@@ -304,9 +304,9 @@ async function exercise(page: Page, workspace: Workspace, evidence: Evidence, ap
         expect(raw.length).toBeGreaterThan(0); body = {bytes: raw.length, sha256: sha(raw)};
       }
       if (endpoint === '/api/flowchart/draft' && response!.status() === 404) {
-        if (body.detail === '이 프로젝트, 데이터셋, 라벨 목록에 해당하는 임시 저장본이 없습니다.') expect(drafts).toHaveLength(0);
+        if (body.detail === 'No draft for this project, source and labelset') expect(drafts).toHaveLength(0);
         else {
-          expect(body).toEqual({detail: '이 임시 저장본보다 새로 저장된 플로우가 있습니다. 저장된 플로우를 여세요.'});
+          expect(body).toEqual({detail: 'A newer saved flow supersedes this draft'});
           expect(finalVersion).not.toBeNull(); expect(finalGraphSha).not.toBeNull();
           expect(drafts.at(-1)?.response.draft_sha256).not.toBe(finalGraphSha);
         }

@@ -254,7 +254,7 @@ async function exercise(page: Page, workspace: Workspace, evidence: Evidence, ap
       (row.method === 'GET' ? reads : writes).push(row);
       evidence.note('shared_source_seg_patch_original_page_requests', [...reads, ...writes].sort((a, b) => a.started - b.started));
       if (row.method === 'GET' && url.pathname === '/api/flowchart/draft' && row.status === 404)
-        expect(['이 프로젝트, 데이터셋, 라벨 목록에 해당하는 임시 저장본이 없습니다.', '이 임시 저장본보다 새로 저장된 플로우가 있습니다. 저장된 플로우를 여세요.']).toContain(body.detail);
+        expect(['No draft for this project, source and labelset', 'A newer saved flow supersedes this draft']).toContain(body.detail);
       else expect(row.status).toBe(200);
       if (body === null) {
         if (contentType.startsWith('application/json')) {

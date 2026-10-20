@@ -46,7 +46,7 @@ def test_original_newer_activation_supersedes_valid_draft_without_poisoning_owne
             before=_basis(root)
             response=await client.get('/api/flowchart/draft',headers=headers)
             assert response.status_code==404
-            assert response.json()=={'detail':'이 임시 저장본보다 새로 저장된 플로우가 있습니다. 저장된 플로우를 여세요.'}
+            assert response.json()=={'detail':'A newer saved flow supersedes this draft'}
             after=_basis(root)
             assert before==after and json.loads(draft_file.read_bytes())==draft
             return response.json(),before,after,activated
@@ -129,7 +129,7 @@ def test_unproved_supersession_keeps_original_business_result_and_strict_refusal
             return await client.get('/api/flowchart/draft',headers=headers)
     response=asyncio.run(original_request())
     assert response.status_code==expected_status
-    if expected_status==404:assert response.json()=={'detail':'이 임시 저장본보다 새로 저장된 플로우가 있습니다. 저장된 플로우를 여세요.'}
+    if expected_status==404:assert response.json()=={'detail':'A newer saved flow supersedes this draft'}
     else:assert response.json()=={'detail':'저장된 임시 저장본이 올바르지 않습니다: Draft context or hash differs'}
     assert all(path.read_bytes()==raw for path,raw in before.items())
     assert audit.verify()=={'intact':True,'rows':0}
@@ -171,7 +171,7 @@ def test_foreign_response_sender_cannot_repeat_the_genuine_helper_observation(tm
             headers=await _login_current(client,app,project)
             return await client.get('/api/flowchart/draft',headers=headers)
     response=asyncio.run(original_request())
-    assert response.status_code==404 and response.json()=={'detail':'이 임시 저장본보다 새로 저장된 플로우가 있습니다. 저장된 플로우를 여세요.'}
+    assert response.status_code==404 and response.json()=={'detail':'A newer saved flow supersedes this draft'}
     assert len(captured)==1 and len(captured[0].draft_active_reads)==1 and captured[0].failed
     assert observer.snapshot()['failures']==[
         'owned_ancillary_draft_active_return_entry','owned_ancillary_draft_active_return','owned_ancillary_unconfirmed_lifetime']
