@@ -91,6 +91,7 @@ jobs:
               backend/tests/test_anomaly_name_prefixes.py
               backend/tests/test_anomaly_flat_name_layout.py
               backend/tests/test_field_export_layouts.py
+              backend/tests/test_project_activation_race.py
               backend/tests/test_beginner_errors_korean.py
               scripts/tests/test_publication_audit.py
               backend/tests/test_sdk_cancellation.py::test_interruption_reaps_the_actual_owned_child

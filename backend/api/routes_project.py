@@ -8,6 +8,7 @@ import logging
 import os
 import re
 import tempfile
+import threading
 import time
 import traceback
 import uuid
@@ -88,7 +89,18 @@ def _project_root(request: Request) -> Path:
     return Path(getattr(request.app.state, "project_dir", Path.cwd() / "projects")).resolve()
 
 
+# Serialises project activation with the lazy first activation in get_current_project. Without it, a first
+# GET /api/project/current that was still loading the saved pointer could finish after a concurrent create/open
+# and put the older project back as current (issue #9).
+_ACTIVATION_LOCK = threading.RLock()
+
+
 def _activate_project(request: Request, project: Dict[str, Any]) -> Dict[str, Any]:
+    with _ACTIVATION_LOCK:
+        return _activate_project_locked(request, project)
+
+
+def _activate_project_locked(request: Request, project: Dict[str, Any]) -> Dict[str, Any]:
     account=getattr(request.state,'account_user',None)
     accounts=getattr(request.app.state,'accounts',None)
     try:
@@ -424,7 +436,15 @@ def get_current_project(request: Request):
     project = getattr(request.app.state, "current_project", None)
     if project is not None:
         return project
+    with _ACTIVATION_LOCK:
+        # Another request may have activated a project while this one waited: that choice stands.
+        project = getattr(request.app.state, "current_project", None)
+        if project is not None:
+            return project
+        return _activate_saved_or_default_project(request)
 
+
+def _activate_saved_or_default_project(request: Request):
     pointer = _project_root(request) / _ACTIVE_FILE_NAME
     try:
         path = json.loads(pointer.read_text(encoding="utf-8"))["project_dir"]
