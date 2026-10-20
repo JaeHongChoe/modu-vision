@@ -9,8 +9,8 @@
       "test": "scripts/e2e/ocr-empty-workbench-controls.spec.ts::OCR empty truth prepared input completed job and model selection preserve originals through reopen",
       "recorded_test_source_sha256": "238bb9d59cc8cb998f222e4ec38a9aeb87d0b86f35eb3e44c7d7a01f54757b62",
       "retained_spec_commit": "9a18c088eda03610546190b64c32a5bf129737af",
-      "current_test_source_sha256": "ed4717e89bae4672be4c747c3d0345a5582811b77c6a80916a447480de620c61",
-      "reason": "Inherited public spec anchor retains the exact historical test declaration. Current source SHA declarations changed after reviewed product changes; this supplies no new GUI execution or current acceptance. Refreshed on the beginner-UX branch: the spec now reads the Korean control names and footer wording of the simple view; the retained commit still holds the exact bytes the receipt executed, and no new GUI execution is claimed. Refreshed on the beginner-UX branch: the spec now reads the Korean labels, readouts and refusals of the simple view and carries current source pins; the retained commit still holds the exact bytes the receipt executed, and no new GUI execution is claimed"
+      "current_test_source_sha256": "b415a6360eb535cb2328f341dca01a70373c7236de7f69929a7b1bbabfd99df9",
+      "reason": "Inherited public spec anchor retains the exact historical test declaration. Current source SHA declarations changed after reviewed product changes; this supplies no new GUI execution or current acceptance. Refreshed on the beginner-UX branch: the spec now reads the Korean control names and footer wording of the simple view; the retained commit still holds the exact bytes the receipt executed, and no new GUI execution is claimed. Refreshed on the beginner-UX branch: the spec now reads the Korean labels, readouts and refusals of the simple view and carries current source pins; the retained commit still holds the exact bytes the receipt executed, and no new GUI execution is claimed. Mask and OCR specs re-read gallery thumbnails the browser kept no body for"
     },
     {
       "receipt": "2026-10-12-app-f030-root570-browser-invalid.json",
@@ -19,8 +19,8 @@
       "test": "scripts/e2e/ocr-empty-workbench-controls.spec.ts::OCR invalid numeric training preflight with valid saved truth preserves whole originals through reopen",
       "recorded_test_source_sha256": "238bb9d59cc8cb998f222e4ec38a9aeb87d0b86f35eb3e44c7d7a01f54757b62",
       "retained_spec_commit": "9a18c088eda03610546190b64c32a5bf129737af",
-      "current_test_source_sha256": "ed4717e89bae4672be4c747c3d0345a5582811b77c6a80916a447480de620c61",
-      "reason": "Inherited public spec anchor retains the exact historical test declaration. Current source SHA declarations changed after reviewed product changes; this supplies no new GUI execution or current acceptance. Refreshed on the beginner-UX branch: the spec now reads the Korean control names and footer wording of the simple view; the retained commit still holds the exact bytes the receipt executed, and no new GUI execution is claimed. Refreshed on the beginner-UX branch: the spec now reads the Korean labels, readouts and refusals of the simple view and carries current source pins; the retained commit still holds the exact bytes the receipt executed, and no new GUI execution is claimed"
+      "current_test_source_sha256": "b415a6360eb535cb2328f341dca01a70373c7236de7f69929a7b1bbabfd99df9",
+      "reason": "Inherited public spec anchor retains the exact historical test declaration. Current source SHA declarations changed after reviewed product changes; this supplies no new GUI execution or current acceptance. Refreshed on the beginner-UX branch: the spec now reads the Korean control names and footer wording of the simple view; the retained commit still holds the exact bytes the receipt executed, and no new GUI execution is claimed. Refreshed on the beginner-UX branch: the spec now reads the Korean labels, readouts and refusals of the simple view and carries current source pins; the retained commit still holds the exact bytes the receipt executed, and no new GUI execution is claimed. Mask and OCR specs re-read gallery thumbnails the browser kept no body for"
     },
     {
       "receipt": "2026-10-12-app-f030-root570-electron-empty.json",
@@ -29,8 +29,8 @@
       "test": "scripts/e2e/ocr-empty-workbench-controls.spec.ts::native OCR empty truth prepared input completed job and model selection preserve originals through reopen",
       "recorded_test_source_sha256": "238bb9d59cc8cb998f222e4ec38a9aeb87d0b86f35eb3e44c7d7a01f54757b62",
       "retained_spec_commit": "9a18c088eda03610546190b64c32a5bf129737af",
-      "current_test_source_sha256": "ed4717e89bae4672be4c747c3d0345a5582811b77c6a80916a447480de620c61",
-      "reason": "Inherited public spec anchor retains the exact historical test declaration. Current source SHA declarations changed after reviewed product changes; this supplies no new GUI execution or current acceptance. Refreshed on the beginner-UX branch: the spec now reads the Korean control names and footer wording of the simple view; the retained commit still holds the exact bytes the receipt executed, and no new GUI execution is claimed. Refreshed on the beginner-UX branch: the spec now reads the Korean labels, readouts and refusals of the simple view and carries current source pins; the retained commit still holds the exact bytes the receipt executed, and no new GUI execution is claimed"
+      "current_test_source_sha256": "b415a6360eb535cb2328f341dca01a70373c7236de7f69929a7b1bbabfd99df9",
+      "reason": "Inherited public spec anchor retains the exact historical test declaration. Current source SHA declarations changed after reviewed product changes; this supplies no new GUI execution or current acceptance. Refreshed on the beginner-UX branch: the spec now reads the Korean control names and footer wording of the simple view; the retained commit still holds the exact bytes the receipt executed, and no new GUI execution is claimed. Refreshed on the beginner-UX branch: the spec now reads the Korean labels, readouts and refusals of the simple view and carries current source pins; the retained commit still holds the exact bytes the receipt executed, and no new GUI execution is claimed. Mask and OCR specs re-read gallery thumbnails the browser kept no body for"
     },
     {
       "receipt": "2026-10-12-app-f030-root570-electron-invalid.json",
@@ -39,8 +39,8 @@
       "test": "scripts/e2e/ocr-empty-workbench-controls.spec.ts::native OCR invalid numeric training preflight with valid saved truth preserves whole originals through reopen",
       "recorded_test_source_sha256": "238bb9d59cc8cb998f222e4ec38a9aeb87d0b86f35eb3e44c7d7a01f54757b62",
       "retained_spec_commit": "9a18c088eda03610546190b64c32a5bf129737af",
-      "current_test_source_sha256": "ed4717e89bae4672be4c747c3d0345a5582811b77c6a80916a447480de620c61",
-      "reason": "Inherited public spec anchor retains the exact historical test declaration. Current source SHA declarations changed after reviewed product changes; this supplies no new GUI execution or current acceptance. Refreshed on the beginner-UX branch: the spec now reads the Korean control names and footer wording of the simple view; the retained commit still holds the exact bytes the receipt executed, and no new GUI execution is claimed. Refreshed on the beginner-UX branch: the spec now reads the Korean labels, readouts and refusals of the simple view and carries current source pins; the retained commit still holds the exact bytes the receipt executed, and no new GUI execution is claimed"
+      "current_test_source_sha256": "b415a6360eb535cb2328f341dca01a70373c7236de7f69929a7b1bbabfd99df9",
+      "reason": "Inherited public spec anchor retains the exact historical test declaration. Current source SHA declarations changed after reviewed product changes; this supplies no new GUI execution or current acceptance. Refreshed on the beginner-UX branch: the spec now reads the Korean control names and footer wording of the simple view; the retained commit still holds the exact bytes the receipt executed, and no new GUI execution is claimed. Refreshed on the beginner-UX branch: the spec now reads the Korean labels, readouts and refusals of the simple view and carries current source pins; the retained commit still holds the exact bytes the receipt executed, and no new GUI execution is claimed. Mask and OCR specs re-read gallery thumbnails the browser kept no body for"
     },
     {
       "receipt": "2026-10-12-app-f030-root572-browser-handoff.json",
@@ -49,8 +49,8 @@
       "test": "scripts/e2e/ocr-prepared-unsent-handoff.spec.ts::OCR unsent alphabet draft and saved alphabet split handoff preserve whole originals",
       "recorded_test_source_sha256": "47d0083f0980707408476282bd8f72bea3b472b3138b2c39560180f4fdc99368",
       "retained_spec_commit": "9a18c088eda03610546190b64c32a5bf129737af",
-      "current_test_source_sha256": "89303e5a3e1022bc766b3a606d97871a786c1c91f012c258db8be2e183e932f6",
-      "reason": "Inherited public spec anchor retains the exact historical test declaration. Current source SHA declarations changed after reviewed product changes; this supplies no new GUI execution or current acceptance. Refreshed on the beginner-UX branch: the spec now reads the Korean labels, readouts and refusals of the simple view and carries current source pins; the retained commit still holds the exact bytes the receipt executed, and no new GUI execution is claimed"
+      "current_test_source_sha256": "db7534688c80e2ea04331d79928078f7fc4cff551881b2b6215fead3c972fda8",
+      "reason": "Inherited public spec anchor retains the exact historical test declaration. Current source SHA declarations changed after reviewed product changes; this supplies no new GUI execution or current acceptance. Refreshed on the beginner-UX branch: the spec now reads the Korean labels, readouts and refusals of the simple view and carries current source pins; the retained commit still holds the exact bytes the receipt executed, and no new GUI execution is claimed. Mask and OCR specs re-read gallery thumbnails the browser kept no body for"
     },
     {
       "receipt": "2026-10-12-app-f030-root572-electron-handoff.json",
@@ -59,8 +59,8 @@
       "test": "scripts/e2e/ocr-prepared-unsent-handoff.spec.ts::native OCR unsent alphabet draft and saved alphabet split handoff preserve whole originals",
       "recorded_test_source_sha256": "47d0083f0980707408476282bd8f72bea3b472b3138b2c39560180f4fdc99368",
       "retained_spec_commit": "9a18c088eda03610546190b64c32a5bf129737af",
-      "current_test_source_sha256": "89303e5a3e1022bc766b3a606d97871a786c1c91f012c258db8be2e183e932f6",
-      "reason": "Inherited public spec anchor retains the exact historical test declaration. Current source SHA declarations changed after reviewed product changes; this supplies no new GUI execution or current acceptance. Refreshed on the beginner-UX branch: the spec now reads the Korean labels, readouts and refusals of the simple view and carries current source pins; the retained commit still holds the exact bytes the receipt executed, and no new GUI execution is claimed"
+      "current_test_source_sha256": "db7534688c80e2ea04331d79928078f7fc4cff551881b2b6215fead3c972fda8",
+      "reason": "Inherited public spec anchor retains the exact historical test declaration. Current source SHA declarations changed after reviewed product changes; this supplies no new GUI execution or current acceptance. Refreshed on the beginner-UX branch: the spec now reads the Korean labels, readouts and refusals of the simple view and carries current source pins; the retained commit still holds the exact bytes the receipt executed, and no new GUI execution is claimed. Mask and OCR specs re-read gallery thumbnails the browser kept no body for"
     },
     {
       "receipt": "2026-10-12-app-f064-root575-browser-controls.json",
@@ -149,8 +149,8 @@
       "test": "scripts/e2e/label-mask-empty-preflights.spec.ts::label and mask empty chooser preview and apply preflights preserve originals",
       "recorded_test_source_sha256": "b3c7c07af92471aefb2b236e9552987bea28e1a089d8c7415be007dcaf08ebbd",
       "retained_spec_commit": "9a18c088eda03610546190b64c32a5bf129737af",
-      "current_test_source_sha256": "bb5c436f83746203d374abae6a5b5341307e2cc9be12550a0e44e34ccfdf0a46",
-      "reason": "Inherited public spec anchor retains the exact historical test declaration. Current source SHA declarations changed after reviewed product changes; this supplies no new GUI execution or current acceptance. Refreshed on the beginner-UX branch: the spec now reads the Korean labels, readouts and refusals of the simple view and carries current source pins; the retained commit still holds the exact bytes the receipt executed, and no new GUI execution is claimed. Refreshed on the beginner-UX branch: the spec reads the language switch by its stable name and carries current fixture pins; the retained commit still holds the exact bytes the receipt executed, and no new GUI execution is claimed"
+      "current_test_source_sha256": "35d7f264c1afbe9b7866242e23c8de80ae6ab79172d2ee16077a875cc5c14eaf",
+      "reason": "Inherited public spec anchor retains the exact historical test declaration. Current source SHA declarations changed after reviewed product changes; this supplies no new GUI execution or current acceptance. Refreshed on the beginner-UX branch: the spec now reads the Korean labels, readouts and refusals of the simple view and carries current source pins; the retained commit still holds the exact bytes the receipt executed, and no new GUI execution is claimed. Refreshed on the beginner-UX branch: the spec reads the language switch by its stable name and carries current fixture pins; the retained commit still holds the exact bytes the receipt executed, and no new GUI execution is claimed. Mask and OCR specs re-read gallery thumbnails the browser kept no body for"
     },
     {
       "receipt": "2026-10-12-app-label-mask-root581-electron-empty.json",
@@ -159,8 +159,8 @@
       "test": "scripts/e2e/label-mask-empty-preflights.spec.ts::native label and mask empty chooser preview and apply preflights preserve originals",
       "recorded_test_source_sha256": "b3c7c07af92471aefb2b236e9552987bea28e1a089d8c7415be007dcaf08ebbd",
       "retained_spec_commit": "9a18c088eda03610546190b64c32a5bf129737af",
-      "current_test_source_sha256": "bb5c436f83746203d374abae6a5b5341307e2cc9be12550a0e44e34ccfdf0a46",
-      "reason": "Inherited public spec anchor retains the exact historical test declaration. Current source SHA declarations changed after reviewed product changes; this supplies no new GUI execution or current acceptance. Refreshed on the beginner-UX branch: the spec now reads the Korean labels, readouts and refusals of the simple view and carries current source pins; the retained commit still holds the exact bytes the receipt executed, and no new GUI execution is claimed. Refreshed on the beginner-UX branch: the spec reads the language switch by its stable name and carries current fixture pins; the retained commit still holds the exact bytes the receipt executed, and no new GUI execution is claimed"
+      "current_test_source_sha256": "35d7f264c1afbe9b7866242e23c8de80ae6ab79172d2ee16077a875cc5c14eaf",
+      "reason": "Inherited public spec anchor retains the exact historical test declaration. Current source SHA declarations changed after reviewed product changes; this supplies no new GUI execution or current acceptance. Refreshed on the beginner-UX branch: the spec now reads the Korean labels, readouts and refusals of the simple view and carries current source pins; the retained commit still holds the exact bytes the receipt executed, and no new GUI execution is claimed. Refreshed on the beginner-UX branch: the spec reads the language switch by its stable name and carries current fixture pins; the retained commit still holds the exact bytes the receipt executed, and no new GUI execution is claimed. Mask and OCR specs re-read gallery thumbnails the browser kept no body for"
     },
     {
       "receipt": "2026-10-08-late-original-response-lifecycle-f7175f5-browser.json",
@@ -1239,8 +1239,8 @@
       "test": "scripts/e2e/mask-source-choice-empty.spec.ts::empty mask source choice stays local through actual checkbox changes without a chosen bundle or preview",
       "recorded_test_source_sha256": "61b879742a7ef7c2207734fc17d34c68dfc430049a61a0ccf1b5d657bbaaa49e",
       "retained_spec_commit": "d45817a83d72793570f888a6fff4701fbddced7f",
-      "current_test_source_sha256": "e27fa7a8cbc1896c614cf32a803095cf319ffc1cae99fe8009ad5449565c9227",
-      "reason": "Refreshed on the beginner-UX branch: the spec now reads the Korean labels, readouts and refusals of the simple view and carries current source pins; the retained commit still holds the exact bytes the receipt executed, and no new GUI execution is claimed. Refreshed on the beginner-UX branch: the spec reads the language switch by its stable name and carries current fixture pins; the retained commit still holds the exact bytes the receipt executed, and no new GUI execution is claimed"
+      "current_test_source_sha256": "62fbb925ad1614037dc270977b3ae9c0b6d6f8be7ebe8cb3e4dcab721c114f04",
+      "reason": "Refreshed on the beginner-UX branch: the spec now reads the Korean labels, readouts and refusals of the simple view and carries current source pins; the retained commit still holds the exact bytes the receipt executed, and no new GUI execution is claimed. Refreshed on the beginner-UX branch: the spec reads the language switch by its stable name and carries current fixture pins; the retained commit still holds the exact bytes the receipt executed, and no new GUI execution is claimed. Mask and OCR specs re-read gallery thumbnails the browser kept no body for"
     },
     {
       "receipt": "2026-10-07-app-project-recovery-closure.spec-electron.json",
