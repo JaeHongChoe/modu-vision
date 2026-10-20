@@ -6,6 +6,15 @@ import type {Page} from '@playwright/test';
 import {test,expect,type Workspace,type Evidence} from './fixtures/test';
 import {installDesktopHostShim} from './fixtures/desktop-host-shim';
 import {png} from './qa/appFlow';
+
+/** Step 1's gallery reads its thumbnails itself and drops a read when the page leaves the step. A user sees the
+ *  gallery before moving on; the spec does the same, so every thumbnail it checks has a whole body. */
+async function galleryReadsSettled(page:Page){
+ if(!(await page.getByRole('button',{name:'데이터셋 폴더 열기',exact:true}).isVisible()))return;
+ const thumbs=page.locator('button[aria-label$=" 라벨링에서 열기"] img');
+ await expect.poll(async()=>{const shown=await thumbs.count();const pending=await thumbs.and(page.locator('[data-read-state="pending"]')).count();return shown>0&&pending===0;},{timeout:10_000}).toBe(true);
+}
+
 test.use({actionTimeout:10_000});
 type OwnedApi=(route:string,body?:unknown,method?:string)=>Promise<any>;
 const hash=(data:Buffer)=>crypto.createHash('sha256').update(data).digest('hex');
@@ -278,7 +287,7 @@ async function flowModelLessReopenExercise(page:Page,w:Workspace,e:Evidence,api:
   const pin=splitControlFile(scope.draftFile,custody);expect(JSON.parse(pin.bytes.toString('utf8'))).toEqual(Object.fromEntries(Object.entries(scope.saved).filter(([key])=>key!=='active_version_id')));await settle();await settleWrites();return{API:replies,draft_fullpin:{path:scope.draftFile,raw9:pin.raw,sha256:pin.sha256,size:pin.bytes.length}};
  };
  const enter=async(scope:Scope)=>{
-  active=scope;transport=scope.transport;await expect(page.getByTitle('프로젝트 관리',{exact:true})).toContainText(scope.project.name);await page.getByRole('navigation',{name:'Workflow Stages'}).getByRole('button').nth(4).click();await page.getByRole('tab',{name:'편집',exact:true}).click();await expect(page.getByRole('heading',{name:'검사 플로우 편집기',exact:true})).toBeVisible();await expect(page.locator('[data-flow-node-id]')).toHaveCount(scope.saved.pipeline.nodes.length);await expect.poll(rendered).toEqual(view(scope.saved.pipeline));await savedStatus(false);await settle();await settleWrites();
+  active=scope;transport=scope.transport;await expect(page.getByTitle('프로젝트 관리',{exact:true})).toContainText(scope.project.name);await galleryReadsSettled(page);await page.getByRole('navigation',{name:'Workflow Stages'}).getByRole('button').nth(4).click();await page.getByRole('tab',{name:'편집',exact:true}).click();await expect(page.getByRole('heading',{name:'검사 플로우 편집기',exact:true})).toBeVisible();await expect(page.locator('[data-flow-node-id]')).toHaveCount(scope.saved.pipeline.nodes.length);await expect.poll(rendered).toEqual(view(scope.saved.pipeline));await savedStatus(false);await settle();await settleWrites();
  };
   const documentReload=async(initial:boolean)=>{
    expect(documentBootstrap).toBeUndefined();await settle();await settleWrites();const readStart=reads.length,phase={epoch:++documentBootstrapEpoch,project_id:A.project.id,started:performance.now()};documentBootstrap=phase;

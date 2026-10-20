@@ -6,6 +6,15 @@ import type {Page} from '@playwright/test';
 import {test,expect,type Workspace,type Evidence} from './fixtures/test';
 import {installDesktopHostShim} from './fixtures/desktop-host-shim';
 import {png} from './qa/appFlow';
+
+/** Step 1's gallery reads its thumbnails itself and drops a read when the page leaves the step. A user sees the
+ *  gallery before moving on; the spec does the same, so every thumbnail it checks has a whole body. */
+async function galleryReadsSettled(page:Page){
+ if(!(await page.getByRole('button',{name:'데이터셋 폴더 열기',exact:true}).isVisible()))return;
+ const thumbs=page.locator('button[aria-label$=" 라벨링에서 열기"] img');
+ await expect.poll(async()=>{const shown=await thumbs.count();const pending=await thumbs.and(page.locator('[data-read-state="pending"]')).count();return shown>0&&pending===0;},{timeout:10_000}).toBe(true);
+}
+
 test.use({actionTimeout:10_000});
 type OwnedApi=(route:string,body?:unknown,method?:string)=>Promise<any>;
 const hash=(data:Buffer)=>crypto.createHash('sha256').update(data).digest('hex');
@@ -236,7 +245,7 @@ async function flowNodeLimitExercise(page:Page,w:Workspace,e:Evidence,api:FlowAp
  try{
   if(url)await page.goto(url);else await page.reload();await expect(page.getByTitle('프로젝트 관리',{exact:true})).toContainText(project.name);
   await settle();const current=await readReply('/api/project/current');const rawContext=current.reply.headers['x-vision-context'];expect(rawContext).toBeDefined();expect(JSON.parse(rawContext)).toEqual(transport);contexts.set(project.id,transport);
-  await page.getByRole('navigation',{name:'Workflow Stages'}).getByRole('button').nth(4).click();await page.getByRole('tab',{name:'편집',exact:true}).click();
+  await galleryReadsSettled(page);await page.getByRole('navigation',{name:'Workflow Stages'}).getByRole('button').nth(4).click();await page.getByRole('tab',{name:'편집',exact:true}).click();
   await expect(page.getByRole('heading',{name:'검사 플로우 편집기',exact:true})).toBeVisible();await expect(page.locator('[data-flow-node-id]')).toHaveCount(19);expect(await rendered()).toEqual(expectedView);await clean();
   await settle();baselineAPI=await readAPI();baseline=treeState();expect(baseline.source).toEqual(beforeInitialization.source);expect(splitControlFile(draftFile,custody)).toEqual(draftPin);
   expect((baselineAPI['/api/flowchart/draft'] as any).body).toEqual(saved);expect((baselineAPI['/api/flowchart/pipeline/active-version'] as any).body).toEqual({version_id:null});expect((baselineAPI['/api/dataset/revisions'] as any).body).toEqual({active_revision:null,revisions:[]});expect((baselineAPI[endpoints[endpoints.length-1]] as any).body).toEqual({pipelines:[],total:0});
