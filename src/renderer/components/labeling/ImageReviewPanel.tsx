@@ -17,7 +17,8 @@ export const ImageReviewPanel: React.FC = () => {
       if (useProjectStore.getState().projectDir === projectDir && useAnnotationStore.getState().currentImage?.file_path === path) setMetadata(next);
     } catch (cause) { setError(workflowError(cause)); } finally {setBusy(false);}
   };
-  return <div className="relative z-[65] shrink-0 border-b border-slate-700 bg-[#101722] text-xs">
+  // The open sheet drops over the bars below it (class picker, class bar, 모델 보조 at z-70), so it stacks above them.
+  return <div className={`relative ${open ? 'z-[75]' : 'z-[65]'} shrink-0 border-b border-slate-700 bg-[#101722] text-xs`}>
     <div className="flex items-center gap-3 px-4 py-2"><button type="button" onClick={()=>setOpen(!open)} aria-expanded={open} className="rounded border border-slate-600 px-2 py-1 font-semibold text-cyan-200">이미지 정보·검토</button>
       <span className={metadata?.workflow_state==='approved'?'text-emerald-300':'text-amber-300'}>{metadata ? states[metadata.workflow_state] : '이미지 선택'}</span>
       {metadata?.reviewer && <span>검토자 {metadata.reviewer}</span>}<span className="truncate text-slate-500">{metadata?.product} {metadata?.lot} {metadata?.group}</span>
