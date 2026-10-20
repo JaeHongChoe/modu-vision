@@ -33,6 +33,9 @@ function splitControlTree(root:string,custody:SplitControlCustody):Record<string
  const rows:Record<string,unknown>={};const walk=(file:string,relative:string)=>{
   const first=fs.lstatSync(file,{bigint:true});expect(first.isSymbolicLink()).toBe(false);
   if(first.isDirectory()){const names=fs.readdirSync(file).sort();rows[relative]={kind:'directory',raw:splitControlRaw(first),names};for(const name of names)walk(path.join(file,name),relative?relative+'/'+name:name);expect(fs.readdirSync(file).sort()).toEqual(names);expect(splitControlRaw(fs.lstatSync(file,{bigint:true}))).toEqual(splitControlRaw(first));}
+  // SQLite's -shm file is its shared read index: a read-only reader of a WAL database updates it (the step-4
+  // evidence re-read opens model_deployments.sqlite3). It stays listed; data writes show in the database and -wal.
+  else if(file.endsWith('.sqlite3-shm')){expect(first.isFile()).toBe(true);rows[relative]={kind:'sqlite_read_index'};}
   else{expect(first.isFile()).toBe(true);const pin=splitControlFile(file,custody);rows[relative]={kind:'file',raw:pin.raw,sha256:pin.sha256};}
  };walk(root,'');return rows;
 }
