@@ -57,7 +57,7 @@ import { FlowPreflightPanel } from './FlowPreflightPanel';
 import { IntermediateCropDrawer } from './IntermediateCropDrawer';
 import { CropDetailModal } from './CropDetailModal';
 import { computeFlowchartViewport, readableFlowScale, FLOW_NODE_WIDTH } from './flowchartViewport';
-import { getFlowchartModelReferences, getFlowchartModelTask, pipelineMatchesTask, recoverThenLoadFlowchart, singleModelAutoBinding } from './flowchartStartup';
+import { getFlowchartModelReferences, getFlowchartModelTask, pipelineMatchesTask, recoverThenLoadFlowchart, singleModelAutoBinding, canReuseStartupRead } from './flowchartStartup';
 import { flowRecipeLabel, flowRunSourceLabel } from './flowHandoff';
 import { flowExecutionOptions, type FlowExecutionChoice } from './flowExecution';
 import { connectFlowNodes, decisionReachedOnlyByConditions, decisionRulePatch, flowIssuesByTarget, layoutFlowchart, locateFlowIssue, nodeClassChoices, removeFlowNode, removeFlowEdge, selectFlowEdge, selectedFlowEdge, flowEdgeKey, shouldShowThreshold, updateFlowEdgeData, updateFlowEdgeBranch, updateFlowEdgePayload, validateFlowchartGraph, type FlowPortPayload, type FlowEdgeSelection, rebaseFlowEdgeSelection } from './flowchartGraph';
@@ -371,14 +371,15 @@ export const FlowchartStudio: React.FC = () => {
             if (isCurrent()) setModelCheck({ status: 'blocked', reason: 'saved_flow_unavailable' });
             cancelled = true; return null;
           }
-          return loaded && isCurrentSavedFlowPipeline(loaded, task, folderPath) ? loaded : null;
+          // The procedure checks whether this is a current saved flow; the graph is also handed to the recovery step.
+          return loaded;
         },
         isCurrentSavedPipeline: saved => isCurrent() && isCurrentSavedFlowPipeline(saved, task, folderPath),
-        loadSavedPipeline: () => {
+        loadSavedPipeline: (alreadyRead) => {
           const current = useFlowchartStore.getState();
-          return current.pipeline && current.pipelineDirty && pipelineMatchesTask(current.pipeline, task)
-            ? Promise.resolve(current.pipeline)
-            : loadPipeline(true, task, folderPath);
+          if (current.pipeline && current.pipelineDirty && pipelineMatchesTask(current.pipeline, task)) return Promise.resolve(current.pipeline);
+          // The saved-flow check above already read this flow in this start; reading it again only raced the user's first click.
+          return canReuseStartupRead(current, alreadyRead) ? Promise.resolve(alreadyRead) : loadPipeline(true, task, folderPath);
         },
         verifyModels: verifyModelReferences,
         isCurrent,

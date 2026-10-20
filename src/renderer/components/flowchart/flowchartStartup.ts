@@ -17,7 +17,10 @@ interface FlowchartStartupOptions {
   completedCurrentJobId: string | null;
   getVerifiedJobId: () => string | null;
   loadEvaluation: (jobId?: string, source?: { folderPath: string; task: VisionTask }) => Promise<void>;
-  loadSavedPipeline: () => Promise<FlowchartPipeline | null>;
+  /** `alreadyRead` is the graph the saved-flow check read in this same start, when it read one: the loader may reuse
+   *  it instead of reading the same flow again (a second read could land after the user's first click). */
+  loadSavedPipeline: (alreadyRead?: FlowchartPipeline | null) => Promise<FlowchartPipeline | null>;
+  /** Returns the graph it read (or null); the procedure decides whether it is a current saved flow. */
   loadCurrentSavedPipeline?: () => Promise<FlowchartPipeline | null>;
   isCurrentSavedPipeline?: (pipeline: FlowchartPipeline) => boolean;
   verifyModels: (sourceFolder: string, models: Array<{ job_id: string; task: FlowModelTask }>) => Promise<void>;
@@ -87,9 +90,11 @@ export async function recoverThenLoadFlowchart(options: FlowchartStartupOptions)
 
   // Opening a current, fully bound saved graph is a metadata verification, not
   // an implicit request to evaluate its model or generate heatmaps.
+  let alreadyRead: FlowchartPipeline | null = null;
   if (options.loadCurrentSavedPipeline && options.isCurrentSavedPipeline) {
     try {
       const saved = await options.loadCurrentSavedPipeline();
+      alreadyRead = saved;
       if (!options.isCurrent()) return { status: 'cancelled' };
       if (saved && options.isCurrentSavedPipeline(saved) && pipelineMatchesTask(saved, options.task)) {
         const modelNodes = saved.nodes.filter(node => getFlowchartModelTask(node) !== null);
@@ -125,7 +130,7 @@ export async function recoverThenLoadFlowchart(options: FlowchartStartupOptions)
     }
   }
 
-  const pipeline = await options.loadSavedPipeline();
+  const pipeline = await options.loadSavedPipeline(alreadyRead);
   if (!options.isCurrent()) return { status: 'cancelled' };
   if (!pipeline) return { status: 'blocked', reason: 'saved_flow_unavailable' };
   try {
@@ -141,4 +146,14 @@ export async function recoverThenLoadFlowchart(options: FlowchartStartupOptions)
   }
   if (!options.isCurrent()) return { status: 'cancelled' };
   return { status: 'ready', pipeline, verifiedJobId: verifiedJobId || '' };
+}
+
+/** Whether the recovery step may reuse the graph the saved-flow check just read instead of reading the flow again:
+ *  only while that same graph is still on screen, unedited and not being reloaded, saved or run. */
+export function canReuseStartupRead(
+  current: { pipeline: FlowchartPipeline | null; pipelineDirty: boolean; isLoading: boolean; isSaving: boolean; isRunning: boolean },
+  alreadyRead: FlowchartPipeline | null | undefined,
+): alreadyRead is FlowchartPipeline {
+  return Boolean(alreadyRead) && current.pipeline === alreadyRead && !current.pipelineDirty
+    && !current.isLoading && !current.isSaving && !current.isRunning;
 }

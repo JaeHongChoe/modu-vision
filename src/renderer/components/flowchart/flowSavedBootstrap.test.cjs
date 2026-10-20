@@ -279,3 +279,28 @@ test('the actual Studio action and identity projection settle ready for the curr
   assert.equal(header.props.identity.approval, '미조회');
   assert.deepEqual(f.evaluationCalls(), []);
 });
+
+test('a start reads the flow once: the saved-flow check hands what it read to the recovery step', async t => {
+  const f = fixture(t), reads = []; let handed;
+  const draftGraph = structuredClone(GRAPH);
+  const result = await f.startup.recoverThenLoadFlowchart({folderPath: '/source', task: 'segmentation', datasetKey: '/source\0segmentation',
+    hasSelectedFolder: true, datasetIsLoading: false, importError: null, allowLatestRecovery: true, completedCurrentJobId: null,
+    getVerifiedJobId: () => 'job_current', loadEvaluation: async () => {},
+    loadCurrentSavedPipeline: async () => {reads.push('check'); return draftGraph;},
+    isCurrentSavedPipeline: () => false,
+    loadSavedPipeline: async alreadyRead => {handed = alreadyRead; return alreadyRead;},
+    verifyModels: async () => {}, isCurrent: () => true});
+  assert.equal(result.status, 'ready');
+  assert.deepEqual(reads, ['check']);
+  assert.equal(handed, draftGraph, 'the recovery step receives the graph the check read');
+});
+
+test('the recovery step reuses that read only while the same graph is on screen and idle', t => {
+  const f = fixture(t), graph = structuredClone(GRAPH), idle = {pipeline: graph, pipelineDirty: false, isLoading: false, isSaving: false, isRunning: false};
+  const reuse = f.startup.canReuseStartupRead;
+  assert.equal(reuse(idle, graph), true);
+  assert.equal(reuse(idle, null), false, 'nothing was read');
+  assert.equal(reuse({...idle, pipeline: structuredClone(GRAPH)}, graph), false, 'another read replaced it');
+  assert.equal(reuse({...idle, pipelineDirty: true}, graph), false, 'the user edited it');
+  for (const busy of ['isLoading', 'isSaving', 'isRunning']) assert.equal(reuse({...idle, [busy]: true}, graph), false, busy);
+});
