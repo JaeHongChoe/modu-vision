@@ -42,6 +42,9 @@ function splitControlTree(root:string,custody:SplitControlCustody):Record<string
 // is Playwright's work: in Electron it goes through the DevTools protocol, measured at 1-12.5 s under this spec's load
 // while the same requests finished on the network in about 15 ms. That retrieval gets its own allowance (F-22).
 const BODY_RETRIEVAL_ALLOWANCE_MS=50_000;
+// A row whose answer finished on the network within the frame may take the hand-off allowance on top; any row without a
+// recorded network completion (a retired gallery read, the test's own request) keeps the strict frame.
+function expectWithinFrame(row:any){if(row.network_finished!==undefined)expect(row.network_finished).toBeLessThanOrEqual(row.deadline);expect(row.finished).toBeLessThanOrEqual(row.deadline+(row.network_finished!==undefined?BODY_RETRIEVAL_ALLOWANCE_MS:0));}
 async function splitControlWithin<T>(operation:Promise<T>,deadline:number,label:string):Promise<T>{
  const remaining=deadline-performance.now();if(remaining<=0)throw Error('Original 10s split-control frame expired: '+label);let timer:ReturnType<typeof setTimeout>|undefined;
  try{return await Promise.race([operation,new Promise<never>((_,reject)=>{timer=setTimeout(()=>reject(Error('Original 10s split-control frame expired: '+label)),remaining);})]);}finally{if(timer!==undefined)clearTimeout(timer);}
@@ -236,7 +239,7 @@ async function flowModelLessReopenExercise(page:Page,w:Workspace,e:Evidence,api:
     }else{
      expect(u.pathname).toBe('/api/project/open');expect(u.search).toBe('');expect(row.method).toBe('POST');const matches=scopes.filter(scope=>row.request_body?.project_dir===scope.project.project_dir);expect(matches).toHaveLength(1);expect(row.request_body).toEqual({project_dir:matches[0].project.project_dir});expect(row.response).toEqual(matches[0].project);expect(row.response_context).toEqual(matches[0].transport);if(row.request_context!==null)scopeFor(row.request_context);
     }
-    row.finished=performance.now();if((row as any).network_finished!==undefined)expect((row as any).network_finished).toBeLessThanOrEqual(row.deadline);expect(row.finished).toBeLessThanOrEqual(row.deadline+BODY_RETRIEVAL_ALLOWANCE_MS);row.complete=true;
+    row.finished=performance.now();expectWithinFrame(row);row.complete=true;
    }catch(cause){row.failed=true;row.failure=cause;}})();return;
   }
   const started=performance.now(),row:FlowRead={request,started,deadline:started+10_000,post_baseline:reachedBaseline,complete:false,pending:Promise.resolve(),document_bootstrap:documentBootstrap?{...documentBootstrap}:undefined};reads.push(row);
@@ -260,21 +263,21 @@ async function flowModelLessReopenExercise(page:Page,w:Workspace,e:Evidence,api:
      else{expect(u.pathname).toBe('/api/evaluation/results');expect(u.search).toBe('?'+new URLSearchParams({source_dataset_path:owner.source,source_task:'anomaly'}).toString());expect(row.status).toBe(404);expect(row.body).toEqual({detail:'학습을 끝낸 모델을 아직 고르지 않았습니다. 학습을 먼저 끝낸 뒤 평가할 모델을 고르세요.'});}
     }else if(u.pathname==='/api/project/current'){expect(row.body).toEqual(owner.project);}
    }
-   row.finished=performance.now();if((row as any).network_finished!==undefined)expect((row as any).network_finished).toBeLessThanOrEqual(row.deadline);expect(row.finished).toBeLessThanOrEqual(row.deadline+BODY_RETRIEVAL_ALLOWANCE_MS);row.complete=true;
+   row.finished=performance.now();expectWithinFrame(row);row.complete=true;
   }catch(cause){row.failed=true;row.failure=cause;}})();
  };
  const settle=async()=>{
   const admitted=[...reads];let drainFailed=false,firstDrain:unknown;
   for(let ordinal=0;ordinal<admitted.length;ordinal++){
    const row=admitted[ordinal];
-   try{await row.pending;if(row.failed)throw row.failure;expect(row.complete).toBe(true);expect(row.deadline).toBe(row.started+10_000);expect(row.finished!).toBeLessThanOrEqual(row.deadline);}
+   try{await row.pending;if(row.failed)throw row.failure;expect(row.complete).toBe(true);expect(row.deadline).toBe(row.started+10_000);expectWithinFrame(row);}
    catch(cause){if(!drainFailed){drainFailed=true;firstDrain=cause;}else secondary.push({label:'later original admitted GET',ordinal,cause});}
   }
   if(drainFailed)throw firstDrain;
  };
  const settleWrites=async()=>{
   const admitted=[...writes];let drainFailed=false,firstDrain:unknown;
-  for(let ordinal=0;ordinal<admitted.length;ordinal++){const row=admitted[ordinal];try{await row.pending;if(row.failed)throw row.failure;expect(row.complete).toBe(true);expect(row.finished).toBeLessThanOrEqual(row.deadline);}catch(cause){if(!drainFailed){drainFailed=true;firstDrain=cause;}else secondary.push({label:'later original admitted mutation',ordinal,cause});}}
+  for(let ordinal=0;ordinal<admitted.length;ordinal++){const row=admitted[ordinal];try{await row.pending;if(row.failed)throw row.failure;expect(row.complete).toBe(true);expectWithinFrame(row);}catch(cause){if(!drainFailed){drainFailed=true;firstDrain=cause;}else secondary.push({label:'later original admitted mutation',ordinal,cause});}}
   if(drainFailed)throw firstDrain;
  };
  const rendered=()=>page.evaluate(()=>({nodes:[...document.querySelectorAll<HTMLElement>('[data-flow-node-id]')].map(row=>({id:row.dataset.flowNodeId,label:row.querySelector('h4')?.textContent,x:parseFloat(row.style.left),y:parseFloat(row.style.top)})),edges:[...document.querySelectorAll<SVGElement>('path[data-flow-edge]')].map(row=>({id:row.dataset.flowEdge,source:row.dataset.flowFrom?.split(':')[0],target:row.dataset.flowTo?.split(':')[0]}))}));
@@ -300,7 +303,7 @@ async function flowModelLessReopenExercise(page:Page,w:Workspace,e:Evidence,api:
    // Close phase admission first; finish the exact admitted rows under each original event-start deadline.
    await settle();await settleWrites();const admitted=reads.slice(readStart).filter(row=>row.document_bootstrap?.epoch===phase.epoch),unscoped=admitted.filter(row=>row.bootstrap_unscoped===true);
    expect([...new Set(unscoped.map(row=>new URL(row.request.url()).pathname))].sort()).toEqual([...RELOAD_BOOTSTRAP_PATHS].sort());
-   for(const row of unscoped){expect(row.complete&&!row.failed).toBe(true);expect(row.status).toBe(200);expect(row.request_context).toBeNull();expect(row.response_context).toEqual(A.transport);expect(row.finished!).toBeLessThanOrEqual(row.deadline);}
+   for(const row of unscoped){expect(row.complete&&!row.failed).toBe(true);expect(row.status).toBe(200);expect(row.request_context).toBeNull();expect(row.response_context).toEqual(A.transport);expectWithinFrame(row);}
    documentBootstrapProofs.push({phase,initial,ordinary_document_navigation:true,allowlist:[...RELOAD_BOOTSTRAP_PATHS],phase_admission_closed:true,all_event_start_10s_reads_complete:true,reads:unscoped.map(({request,pending,failure,...row})=>({...row,url:request.url(),method:request.method(),failure:row.failed?String(failure):null}))});
   };
  const switchProject=async(scope:Scope)=>{
