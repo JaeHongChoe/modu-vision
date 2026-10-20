@@ -38,6 +38,10 @@ function splitControlTree(root:string,custody:SplitControlCustody):Record<string
   else{expect(first.isFile()).toBe(true);const pin=splitControlFile(file,custody);rows[relative]={kind:'file',raw:pin.raw,sha256:pin.sha256};}
  };walk(root,'');return rows;
 }
+// The app's answer must finish within the original 10 s frame (response.finished()). Handing the finished body to the test
+// is Playwright's work: in Electron it goes through the DevTools protocol, measured at 1-12.5 s under this spec's load
+// while the same requests finished on the network in about 15 ms. That retrieval gets its own allowance (F-22).
+const BODY_RETRIEVAL_ALLOWANCE_MS=50_000;
 async function splitControlWithin<T>(operation:Promise<T>,deadline:number,label:string):Promise<T>{
  const remaining=deadline-performance.now();if(remaining<=0)throw Error('Original 10s split-control frame expired: '+label);let timer:ReturnType<typeof setTimeout>|undefined;
  try{return await Promise.race([operation,new Promise<never>((_,reject)=>{timer=setTimeout(()=>reject(Error('Original 10s split-control frame expired: '+label)),remaining);})]);}finally{if(timer!==undefined)clearTimeout(timer);}
@@ -248,7 +252,7 @@ async function flowModelLessReopenExercise(page:Page,w:Workspace,e:Evidence,api:
      const bootstrapUnscoped=row.document_bootstrap!==undefined&&row.request_context===null&&(RELOAD_BOOTSTRAP_PATHS as readonly string[]).includes(u.pathname);
      if(bootstrapUnscoped){expect(u.search).toBe('');expect(rh['x-vision-project']).toBeUndefined();expect(rh['x-vision-context']).toBeUndefined();expect(row.started).toBeGreaterThanOrEqual(row.document_bootstrap!.started);expect(owner.project.id).toBe(row.document_bootstrap!.project_id);expect(row.response_context).toEqual(owner.transport);row.bootstrap_unscoped=true;}
      else if(row.post_baseline){if(u.pathname==='/api/project/current'&&row.request_context===null){expect(u.search).toBe('');expect(rh['x-vision-project']).toBeUndefined();expect(row.response_context).toEqual(owner.transport);}else{expect(row.request_context).toEqual(owner.transport);expect(rh['x-vision-project']).toBe(owner.project.id);}}
-    const bytes=await splitControlWithin(response!.body(),row.deadline,'whole original F064 API body');expect(await splitControlWithin(response!.finished(),row.deadline,'original F064 API completion')).toBeNull();row.status=response!.status();row.body=JSON.parse(bytes.toString('utf8'));row.sha256=hash(bytes);row.size=bytes.length;
+    expect(await splitControlWithin(response!.finished(),row.deadline,'original F064 API completion')).toBeNull();const bytes=await splitControlWithin(response!.body(),row.deadline+BODY_RETRIEVAL_ALLOWANCE_MS,'whole original F064 API body');row.status=response!.status();row.body=JSON.parse(bytes.toString('utf8'));row.sha256=hash(bytes);row.size=bytes.length;
      if(bootstrapUnscoped){expect(row.status).toBe(200);expect(sh['content-type']).toMatch(/^application\/json(?:\s*;|$)/);if(u.pathname==='/api/dataset/revisions')expect(row.body).toEqual({active_revision:null,revisions:[]});else if(u.pathname==='/api/compute/profiles')expect(row.body).toEqual({profiles:[]});else if(u.pathname==='/api/compute/selection')expect(row.body).toEqual({compute_profile_id:null});else expect(row.body).toEqual(owner.project);}
     if(row.status!==200){
      expect(row.request_context).toEqual(owner.transport);
@@ -374,12 +378,14 @@ async function flowModelLessReopenExercise(page:Page,w:Workspace,e:Evidence,api:
 }
 
 test('F064 model-less inspection ROI and typed connection drafts reopen with exact saved graphs',async({page,request,renderer,workspace,evidence})=>{
- test.setTimeout(160_000);await installDesktopHostShim(page,renderer.port);
+ // Measured 114 s locally; hosted runners ran past 160 s (b445518). 240 s keeps headroom; the checks are unchanged.
+ test.setTimeout(240_000);await installDesktopHostShim(page,renderer.port);
  const api:FlowApi=async(route,body,method,headers)=>{const response=await request.fetch(renderer.origin+route,{method:method||(body===undefined?'GET':'POST'),headers,...(body===undefined?{}:{data:body}),timeout:10_000});return {status:response.status(),body:await response.text(),url:response.url(),headers:response.headers()};};
  await flowModelLessReopenExercise(page,workspace,evidence,api,false,renderer.origin,renderer.url);
 });
 test('native F064 model-less inspection ROI and typed connection drafts reopen with exact saved graphs',{tag:'@electron'},async({electronSession,workspace,evidence})=>{
- test.setTimeout(160_000);const {window}=electronSession,backend=await electronSession.waitForBackend();
+ // Electron adds the DevTools body hand-off measured above; 300 s covers the measured run with headroom.
+ test.setTimeout(300_000);const {window}=electronSession,backend=await electronSession.waitForBackend();
  const api:FlowApi=(route,body,method,headers)=>window.evaluate(async({port,route,body,method,headers})=>{const abort=new AbortController(),timer=setTimeout(()=>abort.abort(),10_000);try{const response=await fetch(`http://127.0.0.1:${port}${route}`,{method:method||(body===undefined?'GET':'POST'),headers:{'Content-Type':'application/json',...headers},...(body===undefined?{}:{body:JSON.stringify(body)}),signal:abort.signal});return {status:response.status,body:await response.text(),url:response.url,headers:Object.fromEntries(response.headers.entries())};}finally{clearTimeout(timer);}},{port:backend.port,route,body,method,headers});
  await flowModelLessReopenExercise(window,workspace,evidence,api,true,`http://127.0.0.1:${backend.port}`);
 });
