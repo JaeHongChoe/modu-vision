@@ -1311,6 +1311,26 @@
       "retained_spec_commit": "e08b33ce117b25521dbac8984c89cfd5a971dcae",
       "current_test_source_sha256": "9c965f73fc6c7e712c0a4eab75bf81ce775785f463a60184171b4c44a8e46536",
       "reason": "Specs follow the Korean split and threshold wording (F-15)"
+    },
+    {
+      "receipt": "2026-10-12-app-u015-root569-browser-remaining.json",
+      "receipt_sha256": "cdd228636001aef06947eddf6b56f7eac612829e53f4793a49f7a81df468cdb9",
+      "execution_source_sha": "9d09adda461674783f9026e58930f59c6ea4be07",
+      "test": "scripts/e2e/saved-queue-remaining-controls.spec.ts::saved queue owning evaluation error recovery and real preparation document reopen preserve exact saved controls",
+      "recorded_test_source_sha256": "6bfd0b7d19d2a1338c76fd785ad52fd17efb8c5fdc1251aa5d4576d55e1c728b",
+      "retained_spec_commit": "36c9a4450cdaea907809daa04c67b4ada1f5dcb6",
+      "current_test_source_sha256": "2156e0f88510da2035b5fdad38b2799ec99549402bdd146cb205f311b935aa0a",
+      "reason": "Saved-queue tree lists the SQLite read index without pinning it"
+    },
+    {
+      "receipt": "2026-10-12-app-u015-root569-electron-remaining.json",
+      "receipt_sha256": "e60ddd10d33df6f1a1a76b7893ec6ed0c9b6fd6b6363a93b8ea8cc906fb208a3",
+      "execution_source_sha": "9d09adda461674783f9026e58930f59c6ea4be07",
+      "test": "scripts/e2e/saved-queue-remaining-controls.spec.ts::native saved queue owning evaluation error recovery and real preparation document reopen preserve exact originals",
+      "recorded_test_source_sha256": "6bfd0b7d19d2a1338c76fd785ad52fd17efb8c5fdc1251aa5d4576d55e1c728b",
+      "retained_spec_commit": "36c9a4450cdaea907809daa04c67b4ada1f5dcb6",
+      "current_test_source_sha256": "2156e0f88510da2035b5fdad38b2799ec99549402bdd146cb205f311b935aa0a",
+      "reason": "Saved-queue tree lists the SQLite read index without pinning it"
     }
   ]
 }
