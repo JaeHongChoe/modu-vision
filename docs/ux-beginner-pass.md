@@ -89,9 +89,22 @@
 | 평면 폴더(분할 없음)는 미분할 100% | 1단계 분할 적용 안내는 기존 그대로. |
 | `._*` AppleDouble, 공백·#·괄호·한글 경로 | 문제 없음. |
 
+## 9차 (2026-10-20) · CI 신호 복구와 현장 레이아웃
+
+평가 보고서의 "CI가 신호가 아니다"를 먼저 풀었습니다. main에 이미 있던 실패 중 고칠 수 있는 것은 고치고, 타이밍 플레이크는 원인 하나를 제거했으며, 실제 데이터에서 본 레이아웃은 합성 복제본 테스트로 남겼습니다.
+
+| 영역 | 내용 |
+| --- | --- |
+| source 잠금 테스트 | `remote/operations`의 전송 객체 검사를 `isinstance(SSHTransport)`에서 "`download_capability_scope`를 가진 객체"로 바꿔 21개 parity·recipe·preflight 테스트가 도구 대역(double)으로 통과. required-flow 레지스트리와 두 코호트 테스트는 현재 `flowchart_engine.py` 바이트를 등록. README에 Python 3.13·Node.js 24·Electron 44와 배지를 적어 설치 잠금 테스트(s6_07) 통과. CI lane 잠금(source_ci_model_lanes)은 이후 추가된 두 삽입 구간(main의 owned-lifetime 진단 14개, 이 브랜치의 초보자 경로 6개)을 등록. |
+| 갤러리 썸네일 | main 6dd4c1f부터 썸네일이 blob URL이라 스펙이 `img.src`에서 원본 경로를 읽지 못함 → `data-thumbnail-path` 속성 추가, 갤러리 스펙 5개가 그 속성을 읽음. 뷰포트 800px 안쪽 썸네일은 미리 읽음. (갤러리가 "현재"가 되는 순간 읽기를 다시 시작하는 변형은 바쁜 상태가 깜빡일 때 읽기를 반복해 dataset-picker-ownership이 실패해 되돌림.) |
+| 노드 선택 플레이크(#8) | 초안·버전 읽기가 끝날 때 `selectedNodeId`를 무조건 지우던 네 경로가, 그 노드가 아직 그래프에 있으면 선택을 유지. 클릭 직후 도착한 읽기에 속성 패널이 비던 roi-*·flow-* 스펙이 로컬 재실행에서 통과. |
+| 현장 레이아웃 | 학습 로더가 `._이름.jpg`(macOS 리소스 포크)를 건너뜀(인벤토리는 이미 제외). 다른 점(.)으로 시작하는 파일은 저장된 분할 계약을 그대로 유지. 데이터 준비도에 "train 폴더의 결함 이름 파일 N장은 정상 학습에서 빼고 결함으로 셉니다" 안내. `test_field_export_layouts`: LabelMe NG 폴더를 분류로 가져오면 작업 전환 문장으로 거절되고 영역 분할로는 가져와짐, 리소스 포크는 인벤토리·로더 모두 건너뜀. |
+| 로컬 확인 | 백엔드 잠금·레지스트리·로더·가져오기 계약 테스트 통과(환경 의존 `test_original_*`·remote 테스트는 로컬 FastAPI 0.108 때문에 main과 동일하게 실패). 브라우저 스펙 21개 중 16개 통과: 갤러리 5개, roi 4개, service-s2-05 3개, label-export, flow-history. 실패 5개 중 `flow-existing-refusal-controls`·`flow-node-limit-preflights`(썸네일 응답 본문 0바이트)는 main a267a4c에서도 같은 실패, `flow-template-draft-history`는 #7 항목, `flow-legacy-edge-repair`는 연결선 선택 플레이크(#8). Electron 네이티브: dataset-source-empty-controls·evaluation-selection·converted-flow-review·derived-workflow-closure·classification-summary C-D-C 통과. |
+| 미해결 | `remaining-mask-handoff-invalid`(브라우저): 프로젝트를 만든 직후 `/api/project/current`가 다른 프로젝트를 돌려줌. main에서는 통과하므로 이 브랜치 기인으로 분류하고 원인 추적 중. Electron `classification-summary` A-B-A: 이전 프로젝트로 돌아온 뒤 썸네일이 10초 안에 그려지지 않음(브라우저 CI에서도 main부터 같은 증상, #7). |
+
 ## 남은 것
 
-- 이상 탐지 가져오기에서 `train/` 안의 결함 이름 파일은 학습에서 빠지지만 화면에 그 사실을 알리지 않습니다(요약에 경고 항목이 없음). 전체 수가 줄어든 것으로만 보입니다.
+- 이상 탐지 가져오기의 결함 이름 파일 안내는 데이터 준비도 패널에 있습니다(가져오기 요약 자체에는 아직 없음). 전체 수가 줄어든 것으로만 보입니다.
 - 5단계 편집 화면의 밀도(팔레트·식별 정보 줄)와 영어 포트 이름, 4단계 비교 패널 접기.
 - 브라우저 모드에는 폴더 선택 창이 없습니다(경로 입력란으로 대체). 고급 설정 항목의 전문 용어는 남아 있습니다.
 - CI: #7(main 기존)·#8(타이밍) 항목은 이 브랜치와 무관하게 남습니다.
