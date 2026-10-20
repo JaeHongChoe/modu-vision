@@ -387,8 +387,9 @@ test('F064 model-less inspection ROI and typed connection drafts reopen with exa
  await flowModelLessReopenExercise(page,workspace,evidence,api,false,renderer.origin,renderer.url);
 });
 test('native F064 model-less inspection ROI and typed connection drafts reopen with exact saved graphs',{tag:'@electron'},async({electronSession,workspace,evidence})=>{
- // Electron adds the DevTools body hand-off measured above; 300 s covers the measured run with headroom.
- test.setTimeout(300_000);const {window}=electronSession,backend=await electronSession.waitForBackend();
+ // Electron adds the DevTools body hand-off measured above: a full passing run took 8.3 min locally (2026-10-21).
+ // 660 s is about 1.4x that run; every check is unchanged.
+ test.setTimeout(660_000);const {window}=electronSession,backend=await electronSession.waitForBackend();
  const api:FlowApi=(route,body,method,headers)=>window.evaluate(async({port,route,body,method,headers})=>{const abort=new AbortController(),timer=setTimeout(()=>abort.abort(),10_000);try{const response=await fetch(`http://127.0.0.1:${port}${route}`,{method:method||(body===undefined?'GET':'POST'),headers:{'Content-Type':'application/json',...headers},...(body===undefined?{}:{body:JSON.stringify(body)}),signal:abort.signal});return {status:response.status,body:await response.text(),url:response.url,headers:Object.fromEntries(response.headers.entries())};}finally{clearTimeout(timer);}},{port:backend.port,route,body,method,headers});
  await flowModelLessReopenExercise(window,workspace,evidence,api,true,`http://127.0.0.1:${backend.port}`);
 });
