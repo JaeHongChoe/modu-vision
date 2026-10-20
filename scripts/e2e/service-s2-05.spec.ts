@@ -29,7 +29,7 @@ test('every wire starts at its typed output port and ends at its input port, inc
  for(const wire of wires){expect(wire.start,`${wire.edge} starts at ${wire.from}`).toBeGreaterThanOrEqual(0);expect(wire.start).toBeLessThanOrEqual(2);
   expect(wire.end,`${wire.edge} ends at ${wire.to}`).toBeGreaterThanOrEqual(0);expect(wire.end).toBeLessThanOrEqual(2);}
  // the default flow's model -> decision edge is saved without a payload; it is still a result and leaves RESULT OUT
- const decision=await page.locator('[data-flow-node-id]').filter({hasText:'DECISION'}).first().getAttribute('data-flow-node-id');
+ const decision=await page.locator('[data-flow-node-type="decision"]').first().getAttribute('data-flow-node-id');
  expect(wires.some(wire=>wire.to===`${decision}:in:0`&&wire.from?.endsWith(':out:1')),'the result wire leaves the RESULT OUT port').toBe(true);
  await evidence.screenshot(page,'s205-wires-at-ports');
 });

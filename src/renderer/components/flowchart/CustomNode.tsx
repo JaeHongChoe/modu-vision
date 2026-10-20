@@ -44,6 +44,23 @@ interface CustomNodeProps {
   isConnectionSource?: boolean;
   /** This node's own validation problems, shown on the node (S2-05). */
   issues?: string[];
+  /** Screen language of the visible type and port words; button names stay English for automation. */
+  language?: 'ko' | 'en';
+}
+
+const NODE_TYPE_KO: Record<string, string> = {
+  input: '입력', inspection: '검사 모델', decision: '판정', output: '출력', fixed_roi: '고정 ROI',
+  blob_measure: '블롭 측정', patch_split: '패치 분할', preprocess: '전처리', measurement: '측정', aggregate: '집계',
+};
+const PAYLOAD_KO: Record<string, string> = { IMAGE: '이미지', ROI: 'ROI', RESULT: '결과', VERDICT: '판정' };
+
+/** The visible Korean words for a port label such as "IMAGE/ROI IN" or "DEFECT BOXES"; unknown labels stay as they are. */
+export function koreanPortLabel(label: string): string {
+  if (label === 'DEFECT BOXES') return '결함 박스';
+  const match = /^(.+) (IN|OUT)$/.exec(label);
+  if (!match) return label;
+  const payloads = match[1].split('/').map((part) => PAYLOAD_KO[part] ?? part).join('·');
+  return `${payloads} ${match[2] === 'IN' ? '입력' : '출력'}`;
 }
 
 export const CustomNode: React.FC<CustomNodeProps> = ({
@@ -62,6 +79,7 @@ export const CustomNode: React.FC<CustomNodeProps> = ({
   onConnectStart,
   onConnectFinish,
   isConnectionSource = false,
+  language = 'ko',
   issues = [],
 }) => {
   const nodeType = node.data.node_type;
@@ -122,6 +140,7 @@ export const CustomNode: React.FC<CustomNodeProps> = ({
   // carry in node.data.ports are not shown, since they did not say what a connection may carry.
   const { inputs, outputs } = flowNodePorts(node);
   // A detection model feeding the decision directly turns its boxes into defects; other models keep 'RESULT OUT'.
+  const shownPort = (label: string) => language === 'ko' ? koreanPortLabel(label) : label;
   const outputLabel = (label: string) => nodeType === 'detection_crop' && isDetectorOnly && label === 'RESULT OUT' ? 'DEFECT BOXES' : label;
   // LED Annunciator Optical State
   const getAnnunciatorState = () => {
@@ -183,9 +202,11 @@ export const CustomNode: React.FC<CustomNodeProps> = ({
         <div className="flex items-center space-x-2">
           {getNodeIcon()}
           <span className="text-[11px] font-mono uppercase tracking-wide text-slate-200 font-bold truncate max-w-[120px]">
-            {nodeType === 'detection_crop' ? (isDetectorOnly ? 'DEFECT DETECTION' : 'ROI DETECTION')
-              : nodeType === 'fixed_roi' ? 'FIXED ROI'
-                : nodeType === 'blob_measure' ? 'BLOB MEASURE' : nodeType}
+            {language === 'ko'
+              ? (nodeType === 'detection_crop' ? (isDetectorOnly ? '결함 검출' : 'ROI 검출') : NODE_TYPE_KO[nodeType] ?? nodeType)
+              : nodeType === 'detection_crop' ? (isDetectorOnly ? 'DEFECT DETECTION' : 'ROI DETECTION')
+                : nodeType === 'fixed_roi' ? 'FIXED ROI'
+                  : nodeType === 'blob_measure' ? 'BLOB MEASURE' : nodeType}
           </span>
         </div>
 
@@ -290,7 +311,7 @@ export const CustomNode: React.FC<CustomNodeProps> = ({
                 disabled={editingDisabled}
                 data-flow-port={`${node.id}:in:${index}`}
                 aria-label={`Connect to ${nodeLabel} ${port.label}`}
-                title={`이 노드의 입력에 연결 (${port.label})`}
+                title={`이 노드의 입력에 연결 (${shownPort(port.label)})`}
                 onClick={(event) => { event.stopPropagation(); onConnectFinish?.(); }}
                 style={{ borderColor: getPortColor(port.payloads) }}
                 className="w-3.5 h-3.5 rounded-full bg-[#0B0E14] border-2 flex items-center justify-center shrink-0 hover:scale-125 focus:outline-cyan-400"
@@ -300,7 +321,7 @@ export const CustomNode: React.FC<CustomNodeProps> = ({
                   className="w-1 h-1 rounded-full"
                 />
               </button>
-              <span className="text-slate-300 font-bold uppercase truncate">{port.label}</span>
+              <span className="text-slate-300 font-bold uppercase truncate">{shownPort(port.label)}</span>
             </div>
           ))}
         </div>
@@ -309,13 +330,13 @@ export const CustomNode: React.FC<CustomNodeProps> = ({
         <div className="space-y-1.5 flex-1 pl-2 text-right">
           {outputs.map((port, index) => (
             <div key={port.id} className="flex items-center justify-end space-x-1.5">
-              <span className="text-slate-300 font-bold uppercase truncate">{outputLabel(port.label)}</span>
+              <span className="text-slate-300 font-bold uppercase truncate">{shownPort(outputLabel(port.label))}</span>
               <button
                 type="button"
                 disabled={editingDisabled}
                 data-flow-port={`${node.id}:out:${index}`}
                 aria-label={`Start connection from ${nodeLabel} ${outputLabel(port.label)}`}
-                title={`여기서 연결 시작 (${outputLabel(port.label)})`}
+                title={`여기서 연결 시작 (${shownPort(outputLabel(port.label))})`}
                 onClick={(event) => { event.stopPropagation(); onConnectStart?.(port.payloads); }}
                 style={{ borderColor: getPortColor(port.payloads) }}
                 className="w-3.5 h-3.5 rounded-full bg-[#0B0E14] border-2 flex items-center justify-center shrink-0 hover:scale-125 focus:outline-cyan-400"

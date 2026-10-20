@@ -243,7 +243,7 @@ export const SynchronizedDualViewport: React.FC<SynchronizedDualViewportProps> =
                 />
               </div>
             ) : (
-              <span className="text-slate-400 font-mono text-xs">No sample selected</span>
+              <span className="text-slate-400 text-xs">왼쪽 목록에서 이미지를 고르면 여기에 원본이 보입니다</span>
             )}
           </div>
 
@@ -306,7 +306,7 @@ export const SynchronizedDualViewport: React.FC<SynchronizedDualViewportProps> =
                 )}
               </div>
             ) : (
-              <span className="text-slate-400 font-mono text-xs">No overlay available</span>
+              <span className="text-slate-400 text-xs">이 이미지에는 표시할 결함 위치가 없습니다</span>
             )}
           </div>
 

@@ -1426,6 +1426,7 @@ export const FlowchartStudio: React.FC = () => {
                   <div
                     key={node.id}
                     data-flow-node-id={node.id}
+                    data-flow-node-type={node.data.node_type}
                     style={{
                       position: 'absolute',
                       left: pos.x,
@@ -1455,6 +1456,7 @@ export const FlowchartStudio: React.FC = () => {
                       onConnectStart={(payloads) => startConnection(node.id, payloads)}
                       onConnectFinish={() => finishConnection(node.id)}
                       issues={flowIssues?.nodes.get(node.id)}
+                      language={language === 'en' ? 'en' : 'ko'}
                     />
                   </div>
                 );

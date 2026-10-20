@@ -181,13 +181,13 @@ test('Blob and aggregate nodes show their configured rules and result ports', ()
   const graph = parallelGraph();
   const blob = renderNode(graph.nodes.find((item) => item.id === 'blob'));
   const aggregate = renderNode(graph.nodes.find((item) => item.id === 'combine'));
-  assert.match(blob, /BLOB MEASURE/);
+  assert.match(blob, />블롭 측정</, 'the Korean screen names the node type in Korean');
   assert.match(blob, /MIN AREA/);
   assert.match(blob, /2 px/);
   assert.match(blob, /NG COUNT/);
   assert.match(blob, /RESULT IN/);
   assert.match(blob, /RESULT OUT/);
-  assert.match(aggregate, /aggregate/i);
+  assert.match(aggregate, />집계</, 'the Korean screen names the aggregate node in Korean');
   assert.match(aggregate, /ALL NG/);
   assert.match(aggregate, /RESULT IN/);
 });

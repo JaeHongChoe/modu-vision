@@ -30,7 +30,7 @@ export const PhysicalScaleOverlay: React.FC<PhysicalScaleOverlayProps> = ({
     }
 
     const calculatedPx = chosenPx * scale;
-    const label = `${chosenPx} image px`;
+    const label = `이미지 ${chosenPx}px`;
     const res = `실제 크기 미보정 (${(scale * 100).toFixed(0)}%)`;
 
     return {
