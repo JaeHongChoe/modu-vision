@@ -130,3 +130,22 @@ test('step 3 in the simple view: one model heading, plain preset words, a finish
  const chart=read('src/renderer/components/training/OscilloscopeLossCurve.tsx');
  assert.ok(!chart.includes('`EP ${epoch}`')&&!chart.includes('10Hz'),'chart labels are plain');
 });
+
+test('step 4 in the simple view: results first, reviewer tools and raw metrics one click away, Korean matrix labels',()=>{
+ const evaluation=read('src/renderer/components/evaluation/EvaluationStudio.tsx');
+ assert.match(evaluation,/<summary[^>]*>모델 승인 · 검사 서비스 · 평가 이력<\/summary>/);
+ assert.match(evaluation,/\{!simpleView && <>\s*<ModelDeploymentPanel/,'the full view keeps the panels where they were');
+ assert.ok(evaluation.indexOf('모델 승인 · 검사 서비스 · 평가 이력')>evaluation.indexOf('{metricGrid}'),'the folded tools come after the results');
+ assert.match(evaluation,/자세한 품질 지표/);assert.match(evaluation,/!\(simpleView && testPredictions\.length > 0\)/);
+ assert.match(evaluation,/simpleView \? '추천 점수 적용' : '평가 임계값 적용'/);
+ for(const ko of ["'판정 합계'","`합계 ${totalSamples}`","'정밀도'","`정확도 ${overallAccuracy.toFixed(1)}%`"])assert.ok(evaluation.includes(ko),ko);
+});
+
+test('the step 4 viewer reads plainly: Korean verdicts, no pixel scale boxes over the images in the simple view',()=>{
+ const viewer=read('src/renderer/components/evaluation/SynchronizedDualViewport.tsx');
+ assert.ok(!viewer.includes("'REJECT (NG)'")&&!viewer.includes("'PASS (OK)'"),'verdicts are Korean');
+ assert.match(viewer,/\{!plain && <PhysicalScaleOverlay scale=\{rawTransform\.scale\} \/>\}/);assert.match(viewer,/\{!plain && <PhysicalScaleOverlay scale=\{overlayTransform\.scale\} \/>\}/);
+ assert.match(read('src/renderer/components/evaluation/EvaluationStudio.tsx'),/plain=\{simpleView\}/);
+ const readiness=read('src/renderer/components/wizard/workflowReadiness.ts');
+ assert.match(readiness,/승인은 필요하지 않습니다/);assert.match(readiness,/openFoldsAround\(element\)/);
+});
