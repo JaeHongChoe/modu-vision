@@ -537,7 +537,7 @@ test('S0-02: a raw distance threshold of 8 is saved, reopened and used for the r
   await expect(thresholdInput(page)).toHaveValue('3.5');
   await thresholdInput(page).fill('8');
   await expect(page.getByText('결함 판정 기준 점수 · 마할라노비스 거리')).toBeVisible();
-  await expect(page.getByText('8.00', { exact: true })).toBeVisible();
+  await expect(page.getByRole('complementary', { name: '플로우 속성 패널' }).getByText('8.00', { exact: true })).toBeVisible();
   const saved = page.waitForResponse(response => new URL(response.url()).pathname === '/api/flowchart/pipeline' && response.request().method() === 'POST');
   await page.getByRole('button', { name: '플로우 저장', exact: true }).click();
   await confirmFlowSave(page, 'threshold 8 for the anomaly check');
