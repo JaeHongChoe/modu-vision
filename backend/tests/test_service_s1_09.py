@@ -142,10 +142,15 @@ def test_real_spawn_dataloader_children_stop_with_their_owned_parent_only(tmp_pa
                 time.sleep(.1)
             assert ready and ready['values']==[0,1],log.read_text(encoding='utf-8')
             members=worker._owned_members(journal)
-            assert set(ready['workers']).issubset({p.pid for p in members})
+            assert {*ready['workers'],ready['marked']}.issubset({p.pid for p in members})
             assert bystander.pid not in {p.pid for p in members}
             assert worker._stop_owned(journal,force=True)
             owned.wait(30)
+            # Reaping the leader does not mean its killed DataLoader workers have finished exiting: one still tearing
+            # down shows no token and is unknown. Observe the session with the app's post-stop observer, which keeps
+            # looking while ownership is unknown and returns only once nothing owned is left (unknown at the deadline
+            # raises). The fixture's marked process never exits by itself, so a stop that spared it still fails here.
+            assert worker._AttachedProcess(journal).wait(timeout=30)==-1
             assert worker._owned_members(journal)==[]
             assert bystander.poll() is None
     finally:
@@ -243,8 +248,17 @@ def test_a_cached_valid_member_never_overrides_unknown_current_ownership(monkeyp
 def attached_observation(monkeypatch):
     from backend.engine import local_training_worker
     clock = [0.0]
-    monkeypatch.setattr(local_training_worker.time, 'monotonic', lambda: clock[0])
-    monkeypatch.setattr(local_training_worker.time, 'sleep', lambda seconds: clock.__setitem__(0, clock[0] + seconds))
+    # The clock belongs to this test's thread. `time` is the process-wide module, and a training monitor left running
+    # by an earlier test sleeps POLL_SECONDS through it; its sleeps must neither move this clock nor return early.
+    observer, real_monotonic, real_sleep = threading.current_thread(), time.monotonic, time.sleep
+    def monotonic():
+        return clock[0] if threading.current_thread() is observer else real_monotonic()
+    def sleep(seconds):
+        if threading.current_thread() is not observer:
+            return real_sleep(seconds)
+        clock[0] += seconds
+    monkeypatch.setattr(local_training_worker.time, 'monotonic', monotonic)
+    monkeypatch.setattr(local_training_worker.time, 'sleep', sleep)
     def forbidden(*args, **kwargs):
         raise AssertionError('Observing a worker never signals, cancels, or launches one')
     monkeypatch.setattr(local_training_worker, '_stop_owned', forbidden)
