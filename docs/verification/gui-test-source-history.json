@@ -779,8 +779,8 @@
       "test": "scripts/e2e/team-edit-lease-lifecycle.spec.ts::edit lease clean cancellation reload refusal and real project handoff preserve exact originals",
       "recorded_test_source_sha256": "1d31d64a30855992c24994ee4e1ecb62a6edb2f184465586d6e08f0841bf2cd7",
       "retained_spec_commit": "6b14126fed9b3e0151d10d25e8dbce52606f8025",
-      "current_test_source_sha256": "d83e1c44cfc8225cf3e27a170eeac1be7a3d530fec04f456d79178c6bf9f02e6",
-      "reason": "Refreshed on the beginner-UX branch: the spec now reads the Korean control names and footer wording of the simple view; the retained commit still holds the exact bytes the receipt executed, and no new GUI execution is claimed. Refreshed on the beginner-UX branch: the spec now reads the Korean save and normal-mark labels of the labeling toolbar; the retained commit still holds the exact bytes the receipt executed, and no new GUI execution is claimed"
+      "current_test_source_sha256": "745fa461d1c96e2c29890707b7c8343929ffb089d847d14181b38bc78116f810",
+      "reason": "Refreshed on the beginner-UX branch: the spec now reads the Korean control names and footer wording of the simple view; the retained commit still holds the exact bytes the receipt executed, and no new GUI execution is claimed. Refreshed on the beginner-UX branch: the spec now reads the Korean save and normal-mark labels of the labeling toolbar; the retained commit still holds the exact bytes the receipt executed, and no new GUI execution is claimed. saved-queue and edit-lease specs set aside only the gallery's own aborted thumbnail reads"
     },
     {
       "receipt": "2026-10-10-team-edit-lease-279-c0b1680d-electron.json",
@@ -789,8 +789,8 @@
       "test": "scripts/e2e/team-edit-lease-lifecycle.spec.ts::native edit lease cancellation reload refusal and project handoff retain original authority",
       "recorded_test_source_sha256": "1d31d64a30855992c24994ee4e1ecb62a6edb2f184465586d6e08f0841bf2cd7",
       "retained_spec_commit": "6b14126fed9b3e0151d10d25e8dbce52606f8025",
-      "current_test_source_sha256": "d83e1c44cfc8225cf3e27a170eeac1be7a3d530fec04f456d79178c6bf9f02e6",
-      "reason": "Refreshed on the beginner-UX branch: the spec now reads the Korean control names and footer wording of the simple view; the retained commit still holds the exact bytes the receipt executed, and no new GUI execution is claimed. Refreshed on the beginner-UX branch: the spec now reads the Korean save and normal-mark labels of the labeling toolbar; the retained commit still holds the exact bytes the receipt executed, and no new GUI execution is claimed"
+      "current_test_source_sha256": "745fa461d1c96e2c29890707b7c8343929ffb089d847d14181b38bc78116f810",
+      "reason": "Refreshed on the beginner-UX branch: the spec now reads the Korean control names and footer wording of the simple view; the retained commit still holds the exact bytes the receipt executed, and no new GUI execution is claimed. Refreshed on the beginner-UX branch: the spec now reads the Korean save and normal-mark labels of the labeling toolbar; the retained commit still holds the exact bytes the receipt executed, and no new GUI execution is claimed. saved-queue and edit-lease specs set aside only the gallery's own aborted thumbnail reads"
     },
     {
       "receipt": "2026-10-11-app-f024-root541-cancel-browser.json",
@@ -1319,8 +1319,8 @@
       "test": "scripts/e2e/saved-queue-remaining-controls.spec.ts::saved queue owning evaluation error recovery and real preparation document reopen preserve exact saved controls",
       "recorded_test_source_sha256": "6bfd0b7d19d2a1338c76fd785ad52fd17efb8c5fdc1251aa5d4576d55e1c728b",
       "retained_spec_commit": "36c9a4450cdaea907809daa04c67b4ada1f5dcb6",
-      "current_test_source_sha256": "2156e0f88510da2035b5fdad38b2799ec99549402bdd146cb205f311b935aa0a",
-      "reason": "Saved-queue tree lists the SQLite read index without pinning it"
+      "current_test_source_sha256": "9c5228420f2611c100660e23ab6cab56915df74fad1f7823ad1e1069aeaa8efc",
+      "reason": "Saved-queue tree lists the SQLite read index without pinning it. saved-queue and edit-lease specs set aside only the gallery's own aborted thumbnail reads"
     },
     {
       "receipt": "2026-10-12-app-u015-root569-electron-remaining.json",
@@ -1329,8 +1329,8 @@
       "test": "scripts/e2e/saved-queue-remaining-controls.spec.ts::native saved queue owning evaluation error recovery and real preparation document reopen preserve exact originals",
       "recorded_test_source_sha256": "6bfd0b7d19d2a1338c76fd785ad52fd17efb8c5fdc1251aa5d4576d55e1c728b",
       "retained_spec_commit": "36c9a4450cdaea907809daa04c67b4ada1f5dcb6",
-      "current_test_source_sha256": "2156e0f88510da2035b5fdad38b2799ec99549402bdd146cb205f311b935aa0a",
-      "reason": "Saved-queue tree lists the SQLite read index without pinning it"
+      "current_test_source_sha256": "9c5228420f2611c100660e23ab6cab56915df74fad1f7823ad1e1069aeaa8efc",
+      "reason": "Saved-queue tree lists the SQLite read index without pinning it. saved-queue and edit-lease specs set aside only the gallery's own aborted thumbnail reads"
     },
     {
       "receipt": "2026-10-17-f117-owned-export-cancel-current-browser.json",

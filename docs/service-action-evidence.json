@@ -18,7 +18,7 @@
     "src/renderer/components/dataset/DerivedDatasetPanel.tsx": "11263d7aa7052d4ede7782669f8976cbe4e5d0c9896404021acd5bd4299ccbcf",
     "src/renderer/components/dataset/DatasetWorkflowPanel.tsx": "e2cc7bfdbf6db447910802373158c833ffe3d3274072c2c9be10ba9a9a80b706",
     "src/renderer/components/labeling/AnnotationList.tsx": "d23b47d6491e78287f155259aebe8ada43d42c86ba76ec48a5a3bd14b956d904",
-    "src/renderer/components/labeling/LabelingCanvas.tsx": "d27f2b02df73b99ffa257b2b9a9ceabb6d09de03e00aaad8019a7f332247efd1",
+    "src/renderer/components/labeling/LabelingCanvas.tsx": "71f582293cc69850a1c9ec80df76919286c2a31577536f37e3236ecdcaa048a8",
     "src/renderer/components/dataset/DataReadinessPanel.tsx": "22f354c983eae8ad7535800447ba41e0a9b29c3d07b2a36bbc7d14a240ef59b4",
     "src/renderer/components/labeling/LabelSetBar.tsx": "8a421172a24c7660c10badd036b51fb70a4fd19593c790290b702df782db5e0c",
     "src/renderer/components/dataset/ProjectPreferencePanel.tsx": "0b375b9ae1bd98ffd2c2c16ed5c3c7052b2f15bbfdb3e399d72f1ffb9ba1978e",
