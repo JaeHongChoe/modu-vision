@@ -88,10 +88,14 @@ interface AnnotationState {
   teamEditingEnabled: boolean;
   teamReviewEnabled: boolean;
   editLease: EditLease | null;
+  /** The image whose 편집 시작 request is still waiting for its reply. Its save button stays off until the lease lands,
+   *  and a save tried in between says the lease is on its way instead of asking for 편집 시작 again. */
+  editLeaseAcquiring: { image_uuid: string } | null;
   labelbookVersion: number | null;
   setTeamEditingEnabled: (enabled:boolean) => void;
   setTeamReviewEnabled: (enabled:boolean) => void;
   setEditLease: (lease:EditLease|null) => void;
+  setEditLeaseAcquiring: (value:{ image_uuid: string }|null) => void;
   setLabelbook: (version:number|null,categories?:BookCategory[]) => void;
 
   // Persistence & History
@@ -155,6 +159,8 @@ interface AnnotationState {
   redo: () => void;
 }
 
+const LEASE_PENDING_MESSAGE = '편집 권한을 받는 중입니다. 받은 뒤 다시 저장하세요.';
+
 export const useAnnotationStore = create<AnnotationState>((set, get) => ({
   externalSelectionPath: null,
   metadata: null,
@@ -164,10 +170,13 @@ export const useAnnotationStore = create<AnnotationState>((set, get) => ({
   teamEditingEnabled:false,
   teamReviewEnabled:false,
   editLease:null,
+  editLeaseAcquiring:null,
   labelbookVersion:null,
   setTeamEditingEnabled:(enabled)=>set({teamEditingEnabled:enabled}),
   setTeamReviewEnabled:(enabled)=>set({teamReviewEnabled:enabled}),
   setEditLease:(editLease)=>set({editLease}),
+  // The 'on its way' notice of a save refused meanwhile goes with the request, so a refused 편집 시작 does not leave it behind.
+  setEditLeaseAcquiring:(editLeaseAcquiring)=>set(state=>({editLeaseAcquiring,...(!editLeaseAcquiring&&state.saveMessage===LEASE_PENDING_MESSAGE?{saveMessage:null}:{})})),
   setLabelbook:(version,categories)=>{const next=categories?.length?bookPalette(categories,get().categories):get().categories;const active=next.find(row=>row.name===get().activeCategory.name)||next[0];set({labelbookVersion:version,categories:next,...(active?{activeCategory:active,currentLabel:active.name}:{})});},
   task: 'detection',
   images: [],
@@ -215,7 +224,7 @@ export const useAnnotationStore = create<AnnotationState>((set, get) => ({
     const current = idx >= 0 ? images[idx] : null;
     set({
       images,
-      ...(!images.length?{teamEditingEnabled:false,teamReviewEnabled:false,editLease:null,labelbookVersion:null,categories:DEFAULT_CATEGORIES}:{}),
+      ...(!images.length?{teamEditingEnabled:false,teamReviewEnabled:false,editLease:null,editLeaseAcquiring:null,labelbookVersion:null,categories:DEFAULT_CATEGORIES}:{}),
       externalSelectionPath: current?.file_path === externalSelectionPath ? externalSelectionPath : null,
       metadata: null,
       loadedAnnotationContext: null,
@@ -586,7 +595,11 @@ export const useAnnotationStore = create<AnnotationState>((set, get) => ({
     const { currentImage, annotations, isDirty } = get();
     if (!currentImage) return Promise.resolve(false);
     const leaseToken=imageLeaseToken(get().editLease,get().metadata?.image_uuid);
-    if(get().teamEditingEnabled&&!leaseToken){set({saveMessage:'팀 작업의 편집 시작을 누른 뒤 저장하세요. 편집 권한이 만료됐으면 다시 시작하세요.'});return Promise.resolve(false);}
+    if(get().teamEditingEnabled&&!leaseToken){
+      // 편집 시작 was pressed and its reply is on the way: say so, rather than asking for a press that already happened.
+      const acquiring=!!get().editLeaseAcquiring&&get().editLeaseAcquiring?.image_uuid===get().metadata?.image_uuid;
+      set({saveMessage:acquiring?LEASE_PENDING_MESSAGE:'팀 작업의 편집 시작을 누른 뒤 저장하세요. 편집 권한이 만료됐으면 다시 시작하세요.'});return Promise.resolve(false);
+    }
 
     set({ isSaving: true, saveMessage: 'Saving...' });
 

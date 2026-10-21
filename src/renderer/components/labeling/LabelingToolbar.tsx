@@ -56,6 +56,8 @@ export const LabelingToolbar: React.FC<{ classification?: boolean }> = ({ classi
     isSaving,
     saveMessage,
     annotationLoadStatus,
+    editLeaseAcquiring,
+    metadata,
     saveAnnotations,
     markNormal,
     annotations,
@@ -68,6 +70,8 @@ export const LabelingToolbar: React.FC<{ classification?: boolean }> = ({ classi
 
   const [isConverterOpen, setIsConverterOpen] = useState(false);
   const isNormalMarked = annotations.some((a) => a.is_normal);
+  // 편집 시작 was pressed for this image and its lease is not back yet; a save now would be refused without a request.
+  const leasePending = !!editLeaseAcquiring && editLeaseAcquiring.image_uuid === metadata?.image_uuid;
   const selectedAnn = annotations.find((a) => a.id === selectedAnnotationId);
   const canConvertShape = isShapeConvertible(selectedAnn);
 
@@ -413,8 +417,8 @@ export const LabelingToolbar: React.FC<{ classification?: boolean }> = ({ classi
         <button
           data-testid="annotation-save-button"
           onClick={() => saveAnnotations()}
-          disabled={isSaving || annotationLoadStatus !== 'ready'}
-          title={annotationLoadStatus !== 'ready' ? '기존 라벨 조회가 완료되어야 저장할 수 있습니다.' : undefined}
+          disabled={isSaving || annotationLoadStatus !== 'ready' || leasePending}
+          title={annotationLoadStatus !== 'ready' ? '기존 라벨 조회가 완료되어야 저장할 수 있습니다.' : leasePending ? '편집 권한을 받는 중입니다. 받으면 저장할 수 있습니다.' : undefined}
           className={`flex items-center space-x-1.5 px-3 py-1.5 rounded text-xs font-medium transition-colors border cursor-pointer ${
             isDirty
               ? 'bg-cyan-600 hover:bg-cyan-500 text-white border-cyan-400 shadow-sm'
