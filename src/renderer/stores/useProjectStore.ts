@@ -168,6 +168,9 @@ interface ProjectState {
   recentProjects: RecentProject[];
   isProjectBusy: boolean;
   projectError: string | null;
+  /** True while a shared-server login, project switch or logout is still running. Each one ends by rebuilding the
+   * step views, which cancels a ZIP upload started meanwhile, so the data step holds new uploads until it is false. */
+  sharedSessionChanging: boolean;
 
   setStep: (step: WizardStep) => Promise<void>;
   setTechnicalDetails: (value: boolean) => void;
@@ -359,6 +362,7 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
   recentProjects: [],
   isProjectBusy: false,
   projectError: null,
+  sharedSessionChanging: false,
 
   setStep: async (step) => {
     if (step === get().activeStep) return;

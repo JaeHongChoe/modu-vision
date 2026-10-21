@@ -263,3 +263,33 @@ test('a late old-backend split reply cannot change the current split summary', a
   h.changeAuthority({transport: 'B'}); h.splits[0].resolve({split: {train: 99, val: 0, test: 0}}); await pending;
   assert.deepEqual(h.store.getState().split, before);
 });
+
+// A shared login, project switch or logout remounts this step (browser-team-session): a verified-version dialog opened
+// before the last remount closes with it and its ZIP upload is cancelled. While the change runs the dialog stays shut
+// and the step says why; afterwards it opens as before.
+test('a shared session change holds the verified-version dialog, says why, and releases it when it ends', () => {
+  const h = harness();
+  const all = tree => { const found = []; const visit = node => {
+    if (Array.isArray(node)) return node.forEach(visit);
+    if (node && typeof node === 'object') { found.push(node); visit(node.props?.children); }
+  }; visit(tree); return found; };
+  const view = () => {
+    const tree = all(h.render());
+    const opener = tree.find(node => node.type === 'button' && all(node.props.children).some(child => child.props?.children === '검증된 데이터 버전'));
+    const notice = tree.find(node => node.props?.role === 'status' && /공동 작업 서버 연결을 바꾸는 중/.test(String(node.props.children)));
+    const dialog = tree.find(node => node.props?.projectId === 'A' && 'registeredSource' in node.props);
+    return { opener, notice, dialog };
+  };
+  h.project.sharedSessionChanging = true;
+  let shown = view();
+  assert.equal(shown.opener.props.disabled, true, 'the dialog cannot open while the change can still remount the step');
+  assert.match(shown.opener.props.title, /공동 작업 서버 연결을 바꾸는 중입니다/);
+  assert.ok(shown.notice, 'the step says why the dialog is held');
+  h.project.sharedSessionChanging = false;
+  shown = view();
+  assert.equal(shown.opener.props.disabled, false);
+  assert.equal(shown.notice, undefined);
+  assert.equal(shown.dialog, undefined);
+  shown.opener.props.onClick();
+  assert.ok(view().dialog, 'the dialog opens once the change has ended');
+});

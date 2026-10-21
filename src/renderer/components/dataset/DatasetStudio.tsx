@@ -48,11 +48,15 @@ import { SpecialistFamilyNote } from '../common/SpecialistFamilyNote';
 
 const SPLIT_BADGE_KO: Record<string, string> = { train: '학습', val: '검증', test: '시험', not_split: '미분할', not_used: '미사용' };
 
+/** Shown while a shared login, project switch or logout runs: it rebuilds this step, which would cancel a ZIP upload. */
+const SESSION_CHANGING_NOTICE = '공동 작업 서버 연결을 바꾸는 중입니다. 끝나면 검증된 데이터 버전을 열 수 있습니다.';
+
 export const DatasetStudio: React.FC = () => {
   const {key:sourceContextKey}=useDeliveryScope();
   const { task, language, projectDir, openImageForLabeling, project } = useProjectStore();
   const full = useProjectStore(state => state.viewMode) === 'full';
   const simpleView = useProjectStore(state => state.viewMode) === 'simple';
+  const sessionChanging = useProjectStore(state => state.sharedSessionChanging);
   const {
     folderPath,
     datasetKey,
@@ -291,6 +295,11 @@ export const DatasetStudio: React.FC = () => {
           {sourceSaveError}
         </div>
       )}
+      {sessionChanging && (
+        <div role="status" className="border-b border-sky-800/50 bg-sky-950/20 px-4 py-2 text-xs text-sky-200">
+          {SESSION_CHANGING_NOTICE}
+        </div>
+      )}
       {/* Top Action Toolbar (Dark Steel Panel #131822) */}
       <div className="p-3 bg-[#131822] border-b border-[#2B3547] flex items-center justify-between">
         <div className="flex items-center space-x-3">
@@ -350,8 +359,8 @@ export const DatasetStudio: React.FC = () => {
             <button
               type="button"
               onClick={() => setShowImports(true)}
-              disabled={!hasSelectedFolder || !project?.id || isLoading}
-              title={hasSelectedFolder ? '모든 이미지를 열어 검증한 고정 버전을 만들고 채택합니다' : '데이터셋을 먼저 불러오세요'}
+              disabled={!hasSelectedFolder || !project?.id || isLoading || sessionChanging}
+              title={sessionChanging ? SESSION_CHANGING_NOTICE : hasSelectedFolder ? '모든 이미지를 열어 검증한 고정 버전을 만들고 채택합니다' : '데이터셋을 먼저 불러오세요'}
               className="flex items-center gap-2 rounded-[4px] border border-emerald-700/60 bg-emerald-950/30 px-3 py-1.5 text-xs font-semibold text-emerald-200 hover:bg-emerald-900/40 disabled:cursor-not-allowed disabled:opacity-40"
             >
               <ListChecks className="h-4 w-4" />
@@ -365,8 +374,8 @@ export const DatasetStudio: React.FC = () => {
           <button
             type="button"
             onClick={() => setShowImports(true)}
-            disabled={!hasSelectedFolder || !project?.id || isLoading}
-            title={hasSelectedFolder ? '모든 이미지를 열어 검증한 고정 버전을 만들고 채택합니다' : '데이터셋을 먼저 불러오세요'}
+            disabled={!hasSelectedFolder || !project?.id || isLoading || sessionChanging}
+            title={sessionChanging ? SESSION_CHANGING_NOTICE : hasSelectedFolder ? '모든 이미지를 열어 검증한 고정 버전을 만들고 채택합니다' : '데이터셋을 먼저 불러오세요'}
             className="flex items-center gap-2 rounded-[4px] border border-emerald-700/60 bg-emerald-950/30 px-3 py-1.5 text-xs font-semibold text-emerald-200 hover:bg-emerald-900/40 disabled:cursor-not-allowed disabled:opacity-40"
           >
             <ListChecks className="h-4 w-4" />

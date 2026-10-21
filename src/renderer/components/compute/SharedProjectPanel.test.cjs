@@ -132,3 +132,48 @@ for(const outcome of ['success','auth_failure','inventory_failure','select_failu
     }
   }finally{unsubscribe();telemetryService.disconnect();global.WebSocket=previousSocket;}
 });
+
+// Login, project switch and logout remount the step views (resetComputeTransportCache), login once more after it has
+// accepted the project. A ZIP upload started before a remount is cancelled with its dialog, so the data step holds new
+// uploads while sharedSessionChanging is set: the flag has to cover every remount and the project acceptance that
+// re-enables the data step, and has to clear however the change ends.
+for(const operation of ['login','activate','disconnect','login_sync_failure'])test(`${operation} holds data-step uploads through every step-view remount and releases them when it ends`,async()=>{
+  const isLogin=operation.startsWith('login');
+  const connection={server_url:'https://new.example',user:{id:'user',username:'tester',administrator:false},expires_at:2000000000};
+  const context={workspace_id:'workspace',project_id:'new-project',actor_id:'user',mode:'team'};
+  const seen=[];let complete;const completed=new Promise(resolve=>{complete=resolve;});
+  const projectState={project:{id:'new-project',project_dir:'/owned/new-project',source_dataset_dir:'/owned/source'},isProjectBusy:false,sharedSessionChanging:false,syncCurrentProject:async()=>{
+    seen.push(['project accepted',projectState.sharedSessionChanging]);
+    if(operation==='login_sync_failure')throw new Error('Project synchronization refused');
+  }};
+  const projectStore=Object.assign(selector=>selector(projectState),{getState:()=>projectState,setState:value=>Object.assign(projectState,value)});
+  const values=[isLogin?null:{...connection,project_id:'old-project'},connection.server_url,'tester','private-test-password',[],isLogin?'':'old-project',[],'','','','viewer','',{value:'',scope:null},false,''];let cursor=0;
+  const react={createElement:(type,props,...children)=>({type,props:{...props,children}}),useEffect:()=>{},useState:initial=>{
+    const index=cursor++;if(values[index]===undefined)values[index]=initial;
+    return [values[index],value=>{values[index]=typeof value==='function'?value(values[index]):value;if(index===13&&values[index]===false)complete();}];
+  }};
+  const request=async endpoint=>endpoint==='/api/accounts/me'?{projects:[{id:'new-project',path:'/owned/new-project',role:'trainer'}],selected_project_id:'new-project'}:{};
+  const panel=load(path.resolve(__dirname,'SharedProjectPanel.tsx'),{
+    react:{__esModule:true,default:react,...react},'lucide-react':{Users:'icon',LogIn:'icon',LogOut:'icon'},
+    '../../services/api':{api:{},request,setSharedApiBase:()=>{},setProjectContext:()=>{},getProjectContext:()=>context,getProjectContextGeneration:()=>0,getApiPersistenceIdentity:()=>'shared:https://new.example'},
+    '../../stores/useProjectStore':{useProjectStore:projectStore,saveOpenEdits:async()=>{}},
+    '../../stores/useComputeStore':{resetComputeTransportCache:()=>seen.push(['step views remounted',projectState.sharedSessionChanging])},
+    '../../stores/useDatasetStore':{useDatasetStore:{getState:()=>({setFolderPath:()=>{}})}},
+    '../../stores/useAnnotationStore':{useAnnotationStore:{getState:()=>({setReviewerName:()=>{},setImages:async()=>{}})}},
+    '../../services/websocket':{telemetryService:{disconnect:()=>{},connect:async()=>{seen.push(['telemetry connected',projectState.sharedSessionChanging]);}}},
+    '../../services/hostAdapter':{host:{kind:()=>'desktop',shared:{login:async()=>connection,select:async id=>({...connection,project_id:id}),disconnect:async()=>{}}}},
+  }).SharedProjectPanel;
+  const list=nodes(panel());
+  if(operation==='activate')list.find(n=>n.props?.['aria-label']==='공동 작업 프로젝트').props.onChange({target:{value:'new-project'}});
+  else if(operation==='disconnect')list.find(n=>n.props?.['aria-label']==='공동 작업 서버 연결 해제').props.onClick();
+  else list.find(n=>n.type==='button'&&n.props.children.includes('연결·로그인')).props.onClick();
+  assert.equal(projectState.sharedSessionChanging,true,'held from the click, before the first server request');
+  await completed;
+  assert.equal(projectState.sharedSessionChanging,false,'released once the change has ended');
+  assert.deepEqual(seen.filter(([,held])=>!held),[],'no remount, project acceptance or stream reconnect happens while uploads are allowed');
+  const remounts=seen.filter(([event])=>event==='step views remounted').length;
+  assert.equal(remounts,operation==='login'?2:1);
+  assert.ok(seen.some(([event])=>event==='project accepted'));
+  if(operation==='login_sync_failure')assert.match(values[14],/synchronization refused/);
+  else{assert.equal(values[14],'');assert.equal(seen.at(-1)[0],'telemetry connected');}
+});
