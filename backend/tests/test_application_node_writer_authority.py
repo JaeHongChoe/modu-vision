@@ -50,9 +50,10 @@ def cooperative_exit():
   if escrow is None and (root/'projects'/'escrow-request').exists():
    import subprocess
    anchor=handshake._CACHE['writer_private_fd']
-   code="import os,sys,time,json;from pathlib import Path;p=Path(sys.argv[1]);fd=int(sys.argv[2]);s=os.fstat(fd);(p/'escrow-held.json').write_text(json.dumps({{'pid':os.getpid(),'lock':[s.st_dev,s.st_ino]}}));\\nwhile not (p/'escrow-release').exists():time.sleep(.01)\\nos.close(fd);(p/'escrow-exited.json').write_text(json.dumps({{'returncode':0}}))"
+   code="import os,sys,time,json;from pathlib import Path;p=Path(sys.argv[1]);fd=int(sys.argv[2]);s=os.fstat(fd);t=p/'escrow-held.tmp';t.write_text(json.dumps({{'pid':os.getpid(),'lock':[s.st_dev,s.st_ino]}}));os.replace(t,p/'escrow-held.json');\\nwhile not (p/'escrow-release').exists():time.sleep(.01)\\nos.close(fd);t=p/'escrow-exited.tmp';t.write_text(json.dumps({{'returncode':0}}));os.replace(t,p/'escrow-exited.json')"
    escrow=subprocess.Popen([sys.executable,'-I','-B','-c',code,str(root/'projects'),str(anchor)],pass_fds=(anchor,),start_new_session=True)
-   (root/'projects'/'escrow-original-handle.json').write_text(json.dumps({{'pid':escrow.pid,'returncode':escrow.poll()}}))
+   # Records the test reads as soon as they exist are written whole (temporary name, then rename).
+   handle=root/'projects'/'escrow-original-handle.tmp';handle.write_text(json.dumps({{'pid':escrow.pid,'returncode':escrow.poll()}}));os.replace(handle,root/'projects'/'escrow-original-handle.json')
   time.sleep(.01)
  stop.set()
 threading.Thread(target=cooperative_exit,daemon=True).start()
@@ -333,7 +334,7 @@ def test_original_node_direct_exit_does_not_erase_escaped_descriptor_custody(sta
     try:
         (projects/'escrow-request').write_text('original backend anchor only')
         until=time.monotonic()+3
-        while not (projects/'escrow-held.json').exists() and time.monotonic()<until:time.sleep(.01)
+        while not ((projects/'escrow-held.json').exists() and (projects/'escrow-original-handle.json').exists()) and time.monotonic()<until:time.sleep(.01)
         custody=json.loads((projects/'fixture-custody.json').read_bytes())
         held=json.loads((projects/'escrow-held.json').read_bytes())
         handle=json.loads((projects/'escrow-original-handle.json').read_bytes())
