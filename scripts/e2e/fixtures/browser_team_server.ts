@@ -61,9 +61,13 @@ Path(sys.argv[2]).chmod(0o600)
       return {stop, backend_port_closed: closed};
     };
     const call = async (route: string, body?: unknown, token?: string, method?: string) => {
+      // One connection per fixture call. Specs run synchronous fixture scripts
+      // (execFileSync, ~10 s on hosted runners) between calls; Node 24's fetch
+      // then writes the next call to a pooled socket that uvicorn closed after
+      // its 5 s keep-alive, and the call fails with "other side closed".
       const response = await fetch(backend.baseUrl + route, {
         method: method || (body === undefined ? 'GET' : 'POST'), headers: {'Content-Type': 'application/json',
-          ...(token ? {Authorization: `Bearer ${token}`} : {'X-Vision-Token': backend.token})},
+          Connection: 'close', ...(token ? {Authorization: `Bearer ${token}`} : {'X-Vision-Token': backend.token})},
         ...(body === undefined ? {} : {body: JSON.stringify(body)})});
       if (!response.ok) throw new Error(`Fixture API ${route}: ${response.status} ${await response.text()}`);
       return response.json();

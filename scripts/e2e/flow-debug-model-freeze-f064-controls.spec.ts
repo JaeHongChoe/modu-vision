@@ -31,7 +31,7 @@ async function exercise(page:Page,workspace:Workspace,evidence:Evidence,api:Api,
   expect(capability).toMatchObject({project_id:project.id,stop_node_id:versions.stop_node_id,state:'prepared',execution_finished:false,execution_target:'local',device:'cpu'});expect(capability.run_id).toMatch(/^[a-f0-9]{32}$/);
   const wire=await response;expect(wire.ok(),await wire.text()).toBe(true);expect(wire.request().postDataJSON().partial_run_id).toBe(capability.run_id);
   expect(JSON.parse(wire.request().headers()['x-vision-context'])).toEqual(JSON.parse(preparation.request().headers()['x-vision-context']));
-  const result=await wire.json();expect(result.partial_run_id).toBe(capability.run_id);guiRuns.push(result);preparations.push(capability);
+  const result=await wire.json();expect(result.partial_run_id).toBe(capability.run_id);guiRuns.push(result);preparations.push(capability);await expect(page.getByRole('tab',{name:'편집',exact:true})).toHaveAttribute('aria-selected','true'); // handleRunToNode reopens the editor once runPipeline and its post-run state read resolve; the next 테스트 click must follow it
  }
  evidence.note('actual_partial_prepare_run_bindings',preparations);
  expect(guiRuns[0].debug_cache.status).toBe('miss');expect(guiRuns[1].debug_cache.status).toBe('hit');await expect(page.getByRole('status').filter({hasText:'동일한 부분 실행 근거 재사용'})).toBeVisible();await evidence.screenshot(page,'actual-gui-debug-cache-hit');

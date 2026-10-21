@@ -339,8 +339,8 @@
       "test": "scripts/e2e/flow-debug-model-freeze.spec.ts::native CPU debug cache and model hash history reopen",
       "recorded_test_source_sha256": "155708aac056bf6a57269a44be553d3eb068d37bf705cd40f73f32deccaced8c",
       "retained_spec_commit": "9a18c088eda03610546190b64c32a5bf129737af",
-      "current_test_source_sha256": "8f6bd5a326ee206a2bfb57d242c998354ffcf6482e82ea23f54b54f2e373ea9a",
-      "reason": "Inherited public spec anchor retains the exact historical test declaration. Reviewed current fixture changes establish legitimate API readiness or platform prerequisites with original interaction guards retained; no new GUI execution or current acceptance is supplied."
+      "current_test_source_sha256": "3e7aebf467a23154961a9f9b40ab7d1d879bf15b939471d4df92839607afd6e6",
+      "reason": "Inherited public spec anchor retains the exact historical test declaration. Reviewed current fixture changes establish legitimate API readiness or platform prerequisites with original interaction guards retained; no new GUI execution or current acceptance is supplied. flow-debug fixture calls use one connection each; wait for the editor tab after a partial run"
     },
     {
       "receipt": "2026-10-07-clean-template-draft-electron.json",
@@ -419,8 +419,8 @@
       "test": "scripts/e2e/flow-debug-model-freeze-f064-controls.spec.ts::F064 owning selected-node503 retries genuine CPU partial and cache identity survives reopen and A B A",
       "recorded_test_source_sha256": "6b4aa3c55d78d1870114a4cf57106feb7820f2a51e4ad49d11a832223e21dd65",
       "retained_spec_commit": "9a18c088eda03610546190b64c32a5bf129737af",
-      "current_test_source_sha256": "debbfb4153d4a5a26d8029a00d61fedaa313fd7eec469b39917272e35c4df3df",
-      "reason": "Inherited public spec anchor retains the exact historical test declaration. Reviewed current fixture uses real authenticated project/provider and validated library image identity under original10s execution/recovery guards; no new GUI execution or current acceptance is supplied."
+      "current_test_source_sha256": "7782689f601e39b5e5c8157a146c11c1258e8a2b8cd3af277fedb403a2289527",
+      "reason": "Inherited public spec anchor retains the exact historical test declaration. Reviewed current fixture uses real authenticated project/provider and validated library image identity under original10s execution/recovery guards; no new GUI execution or current acceptance is supplied. flow-debug fixture calls use one connection each; wait for the editor tab after a partial run"
     },
     {
       "current_test_source_sha256": "1c32a3155ac2d3196ad6fc52bd0577d49785cb8fcacd7bbda32ac041ff35eda4",
