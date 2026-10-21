@@ -201,28 +201,47 @@ function projectErrorMessage(error: unknown): string {
   return '프로젝트를 열지 못했습니다.';
 }
 
-export async function saveOpenEdits(options?: {allowCleanDisconnect?: boolean}): Promise<void> {
+/** Why saving the open work for a project switch (or a create, backup or restore) is refused right now, or null.
+ * The project manager disables those actions with the same answer, so it never offers a switch that the click then
+ * refuses; right after start, for one, the current project's saved source is still being read. */
+export function projectSwitchRefusal(): string | null {
   if (useModelAssistRunStore.getState().activeOperations > 0) {
-    throw new Error('모델 보조 라벨링 요청이 진행 중입니다. 완료 후 프로젝트를 전환하세요.');
+    return '모델 보조 라벨링 요청이 진행 중입니다. 완료 후 프로젝트를 전환하세요.';
   }
   if (useInspectionRunStore.getState().isRunning) {
-    throw new Error('일괄 검사가 진행 중입니다. 완료 후 프로젝트를 전환하세요.');
+    return '일괄 검사가 진행 중입니다. 완료 후 프로젝트를 전환하세요.';
   }
   const dataset = useDatasetStore.getState();
   if (dataset.isLoading || dataset.isSplitting || dataset.isGenerating) {
-    throw new Error('데이터 작업이 진행 중입니다. 완료 후 프로젝트를 전환하세요.');
+    return '데이터 작업이 진행 중입니다. 완료 후 프로젝트를 전환하세요.';
   }
-  const training = useTrainingStore.getState();
-  if (training.isTraining) {
-    throw new Error('학습이 진행 중입니다. 작업이 끝난 후 프로젝트를 전환하세요.');
+  if (useTrainingStore.getState().isTraining) {
+    return '학습이 진행 중입니다. 작업이 끝난 후 프로젝트를 전환하세요.';
   }
   const flow = useFlowchartStore.getState();
   if (flow.isRunning) {
-    throw new Error('플로우 실행이 진행 중입니다. 완료 후 프로젝트를 전환하세요.');
+    return '플로우 실행이 진행 중입니다. 완료 후 프로젝트를 전환하세요.';
   }
   if (flow.isLoading || flow.isSaving) {
-    throw new Error('플로우를 불러오거나 저장하는 중입니다. 완료 후 프로젝트를 전환하세요.');
+    return '플로우를 불러오거나 저장하는 중입니다. 완료 후 프로젝트를 전환하세요.';
   }
+  return null;
+}
+
+/** Calls the listener whenever a store that projectSwitchRefusal reads changes. */
+export function subscribeProjectSwitchRefusal(listener: () => void): () => void {
+  const stops = [
+    useModelAssistRunStore.subscribe(listener), useInspectionRunStore.subscribe(listener), useDatasetStore.subscribe(listener),
+    useTrainingStore.subscribe(listener), useFlowchartStore.subscribe(listener),
+  ];
+  return () => { for (const stop of stops) stop(); };
+}
+
+export async function saveOpenEdits(options?: {allowCleanDisconnect?: boolean}): Promise<void> {
+  const refusal = projectSwitchRefusal();
+  if (refusal) throw new Error(refusal);
+  const dataset = useDatasetStore.getState();
+  const flow = useFlowchartStore.getState();
   const currentProject = useProjectStore.getState().project;
   // Logout is authenticated independently of project membership. A clean view
   // must remain disconnectable after revocation; unsaved work retains the

@@ -48,7 +48,7 @@ const UI_SOURCE={
  "src/renderer/components/training/TrainingPreparationPanel.tsx": "2b8fd81f3188d4fcda2add4e1bb32b2c31a681c4b9c7257193c00823ee968262",
  "src/renderer/components/training/useSpecializedTraining.ts": "d0291891ab24c05a5078429c909be256565dd88e49424e9f736c819101f7c25e",
  "src/renderer/components/training/TrainingRuntimeSettings.tsx": "d9f6ad8b79c0a6639521ab4d2b9f3efc76a3d5962222666e8a8f03da86009080",
- "src/renderer/stores/useProjectStore.ts": "b52f486c29065e82aa48eaf9de30088f973c8060c2d85742ee7282fdd33b18fb",
+ "src/renderer/stores/useProjectStore.ts": "33950b8b60ffcaa0345195cfe9c9b3151da625e5bf738e176d6d6ddc6c7e13d8",
  "src/renderer/components/training/TeamTrainingReadiness.tsx": "f835409d64acd7972b6253b94c280793e1bc47b00decc6b47d8fcd498c1ea984",
  "src/renderer/components/training/WarmStartSelector.tsx": "e5817228ee17f5b4e2e07f9f8fb43293f636a2cb51a51dbfc15720c16665007f",
  "backend/engine/ocr.py": "1e42167362e251c567f0e5c66a7a678f1907f98df46302fcfa0a638c8a803fd1",
