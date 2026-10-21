@@ -266,18 +266,22 @@ async function flowModelLessReopenExercise(page:Page,w:Workspace,e:Evidence,api:
    row.finished=performance.now();expectWithinFrame(row);row.complete=true;
   }catch(cause){row.failed=true;row.failure=cause;}})();
  };
+ // A row's outcome is final once its pending promise settles, so each row is checked once, the first time a drain
+ // finds it settled. Re-checking every earlier row on every drain made each later step slower (Playwright walks all
+ // recorded steps for every new expect), which ran this test past its budget on slow runners without checking more.
+ const drainedReads=new WeakSet<object>(),drainedWrites=new WeakSet<object>();
  const settle=async()=>{
   const admitted=[...reads];let drainFailed=false,firstDrain:unknown;
   for(let ordinal=0;ordinal<admitted.length;ordinal++){
-   const row=admitted[ordinal];
-   try{await row.pending;if(row.failed)throw row.failure;expect(row.complete).toBe(true);expect(row.deadline).toBe(row.started+10_000);expectWithinFrame(row);}
+   const row=admitted[ordinal];if(drainedReads.has(row))continue;
+   try{await row.pending;if(row.failed)throw row.failure;expect(row.complete).toBe(true);expect(row.deadline).toBe(row.started+10_000);expectWithinFrame(row);drainedReads.add(row);}
    catch(cause){if(!drainFailed){drainFailed=true;firstDrain=cause;}else secondary.push({label:'later original admitted GET',ordinal,cause});}
   }
   if(drainFailed)throw firstDrain;
  };
  const settleWrites=async()=>{
   const admitted=[...writes];let drainFailed=false,firstDrain:unknown;
-  for(let ordinal=0;ordinal<admitted.length;ordinal++){const row=admitted[ordinal];try{await row.pending;if(row.failed)throw row.failure;expect(row.complete).toBe(true);expectWithinFrame(row);}catch(cause){if(!drainFailed){drainFailed=true;firstDrain=cause;}else secondary.push({label:'later original admitted mutation',ordinal,cause});}}
+  for(let ordinal=0;ordinal<admitted.length;ordinal++){const row=admitted[ordinal];if(drainedWrites.has(row))continue;try{await row.pending;if(row.failed)throw row.failure;expect(row.complete).toBe(true);expectWithinFrame(row);drainedWrites.add(row);}catch(cause){if(!drainFailed){drainFailed=true;firstDrain=cause;}else secondary.push({label:'later original admitted mutation',ordinal,cause});}}
   if(drainFailed)throw firstDrain;
  };
  const rendered=()=>page.evaluate(()=>({nodes:[...document.querySelectorAll<HTMLElement>('[data-flow-node-id]')].map(row=>({id:row.dataset.flowNodeId,label:row.querySelector('h4')?.textContent,x:parseFloat(row.style.left),y:parseFloat(row.style.top)})),edges:[...document.querySelectorAll<SVGElement>('path[data-flow-edge]')].map(row=>({id:row.dataset.flowEdge,source:row.dataset.flowFrom?.split(':')[0],target:row.dataset.flowTo?.split(':')[0]}))}));

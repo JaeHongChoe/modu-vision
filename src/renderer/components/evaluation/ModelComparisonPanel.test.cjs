@@ -262,6 +262,35 @@ test('same-scope refresh preserves a pending comparison and its running result u
   global.window=priorWindow;storage.restore();
  }
 });
+test('a preferred model that lands while the comparison is created keeps that comparison, and later reattaches it',async()=>{
+ // Step 4 names its evaluated model when the evaluation read finishes, which can be after compare was pressed.
+ const storage=persistentSelection(),priorWindow=global.window,timers=new Map();let nextTimer=0;
+ global.window={setTimeout:fn=>{const id=++nextTimer;timers.set(id,fn);return id;},clearTimeout:id=>timers.delete(id)};
+ const config={props:{preferredJobId:null,preferredParentJobId:null},polled:compareJob('stale-request','running')},f=fixture(config);
+ const section=()=>f.all().find(n=>n.props?.['aria-label']==='현행과 후보 모델 비교');
+ let pendingStarted=false,resolved=false;
+ try{
+  await f.settle();await f.change('비교 기준 모델','incumbent');await f.change('후보 모델','candidate');
+  f.defer();pendingStarted=true;const pending=f.run();await new Promise(setImmediate);await f.settle();
+  config.props.preferredJobId='candidate';config.props.preferredParentJobId='incumbent';f.render();await f.settle();
+  assert.equal(section().props['aria-busy'],true);assert.equal(f.catalogReads.length,1);
+  f.resolve();resolved=true;await pending;await f.settle();
+  assert(f.urls.some(url=>url.includes('/jobs/stale-request?')));
+  assert.equal(f.all().find(n=>n.props?.['aria-label']==='비교 작업 다시 열기').props.value,'stale-request');
+  assert(f.all().some(n=>n.props?.role==='status'&&textOf(n).startsWith('비교 ')));
+  // With the job known, a later recommendation re-reads the catalog as before and reattaches the same job.
+  config.jobs=[compareJob('stale-request','running')];
+  config.props.preferredJobId='incumbent';f.render();await f.settle();
+  assert.equal(f.catalogReads.length,2);assert.equal(section().props['aria-busy'],true);
+  assert.equal(f.all().find(n=>n.props?.['aria-label']==='비교 작업 다시 열기').props.value,'stale-request');
+  assert(f.all().some(n=>n.props?.role==='status'&&textOf(n).startsWith('비교 ')));assert.equal(f.calls.length,1);
+  assert.equal(f.all().find(n=>n.props?.['aria-label']==='비교 기준 모델').props.value,'incumbent');
+  assert.equal(f.all().find(n=>n.props?.['aria-label']==='후보 모델').props.value,'candidate');
+ }finally{
+  if(pendingStarted&&!resolved){f.resolve();await f.settle();}
+  global.window=priorWindow;storage.restore();
+ }
+});
 
 test('a late preferred-model refresh retains a consumed review-return image until its exact report applies',async()=>{
  const storage=persistentSelection();try{

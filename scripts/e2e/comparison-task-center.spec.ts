@@ -57,12 +57,22 @@ async function exercise(page: Page, workspace: Workspace, evidence: Evidence, ap
       posted++; jobId = (await response.json()).job_id;
     }
   });
+  // Step 4 names its evaluated model when its evaluation read lands, and the comparison panel then re-reads its model
+  // catalog (controls off while it loads). Choose and compare after that settles, as the operator sees it: a click in
+  // that window hits a button that turned off under it and sends nothing.
+  let evaluationLanded = false, catalogAfterEvaluation = false;
+  page.on('response', response => { if (new URL(response.url()).pathname === '/api/evaluation/results') evaluationLanded = true; });
+  page.on('requestfinished', request => {
+    if (evaluationLanded && new URL(request.url()).pathname === '/api/evaluation/model-comparisons/models') catalogAfterEvaluation = true;
+  });
   if (startupUrl) await page.goto(startupUrl); else await page.reload();
   await expect(page.getByTitle('프로젝트 관리', {exact: true})).toContainText('Comparison handoff fixture');
   await page.getByRole('navigation', {name: 'Workflow Stages'}).getByRole('button').nth(1).click();
   await expect(page.getByRole('region',{name:'판정 근거에서 시작한 라벨 편집'})).toHaveCount(0);
   await page.getByRole('navigation', {name: 'Workflow Stages'}).getByRole('button').nth(3).click();
   const panel = page.getByRole('region', {name: '현행과 후보 모델 비교'});
+  await expect.poll(() => catalogAfterEvaluation).toBe(true);
+  await expect(panel.getByText('목록 불러오는 중…', {exact: true})).toHaveCount(0);
   await panel.getByLabel('비교 기준 모델', {exact: true}).selectOption('job_fixture_incumbent');
   await panel.getByLabel('후보 모델', {exact: true}).selectOption('job_fixture_candidate');
   await panel.getByRole('button', {name: '동일 test 이미지로 비교', exact: true}).click();

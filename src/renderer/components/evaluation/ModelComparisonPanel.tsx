@@ -145,12 +145,16 @@ export const ModelComparisonPanel: React.FC<Props> = ({ projectDir, sourceFolder
     let active = true;
     if(reviewReturnChoice.current?.scope!==scopeKey)reviewReturnChoice.current=null;
     if(pendingManualReport.current?.scope!==modelSelectionScope)pendingManualReport.current=null;
-    const sameScopeRefresh=catalogRequest.current.scope===modelSelectionScope
-      && catalogRequest.current.refreshRevision!==refreshRevision;
+    const sameScope=catalogRequest.current.scope===modelSelectionScope;
+    const sameScopeRefresh=sameScope&&catalogRequest.current.refreshRevision!==refreshRevision;
     catalogRequest.current={scope:modelSelectionScope,refreshRevision};
-    // A refresh cannot abandon an owned POST or running comparison. Scope
-    // changes still reset below; a later idle refresh reloads the catalog.
-    if(sameScopeRefresh&&isRunning)return () => { active = false; };
+    // A refresh cannot abandon an owned POST or running comparison. Nor can a
+    // recommendation that lands while the POST is unanswered (step 4 names its
+    // evaluated model when its read finishes, which can be after compare was
+    // pressed): its job is not remembered yet, so a reset would lose it. Once
+    // the job exists, a reset reattaches it through the remembered selection.
+    // Scope changes still reset below; a later idle refresh reloads the catalog.
+    if(isRunning&&(sameScopeRefresh||sameScope&&!comparisonJob))return () => { active = false; };
     const keepManualPair=manualModels.current.scope===modelSelectionScope
       && (manualModels.current.incumbent!==undefined||manualModels.current.candidate!==undefined);
     if(manualModels.current.scope!==modelSelectionScope)manualModels.current={scope:modelSelectionScope};
