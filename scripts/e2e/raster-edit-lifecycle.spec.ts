@@ -218,19 +218,39 @@ async function exercise(page:Page,workspace:Workspace,evidence:Evidence,api:Api,
  const prefix=native?'source-electron':'browser',calls:any[]=[],writes:Write[]=[],cells:any[]=[],saveCycles:any[]=[],oracles:any[]=[];
  const order=new WeakMap<Request,number>();let sequence=0,trackReads=false;
  const readTimes=new Map<Request,ReadTiming>(),unverifiedReads=new Set<Request>(),verifiedReads:any[]=[],failedReads:any[]=[];
+ // Leaving step 1 retires the gallery's in-flight thumbnail reads (ScopedDatasetThumbnail aborts them), before or after
+ // their headers; after the headers the browser keeps no body. The browser's own end event decides: these end listeners
+ // are attached before the request observer. Only an aborted main-frame fetch GET of this project's own image is set
+ // aside and recorded; every thumbnail that finishes, and every other GET, keeps its full status, body and completion.
+ const thumbnailEnds=new Map<Request,{ended:Promise<'failed'|'finished'>;resolve:(kind:'failed'|'finished')=>void;at?:number}>(),retiredReads:any[]=[];
+ let thumbnailOwner:{origin:string;project:string;image:string}|undefined;
+ const thumbnailEnd=(kind:'failed'|'finished')=>(r:Request)=>{const row=thumbnailEnds.get(r);if(row&&row.at===undefined){row.at=performance.now();row.resolve(kind);}};
+ const retiredThumbnail=(r:Request)=>thumbnailEnds.has(r)&&/ERR_ABORTED|aborted|cancel/i.test(r.failure()?.errorText??'');
+ const endWithin=async<T,>(timing:ReadTiming,pending:Promise<T>,label:string)=>{let timer:ReturnType<typeof setTimeout>|undefined;
+  try{return await Promise.race([pending,new Promise<never>((_,reject)=>{timer=setTimeout(()=>reject(Error('Original '+label+' exceeded absolute 10s deadline')),Math.max(0,timing.deadline-performance.now()));})]);}finally{if(timer!==undefined)clearTimeout(timer);}};
+ page.on('requestfailed',thumbnailEnd('failed'));page.on('requestfinished',thumbnailEnd('finished'));
  page.on('request',r=>{
   order.set(r,++sequence);const endpoint=new URL(r.url()).pathname;
   if(endpoint.startsWith('/api/')&&!['GET','HEAD','OPTIONS'].includes(r.method()))
    writes.push({index:sequence,method:r.method(),endpoint,body:r.postData()});
   if(trackReads&&endpoint.startsWith('/api/')){
    const started=performance.now();readTimes.set(r,{started,deadline:started+10_000});if(r.method()==='GET')unverifiedReads.add(r);
+   if(r.method()==='GET'&&r.frame()===page.mainFrame()&&r.resourceType()==='fetch'&&endpoint.startsWith('/api/dataset/thumbnail/')){
+    let resolve:(kind:'failed'|'finished')=>void=()=>{};const ended=new Promise<'failed'|'finished'>(done=>{resolve=done;});thumbnailEnds.set(r,{ended,resolve});}
   }
  });
  page.on('requestfinished',r=>{const timing=readTimes.get(r);if(timing)timing.finished=performance.now();});
- page.on('requestfailed',r=>{if(unverifiedReads.has(r))failedReads.push({method:r.method(),url:r.url(),failure:r.failure()});});
+ page.on('requestfailed',r=>{if(unverifiedReads.has(r)&&!retiredThumbnail(r))failedReads.push({method:r.method(),url:r.url(),failure:r.failure()});});
  const settleReads=async()=>{
   for(const r of unverifiedReads){
-   const timing=readTimes.get(r)!;
+   const timing=readTimes.get(r)!,end=thumbnailEnds.get(r);
+   if(end&&await endWithin(timing,end.ended,'gallery thumbnail end event')==='failed'&&retiredThumbnail(r)){
+    const u=new URL(r.url()),failure=r.failure()!.errorText;expect(thumbnailOwner).toBeDefined();expect(u.origin).toBe(thumbnailOwner!.origin);
+    expect(r.headers()['x-vision-project']).toBe(thumbnailOwner!.project);expect(u.searchParams.get('file_path')).toBe(thumbnailOwner!.image);expect(u.pathname).toBe('/api/dataset/thumbnail/'+path.basename(thumbnailOwner!.image));
+    expect(end.at!).toBeGreaterThanOrEqual(timing.started);expect(end.at!).toBeLessThanOrEqual(timing.deadline);expect(timing.finished).toBeUndefined();
+    const headers=await endWithin(timing,r.response(),'retired thumbnail headers');if(headers!==null)expect([200,304]).toContain(headers.status());
+    retiredReads.push({method:'GET',url:r.url(),resource_type:r.resourceType(),project:thumbnailOwner!.project,failure,headers_status:headers?.status()??null,retired_at:end.at,...timing});unverifiedReads.delete(r);continue;
+   }
    const completed=await withinOriginalReadDeadline(timing,async()=>{
     const response=await r.response();expect(response).not.toBeNull();expect(response!.status(),r.url()).toBe(200);expect(await response!.finished()).toBeNull();
     return{response:response!,bytes:await response!.body()};
@@ -307,6 +327,7 @@ async function exercise(page:Page,workspace:Workspace,evidence:Evidence,api:Api,
  const imagePath=path.join(source,'part.png');fs.writeFileSync(imagePath,png(256,3,(x,y)=>[x,y,80]),{flag:'wx'});const imageSha=sha(fs.readFileSync(imagePath));
  const project=await value('/api/project/create',{name:'Owned raster brush erase undo lifecycle',task:'segmentation'});
  await value('/api/project/update',{source_dataset_dir:source},'PUT');await value('/api/dataset/import',{folder_path:source,task:'segmentation'});
+ thumbnailOwner={origin:new URL(calls.find(row=>row.route==='/api/project/create'&&row.request?.name===project.name).url).origin,project:project.id,image:imagePath};
  if(url)await page.goto(url);else await page.reload();await enter();
  await expect(page.getByTitle('프로젝트 관리',{exact:true})).toContainText(project.name);
  await expect(page.getByText('1 / 1',{exact:true})).toBeVisible();
@@ -462,7 +483,7 @@ async function exercise(page:Page,workspace:Workspace,evidence:Evidence,api:Api,
  expect(new Set(cells.map(x=>x.action+'.'+x.dimension))).toEqual(new Set(actions.flatMap(a=>['empty','invalid','error','cancel','handoff'].map(d=>'U030.'+a+'.'+d))));expect(cells).toHaveLength(15);
  expect(sha(fs.readFileSync(imagePath))).toBe(imageSha);for(const image of workspace.images)expect(sha(fs.readFileSync(image.path))).toBe(image.sha256);
  const notes={sourceElectron:native,project,current,emptyProject,emptyCurrent,ownedRoot,imagePath,image_sha256:imageSha,identity,initial,painted,erased,undone,reopened,reopenedOracle,
-  preludeWrites,calls,writes,saveCycles,oracles,cells,finalBefore,finalAfter,finalReadback,actual_body_mutating_calls:actualBodyWrites,verifiedReads,failedReads,unverified_reads:unverifiedReads.size,
+  preludeWrites,calls,writes,saveCycles,oracles,cells,finalBefore,finalAfter,finalReadback,actual_body_mutating_calls:actualBodyWrites,verifiedReads,failedReads,unverified_reads:unverifiedReads.size,retired_gallery_thumbnail_reads:retiredReads,set_aside_only_aborted_main_frame_gallery_thumbnail_fetches_of_own_image:true,
   independent_PIL_entire_class_pixels_from_original_RGBA_alpha_and_order:true,ideal_brush_geometry_or_human_quality_claim:false,
   declared_successful_dirty_save_imports:4,controlled503_then_deliberate_same_raw200:true,full_unfiltered_project_original_source_and_harness_dataset_custody:true,
   whole_workspace_or_userData_store_preservation_claim:false,training_inference_Gpu_download_job_execution:false,installed_windows_physical_or_release_acceptance:false};

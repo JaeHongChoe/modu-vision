@@ -54,6 +54,9 @@ type Wire = {
   request: Request; started: number; deadline: number; finished?: number;
   status?: number; file?: string; sha256?: string; size?: number; failure?: string;
   done: Promise<void>; resolve(): void;
+  // Gallery thumbnail reads only: the browser's own end event, and the retirement that event proved.
+  ended?: Promise<'failed' | 'finished'>; end?(kind: 'failed' | 'finished'): void;
+  retired?: {at: number; failure: string; project: string | null; file_path: string | null; headers_status: number | null};
 };
 
 test('U020 empty selection ignores a delivered coarse nudge after an owning OBB control', async ({page, renderer, workspace: w, evidence: e}) => {
@@ -73,6 +76,10 @@ test('U020 empty selection ignores a delivered coarse nudge after an owning OBB 
   const originalSource = sourcePins(), wires: Wire[] = [], byRequest = new Map<Request, Wire>();
   const writes: Array<{method: string; route: string; body: unknown}> = [];
   const pageErrors: string[] = [], consoleErrors: string[] = [], requestFailures: unknown[] = [], foreignRequests: string[] = [], apiCalls: unknown[] = [];
+  const retiredThumbnails: Wire[] = [];
+  let owned: {project: string; image: string} | undefined;
+  const galleryThumbnail = (request: Request) => request.method() === 'GET' && request.frame() === page.mainFrame() && request.resourceType() === 'fetch'
+    && new URL(request.url()).origin === renderer.origin && new URL(request.url()).pathname.startsWith('/api/dataset/thumbnail/');
   const proof: Record<string, unknown> = {cell: 'U020.independent-direction-nudge.empty', source: sourceIdentity,
     source_pins_before: originalSource, actual_browser: true, installed_native: false,
     model_training_or_inference: false, annotation_quality_approval: false, parent_acceptance: false};
@@ -89,6 +96,8 @@ test('U020 empty selection ignores a delivered coarse nudge after an owning OBB 
     let resolve!: () => void;
     const row: Wire = {request, started: performance.now(), deadline: 0, done: new Promise<void>(done => { resolve = done; }), resolve: () => resolve()};
     row.deadline = row.started + 10_000; wires.push(row); byRequest.set(request, row);
+    if (galleryThumbnail(request)) { let end!: (kind: 'failed' | 'finished') => void;
+      row.ended = new Promise(settled => { end = settled; }); row.end = kind => end(kind); }
     if (!['GET', 'HEAD'].includes(request.method())) writes.push({method: request.method(), route: address.pathname, body: request.postDataJSON()});
   };
   const onResponse = (response: Response) => {
@@ -96,6 +105,9 @@ test('U020 empty selection ignores a delivered coarse nudge after an owning OBB 
     row.status = response.status();
     void (async () => {
       try {
+        // A gallery thumbnail read can be retired after its headers arrived, and then the browser keeps no body.
+        // Its own end event decides first; onFailed below judges a failed one. A finished one is checked in full.
+        if (row.ended && await within(row.ended, row.deadline, 'gallery thumbnail end event') === 'failed') return;
         const [bytes, terminal] = await within(Promise.all([response.body(), response.finished()]), row.deadline, 'original browser response');
         expect(terminal).toBeNull(); expect(bytes.length).toBeLessThanOrEqual(2 * 1024 * 1024);
         Object.assign(row, retain('browser-response', bytes), {finished: performance.now()});
@@ -103,17 +115,42 @@ test('U020 empty selection ignores a delivered coarse nudge after an owning OBB 
       } catch (error) { row.failure = String(error); } finally { row.resolve(); }
     })();
   };
+  const onFinished = (request: Request) => { byRequest.get(request)?.end?.('finished'); };
   const onFailed = (request: Request) => {
+    const row = byRequest.get(request), failure = request.failure()?.errorText || 'Original request failed'; row?.end?.('failed');
+    // Leaving step 1 retires the gallery's in-flight thumbnail reads (ScopedDatasetThumbnail aborts them), before or
+    // after their headers. Only an aborted main-frame fetch GET /api/dataset/thumbnail/* is set aside and recorded;
+    // settle checks it is this spec's own image and project. Every other failure stays a request failure.
+    if (row?.ended && /ERR_ABORTED|aborted|cancel/i.test(failure)) {
+      row.retired = {at: performance.now(), failure, project: request.headers()['x-vision-project'] ?? null,
+        file_path: new URL(request.url()).searchParams.get('file_path'), headers_status: row.status ?? null};
+      retiredThumbnails.push(row); row.resolve(); return;
+    }
     requestFailures.push({url: request.url(), method: request.method(), failure: request.failure()});
-    const row = byRequest.get(request); if (row) { row.failure = request.failure()?.errorText || 'Original request failed'; row.resolve(); }
+    if (row) { row.failure = failure; row.resolve(); }
   };
   const onPageError = (error: Error) => pageErrors.push(error.message);
   const onConsole = (message: {type(): string; text(): string}) => { if (message.type() === 'error') consoleErrors.push(message.text()); };
-  page.on('request', onRequest); page.on('response', onResponse); page.on('requestfailed', onFailed);
+  // Both end listeners are attached before the request observer, so no thumbnail end event can be missed.
+  page.on('requestfailed', onFailed); page.on('requestfinished', onFinished); page.on('request', onRequest); page.on('response', onResponse);
   page.on('pageerror', onPageError); page.on('console', onConsole);
+  const retiredRead = (row: Wire) => {
+    const url = new URL(row.request.url()), retired = row.retired!;
+    expect(row.request.method()).toBe('GET'); expect(row.request.frame()).toBe(page.mainFrame()); expect(row.request.resourceType()).toBe('fetch');
+    expect(url.origin).toBe(renderer.origin); expect(url.pathname.startsWith('/api/dataset/thumbnail/')).toBe(true);
+    expect(retired.failure).toMatch(/ERR_ABORTED|aborted|cancel/i); expect(owned).toBeDefined();
+    expect(retired.project).toBe(owned!.project); expect(retired.file_path).toBe(owned!.image);
+    expect(url.pathname).toBe('/api/dataset/thumbnail/' + path.basename(owned!.image));
+    if (retired.headers_status !== null) expect([200, 304]).toContain(retired.headers_status);
+    expect(row.failure).toBeUndefined(); expect(row.file).toBeUndefined();
+    expect(retired.at).toBeGreaterThanOrEqual(row.started); expect(retired.at).toBeLessThanOrEqual(row.deadline);
+  };
   const settle = async () => {
     for (let index = 0; index < wires.length; index++) {
+      // A gallery thumbnail read waits for its own end event under the same original deadline. Only a read the
+      // gallery retired is set aside; a finished or otherwise failed one is checked in full like every other read.
       const row = wires[index]; await within(row.done, row.deadline, 'original browser request completion');
+      if (row.retired) { retiredRead(row); continue; }
       expect(row.failure).toBeUndefined(); expect(row.finished).toBeDefined();
     }
   };
@@ -151,7 +188,7 @@ test('U020 empty selection ignores a delivered coarse nudge after an owning OBB 
     const image = path.join(source, 'part.png'), originalImage = png(256, 3, (x, y) => [x, y, 100]);
     fs.writeFileSync(image, originalImage, {flag: 'wx'});
     const project = (await read('/api/project/create', {name: 'Owned empty selection nudge', task: 'segmentation'})).body;
-    expect(path.dirname(project.project_dir)).toBe(w.projects);
+    expect(path.dirname(project.project_dir)).toBe(w.projects); owned = {project: project.id, image};
     await read('/api/project/update', {source_dataset_dir: source}, 'PUT');
     await read('/api/dataset/import', {folder_path: source, task: 'segmentation', validate_images: true});
     await installDesktopHostShim(page, renderer.port); await page.goto(renderer.url);
@@ -293,9 +330,14 @@ test('U020 empty selection ignores a delivered coarse nudge after an owning OBB 
       }); } catch (error) { proof.observer_cleanup_error = String(error); }
     }
     page.off('request', onRequest); page.off('response', onResponse); page.off('requestfailed', onFailed);
-    page.off('pageerror', onPageError); page.off('console', onConsole);
+    page.off('requestfinished', onFinished); page.off('pageerror', onPageError); page.off('console', onConsole);
     const transport = wires.map(row => ({method: row.request.method(), url: row.request.url(), request_body: row.request.postData(),
-      started: row.started, deadline: row.deadline, finished: row.finished, status: row.status, file: row.file, sha256: row.sha256, size: row.size, failure: row.failure}));
+      started: row.started, deadline: row.deadline, finished: row.finished, status: row.status, file: row.file, sha256: row.sha256, size: row.size, failure: row.failure,
+      retired_gallery_thumbnail_read: row.retired ?? null}));
+    proof.retired_gallery_thumbnail_reads = retiredThumbnails.map(row => ({method: row.request.method(), resource_type: row.request.resourceType(),
+      path: new URL(row.request.url()).pathname, file_path: row.retired!.file_path, project: row.retired!.project, failure: row.retired!.failure,
+      headers_status: row.retired!.headers_status, started: row.started, retired_at: row.retired!.at, deadline: row.deadline}));
+    proof.set_aside_only_aborted_main_frame_gallery_thumbnail_fetches_of_own_image = true;
     const file = path.join(w.logs, 'u020-empty-selection-nudge-readback.json');
     fs.writeFileSync(file, JSON.stringify({...proof, api_calls: apiCalls, original_browser_transport: transport, writes,
       observed_postbaseline_mutations: writeBoundary === undefined ? null : writes.slice(writeBoundary),

@@ -49,8 +49,8 @@
       "test": "scripts/e2e/ocr-prepared-unsent-handoff.spec.ts::OCR unsent alphabet draft and saved alphabet split handoff preserve whole originals",
       "recorded_test_source_sha256": "47d0083f0980707408476282bd8f72bea3b472b3138b2c39560180f4fdc99368",
       "retained_spec_commit": "9a18c088eda03610546190b64c32a5bf129737af",
-      "current_test_source_sha256": "2aa961a673a33f077e3b32ee775d6f64e9a2854978f181aa966bbec6cee693dc",
-      "reason": "Inherited public spec anchor retains the exact historical test declaration. Current source SHA declarations changed after reviewed product changes; this supplies no new GUI execution or current acceptance. Refreshed on the beginner-UX branch: the spec now reads the Korean labels, readouts and refusals of the simple view and carries current source pins; the retained commit still holds the exact bytes the receipt executed, and no new GUI execution is claimed. Mask and OCR specs re-read gallery thumbnails the browser kept no body for. simple view: the training target reads as one sentence; review counts and team actions fold behind 검수 세부. simple view step 3: model heading, plain preset words, folded route and import, finished-run banner under the status, plain job progress and chart labels. audit unit 1: undecodable images excluded via usage ledger, split state reported and shown, one-class refusal, layout errors, import checklist, worker data scope. audit unit 2: per-image classification class overrides honored by training, evaluation, counts, gallery and truth; import response fields in exact expectations. Resume list reasons, real device, weights pre-download and Korean weight-file errors (audit F-07/A7/F-20/F-12/A5/F-13). Thumbnail re-read inside the page (F-22) and thumbnail read diagnostics (B5). Step-2 rotated boxes into the rotated detection workbench and specialist family guidance (audit F-16/B3). Thumbnail checks accept an ETag revalidation and verify it by an in-page read (F-22). OCR handoff spec accepts a gallery-aborted thumbnail read as retired. export cancel spec keeps the gallery's own aborted thumbnail reads apart; step-1 sidebar width and panel scope lock; project switch refused up front"
+      "current_test_source_sha256": "fd95370346b15a08fe50da794197638bac6bee9e6c5f0215469a5bb6415ce445",
+      "reason": "Inherited public spec anchor retains the exact historical test declaration. Current source SHA declarations changed after reviewed product changes; this supplies no new GUI execution or current acceptance. Refreshed on the beginner-UX branch: the spec now reads the Korean labels, readouts and refusals of the simple view and carries current source pins; the retained commit still holds the exact bytes the receipt executed, and no new GUI execution is claimed. Mask and OCR specs re-read gallery thumbnails the browser kept no body for. simple view: the training target reads as one sentence; review counts and team actions fold behind 검수 세부. simple view step 3: model heading, plain preset words, folded route and import, finished-run banner under the status, plain job progress and chart labels. audit unit 1: undecodable images excluded via usage ledger, split state reported and shown, one-class refusal, layout errors, import checklist, worker data scope. audit unit 2: per-image classification class overrides honored by training, evaluation, counts, gallery and truth; import response fields in exact expectations. Resume list reasons, real device, weights pre-download and Korean weight-file errors (audit F-07/A7/F-20/F-12/A5/F-13). Thumbnail re-read inside the page (F-22) and thumbnail read diagnostics (B5). Step-2 rotated boxes into the rotated detection workbench and specialist family guidance (audit F-16/B3). Thumbnail checks accept an ETag revalidation and verify it by an in-page read (F-22). OCR handoff spec accepts a gallery-aborted thumbnail read as retired. export cancel spec keeps the gallery's own aborted thumbnail reads apart; step-1 sidebar width and panel scope lock; project switch refused up front. eleven specs decide retired gallery thumbnail reads by the browser's end event"
     },
     {
       "receipt": "2026-10-12-app-f030-root572-electron-handoff.json",
@@ -59,8 +59,8 @@
       "test": "scripts/e2e/ocr-prepared-unsent-handoff.spec.ts::native OCR unsent alphabet draft and saved alphabet split handoff preserve whole originals",
       "recorded_test_source_sha256": "47d0083f0980707408476282bd8f72bea3b472b3138b2c39560180f4fdc99368",
       "retained_spec_commit": "9a18c088eda03610546190b64c32a5bf129737af",
-      "current_test_source_sha256": "2aa961a673a33f077e3b32ee775d6f64e9a2854978f181aa966bbec6cee693dc",
-      "reason": "Inherited public spec anchor retains the exact historical test declaration. Current source SHA declarations changed after reviewed product changes; this supplies no new GUI execution or current acceptance. Refreshed on the beginner-UX branch: the spec now reads the Korean labels, readouts and refusals of the simple view and carries current source pins; the retained commit still holds the exact bytes the receipt executed, and no new GUI execution is claimed. Mask and OCR specs re-read gallery thumbnails the browser kept no body for. simple view: the training target reads as one sentence; review counts and team actions fold behind 검수 세부. simple view step 3: model heading, plain preset words, folded route and import, finished-run banner under the status, plain job progress and chart labels. audit unit 1: undecodable images excluded via usage ledger, split state reported and shown, one-class refusal, layout errors, import checklist, worker data scope. audit unit 2: per-image classification class overrides honored by training, evaluation, counts, gallery and truth; import response fields in exact expectations. Resume list reasons, real device, weights pre-download and Korean weight-file errors (audit F-07/A7/F-20/F-12/A5/F-13). Thumbnail re-read inside the page (F-22) and thumbnail read diagnostics (B5). Step-2 rotated boxes into the rotated detection workbench and specialist family guidance (audit F-16/B3). Thumbnail checks accept an ETag revalidation and verify it by an in-page read (F-22). OCR handoff spec accepts a gallery-aborted thumbnail read as retired. export cancel spec keeps the gallery's own aborted thumbnail reads apart; step-1 sidebar width and panel scope lock; project switch refused up front"
+      "current_test_source_sha256": "fd95370346b15a08fe50da794197638bac6bee9e6c5f0215469a5bb6415ce445",
+      "reason": "Inherited public spec anchor retains the exact historical test declaration. Current source SHA declarations changed after reviewed product changes; this supplies no new GUI execution or current acceptance. Refreshed on the beginner-UX branch: the spec now reads the Korean labels, readouts and refusals of the simple view and carries current source pins; the retained commit still holds the exact bytes the receipt executed, and no new GUI execution is claimed. Mask and OCR specs re-read gallery thumbnails the browser kept no body for. simple view: the training target reads as one sentence; review counts and team actions fold behind 검수 세부. simple view step 3: model heading, plain preset words, folded route and import, finished-run banner under the status, plain job progress and chart labels. audit unit 1: undecodable images excluded via usage ledger, split state reported and shown, one-class refusal, layout errors, import checklist, worker data scope. audit unit 2: per-image classification class overrides honored by training, evaluation, counts, gallery and truth; import response fields in exact expectations. Resume list reasons, real device, weights pre-download and Korean weight-file errors (audit F-07/A7/F-20/F-12/A5/F-13). Thumbnail re-read inside the page (F-22) and thumbnail read diagnostics (B5). Step-2 rotated boxes into the rotated detection workbench and specialist family guidance (audit F-16/B3). Thumbnail checks accept an ETag revalidation and verify it by an in-page read (F-22). OCR handoff spec accepts a gallery-aborted thumbnail read as retired. export cancel spec keeps the gallery's own aborted thumbnail reads apart; step-1 sidebar width and panel scope lock; project switch refused up front. eleven specs decide retired gallery thumbnail reads by the browser's end event"
     },
     {
       "receipt": "2026-10-12-app-f064-root575-browser-controls.json",
@@ -269,8 +269,8 @@
       "test": "scripts/e2e/flow-history-input-boundaries.spec.ts::native input-focused history shortcuts preserve graph and durable draft boundary",
       "recorded_test_source_sha256": "400df9d3d2f258d587d815351fe2404005bbf7482ad8f828a568b039f8e3791a",
       "retained_spec_commit": "9a18c088eda03610546190b64c32a5bf129737af",
-      "current_test_source_sha256": "f04261e1ec6071ce51d1f25bde82dd807d2df300e826b1529e08ab578c821ade",
-      "reason": "Inherited public spec anchor retains the exact historical test declaration. Current no-job startup now verifies the original200 empty model catalog and refuses an obsolete evaluator404; no new GUI execution or current acceptance is supplied. audit unit 2: per-image classification class overrides honored by training, evaluation, counts, gallery and truth; import response fields in exact expectations"
+      "current_test_source_sha256": "a3568aeb6d68f035034b572d0f6b71d29f4ca1d353aae1b7c125028251f2cd14",
+      "reason": "Inherited public spec anchor retains the exact historical test declaration. Current no-job startup now verifies the original200 empty model catalog and refuses an obsolete evaluator404; no new GUI execution or current acceptance is supplied. audit unit 2: per-image classification class overrides honored by training, evaluation, counts, gallery and truth; import response fields in exact expectations. eleven specs decide retired gallery thumbnail reads by the browser's end event"
     },
     {
       "receipt": "2026-10-09-flow-input-history-d2d7f3e-browser.json",
@@ -279,8 +279,8 @@
       "test": "scripts/e2e/flow-history-input-boundaries.spec.ts::input-focused history shortcuts preserve available undo and redo plus saved source",
       "recorded_test_source_sha256": "400df9d3d2f258d587d815351fe2404005bbf7482ad8f828a568b039f8e3791a",
       "retained_spec_commit": "9a18c088eda03610546190b64c32a5bf129737af",
-      "current_test_source_sha256": "f04261e1ec6071ce51d1f25bde82dd807d2df300e826b1529e08ab578c821ade",
-      "reason": "Inherited public spec anchor retains the exact historical test declaration. Current no-job startup now verifies the original200 empty model catalog and refuses an obsolete evaluator404; no new GUI execution or current acceptance is supplied. audit unit 2: per-image classification class overrides honored by training, evaluation, counts, gallery and truth; import response fields in exact expectations"
+      "current_test_source_sha256": "a3568aeb6d68f035034b572d0f6b71d29f4ca1d353aae1b7c125028251f2cd14",
+      "reason": "Inherited public spec anchor retains the exact historical test declaration. Current no-job startup now verifies the original200 empty model catalog and refuses an obsolete evaluator404; no new GUI execution or current acceptance is supplied. audit unit 2: per-image classification class overrides honored by training, evaluation, counts, gallery and truth; import response fields in exact expectations. eleven specs decide retired gallery thumbnail reads by the browser's end event"
     },
     {
       "receipt": "2026-10-10-root442-flow-old-electron.json",
@@ -289,8 +289,8 @@
       "test": "scripts/e2e/flow-draft-save-error.spec.ts::native owning draft PUT503 retains original source and explicit save200 readback",
       "recorded_test_source_sha256": "1991a427a21bec2cab6a7d9d9ed326cf2e64ccc9b67118317959741f0edd5a7a",
       "retained_spec_commit": "9a18c088eda03610546190b64c32a5bf129737af",
-      "current_test_source_sha256": "11861a94a77832fe674c95f0e4b9d94ce5e93d4ee459552f922b0417880dff9d",
-      "reason": "Inherited public spec anchor retains the exact historical test declaration. Current no-job startup now verifies the original200 empty model catalog and refuses an obsolete evaluator404; no new GUI execution or current acceptance is supplied. audit unit 2: per-image classification class overrides honored by training, evaluation, counts, gallery and truth; import response fields in exact expectations"
+      "current_test_source_sha256": "c3df1c8c850e44c2f3fb00a303bf5013e77bb1a80ce1d2f3f4b6f62eb019b314",
+      "reason": "Inherited public spec anchor retains the exact historical test declaration. Current no-job startup now verifies the original200 empty model catalog and refuses an obsolete evaluator404; no new GUI execution or current acceptance is supplied. audit unit 2: per-image classification class overrides honored by training, evaluation, counts, gallery and truth; import response fields in exact expectations. eleven specs decide retired gallery thumbnail reads by the browser's end event"
     },
     {
       "receipt": "2026-10-10-root442-flow-old-browser.json",
@@ -299,8 +299,8 @@
       "test": "scripts/e2e/flow-draft-save-error.spec.ts::owning draft PUT503 preserves saved graph and explicitly recovers same dirty edit",
       "recorded_test_source_sha256": "1991a427a21bec2cab6a7d9d9ed326cf2e64ccc9b67118317959741f0edd5a7a",
       "retained_spec_commit": "9a18c088eda03610546190b64c32a5bf129737af",
-      "current_test_source_sha256": "11861a94a77832fe674c95f0e4b9d94ce5e93d4ee459552f922b0417880dff9d",
-      "reason": "Inherited public spec anchor retains the exact historical test declaration. Current no-job startup now verifies the original200 empty model catalog and refuses an obsolete evaluator404; no new GUI execution or current acceptance is supplied. audit unit 2: per-image classification class overrides honored by training, evaluation, counts, gallery and truth; import response fields in exact expectations"
+      "current_test_source_sha256": "c3df1c8c850e44c2f3fb00a303bf5013e77bb1a80ce1d2f3f4b6f62eb019b314",
+      "reason": "Inherited public spec anchor retains the exact historical test declaration. Current no-job startup now verifies the original200 empty model catalog and refuses an obsolete evaluator404; no new GUI execution or current acceptance is supplied. audit unit 2: per-image classification class overrides honored by training, evaluation, counts, gallery and truth; import response fields in exact expectations. eleven specs decide retired gallery thumbnail reads by the browser's end event"
     },
     {
       "receipt": "2026-10-10-root442-flow-handoff-browser.json",
@@ -309,8 +309,8 @@
       "test": "scripts/e2e/flow-draft-save-error.spec.ts::saved editable flow graphs and hashes stay scoped through A B A project handoff after owning draft saves",
       "recorded_test_source_sha256": "1991a427a21bec2cab6a7d9d9ed326cf2e64ccc9b67118317959741f0edd5a7a",
       "retained_spec_commit": "9a18c088eda03610546190b64c32a5bf129737af",
-      "current_test_source_sha256": "11861a94a77832fe674c95f0e4b9d94ce5e93d4ee459552f922b0417880dff9d",
-      "reason": "Inherited public spec anchor retains the exact historical test declaration. Current no-job startup now verifies the original200 empty model catalog and refuses an obsolete evaluator404; no new GUI execution or current acceptance is supplied. audit unit 2: per-image classification class overrides honored by training, evaluation, counts, gallery and truth; import response fields in exact expectations"
+      "current_test_source_sha256": "c3df1c8c850e44c2f3fb00a303bf5013e77bb1a80ce1d2f3f4b6f62eb019b314",
+      "reason": "Inherited public spec anchor retains the exact historical test declaration. Current no-job startup now verifies the original200 empty model catalog and refuses an obsolete evaluator404; no new GUI execution or current acceptance is supplied. audit unit 2: per-image classification class overrides honored by training, evaluation, counts, gallery and truth; import response fields in exact expectations. eleven specs decide retired gallery thumbnail reads by the browser's end event"
     },
     {
       "receipt": "2026-10-14-comparison-submit-real-cancel-browser.json",
@@ -969,8 +969,8 @@
       "test": "scripts/e2e/labeling-empty-selection-nudge.spec.ts::U020 empty selection ignores a delivered coarse nudge after an owning OBB control",
       "recorded_test_source_sha256": "1fd0aec5059a85672ff1bc038c2b06d0b8a1ccaa143c3deaa12b59e128f75d98",
       "retained_spec_commit": "6b14126fed9b3e0151d10d25e8dbce52606f8025",
-      "current_test_source_sha256": "45d3bdde29e1b412aa3cf3da3872775731f357ea30c8c5403da3a41711b49097",
-      "reason": "Refreshed on the beginner-UX branch: the spec now reads the Korean control names and footer wording of the simple view; the retained commit still holds the exact bytes the receipt executed, and no new GUI execution is claimed. Refreshed on the beginner-UX branch: the spec now reads the Korean save and normal-mark labels of the labeling toolbar; the retained commit still holds the exact bytes the receipt executed, and no new GUI execution is claimed. Refreshed on the beginner-UX branch: the spec now reads the Korean canvas readout (배율) instead of 'scale'; the retained commit still holds the exact bytes the receipt executed, and no new GUI execution is claimed"
+      "current_test_source_sha256": "2e2f23875af70f9c87a0784398bac8b15b5e876adf2949c3abe7ca1a0589ec5f",
+      "reason": "Refreshed on the beginner-UX branch: the spec now reads the Korean control names and footer wording of the simple view; the retained commit still holds the exact bytes the receipt executed, and no new GUI execution is claimed. Refreshed on the beginner-UX branch: the spec now reads the Korean save and normal-mark labels of the labeling toolbar; the retained commit still holds the exact bytes the receipt executed, and no new GUI execution is claimed. Refreshed on the beginner-UX branch: the spec now reads the Korean canvas readout (배율) instead of 'scale'; the retained commit still holds the exact bytes the receipt executed, and no new GUI execution is claimed. eleven specs decide retired gallery thumbnail reads by the browser's end event"
     },
     {
       "receipt": "2026-10-11-root510-04b0a6184ee74eb4a571.json",
@@ -1039,8 +1039,8 @@
       "test": "scripts/e2e/raster-edit-lifecycle.spec.ts::native raster brush erase undo empty invalid failures discard and stage handoff preserve full original class pixels",
       "recorded_test_source_sha256": "5f81545cd446471d593fab71f54f32609e07918a8a31fa78e356d40e39347890",
       "retained_spec_commit": "6b14126fed9b3e0151d10d25e8dbce52606f8025",
-      "current_test_source_sha256": "a1e9a94909d9c0dd8a1bc299a0b48e4d65748d4ec8ddb2f4d5cfbc7c802eb7d8",
-      "reason": "Refreshed on the beginner-UX branch: the spec now reads the Korean control names and footer wording of the simple view; the retained commit still holds the exact bytes the receipt executed, and no new GUI execution is claimed. Refreshed on the beginner-UX branch: the spec now reads the Korean save and normal-mark labels of the labeling toolbar; the retained commit still holds the exact bytes the receipt executed, and no new GUI execution is claimed. Refreshed on the beginner-UX branch: the spec now reads the Korean canvas readout (배율) instead of 'scale'; the retained commit still holds the exact bytes the receipt executed, and no new GUI execution is claimed. Refreshed on the beginner-UX branch: the spec now reads the Korean labels, readouts and refusals of the simple view and carries current source pins; the retained commit still holds the exact bytes the receipt executed, and no new GUI execution is claimed"
+      "current_test_source_sha256": "2f4f708e641e7f9bddf62ff164027fb5a89104fc0e9f31e33b709a33d3b23a28",
+      "reason": "Refreshed on the beginner-UX branch: the spec now reads the Korean control names and footer wording of the simple view; the retained commit still holds the exact bytes the receipt executed, and no new GUI execution is claimed. Refreshed on the beginner-UX branch: the spec now reads the Korean save and normal-mark labels of the labeling toolbar; the retained commit still holds the exact bytes the receipt executed, and no new GUI execution is claimed. Refreshed on the beginner-UX branch: the spec now reads the Korean canvas readout (배율) instead of 'scale'; the retained commit still holds the exact bytes the receipt executed, and no new GUI execution is claimed. Refreshed on the beginner-UX branch: the spec now reads the Korean labels, readouts and refusals of the simple view and carries current source pins; the retained commit still holds the exact bytes the receipt executed, and no new GUI execution is claimed. eleven specs decide retired gallery thumbnail reads by the browser's end event"
     },
     {
       "receipt": "2026-10-08-raster-lifecycle15-817f71f-browser.json",
@@ -1049,8 +1049,8 @@
       "test": "scripts/e2e/raster-edit-lifecycle.spec.ts::raster brush erase undo empty invalid failures discard and stage handoff preserve full original class pixels",
       "recorded_test_source_sha256": "5f81545cd446471d593fab71f54f32609e07918a8a31fa78e356d40e39347890",
       "retained_spec_commit": "6b14126fed9b3e0151d10d25e8dbce52606f8025",
-      "current_test_source_sha256": "a1e9a94909d9c0dd8a1bc299a0b48e4d65748d4ec8ddb2f4d5cfbc7c802eb7d8",
-      "reason": "Refreshed on the beginner-UX branch: the spec now reads the Korean control names and footer wording of the simple view; the retained commit still holds the exact bytes the receipt executed, and no new GUI execution is claimed. Refreshed on the beginner-UX branch: the spec now reads the Korean save and normal-mark labels of the labeling toolbar; the retained commit still holds the exact bytes the receipt executed, and no new GUI execution is claimed. Refreshed on the beginner-UX branch: the spec now reads the Korean canvas readout (배율) instead of 'scale'; the retained commit still holds the exact bytes the receipt executed, and no new GUI execution is claimed. Refreshed on the beginner-UX branch: the spec now reads the Korean labels, readouts and refusals of the simple view and carries current source pins; the retained commit still holds the exact bytes the receipt executed, and no new GUI execution is claimed"
+      "current_test_source_sha256": "2f4f708e641e7f9bddf62ff164027fb5a89104fc0e9f31e33b709a33d3b23a28",
+      "reason": "Refreshed on the beginner-UX branch: the spec now reads the Korean control names and footer wording of the simple view; the retained commit still holds the exact bytes the receipt executed, and no new GUI execution is claimed. Refreshed on the beginner-UX branch: the spec now reads the Korean save and normal-mark labels of the labeling toolbar; the retained commit still holds the exact bytes the receipt executed, and no new GUI execution is claimed. Refreshed on the beginner-UX branch: the spec now reads the Korean canvas readout (배율) instead of 'scale'; the retained commit still holds the exact bytes the receipt executed, and no new GUI execution is claimed. Refreshed on the beginner-UX branch: the spec now reads the Korean labels, readouts and refusals of the simple view and carries current source pins; the retained commit still holds the exact bytes the receipt executed, and no new GUI execution is claimed. eleven specs decide retired gallery thumbnail reads by the browser's end event"
     },
     {
       "receipt": "2026-10-10-root456-derived-old-electron.json",
@@ -1351,6 +1351,76 @@
       "retained_spec_commit": "c1fa8aa0c3d3a63d769abad80feaa6ad83f04b93",
       "current_test_source_sha256": "41abbbe24c509abd056688b1cc124ef2bf2350ad6f406cd8ea87f10ed1d8bab9",
       "reason": "flow-inspector handoff spec sets aside only the gallery's own aborted thumbnail reads"
+    },
+    {
+      "receipt": "2026-10-18-u007-no-selected-image-empty-browser.json",
+      "receipt_sha256": "0b3395fe79ed48fd9ee70b592165baa5f259ed7ee7645d330c6af846475eec7b",
+      "execution_source_sha": "646622dd3acfa042c5640de11087cc0cb1dab477",
+      "test": "scripts/e2e/roi-no-image-preflight.spec.ts::empty ROI image selection shows the owning placeholder and preserves saved original coordinates through node selection and reload",
+      "recorded_test_source_sha256": "1c0ac0564b6d2a57e0c757ad4651c4253727b037c79391a95015ddc620b45cdc",
+      "retained_spec_commit": "ad686609be6201ffc3255bd52a76bbb66a464512",
+      "current_test_source_sha256": "6d918fbac07587c78f4b9b0fba6fccd802103c1bbab58ff4d76b8c8942c95e71",
+      "reason": "eleven specs decide retired gallery thumbnail reads by the browser's end event"
+    },
+    {
+      "receipt": "2026-10-17-u007-small-image-refusal-browser.json",
+      "receipt_sha256": "061601f0563a1be872e3b8eef9cf66a22529a4c87954ff80369bc4f214b2264e",
+      "execution_source_sha": "27eb9e0fb8c46a2fcd6325efc7c1f29bd7d02343",
+      "test": "scripts/e2e/roi-too-small-image.spec.ts::U007 refuses an actual 8x8 ROI editor input while preserving the saved original-coordinate draft",
+      "recorded_test_source_sha256": "cc459838aef446b814482935397d9eb3c2655c96fa9bcb4240e92076100e41f8",
+      "retained_spec_commit": "ad686609be6201ffc3255bd52a76bbb66a464512",
+      "current_test_source_sha256": "585f5b7947c674c402d1d1024cb18770b2dc5475ec803408949a56a715338733",
+      "reason": "eleven specs decide retired gallery thumbnail reads by the browser's end event"
+    },
+    {
+      "receipt": "2026-10-18-u007-roi-edit-project-handoff-browser.json",
+      "receipt_sha256": "54de60db9cba9f6e331dd7dcc2a892487d0b32760fd9cc31dd3eff816ccf2d80",
+      "execution_source_sha": "76f238d6e146387306d893a694e073e53182ce2f",
+      "test": "scripts/e2e/roi-edit-project-handoff.spec.ts::U007 actual ROI drag and trusted resize keys survive A B A project handoff with exact saved original coordinates",
+      "recorded_test_source_sha256": "f7f8c4e5ad7178e2693e6fdb6a2eb47f5f86d8b1f54638548971521f622b86ce",
+      "retained_spec_commit": "ad686609be6201ffc3255bd52a76bbb66a464512",
+      "current_test_source_sha256": "a6c9d7fe84089d54acbad2028004307e1a8a410544dac12ac387fdf3fd78f385",
+      "reason": "eleven specs decide retired gallery thumbnail reads by the browser's end event"
+    },
+    {
+      "receipt": "2026-10-17-u007-keyboard-small-image-browser.json",
+      "receipt_sha256": "813b1edb0c377f50f5a6c1d624d21518ccde45bb757a2ef4453ddc07560a7357",
+      "execution_source_sha": "49b597a08dc64bf7a39cee30e767e4c563175f2e",
+      "test": "scripts/e2e/roi-keyboard-small-image.spec.ts::U007 trusted ROI keys after a real 8x8 input unmount preserve the saved original-coordinate draft",
+      "recorded_test_source_sha256": "43726428400f7324146311e8539746b3e0fa34c7202973ab0a0137fc9034c1a6",
+      "retained_spec_commit": "ad686609be6201ffc3255bd52a76bbb66a464512",
+      "current_test_source_sha256": "95017089923439f8cebb2873af03a6d2305dc69af579bfc7256e1e80d8be9752",
+      "reason": "eleven specs decide retired gallery thumbnail reads by the browser's end event"
+    },
+    {
+      "receipt": "2026-10-11-app-u015-root548-browser-empty.json",
+      "receipt_sha256": "21b06629b0812f4ff66feaf7b1ca60e55bc893f4e8af6aae22321826dcaed66f",
+      "execution_source_sha": "b20b9a8bd0f337174f7a1ef46880515bf6d10c19",
+      "test": "scripts/e2e/saved-queue-empty-controls.spec.ts::saved queue empty threshold margin origin and eligible training preserve exact saved controls",
+      "recorded_test_source_sha256": "aa5ab27e0a937729c61c8e1d821786f3e36f9583a8b7af3e925fe62b2f0d7db3",
+      "retained_spec_commit": "ad686609be6201ffc3255bd52a76bbb66a464512",
+      "current_test_source_sha256": "94b1353811b45dd00c0a40a398f74598d6e9c43676add2fe16caa1ccd68644de",
+      "reason": "eleven specs decide retired gallery thumbnail reads by the browser's end event"
+    },
+    {
+      "receipt": "2026-10-11-app-u015-root548-electron-empty.json",
+      "receipt_sha256": "8ed628de1a0a3151f0676c77c0f0555ab4d9ce510d0abf115cb92da93b92c758",
+      "execution_source_sha": "b20b9a8bd0f337174f7a1ef46880515bf6d10c19",
+      "test": "scripts/e2e/saved-queue-empty-controls.spec.ts::native saved queue empty threshold margin origin and eligible training preserve exact originals",
+      "recorded_test_source_sha256": "aa5ab27e0a937729c61c8e1d821786f3e36f9583a8b7af3e925fe62b2f0d7db3",
+      "retained_spec_commit": "ad686609be6201ffc3255bd52a76bbb66a464512",
+      "current_test_source_sha256": "94b1353811b45dd00c0a40a398f74598d6e9c43676add2fe16caa1ccd68644de",
+      "reason": "eleven specs decide retired gallery thumbnail reads by the browser's end event"
+    },
+    {
+      "receipt": "2026-10-19-saved-queue-open-invalid-413edc0-browser.json",
+      "receipt_sha256": "4c9cb56259dec7d82dd0b26380298d2ac788734e0a26482a6c4effff9a2bbe60",
+      "execution_source_sha": "413edc0f8ef534fe3595f8ce42711c1c0033913e",
+      "test": "scripts/e2e/saved-queue-open-invalid.spec.ts::saved queue open refuses an actual invalid owned evaluation record without changing the selected queue or originals",
+      "recorded_test_source_sha256": "b1befd298dcbbe07348affe8a70e485c8220c7e248112c6a5294c332f6703503",
+      "retained_spec_commit": "ad686609be6201ffc3255bd52a76bbb66a464512",
+      "current_test_source_sha256": "196c4bef9760750792f8ef477c8de1d46758597d48e52b830714125c914d242e",
+      "reason": "eleven specs decide retired gallery thumbnail reads by the browser's end event"
     }
   ]
 }
