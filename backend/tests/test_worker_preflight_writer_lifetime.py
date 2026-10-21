@@ -512,7 +512,10 @@ def _wait_preflight_bootstrap_json(path,child,absolute_deadline,*,observer=False
     while True:
         _preflight_bootstrap_remaining(absolute_deadline)
         assert child.poll() is None,'Original controller ended before preflight admission'
-        if path.exists():
+        # The observer creates its file with open('x') and fills it at close, so
+        # it can exist with zero bytes first: that is incomplete too (lstat, no
+        # link followed). Every other refusal of the strict reader still raises.
+        if path.exists() and not (observer and path.lstat().st_size==0):
             raw=update._read(path,65536)  # Original regular/no-follow bounded reader.
             # The observer writes a newline last; an incomplete advisory file
             # never admits POST and remains inside the same original deadline.
@@ -520,6 +523,28 @@ def _wait_preflight_bootstrap_json(path,child,absolute_deadline,*,observer=False
                 value=json.loads(raw);_preflight_bootstrap_remaining(absolute_deadline)
                 return value
         time.sleep(min(.01,_preflight_bootstrap_remaining(absolute_deadline)))
+
+
+def test_preflight_observer_wait_reads_an_empty_advisory_file_as_incomplete(tmp_path,monkeypatch):
+    """The authenticate observer creates its file with open('x') and fills it only at close, so a poll can find zero
+    bytes (hosted run 39513723226 refused there). Zero bytes waits like a missing final newline, inside the same
+    deadline; a strict record and a linked observer file are still refused by the original reader."""
+    from backend.engine import runtime_update as update
+    class Handle:
+        # Modeled Popen: always running. Nothing is reaped or signalled.
+        def poll(self):return None
+    fact=tmp_path/'fact.json';fact.write_bytes(b'')
+    stages=[b'{"kind":',b'{"kind":"returned"}\n']
+    def modeled_sleep(seconds):
+        # Each poll interval publishes the observer's next stage instead of waiting.
+        if stages:fact.write_bytes(stages.pop(0))
+    monkeypatch.setattr(time,'sleep',modeled_sleep)
+    assert _wait_preflight_bootstrap_json(fact,Handle(),time.monotonic()+5,observer=True)=={'kind':'returned'}
+    assert stages==[]
+    record=tmp_path/'record.json';record.write_bytes(b'')
+    with pytest.raises(update.UpdateError):_wait_preflight_bootstrap_json(record,Handle(),time.monotonic()+5)
+    linked=tmp_path/'linked.json';linked.symlink_to(record)
+    with pytest.raises(update.UpdateError):_wait_preflight_bootstrap_json(linked,Handle(),time.monotonic()+5,observer=True)
 
 
 def _assert_preflight_authenticate_settlement(fact,journal,bootstrap,snapshot,inspection,ack,server,controller_identity):
@@ -733,6 +758,14 @@ def test_actual_authenticated_source_preflight_cpu_preserves_guard_through_real_
             while time.monotonic()<until:
                 try: final=lease.inspect_launch(root)
                 except lease.LeaseTransitionBusy:
+                    time.sleep(.01);continue
+                except ValueError as exc:
+                    # After an early body failure the original controller closes
+                    # its own store writers once the main exits, holding exclusive
+                    # store admission for about 0.1 s. Only that exact refusal is
+                    # the same transient interval; it must not replace the body's
+                    # first failure (hosted run 39513723226). Others still raise.
+                    if str(exc)!='Project writers or migration hold maintenance admission; retry after drain':raise
                     time.sleep(.01);continue
                 assert final['nonce']==ack['nonce']
                 if original_binding is not None:assert final['binding']==original_binding
