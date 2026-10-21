@@ -46,6 +46,8 @@ export const LabelingCanvas: React.FC = () => {
   const baseImageRef = useRef<HTMLImageElement | null>(null);
   const maskImageRef = useRef<HTMLImageElement | null>(null);
   const otherBrushCanvasRef = useRef<HTMLCanvasElement | null>(null);
+  // The edited brush layer as it was last shown, kept on screen while its next stored mask decodes (see below).
+  const shownBrushCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const foundationPrompt = useFoundationPromptStore();
 
   const {
@@ -199,6 +201,7 @@ export const LabelingCanvas: React.FC = () => {
     }
 
     if (otherBrushCanvasRef.current) ctx.drawImage(otherBrushCanvasRef.current, sx, sy, sw, sh, dx, dy, dw, dh);
+    if (shownBrushCanvasRef.current) ctx.drawImage(shownBrushCanvasRef.current, sx, sy, sw, sh, dx, dy, dw, dh);
 
     // Blit offscreen brush canvas
     if (offscreenBrushCanvasRef.current) {
@@ -588,11 +591,32 @@ export const LabelingCanvas: React.FC = () => {
 
   const editableBrush = brushEditTarget(annotations,selectedAnnotationId,activeCategory.id);
   const storedBrushMask = editableBrush?.mask_rle;
+  // A stored mask decodes asynchronously (longer on a busy machine), and any redraw meanwhile (the canvases are resized
+  // and redrawn when the annotations change) painted the mask plane from emptied layers: every stroke, undo, redo and
+  // discard showed no masks at all for that moment. The layers shown so far now stay on screen until their replacement
+  // is decoded; a layer that has nothing stored any more (another image, a class without a mask) is cleared at once.
   useEffect(() => {
     const canvas = offscreenBrushCanvasRef.current;
-    if (!canvas || canvas.width !== imgDimensions.width || canvas.height !== imgDimensions.height) return;
+    if (!canvas || canvas.width !== imgDimensions.width || canvas.height !== imgDimensions.height) {
+      shownBrushCanvasRef.current = null;
+      return;
+    }
     const context = canvas.getContext('2d');
     if (!context) return;
+    if (storedBrushMask) {
+      // Strokes still paint on the cleared layer as before; the shown copy only covers the decode. A copy kept from a
+      // decode that was overtaken also takes the strokes painted since.
+      let shown = shownBrushCanvasRef.current;
+      if (!shown || shown.width !== canvas.width || shown.height !== canvas.height) {
+        shown = document.createElement('canvas');
+        shown.width = canvas.width;
+        shown.height = canvas.height;
+      }
+      shown.getContext('2d')?.drawImage(canvas, 0, 0);
+      shownBrushCanvasRef.current = shown;
+    } else {
+      shownBrushCanvasRef.current = null;
+    }
     context.clearRect(0, 0, canvas.width, canvas.height);
     if (!storedBrushMask) {
       redrawMaskRef.current();
@@ -603,6 +627,13 @@ export const LabelingCanvas: React.FC = () => {
     storedImage.onload = () => {
       if (!active) return;
       context.drawImage(storedImage, 0, 0);
+      shownBrushCanvasRef.current = null;
+      redrawMaskRef.current();
+    };
+    // An undecodable mask leaves the layer cleared, as it always did, instead of keeping the old pixels on screen.
+    storedImage.onerror = () => {
+      if (!active) return;
+      shownBrushCanvasRef.current = null;
       redrawMaskRef.current();
     };
     storedImage.src = storedBrushMask;
@@ -611,12 +642,17 @@ export const LabelingCanvas: React.FC = () => {
 
   useEffect(()=>{
     const other=document.createElement('canvas');other.width=imgDimensions.width;other.height=imgDimensions.height;
-    otherBrushCanvasRef.current=other;let active=true;
+    const layers=annotations.filter(a=>a.type==='brush_mask'&&a.id!==editableBrush?.id&&a.mask_rle);
+    // The other classes' layers are swapped in once all of them are drawn; with none, or at another size, at once.
+    const shown=otherBrushCanvasRef.current;
+    if(!layers.length||!shown||shown.width!==other.width||shown.height!==other.height)otherBrushCanvasRef.current=other;
+    let active=true;
     const context=other.getContext('2d');
-    void (async()=>{for(const annotation of annotations.filter(a=>a.type==='brush_mask'&&a.id!==editableBrush?.id&&a.mask_rle)){
+    const show=()=>{if(!active)return;otherBrushCanvasRef.current=other;redrawMaskRef.current();};
+    void (async()=>{for(const annotation of layers){
       if(!active)return;const image=await new Promise<HTMLImageElement>((resolve,reject)=>{const image=new Image();image.onload=()=>resolve(image);image.onerror=reject;image.src=annotation.mask_rle!;});
       if(active&&context)context.drawImage(image,0,0);
-    }if(active)redrawMaskRef.current();})().catch(()=>{if(active)redrawMaskRef.current();});
+    }show();})().catch(show);
     return()=>{active=false;};
   },[annotations,editableBrush?.id,imgDimensions.width,imgDimensions.height]);
 
