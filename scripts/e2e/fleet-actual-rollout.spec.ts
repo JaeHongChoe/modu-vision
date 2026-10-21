@@ -45,5 +45,10 @@ async function exercise(page:Page,workspace:Workspace,evidence:Evidence,api:Api,
   await cleanupOwnedFleet({agents,start,remote,disconnect,evidence,...(bodyFailed?{primaryError}:{})});
  }
 }
-test('actual authenticated CPU fleet canary, disconnect continuity and rollback',async({page,renderer,workspace,evidence})=>{const api:Api=async(route,body,method)=>{const r=await page.request.fetch(renderer.origin+route,{method:method||(body?'POST':'GET'),data:body});expect(r.ok(),await r.text()).toBe(true);return r.json();};await installDesktopHostShim(page,renderer.port);await exercise(page,workspace,evidence,api,false,renderer.url);});
+test('actual authenticated CPU fleet canary, disconnect continuity and rollback',async({page,renderer,workspace,evidence})=>{
+ // Real work, not spec polling: building the two releases (four isolated packaged parity runs) took 44-51 s locally and the
+ // fleet deploy/canary/rollback commands 53-64 s; full runs took 114-144 s locally (Node 24, 2026-10-21). Hosted Linux runners
+ // passed at 126-234 s (17 runs, median 180 s) and 8 runs hit the 240 s default in the last rollback batch or the final
+ // inspection (d1b70d7 and 2e8aee7 among them). 360 s is about 1.5x the slowest hosted pass; every check is unchanged.
+ test.setTimeout(360_000);const api:Api=async(route,body,method)=>{const r=await page.request.fetch(renderer.origin+route,{method:method||(body?'POST':'GET'),data:body});expect(r.ok(),await r.text()).toBe(true);return r.json();};await installDesktopHostShim(page,renderer.port);await exercise(page,workspace,evidence,api,false,renderer.url);});
 test('native actual CPU fleet deploy, reopen and rollback',{tag:'@electron'},async({electronSession,workspace,evidence})=>{const status=await electronSession.waitForBackend(),page=electronSession.window;const api:Api=(route,body,method)=>page.evaluate(async({port,route,body,method})=>{const r=await fetch(`http://127.0.0.1:${port}${route}`,{method:method||(body?'POST':'GET'),headers:{'Content-Type':'application/json'},body:body?JSON.stringify(body):undefined});if(!r.ok)throw Error(`Owned fleet HTTP ${r.status}: ${await r.text()}`);return r.json();},{port:status.port,route,body,method});await exercise(page,workspace,evidence,api,true);});
