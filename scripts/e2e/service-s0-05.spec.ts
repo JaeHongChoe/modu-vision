@@ -209,6 +209,65 @@ test.describe('S0-05 flow canvas versions', () => {
     expect(runs).toHaveLength(1);
   });
 
+  // The draft autosave starts 650 ms after an edit. A layout move or an undo that lands while it saves is kept rather
+  // than dropped, and the draft then holds the graph on screen (CI d1b70d7: an undo in that window did nothing).
+  test('a layout move and an undo made while the draft autosave saves are kept, and the draft then holds the graph on screen', async ({ page, renderer, workspace, evidence }) => {
+    const log = fixtureLog(evidence);
+    const draftGate = new Gate();
+    const draftPuts: Array<{ held: boolean; pipeline: Json }> = [];
+    let holding = false;
+    await createProject(page, renderer.origin, 'classification', workspace.dataset);
+    await routeModelFixtures(page, log, { task: 'classification', source: workspace.dataset, runGate: new Gate(), runs: [] });
+    // The app's own draft PUT goes on to the actual backend; holding it keeps the autosave saving while the user acts.
+    await page.route(pathIs('/api/flowchart/draft'), async route => {
+      if (route.request().method() === 'PUT') {
+        draftPuts.push({ held: holding, pipeline: (route.request().postDataJSON() as Json).pipeline });
+        await draftGate.pass();
+      }
+      return route.continue();
+    });
+    await openStep(page, renderer.port, renderer.url, /05.*플로우차트/);
+    await waitForFlow(page);
+    await connectFixtureModel(page);
+    const savedStatus = page.getByRole('status').filter({ hasText: '초안 저장됨 · 실행본 활성화 전 · 배포 상태' });
+    await expect(savedStatus).toHaveCount(1);
+    const readDraft = async () => {
+      const response = await page.request.get(`${renderer.origin}/api/flowchart/draft`);
+      expect(response.status()).toBe(200);
+      return await response.json() as Json;
+    };
+    const clean = await readDraft();
+    const decisionId = await decisionNode(page).getAttribute('data-flow-node-id');
+    const position = (pipeline: Json) => (pipeline.nodes as Json[]).find(node => node.id === decisionId)?.position;
+    const left = () => decisionNode(page).evaluate(element => (element as HTMLElement).style.left);
+    const startLeft = await left();
+    const saving = page.getByRole('button', { name: '초안 저장' });
+    const undo = page.getByRole('button', { name: '플로우 실행 취소' });
+
+    holding = true;
+    draftGate.hold();
+    await dragNode(page, decisionNode(page), 140, 60);
+    await draftGate.reached();
+    await expect(saving, 'the autosave of the moved graph is saving').toContainText('저장 중');
+    await dragNode(page, decisionNode(page), -60, 40);
+    await expect(undo, 'undo stays usable while the draft saves').toBeEnabled();
+    await undo.click();
+    await undo.click();
+    await expect.poll(left, { message: 'two undos return to the saved layout' }).toBe(startLeft);
+    await expect(saving, 'every action above happened while the first autosave was saving').toContainText('저장 중');
+    await evidence.screenshot(page, '05-actions-during-held-autosave');
+    holding = false;
+    draftGate.release();
+
+    await expect.poll(async () => (await readDraft()).draft_sha256, { message: 'the draft holds the graph on screen again', timeout: 15_000 })
+      .toBe(clean.draft_sha256);
+    await expect(savedStatus).toHaveCount(1);
+    expect(draftPuts.filter(row => row.held)).toHaveLength(1);
+    expect(position(draftPuts.find(row => row.held)!.pipeline)).not.toEqual(position(clean.pipeline));
+    expect(position(draftPuts[draftPuts.length - 1].pipeline)).toEqual(position(clean.pipeline));
+    await evidence.screenshot(page, '06-draft-after-held-autosave');
+  });
+
   test('an inflight run refuses layout moves and records changed rules as an earlier version', async ({ page, renderer, workspace, evidence }) => {
     const log = fixtureLog(evidence);
     const runs: Json[] = [];

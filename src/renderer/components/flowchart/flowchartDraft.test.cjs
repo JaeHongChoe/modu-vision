@@ -108,3 +108,44 @@ test('a draft save whose transport owner changes cannot claim readback durabilit
   assert.equal(store.getState().persistedDraftHash,null);
   assert.equal(store.getState().pipelineDirty,true);
 });
+
+test('an undo made while a draft save runs stays dirty, so the graph on screen is the one saved next', async () => {
+  store.getState().updateNodeData('inspect', { label: 'Saved' });
+  assert.equal(await store.getState().saveDraft(), true);
+  const saved = store.getState().pipeline;
+  store.getState().updateNodeData('inspect', { label: 'Newer' });
+  let finish;
+  beforeSave = () => new Promise(resolve => { finish = resolve; });
+  const pending = store.getState().saveDraft();
+  assert.equal(store.getState().isSaving, true);
+  assert.equal(store.getState().isDraftSaving, true, 'the save in progress is a draft save');
+  store.getState().undo();
+  assert.equal(store.getState().pipeline, saved, 'undo returns to the last saved graph');
+  assert.equal(store.getState().pipelineDirty, true, 'the draft being saved holds the newer graph, so this one is not saved yet');
+  finish();
+  assert.equal(await pending, false, 'the save of the graph left by undo claims nothing');
+  assert.equal(store.getState().isDraftSaving, false);
+  assert.equal(drafts.get(key()).pipeline.nodes[0].data.label, 'Newer');
+  assert.equal(store.getState().pipelineDirty, true);
+  beforeSave = null;
+  assert.equal(await store.getState().saveDraft(), true);
+  assert.equal(drafts.get(key()).pipeline.nodes[0].data.label, 'Saved', 'the next draft save stores the graph on screen');
+  assert.equal(store.getState().pipelineDirty, false);
+});
+
+test('a redo back to the graph being saved lets that draft save record it', async () => {
+  store.getState().updateNodeData('inspect', { label: 'Redone' });
+  const target = store.getState().pipeline;
+  let finish;
+  beforeSave = () => new Promise(resolve => { finish = resolve; });
+  const pending = store.getState().saveDraft();
+  store.getState().undo();
+  store.getState().redo();
+  assert.equal(store.getState().pipeline, target);
+  assert.equal(store.getState().pipelineDirty, true);
+  finish();
+  assert.equal(await pending, true);
+  assert.equal(store.getState().pipelineDirty, false);
+  assert.equal(store.getState().cleanPipeline, target);
+  assert.equal(drafts.get(key()).pipeline.nodes[0].data.label, 'Redone');
+});

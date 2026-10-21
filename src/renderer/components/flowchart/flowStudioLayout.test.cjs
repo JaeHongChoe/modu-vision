@@ -2,7 +2,7 @@ const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('n
 
 // Render the real editor structure without executing its network effects. The
 // regression is its flex/overflow contract, not graph or training behavior.
-function editor(project={}){
+function editor(project={},flowState={}){
  const previousStorage=Object.getOwnPropertyDescriptor(globalThis,'localStorage');
  const values=new Map();
  Object.defineProperty(globalThis,'localStorage',{configurable:true,value:{
@@ -11,7 +11,7 @@ function editor(project={}){
  try{
  const pipeline={id:'layout',name:'Layout',nodes:[],edges:[]};
  const store=value=>{const fn=selector=>selector?selector(value):value;fn.getState=()=>value;return fn;};
- const flow=store({pipeline,pipelineDirty:false,pipelineIsDraft:false,executionChoiceOverride:'local_cpu',errorMessage:'Visible error',canUndo:false,canRedo:false});
+ const flow=store({pipeline,pipelineDirty:false,pipelineIsDraft:false,executionChoiceOverride:'local_cpu',errorMessage:'Visible error',canUndo:false,canRedo:false,...flowState});
  const jsx=(type,props)=>({type,props:props||{}}),component=()=>null;
  const mocks={'react':{useState:initial=>[typeof initial==='function'?initial():initial,()=>{}],useRef:initial=>({current:initial}),useEffect(){},useLayoutEffect(){}},'react/jsx-runtime':{jsx,jsxs:jsx},'lucide-react':new Proxy({}, {get:()=>component}),
   '../../stores/useFlowchartStore':{useFlowchartStore:flow,flowSemanticKey:()=>'',isExecutionResultCurrent:()=>true},'../../stores/useDatasetStore':{useDatasetStore:store({folderPath:'/source',datasetKey:'/source\0segmentation',hasSelectedFolder:true})},'../../stores/useProjectStore':{useProjectStore:store({language:'ko',task:'segmentation',...project})},'../../stores/useEvaluationStore':{useEvaluationStore:store({})},'../../stores/useTrainingStore':{useTrainingStore:store({})},'../../stores/useComputeStore':{useComputeStore:store({profiles:[],selectedProfileId:null,isLoaded:true})},'../../services/api':{getProjectContext:()=>null,getProjectContextGeneration:()=>0,getApiPersistenceIdentity:()=> 'local'},
@@ -83,4 +83,18 @@ test('node add buttons are disabled while the flow is still opening, so a click 
  const quick=tree.filter(node=>node.type==='button'&&/패치 분할 추가|길이·면적 측정|Blob 측정|결과 집계|판정 출력/.test(text(node)));
  assert.ok(quick.length>=4,'quick-add row buttons are rendered');
  assert.ok(quick.every(button=>button.props.disabled===true),'quick-add buttons wait for the flow to open');
+});
+
+test('a draft save keeps undo, redo and flow layout usable, so a click during the autosave is never silently dropped',()=>{
+ const all=node=>[node,...children(node).flatMap(all)];
+ const text=node=>[node.props?.children].flat(Infinity).map(value=>typeof value==='string'?value:value&&typeof value==='object'?text(value):'').join('');
+ const controls=tree=>{const nodes=all(tree);return {
+  undo:nodes.find(node=>node.type==='button'&&node.props['aria-label']==='플로우 실행 취소'),
+  redo:nodes.find(node=>node.type==='button'&&node.props['aria-label']==='플로우 다시 실행'),
+  layout:nodes.find(node=>node.type==='button'&&text(node).includes('흐름 정렬')),
+ };};
+ const draft=controls(editor({},{canUndo:true,canRedo:true,isSaving:true,isDraftSaving:true}));
+ for(const [name,button] of Object.entries(draft)){assert.ok(button,`${name} is rendered`);assert.equal(button.props.disabled,false,`${name} stays usable while a draft save runs`);}
+ const version=controls(editor({},{canUndo:true,canRedo:true,isSaving:true,isDraftSaving:false}));
+ for(const [name,button] of Object.entries(version))assert.equal(button.props.disabled,true,`${name} waits for a version save`);
 });

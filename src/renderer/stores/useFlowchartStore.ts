@@ -115,6 +115,9 @@ interface FlowchartState {
   lastRunSource: { kind: 'draft' | 'saved'; versionId: string | null } | null;
   isLoading: boolean;
   isSaving: boolean;
+  /** The save in progress is a draft save (the 650 ms autosave or 초안 저장). It never changes the graph and its result
+   * is checked against the graph on screen, so editing, undo and redo stay open while it runs; a version save holds them. */
+  isDraftSaving: boolean;
   isRunning: boolean;
   partialRun: FlowPartialRunView | null;
   activeRunningNodeId: string | null;
@@ -411,6 +414,7 @@ export const useFlowchartStore = create<FlowchartState>((set, get) => ({
   lastRunSource: null,
   isLoading: false,
   isSaving: false,
+  isDraftSaving: false,
   isRunning: false,
   partialRun: null,
   activeRunningNodeId: null,
@@ -537,7 +541,9 @@ export const useFlowchartStore = create<FlowchartState>((set, get) => ({
     if (!target || !context || get().isSaving || get().isRunning || get().isLoading || get().historyGroupStart || (isCurrent && !isCurrent())) return false;
     const generation = flowchartGeneration;
     const saveGeneration = ++flowchartSaveGeneration;
-    set({ isSaving: true, errorMessage: null, saveMessage: null });
+    // An edit, undo or redo made while this runs leaves the graph on screen different from target: the save then
+    // claims nothing below, and undo/redo keep the graph dirty (see undo), so the draft autosave saves it next.
+    set({ isSaving: true, isDraftSaving: true, errorMessage: null, saveMessage: null });
     try {
       const base = get().baseVersionId;
       const saved = await flowDraft.save(target, context, base === undefined ? undefined : base ?? 'none');
@@ -557,7 +563,7 @@ export const useFlowchartStore = create<FlowchartState>((set, get) => ({
         set({ errorMessage: error instanceof Error ? error.message : '초안 저장 실패' });
       return false;
     } finally {
-      if (saveGeneration === flowchartSaveGeneration) set({ isSaving: false });
+      if (saveGeneration === flowchartSaveGeneration) set({ isSaving: false, isDraftSaving: false });
     }
   },
 
@@ -641,7 +647,7 @@ export const useFlowchartStore = create<FlowchartState>((set, get) => ({
     if (!target) return false;
     const generation = flowchartGeneration;
     const saveGeneration = ++flowchartSaveGeneration;
-    set({ isSaving: true, errorMessage: null, saveMessage: null });
+    set({ isSaving: true, isDraftSaving: false, errorMessage: null, saveMessage: null });
     try {
       const saved = await api.flowchart.savePipeline(target, recipeTask, sourceDatasetPath,
         { changeReason: change?.changeReason, expectedVersionId: get().baseVersionId });
@@ -909,7 +915,9 @@ export const useFlowchartStore = create<FlowchartState>((set, get) => ({
     markUserEdit();
     set({
       flowIdentity: editedIdentity(state, previous),
-      pipeline: previous, pipelineDirty: previous !== state.cleanPipeline,
+      // While a draft save runs, the saved draft may become the graph being left: an undo back to the last saved graph
+      // stays dirty, so it is saved again rather than shown as saved while the draft holds the newer graph.
+      pipeline: previous, pipelineDirty: previous !== state.cleanPipeline || state.isDraftSaving,
       historyPast, historyFuture, canUndo: historyPast.length > 0, canRedo: true,
       selectedNodeId: state.selectedNodeId && previous.nodes.some((node) => node.id === state.selectedNodeId)
         ? state.selectedNodeId : null,
@@ -926,7 +934,7 @@ export const useFlowchartStore = create<FlowchartState>((set, get) => ({
     markUserEdit();
     set({
       flowIdentity: editedIdentity(state, next),
-      pipeline: next, pipelineDirty: next !== state.cleanPipeline,
+      pipeline: next, pipelineDirty: next !== state.cleanPipeline || state.isDraftSaving,
       historyPast, historyFuture, canUndo: true, canRedo: historyFuture.length > 0,
       selectedNodeId: state.selectedNodeId && next.nodes.some((node) => node.id === state.selectedNodeId)
         ? state.selectedNodeId : null,
@@ -964,7 +972,7 @@ export const useFlowchartStore = create<FlowchartState>((set, get) => ({
       baseVersionId: undefined,
       modelContextInvalidated: true,
       contextRevision: get().contextRevision + 1,
-      executionResult: null, lastRunSource: null, isLoading: false, isSaving: false, isRunning: false, partialRun: null,
+      executionResult: null, lastRunSource: null, isLoading: false, isSaving: false, isDraftSaving: false, isRunning: false, partialRun: null,
       activeRunningNodeId: null, selectedNodeId: null,
       selectedImage: null, isImagePickerOpen: false, inspectedCrop: null,
       saveMessage: null, errorMessage: null,

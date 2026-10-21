@@ -158,6 +158,7 @@ export const FlowchartStudio: React.FC = () => {
     lastRunSource,
     isLoading,
     isSaving,
+    isDraftSaving,
     isRunning,
     partialRun,
     activeRunningNodeId,
@@ -188,6 +189,10 @@ export const FlowchartStudio: React.FC = () => {
     setInspectedCrop,
     clearError,
   } = useFlowchartStore();
+  // A draft save (the 650 ms autosave or 초안 저장) never changes the graph and claims only the graph it sent, so graph
+  // edits, undo and redo stay open while it runs: a drag or click landing in it is not silently dropped. A version
+  // save still holds them, and saving, running and opening flows wait for every save.
+  const editHeldBySave = isSaving && !isDraftSaving;
   const partialRunButton = useRef<HTMLButtonElement>(null);
   const partialStopHadFocus = useRef(false);
   useEffect(() => {
@@ -434,7 +439,7 @@ export const FlowchartStudio: React.FC = () => {
   useEffect(() => {
     if (activeTab !== 'edit') return;
     const onHistoryKeyDown = (event: KeyboardEvent) => {
-      if (isLoading || isSaving || isRunning || isVerifyingAction || !(event.metaKey || event.ctrlKey) || event.altKey) return;
+      if (isLoading || editHeldBySave || isRunning || isVerifyingAction || !(event.metaKey || event.ctrlKey) || event.altKey) return;
       const target = event.target as HTMLElement | null;
       if (target?.closest('input, textarea, select, [contenteditable="true"]')) return;
       const key = event.key.toLowerCase();
@@ -449,7 +454,7 @@ export const FlowchartStudio: React.FC = () => {
     };
     window.addEventListener('keydown', onHistoryKeyDown);
     return () => window.removeEventListener('keydown', onHistoryKeyDown);
-  }, [activeTab, isLoading, isSaving, isRunning, isVerifyingAction, canUndo, canRedo, undo, redo]);
+  }, [activeTab, isLoading, editHeldBySave, isRunning, isVerifyingAction, canUndo, canRedo, undo, redo]);
 
   const applyHistoryAction = (action: 'undo' | 'redo') => {
     if (action === 'undo') undo(); else redo();
@@ -769,7 +774,7 @@ export const FlowchartStudio: React.FC = () => {
   const focusFlowNode = (id: string) => requestAnimationFrame(() => {
     canvasRef.current?.querySelector<HTMLElement>(`[data-flow-node-id="${CSS.escape(id)}"] [data-flow-node-focus]`)?.focus();
   });
-  const graphEditingDisabled = isLoading || isSaving || isRunning || isVerifyingAction || flowOpening;
+  const graphEditingDisabled = isLoading || editHeldBySave || isRunning || isVerifyingAction || flowOpening;
 
   const addEditableNode = (nodeType: 'patch_split' | 'preprocess' | 'fixed_roi' | 'detection_crop' | 'inspection' | 'blob_measure' | 'measurement' | 'aggregate' | 'output') => {
     if (!pipeline || graphEditingDisabled) return;
@@ -970,7 +975,7 @@ export const FlowchartStudio: React.FC = () => {
   const displayViewport = dragViewport || viewport;
 
   const handleLayout = () => {
-    if (!pipeline || isLoading || isSaving || isRunning || isVerifyingAction) return;
+    if (!pipeline || isLoading || editHeldBySave || isRunning || isVerifyingAction) return;
     try {
       const arranged = layoutFlowchart(pipeline);
       useFlowchartStore.getState().endHistoryGroup();
@@ -1120,13 +1125,13 @@ export const FlowchartStudio: React.FC = () => {
         <div hidden={activeTab!=='edit'} className={activeTab==='edit'?"flex flex-wrap items-center justify-end gap-2":"hidden"}>
           <div className="flex rounded border border-[#2B3547] bg-[#0B0E14] p-0.5" aria-label="플로우 편집 기록">
             <button type="button" onClick={() => applyHistoryAction('undo')}
-              disabled={!canUndo || isLoading || isSaving || isRunning || isVerifyingAction}
+              disabled={!canUndo || isLoading || editHeldBySave || isRunning || isVerifyingAction}
               title="실행 취소 (⌘/Ctrl+Z)" aria-label="플로우 실행 취소"
               className="flex items-center gap-1 rounded px-2 py-1 text-slate-300 hover:bg-[#243247] disabled:opacity-40 disabled:cursor-not-allowed">
               <Undo2 className="h-4 w-4" /> <span>실행 취소</span>
             </button>
             <button type="button" onClick={() => applyHistoryAction('redo')}
-              disabled={!canRedo || isLoading || isSaving || isRunning || isVerifyingAction}
+              disabled={!canRedo || isLoading || editHeldBySave || isRunning || isVerifyingAction}
               title="다시 실행 (⌘/Ctrl+Shift+Z, Ctrl+Y)" aria-label="플로우 다시 실행"
               className="flex items-center gap-1 rounded px-2 py-1 text-slate-300 hover:bg-[#243247] disabled:opacity-40 disabled:cursor-not-allowed">
               <Redo2 className="h-4 w-4" /> <span>다시 실행</span>
@@ -1140,7 +1145,7 @@ export const FlowchartStudio: React.FC = () => {
 
           {/* Save Pipeline Button */}
           <button type="button" onClick={handleLayout}
-            disabled={!pipeline || isLoading || isSaving || isRunning || isVerifyingAction}
+            disabled={!pipeline || isLoading || editHeldBySave || isRunning || isVerifyingAction}
             title="연결 순서대로 노드를 배치하고 전체 흐름을 표시합니다. 실행 취소할 수 있습니다."
             className="flex items-center gap-1.5 rounded border border-[#2B3547] bg-[#1A212E] px-3 py-1.5 text-xs font-semibold text-slate-200 hover:bg-[#222B3D] disabled:opacity-50">
             <ListTree className="h-3.5 w-3.5" /> <span>흐름 정렬</span>
@@ -1161,7 +1166,7 @@ export const FlowchartStudio: React.FC = () => {
 
       <div hidden={activeTab!=='edit'}>
       <details className="shrink-0 border-b border-slate-700 bg-[#101722] text-xs"><summary className="cursor-pointer px-4 py-1 text-slate-400">빠른 노드 추가·연결·실행 자원</summary>
-      {pipeline && <div className="shrink-0 border-b border-slate-700 px-4 py-2"><FlowResourcesEditor pipeline={pipeline} onChange={replacePipeline} disabled={isRunning||isSaving||isLoading}/></div>}
+      {pipeline && <div className="shrink-0 border-b border-slate-700 px-4 py-2"><FlowResourcesEditor pipeline={pipeline} onChange={replacePipeline} disabled={isRunning||editHeldBySave||isLoading}/></div>}
 
       <div className="min-h-10 bg-[#101722] border-b border-[#2B3547] px-4 py-1.5 flex flex-wrap items-center gap-x-2 gap-y-1.5 text-xs">
         <span className="mr-1 text-xs font-bold tracking-wider text-slate-400">노드 추가</span>
@@ -1647,7 +1652,7 @@ export const FlowchartStudio: React.FC = () => {
                     <p className="mt-2 text-slate-400">분기를 바꾸면 기존 출력과 자동으로 맞바꿉니다.</p>
                   </div>
                 )}
-                <button onClick={deleteSelectedEdge} disabled={isRunning || isSaving}
+                <button onClick={deleteSelectedEdge} disabled={isRunning || editHeldBySave}
                   className="w-full px-3 py-2 rounded border border-rose-800 text-rose-300 hover:bg-rose-950 disabled:opacity-50 flex justify-center items-center gap-2">
                   <Trash2 className="w-3.5 h-3.5" /> 연결선 삭제
                 </button>
@@ -1748,7 +1753,7 @@ export const FlowchartStudio: React.FC = () => {
                   return <div className="rounded border border-sky-800/70 bg-sky-950/20 p-3 space-y-2">
                     <div className="text-sky-200 font-bold">{selectedNode.data.params?.fixture ? "기준물 좌표의 ROI" : "원본 이미지의 고정 ROI"}</div>
                     <FixtureReferencePanel params={selectedNode.data.params||{}} onChange={params=>updateNodeData(selectedNode.id,{params})} imagePath={selectedImage?.imagePath}/>
-                    {!selectedNode.data.params?.fixture&&<ImageRoiEditor imagePath={selectedImage?.imagePath} preview={selectedImage?.thumbnailUrl} roi={[x1,y1,x2,y2]} disabled={isRunning||isSaving}
+                    {!selectedNode.data.params?.fixture&&<ImageRoiEditor imagePath={selectedImage?.imagePath} preview={selectedImage?.thumbnailUrl} roi={[x1,y1,x2,y2]} disabled={isRunning||editHeldBySave}
                       onEditingChange={setIsRoiEditing}
                       onChange={roi=>updateNodeData(selectedNode.id,{params:{...selectedNode.data.params,roi_bbox:roi}})}/>}
                     <div className="grid grid-cols-2 gap-2">
