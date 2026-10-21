@@ -34,6 +34,9 @@ test('browser HTTPS cookie login opens authorized flow and role revocation refus
     await expect(page.getByTitle('프로젝트 관리', {exact: true})).toContainText(project.name);
     await expect(page.getByLabel('공유 계정 비밀번호', {exact: true})).toHaveCount(0);
     await expect(page.getByLabel('공동 작업 프로젝트', {exact: true})).toHaveValue(project.id);
+    // The value is set before login has accepted the project and rebuilt the step views; the select is enabled only
+    // once the whole login has finished, as a person would see it.
+    await expect(page.getByLabel('공동 작업 프로젝트', {exact: true})).toBeEnabled();
     await page.getByRole('dialog',{name:'컴퓨팅 서버 관리',exact:true}).getByRole('button',{name:'닫기',exact:true}).click();
     await page.getByRole('navigation', {name: 'Workflow Stages'}).getByRole('button').nth(4).click();
     await expect(page.locator('[data-flow-node-id]')).toHaveCount(46);
@@ -61,6 +64,7 @@ test('browser HTTPS cookie login opens authorized flow and role revocation refus
     await page.getByLabel('공유 계정 비밀번호',{exact:true}).fill(password);
     await page.getByRole('button',{name:'연결·로그인',exact:true}).click();
     await expect(page.getByLabel('공동 작업 프로젝트',{exact:true})).toHaveValue(project.id);
+    await expect(page.getByLabel('공동 작업 프로젝트',{exact:true})).toBeEnabled();
     await page.getByRole('dialog',{name:'컴퓨팅 서버 관리',exact:true}).getByRole('button',{name:'닫기',exact:true}).click();
     await page.getByRole('navigation',{name:'Workflow Stages'}).getByRole('button').nth(0).click();
     await page.getByRole('button',{name:'검증된 데이터 버전',exact:true}).click();
