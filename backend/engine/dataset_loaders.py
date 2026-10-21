@@ -571,7 +571,8 @@ class ClassificationDataset(Dataset):
         h, w = rgb.shape[:2]
 
         if self.image_size:
-            rgb = cv2.resize(rgb, self.image_size, interpolation=cv2.INTER_LINEAR)
+            # The flow inspection node and evaluation resize through the same helper.
+            rgb = resize_model_input(rgb, self.image_size)
         elif self.max_dim and max(h, w) > self.max_dim:
             scale = self.max_dim / float(max(h, w))
             new_w = max(16, int(round(w * scale)))
@@ -1602,4 +1603,5 @@ from backend.engine.industrial_adapters import (
     is_valid_labelme_file,
     normalize_defect_category,
     read_image_safely_rgb,
+    resize_model_input,
 )

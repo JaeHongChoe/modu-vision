@@ -29,7 +29,7 @@ from backend.remote.profiles import ComputeProfile
 CURRENT_PROFILE=json.loads((J/'S7-02-original-installed-manual-native-providers-Source08/retained-normalized-profile.json').read_bytes())
 CURRENT_PROFILE_ID='server42-l40s-2-native43-20261016-01'
 CURRENT_PROFILE_SHA='6f36f621864d3c6b327295f684118434c6c1d18ddee8b21f30071527b0e7ea49'
-CURRENT_ENGINE={'size':151573,'sha256':'ce9e52a393d0dd3210a9282a5b67a4eb4e5a97edab7c5e95be1ed32a32cc82eb'}
+CURRENT_ENGINE={'size':151555,'sha256':'83bb9b25c7d66f91796cdbe6a83d6c13a3728991d76dd9cf7d3f73a27938f976'}
 LEGACY_ENGINE={'size':148262,'sha256':'e62c8461a0f57d4ce8b4e49f5a0dbf21f50e25515e627f5cff778225cdcf1a70'}
 LEGACY_PROFILE_ID='server42-l40s-2'
 LEGACY_PROFILE_SHA='3e0ff9bf6a23791b64b4decd1d51fdbc2af8bb5d4d9ea37b9bc28c5d4c5813a1'

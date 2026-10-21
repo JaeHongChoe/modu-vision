@@ -52,7 +52,7 @@ from backend.engine.detection.model import (
     foreground_class_names,
 )
 from backend.engine.device import get_device
-from backend.engine.industrial_adapters import read_image_safely_rgb, sanitize_file_stem
+from backend.engine.industrial_adapters import read_image_safely_rgb, resize_model_input, sanitize_file_stem
 from backend.engine.patch_classification import predict_patch_classification
 from backend.engine.segmentation.model import build_segmentation_model
 from backend.engine.flow_operators import apply_operator, validate_operator, region_artifacts, local_image, source_bbox, source_boundary_points, image_uri
@@ -324,7 +324,8 @@ def safe_crop_roi(
       1. No negative indexing or wraparound distortion.
       2. No zero-area or empty crops (cv2 assertion safe).
       3. Minimum spatial dimension >= min_size (UNet convolution safe).
-      4. Normalized output resolution (PaDiM spatial grid safe).
+      4. Normalized output resolution (PaDiM spatial grid safe), resized with the
+         same resize_model_input the training and evaluation loaders use.
     """
     h, w = img.shape[:2]
     x1, y1, x2, y2 = box
@@ -365,15 +366,10 @@ def safe_crop_roi(
     if crop.size == 0 or crop.shape[0] == 0 or crop.shape[1] == 0:
         crop = np.zeros((min_size, min_size, 3), dtype=np.uint8)
 
-    # 4. Standardized Resizing to target model input size (e.g. 224x224)
+    # 4. Resize to the model input size (e.g. 224x224) exactly as training and evaluation do,
+    #    so the flow scores an image the same way step 4 evaluated it.
     if target_size is not None:
-        interp = (
-            cv2.INTER_CUBIC
-            if (crop.shape[1] < target_size[0] or crop.shape[0] < target_size[1])
-            else cv2.INTER_AREA
-        )
-        resized_crop = cv2.resize(crop, target_size, interpolation=interp)
-        return resized_crop, actual_bbox
+        return resize_model_input(crop, target_size), actual_bbox
 
     return crop, actual_bbox
 

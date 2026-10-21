@@ -58,6 +58,7 @@ from backend.engine.dataset_loaders import (
     SegmentationDataset,
     AnomalyDataset,
     _read_image_rgb,
+    resize_model_input,
 )
 from backend.engine.device import get_device
 from backend.engine.checkpoint_paths import (
@@ -511,7 +512,7 @@ def _evaluate_classification(
             target_idx = class_to_idx.get(cname, 0)
 
             rgb = _read_image_rgb(img_path)
-            resized = cv2.resize(rgb, img_size, interpolation=cv2.INTER_LINEAR)
+            resized = resize_model_input(rgb, img_size)  # the same resize as training and the flow inspection node
             img_t = torch.from_numpy(resized.transpose(2, 0, 1)).float().unsqueeze(0) / 255.0
             img_t = img_t.to(device)
 
