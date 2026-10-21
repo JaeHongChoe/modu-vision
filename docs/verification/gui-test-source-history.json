@@ -1421,6 +1421,26 @@
       "retained_spec_commit": "ad686609be6201ffc3255bd52a76bbb66a464512",
       "current_test_source_sha256": "196c4bef9760750792f8ef477c8de1d46758597d48e52b830714125c914d242e",
       "reason": "eleven specs decide retired gallery thumbnail reads by the browser's end event"
+    },
+    {
+      "receipt": "2026-10-13-app-overlay-mask-transitions-root603-browser.json",
+      "receipt_sha256": "93326df925b27591cfd378dcd632e9a6e4bdffbfde180ebee966e04daef8e7f2",
+      "execution_source_sha": "3ac991e717ae64427d19914424a9a692eec32a48",
+      "test": "scripts/e2e/evaluation-mask-truth-prediction-transitions.spec.ts::saved truth and prediction overlays recover after source outage and fence old A replies from B",
+      "recorded_test_source_sha256": "7ba7cabc4aab3d517693444b0660b144ebcf4b9c0214ebcbb2b9f9436fe15fae",
+      "retained_spec_commit": "f7941da7079cf395a8442eb5b798958aafd98f8e",
+      "current_test_source_sha256": "23df96b180efcf2108eccbf84a8d8a816fc16810a31d892e0f02f6df6267433d",
+      "reason": "Evaluation-mask post-release B checks get their own 10 s frames; the old A reply is still released inside its hold frame (CI #408)"
+    },
+    {
+      "receipt": "2026-10-13-app-overlay-mask-transitions-root603-electron.json",
+      "receipt_sha256": "1219b4373221831d71783c5283aa67b25297b647e9d369ede6658de68a299e75",
+      "execution_source_sha": "3ac991e717ae64427d19914424a9a692eec32a48",
+      "test": "scripts/e2e/evaluation-mask-truth-prediction-transitions.spec.ts::source Electron saved truth and prediction overlays recover after outage and preserve B after canceled A read",
+      "recorded_test_source_sha256": "7ba7cabc4aab3d517693444b0660b144ebcf4b9c0214ebcbb2b9f9436fe15fae",
+      "retained_spec_commit": "f7941da7079cf395a8442eb5b798958aafd98f8e",
+      "current_test_source_sha256": "23df96b180efcf2108eccbf84a8d8a816fc16810a31d892e0f02f6df6267433d",
+      "reason": "Evaluation-mask post-release B checks get their own 10 s frames; the old A reply is still released inside its hold frame (CI #408)"
     }
   ]
 }
