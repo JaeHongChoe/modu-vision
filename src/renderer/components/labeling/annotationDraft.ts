@@ -19,11 +19,13 @@ export function readDraft(storage:Storage,scope:string,imagePath:string):Annotat
  if(raw.length>MAX_UNITS)throw new Error('초안 크기 size가 허용 범위를 넘었습니다.');
  return checked(JSON.parse(raw),scope,imagePath);
 }
-export function saveDraft(storage:Storage,draft:AnnotationDraft):void {
+// Returns the exact stored value, so a caller can later tell whether the stored draft is still the one it wrote.
+export function saveDraft(storage:Storage,draft:AnnotationDraft):string {
  checked(draft,draft.scope,draft.image_path);const raw=JSON.stringify(draft);
  if(raw.length>MAX_UNITS)throw new Error('초안 크기 size가 2 MiB 한도를 넘었습니다. 현재 수정 내용을 유지하고 서버에 저장하세요.');
  const key=draftKey(draft.scope,draft.image_path);storage.setItem(key,raw);
  if(storage.getItem(key)!==raw)throw new Error('초안 저장 결과를 확인하지 못했습니다. 현재 수정 내용을 유지하세요.');
+ return raw;
 }
 export function removeDraft(storage:Storage,draft:AnnotationDraft):boolean {
  const key=draftKey(draft.scope,draft.image_path);

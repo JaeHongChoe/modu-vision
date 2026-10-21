@@ -7,7 +7,7 @@
     "src/renderer/components/flowchart/FlowDraftControls.tsx": "3bd10fc68ea4ae2dc600dfad2b6c51b56d74d213f7483923107295aac303f5a8",
     "src/renderer/components/labeling/TeamDataPanel.tsx": "c3e0aa4756127e8b3ae8db14d06ed25261b2948856ebb9d26c7c3fc797979397",
     "src/renderer/components/labeling/LabelingToolbar.tsx": "e11d2ea3564fd9328f053ad8e43d2a609cb0ed0e8d0e27cf072f58f987579738",
-    "src/renderer/components/labeling/AnnotationDraftRecovery.tsx": "21cc584ca3683631e26d7df1d711ea4ad1e59f7baa6931c9c30bc6156cb9874f",
+    "src/renderer/components/labeling/AnnotationDraftRecovery.tsx": "70f273b51820aa53a936ffdc4c21e5f6aa60d573d0d60789a5858ba2f7525132",
     "src/renderer/components/labeling/LabelbookEditor.tsx": "2b46bc631bd6c8c1187dfd9f87cd3e24cfbff6be26616373e1196482991c54fb",
     "src/renderer/components/labeling/DicomPanel.tsx": "1e191527a5572743bd92888d92445734dd314d9d64125ff62c02204cd15cd0e7",
     "src/renderer/components/runtime/ProductDeliveryWorkspace.tsx": "8323b2de60c928431997a8ec2262372f7768da519198d95f53c4daab68500b5c",
