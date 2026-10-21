@@ -5,6 +5,7 @@ import type {ParentCandidate} from '../types/parentCandidate';
  */
 
 import type { ApiRequestBody } from './generated/apiTypes';
+import type { ImageReviewMetadata } from './datasetWorkflow';
 import type {
   AnnotationItem,
   ClassSplitCounts,
@@ -1076,7 +1077,8 @@ export const api = {
 
     /** Classification: choose one image's class without moving the file; null returns it to its folder class. */
     setImageClass: (data: { image_path: string; class_name: string | null; actor?: string }) =>
-      request<{ relative_path: string; class: string | null; class_source: 'folder' | 'override'; folder_class: string | null; changed: boolean }>(
+      request<{ relative_path: string; class: string | null; class_source: 'folder' | 'override'; folder_class: string | null; changed: boolean;
+        metadata?: ImageReviewMetadata }>(
         '/api/dataset/metadata/class-override', { method: 'PUT', body: JSON.stringify(data) }),
 
     currentSummary: (data: { folder_path: string; task: VisionTask }) =>

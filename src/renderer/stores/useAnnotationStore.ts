@@ -138,7 +138,9 @@ interface AnnotationState {
 
   markNormal: (isNormal: boolean) => void;
   /** Classification: the class chosen for an image (or its folder class again), applied to the open image list. */
-  applyImageClass: (filePath: string, label: string | null, classSource: 'folder' | 'override') => void;
+  /** `metadata`: the image's row after the class change (a new revision), taken for the image being edited so its next
+   *  label save is checked against that revision. */
+  applyImageClass: (filePath: string, label: string | null, classSource: 'folder' | 'override', metadata?: ImageReviewMetadata | null) => void;
   loadAnnotationsForCurrent: () => Promise<boolean>;
   saveAnnotations: () => Promise<boolean>;
 
@@ -497,11 +499,12 @@ export const useAnnotationStore = create<AnnotationState>((set, get) => ({
 
   setHeatmapUrl: (url) => set({ heatmapUrl: url }),
 
-  applyImageClass: (filePath, label, classSource) => {
+  applyImageClass: (filePath, label, classSource, metadata) => {
     const update = (image: ImageMeta) => image.file_path === filePath
       ? { ...image, label, labels: label ? [label] : [], class_source: classSource } : image;
     const { images, currentImage } = get();
-    set({ images: images.map(update), currentImage: currentImage ? update(currentImage) : currentImage });
+    const editing = currentImage?.file_path === filePath && metadata && get().metadata?.image_uuid === metadata.image_uuid;
+    set({ images: images.map(update), currentImage: currentImage ? update(currentImage) : currentImage, ...(editing ? { metadata } : {}) });
   },
 
   markNormal: (isNormal) => {

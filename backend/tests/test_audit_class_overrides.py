@@ -35,8 +35,10 @@ def test_a_chosen_class_reaches_the_gallery_counts_and_training_without_moving_t
     before = image.read_bytes()
     response = client.put('/api/dataset/metadata/class-override', json={'image_path': str(image), 'class_name': 'NG', 'actor': 'Kim'})
     assert response.status_code == 200, response.text
-    assert response.json() == {'relative_path': 'OK/ok_00.png', 'class': 'NG', 'class_source': 'override',
-                               'folder_class': 'OK', 'changed': True}
+    body = response.json()
+    assert {key: body[key] for key in ('relative_path', 'class', 'class_source', 'folder_class', 'changed')} == {
+        'relative_path': 'OK/ok_00.png', 'class': 'NG', 'class_source': 'override', 'folder_class': 'OK', 'changed': True}
+    assert body['metadata']['relative_path'] == 'OK/ok_00.png' and body['metadata']['audit'][-1]['action'] == 'class_changed'
     assert image.read_bytes() == before and image.parent.name == 'OK', 'the file stays where it was, unchanged'
 
     row = _listing(client, source)['ok_00.png']
@@ -108,3 +110,21 @@ def test_class_choice_is_refused_outside_classification_and_outside_the_folder(t
     assert client2.put('/api/dataset/metadata/class-override', json={'image_path': str(outside), 'class_name': 'NG'}).status_code == 422
     assert client2.put('/api/dataset/metadata/class-override', json={'image_path': str(source2 / 'OK' / 'ok_00.png'),
                                                                      'class_name': 'a/b'}).status_code == 422
+
+
+def test_a_class_change_hands_the_editor_the_new_revision_so_its_next_label_save_is_not_refused(tmp_path):
+    """Live check (2026-10-21): choosing a class and then drawing a region failed to save as another worker's edit,
+    because the editor still held the revision from before the class change."""
+    client, source = _setup(tmp_path)
+    image = source / 'NG' / 'ng_00.png'
+    opened = client.get('/api/annotations/ng_00', params={'file_path': str(image)}).json()['metadata']
+    chosen = client.put('/api/dataset/metadata/class-override', json={'image_path': str(image), 'class_name': 'OK', 'actor': 'Kim'}).json()
+    back = client.put('/api/dataset/metadata/class-override', json={'image_path': str(image), 'class_name': None, 'actor': 'Kim'}).json()
+    assert back['metadata']['revision'] == chosen['metadata']['revision'] + 1 == opened['revision'] + 2
+    box = {'id': 'b1', 'type': 'bbox', 'label': 'scratch', 'bbox': [2, 2, 12, 12]}
+    stale = client.post('/api/annotations/save', json={'image_id': 'ng_00', 'image_path': str(image), 'annotations': [box],
+                                                        'image_width': 32, 'image_height': 32, 'expected_revision': opened['revision']})
+    assert stale.status_code == 409, 'a revision from before the change is still refused'
+    saved = client.post('/api/annotations/save', json={'image_id': 'ng_00', 'image_path': str(image), 'annotations': [box],
+                                                        'image_width': 32, 'image_height': 32, 'expected_revision': back['metadata']['revision']})
+    assert saved.status_code == 200, saved.text

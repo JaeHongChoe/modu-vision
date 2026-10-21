@@ -1573,7 +1573,12 @@ def set_image_class(body: ClassOverrideRequest, request: Request):
         raise HTTPException(422, "이미지가 프로젝트의 데이터 폴더 밖에 있습니다.")
     folder_class, _ = folder_label_split(PurePath(image.relative_to(source).as_posix()), "classification")
     try:
-        return set_class_override(Path(project["project_dir"]), source, image, body.class_name, body.actor, folder_class)
+        result = set_class_override(Path(project["project_dir"]), source, image, body.class_name, body.actor, folder_class)
+        # The change is an audit event on the image's metadata row (a new revision). The labeling editor guards its
+        # next label save with that row's revision, so it gets the new row instead of a later 'another worker' refusal.
+        from backend.engine import dataset_metadata as dm
+        result["metadata"] = dm.metadata_for_path(Path(project["project_dir"]), source, image)
+        return result
     except FileNotFoundError as exc:
         raise HTTPException(404, "이미지 파일을 찾을 수 없습니다.") from exc
     except ValueError as exc:

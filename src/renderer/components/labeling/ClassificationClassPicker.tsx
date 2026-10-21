@@ -31,7 +31,7 @@ export const ClassificationClassPicker: React.FC = () => {
     setError('');
     try {
       const result = await api.dataset.setImageClass({ image_path: image.file_path, class_name: name, actor: 'operator' });
-      applyImageClass(image.file_path, result.class, result.class_source);
+      applyImageClass(image.file_path, result.class, result.class_source, result.metadata);
       setDraft('');
       // The counts and the saved split's per-class numbers follow the new class; evidence built on the old classes
       // becomes stale, so the footer re-reads it.
