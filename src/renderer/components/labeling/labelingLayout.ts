@@ -47,6 +47,19 @@ export function focusStatus(focus: boolean): string {
   return focus ? `접은 패널: ${LABELING_HELPER_PANELS.map(name => name === '모델 보조' ? '모델 보조(SAM2)' : name).join(' · ')}` : '';
 }
 
+// Below this work area height there is little left to draw in: Fit keeps 32 px of padding above and below the image,
+// and the mask controls (top) and the view readout (bottom) cover roughly 60 px and 35 px of the canvas, so a 240 px
+// area leaves the image at most 176 px and about 145 px clear of both. 모두 보기 at 1440x900 in a classification project
+// left a few pixels.
+export const NARROW_CANVAS_HEIGHT = 240;
+export const NARROW_CANVAS_NOTICE = '그림 영역이 좁습니다 · 집중 편집으로 보조 패널을 접을 수 있습니다';
+
+/** The hint next to 집중 편집 while the open helper panels leave the work area short: '' when focus editing is on, the
+ *  area has room, or it was never measured (no ResizeObserver). The screen never folds the panels by itself. */
+export function narrowCanvasNotice(height: number | null, focus: boolean): string {
+  return !focus && height !== null && height < NARROW_CANVAS_HEIGHT ? NARROW_CANVAS_NOTICE : '';
+}
+
 type View = { scale: number; offsetX: number; offsetY: number };
 type Size = { width: number; height: number };
 

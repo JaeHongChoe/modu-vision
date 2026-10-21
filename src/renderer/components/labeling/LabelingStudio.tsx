@@ -9,7 +9,7 @@
  *   - Category Selector & Image Filmstrip
  */
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useId, useRef, useState } from 'react';
 import { useDatasetStore } from '../../stores/useDatasetStore';
 import { useAnnotationStore } from '../../stores/useAnnotationStore';
 import { useProjectStore } from '../../stores/useProjectStore';
@@ -30,7 +30,10 @@ import {TeamDataPanel} from './TeamDataPanel';
 import {AnnotationDraftRecovery} from './AnnotationDraftRecovery';
 import {EvidenceEditReturn} from './EvidenceEditReturn';
 import {WorkflowImpactPanel} from '../common/WorkflowImpactPanel';
-import { FOCUS_SWITCH_NAME, focusStatus, storedLabelingFocus, writeLabelingFocus, type LabelingHelperPanel } from './labelingLayout';
+import {
+  FOCUS_SWITCH_NAME, NARROW_CANVAS_HEIGHT, focusStatus, narrowCanvasNotice, storedLabelingFocus, writeLabelingFocus,
+  type LabelingHelperPanel,
+} from './labelingLayout';
 import { SpecialistFamilyNote } from '../common/SpecialistFamilyNote';
 
 export const LabelingStudio: React.FC = () => {
@@ -54,6 +57,22 @@ export const LabelingStudio: React.FC = () => {
     '워크플로 영향': <WorkflowImpactPanel />, '모델 보조': <ModelAssistPanel />,
   };
   const folded = (...names: LabelingHelperPanel[]) => focus ? null : names.map(name => <React.Fragment key={name}>{helperPanels[name]}</React.Fragment>);
+  // 모두 보기's open helper panels can leave the work area a few pixels tall: the 집중 편집 row then says so and the switch
+  // is highlighted, but nothing is folded for the viewer and the panels' layout is untouched. Only shortness matters, so
+  // the height is kept clamped at the threshold and resizing a roomy window does not render the screen again.
+  const workAreaRef = useRef<HTMLDivElement>(null);
+  const [workAreaHeight, setWorkAreaHeight] = useState<number | null>(null);
+  useEffect(() => {
+    const area = workAreaRef.current;
+    if (!area || typeof ResizeObserver === 'undefined') return; // never measured: no notice
+    const measure = () => setWorkAreaHeight(Math.min(Math.round(area.getBoundingClientRect().height), NARROW_CANVAS_HEIGHT));
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(area);
+    return () => observer.disconnect();
+  }, []);
+  const narrowNotice = narrowCanvasNotice(workAreaHeight, focus);
+  const narrowNoticeId = useId();
 
   // Sync vision task from project store
   useEffect(() => {
@@ -79,8 +98,11 @@ export const LabelingStudio: React.FC = () => {
       <EvidenceEditReturn />
       <div className="flex items-center justify-end gap-2 border-b border-slate-800 px-3 py-0.5 text-[11px] text-slate-400">
         {focus && <span>{focusStatus(focus)}</span>}
+        {/* One line that never adds height to the row (it would take it from the canvas). */}
+        {narrowNotice && <span id={narrowNoticeId} role="status" title={narrowNotice} className="min-w-0 truncate text-amber-200">{narrowNotice}</span>}
         <button type="button" aria-pressed={focus} onClick={toggleFocus} title={focus ? '보조 패널을 다시 보입니다' : '보조 패널을 접어 캔버스를 키웁니다'}
-          className={`rounded border px-2 py-0.5 hover:bg-slate-800 ${focus ? 'border-cyan-500 bg-cyan-950/40 text-cyan-100' : 'border-slate-600 text-slate-200'}`}>{FOCUS_SWITCH_NAME}</button>
+          aria-describedby={narrowNotice ? narrowNoticeId : undefined}
+          className={`shrink-0 rounded border px-2 py-0.5 hover:bg-slate-800 ${focus ? 'border-cyan-500 bg-cyan-950/40 text-cyan-100' : narrowNotice ? 'border-amber-400 bg-amber-950/50 text-amber-100' : 'border-slate-600 text-slate-200'}`}>{FOCUS_SWITCH_NAME}</button>
       </div>
       <LabelSetBar compact={focus} collapsed={viewMode === 'simple'} />
       {/* The team row stays: it loads the team settings and the label book and holds the shared editing lock. */}
@@ -113,7 +135,7 @@ export const LabelingStudio: React.FC = () => {
       {folded('모델 보조')}
 
       {/* Center Work Area: 3-Layer Canvas + Mask Controls + Annotation Sidebar */}
-      <div className="flex-1 flex overflow-hidden relative" data-labeling-work-area>
+      <div ref={workAreaRef} className="flex-1 flex overflow-hidden relative" data-labeling-work-area>
         <div className="flex-1 relative h-full bg-[#0B0E14]">
           <LabelingCanvas />
           <MaskLayerControls />
