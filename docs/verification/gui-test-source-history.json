@@ -1341,6 +1341,16 @@
       "retained_spec_commit": "7568f632ef8837efef873d3a6c6d6d3ee267a5b2",
       "current_test_source_sha256": "59f376a1405239f77ef9bf8d2e684e7424d9b49800851f64cd0cd2cf942eb1de",
       "reason": "export cancel spec keeps the gallery's own aborted thumbnail reads apart; step-1 sidebar width and panel scope lock; project switch refused up front"
+    },
+    {
+      "receipt": "2026-10-18-f064-large-dag-inspector-project-handoff-browser.json",
+      "receipt_sha256": "42b64e62b158cc74d16c208965679297a77f5f028330c9719d057487e563a37d",
+      "execution_source_sha": "a429cc8f14b9d732b8de4063ca113211900a0796",
+      "test": "scripts/e2e/flow-inspector-project-handoff.spec.ts::F064 global inspector resize and collapse preserve owning large DAG drafts through A B A project handoff",
+      "recorded_test_source_sha256": "d3650edd14d689344513426fffa9422b05ff211f44a32958d85346bc26a36079",
+      "retained_spec_commit": "c1fa8aa0c3d3a63d769abad80feaa6ad83f04b93",
+      "current_test_source_sha256": "41abbbe24c509abd056688b1cc124ef2bf2350ad6f406cd8ea87f10ed1d8bab9",
+      "reason": "flow-inspector handoff spec sets aside only the gallery's own aborted thumbnail reads"
     }
   ]
 }
