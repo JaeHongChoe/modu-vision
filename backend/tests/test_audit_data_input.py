@@ -6,6 +6,10 @@ from pathlib import Path
 
 from PIL import Image
 
+# The step-1 checklist, whose class-rule sentences the training-start refusals repeat word for word (F-03).
+_STEP1_CHECKLIST = (Path(__file__).resolve().parents[2] / 'src' / 'renderer' / 'components' / 'dataset'
+                    / 'importChecklist.ts')
+
 
 def _client(tmp_path):
     from backend.main import create_app
@@ -112,6 +116,71 @@ def test_one_class_classification_is_refused_before_training_starts(tmp_path):
     assert response.status_code == 422, response.text
     detail = response.json()['detail']
     assert '2개 이상' in detail and "'OK' 하나뿐" in detail and '빈 클래스 폴더: NG' in detail
+
+
+def _split_and_start(client, source):
+    assert client.post('/api/dataset/split', json={'folder_path': str(source), 'task': 'classification',
+                                                   'train_ratio': .7, 'val_ratio': .2, 'test_ratio': .1,
+                                                   'seed': 42}).status_code == 200
+    return client.post('/api/training/start', json={'task': 'classification', 'preset': 'fast',
+                                                    'dataset_path': str(source), 'device': 'cpu'})
+
+
+def test_a_class_below_the_per_class_minimum_is_refused_before_training_starts(tmp_path):
+    """F-03: every class with images needs two of them; a one-image class sits in a single split, so it is either never
+    learned or never checked during training. Step 1 gives the same reason before training is tried."""
+    client = _client(tmp_path)
+    source = tmp_path / 'source'
+    _images(source / 'OK', 12)
+    _images(source / 'NG', 12, shade=200)
+    _images(source / 'Scratch', 1, shade=100)
+    _use_source(client, source)
+    assert _import(client, source).json()['classes'] == {'OK': 12, 'NG': 12, 'Scratch': 1}, 'step 1 sees the counts'
+    response = _split_and_start(client, source)
+    assert response.status_code == 422, response.text
+    detail = response.json()['detail']
+    assert '클래스마다 이미지가 2장 이상' in detail and '부족한 클래스: Scratch 1장' in detail
+    reason = '한 장뿐인 클래스는 학습·검증·시험 중 한 곳에만 들어가 학습되지 않거나 학습 중 확인되지 않습니다.'
+    assert reason in detail
+    assert reason in _STEP1_CHECKLIST.read_text(encoding='utf-8'), \
+        'step 1, the step-3 start notice and the footer give the refusal reason word for word'
+
+
+def _source_folders(root: Path, layout):
+    for (partition, label), count in layout.items():
+        _images(root / partition / label, count, shade=0 if label == 'OK' else 200)
+    return root
+
+
+def test_two_images_per_class_reach_the_minimum_and_a_class_only_outside_train_is_refused(tmp_path, monkeypatch):
+    """The smallest sets the training tests use (one train and one val image per class) still start; a class that
+    source folders hold only under val/ or test/ is refused because the model would never learn it."""
+    from types import SimpleNamespace
+    from fastapi import HTTPException
+    import pytest
+    from backend.api import routes_training
+    started = []
+    monkeypatch.setattr(routes_training.training_job_manager, 'start_job',
+                        lambda **kwargs: started.append(kwargs) or SimpleNamespace(job_id=kwargs['job_id']))
+
+    smallest = _source_folders(tmp_path / 'smallest', {('train', 'OK'): 1, ('train', 'NG'): 1,
+                                                       ('val', 'OK'): 1, ('val', 'NG'): 1})
+    result = routes_training.start_training(routes_training.TrainingStartRequest(
+        dataset_path=str(smallest), task='classification', output_dir=str(tmp_path / 'models')))
+    assert result['status'] == 'started' and len(started) == 1
+
+    outside = _source_folders(tmp_path / 'outside', {('train', 'OK'): 2, ('train', 'NG'): 2, ('val', 'OK'): 1,
+                                                     ('val', 'NG'): 1, ('val', 'Scratch'): 1, ('test', 'Scratch'): 1})
+    with pytest.raises(HTTPException) as refused:
+        routes_training.start_training(routes_training.TrainingStartRequest(
+            dataset_path=str(outside), task='classification', output_dir=str(tmp_path / 'models')))
+    assert refused.value.status_code == 422
+    assert '학습 분할에 이미지가 없는 클래스가 있습니다: Scratch' in refused.value.detail
+    assert len(started) == 1, 'the refused set never reached the job manager'
+    advice = "모델이 이 클래스를 배우지 못합니다. 1단계에서 '이 비율로 나누기'로 다시 나눈 뒤 학습하세요."
+    assert advice in refused.value.detail
+    assert advice in _STEP1_CHECKLIST.read_text(encoding='utf-8'), \
+        'step 1 and the step-3 start notice give the same advice'
 
 
 def test_stale_saved_split_is_explained_in_korean_at_training_start(tmp_path):

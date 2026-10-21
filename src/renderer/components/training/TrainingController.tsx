@@ -51,6 +51,7 @@ import {defaultTrainingScheduling, trainingSchedulingOptions, TrainingScheduling
 import {JobProgressView} from './JobProgressView';
 import {useSelectedCoreJob} from './useSelectedCoreJob';
 import {OperationsObservabilityPanel} from '../runtime/OperationsObservabilityPanel';
+import {classGaps, classStartBlocker} from '../dataset/importChecklist';
 
 export const TrainingController: React.FC = () => {
   const [actionError, setActionError] = useState<string | null>(null);
@@ -90,9 +91,14 @@ export const TrainingController: React.FC = () => {
   catch (error) { modelOptionsError = error instanceof Error ? error.message : String(error); }
   const modelOptionsKey = JSON.stringify(modelOptions);
   const { folderPath, totalImages, split, isLoading, isSplitting, importError, splitError,
-    splitSupported, splitUnavailableReason, datasetKey, splitState, classes: datasetClasses } = useDatasetStore();
+    splitSupported, splitUnavailableReason, datasetKey, splitState, classes: datasetClasses, classSplitCounts } = useDatasetStore();
   // Classes with images: one class trains a model that can only answer that class (F-03), so the start waits.
   const populatedClasses = Object.values(datasetClasses || {}).filter(count => count > 0).length;
+  // The per-class minimum and the saved split's per-class gaps (F-03): a class below the minimum or without training
+  // images holds the start like the backend does; a class without validation or test images is only a warning.
+  const splitKnown = splitState === 'saved' || splitState === 'source_folders';
+  const classBlocker = task === 'classification' ? classStartBlocker(datasetClasses || {}, splitKnown ? classSplitCounts ?? null : null, split) : null;
+  const thinClasses = task === 'classification' && splitKnown && populatedClasses >= 2 ? classGaps(datasetClasses || {}, classSplitCounts ?? null, split).thin : [];
   const {
     jobId,
     warmStartParentJobId,
@@ -221,16 +227,20 @@ export const TrainingController: React.FC = () => {
   const canStart = totalImages > 0 && split.train > 0 && split.val > 0 &&
     !isProjectBusy && sourceReady && !isLoading && !isSplitting && !isRecoveringTraining && !importError && !modelOptionsError && !schedulingError && computeReady
     // The classification rules the start notice names hold the button too (F-02/F-03).
-    && !(task === 'classification' && (populatedClasses < 2 || splitState === 'stale' || splitState === 'automatic'));
+    && !(task === 'classification' && (populatedClasses < 2 || !!classBlocker || splitState === 'stale' || splitState === 'automatic'));
   const startBlocker = isProjectBusy || isLoading || isSplitting ? '프로젝트·데이터 변경이 진행 중입니다.'
     : !sourceReady || importError ? '현재 데이터 원본을 다시 가져와야 합니다.'
     : totalImages<1 || split.train<1 || split.val<1 ? '저장된 Train·Val 분할과 검수 이미지를 준비하세요.'
     // Training on an automatic split works but step 4 refuses to evaluate it; a stale saved split is refused anyway.
     : task === 'classification' && populatedClasses < 2 ? `분류에는 이미지가 있는 클래스가 2개 이상 필요합니다 (지금 ${populatedClasses}개). 다른 클래스 폴더에 이미지를 넣고 1단계에서 다시 불러오세요.`
+    : classBlocker ? classBlocker
     : task === 'classification' && splitState === 'stale' ? '폴더의 이미지가 저장한 분할과 달라졌습니다. 1단계에서 분할을 다시 저장하세요.'
     : task === 'classification' && splitState === 'automatic' ? "분할이 저장되지 않았습니다. 1단계에서 '이 비율로 나누기'를 누른 뒤 학습하세요 (저장하지 않으면 4단계에서 평가할 수 없습니다)." 
     : isRecoveringTraining ? '이전 학습의 실행 상태를 확인 중입니다.'
     : modelOptionsError || schedulingError || (!computeReady ? computeLoadError || selectedReadiness.reason || '실행 자원을 확인해야 합니다.' : null);
+  // Data and class problems are fixed in step 1, so the notice's button goes there.
+  const startNeedsData = !sourceReady || totalImages<1 || split.train<1 || split.val<1 || (task === 'classification' && (populatedClasses < 2 || !!classBlocker));
+  const startWarning = !startBlocker && thinClasses.length ? `${thinClasses.join(', ')}: 검증 이미지가 없는 클래스는 학습 중 확인되지 않고, 시험 이미지가 없는 클래스는 4단계에서 잴 수 없습니다. 학습은 시작할 수 있습니다. 이 클래스까지 확인하려면 1단계에서 이미지를 늘리거나 검증·시험 비율이 큰 분할로 다시 나누세요.` : null;
   const requiresSourcePartitions = isSplitUnavailable(task, splitSupported);
 
   const handleStart = async () => {
@@ -330,7 +340,8 @@ export const TrainingController: React.FC = () => {
       if(!outcome.ok)setActionError(`모델 종류 변경 후 확인이 필요합니다: ${outcome.error}`);
     }}/>}
     <div id="workflow-training" tabIndex={-1} className="flex-1 flex flex-col h-full bg-[#0B0E14] text-slate-100 overflow-y-auto select-none">
-      {startBlocker&&<div className="workspace-record m-3 text-xs" role="note" aria-label="학습 시작 준비도"><p id="training-start-reason">학습 시작 보류: {startBlocker}</p><button className="workspace-button mt-2" onClick={()=>{if(!sourceReady||totalImages<1||split.train<1||split.val<1)void setStep(1);else document.getElementById('workflow-training')?.focus();}}>{!sourceReady||totalImages<1||split.train<1||split.val<1?'데이터·분할 확인 (1단계)':'실행 자원·학습 설정 확인 (3단계)'}</button></div>}
+      {startBlocker&&<div className="workspace-record m-3 text-xs" role="note" aria-label="학습 시작 준비도"><p id="training-start-reason">학습 시작 보류: {startBlocker}</p><button className="workspace-button mt-2" onClick={()=>{if(startNeedsData)void setStep(1);else document.getElementById('workflow-training')?.focus();}}>{startNeedsData?'데이터·분할 확인 (1단계)':'실행 자원·학습 설정 확인 (3단계)'}</button></div>}
+      {startWarning&&<div className="workspace-record m-3 text-xs" role="note" aria-label="학습 전 확인"><p className="text-amber-200">{startWarning}</p><button className="workspace-button mt-2" onClick={()=>void setStep(1)}>분할 확인 (1단계)</button></div>}
       <OperatorGuidanceBanner step={3} />
       <div className="max-w-7xl w-full mx-auto space-y-5 p-6">
         <ModelFamilyCatalog selectedFamily={selectedFamily} onSelect={chooseFamily} disabled={isLoading||isSplitting||isProjectBusy} />

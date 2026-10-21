@@ -1599,6 +1599,12 @@ def list_warm_start_parents(
 
 
 _IDEMPOTENCY_KEY = re.compile(r"^[A-Za-z0-9_.:-]{1,128}$")
+# Fewest images a classification class with images may have; the error catalog's ERR_002 states the same minimum. A
+# one-image class lands in only one of train, val and test, so it is never learned or never checked during training.
+# Two images do not promise a validation image: step 1's split puts every class in all three splits once every class
+# has 8 images at 80/10/10 (6 at 70/20/10, 4 at 60/20/20), and step 1 warns below that. Step 1 (importChecklist.ts
+# MIN_IMAGES_PER_CLASS) blocks below this minimum with the same sentence as the refusal below.
+MIN_CLASSIFICATION_IMAGES_PER_CLASS = 2
 
 
 @router.post("/start")
@@ -1820,28 +1826,56 @@ def _start_training(req: TrainingStartRequest, request: Optional[Request], reser
     if req.task == "classification":
         try:
             train_set = ClassificationDataset(effective_dataset_path, split="train")
+            val_set = ClassificationDataset(effective_dataset_path, split="val")
+            test_set = ClassificationDataset(effective_dataset_path, split="test")
             train_count = len(train_set)
-            val_count = len(ClassificationDataset(effective_dataset_path, split="val"))
+            val_count = len(val_set)
         except (OSError, ValueError) as exc:
             if str(exc).startswith("Saved split"):
                 raise HTTPException(status_code=422, detail=(
                     "1단계에서 저장한 분할과 지금 폴더의 이미지가 다릅니다(이미지가 추가·삭제되었거나 이름이 바뀜). "
                     "1단계에서 '이 비율로 나누기'로 다시 나눈 뒤 학습하세요.")) from exc
             raise HTTPException(status_code=422, detail=f"분류 데이터 분할을 읽지 못했습니다. 1단계에서 분할을 다시 저장하세요. (기술 상세: {exc})") from exc
+        # Images per class in train, val and test. The three datasets share one class list (folder classes plus the
+        # classes chosen in step 2); an empty class folder is listed with zeros.
+        per_class = {name: [0, 0, 0] for name in train_set.classes}
+        for column, dataset in enumerate((train_set, val_set, test_set)):
+            for _, label in dataset.samples:
+                per_class.setdefault(dataset.classes[label], [0, 0, 0])[column] += 1
         # A classifier needs at least two classes that have training images; one class only ever answers that class.
-        trained_classes = sorted({train_set.classes[label] for _, label in train_set.samples})
+        trained_classes = sorted(name for name, counts in per_class.items() if counts[0])
         if len(trained_classes) < 2:
-            empty = [name for name in train_set.classes if name not in trained_classes]
+            empty = [name for name, counts in per_class.items() if not sum(counts)]
+            untrained = [name for name, counts in per_class.items() if sum(counts) and not counts[0]]
             only = trained_classes[0] if trained_classes else '없음'
             raise HTTPException(status_code=422, detail=(
                 f"분류 학습에는 학습용 이미지가 있는 클래스가 2개 이상 필요합니다. 지금은 '{only}' 하나뿐입니다"
                 + (f" (빈 클래스 폴더: {', '.join(empty)})" if empty else "")
+                + (f" (학습 분할에 이미지가 없는 클래스: {', '.join(untrained)})" if untrained else "")
                 + ". 다른 클래스 폴더에 이미지를 넣고 1단계에서 다시 불러오세요."))
         if train_count == 0 or val_count == 0:
             raise HTTPException(
                 status_code=422,
                 detail="분류 학습에는 서로 분리된 train 및 val 이미지가 필요합니다. test는 val 대신 사용하지 않습니다. / Classification training requires separate train and val images; test cannot replace val.",
             )
+        # Every class with images needs the minimum (F-03): a one-image class sits in a single split, so it is either
+        # never learned or never checked during training. Empty class folders are not judged here; the import response
+        # does not list them, so step 1 could not warn first. "한 장뿐인" follows from the minimum of 2.
+        short = [f"{name} {sum(counts)}장" for name, counts in per_class.items()
+                 if 0 < sum(counts) < MIN_CLASSIFICATION_IMAGES_PER_CLASS]
+        if short:
+            raise HTTPException(status_code=422, detail=(
+                f"분류 학습에는 클래스마다 이미지가 {MIN_CLASSIFICATION_IMAGES_PER_CLASS}장 이상 필요합니다. "
+                f"부족한 클래스: {', '.join(short)}. "
+                "한 장뿐인 클래스는 학습·검증·시험 중 한 곳에만 들어가 학습되지 않거나 학습 중 확인되지 않습니다. "
+                "이 클래스에 이미지를 더 넣고 1단계에서 다시 불러오세요."))
+        # Source train/val/test folders can hold a class only under val/ or test/: an answer the model never learns.
+        # Step 1 and the step-3 start notice give the same sentence (importChecklist.ts).
+        untrained = [name for name, counts in per_class.items() if sum(counts) and not counts[0]]
+        if untrained:
+            raise HTTPException(status_code=422, detail=(
+                f"학습 분할에 이미지가 없는 클래스가 있습니다: {', '.join(untrained)}. 모델이 이 클래스를 배우지 못합니다. "
+                "1단계에서 '이 비율로 나누기'로 다시 나눈 뒤 학습하세요."))
 
     has_split_manifest = local_labelme and _split_manifest_file(d_path).is_file()
     assignments = _read_split_manifest(d_path) if has_split_manifest else {}

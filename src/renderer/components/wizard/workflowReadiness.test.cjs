@@ -1,5 +1,6 @@
 const test=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path'),Module=require('node:module'),ts=require('typescript');
 function load(){const filename=path.join(__dirname,'workflowReadiness.ts');assert.ok(fs.existsSync(filename),'production readiness contract must exist');const m=new Module(filename,module);m._compile(ts.transpileModule(fs.readFileSync(filename,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText,filename);return m.exports;}
+function loadChecklist(){const filename=path.join(__dirname,'..','dataset','importChecklist.ts');const m=new Module(filename,module);m._compile(ts.transpileModule(fs.readFileSync(filename,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText,filename);return m.exports;}
 const base={stage:1,projectReady:true,sourceReady:true,totalImages:12,train:8,val:4,busy:false,task:'classification',modelJobId:null,flowVersionId:null,flowDirty:false,evidence:{status:'ready',review:{ready:true,counts:{eligible:12}},impact:{models:[],model_evaluations:[],flows:[],flow_evaluations:[],approvals:[],packages:[]}}};
 test('each stage has completed/missing inputs and exactly one recommended action',()=>{const {getNextAction}=load();for(let stage=1;stage<=6;stage++){const r=getNextAction({...base,stage,sourceReady:false,totalImages:0});assert.ok(r.missingInputs.length);assert.ok(Array.isArray(r.completedInputs));assert.equal(typeof r.nextAction.label,'string');assert.ok(r.nextAction.step>=1&&r.nextAction.step<=6);}});
 test('a retained evaluation job does not count as a current model',()=>{const {getNextAction}=load();const r=getNextAction({...base,stage:4,modelJobId:'old'});assert.notEqual(r.status,'ready');assert.equal(r.nextAction.step,3);});
@@ -19,7 +20,7 @@ async function hookFixture({wrongProject=false}={}){
  const store=value=>selector=>selector?selector(value):value;
  const mocks={react:{useEffect:fn=>effects.push(fn),useState:initial=>{const i=cursor++;if(!(i in slots))slots[i]=typeof initial==='function'?initial():initial;return[slots[i],v=>slots[i]=typeof v==='function'?v(slots[i]):v];},useRef:value=>{const i=cursor++;return slots[i]??(slots[i]={current:value});}},
  '../../services/api':{getProjectContext:()=>context,getApiPersistenceIdentity:()=>null,subscribeProjectContext:()=>()=>{},request:async endpoint=>endpoint.includes('team-data')?{ready:true,counts:{eligible:10}}:{project_id:wrongProject?'other':'p',source_dataset_path:'/data',labelset_id:'default',models:[],model_evaluations:[],flows:[{version_id:'a',scope_matches:true,state:'current'}],approvals:[],packages:[]},api:{flowchart:{listPipelines:async()=>({pipelines:[{version_id:'a',is_active:true}]}),getPipelineVersion:async id=>{calls.push(id);return saved;}}}},
- '../../stores/useProjectStore':{useProjectStore:store(project)},'../../stores/workflowEvidence':{subscribeWorkflowEvidence:()=>()=>{},workflowEvidenceRevision:()=>0},'../../stores/useComputeStore':{useComputeStore:store({transportRevision:0})},'../../stores/useDatasetStore':{useDatasetStore:store(data)},'../../stores/useTrainingStore':{useTrainingStore:store({status:'idle'})},'../../stores/useEvaluationStore':{useEvaluationStore:store({jobId:null})},'../../stores/useAnnotationStore':{useAnnotationStore:store({isDirty:false,metadata:null})},'../../stores/useFlowchartStore':{useFlowchartStore:store(flow),flowSemanticKey:value=>JSON.stringify(value)},'./workflowReadiness':load(),'../../stores/workflowProgress':{publishWorkflowProgress:()=>{}},'./stepProgress':{stepsFromEvidence:()=>[]}};
+ '../../stores/useProjectStore':{useProjectStore:store(project)},'../../stores/workflowEvidence':{subscribeWorkflowEvidence:()=>()=>{},workflowEvidenceRevision:()=>0},'../../stores/useComputeStore':{useComputeStore:store({transportRevision:0})},'../../stores/useDatasetStore':{useDatasetStore:store(data)},'../../stores/useTrainingStore':{useTrainingStore:store({status:'idle'})},'../../stores/useEvaluationStore':{useEvaluationStore:store({jobId:null})},'../../stores/useAnnotationStore':{useAnnotationStore:store({isDirty:false,metadata:null})},'../../stores/useFlowchartStore':{useFlowchartStore:store(flow),flowSemanticKey:value=>JSON.stringify(value)},'./workflowReadiness':load(),'../dataset/importChecklist':loadChecklist(),'../../stores/workflowProgress':{publishWorkflowProgress:()=>{}},'./stepProgress':{stepsFromEvidence:()=>[]}};
  m.require=name=>mocks[name];m._compile(ts.transpileModule(fs.readFileSync(filename,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText,filename);
  m.exports.useWorkflowReadiness();effects.forEach(fn=>fn());await new Promise(resolve=>setImmediate(resolve));cursor=0;const result=m.exports.useWorkflowReadiness();return{...result,calls};
 }
@@ -61,6 +62,7 @@ function scopedHookFixture({stage=2}={}) {
   '../../stores/useFlowchartStore':{useFlowchartStore:store(flow),flowSemanticKey:value=>JSON.stringify(value)},
   '../../stores/workflowEvidence':{subscribeWorkflowEvidence:()=>()=>{},workflowEvidenceRevision:()=>0},
   './workflowReadiness':load(),
+  '../dataset/importChecklist':loadChecklist(),
   '../../stores/workflowProgress':{publishWorkflowProgress:(scope,steps)=>published.push({scope,steps})},
   './stepProgress':{stepsFromEvidence:(impact,task)=>impact.models.length?[3]:[]},
  };
@@ -261,4 +263,12 @@ test('stage three blocks a one-class classification set and sends the user to st
  const one=getNextAction({...base,stage:3,splitState:'saved',populatedClasses:1});
  assert.equal(one.status,'blocked');assert.equal(one.nextAction.step,1);assert.match(one.missingInputs[0],/클래스가 2개 이상/);
  assert.notEqual(getNextAction({...base,stage:3,splitState:'saved',populatedClasses:2}).nextAction.step,1);
+});
+test('stage three blocks a class below the per-class minimum with the step-1 rule text (F-03)',()=>{
+ const {getNextAction}=load(),{classStartBlocker}=loadChecklist();
+ const classBlocker=classStartBlocker({OK:24,NG:1},null,{train:20,val:3,test:2});
+ const short=getNextAction({...base,stage:3,splitState:'saved',populatedClasses:2,classBlocker});
+ assert.equal(short.status,'blocked');assert.equal(short.nextAction.step,1);assert.match(short.missingInputs[0],/2장 이상.*NG 1장/);
+ assert.equal(classStartBlocker({OK:24,NG:2},null,{train:20,val:4,test:2}),null);
+ assert.notEqual(getNextAction({...base,stage:3,splitState:'saved',populatedClasses:2,classBlocker:null}).nextAction.step,1);
 });

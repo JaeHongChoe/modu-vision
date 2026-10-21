@@ -11,6 +11,7 @@ import { getNextAction, type WorkflowEvidence, type WorkflowImpact } from './wor
 import { subscribeWorkflowEvidence, workflowEvidenceRevision } from '../../stores/workflowEvidence';
 import { publishWorkflowProgress } from '../../stores/workflowProgress';
 import { stepsFromEvidence } from './stepProgress';
+import { classStartBlocker } from '../dataset/importChecklist';
 
 export function useWorkflowReadiness() {
   const project=useProjectStore(s=>s.project),projectDir=useProjectStore(s=>s.projectDir),task=useProjectStore(s=>s.task),stage=useProjectStore(s=>s.activeStep),projectBusy=useProjectStore(s=>s.isProjectBusy);
@@ -66,6 +67,7 @@ export function useWorkflowReadiness() {
   },[key,sourceReady,refresh,data.isLoading,data.isSplitting,training.status,flow.flowIdentity.semantic_revision,flow.pipelineDirty,flow.pipelineIsDraft,flow.baseVersionId,evidenceRevision,modelJobId,evaluatedSamples]);
   const evidence=receipt?.key===key?receipt.evidence:{status:'error' as const,error:'현재 프로젝트 근거 확인 필요'};
   return {readiness:getNextAction({stage,projectReady:Boolean(projectDir&&project),sourceReady,totalImages:data.totalImages,train:data.split.train,val:data.split.val,
-    busy:projectBusy||data.isLoading||data.isSplitting||annotationDirty,task,splitState:data.splitState,populatedClasses:data.hasSelectedFolder?Object.values(data.classes||{}).filter(count=>count>0).length:undefined,modelJobId:modelJobId || (training.isCurrentData?training.jobId:null),flowVersionId:receipt?.key===key?receipt.versionId:null,
+    busy:projectBusy||data.isLoading||data.isSplitting||annotationDirty,task,splitState:data.splitState,populatedClasses:data.hasSelectedFolder?Object.values(data.classes||{}).filter(count=>count>0).length:undefined,
+    classBlocker:data.hasSelectedFolder?classStartBlocker(data.classes||{},data.splitState==='saved'||data.splitState==='source_folders'?data.classSplitCounts??null:null,data.split):undefined,modelJobId:modelJobId || (training.isCurrentData?training.jobId:null),flowVersionId:receipt?.key===key?receipt.versionId:null,
     flowDirty:flow.pipelineDirty,flowMatchesSaved:receipt?.key===key?receipt.flowMatchesSaved:false,trainingStatus:training.status,evidence}),refresh:()=>setRefresh(value=>value+1)};
 }

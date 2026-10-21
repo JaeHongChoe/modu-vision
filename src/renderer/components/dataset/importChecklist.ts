@@ -23,9 +23,48 @@ export interface ImportCheckInput {
 export const APPROVAL_TEST_IMAGES_PER_ROLE = 8;
 /** Below this many test images, one image moves accuracy by several points. */
 export const RELIABLE_TEST_IMAGES = 30;
+/** Fewest images a classification class with images may have (F-03; backend MIN_CLASSIFICATION_IMAGES_PER_CLASS and the
+ *  error catalog's ERR_002). A one-image class lands in only one of train, val and test, so it is never learned or never
+ *  checked during training. Two images do not promise a validation image; the `class_splits` warning covers that. */
+export const MIN_IMAGES_PER_CLASS = 2;
 
 const NORMAL = new Set(['ok', 'good', 'normal', 'pass', '정상', '양품', '합격']);
 const name = (value: string) => value.trim().toLowerCase();
+
+type SplitCounts = { train: number; val: number; test: number };
+
+/** Per-class gaps for classification (F-03), as "NG 1장" or "NG (학습 4 · 검증 0 · 시험 1)". `short`: classes with
+ *  images but fewer than MIN_IMAGES_PER_CLASS. From the saved split, when known: `untrained` classes have no train
+ *  image (training start refuses), `thin` classes have no val or no test image while that split has some (a warning:
+ *  training never checks the class, or step 4 cannot measure it). The stratified split of step 1 puts every class in
+ *  all three splits once every class has 8 images at 80 / 10 / 10, 6 at 70 / 20 / 10 or 4 at 60 / 20 / 20 (measured with
+ *  split_dataset over 200 seeds; its per-class rounding gives the same floors). Below them a class has at most one image
+ *  left after train, so it misses val or test (or both), and the split's second pass then shuffles every class
+ *  without strata. */
+export function classGaps(classes: Record<string, number>, classSplitCounts: Record<string, SplitCounts> | null,
+  split: SplitCounts): { short: string[]; untrained: string[]; thin: string[] } {
+  const short = Object.entries(classes).filter(([, count]) => count > 0 && count < MIN_IMAGES_PER_CLASS).map(([cls, count]) => `${cls} ${count}장`);
+  const rows = Object.entries(classSplitCounts || {}).filter(([cls]) => (classes[cls] ?? 0) >= MIN_IMAGES_PER_CLASS);
+  const named = ([cls, counts]: [string, SplitCounts]) => `${cls} (학습 ${counts.train} · 검증 ${counts.val} · 시험 ${counts.test})`;
+  return { short, untrained: rows.filter(([, counts]) => split.train > 0 && counts.train <= 0).map(([cls]) => cls),
+    thin: rows.filter(([, counts]) => counts.train > 0 && ((split.val > 0 && counts.val <= 0) || (split.test > 0 && counts.test <= 0))).map(named) };
+}
+
+// The two class-rule sentences (F-03). The step-1 checks, the step-3 start notice and the footer show them word for word,
+// and training start refuses with the same sentences (backend routes_training.py). "한 장뿐인" follows from the minimum 2.
+const classMinimumText = (short: string[]) => `분류 학습에는 클래스마다 이미지가 ${MIN_IMAGES_PER_CLASS}장 이상 필요합니다. 부족한 클래스: ${short.join(', ')}. 한 장뿐인 클래스는 학습·검증·시험 중 한 곳에만 들어가 학습되지 않거나 학습 중 확인되지 않습니다. 이 클래스에 이미지를 더 넣고 1단계에서 다시 불러오세요.`;
+const classTrainText = (untrained: string[]) => `학습 분할에 이미지가 없는 클래스가 있습니다: ${untrained.join(', ')}. 모델이 이 클래스를 배우지 못합니다. 1단계에서 '이 비율로 나누기'로 다시 나눈 뒤 학습하세요.`;
+
+/** Why classification training cannot start for its classes, or null; the step-3 start notice and footer use it. */
+export function classStartBlocker(classes: Record<string, number>, classSplitCounts: Record<string, SplitCounts> | null,
+  split: SplitCounts): string | null {
+  const populated = Object.values(classes).filter(count => count > 0).length;
+  if (populated < 2) return null;  // the two-class rule speaks first
+  const gaps = classGaps(classes, classSplitCounts, split);
+  if (gaps.short.length) return classMinimumText(gaps.short);
+  if (gaps.untrained.length) return classTrainText(gaps.untrained);
+  return null;
+}
 
 /** Test images of normal-looking and defect classes, by class name (the approval rule counts confirmed OK and NG). */
 export function roleTestCounts(classSplitCounts: Record<string, { test: number }>): { normal: number; defect: number } {
@@ -55,6 +94,7 @@ export function importChecks(input: ImportCheckInput): ImportCheck[] {
       text: `라벨이 아직 없습니다. 2단계에서 영역을 그리거나, 이렇게 준비해 다시 불러오세요: ${input.expectedLayout}` });
   }
   const present = Object.entries(input.classes).filter(([, count]) => count > 0);
+  const gaps = classGaps(input.classes, input.classSplitCounts, input.split);
   if (input.task === 'classification') {
     if (present.length < 2) {
       const empty = Object.entries(input.classes).filter(([, count]) => count <= 0).map(([cls]) => cls);
@@ -62,6 +102,9 @@ export function importChecks(input: ImportCheckInput): ImportCheck[] {
         text: `분류에는 이미지가 있는 클래스가 2개 이상 필요합니다. 지금은 ${present.map(([cls]) => cls).join(', ') || '없음'}${empty.length ? ` (빈 클래스: ${empty.join(', ')})` : ''}.` });
     } else {
       checks.push({ id: 'classes', level: 'ok', text: `클래스 ${present.length}개: ${present.map(([cls, count]) => `${cls} ${count}장`).join(' · ')}` });
+      if (gaps.short.length) {
+        checks.push({ id: 'class_minimum', level: 'block', action: 'reimport', text: classMinimumText(gaps.short) });
+      }
     }
   }
   if (!input.splitLocked && input.task === 'classification') {
@@ -80,6 +123,15 @@ export function importChecks(input: ImportCheckInput): ImportCheck[] {
   } else if (splitKnown && input.split.test < RELIABLE_TEST_IMAGES) {
     checks.push({ id: 'test', level: 'warn',
       text: `시험 이미지가 ${input.split.test}장뿐입니다. 한 장마다 정확도가 ${(100 / input.split.test).toFixed(0)}%p씩 움직여 결과가 크게 흔들립니다 (${RELIABLE_TEST_IMAGES}장 이상 권장).` });
+  }
+  if (splitKnown && input.task === 'classification' && input.classSplitCounts && present.length >= 2 && !gaps.short.length) {
+    if (gaps.untrained.length) {
+      checks.push({ id: 'class_train', level: 'block', action: 'apply_split', text: classTrainText(gaps.untrained) });
+    }
+    if (gaps.thin.length) {
+      checks.push({ id: 'class_splits', level: 'warn', action: 'apply_split',
+        text: `${gaps.thin.join(', ')}: 검증 이미지가 없는 클래스는 학습 중 확인되지 않고, 시험 이미지가 없는 클래스는 4단계에서 잴 수 없습니다. '이 비율로 나누기'는 모든 클래스가 80 / 10 / 10에서 8장, 70 / 20 / 10에서 6장, 60 / 20 / 20에서 4장 이상이면 클래스마다 학습·검증·시험에 한 장 이상씩 넣습니다. 이 클래스 이미지를 늘리거나 검증·시험 비율이 큰 분할로 다시 나누세요.` });
+    }
   }
   if (splitKnown && input.task === 'classification' && input.classSplitCounts) {
     const { normal, defect } = roleTestCounts(input.classSplitCounts);
