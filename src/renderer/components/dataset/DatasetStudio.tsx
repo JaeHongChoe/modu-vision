@@ -404,8 +404,10 @@ export const DatasetStudio: React.FC = () => {
 
       {/* Main Studio Body: Left Sidebar (Stats, Split Calibrator & Distribution) + Right (Gallery) */}
       <div className="flex-1 flex overflow-hidden">
-        {/* Left Stats, Split Calibrator & Class Distribution Panel */}
-        <aside className="w-84 bg-[#131822] border-r border-[#2B3547] p-3 flex flex-col space-y-3 overflow-y-auto">
+        {/* Left Stats, Split Calibrator & Class Distribution Panel. A fixed width that never shrinks: `w-84` is not on
+            this Tailwind 3 scale, so the sidebar took its longest unwrapped line (a checklist warning is ~2000px) and
+            left the gallery zero pixels wide, off screen, with only the first cards inside its lazy-read margin. */}
+        <aside className="w-[21rem] shrink-0 bg-[#131822] border-r border-[#2B3547] p-3 flex flex-col space-y-3 overflow-y-auto">
           {/* Before-training checks from the import result: what will block training or step 4, and what is weak. */}
           {hasSelectedFolder && checklist.length > 0 && (
             <section aria-label="학습 전 점검" className="rounded-[4px] border border-[#2B3547] bg-[#1A212E] p-2.5 text-xs">
