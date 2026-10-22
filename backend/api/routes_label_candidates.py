@@ -317,11 +317,13 @@ def review_external_proposal(project,proposal,req):
     backup=_snapshot(project,source,f'후보 채택 전 · {image.name}',req.actor,'auto_backup')
     previous_json=json_path.read_bytes() if json_path.exists() else None; previous_mask=mask_path.read_bytes() if mask_path.exists() else None
     try:
+        # Each adopted shape keeps its origin (draft, provider, reviewer, backup) so one adoption can be taken back.
         routes_annotation.save_annotations(routes_annotation.AnnotationSaveRequest(image_id=image.stem,image_path=str(image),
-            annotations=[*existing,*[c['annotation'] for c in proposal['candidates'] if c['id'] in selected]],
+            annotations=[*existing,*suggestions.adopted_candidates(proposal,selected,req.actor,backup['id'])],
             image_width=proposal['image_width'],image_height=proposal['image_height'],expected_revision=current['revision'],actor=req.actor))
         proposal.update(status='accepted',reviewer=req.actor,reviewed_at=time.strftime('%Y-%m-%dT%H:%M:%SZ',time.gmtime()),
-                        accepted_candidate_ids=sorted(selected),backup_version_id=backup['id'])
+                        accepted_candidate_ids=sorted(selected),backup_version_id=backup['id'],
+                        adopted_annotations=suggestions.saved_adoption(image,selected))
         _write_json(suggestions._proposal_path(project,proposal['id']),proposal)
         if batch:
             batch['review_fingerprint']=suggestions._dataset_fingerprint(project)

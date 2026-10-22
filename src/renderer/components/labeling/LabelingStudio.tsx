@@ -21,6 +21,7 @@ import { MaskLayerControls } from './MaskLayerControls';
 import { AnnotationList } from './AnnotationList';
 import { ImageFilmstrip } from './ImageFilmstrip';
 import { ModelAssistPanel } from './ModelAssistPanel';
+import { DraftReviewQueue } from './DraftReviewQueue';
 import { LabelSetBar } from './LabelSetBar';
 import { ImageReviewPanel } from './ImageReviewPanel';
 import {DerivedImagePanel} from './DerivedImagePanel';
@@ -132,6 +133,8 @@ export const LabelingStudio: React.FC = () => {
       <ClassificationClassPicker />
       {projectTask === 'detection' && <SpecialistFamilyNote step={2} />}
       <CategorySelector />
+      {/* Draft review stays visible in focus mode: it is how drafts become labels, not an expert helper. */}
+      <DraftReviewQueue />
       {folded('모델 보조')}
 
       {/* Center Work Area: 3-Layer Canvas + Mask Controls + Annotation Sidebar */}

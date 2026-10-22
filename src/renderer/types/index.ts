@@ -94,6 +94,21 @@ export interface AnnotationItem {
   is_normal?: boolean;
   color?: string;
   text?: string; // Preserve transcription attached to a transformed region.
+  /** Set when a person adopted this shape from a machine draft; shapes a person drew have none. */
+  origin?: AnnotationOrigin;
+}
+
+/** Which draft, model and review an adopted shape came from (kept on later saves so the adoption can be taken back). */
+export interface AnnotationOrigin {
+  kind: 'model_draft';
+  proposal_id: string;
+  candidate_id: string;
+  backend?: string;
+  job_id?: string | null;
+  checkpoint_sha256?: string | null;
+  reviewer: string;
+  adopted_at: string;
+  backup_version_id?: string | null;
 }
 
 export interface AnnotationSavePayload {

@@ -55,6 +55,14 @@ export function classGaps(classes: Record<string, number>, classSplitCounts: Rec
 const classMinimumText = (short: string[]) => `분류 학습에는 클래스마다 이미지가 ${MIN_IMAGES_PER_CLASS}장 이상 필요합니다. 부족한 클래스: ${short.join(', ')}. 한 장뿐인 클래스는 학습·검증·시험 중 한 곳에만 들어가 학습되지 않거나 학습 중 확인되지 않습니다. 이 클래스에 이미지를 더 넣고 1단계에서 다시 불러오세요.`;
 const classTrainText = (untrained: string[]) => `학습 분할에 이미지가 없는 클래스가 있습니다: ${untrained.join(', ')}. 모델이 이 클래스를 배우지 못합니다. 1단계에서 '이 비율로 나누기'로 다시 나눈 뒤 학습하세요.`;
 
+/** A saved split that leaves out labeled images (newly labeled, or adopted from a draft): the import then counts none
+ *  of its partitions until the split is applied again, so say that instead of "no training images". */
+export const SPLIT_MISSES_LABELS_TEXT = "저장된 분할에 없는 라벨 이미지가 있습니다(새로 라벨했거나 초안에서 채택한 이미지). 1단계에서 '3-Way 분할 적용'으로 분할을 다시 적용하세요.";
+export function splitMissesLabels(input: { totalImages: number; split: { train: number; val: number; test?: number };
+  splitState: ImportCheckInput['splitState'] | undefined }): boolean {
+  return input.splitState === 'saved' && input.totalImages > 0 && input.split.train === 0 && input.split.val === 0 && !input.split.test;
+}
+
 /** Why classification training cannot start for its classes, or null; the step-3 start notice and footer use it. */
 export function classStartBlocker(classes: Record<string, number>, classSplitCounts: Record<string, SplitCounts> | null,
   split: SplitCounts): string | null {
@@ -117,7 +125,9 @@ export function importChecks(input: ImportCheckInput): ImportCheck[] {
     }
   }
   const splitKnown = input.splitState === 'saved' || input.splitState === 'source_folders' || input.splitLocked;
-  if (splitKnown && input.split.test <= 0) {
+  if (!input.splitLocked && splitMissesLabels(input)) {
+    checks.push({ id: 'split', level: 'block', action: 'apply_split', text: SPLIT_MISSES_LABELS_TEXT });
+  } else if (splitKnown && input.split.test <= 0) {
     checks.push({ id: 'test', level: 'block', action: 'apply_split',
       text: '시험 이미지가 0장이라 4단계에서 평가할 수 없습니다. 시험 비율이 있는 분할(예: 70 / 20 / 10)을 저장하세요.' });
   } else if (splitKnown && input.split.test < RELIABLE_TEST_IMAGES) {

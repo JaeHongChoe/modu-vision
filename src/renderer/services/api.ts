@@ -427,7 +427,8 @@ export interface LabelSuggestionCandidate {
 
 export interface LabelSuggestion {
   id: string;
-  status: 'pending' | 'accepted' | 'rejected';
+  /** 'reverted': an adoption that was taken back (its shapes removed again). */
+  status: 'pending' | 'accepted' | 'rejected' | 'reverted';
   created_at: string;
   reviewed_at?: string;
   image_path: string;
@@ -443,6 +444,12 @@ export interface LabelSuggestion {
   accepted_candidate_ids: string[];
   backup_version_id: string | null;
   batch_id?: string;
+  reviewer?: string;
+  /** The adopted shapes as the label file held them right after adoption; a take-back compares against these. */
+  adopted_annotations?: AnnotationItem[];
+  reverted_at?: string;
+  reverted_by?: string;
+  revert_backup_version_id?: string | null;
 }
 
 export interface LabelSuggestionBatchEntry {

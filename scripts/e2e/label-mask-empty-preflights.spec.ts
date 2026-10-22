@@ -45,7 +45,7 @@ const UI_SOURCE={
   "backend/api/routes_mask_exchange.py": "f66d4f4273692bf3c46f038c25b56a60ad4b4db5ba3dee9d31c3bac6dcd9a7c5",
   "backend/engine/annotation_formats.py": "dd046ef5e66187577217fe7de19ec6cf0376db5abf30d1b845c5b36a66e9a90c",
   "backend/engine/mask_exchange.py": "e12e6e0f10e9af2267e2f511cc7526ee98f088f0d778ce8959b7e9d6b72fafeb",
-  "src/renderer/services/datasetWorkflow.ts": "67a0b469b78b0d991921244d81d571c954e5c9bda5b767f1c3b0d55270f90bab",
+  "src/renderer/services/datasetWorkflow.ts": "14b3f5860a25b19f92e52a216246580c89d1c0876415c2d1a735ca637e4c8e23",
   "backend/api/routes_dataset_metadata.py": "dbe9ca7edab694241693ce942c56cb013223fcd2f26d76f898a3a947805b489a",
   "scripts/e2e/fixtures/desktop-host-shim.ts": "4f598862ec0e08189628c72bbb552f72bf8fd73f5a9a05b8da1d3ddf516dcfa6",
   "scripts/e2e/fixtures/harness.cjs": "6fe3bb6411a28bc83c6da36ba0b2480b12de6b86fd08daa61d8d0e76d7dac950",

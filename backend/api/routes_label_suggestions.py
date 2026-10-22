@@ -668,6 +668,31 @@ def get_suggestion(suggestion_id: str, request: Request):
     return _read_proposal(get_current_project(request), suggestion_id)
 
 
+def adopted_candidates(proposal: Dict[str, Any], selected_ids: set, reviewer: str,
+                       backup_version_id: Optional[str]) -> List[Dict[str, Any]]:
+    """The selected candidates as label shapes that remember which draft, model and review they came from."""
+    adopted_at = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+    shapes = []
+    for candidate in proposal.get("candidates", []):
+        if candidate["id"] not in selected_ids:
+            continue
+        shape = dict(candidate["annotation"])
+        shape["origin"] = {
+            "kind": "model_draft", "proposal_id": proposal["id"], "candidate_id": candidate["id"],
+            "backend": proposal.get("backend") or "trained_model", "job_id": proposal.get("job_id"),
+            "checkpoint_sha256": proposal.get("checkpoint_sha256"), "reviewer": reviewer,
+            "adopted_at": adopted_at, "backup_version_id": backup_version_id,
+        }
+        shapes.append(shape)
+    return shapes
+
+
+def saved_adoption(image: Path, candidate_ids: set) -> List[Dict[str, Any]]:
+    """The adopted shapes exactly as the label file now holds them; undo compares against these."""
+    saved = routes_annotation.get_annotations(image.stem, file_path=str(image)).get("annotations", [])
+    return [item for item in saved if isinstance(item, dict) and item.get("id") in candidate_ids]
+
+
 def _restore_bytes(path: Path, previous: Optional[bytes]) -> None:
     if previous is None:
         path.unlink(missing_ok=True)
@@ -740,13 +765,19 @@ def review_suggestion(suggestion_id: str, req: ReviewRequest, request: Request):
         if not isinstance(existing, list):
             raise HTTPException(status_code=422, detail="Existing annotation file is invalid.")
         accepted = [item["annotation"] for item in candidates if item["id"] in selected_ids]
-        annotation_request = routes_annotation.AnnotationSaveRequest(
+        # Validate the merged labels before taking the backup; the saved request below adds each shape's origin.
+        routes_annotation.AnnotationSaveRequest(
             image_id=image.stem, image_path=str(image), annotations=[*existing, *accepted],
             image_width=proposal["image_width"], image_height=proposal["image_height"], actor=req.actor, expected_revision=metadata["revision"],
         )
         backup = _snapshot(project, _source_path(project),
                            f"모델 라벨 채택 전 · {image.name}",
                            f"Before accepting {suggestion_id}", "auto_backup")
+        annotation_request = routes_annotation.AnnotationSaveRequest(
+            image_id=image.stem, image_path=str(image),
+            annotations=[*existing, *adopted_candidates(proposal, selected_ids, req.actor, backup["id"])],
+            image_width=proposal["image_width"], image_height=proposal["image_height"], actor=req.actor, expected_revision=metadata["revision"],
+        )
         previous_json = json_path.read_bytes() if json_path.is_file() else None
         previous_mask = mask_path.read_bytes() if mask_path.is_file() else None
         previous_proposal = _proposal_path(project, suggestion_id).read_bytes()
@@ -762,7 +793,7 @@ def review_suggestion(suggestion_id: str, req: ReviewRequest, request: Request):
                 _persist_batch(project, batch)
             proposal.update(
                 status="accepted", reviewer=req.actor, accepted_candidate_ids=sorted(selected_ids),
-                backup_version_id=backup["id"],
+                backup_version_id=backup["id"], adopted_annotations=saved_adoption(image, selected_ids),
                 reviewed_at=time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
             )
             _write_json(_proposal_path(project, suggestion_id), proposal)
@@ -772,5 +803,95 @@ def review_suggestion(suggestion_id: str, req: ReviewRequest, request: Request):
             _restore_bytes(_proposal_path(project, suggestion_id), previous_proposal)
             if batch_path is not None:
                 _restore_bytes(batch_path, previous_batch)
+            raise
+        return proposal
+
+
+class UndoRequest(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    actor: str = Field("operator", min_length=1, max_length=100)
+
+
+@router.post("/{suggestion_id}/undo")
+def undo_adoption(suggestion_id: str, req: UndoRequest, request: Request):
+    """Take back one adoption: remove exactly the shapes it added, only while nobody has changed them since.
+
+    The label file is backed up first. When an adopted shape was edited or removed, nothing is written and the
+    reply names the data version taken before the adoption, so the person can restore it knowingly."""
+    from backend.api.shared_authorization import request_actor
+    actor = request_actor(request, req.actor)
+    project = get_current_project(request)
+    source = _source_path(project)
+    with _REVIEW_LOCK, _VERSION_LOCK, metadata_engine.metadata_transaction(Path(project["project_dir"]), source, Path(project["annotations_dir"])):
+        proposal = _read_proposal(project, suggestion_id)
+        if proposal["status"] != "accepted":
+            raise HTTPException(status_code=409, detail="Only an adopted draft can be taken back.")
+        adopted = proposal.get("adopted_annotations")
+        if not adopted:
+            raise HTTPException(status_code=409, detail={
+                "message": "이 채택은 도형 단위 되돌리기 기록이 없습니다. 채택 전에 남긴 데이터 버전으로 복원하세요.",
+                "backup_version_id": proposal.get("backup_version_id")})
+        external = proposal.get("backend") in {"template_match", "grounding_dino", "foundation", "vlm"}
+        from backend.api.routes_training import training_job_manager
+        if training_job_manager.get_active_job() is not None:
+            raise HTTPException(status_code=409, detail="Finish or stop active training before changing labels.")
+        if external:
+            from backend.engine import labeling_tasks
+            if labeling_tasks.active(project):
+                raise HTTPException(status_code=409, detail="Finish or cancel the active labeling task before changing labels.")
+            batch = labeling_tasks.read(project, proposal["batch_id"]) if proposal.get("batch_id") else None
+        else:
+            with _BATCH_LOCK:
+                if _project_batch_key(project) in _LIVE_BATCHES:
+                    raise HTTPException(status_code=409, detail="Finish or cancel the active label batch before changing labels.")
+            batch = _read_batch(project, proposal["batch_id"]) if proposal.get("batch_id") else None
+        image = _image_path(project, proposal["image_path"])
+        current = routes_annotation.get_annotations(image.stem, file_path=str(image)).get("annotations", [])
+        if not isinstance(current, list):
+            raise HTTPException(status_code=422, detail="Existing annotation file is invalid.")
+        by_id = {item.get("id"): item for item in current if isinstance(item, dict)}
+        changed = sorted(item["id"] for item in adopted if by_id.get(item["id"]) != item)
+        if changed:
+            raise HTTPException(status_code=409, detail={
+                "message": "채택한 도형이 그 뒤 바뀌어 이 채택만 되돌릴 수 없습니다. 채택 전에 남긴 데이터 버전으로 복원하세요.",
+                "backup_version_id": proposal.get("backup_version_id"), "changed_candidate_ids": changed})
+        adopted_ids = {item["id"] for item in adopted}
+        remaining = [item for item in current if not (isinstance(item, dict) and item.get("id") in adopted_ids)]
+        metadata = metadata_engine.metadata_for_path(Path(project["project_dir"]), source, image, Path(project["annotations_dir"]))
+        before = _dataset_fingerprint(project)
+        # The same label folder each review path writes (and restores on failure).
+        studio = (dataset_annotation_dir(image.parent, Path(project["annotations_dir"]), use_scope=False) if external
+                  else dataset_annotation_dir(image.parent, routes_dataset.STUDIO_ANNOTATIONS_DIR))
+        json_path, mask_path = studio / f"{image.stem}.json", studio / "masks" / f"{image.stem}.png"
+        save = routes_annotation.AnnotationSaveRequest(
+            image_id=image.stem, image_path=str(image), annotations=remaining, image_width=proposal["image_width"],
+            image_height=proposal["image_height"], actor=actor, expected_revision=metadata["revision"])
+        backup = _snapshot(project, source, f"채택 되돌리기 전 · {image.name}", f"Before taking back {suggestion_id}", "auto_backup")
+        proposal_path = _proposal_path(project, suggestion_id)
+        previous = {path: (path.read_bytes() if path.is_file() else None) for path in (json_path, mask_path, proposal_path)}
+        if batch is not None:
+            if external:
+                from backend.engine import labeling_tasks
+                batch_path = labeling_tasks._root(project) / f"{batch['id']}.json"
+            else:
+                batch_path = _batch_path(project, batch["id"])
+            previous[batch_path] = batch_path.read_bytes() if batch_path.is_file() else None
+        try:
+            routes_annotation.save_annotations(save, request)
+            # The take-back is a reviewed change, like an adoption: the batch's remaining drafts stay reviewable
+            # only when nothing else changed the dataset since the last reviewed change.
+            if batch is not None and batch.get("review_fingerprint") == before:
+                batch["review_fingerprint"] = _dataset_fingerprint(project)
+                if external:
+                    from backend.engine import labeling_tasks
+                    labeling_tasks.write(project, batch)
+                else:
+                    _persist_batch(project, batch)
+            proposal.update(status="reverted", reverted_by=actor, revert_backup_version_id=backup["id"],
+                            reverted_at=time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()))
+            _write_json(proposal_path, proposal)
+        except Exception:
+            for path, data in previous.items():
+                _restore_bytes(path, data)
             raise
         return proposal

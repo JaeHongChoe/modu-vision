@@ -78,6 +78,20 @@ def _trusted_annotation_directory(requested: str) -> Path:
     return target
 
 
+class AnnotationOrigin(BaseModel):
+    """Where a shape came from when a person adopted it from a machine draft. Shapes a person drew have none."""
+    model_config = ConfigDict(extra="ignore")
+    kind: Literal["model_draft"] = "model_draft"
+    proposal_id: str = Field(..., min_length=1, max_length=100)
+    candidate_id: str = Field(..., min_length=1, max_length=120)
+    backend: str = Field("trained_model", min_length=1, max_length=40)
+    job_id: Optional[str] = Field(None, max_length=160)
+    checkpoint_sha256: Optional[str] = Field(None, max_length=64)
+    reviewer: str = Field(..., min_length=1, max_length=100)
+    adopted_at: str = Field(..., min_length=1, max_length=40)
+    backup_version_id: Optional[str] = Field(None, max_length=80)
+
+
 class AnnotationItem(BaseModel):
     model_config = ConfigDict(extra="ignore")
     id: Optional[str] = None
@@ -93,6 +107,7 @@ class AnnotationItem(BaseModel):
     color: Optional[str] = None
     text: Optional[str] = Field(None, max_length=2000)
     direction_deg: Optional[float] = Field(None,ge=0,lt=360,allow_inf_nan=False)
+    origin: Optional[AnnotationOrigin] = None
 
     @field_validator("bbox")
     @classmethod
@@ -179,7 +194,8 @@ def _save_annotations_locked(req: AnnotationSaveRequest, target_dir: Path, file_
     brush_masks = []
 
     for item in req.annotations:
-        item_dict = item.model_dump()
+        # A shape without an origin is stored exactly as before (no origin key).
+        item_dict = item.model_dump(exclude={"origin"} if item.origin is None else None)
         # Sanitize bbox if present
         if item.bbox is not None:
             try:

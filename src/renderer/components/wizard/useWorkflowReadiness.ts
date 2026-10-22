@@ -11,7 +11,8 @@ import { getNextAction, type WorkflowEvidence, type WorkflowImpact } from './wor
 import { subscribeWorkflowEvidence, workflowEvidenceRevision } from '../../stores/workflowEvidence';
 import { publishWorkflowProgress } from '../../stores/workflowProgress';
 import { stepsFromEvidence } from './stepProgress';
-import { classStartBlocker } from '../dataset/importChecklist';
+import { classStartBlocker, splitMissesLabels } from '../dataset/importChecklist';
+import { draftReviewScope, useDraftReviewStore } from '../../stores/useDraftReviewStore';
 
 export function useWorkflowReadiness() {
   const project=useProjectStore(s=>s.project),projectDir=useProjectStore(s=>s.projectDir),task=useProjectStore(s=>s.task),stage=useProjectStore(s=>s.activeStep),projectBusy=useProjectStore(s=>s.isProjectBusy);
@@ -24,6 +25,8 @@ export function useWorkflowReadiness() {
   const evaluatedSamples=useEvaluationStore(s=>s.testPredictions?.length ?? 0);
   const flow=useFlowchartStore();
   const annotationDirty=useAnnotationStore(s=>s.isDirty);
+  const draftScope=draftReviewScope({projectDir,project,task});
+  const pendingDrafts=useDraftReviewStore(s=>s.scope===draftScope?s.pendingImages:0);
   const annotationRevision=useAnnotationStore(s=>s.metadata?.revision),labelbookVersion=useAnnotationStore(s=>s.labelbookVersion);
   const [context,setContext]=useState(getProjectContext);
   useEffect(()=>subscribeProjectContext(setContext),[]);
@@ -69,5 +72,6 @@ export function useWorkflowReadiness() {
   return {readiness:getNextAction({stage,projectReady:Boolean(projectDir&&project),sourceReady,totalImages:data.totalImages,train:data.split.train,val:data.split.val,
     busy:projectBusy||data.isLoading||data.isSplitting||annotationDirty,task,splitState:data.splitState,populatedClasses:data.hasSelectedFolder?Object.values(data.classes||{}).filter(count=>count>0).length:undefined,
     classBlocker:data.hasSelectedFolder?classStartBlocker(data.classes||{},data.splitState==='saved'||data.splitState==='source_folders'?data.classSplitCounts??null:null,data.split):undefined,modelJobId:modelJobId || (training.isCurrentData?training.jobId:null),flowVersionId:receipt?.key===key?receipt.versionId:null,
-    flowDirty:flow.pipelineDirty,flowMatchesSaved:receipt?.key===key?receipt.flowMatchesSaved:false,trainingStatus:training.status,evidence}),refresh:()=>setRefresh(value=>value+1)};
+    flowDirty:flow.pipelineDirty,flowMatchesSaved:receipt?.key===key?receipt.flowMatchesSaved:false,trainingStatus:training.status,evidence,drafts:{pendingImages:pendingDrafts},
+    splitMissesLabels:data.splitSupported!==false&&splitMissesLabels({totalImages:data.totalImages,split:data.split,splitState:data.splitState})}),refresh:()=>setRefresh(value=>value+1)};
 }

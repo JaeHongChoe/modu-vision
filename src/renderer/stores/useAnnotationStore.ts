@@ -624,6 +624,8 @@ export const useAnnotationStore = create<AnnotationState>((set, get) => ({
             rotated_bbox: a.rotated_bbox,
             direction_deg: a.direction_deg,
             mask_rle: a.mask_rle,
+            // An adopted draft keeps where it came from; without it the adoption could not be taken back later.
+            ...(a.origin ? { origin: a.origin } : {}),
           })),
           image_width: get().imageDimensions?.width || currentImage.width || 8192,
           image_height: get().imageDimensions?.height || currentImage.height || 5464,

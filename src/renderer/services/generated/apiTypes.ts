@@ -39,6 +39,19 @@ export type AnnotationItem = {
   color?: string | null;
   text?: string | null;
   direction_deg?: number | null;
+  origin?: AnnotationOrigin | null;
+};
+
+export type AnnotationOrigin = {
+  kind?: "model_draft";
+  proposal_id: string;
+  candidate_id: string;
+  backend?: string;
+  job_id?: string | null;
+  checkpoint_sha256?: string | null;
+  reviewer: string;
+  adopted_at: string;
+  backup_version_id?: string | null;
 };
 
 export type AnnotationSaveRequest = {
@@ -1593,6 +1606,10 @@ export type TruthRequest = {
   note?: string;
 };
 
+export type UndoRequest = {
+  actor?: string;
+};
+
 export type UpdateRow = {
   image_path: string;
   state: "pending" | "running" | "OK" | "NG" | "REVIEW" | "error" | "skipped";
@@ -1979,6 +1996,7 @@ export interface ApiRequestBody {
   "POST /api/label-suggestions/feature-train": FeatureTrainRequest;
   "POST /api/label-suggestions/generate": GenerateRequest;
   "POST /api/label-suggestions/{suggestion_id}/review": backend__api__routes_label_suggestions__ReviewRequest;
+  "POST /api/label-suggestions/{suggestion_id}/undo": UndoRequest;
   "POST /api/model-deployments/approve": ApprovalRequest;
   "POST /api/model-deployments/rollback": backend__api__routes_model_deployments__RollbackRequest;
   "POST /api/model-deployments/specialized-approve": SpecializedApprovalRequest;

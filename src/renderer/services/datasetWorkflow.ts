@@ -43,6 +43,8 @@ export const datasetWorkflow = {
   generateModel: (jobId: string, imagePath: string, threshold: number, keywords: string[], options: SizeControls & {device:string} = {device:'cpu',min_area:0,min_width:0,min_height:0}) => request<CandidateProposal>('/api/label-suggestions/generate',json('POST',buildModelRequest(jobId,imagePath,threshold,keywords,options))),
   startBatch: (body: Record<string,unknown>) => request<LabelSuggestionBatch>('/api/label-suggestions/batches',json('POST',body)),
   review: (id: string, decision: string, candidateIds: string[], actor: string) => request<CandidateProposal>(`/api/label-suggestions/${id}/review`,json('POST',{decision,candidate_ids:candidateIds,actor})),
+  /** Take back one adoption: only its shapes are removed, and only while nobody changed them since (else a 409 naming the backup). */
+  undoAdoption: (id: string, actor: string) => request<CandidateProposal>(`/api/label-suggestions/${id}/undo`,json('POST',{actor})),
 };
 export function workflowError(error: unknown): string {
   if (error instanceof Error) return error.message;

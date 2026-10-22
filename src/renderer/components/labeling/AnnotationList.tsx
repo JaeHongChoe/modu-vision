@@ -290,6 +290,8 @@ export const AnnotationList: React.FC = () => {
                     {ann.type === 'brush_mask' && <Paintbrush className="w-3.5 h-3.5 text-emerald-400 flex-shrink-0" />}
                     {ann.type === 'tag' && <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 flex-shrink-0" />}
                     <span className="truncate text-xs font-medium text-slate-200">{ann.label}</span>
+                    {ann.origin?.kind === 'model_draft' && <span title={`초안 ${ann.origin.proposal_id} · ${ann.origin.reviewer} 채택`}
+                      className="flex-shrink-0 rounded bg-emerald-900/60 px-1 text-[10px] text-emerald-200">초안에서 채택</span>}
                   </div>
 
                   <div className="flex items-center space-x-1">

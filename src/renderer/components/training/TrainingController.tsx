@@ -51,7 +51,7 @@ import {defaultTrainingScheduling, trainingSchedulingOptions, TrainingScheduling
 import {JobProgressView} from './JobProgressView';
 import {useSelectedCoreJob} from './useSelectedCoreJob';
 import {OperationsObservabilityPanel} from '../runtime/OperationsObservabilityPanel';
-import {classGaps, classStartBlocker} from '../dataset/importChecklist';
+import {classGaps, classStartBlocker, SPLIT_MISSES_LABELS_TEXT, splitMissesLabels} from '../dataset/importChecklist';
 
 export const TrainingController: React.FC = () => {
   const [actionError, setActionError] = useState<string | null>(null);
@@ -224,12 +224,14 @@ export const TrainingController: React.FC = () => {
     return () => window.clearInterval(timer);
   }, [jobId, isTraining, cancelIncomplete, refreshCurrentJob]);
 
+  const splitMissesLabelled = !isSplitUnavailable(task, splitSupported) && splitMissesLabels({ totalImages, split, splitState });
   const canStart = totalImages > 0 && split.train > 0 && split.val > 0 &&
     !isProjectBusy && sourceReady && !isLoading && !isSplitting && !isRecoveringTraining && !importError && !modelOptionsError && !schedulingError && computeReady
     // The classification rules the start notice names hold the button too (F-02/F-03).
     && !(task === 'classification' && (populatedClasses < 2 || !!classBlocker || splitState === 'stale' || splitState === 'automatic'));
   const startBlocker = isProjectBusy || isLoading || isSplitting ? '프로젝트·데이터 변경이 진행 중입니다.'
     : !sourceReady || importError ? '현재 데이터 원본을 다시 가져와야 합니다.'
+    : splitMissesLabelled ? SPLIT_MISSES_LABELS_TEXT
     : totalImages<1 || split.train<1 || split.val<1 ? '저장된 Train·Val 분할과 검수 이미지를 준비하세요.'
     // Training on an automatic split works but step 4 refuses to evaluate it; a stale saved split is refused anyway.
     : task === 'classification' && populatedClasses < 2 ? `분류에는 이미지가 있는 클래스가 2개 이상 필요합니다 (지금 ${populatedClasses}개). 다른 클래스 폴더에 이미지를 넣고 1단계에서 다시 불러오세요.`
@@ -382,6 +384,7 @@ export const TrainingController: React.FC = () => {
             title={split.train === 0 ? '사용 가능한 학습 이미지가 없습니다' : '사용 가능한 검증 이미지가 없습니다'}
             description={requiresSourcePartitions
               ? splitUnavailableReason || '이 작업 유형은 화면 재분할을 지원하지 않습니다. 원본 train/val/test 폴더 구성을 확인하세요.'
+              : splitMissesLabelled ? SPLIT_MISSES_LABELS_TEXT
               : `현재 학습 대상: Train ${split.train}장 · Val ${split.val}장 · Test ${split.test}장. 저장된 분할과 이미지의 미사용·검수 상태를 확인하세요.`}
             shopFloorTip="검수 정책으로 제외된 이미지는 먼저 검수하세요. 기존 시험 분할을 유지하고, 분할 변경이 필요하면 1단계에서 확인 후 적용하세요."
             actions={[

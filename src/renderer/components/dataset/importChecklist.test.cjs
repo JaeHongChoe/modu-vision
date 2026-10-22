@@ -78,3 +78,17 @@ test('detection or segmentation without labels blocks with the layout',()=>{
  const check=byId(importChecks({...base,task:'segmentation',classes:{defect_mask:0},labelsMissing:true,expectedLayout:'images/ 와 masks/'}),'labels_missing');
  assert.equal(check.level,'block');assert.match(check.text,/masks\//);
 });
+test('a saved split that leaves out newly labeled or adopted images says to apply it again, not that test images are missing',()=>{
+ const {splitMissesLabels,SPLIT_MISSES_LABELS_TEXT}=load('importChecklist.ts');
+ const detection={...base,task:'detection',classes:{defect:49},classSplitCounts:null,split:{train:0,val:0,test:0},splitState:'saved'};
+ assert.equal(splitMissesLabels(detection),true);
+ const check=byId(importChecks(detection),'split');
+ assert.equal(check.level,'block');assert.equal(check.action,'apply_split');assert.equal(check.text,SPLIT_MISSES_LABELS_TEXT);
+ assert.match(check.text,/초안에서 채택한 이미지/);
+ assert.equal(byId(importChecks(detection),'test'),undefined,'the zero test count is the same cause, not a second problem');
+ // A split that covers every labeled image, folders, or no images at all are not this case.
+ assert.equal(splitMissesLabels({...detection,split:{train:34,val:10,test:5}}),false);
+ assert.equal(splitMissesLabels({...detection,splitState:'source_folders'}),false);
+ assert.equal(splitMissesLabels({...detection,totalImages:0}),false);
+ assert.equal(byId(importChecks({...detection,splitLocked:true}),'split'),undefined);
+});

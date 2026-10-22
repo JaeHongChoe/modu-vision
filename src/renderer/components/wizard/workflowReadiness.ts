@@ -1,11 +1,12 @@
 export type WorkflowStep = 1 | 2 | 3 | 4 | 5 | 6;
 export type RecordedInput = { job_id?: string; task?: string; checkpoint_state?: string; data_state?: string; state?: string; scope_matches?: boolean; version_id?: string; revision_id?: string; evaluation_id?: string; package_id?: string; model_job_ids?: string[] };
 export type WorkflowImpact = { project_id?: string; source_dataset_path?: string; labelset_id?: string; models: RecordedInput[]; model_evaluations: RecordedInput[]; flows: RecordedInput[]; flow_evaluations: RecordedInput[]; approvals: RecordedInput[]; packages: RecordedInput[]; required_actions?: string[] };
-export type WorkflowEvidence = { status: 'checking' | 'error' | 'ready'; error?: string; review?: { ready: boolean; counts: { eligible: number; pending?: number }; blockers?: string[] }; impact?: WorkflowImpact };
+export type WorkflowEvidence = { status: 'checking' | 'error' | 'ready'; error?: string; review?: { ready: boolean; counts: { eligible: number; pending?: number; approved?: number }; blockers?: string[] }; impact?: WorkflowImpact };
 export type ReadinessAction = { stage: WorkflowStep; status: 'ready' | 'blocked' | 'checking' | 'unknown'; completedInputs: string[]; missingInputs: string[]; nextAction: { label: string; step: WorkflowStep; kind?: 'refresh' | 'details'; target?: string };
   /** A model whose training data changed since it was trained: the footer shows what changed and the ways back. */
   dataChangedJobId?: string };
-export type ReadinessContext = { stage: WorkflowStep; projectReady: boolean; sourceReady: boolean; totalImages: number; train: number; val: number; busy: boolean; task: string; modelJobId?: string | null; flowVersionId?: string | null; flowDirty: boolean; flowMatchesSaved?: boolean; splitState?: 'saved' | 'source_folders' | 'automatic' | 'stale' | null; populatedClasses?: number; classBlocker?: string | null; trainingStatus?: string; evidence: WorkflowEvidence };
+export type ReadinessContext = { stage: WorkflowStep; projectReady: boolean; sourceReady: boolean; totalImages: number; train: number; val: number; busy: boolean; task: string; modelJobId?: string | null; flowVersionId?: string | null; flowDirty: boolean; flowMatchesSaved?: boolean; splitState?: 'saved' | 'source_folders' | 'automatic' | 'stale' | null; populatedClasses?: number; classBlocker?: string | null; trainingStatus?: string; evidence: WorkflowEvidence; /** Images with machine drafts waiting for a person (step 2's draft review). */ drafts?: { pendingImages: number };
+  /** The saved split leaves out labeled images (newly labeled or adopted), so it counts none until applied again. */ splitMissesLabels?: boolean};
 
 /** Navigation advice only. A recorded result is never authorization to run work. */
 export function getNextAction(input: ReadinessContext): ReadinessAction {
@@ -21,6 +22,9 @@ export function getNextAction(input: ReadinessContext): ReadinessAction {
   if(evidence.status!=='ready')return result(evidence.status==='checking'?'checking':'unknown',[evidence.error || '현재 입력 근거 확인 중'],'준비도 다시 확인',stage,undefined,'refresh');
   if(!evidence.review)return result('unknown',['현재 입력의 검수·이력 근거 확인 필요'],'준비도 다시 확인',stage,undefined,'refresh');
   if(stage===2){
+    // Drafts are not labels until a person adopts them, so they come first while any wait.
+    const drafts=input.drafts?.pendingImages??0,approved=evidence.review.counts.approved;
+    if(drafts>0)return result(evidence.review.ready?'ready':'blocked',[`초안 ${drafts}장 검토 대기${approved?` · 검수 승인 ${approved}장`:''}`],'초안 검토',2,'draft-review-queue');
     if(!evidence.review.ready)return result('blocked',evidence.review.blockers?.length?evidence.review.blockers:['학습에 사용할 승인 이미지가 부족합니다.'],'라벨 작업 열기 (2단계)',2,'workflow-label-review');
     completedInputs.push(`검수 기준을 통과한 이미지 ${evidence.review.counts.eligible}장`);
     return result('ready',[],'모델 학습 시작 (3단계)',3,'workflow-training');
@@ -33,6 +37,7 @@ export function getNextAction(input: ReadinessContext): ReadinessAction {
     // The per-class minimum and a class without training images (F-03); the text comes from the step-1 checklist rules.
     if(input.task==='classification'&&input.classBlocker)return result('blocked',[input.classBlocker],'데이터 다시 확인 (1단계)',1,'workflow-data');
     if(input.task==='classification'&&(input.splitState==='automatic'||input.splitState==='stale'))return result('blocked',[input.splitState==='stale'?'폴더 이미지가 저장한 분할과 달라졌습니다 (다시 나눠 저장 필요)':'분할이 저장되지 않았습니다 (자동 분할로는 4단계 평가를 할 수 없음)'],'분할 저장하기 (1단계)',1);
+    if(input.splitMissesLabels)return result('blocked',['저장된 분할에 없는 라벨 이미지가 있습니다 (새로 라벨했거나 초안에서 채택한 이미지)'],'분할 다시 적용 (1단계)',1);
     if(input.train<1 || input.val<1)return result('blocked',[`저장된 학습·검증 분할 부족 (Train ${input.train} / Val ${input.val})`],'학습·시험 분할 확인 (1단계)',1);
     completedInputs.push(`저장 분할 Train ${input.train} / Val ${input.val}`);
     if(['queued','preparing','running','transferring','syncing','stopping'].includes(input.trainingStatus||''))return result('checking',['작업 완료 응답 확인 중'],'학습 진행 상태 보기',3,'workflow-training');

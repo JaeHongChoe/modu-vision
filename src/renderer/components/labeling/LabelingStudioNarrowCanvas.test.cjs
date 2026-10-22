@@ -27,7 +27,7 @@ const layout = compile(path.join(directory, 'labelingLayout.ts'), {}, false);
 // Every child panel is a named stub: the tree keeps it as an element and never renders it.
 const stubs = new Proxy({}, {get: (_, name) => name === '__esModule' ? true : Object.assign(() => null, {displayName: String(name)})});
 const childModules = ['./LabelingToolbar', './CategorySelector', './ClassificationClassPicker', './LabelingCanvas', './MaskLayerControls',
-  './AnnotationList', './ImageFilmstrip', './ModelAssistPanel', './LabelSetBar', './ImageReviewPanel', './DerivedImagePanel',
+  './AnnotationList', './ImageFilmstrip', './ModelAssistPanel', './DraftReviewQueue', './LabelSetBar', './ImageReviewPanel', './DerivedImagePanel',
   './SavedReviewQueuePanel', './DicomPanel', './TeamDataPanel', './AnnotationDraftRecovery', './EvidenceEditReturn',
   '../common/WorkflowImpactPanel', '../common/SpecialistFamilyNote'];
 
