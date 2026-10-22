@@ -1,18 +1,21 @@
 import { create } from 'zustand';
 
-/** How many images have machine drafts waiting for a person, as the draft review queue last read them.
- *  `scope` names the project, source, label set and task that count belongs to, so the footer never shows
- *  another project's count. */
+/** How many images have machine drafts waiting for a person, and how many finished models fit the current data, as
+ *  the draft review queue last read them. `scope` names the project, source, label set and task those numbers belong
+ *  to, so the footer never shows another project's count. */
 interface DraftReviewState {
   scope: string;
   pendingImages: number;
-  publish: (scope: string, pendingImages: number) => void;
+  /** Models trained on exactly the current data (the ones that can draft); 0 until the queue has read them. */
+  models: number;
+  publish: (scope: string, pendingImages: number, models?: number) => void;
 }
 
 export const useDraftReviewStore = create<DraftReviewState>((set) => ({
   scope: '',
   pendingImages: 0,
-  publish: (scope, pendingImages) => set({ scope, pendingImages }),
+  models: 0,
+  publish: (scope, pendingImages, models = 0) => set({ scope, pendingImages, models }),
 }));
 
 export function draftReviewScope(input: {

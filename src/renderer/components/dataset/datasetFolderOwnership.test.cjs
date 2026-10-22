@@ -87,7 +87,7 @@ function harness({ holdSave = false, holdImport = false, holdImages = false, hol
     } },
   };
   const jsx = (type, props) => ({ type, props });
-  const helpers = Object.fromEntries(['classDistribution', 'datasetImportView', 'splitCalibrator'].map(name =>
+  const helpers = Object.fromEntries(['classDistribution', 'datasetImportView', 'splitCalibrator', 'datasetLayout'].map(name =>
     ['./' + name, load(path.join(__dirname, name + '.ts'), {})]));
   helpers['../../utils/datasetSplitCapability'] = load(path.resolve(__dirname, '../../utils/datasetSplitCapability.ts'), {});
   const scopedThumbnail = load(path.resolve(__dirname, '../common/ScopedDatasetThumbnail.tsx'), {'../../services/api': apiModule, '../../stores/thumbnailDiagnostics': {recordThumbnailRead: () => {}}});

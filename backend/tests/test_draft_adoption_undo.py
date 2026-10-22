@@ -135,3 +135,44 @@ def test_drafts_from_the_same_batch_stay_reviewable_after_a_take_back(suggestion
     assert reviewed.status_code == 200, reviewed.text
     second_labels = dataset_annotation_dir(source, Path(project["annotations_dir"]), use_scope=False) / "second.json"
     assert json.loads(second_labels.read_text())["annotations"][0]["origin"]["proposal_id"] == second_id
+
+
+def test_team_editing_needs_the_reviewers_lease_to_adopt_and_to_take_back(suggestion_workspace):
+    """With team editing on, adopting a draft is a label save like any other: it needs the image's edit lease.
+
+    The reviewer acquires the lease the usual way and passes its token with the review; without it the save is
+    refused and nothing is written. Taking the adoption back needs the lease the same way."""
+    from backend.api import routes_team_data
+
+    client, project, source, image, labelme, studio, _ = suggestion_workspace
+    client.app.include_router(routes_annotation.router)
+    client.app.include_router(routes_team_data.router)
+    assert client.put("/api/team-data/settings", json={"expected_revision": 1, "actor": "owner", "changes": {"editing_enabled": True}}).status_code == 200
+    proposal = client.post("/api/label-suggestions/generate", json={"job_id": "job_12345_test", "image_path": str(image)}).json()
+    chosen = proposal["candidates"][0]["id"]
+    original = labelme.read_bytes()
+
+    refused = client.post(f"/api/label-suggestions/{proposal['id']}/review", json={"decision": "accept", "candidate_ids": [chosen], "actor": "Lee"})
+    assert refused.status_code == 409, refused.text
+    assert "편집 잠금" in refused.text and "token_hash" not in refused.text
+    assert not (studio / "first.json").is_file() and labelme.read_bytes() == original
+    assert client.get(f"/api/label-suggestions/{proposal['id']}").json()["status"] == "pending"
+
+    current = client.get("/api/annotations/first", params={"file_path": str(image)}).json()["metadata"]
+    lease = client.post(f"/api/team-data/images/{current['image_uuid']}/lease/acquire", json={"expected_revision": current["revision"], "actor": "Lee"})
+    assert lease.status_code == 200, lease.text
+    token = lease.json()["lease_token"]
+    accepted = client.post(f"/api/label-suggestions/{proposal['id']}/review", json={"decision": "accept", "candidate_ids": [chosen], "actor": "Lee", "lease_token": token})
+    assert accepted.status_code == 200, accepted.text
+    assert "token_hash" not in accepted.text and token not in accepted.text
+    saved = _labels(studio)
+    assert [row["id"] for row in saved if row.get("origin")] == [chosen]
+    assert saved[-1]["origin"]["reviewer"] == "Lee"
+
+    # Another person without the lease cannot take the adoption back; the reviewer with the lease can.
+    assert client.post(f"/api/label-suggestions/{proposal['id']}/undo", json={"actor": "Kim"}).status_code == 409
+    assert [row["id"] for row in _labels(studio) if row.get("origin")] == [chosen]
+    reverted = client.post(f"/api/label-suggestions/{proposal['id']}/undo", json={"actor": "Lee", "lease_token": token})
+    assert reverted.status_code == 200, reverted.text
+    assert reverted.json()["status"] == "reverted"
+    assert [row["id"] for row in _labels(studio) if row.get("origin")] == []

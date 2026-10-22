@@ -36,6 +36,7 @@ import {
   type LabelingHelperPanel,
 } from './labelingLayout';
 import { SpecialistFamilyNote } from '../common/SpecialistFamilyNote';
+import { reportPanelError } from '../../stores/assistContext';
 
 export const LabelingStudio: React.FC = () => {
   const { images: datasetImages } = useDatasetStore();
@@ -92,6 +93,11 @@ export const LabelingStudio: React.FC = () => {
     }
   }, [datasetImages, annotImages, syncDatasetImages, isProjectBusy]);
 
+  // The banners above the canvas are also listed in the footer's details, with the other panels' errors.
+  const loadError = currentImage && annotationLoadStatus === 'error' ? `기존 라벨 조회 실패: ${annotationLoadError}` : null;
+  useEffect(() => { reportPanelError('기존 라벨 조회', loadError); return () => reportPanelError('기존 라벨 조회', null); }, [loadError]);
+  useEffect(() => { reportPanelError('자동 추출', autoSelectError); return () => reportPanelError('자동 추출', null); }, [autoSelectError]);
+
   return (
     <div className="flex flex-col h-full w-full bg-[#0B0E14] text-slate-200 overflow-hidden select-none">
       {/* Top Action Toolbar */}
@@ -138,7 +144,7 @@ export const LabelingStudio: React.FC = () => {
       {folded('모델 보조')}
 
       {/* Center Work Area: 3-Layer Canvas + Mask Controls + Annotation Sidebar */}
-      <div ref={workAreaRef} className="flex-1 flex overflow-hidden relative" data-labeling-work-area>
+      <div ref={workAreaRef} id="labeling-canvas" tabIndex={-1} className="flex-1 flex overflow-hidden relative" data-labeling-work-area>
         <div className="flex-1 relative h-full bg-[#0B0E14]">
           <LabelingCanvas />
           <MaskLayerControls />

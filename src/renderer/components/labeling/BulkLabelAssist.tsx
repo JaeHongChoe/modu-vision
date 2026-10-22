@@ -7,6 +7,7 @@ import type { ImageMeta } from '../../types';
 import type {LabelAssistExecution} from './LabelAssistDeviceSizes';
 import { datasetWorkflow } from '../../services/datasetWorkflow';
 import {labelingScope} from './foundationRequest';
+import { reportPanelError } from '../../stores/assistContext';
 
 function errorText(error: unknown): string {
   if (error instanceof Error) return error.message;
@@ -56,6 +57,7 @@ export const BulkLabelAssist: React.FC<Props> = ({ projectDir, modelId, threshol
   const [selectedBatchId, setSelectedBatchId] = useState('');
   const [busy, setBusy] = useState<'start' | 'cancel' | null>(null);
   const [error, setError] = useState<string | null>(null);
+  useEffect(() => { reportPanelError('초안 만들기', error); return () => reportPanelError('초안 만들기', null); }, [error]);
 
   const visibleBatches=currentScope?batches:[];
   const selectedBatch = visibleBatches.find((batch) => batch.id === selectedBatchId);

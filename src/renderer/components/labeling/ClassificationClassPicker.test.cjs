@@ -10,7 +10,7 @@ function render({task='classification',image}){
   '../../stores/useAnnotationStore':{useAnnotationStore:store({currentImage:image,applyImageClass:()=>{}})},
   '../../stores/useDatasetStore':{useDatasetStore:Object.assign(store({classes:{OK:5,NG:7}}),{getState:()=>({annotationsChanged:async()=>{}})})},
   '../../stores/useProjectStore':{useProjectStore:store({task})},
-  '../../stores/workflowEvidence':{bumpWorkflowEvidence:()=>{}}};
+  '../../stores/workflowEvidence':{bumpWorkflowEvidence:()=>{}},'../../stores/assistContext':{reportPanelError:()=>{}}};
  const {ClassificationClassPicker}=load('ClassificationClassPicker.tsx',mocks);
  return {html:renderToStaticMarkup(React.createElement(ClassificationClassPicker)),calls};
 }

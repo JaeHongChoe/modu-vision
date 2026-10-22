@@ -13,6 +13,7 @@ import { publishWorkflowProgress } from '../../stores/workflowProgress';
 import { stepsFromEvidence } from './stepProgress';
 import { classStartBlocker, splitMissesLabels } from '../dataset/importChecklist';
 import { draftReviewScope, useDraftReviewStore } from '../../stores/useDraftReviewStore';
+import { publishAssistContext } from '../../stores/assistContext';
 
 export function useWorkflowReadiness() {
   const project=useProjectStore(s=>s.project),projectDir=useProjectStore(s=>s.projectDir),task=useProjectStore(s=>s.task),stage=useProjectStore(s=>s.activeStep),projectBusy=useProjectStore(s=>s.isProjectBusy);
@@ -27,6 +28,11 @@ export function useWorkflowReadiness() {
   const annotationDirty=useAnnotationStore(s=>s.isDirty);
   const draftScope=draftReviewScope({projectDir,project,task});
   const pendingDrafts=useDraftReviewStore(s=>s.scope===draftScope?s.pendingImages:0);
+  // The queue's count of models that fit the current data; before it has read them, the training store's last run.
+  const draftModels=useDraftReviewStore(s=>s.scope===draftScope?(s.models??0):0);
+  const currentModels=draftModels||(training.isCurrentData&&training.status==='completed'&&training.jobId?1:0);
+  // Per-image labels exist for detection and segmentation; a classification image always carries its folder class.
+  const labels=data.hasSelectedFolder&&(task==='detection'||task==='segmentation')?{total:data.sourceImages||data.totalImages,unlabeled:data.unlabeledImages}:undefined;
   const annotationRevision=useAnnotationStore(s=>s.metadata?.revision),labelbookVersion=useAnnotationStore(s=>s.labelbookVersion);
   const [context,setContext]=useState(getProjectContext);
   useEffect(()=>subscribeProjectContext(setContext),[]);
@@ -69,9 +75,13 @@ export function useWorkflowReadiness() {
     return()=>{sequence.current++;};
   },[key,sourceReady,refresh,data.isLoading,data.isSplitting,training.status,flow.flowIdentity.semantic_revision,flow.pipelineDirty,flow.pipelineIsDraft,flow.baseVersionId,evidenceRevision,modelJobId,evaluatedSamples]);
   const evidence=receipt?.key===key?receipt.evidence:{status:'error' as const,error:'현재 프로젝트 근거 확인 필요'};
-  return {readiness:getNextAction({stage,projectReady:Boolean(projectDir&&project),sourceReady,totalImages:data.totalImages,train:data.split.train,val:data.split.val,
+  const readiness=getNextAction({stage,projectReady:Boolean(projectDir&&project),sourceReady,totalImages:data.totalImages,train:data.split.train,val:data.split.val,
     busy:projectBusy||data.isLoading||data.isSplitting||annotationDirty,task,splitState:data.splitState,populatedClasses:data.hasSelectedFolder?Object.values(data.classes||{}).filter(count=>count>0).length:undefined,
     classBlocker:data.hasSelectedFolder?classStartBlocker(data.classes||{},data.splitState==='saved'||data.splitState==='source_folders'?data.classSplitCounts??null:null,data.split):undefined,modelJobId:modelJobId || (training.isCurrentData?training.jobId:null),flowVersionId:receipt?.key===key?receipt.versionId:null,
     flowDirty:flow.pipelineDirty,flowMatchesSaved:receipt?.key===key?receipt.flowMatchesSaved:false,trainingStatus:training.status,evidence,drafts:{pendingImages:pendingDrafts},
-    splitMissesLabels:data.splitSupported!==false&&splitMissesLabels({totalImages:data.totalImages,split:data.split,splitState:data.splitState})}),refresh:()=>setRefresh(value=>value+1)};
+    splitMissesLabels:data.splitSupported!==false&&splitMissesLabels({totalImages:data.totalImages,split:data.split,splitState:data.splitState}),currentModels,labels});
+  // The same picture the footer shows, published once per change for the footer's error list and a later assistant.
+  const assist=JSON.stringify([draftScope,stage,readiness.status,readiness.missingInputs[0]??null,readiness.nextAction,readiness.progress??null]);
+  useEffect(()=>{publishAssistContext({scope:draftScope,stage,status:readiness.status,blocker:readiness.missingInputs[0]??null,nextAction:{label:readiness.nextAction.label,step:readiness.nextAction.step,target:readiness.nextAction.target},progress:readiness.progress??null});},[assist]); // eslint-disable-line react-hooks/exhaustive-deps
+  return {readiness,refresh:()=>setRefresh(value=>value+1)};
 }

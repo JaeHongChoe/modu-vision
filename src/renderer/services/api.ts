@@ -444,6 +444,9 @@ export interface LabelSuggestion {
   accepted_candidate_ids: string[];
   backup_version_id: string | null;
   batch_id?: string;
+  /** The image's ledger identity when the draft was made; adopting under team editing takes its edit lease. */
+  image_uuid?: string;
+  image_revision?: number;
   reviewer?: string;
   /** The adopted shapes as the label file held them right after adoption; a take-back compares against these. */
   adopted_annotations?: AnnotationItem[];

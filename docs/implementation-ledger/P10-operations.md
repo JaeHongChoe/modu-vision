@@ -23,7 +23,7 @@ F108–F111 are integrated through project-owned policy/journal, native controls
 
 ## Actual functional evidence
 
-- `test_model_operations.py`: actual classification inference adopts one reviewable label; untouched source bytes; backup/journal reopen; changed holdout/duplicates blocked.
+- `test_model_operations.py`: actual classification inference writes one pending step-2 draft (never a label) with its batch and review fingerprint; adoption through `/api/label-suggestions/{id}/review` keeps the origin; a pending, rejected or zero-candidate image is not drafted again; a parent step 2 cannot resolve is refused at configure time; untouched source bytes; journal reopen; changed holdout/duplicates blocked.
 - `test_model_operations_real_cycle.py`: genuine cached DINOv3 parent, new image/JSON, actual optimizer fit, immutable input version, both reevaluations, full fixed cohort comparison and persistent `awaiting_approval`.
 - Same actual cycle keeps a separate HTTP inference process alive: queued/running/completed real prediction while the candidate has executed an optimizer batch and remains actively training. This establishes independent functional execution, not production throughput.
 - `test_operations_security_review.py`: concurrent watcher launch, unrelated live owner recovery and cancellation at approval/deployment acknowledgement.

@@ -106,3 +106,55 @@ test('a later save keeps an adopted shape\'s origin and adds none to a drawn sha
   assert.equal('origin' in drawn, false);
   assert.deepEqual(adopted.origin, origin);
 });
+
+test('step 2 counts confirmed, drafted and remaining images, and its action reduces the remaining ones', () => {
+  const {getNextAction, stepTwoProgress} = load(path.join(__dirname, '..', 'wizard', 'workflowReadiness.ts'));
+  const base = {stage: 2, projectReady: true, sourceReady: true, totalImages: 54, train: 34, val: 10, busy: false, task: 'detection', flowDirty: false,
+    evidence: {status: 'ready', review: {ready: true, counts: {eligible: 48}}}};
+  assert.equal(stepTwoProgress({}), null, 'no per-image label count: no progress line');
+  assert.deepEqual(stepTwoProgress({labels: {total: 54, unlabeled: 6}, drafts: {pendingImages: 4}}), {confirmed: 48, drafts: 4, remaining: 2});
+  assert.deepEqual(stepTwoProgress({labels: {total: 54, unlabeled: 6}, drafts: {pendingImages: 9}}), {confirmed: 48, drafts: 6, remaining: 0}, 'drafts never exceed the unlabeled images');
+  // No model yet: a person labels the remaining images on the canvas (the class picker for classification).
+  const byHand = getNextAction({...base, labels: {total: 54, unlabeled: 6}, drafts: {pendingImages: 0}, currentModels: 0});
+  assert.equal(byHand.status, 'ready', 'training is still possible');
+  assert.deepEqual(byHand.nextAction, {label: '직접 라벨 달기', step: 2, target: 'labeling-canvas', kind: undefined});
+  assert.deepEqual(byHand.missingInputs, ['라벨 없는 이미지 6장']);
+  assert.deepEqual(byHand.progress, {confirmed: 48, drafts: 0, remaining: 6});
+  assert.equal(getNextAction({...base, task: 'classification', labels: {total: 54, unlabeled: 6}, currentModels: 0}).nextAction.target, 'image-class-picker');
+  // A model trained on the current data drafts them instead; the target sits inside the draft panel's popover.
+  const byModel = getNextAction({...base, labels: {total: 54, unlabeled: 6}, drafts: {pendingImages: 0}, currentModels: 1});
+  assert.deepEqual(byModel.nextAction, {label: '초안 만들기', step: 2, target: 'draft-create', kind: undefined});
+  // Waiting drafts still come first, with the progress line; nothing left to label goes on to training.
+  const waiting = getNextAction({...base, labels: {total: 54, unlabeled: 6}, drafts: {pendingImages: 6}, currentModels: 1});
+  assert.equal(waiting.nextAction.label, '초안 검토');
+  assert.deepEqual(waiting.progress, {confirmed: 48, drafts: 6, remaining: 0});
+  const done = getNextAction({...base, labels: {total: 54, unlabeled: 0}, drafts: {pendingImages: 0}, currentModels: 1});
+  assert.equal(done.nextAction.label, '모델 학습 시작 (3단계)');
+  assert.deepEqual(done.progress, {confirmed: 54, drafts: 0, remaining: 0});
+  // Review blockers keep their text and target, with the progress line beside them.
+  const blocked = getNextAction({...base, labels: {total: 54, unlabeled: 6}, currentModels: 1, evidence: {status: 'ready', review: {ready: false, counts: {eligible: 0}, blockers: ['두 사람 검토 대기 이미지 3장']}}});
+  assert.deepEqual(blocked.missingInputs, ['두 사람 검토 대기 이미지 3장']);
+  assert.equal(blocked.nextAction.target, 'workflow-label-review');
+  assert.deepEqual(blocked.progress, {confirmed: 48, drafts: 0, remaining: 6});
+});
+
+test('several drafts adopt together only from one batch, one per image, and the loop stops on a stale batch', () => {
+  const {multiAdoptionRefusal, staleBatchRefusal, adoptionSummary} = helpers();
+  const a = draft('d1', '/a.png', [0.9], {batch_id: 'batch_1'}), b = draft('d2', '/b.png', [0.8], {batch_id: 'batch_1'});
+  assert.equal(multiAdoptionRefusal([a]), null, 'one draft needs no grouping');
+  assert.equal(multiAdoptionRefusal([a, b]), null);
+  assert.match(multiAdoptionRefusal([a, draft('d3', '/c.png', [0.5], {batch_id: 'batch_2'})]), /같은 묶음/);
+  assert.match(multiAdoptionRefusal([a, draft('d4', '/d.png', [0.5])]), /하나씩/);
+  assert.match(multiAdoptionRefusal([a, draft('d5', '/a.png', [0.5], {batch_id: 'batch_1'})]), /같은 이미지/);
+  assert.equal(staleBatchRefusal(new Error('Training dataset fingerprint changed after proposal generation. Generate again.')), true);
+  assert.equal(staleBatchRefusal(new Error('Image, labels, or checkpoint changed after proposal generation. Generate again.')), false);
+  const summary = adoptionSummary([{draft: a, adopted: 2}, {draft: b, adopted: 0, error: '이 이미지가 바뀌었습니다'}], true);
+  assert.match(summary, /1장의 초안에서 2개를 라벨로 채택/);
+  assert.match(summary, /1장은 채택하지 못했습니다: b\.png · 이 이미지가 바뀌었습니다/);
+  assert.match(summary, /남은 초안은 데이터가 바뀌어 멈췄습니다/);
+  assert.doesNotMatch(adoptionSummary([{draft: a, adopted: 1}], false), /채택하지 못했습니다|멈췄습니다/);
+  const {adoptable, draftError} = helpers();
+  assert.equal(adoptable(draft('d8', '/h.png', [])), false, 'nothing to adopt: only rejectable');
+  assert.equal(adoptable(a), true);
+  assert.match(draftError(new Error('Select one or more proposal candidates to accept.')), /채택할 후보가 없습니다/);
+});

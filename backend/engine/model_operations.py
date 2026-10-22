@@ -172,6 +172,21 @@ def _checkpoint(project,task,identifier):
     return checkpoint
 
 
+_UNREVIEWABLE_PARENT='자동 라벨 초안은 2단계 초안 검토에서 채택할 수 있어야 합니다. 이 프로젝트의 작업으로 이 데이터에서 완료된 학습 모델(job_*)을 시작 모델로 선택하세요.'
+
+
+def _reviewable_parent(project,policy,checkpoint=None):
+    """The step 2 catalog row review resolves for this policy's parent, or None when a draft from it could never be adopted.
+
+    review_suggestion looks the model up in _model_catalog (completed job_* models of the project's task on this exact
+    source), so a specialized or lineage-only parent, or a policy task other than the project's, yields no reviewable draft."""
+    from backend.api.routes_label_suggestions import _model_catalog
+    if policy['task']!=project['task']:return None
+    model=next((item for item in _model_catalog(project) if item['job_id']==policy['parent_job_id']),None)
+    if model and checkpoint is not None and Path(model['checkpoint_path']).resolve()!=Path(checkpoint).resolve():return None
+    return model
+
+
 def configure_program(project, supplied):
     from backend.api.routes_model_operations import OperationsPolicy
     policy=OperationsPolicy.model_validate(supplied).model_dump()
@@ -186,6 +201,7 @@ def configure_program(project, supplied):
     if policy['auto_label'] and policy['task'] not in ('classification','detection','segmentation','ocr','rotated_detection'):
         raise ValueError('High confidence automatic labels require a calibrated classification, detection, segmentation, OCR or rotated detection model')
     with _cycle_lock(project), project_scope(project):
+        if policy['auto_label'] and _reviewable_parent(project,policy) is None:raise ValueError(_UNREVIEWABLE_PARENT)
         checkpoint=_checkpoint(project,policy['task'],policy['parent_job_id'])
         store=OperationsStore(project['project_dir']);previous=store.policy()
         if any(row['status']=='running' for row in store.history()):raise OperationsBusy('Cancel the active cycle before changing its policy')
@@ -216,43 +232,136 @@ def _authorized_flow(project,policy):
     return pipeline,record
 
 
-def _auto_label(project,policy,path,checkpoint,cycle_id):
-    """Adopt bounded model suggestions into an owned overlay, still needing review."""
+def _auto_label(project,policy,path,checkpoint,batch_id,fingerprint,cycle_id):
+    """Write one pending draft for a new, unlabeled image into the step 2 draft store; nothing is adopted here.
+
+    The proposal carries the field set routes_label_suggestions._generate_proposal writes, so review_suggestion adopts it
+    (with a backup and an origin) or refuses it exactly like a draft a person generated. Returns the per-image entry
+    {'image_path','image_sha256','checkpoint_sha256','candidate_count','confidence_threshold','status','proposal_id'?,'batch_id'?}
+    with status 'drafted' (a pending proposal was written) or 'zero_candidates' (no prediction reached the threshold; nothing written)."""
     from backend.api import routes_annotation
-    from backend.api.routes_dataset_versions import _snapshot,_VERSION_LOCK
-    from backend.api.routes_label_suggestions import _candidate_annotations
+    from backend.api.routes_dataset_versions import _VERSION_LOCK
+    from backend.api.routes_label_suggestions import _candidate_annotations,_proposal_path,_sha256
+    from backend.api.routes_project import _write_json
+    from backend.engine.annotation_storage import dataset_annotation_dir
     from backend.engine.dataset_metadata import metadata_for_path
     from backend.engine.trainer import infer
-    task=policy['task'];path=Path(path);before=_sha(path);model_hash=_sha(checkpoint)
-    current=routes_annotation.get_annotations(path.stem,file_path=str(path))
-    if current.get('annotations'):return {'image_path':str(path),'status':'already_labeled','accepted_count':0}
+    task=policy['task'];path=Path(path);before=_sha(path);model_hash=_sha(checkpoint);threshold=policy['confidence_threshold']
+    entry={'image_path':str(path),'image_sha256':before,'checkpoint_sha256':model_hash,'candidate_count':0,'confidence_threshold':threshold}
+    # Captured before inference, as the step 2 generator does: review refuses the draft once any of them changed.
+    metadata=metadata_for_path(Path(project['project_dir']),Path(project['source_dataset_dir']),path,Path(project['annotations_dir']))
+    labelme=path.with_suffix('.json');studio_json=dataset_annotation_dir(path.parent,Path(project['annotations_dir']),use_scope=False)/f'{path.stem}.json'
+    labelme_hash=_sha256(labelme);studio_hash=_sha256(studio_json)
+    if routes_annotation.get_annotations(path.stem,file_path=str(path)).get('annotations'):raise ValueError('Image, model or labels changed during automatic labeling')
+    suggestion_id=f'suggestion_{uuid.uuid4().hex[:24]}';started=time.monotonic()
     if task=='ocr':
         from backend.engine.ocr import predict_ocr
         result=predict_ocr(checkpoint,path,device=policy['label_device'])
-        candidates=[{'confidence':result['confidence'],'annotation':{'type':'tag','label':result['text'],'category_id':1}}] if result['text'] else []
+        found=[({'type':'tag','label':result['text'],'category_id':1},float(result['confidence']))] if result['text'] else []
     elif task=='rotated_detection':
         from backend.engine.rotated_detection import predict_rotated_box
-        result=predict_rotated_box(checkpoint,path,device=policy['label_device'],threshold=policy['confidence_threshold'])
+        result=predict_rotated_box(checkpoint,path,device=policy['label_device'],threshold=threshold)
         items=result.get('detections') or result.get('predictions') or [result]
-        candidates=[{'confidence':item.get('confidence',item.get('score',0)), 'annotation':{'type':'rotated_bbox','label':item.get('label','defect'),
-                    'rotated_bbox':[item['box'][key] for key in ('cx','cy','width','height','angle_deg')],'category_id':index}}
-                    for index,item in enumerate(items,1) if item.get('box')]
+        found=[({'type':'rotated_bbox','label':item.get('label','defect'),'rotated_bbox':[item['box'][key] for key in ('cx','cy','width','height','angle_deg')],'category_id':index},
+                float(item.get('confidence',item.get('score',0)))) for index,item in enumerate(items,1) if item.get('box')]
+    if task in ('ocr','rotated_detection'):
+        # Candidate ids follow the suggestion id, as _candidate_annotations mints them, so adoption and undo match by id.
+        candidates=[{'id':f'{suggestion_id}_c{index}','confidence':round(confidence,4),'annotation':{**annotation,'id':f'{suggestion_id}_c{index}'}}
+                    for index,(annotation,confidence) in enumerate(found,1)]
     else:
-        result=infer(task,checkpoint,path,threshold=policy['confidence_threshold'],device=policy['label_device'])
-        candidates=_candidate_annotations(task,result.predictions,result.confidence_score,cycle_id)
-    accepted=[candidate['annotation'] for candidate in candidates if float(candidate['confidence'])>=policy['confidence_threshold']]
-    if not accepted:return {'image_path':str(path),'status':'below_threshold','accepted_count':0}
+        result=infer(task,checkpoint,path,threshold=threshold,device=policy['label_device'])
+        candidates=_candidate_annotations(task,result.predictions,result.confidence_score,suggestion_id)
+    latency_ms=round((time.monotonic()-started)*1000,2)
+    kept=[candidate for candidate in candidates if float(candidate['confidence'])>=threshold]
+    if not kept:return {**entry,'status':'zero_candidates'}
     from PIL import Image
     with Image.open(path) as image:width,height=image.size
     with _VERSION_LOCK:
-        metadata=metadata_for_path(Path(project['project_dir']),Path(project['source_dataset_dir']),path,Path(project['annotations_dir']))
-        if _sha(path)!=before or _sha(checkpoint)!=model_hash or routes_annotation.get_annotations(path.stem,file_path=str(path)).get('annotations'):
+        if (_sha(path)!=before or _sha(checkpoint)!=model_hash or _sha256(labelme)!=labelme_hash or _sha256(studio_json)!=studio_hash
+                or routes_annotation.get_annotations(path.stem,file_path=str(path)).get('annotations')):
             raise ValueError('Image, model or labels changed during automatic labeling')
-        snapshot=_snapshot(project,Path(project['source_dataset_dir']),'Automatic label backup',cycle_id,'auto_backup')
-        routes_annotation.save_annotations(routes_annotation.AnnotationSaveRequest(image_id=path.stem,image_path=str(path),annotations=accepted,
-            image_width=width,image_height=height,actor=policy['reviewer'],expected_revision=metadata['revision']))
-    return {'image_path':str(path),'image_sha256':before,'checkpoint_sha256':model_hash,'status':'needs_review','accepted_count':len(accepted),
-            'confidence_threshold':policy['confidence_threshold'],'backup_version_id':snapshot['id'],'workflow_state':'needs_review','quality_approved':False}
+        proposal={'id':suggestion_id,'project_id':project['id'],'status':'pending','created_at':time.strftime('%Y-%m-%dT%H:%M:%SZ',time.gmtime()),
+                  'image_path':str(path),'image_id':path.stem,'image_width':width,'image_height':height,
+                  'image_uuid':metadata['image_uuid'],'image_revision':metadata['revision'],
+                  'image_sha256':before,'labelme_sha256':labelme_hash,'studio_sha256':studio_hash,
+                  'job_id':policy['parent_job_id'],'task':task,'checkpoint_sha256':model_hash,'dataset_fingerprint':fingerprint,
+                  'threshold':threshold,'confidence':round(max(float(candidate['confidence']) for candidate in kept),4),'latency_ms':latency_ms,
+                  'candidates':kept,'accepted_candidate_ids':[],'backup_version_id':None,
+                  'device':policy['label_device'],'size_bounds':{},'keywords':[],'backend':'trained_model','batch_id':batch_id,'cycle_id':cycle_id}
+        _write_json(_proposal_path(project,suggestion_id),proposal)
+    return {**entry,'status':'drafted','proposal_id':suggestion_id,'batch_id':batch_id,'candidate_count':len(kept)}
+
+
+def _existing_drafts(project):
+    """Step 2 drafts still pending or rejected, keyed by (image path, image bytes, checkpoint bytes) → (id, status):
+    the same draft is never written twice, and a draft a person rejected is not offered again for the same bytes."""
+    from backend.api.routes_label_suggestions import _SUGGESTION_ID,_proposal_root,_read_proposal
+    found={}
+    for file in sorted(_proposal_root(project).glob('suggestion_*.json')):
+        if not _SUGGESTION_ID.fullmatch(file.stem):continue
+        try:item=_read_proposal(project,file.stem)
+        except HTTPException:continue
+        if item.get('status') in ('pending','rejected'):
+            key=(item.get('image_path'),item.get('image_sha256'),item.get('checkpoint_sha256'))
+            if item['status']=='pending' or key not in found:found[key]=(item['id'],item['status'])
+    return found
+
+
+def _draft_labels(project,policy,new,checkpoint,cycle_id,step,result):
+    """Draft the cycle's new images into one step 2 batch; the summary is result['label_drafts'] (the cycle's result dict).
+
+    Summary: {'batch_id','review_fingerprint','drafted','zero_candidates','duplicate_pending','rejected_before','drafted_before','already_labeled','images'}
+    where images holds one entry per new image: the _auto_label entry for a drafted or zero-candidate image, or
+    {'image_path','image_sha256','checkpoint_sha256','candidate_count':0,'confidence_threshold','status':...,'proposal_id'?}
+    with status 'duplicate_pending' (a pending draft for these image and checkpoint bytes already waits in step 2),
+    'rejected_before' (a person rejected a draft for these bytes), 'drafted_before' (an earlier cycle already ran this
+    model on these bytes, with or without candidates; policy['drafted'] remembers it, since a cycle that stops for
+    review leaves the image "new" until its labels change) or 'already_labeled' (the image has labels; drafts never
+    append to them). Only images actually run are batch entries, so entry statuses stay generated / zero_candidates /
+    failed. The summary is placed in the result before any draft is written and filled in place (step saves the cycle
+    per image), so a cycle that fails or is cancelled after some drafts still journals their batch_id,
+    review_fingerprint and counts; those drafts stay pending and the next cycle counts them as duplicate_pending
+    instead of drafting them again."""
+    from backend.api import routes_annotation
+    from backend.api.routes_label_suggestions import _dataset_fingerprint,_persist_batch,_source_path
+    model_hash=_sha(checkpoint);existing=_existing_drafts(project);handled=policy.setdefault('drafted',{});stamp=lambda:time.strftime('%Y-%m-%dT%H:%M:%SZ',time.gmtime())
+    summary=result['label_drafts']={'batch_id':None,'review_fingerprint':None,'drafted':0,'zero_candidates':0,'duplicate_pending':0,'rejected_before':0,'drafted_before':0,'already_labeled':0,'images':[]}
+    queued=[];digests={}
+    for path in new:
+        digest=_sha(path);digests[path]=digest;entry={'image_path':path,'image_sha256':digest,'checkpoint_sha256':model_hash,'candidate_count':0,'confidence_threshold':policy['confidence_threshold']}
+        known=existing.get((path,digest,model_hash));before=handled.get(path) or {}
+        if known and known[1]=='pending':summary['images'].append({**entry,'status':'duplicate_pending','proposal_id':known[0]});summary['duplicate_pending']+=1
+        elif known:summary['images'].append({**entry,'status':'rejected_before','proposal_id':known[0]});summary['rejected_before']+=1
+        elif before.get('image_sha256')==digest and before.get('checkpoint_sha256')==model_hash:summary['images'].append({**entry,'status':'drafted_before'});summary['drafted_before']+=1
+        elif routes_annotation.get_annotations(Path(path).stem,file_path=path).get('annotations'):summary['images'].append({**entry,'status':'already_labeled'});summary['already_labeled']+=1
+        else:queued.append(path)
+    if not queued:return summary
+    # One fingerprint per cycle: review compares the dataset against the batch's copy, so nothing in this cycle may
+    # change labels or the split after this point (the cycle stops before enrollment when drafts were made).
+    fingerprint=_dataset_fingerprint(project)
+    batch={'id':'batch_'+uuid.uuid4().hex[:24],'project_id':project['id'],'source_dataset_dir':str(_source_path(project)),
+           'job_id':policy['parent_job_id'],'task':policy['task'],'threshold':policy['confidence_threshold'],'keywords':[],
+           'device':policy['label_device'],'size_bounds':{},'review_fingerprint':fingerprint,'checkpoint_sha256':model_hash,
+           'status':'running','created_at':stamp(),'finished_at':None,'total':len(queued),'processed':0,'generated':0,'zero_candidates':0,'failed':0,
+           'entries':[{'image_path':path,'image_id':Path(path).stem,'status':'queued'} for path in queued],'cycle_id':cycle_id}
+    _persist_batch(project,batch);summary.update(batch_id=batch['id'],review_fingerprint=fingerprint)
+    entry=None
+    try:
+        for entry in batch['entries']:
+            step('automatic_labels',image_path=entry['image_path'])
+            row=_auto_label(project,policy,entry['image_path'],checkpoint,batch['id'],fingerprint,cycle_id)
+            entry.update(status='generated' if row['status']=='drafted' else 'zero_candidates',candidate_count=row['candidate_count'])
+            if row.get('proposal_id'):entry['proposal_id']=row['proposal_id']
+            batch['processed']+=1;batch['generated' if row['status']=='drafted' else 'zero_candidates']+=1
+            summary[row['status']]+=1;summary['images'].append(row);_persist_batch(project,batch)
+            handled[entry['image_path']]={'image_sha256':digests[entry['image_path']],'checkpoint_sha256':model_hash,'status':row['status'],'cycle_id':cycle_id}
+    except BaseException as exc:
+        # Finalized before the phase ends, so a reader never has to flip a batch it cannot see to 'interrupted'.
+        if entry is not None and entry['status']=='queued':entry.update(status='failed',error=str(exc));batch['processed']+=1;batch['failed']+=1
+        batch.update(status='cancelled' if isinstance(exc,InterruptedError) else 'failed',error=str(exc),finished_at=stamp());_persist_batch(project,batch)
+        raise
+    batch.update(status='completed',finished_at=stamp());_persist_batch(project,batch)
+    return summary
 
 
 def _enroll_new_training_images(project, policy, new):
@@ -418,13 +527,18 @@ def _run_cycle_locked(project,event,*,training_fn=None,evaluation_fn=None):
             if any(inventory[path] in holdout_hashes for path in new):raise ValueError('New training data duplicates an independent holdout image')
             if not new and not (input_changed and policy['auto_retrain']):cycle['status']='idle';return store.save(cycle)
             cycle['result']['new_images']=[{'image_path':path,'sha256':inventory[path]} for path in new]
+            if policy['auto_label'] and _reviewable_parent(project,policy,checkpoint) is None:
+                # Never write a draft step 2 cannot adopt: the person fixes the parent, and the next cycle retries these images.
+                cycle['result']['label_drafts']={'batch_id':None,'review_fingerprint':None,'drafted':0,'zero_candidates':0,'duplicate_pending':0,'already_labeled':0,'images':[],'skipped_reason':_UNREVIEWABLE_PARENT}
+                raise ValueError(_UNREVIEWABLE_PARENT)
             step('automatic_labels',new_images=len(new))
-            labels=[]
-            if policy['auto_label']:
-                for path in new:
-                    step('automatic_labels',image_path=path)
-                    labels.append(_auto_label(project,policy,path,checkpoint,cycle['cycle_id']))
-            cycle['result']['auto_labels']=labels
+            # The summary lands in cycle['result']['label_drafts'] before drafting, so it survives a failure mid-batch.
+            drafts=_draft_labels(project,policy,new,checkpoint,cycle['cycle_id'],step,cycle['result']) if policy['auto_label'] else None
+            # What this cycle drafted is remembered now: the cycle may stop for review below, before the policy's
+            # normal save, and the next cycle must not run the same model on the same bytes again.
+            if drafts is not None:store.save_policy(policy,expected_revision=cycle['policy_revision'])
+            # Drafts are not labels: while any of this cycle's images waits in step 2, the cycle stops for review.
+            waiting=bool(drafts and (drafts['drafted'] or drafts['duplicate_pending']))
             if policy['auto_retrain']:
                 from backend.engine.dataset_metadata import metadata_for_path
                 required=[]
@@ -434,6 +548,10 @@ def _run_cycle_locked(project,event,*,training_fn=None,evaluation_fn=None):
                 if required:
                     cycle['status']='needs_review';cycle['result']['pending_review_images']=required
                     return store.save(cycle)
+                if waiting:
+                    # Enrollment rewrites the split manifest, which the batch's review_fingerprint covers; the drafts
+                    # would become unadoptable and unreviewed images would reach the training split.
+                    cycle['status']='needs_review';return store.save(cycle)
                 step('retraining')
                 if not policy['family_dataset_path']:cycle['result']['split_counts']=_enroll_new_training_images(project,policy,new)
                 training=(training_fn or _train)(project,policy,event);cycle['result']['training']=training
@@ -452,7 +570,7 @@ def _run_cycle_locked(project,event,*,training_fn=None,evaluation_fn=None):
                     cycle['result']['candidate_job_id']=candidate
                     cycle['result']['review_handoff']=freeze_subject(project,policy,candidate,evidence)
                 cycle['status']=cycle['result'].get('activation_state','completed') if policy['auto_approve'] else 'awaiting_approval'
-            else:cycle['status']='needs_review' if any(row['status']=='needs_review' for row in labels) else 'completed'
+            else:cycle['status']='needs_review' if waiting else 'completed'
             policy['seen'].update({path:inventory[path] for path in new})
             policy.setdefault('seen_labels',{}).update({path:_image_binding(project,path) for path in new})
             policy['input_version']=_input_version(project,policy);store.save_policy(policy, expected_revision=cycle['policy_revision'])

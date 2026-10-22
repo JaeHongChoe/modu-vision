@@ -45,8 +45,15 @@ import { ScopedDatasetThumbnail } from '../common/ScopedDatasetThumbnail';
 import { subscribeDataVersionRequest, takeDataVersionRequest } from '../../stores/dataVersionRequest';
 import { FieldReadinessPanel } from '../common/FieldReadinessPanel';
 import { SpecialistFamilyNote } from '../common/SpecialistFamilyNote';
+import {
+  AUTO_FOLD_STATUS, FOCUS_SWITCH_NAME, FOLD_STATUS_SHORT, NARROW_BODY_HEIGHT, NARROW_BODY_NOTICE_SHORT, autoFoldDecision, focusStatus, narrowBodyNotice,
+  storedDatasetFocus, writeDatasetFocus,
+} from './datasetLayout';
 
 const SPLIT_BADGE_KO: Record<string, string> = { train: '학습', val: '검증', test: '시험', not_split: '미분할', not_used: '미사용' };
+
+/** The narrow-body notice's id for the switch's aria-describedby (one DatasetStudio mounts; the render tests' React mock has no useId). */
+const NARROW_NOTICE_ID = 'dataset-narrow-notice';
 
 /** Shown while a shared login, project switch or logout runs: it rebuilds this step, which would cancel a ZIP upload. */
 const SESSION_CHANGING_NOTICE = '공동 작업 서버 연결을 바꾸는 중입니다. 끝나면 검증된 데이터 버전을 열 수 있습니다.';
@@ -57,6 +64,36 @@ export const DatasetStudio: React.FC = () => {
   const full = useProjectStore(state => state.viewMode) === 'full';
   const simpleView = useProjectStore(state => state.viewMode) === 'simple';
   const sessionChanging = useProjectStore(state => state.sharedSessionChanging);
+  // The focus view folds the full-width panels above the toolbar (DATASET_HELPER_PANELS) so the sidebar and the gallery
+  // keep the window's height; the choice is remembered. Off in both views until pressed (the simple view keeps 데이터 현황
+  // on screen), with one exception: a body measured under UNUSABLE_BODY_HEIGHT folds the panels once by itself for a
+  // viewer who never chose (a 0 px body is a hard failure for a first-time user). Their own press always wins afterwards.
+  const [focusChoice, setFocusChoice] = useState<boolean | null>(() => storedDatasetFocus());
+  const [autoFolded, setAutoFolded] = useState(false);
+  const focus = focusChoice ?? autoFolded;
+  const toggleFocus = () => { const next = !focus; writeDatasetFocus(next); setFocusChoice(next); };
+  // The open panels can leave the body row a few pixels tall (or none): the toolbar's switch then says so and is
+  // highlighted, and the panels' layout is untouched. Only shortness matters, so the height is kept clamped at the
+  // threshold and resizing a roomy window does not render the screen again.
+  const bodyRef = useRef<HTMLDivElement>(null);
+  const [bodyHeight, setBodyHeight] = useState<number | null>(null);
+  useEffect(() => {
+    const body = bodyRef.current;
+    if (!body || typeof ResizeObserver === 'undefined') return; // never measured: no notice, no fold by itself
+    const measure = () => {
+      const height = Math.round(body.getBoundingClientRect().height);
+      setBodyHeight(Math.min(height, NARROW_BODY_HEIGHT));
+      // Folds once: the fold itself gives the body room, and a later press is the viewer's choice (never unset here).
+      if (autoFoldDecision(height, storedDatasetFocus())) setAutoFolded(true);
+    };
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(body);
+    return () => observer.disconnect();
+  }, []);
+  const narrowNotice = narrowBodyNotice(bodyHeight, focus);
+  // Said while the panels are folded: what the screen folded by itself and how to undo it, or what the viewer folded.
+  const foldStatus = focusChoice === null && autoFolded ? AUTO_FOLD_STATUS : focusStatus(focus);
   const {
     folderPath,
     datasetKey,
@@ -281,6 +318,9 @@ export const DatasetStudio: React.FC = () => {
   return (
     <div className="flex-1 flex flex-col h-full bg-[#0B0E14] text-slate-100 overflow-hidden">
       <OperatorGuidanceBanner step={1} />
+      {/* The focus view folds these three panels (DATASET_HELPER_PANELS, in this order). The step title above, the
+          alert and session rows and the toolbar below never fold. */}
+      {!focus && <>
       <SimpleViewFold label="데이터 관리 도구" hint="이미지 검토·그룹 분할·라벨 교환, 현장 캡처, 파생 편집, 변경 영향 확인">
         <DatasetWorkflowPanel />
         <CaptureIntakePanel sourceDatasetPath={folderPath} contextKey={sourceContextKey} onUseSource={source=>importFolder(source,task,false)}/>
@@ -290,6 +330,7 @@ export const DatasetStudio: React.FC = () => {
       </SimpleViewFold>
       <DatasetStatisticsPanel />
       {full && <DataReadinessPanel />}
+      </>}
       {sourceSaveError && (
         <div role="alert" className="border-b border-amber-700 bg-amber-950/40 px-4 py-2 text-xs text-amber-200">
           {sourceSaveError}
@@ -389,30 +430,38 @@ export const DatasetStudio: React.FC = () => {
           </span>
         </div>
 
-        {/* Partition Status Annunciator (the gallery tabs below show the same counts in the simple view) */}
-        <div className={`${simpleView ? 'hidden' : 'flex'} items-center space-x-3 bg-[#0B0E14] px-3 py-1.5 rounded-[4px] border border-[#2B3547] text-xs font-mono tabular-nums`}>
-          <div className="flex items-center space-x-1.5">
-            <span className="w-2 h-2 rounded-full bg-[#3B82F6]" />
-            <span className="text-slate-400">{language === 'ko' ? '학습' : 'Train'}:</span>
-            <span className="font-bold text-blue-400">{split.train}</span>
-          </div>
-          <span className="w-[1px] h-3 bg-[#2B3547]" />
-          <div className="flex items-center space-x-1.5">
-            <span className="w-2 h-2 rounded-full bg-[#F59E0B]" />
-            <span className="text-slate-400">{language === 'ko' ? '검증' : 'Val'}:</span>
-            <span className="font-bold text-amber-400">{split.val}</span>
-          </div>
-          <span className="w-[1px] h-3 bg-[#2B3547]" />
-          <div className="flex items-center space-x-1.5">
-            <span className="w-2 h-2 rounded-full bg-[#10B981]" />
-            <span className="text-slate-400">{language === 'ko' ? '시험' : 'Test'}:</span>
-            <span className="font-bold text-emerald-400">{split.test}</span>
+        {/* The focus switch and the Partition Status Annunciator (the gallery tabs below show the same counts in the
+            simple view). One group on this row that never wraps: a new row would take its height from the body. */}
+        <div className="flex shrink-0 items-center gap-2">
+          {focus && <span title={foldStatus} className="min-w-0 max-w-sm truncate text-[11px] text-slate-400"><span className="xl:hidden">{FOLD_STATUS_SHORT}</span><span className="hidden xl:inline">{foldStatus}</span></span>}
+          {narrowNotice && <span id={NARROW_NOTICE_ID} role="status" title={narrowNotice} className="min-w-0 max-w-xs truncate text-[11px] text-amber-200"><span className="xl:hidden">{NARROW_BODY_NOTICE_SHORT}</span><span className="hidden xl:inline">{narrowNotice}</span></span>}
+          <button type="button" aria-pressed={focus} onClick={toggleFocus} title={focus ? '위쪽 패널을 다시 보입니다' : '위쪽 패널을 접어 목록과 갤러리를 키웁니다'}
+            aria-describedby={narrowNotice ? NARROW_NOTICE_ID : undefined}
+            className={`shrink-0 rounded border px-2 py-0.5 text-[11px] hover:bg-slate-800 ${focus ? 'border-cyan-500 bg-cyan-950/40 text-cyan-100' : narrowNotice ? 'border-amber-400 bg-amber-950/50 text-amber-100' : 'border-slate-600 text-slate-200'}`}>{FOCUS_SWITCH_NAME}</button>
+          <div className={`${simpleView ? 'hidden' : 'flex'} items-center space-x-3 bg-[#0B0E14] px-3 py-1.5 rounded-[4px] border border-[#2B3547] text-xs font-mono tabular-nums`}>
+            <div className="flex items-center space-x-1.5">
+              <span className="w-2 h-2 rounded-full bg-[#3B82F6]" />
+              <span className="text-slate-400">{language === 'ko' ? '학습' : 'Train'}:</span>
+              <span className="font-bold text-blue-400">{split.train}</span>
+            </div>
+            <span className="w-[1px] h-3 bg-[#2B3547]" />
+            <div className="flex items-center space-x-1.5">
+              <span className="w-2 h-2 rounded-full bg-[#F59E0B]" />
+              <span className="text-slate-400">{language === 'ko' ? '검증' : 'Val'}:</span>
+              <span className="font-bold text-amber-400">{split.val}</span>
+            </div>
+            <span className="w-[1px] h-3 bg-[#2B3547]" />
+            <div className="flex items-center space-x-1.5">
+              <span className="w-2 h-2 rounded-full bg-[#10B981]" />
+              <span className="text-slate-400">{language === 'ko' ? '시험' : 'Test'}:</span>
+              <span className="font-bold text-emerald-400">{split.test}</span>
+            </div>
           </div>
         </div>
       </div>
 
       {/* Main Studio Body: Left Sidebar (Stats, Split Calibrator & Distribution) + Right (Gallery) */}
-      <div className="flex-1 flex overflow-hidden">
+      <div ref={bodyRef} className="flex-1 flex overflow-hidden" data-dataset-work-area>
         {/* Left Stats, Split Calibrator & Class Distribution Panel. A fixed width that never shrinks: `w-84` is not on
             this Tailwind 3 scale, so the sidebar took its longest unwrapped line (a checklist warning is ~2000px) and
             left the gallery zero pixels wide, off screen, with only the first cards inside its lazy-read margin. */}

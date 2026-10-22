@@ -1608,6 +1608,7 @@ export type TruthRequest = {
 
 export type UndoRequest = {
   actor?: string;
+  lease_token?: string | null;
 };
 
 export type UpdateRow = {
@@ -1692,6 +1693,7 @@ export type backend__api__routes_label_suggestions__ReviewRequest = {
   decision: "accept" | "reject";
   candidate_ids?: Array<string>;
   actor?: string;
+  lease_token?: string | null;
 };
 
 export type backend__api__routes_model_deployments__RollbackRequest = {

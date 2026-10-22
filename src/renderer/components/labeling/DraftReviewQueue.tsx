@@ -1,25 +1,51 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Check, ChevronDown, ClipboardCheck, Loader2, RotateCcw, X } from 'lucide-react';
+import { Check, CheckCheck, ChevronDown, ChevronRight, ClipboardCheck, Loader2, RotateCcw, X } from 'lucide-react';
 import { api, type LabelSuggestion, type LabelSuggestionBatchEntry, type LabelSuggestionModel } from '../../services/api';
 import { datasetWorkflow } from '../../services/datasetWorkflow';
+import { teamDataApi } from '../../services/teamDataApi';
 import { useAnnotationStore } from '../../stores/useAnnotationStore';
 import { useDatasetStore } from '../../stores/useDatasetStore';
 import { useProjectStore } from '../../stores/useProjectStore';
 import { useModelAssistRunStore } from '../../stores/useModelAssistRunStore';
 import { draftReviewScope, useDraftReviewStore } from '../../stores/useDraftReviewStore';
-import { bumpWorkflowEvidence } from '../../stores/workflowEvidence';
+import { bumpWorkflowEvidence, subscribeWorkflowEvidence } from '../../stores/workflowEvidence';
+import { reportPanelError } from '../../stores/assistContext';
 import { BulkLabelAssist } from './BulkLabelAssist';
 import type { LabelAssistExecution } from './LabelAssistDeviceSizes';
 import { SuggestionPreview } from './SuggestionPreview';
-import { DRAFT_ORDER_TEXT, adoptionHistory, canTakeBack, draftError, orderDrafts, pendingImageCount, topConfidence, type DraftOrder } from './draftReview';
+import { imageLeaseToken } from './teamDataWorkflow';
+import { DRAFT_ORDER_TEXT, adoptable, adoptionHistory, adoptionSummary, canTakeBack, draftError, multiAdoptionRefusal, orderDrafts, pendingImageCount,
+  staleBatchRefusal, topConfidence, type AdoptionResult, type DraftOrder } from './draftReview';
 
 const EXECUTION: LabelAssistExecution = { device: 'cpu', min_area: 0, min_width: 0, min_height: 0 };
 const fileName = (path: string) => path.split(/[\\/]/).pop() || path;
 const stem = (path: string) => fileName(path).replace(/\.[^.]+$/, '');
+const PANEL = '초안 검토';
 
-/** Step 2's draft review: machine label drafts for the whole project, reviewed one image at a time.
- *  A draft is never a label until a person adopts it; adoption adds (never replaces) shapes, keeps a backup and the
- *  shapes' origin, and one adoption can be taken back while its shapes are unchanged. It stays visible in focus mode. */
+/** With team editing on, a label save needs the image's edit lease. The canvas lease covers the open image; any other
+ *  image gets a lease of its own for the one adoption (or take-back) and gives it back right after. */
+async function leaseFor(draft: LabelSuggestion, actor: string): Promise<{ token?: string; release: () => Promise<void> }> {
+  const state = useAnnotationStore.getState();
+  if (!state.teamEditingEnabled) return { release: async () => {} };
+  const own = imageLeaseToken(state.editLease, draft.image_uuid);
+  if (own) return { token: own, release: async () => {} };
+  if (!draft.image_uuid) throw new Error('이 초안에는 이미지 식별 정보가 없어 팀 편집 중에는 채택할 수 없습니다. 초안을 새로 만드세요.');
+  const uuid = draft.image_uuid;
+  const lease = await teamDataApi.acquire((await teamDataApi.image(uuid)).image, actor);
+  const token = lease.lease_token;
+  return {
+    token,
+    release: async () => {
+      if (!token) return;
+      try { await teamDataApi.release((await teamDataApi.image(uuid)).image, actor, token); } catch { /* the lease lapses on its own */ }
+    },
+  };
+}
+
+/** Step 2's draft review: machine label drafts for the whole project, reviewed one image at a time or several at
+ *  once. A draft is never a label until a person adopts it; adoption adds (never replaces) shapes, keeps a backup and
+ *  the shapes' origin, and one adoption can be taken back while its shapes are unchanged. Only drafts the person has
+ *  looked at in the preview can go into a multi-adoption. It stays visible in focus mode. */
 export const DraftReviewQueue: React.FC = () => {
   const projectDir = useProjectStore((state) => state.projectDir);
   const project = useProjectStore((state) => state.project);
@@ -39,6 +65,11 @@ export const DraftReviewQueue: React.FC = () => {
   const [order, setOrder] = useState<DraftOrder>('uncertain');
   const [selectedId, setSelectedId] = useState('');
   const [chosen, setChosen] = useState<Set<string>>(new Set());
+  // Drafts whose preview the person has seen, the ones picked for a multi-adoption, and each one's candidate choice.
+  const [viewed, setViewed] = useState<Set<string>>(new Set());
+  const [picks, setPicks] = useState<Set<string>>(new Set());
+  const [choices, setChoices] = useState<Map<string, Set<string>>>(new Map());
+  const [progress, setProgress] = useState<{ done: number; total: number } | null>(null);
   const [busy, setBusy] = useState<'loading' | 'accept' | 'reject' | 'undo' | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
@@ -53,18 +84,21 @@ export const DraftReviewQueue: React.FC = () => {
   useEffect(() => {
     let current = true;
     setError(null);
-    if (!projectDir || !project?.source_dataset_dir) { setDrafts([]); setModels([]); publish(scope, 0); return; }
+    if (!projectDir || !project?.source_dataset_dir) { setDrafts([]); setModels([]); publish(scope, 0, 0); return; }
     setBusy((value) => value ?? 'loading');
     Promise.all([api.labelSuggestions.list(), api.labelSuggestions.models()]).then(([listed, catalog]) => {
       if (!current || live.current !== scope) return;
       setDrafts(listed.suggestions);
       setModels(catalog.models);
       setModelId((previous) => catalog.models.some((model) => model.job_id === previous) ? previous : catalog.models[0]?.job_id || '');
-      publish(scope, pendingImageCount(listed.suggestions));
+      publish(scope, pendingImageCount(listed.suggestions), catalog.models.length);
     }).catch((cause) => { if (current && live.current === scope) setError(draftError(cause)); })
       .finally(() => { if (current && live.current === scope) setBusy((value) => value === 'loading' ? null : value); });
     return () => { current = false; };
   }, [scope, reloads, projectDir, project?.source_dataset_dir, publish]);
+
+  // Labels or drafts changed somewhere else (an adoption here, a class change, the operations cycle's drafts): read again.
+  useEffect(() => subscribeWorkflowEvidence(() => setReloads((value) => value + 1)), []);
 
   // A batch that stopped leaves new drafts; read them once. The batch panel's callback must stay stable, since it
   // reports `false` on every cleanup.
@@ -74,16 +108,30 @@ export const DraftReviewQueue: React.FC = () => {
     wasRunning.current = batchRunning;
   }, [batchRunning]);
 
+  useEffect(() => { reportPanelError(PANEL, error); return () => reportPanelError(PANEL, null); }, [error]);
+
   const pending = useMemo(() => orderDrafts(drafts, order), [drafts, order]);
   const history = useMemo(() => adoptionHistory(drafts).slice(0, 20), [drafts]);
   const selected = drafts.find((draft) => draft.id === selectedId);
   const waiting = pendingImageCount(drafts);
+  const picked = pending.filter((draft) => picks.has(draft.id));
+  const refusal = multiAdoptionRefusal(picked);
+  const unseenPicked = picked.filter((draft) => !viewed.has(draft.id)).length;
 
   const choose = (draft: LabelSuggestion) => {
     setSelectedId(draft.id);
-    setChosen(new Set(draft.candidates.map((candidate) => candidate.id)));
+    setChosen(choices.get(draft.id) ?? new Set(draft.candidates.map((candidate) => candidate.id)));
+    setViewed((previous) => previous.has(draft.id) ? previous : new Set(previous).add(draft.id));
     setError(null);
     setNotice(null);
+  };
+
+  const chooseCandidate = (candidateId: string, checked: boolean) => {
+    if (!selected) return;
+    const next = new Set(chosen);
+    if (checked) next.add(candidateId); else next.delete(candidateId);
+    setChosen(next);
+    setChoices((previous) => new Map(previous).set(selected.id, next));
   };
 
   // Show the draft's image on the canvas too (current edits are saved first, as with any image change).
@@ -94,6 +142,12 @@ export const DraftReviewQueue: React.FC = () => {
     if (!opened && live.current === scope) setError('현재 이미지의 수정 내용을 저장하지 못해 초안 이미지로 이동하지 않았습니다.');
   };
 
+  const openNext = async () => {
+    const index = pending.findIndex((draft) => draft.id === selectedId);
+    const next = pending[index + 1] ?? pending.find((draft) => draft.id !== selectedId);
+    if (next) await openDraft(next);
+  };
+
   const openBatchEntry = async (entry: LabelSuggestionBatchEntry) => {
     if (!entry.proposal_id) return;
     const known = drafts.find((draft) => draft.id === entry.proposal_id)
@@ -101,10 +155,11 @@ export const DraftReviewQueue: React.FC = () => {
     if (known && live.current === scope) await openDraft(known);
   };
 
-  // After the server changed labels: re-read the open image when it is the one that changed, and the drafts.
-  const afterLabelChange = async (draft: LabelSuggestion, startedScope: string) => {
+  // After the server changed labels: re-read the open image when it is one that changed, then the counts and drafts
+  // (the evidence bump makes this panel read again).
+  const afterLabelChanges = async (changed: LabelSuggestion[], startedScope: string) => {
     const annotation = useAnnotationStore.getState();
-    if (annotation.currentImage?.file_path === draft.image_path) {
+    if (changed.some((draft) => annotation.currentImage?.file_path === draft.image_path)) {
       await annotation.loadAnnotationsForCurrent();
       // Undo must not bring back the labels as they were before this server change.
       useAnnotationStore.setState({ history: [], future: [] });
@@ -112,7 +167,6 @@ export const DraftReviewQueue: React.FC = () => {
     if (live.current !== startedScope) return;
     await useDatasetStore.getState().annotationsChanged();
     bumpWorkflowEvidence();
-    setReloads((value) => value + 1);
   };
 
   const sameImageDirty = (draft: LabelSuggestion) => isDirty && image?.file_path === draft.image_path;
@@ -152,11 +206,18 @@ export const DraftReviewQueue: React.FC = () => {
     setError(null);
     setNotice(null);
     try {
-      const updated = await datasetWorkflow.review(selected.id, decision, decision === 'accept' ? [...chosen] : [], reviewerName);
+      let updated: LabelSuggestion;
+      if (decision === 'accept') {
+        const lease = await leaseFor(selected, reviewerName);
+        try { updated = await datasetWorkflow.review(selected.id, decision, [...chosen], reviewerName, lease.token); } finally { await lease.release(); }
+      } else {
+        updated = await datasetWorkflow.review(selected.id, decision, [], reviewerName);
+      }
       if (live.current !== startedScope) return;
       setDrafts((previous) => previous.map((draft) => draft.id === updated.id ? updated : draft));
+      setPicks((previous) => { const next = new Set(previous); next.delete(updated.id); return next; });
       if (decision === 'accept') {
-        await afterLabelChange(updated, startedScope);
+        await afterLabelChanges([updated], startedScope);
         setNotice(`${updated.accepted_candidate_ids.length}개를 라벨로 채택했습니다(기존 라벨에 덧붙임). 캔버스에서 고친 뒤 저장할 수 있고(남은 초안을 먼저 검토하세요. 고쳐 저장하면 남은 초안은 다시 만들어야 합니다), 고치기 전이면 '이 채택 되돌리기'로 이 채택만 뺄 수 있습니다. 채택 전 데이터 버전 ${updated.backup_version_id}.`);
       } else {
         setReloads((value) => value + 1);
@@ -171,6 +232,55 @@ export const DraftReviewQueue: React.FC = () => {
     }
   };
 
+  // Several drafts of one batch, one after another: each adoption keeps its own backup and origin, so each can still
+  // be taken back on its own. The loop stops when the server says the batch's data changed (the rest would be
+  // refused the same way) and goes on past a refusal that concerns one image only.
+  const adoptPicked = async () => {
+    const targets = picked;
+    if (!targets.length) return;
+    if (!reviewerName.trim()) { setError('검토자 이름을 입력하세요.'); return; }
+    if (refusal) { setError(refusal); return; }
+    if (unseenPicked) { setError(`미리보기로 확인하지 않은 초안 ${unseenPicked}건이 있습니다. 열어서 확인한 뒤 채택하세요.`); return; }
+    if (targets.some(sameImageDirty)) { setError('이 이미지의 수정 내용을 먼저 저장한 뒤 채택하세요.'); return; }
+    const startedScope = scope;
+    beginRun();
+    setBusy('accept');
+    setError(null);
+    setNotice(null);
+    setProgress({ done: 0, total: targets.length });
+    const results: AdoptionResult[] = [];
+    const adopted: LabelSuggestion[] = [];
+    let stopped = false;
+    try {
+      for (const draft of targets) {
+        if (live.current !== startedScope) return;
+        const candidateIds = [...(choices.get(draft.id) ?? draft.candidates.map((candidate) => candidate.id))];
+        try {
+          const lease = await leaseFor(draft, reviewerName);
+          let updated: LabelSuggestion;
+          try { updated = await datasetWorkflow.review(draft.id, 'accept', candidateIds, reviewerName, lease.token); } finally { await lease.release(); }
+          if (live.current !== startedScope) return;
+          setDrafts((previous) => previous.map((row) => row.id === updated.id ? updated : row));
+          adopted.push(updated);
+          results.push({ draft, adopted: updated.accepted_candidate_ids.length });
+        } catch (cause) {
+          results.push({ draft, adopted: 0, error: draftError(cause) });
+          if (staleBatchRefusal(cause)) { stopped = true; break; }
+        }
+        setProgress({ done: results.length, total: targets.length });
+      }
+      if (live.current !== startedScope) return;
+      setPicks((previous) => { const next = new Set(previous); for (const row of adopted) next.delete(row.id); return next; });
+      if (adopted.some((row) => row.id === selectedId)) setSelectedId('');
+      if (adopted.length) await afterLabelChanges(adopted, startedScope);
+      if (live.current !== startedScope) return;
+      setNotice(adoptionSummary(results, stopped));
+    } finally {
+      endRun();
+      if (live.current === startedScope) { setBusy(null); setProgress(null); }
+    }
+  };
+
   const takeBack = async (draft: LabelSuggestion) => {
     if (!reviewerName.trim()) { setError('검토자 이름을 입력하세요.'); return; }
     if (sameImageDirty(draft)) { setError('이 이미지의 수정 내용을 먼저 저장하세요.'); return; }
@@ -180,10 +290,12 @@ export const DraftReviewQueue: React.FC = () => {
     setError(null);
     setNotice(null);
     try {
-      const updated = await datasetWorkflow.undoAdoption(draft.id, reviewerName);
+      const lease = await leaseFor(draft, reviewerName);
+      let updated: LabelSuggestion;
+      try { updated = await datasetWorkflow.undoAdoption(draft.id, reviewerName, lease.token); } finally { await lease.release(); }
       if (live.current !== startedScope) return;
       setDrafts((previous) => previous.map((item) => item.id === updated.id ? updated : item));
-      await afterLabelChange(updated, startedScope);
+      await afterLabelChanges([updated], startedScope);
       setNotice(`${fileName(draft.image_path)}에서 이 채택의 도형만 뺐습니다. 되돌리기 직전 데이터 버전 ${updated.revert_backup_version_id}.`);
     } catch (cause) {
       if (live.current === startedScope) setError(draftError(cause));
@@ -192,6 +304,8 @@ export const DraftReviewQueue: React.FC = () => {
       if (live.current === startedScope) setBusy(null);
     }
   };
+
+  const pickAllViewed = () => setPicks(new Set(pending.filter((draft) => viewed.has(draft.id) && adoptable(draft)).map((draft) => draft.id)));
 
   if (!projectDir || !project?.source_dataset_dir) return null;
   return (
@@ -202,7 +316,8 @@ export const DraftReviewQueue: React.FC = () => {
         <span className="font-semibold text-slate-100">초안 검토</span>
         <span className="truncate text-slate-500">모델이 만든 라벨 초안은 사람이 채택해야 라벨이 됩니다</span>
       </div>
-      <button id="draft-review-queue" type="button" onClick={toggle} aria-expanded={open} aria-label="초안 검토 패널"
+      {/* The footer's '초안 만들기' lands on the section inside this popover: it names this button as its opener. */}
+      <button id="draft-review-queue" type="button" onClick={toggle} aria-expanded={open} aria-label="초안 검토 패널" data-workflow-opens="draft-create"
         className="ml-3 flex shrink-0 items-center gap-1.5 rounded-md border border-emerald-800 bg-emerald-950/40 px-3 py-1.5 font-semibold text-emerald-200 hover:bg-emerald-900/50">
         검토 대기 {waiting}장
         <ChevronDown className={`h-3.5 w-3.5 transition-transform ${open ? 'rotate-180' : ''}`} />
@@ -221,7 +336,7 @@ export const DraftReviewQueue: React.FC = () => {
             {error && <p role="alert" className="rounded border border-red-800 bg-red-950/40 p-2 text-xs text-red-200">{error}</p>}
             {notice && <p role="status" className="rounded border border-emerald-800 bg-emerald-950/30 p-2 text-xs text-emerald-200">{notice}</p>}
 
-            <section className="space-y-2 rounded-lg border border-slate-700 bg-[#101722] p-3" aria-label="초안 만들기">
+            <section id="draft-create" tabIndex={-1} className="space-y-2 rounded-lg border border-slate-700 bg-[#101722] p-3" aria-label="초안 만들기">
               <h4 className="font-semibold text-slate-100">1. 초안 만들기</h4>
               {models.length === 0 ? <p className="text-[11px] text-slate-400">지금 데이터로 학습을 마친 모델이 없습니다. 몇 장을 직접 라벨한 뒤 3단계에서 학습하면, 남은 이미지의 초안을 만들 수 있습니다.</p> : <>
                 <label className="block text-[11px] text-slate-400">초안을 만들 모델
@@ -250,11 +365,19 @@ export const DraftReviewQueue: React.FC = () => {
               </div>
               <p className="text-[11px] text-slate-500">순서 기준: {DRAFT_ORDER_TEXT[order]}</p>
               {pending.length === 0 && <p className="rounded border border-slate-700 p-3 text-center text-slate-400">검토할 초안이 없습니다.</p>}
+              {pending.length > 1 && <div className="flex flex-wrap items-center gap-2 text-[11px] text-slate-400">
+                <span>여러 장을 한꺼번에 채택하려면 초안을 열어 미리보기로 확인한 뒤 왼쪽 상자를 고르세요. 본 것 {pending.filter((draft) => viewed.has(draft.id)).length}건 · 고른 것 {picked.length}건</span>
+                <button type="button" onClick={pickAllViewed} disabled={!!busy} className="rounded border border-slate-600 px-2 py-0.5 text-slate-200 hover:bg-slate-700 disabled:opacity-40">본 초안 모두 고르기</button>
+                {picked.length > 0 && <button type="button" onClick={() => setPicks(new Set())} disabled={!!busy} className="rounded border border-slate-600 px-2 py-0.5 text-slate-200 hover:bg-slate-700 disabled:opacity-40">고른 것 해제</button>}
+              </div>}
               <ul className="max-h-40 space-y-1 overflow-y-auto">
-                {pending.map((draft) => <li key={draft.id}>
+                {pending.map((draft) => <li key={draft.id} className="flex items-center gap-1.5">
+                  <input type="checkbox" aria-label={`${fileName(draft.image_path)} 한꺼번에 채택에 포함`} checked={picks.has(draft.id)} disabled={!!busy || !viewed.has(draft.id) || !adoptable(draft)}
+                    title={!adoptable(draft) ? '후보가 없어 채택할 수 없습니다. 거절하세요.' : viewed.has(draft.id) ? undefined : '미리보기로 확인한 뒤 고를 수 있습니다'} className="accent-emerald-500 disabled:opacity-40"
+                    onChange={(event) => setPicks((previous) => { const next = new Set(previous); if (event.target.checked) next.add(draft.id); else next.delete(draft.id); return next; })} />
                   <button type="button" onClick={() => void openDraft(draft)} aria-pressed={draft.id === selectedId}
-                    className={`flex w-full items-center justify-between gap-2 rounded border px-2 py-1.5 text-left ${draft.id === selectedId ? 'border-cyan-500 bg-cyan-900/30 text-cyan-100' : 'border-slate-700 bg-slate-800/50 text-slate-200 hover:border-slate-500'}`}>
-                    <span className="min-w-0 truncate">{fileName(draft.image_path)}</span>
+                    className={`flex min-w-0 grow items-center justify-between gap-2 rounded border px-2 py-1.5 text-left ${draft.id === selectedId ? 'border-cyan-500 bg-cyan-900/30 text-cyan-100' : 'border-slate-700 bg-slate-800/50 text-slate-200 hover:border-slate-500'}`}>
+                    <span className="min-w-0 truncate">{fileName(draft.image_path)}{viewed.has(draft.id) && draft.id !== selectedId ? <span className="ml-1 text-[10px] text-slate-500">· 봄</span> : null}</span>
                     <span className="shrink-0 text-[11px] text-slate-400">후보 {draft.candidates.length}개 · 최고 {Math.round(topConfidence(draft) * 100)}%</span>
                   </button>
                 </li>)}
@@ -264,11 +387,7 @@ export const DraftReviewQueue: React.FC = () => {
                 <div className="max-h-36 space-y-1 overflow-y-auto">
                   {selected.candidates.length === 0 && <p className="rounded border border-slate-700 p-2 text-center text-slate-400">이 이미지에는 후보가 없습니다. 거절하고 직접 라벨하세요.</p>}
                   {selected.candidates.map((candidate) => <label key={candidate.id} className="flex items-center gap-2 rounded border border-slate-700 bg-slate-800/40 p-1.5">
-                    <input type="checkbox" checked={chosen.has(candidate.id)} disabled={!!busy} onChange={(event) => setChosen((previous) => {
-                      const next = new Set(previous);
-                      if (event.target.checked) next.add(candidate.id); else next.delete(candidate.id);
-                      return next;
-                    })} className="accent-cyan-500" />
+                    <input type="checkbox" checked={chosen.has(candidate.id)} disabled={!!busy} onChange={(event) => chooseCandidate(candidate.id, event.target.checked)} className="accent-cyan-500" />
                     <span className="grow text-slate-100">{candidate.annotation.label} <span className="text-[10px] text-slate-400">{candidate.annotation.type}</span></span>
                     <span className="font-mono tabular-nums text-cyan-300">{Math.round(candidate.confidence * 100)}%</span>
                   </label>)}
@@ -276,9 +395,21 @@ export const DraftReviewQueue: React.FC = () => {
                 <label className="block text-[11px]">검토자<input aria-label="초안 검토자 이름" value={reviewerName} onChange={(event) => setReviewerName(event.target.value)} className="ml-2 rounded border border-slate-600 bg-slate-900 p-1.5" /></label>
                 <div className="flex gap-2">
                   <button type="button" onClick={() => void review('reject')} disabled={!!busy} className="flex grow items-center justify-center gap-1 rounded border border-slate-600 px-3 py-2 font-semibold text-slate-200 hover:bg-slate-700 disabled:opacity-40"><X className="h-3.5 w-3.5" /> 거절</button>
-                  <button type="button" onClick={() => void review('accept')} disabled={!!busy || batchRunning || chosen.size === 0} className="flex grow items-center justify-center gap-1 rounded bg-emerald-600 px-3 py-2 font-semibold text-white hover:bg-emerald-500 disabled:cursor-not-allowed disabled:opacity-40">{busy === 'accept' ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5" />} 선택 후보 채택 (덧붙이기)</button>
+                  <button type="button" onClick={() => void review('accept')} disabled={!!busy || batchRunning || chosen.size === 0} className="flex grow items-center justify-center gap-1 rounded bg-emerald-600 px-3 py-2 font-semibold text-white hover:bg-emerald-500 disabled:cursor-not-allowed disabled:opacity-40">{busy === 'accept' && !progress ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5" />} 선택 후보 채택 (덧붙이기)</button>
+                  {pending.length > 1 && <button type="button" onClick={() => void openNext()} disabled={!!busy} aria-label="다음 초안 보기" title="다음 초안을 미리보기로 엽니다" className="flex items-center gap-1 rounded border border-slate-600 px-2 py-2 font-semibold text-slate-200 hover:bg-slate-700 disabled:opacity-40"><ChevronRight className="h-3.5 w-3.5" /> 다음</button>}
                 </div>
                 {batchRunning && <p className="text-[11px] text-amber-300">초안을 만드는 중에는 채택할 수 없습니다. 끝난 뒤 채택하세요.</p>}
+              </div>}
+              {picked.length > 0 && <div className="space-y-2 rounded-lg border border-emerald-900 bg-[#0F1722] p-3" aria-label="고른 초안 한꺼번에 채택">
+                <p className="text-[11px] text-slate-300">고른 초안 {picked.length}건을 차례로 채택합니다. 채택마다 데이터 버전을 남기고, 하나씩 되돌릴 수 있습니다.</p>
+                {refusal && <p className="text-[11px] text-amber-300">{refusal}</p>}
+                {!refusal && unseenPicked > 0 && <p className="text-[11px] text-amber-300">미리보기로 확인하지 않은 초안 {unseenPicked}건이 있습니다.</p>}
+                {progress && <p role="status" className="text-[11px] text-cyan-200">채택 중 {progress.done} / {progress.total}</p>}
+                <button type="button" onClick={() => void adoptPicked()} disabled={!!busy || batchRunning || !!refusal || unseenPicked > 0 || !reviewerName.trim()}
+                  className="flex w-full items-center justify-center gap-1 rounded bg-emerald-700 px-3 py-2 font-semibold text-white hover:bg-emerald-600 disabled:cursor-not-allowed disabled:opacity-40">
+                  {progress ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <CheckCheck className="h-3.5 w-3.5" />} 고른 초안 {picked.length}건 채택 (덧붙이기)
+                </button>
+                {!reviewerName.trim() && <p className="text-[11px] text-slate-400">검토자 이름은 초안을 연 뒤 입력합니다.</p>}
               </div>}
             </section>
 

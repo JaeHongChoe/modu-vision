@@ -71,6 +71,7 @@ function fixture({viewMode = 'full', stored = null, resizeObserver = true, heigh
     '../../stores/useAnnotationStore': {useAnnotationStore: annotation},
     '../../stores/useProjectStore': {useProjectStore: () => ({task: 'classification', isProjectBusy: false, viewMode})},
     './labelingLayout': layout,
+    '../../stores/assistContext': {reportPanelError() {}},
     ...Object.fromEntries(childModules.map(name => [name, stubs])),
   };
   const values = new Map(stored === null ? [] : [['mv.labeling.focus', stored]]);

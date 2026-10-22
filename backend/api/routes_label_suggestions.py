@@ -70,11 +70,32 @@ class GenerateRequest(BaseModel):
     max_height: Optional[float] = Field(None,ge=0)
 
 
+# Ledger events that advance an image's revision without touching its labels: taking or giving back the edit lease
+# that team editing requires. Everything else (a save, a class change, a review, an assignment) makes a draft stale.
+_LEASE_ONLY_EVENTS = {"edit_lease_acquired", "edit_lease_released"}
+
+
+def _changed_since_draft(metadata: Dict[str, Any], proposal: Dict[str, Any]) -> bool:
+    """Whether the image changed since the draft was made, apart from edit-lease events.
+
+    The labels and the image are compared by content hash before this; the revision catches the other ledger
+    changes. A reviewer must take the edit lease to adopt under team editing, and that alone must not refuse them."""
+    drafted = proposal.get("image_revision")
+    if drafted is None or metadata["revision"] == drafted:
+        return False
+    later = [event for event in metadata.get("audit", []) if int(event.get("revision", 0)) > int(drafted)]
+    if len(later) != metadata["revision"] - drafted:
+        return True
+    return any(event.get("action") not in _LEASE_ONLY_EVENTS for event in later)
+
+
 class ReviewRequest(BaseModel):
     model_config = ConfigDict(extra="ignore")
     decision: Literal["accept", "reject"]
     candidate_ids: List[str] = Field(default_factory=list)
     actor: str = Field("operator", min_length=1, max_length=100)
+    # With team editing on, a save needs the image's edit lease; the reviewer passes the one they hold.
+    lease_token: Optional[str] = Field(None, min_length=1, max_length=200)
 
 
 class BatchGenerateRequest(BaseModel):
@@ -758,7 +779,7 @@ def review_suggestion(suggestion_id: str, req: ReviewRequest, request: Request):
             raise HTTPException(status_code=409, detail="Finish or stop active training before accepting labels.")
 
         metadata = metadata_engine.metadata_for_path(Path(project["project_dir"]), _source_path(project), image, Path(project["annotations_dir"]))
-        if proposal.get("image_revision") is not None and proposal["image_revision"] != metadata["revision"]:
+        if _changed_since_draft(metadata, proposal):
             raise HTTPException(status_code=409, detail="Another reviewer changed this image; generate candidates again.")
         current = routes_annotation.get_annotations(image.stem, file_path=str(image))
         existing = current.get("annotations", [])
@@ -769,6 +790,7 @@ def review_suggestion(suggestion_id: str, req: ReviewRequest, request: Request):
         routes_annotation.AnnotationSaveRequest(
             image_id=image.stem, image_path=str(image), annotations=[*existing, *accepted],
             image_width=proposal["image_width"], image_height=proposal["image_height"], actor=req.actor, expected_revision=metadata["revision"],
+            lease_token=req.lease_token,
         )
         backup = _snapshot(project, _source_path(project),
                            f"모델 라벨 채택 전 · {image.name}",
@@ -777,6 +799,7 @@ def review_suggestion(suggestion_id: str, req: ReviewRequest, request: Request):
             image_id=image.stem, image_path=str(image),
             annotations=[*existing, *adopted_candidates(proposal, selected_ids, req.actor, backup["id"])],
             image_width=proposal["image_width"], image_height=proposal["image_height"], actor=req.actor, expected_revision=metadata["revision"],
+            lease_token=req.lease_token,
         )
         previous_json = json_path.read_bytes() if json_path.is_file() else None
         previous_mask = mask_path.read_bytes() if mask_path.is_file() else None
@@ -810,6 +833,7 @@ def review_suggestion(suggestion_id: str, req: ReviewRequest, request: Request):
 class UndoRequest(BaseModel):
     model_config = ConfigDict(extra="ignore")
     actor: str = Field("operator", min_length=1, max_length=100)
+    lease_token: Optional[str] = Field(None, min_length=1, max_length=200)
 
 
 @router.post("/{suggestion_id}/undo")
@@ -865,7 +889,7 @@ def undo_adoption(suggestion_id: str, req: UndoRequest, request: Request):
         json_path, mask_path = studio / f"{image.stem}.json", studio / "masks" / f"{image.stem}.png"
         save = routes_annotation.AnnotationSaveRequest(
             image_id=image.stem, image_path=str(image), annotations=remaining, image_width=proposal["image_width"],
-            image_height=proposal["image_height"], actor=actor, expected_revision=metadata["revision"])
+            image_height=proposal["image_height"], actor=actor, expected_revision=metadata["revision"], lease_token=req.lease_token)
         backup = _snapshot(project, source, f"채택 되돌리기 전 · {image.name}", f"Before taking back {suggestion_id}", "auto_backup")
         proposal_path = _proposal_path(project, suggestion_id)
         previous = {path: (path.read_bytes() if path.is_file() else None) for path in (json_path, mask_path, proposal_path)}

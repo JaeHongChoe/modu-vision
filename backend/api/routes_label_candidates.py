@@ -313,14 +313,14 @@ def review_external_proposal(project,proposal,req):
     if training_job_manager.get_active_job() is not None: raise HTTPException(409,detail='Finish training before adopting labels')
     existing=routes_annotation.get_annotations(image.stem,file_path=str(image)).get('annotations',[])
     current=metadata_for_path(Path(project['project_dir']),source,image,Path(project['annotations_dir']))
-    if current['revision']!=proposal['image_revision']: raise HTTPException(409,detail='Another reviewer changed this image; generate again')
+    if suggestions._changed_since_draft(current,proposal): raise HTTPException(409,detail='Another reviewer changed this image; generate again')
     backup=_snapshot(project,source,f'후보 채택 전 · {image.name}',req.actor,'auto_backup')
     previous_json=json_path.read_bytes() if json_path.exists() else None; previous_mask=mask_path.read_bytes() if mask_path.exists() else None
     try:
         # Each adopted shape keeps its origin (draft, provider, reviewer, backup) so one adoption can be taken back.
         routes_annotation.save_annotations(routes_annotation.AnnotationSaveRequest(image_id=image.stem,image_path=str(image),
             annotations=[*existing,*suggestions.adopted_candidates(proposal,selected,req.actor,backup['id'])],
-            image_width=proposal['image_width'],image_height=proposal['image_height'],expected_revision=current['revision'],actor=req.actor))
+            image_width=proposal['image_width'],image_height=proposal['image_height'],expected_revision=current['revision'],actor=req.actor,lease_token=req.lease_token))
         proposal.update(status='accepted',reviewer=req.actor,reviewed_at=time.strftime('%Y-%m-%dT%H:%M:%SZ',time.gmtime()),
                         accepted_candidate_ids=sorted(selected),backup_version_id=backup['id'],
                         adopted_annotations=suggestions.saved_adoption(image,selected))

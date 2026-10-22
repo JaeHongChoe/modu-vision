@@ -4,12 +4,13 @@
  * counts and the gallery all use it. Boxes and polygons stay available below for patch classification and evidence;
  * they never change the class.
  */
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { api } from '../../services/api';
 import { useAnnotationStore } from '../../stores/useAnnotationStore';
 import { useDatasetStore } from '../../stores/useDatasetStore';
 import { useProjectStore } from '../../stores/useProjectStore';
 import { bumpWorkflowEvidence } from '../../stores/workflowEvidence';
+import { reportPanelError } from '../../stores/assistContext';
 
 export const ClassificationClassPicker: React.FC = () => {
   const task = useProjectStore((state) => state.task);
@@ -19,6 +20,7 @@ export const ClassificationClassPicker: React.FC = () => {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [draft, setDraft] = useState('');
+  useEffect(() => { reportPanelError('이미지 클래스', error); return () => reportPanelError('이미지 클래스', null); }, [error]);
   if (task !== 'classification' || !image) return null;
   const current = image.label ?? null;
   const folder = image.folder_label ?? (image.class_source === 'override' ? null : current);
@@ -45,7 +47,7 @@ export const ClassificationClassPicker: React.FC = () => {
   };
 
   return (
-    <section aria-label="이미지 클래스" className="flex flex-wrap items-center gap-2 border-b border-slate-800 bg-slate-950 px-4 py-2 text-xs">
+    <section id="image-class-picker" tabIndex={-1} aria-label="이미지 클래스" className="flex flex-wrap items-center gap-2 border-b border-slate-800 bg-slate-950 px-4 py-2 text-xs">
       <span className="font-semibold text-slate-200">이 이미지의 클래스</span>
       <div role="group" aria-label="이미지 클래스 고르기" className="flex flex-wrap gap-1.5">
         {classes.map((name) => (
