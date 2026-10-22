@@ -635,21 +635,31 @@ async function exercise(page:Page,w:Workspace,e:Evidence,api:OwnedApi,origin:str
       expect(Bsource.proof.uri).not.toBe(captured.request_uri);expect(Bbefore.rgba_sha256).not.toBe(recovered.rgba_sha256);
       const cancel=await late.finish();await late.close();
       expect(cancel.captured.sha256).toBe(captured.sha256);
-      await expect(page.getByTitle('프로젝트 관리',{exact:true})).toContainText(B.project.name,{timeout:remaining(deadline)});
-      await expect(historyLocators(page).selector).toHaveValue(B.valid.record.evaluation_id,{timeout:remaining(deadline)});
-      await expect(Bchosen.details.locator('xpath=.//p[@role="alert" and not(ancestor::*[@role="dialog"])]')).toHaveCount(0,{timeout:remaining(deadline)});
-      await expect(historyLocators(page).history.locator('xpath=.//p[@role="alert" and not(ancestor::*[@role="dialog"])]')).toHaveCount(0,{timeout:remaining(deadline)});
-      // Neither the saved class selector nor overlay select may be reselected
-      // here: the stale A reply itself must leave genuine B admission intact.
-      const Bafter=await viewerOverlay(page,B,B.valid,layer,classes.B,deadline,false);expect(Bafter).toEqual(Bbefore);
-      expect(await saved(page,B.valid,deadline)).toEqual(Bbinding);expect(await mask(Bchosen.details,B,layer,classes.B,deadline)).toEqual(Bmask);
-      const B_class_after=await Bchosen.details.getByLabel('평가 증거 클래스',{exact:true}).inputValue({timeout:remaining(deadline)});expect(B_class_after).toBe(classes.B);
+      // A's reply is released above, inside the frame that held it. The checks of B after that reply each take their
+      // own original 10s frame instead of the rest of the hold frame: on a slow runner the hold ended in time and the
+      // frame then ran out while B was being re-checked.
       const viewer=page.getByRole('dialog',{name:'이미지 판정 근거 보기',exact:true});
-      await expect(viewer).not.toContainText(item.record.evaluation_id);await expect(viewer).not.toContainText(item.source_path);await expect(viewer).not.toContainText(controlledMessage);
+      await frame('B project and history after the released old A reply',async deadline=>{
+        await expect(page.getByTitle('프로젝트 관리',{exact:true})).toContainText(B.project.name,{timeout:remaining(deadline)});
+        await expect(historyLocators(page).selector).toHaveValue(B.valid.record.evaluation_id,{timeout:remaining(deadline)});
+        await expect(Bchosen.details.locator('xpath=.//p[@role="alert" and not(ancestor::*[@role="dialog"])]')).toHaveCount(0,{timeout:remaining(deadline)});
+        await expect(historyLocators(page).history.locator('xpath=.//p[@role="alert" and not(ancestor::*[@role="dialog"])]')).toHaveCount(0,{timeout:remaining(deadline)});
+      });
+      const {Bafter,B_class_after}=await frame('B overlay and class after the released old A reply',async deadline=>{
+        // Neither the saved class selector nor overlay select may be reselected
+        // here: the stale A reply itself must leave genuine B admission intact.
+        const Bafter=await viewerOverlay(page,B,B.valid,layer,classes.B,deadline,false);expect(Bafter).toEqual(Bbefore);
+        expect(await saved(page,B.valid,deadline)).toEqual(Bbinding);expect(await mask(Bchosen.details,B,layer,classes.B,deadline)).toEqual(Bmask);
+        const B_class_after=await Bchosen.details.getByLabel('평가 증거 클래스',{exact:true}).inputValue({timeout:remaining(deadline)});expect(B_class_after).toBe(classes.B);
+        await expect(viewer).not.toContainText(item.record.evaluation_id);await expect(viewer).not.toContainText(item.source_path);await expect(viewer).not.toContainText(controlledMessage);
+        return {Bafter,B_class_after};
+      });
       await e.screenshot(page,label+'-old-A-reply-cannot-replace-B-overlay');
-      await within(viewer.getByRole('button',{name:'저장 평가로 돌아가기',exact:true}).click(),deadline,'ordinary B viewer close');
-      await expect(viewer).toHaveCount(0,{timeout:remaining(deadline)});await expect(Bsource.opener).toBeFocused({timeout:remaining(deadline)});
-      expect(await mask(Bchosen.details,B,layer,classes.B,deadline)).toEqual(Bmask);
+      await frame('ordinary B viewer close and B mask',async deadline=>{
+        await within(viewer.getByRole('button',{name:'저장 평가로 돌아가기',exact:true}).click(),deadline,'ordinary B viewer close');
+        await expect(viewer).toHaveCount(0,{timeout:remaining(deadline)});await expect(Bsource.opener).toBeFocused({timeout:remaining(deadline)});
+        expect(await mask(Bchosen.details,B,layer,classes.B,deadline)).toEqual(Bmask);
+      });
       transitions.push(await project(page,A,origin,e,w,label+'-return-A'));
       const returned=await choose(page,A,item,origin,e,w,label+'-A-return');
       const returnedMask=await frame('returned A retains exact selected saved error mask',deadline=>classSelection(returned.details,A,classes.A,deadline));expect(returnedMask).toEqual(retained);expect(returned.binding).toEqual(chosen.binding);

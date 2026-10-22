@@ -1441,6 +1441,26 @@
       "retained_spec_commit": "f7941da7079cf395a8442eb5b798958aafd98f8e",
       "current_test_source_sha256": "23df96b180efcf2108eccbf84a8d8a816fc16810a31d892e0f02f6df6267433d",
       "reason": "Evaluation-mask post-release B checks get their own 10 s frames; the old A reply is still released inside its hold frame (CI #408)"
+    },
+    {
+      "receipt": "2026-10-13-app-overlay-error-class-selector-transitions-root608-browser.json",
+      "receipt_sha256": "3d0ea310171b520a3956892a094b37f49cc8f27b73e856352970c153acb8d2d8",
+      "execution_source_sha": "418039a91d8293fae13f161dc3f688b846e09d56",
+      "test": "scripts/e2e/evaluation-error-class-selector-transitions.spec.ts::saved error overlays and class changes recover after source outage and fence old A replies from B",
+      "recorded_test_source_sha256": "19f4ee228a36c3ce12b76e6c766507f84a0eb5eda8834d8527ca82139ae9ea26",
+      "retained_spec_commit": "0a13b5cd41f9c82771d5219e38547451b5424b49",
+      "current_test_source_sha256": "057bde56afa14a1424df6f0cb86239e3940020bc6546ba6b980c69ad56dc6f7e",
+      "reason": "Error-class overlay post-release B checks get their own 10 s frames; the old A reply is still released inside its hold frame (CI #411)"
+    },
+    {
+      "receipt": "2026-10-13-app-overlay-error-class-selector-transitions-root608-electron.json",
+      "receipt_sha256": "20d219da221498630d840b42f42ed16d4210b25a31cfc79636432a39c987eb82",
+      "execution_source_sha": "418039a91d8293fae13f161dc3f688b846e09d56",
+      "test": "scripts/e2e/evaluation-error-class-selector-transitions.spec.ts::source Electron saved error overlays and class changes recover after outage and preserve B after canceled A read",
+      "recorded_test_source_sha256": "19f4ee228a36c3ce12b76e6c766507f84a0eb5eda8834d8527ca82139ae9ea26",
+      "retained_spec_commit": "0a13b5cd41f9c82771d5219e38547451b5424b49",
+      "current_test_source_sha256": "057bde56afa14a1424df6f0cb86239e3940020bc6546ba6b980c69ad56dc6f7e",
+      "reason": "Error-class overlay post-release B checks get their own 10 s frames; the old A reply is still released inside its hold frame (CI #411)"
     }
   ]
 }
