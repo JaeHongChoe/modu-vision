@@ -3,7 +3,9 @@ name: Linux CPU source checks
 "on":
   push:
     branches: [main]
-  pull_request:
+  # The full regression qualifies the head that will be merged, not every pull-request update: each update gets the
+  # fast lane (ci-fast.yml), whose "full regression on this exact head" job passes only after this workflow has
+  # passed on that commit. Run it for a PR head with: gh workflow run ci.yml --ref <branch>
   workflow_dispatch:
 
 # Public contribution runs have no deployment, signing, or GPU credentials.

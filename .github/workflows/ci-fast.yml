@@ -1,0 +1,176 @@
+name: Linux fast checks
+
+# Answers every pull-request update in minutes: the full lanes' static, evidence and renderer checks, plus the full
+# CPU lane's pytest references and the browser specs related to what changed. It never replaces the full regression
+# (ci.yml, "Linux CPU source checks"), which runs unchanged on the exact head that will be merged. The merge gate on
+# that run lives in its own workflow (ci-merge-gate.yml), so this run's result means "the fast checks passed" and
+# the next update's selection starts from here even while the full regression has not run yet.
+"on":
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      pytest:
+        description: Extra pytest references from the full CPU lane (space separated)
+        required: false
+        default: ''
+      specs:
+        description: Extra browser spec files under scripts/e2e (space separated)
+        required: false
+        default: ''
+
+permissions:
+  contents: read
+
+concurrency:
+  # Own queue: fast answers are for the newest commit, so a superseded run gives way. The next run re-checks
+  # everything changed since this branch's last passing fast run, so a cancelled run leaves no change unchecked.
+  group: fast-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  static:
+    name: static, evidence, renderer and build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    env:
+      OMP_NUM_THREADS: '2'
+      MKL_NUM_THREADS: '2'
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          # Resolve exact inherited GUI spec blobs without rebinding their receipts.
+          fetch-depth: 0
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: '24'
+          cache: npm
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: '3.13'
+      - name: Install locked CPU environment
+        run: >-
+          python -m pip install --require-hashes --only-binary=:all: -r build/ci/requirements-ubuntu-py313-cpu.lock
+      - run: npm ci
+      - name: Check preserved scope and acceptance states
+        run: |
+          python scripts/check_service_plan.py
+          python scripts/check_action_evidence.py
+      - name: Type checks, renderer regressions, and build
+        run: |
+          npm run typecheck
+          npm run typecheck:e2e
+          node scripts/verify-supervisor.js --owned-bootstrap-order
+          npm run test:renderer
+          npm run build
+          npm run test:e2e:harness
+          node --test scripts/acceptance/action_inventory.test.cjs
+          node --test scripts/tests/release-readiness.test.cjs scripts/tests/package-license-texts.test.cjs scripts/verify-release-recovery.cjs
+
+  pytest:
+    name: related CPU regressions (${{ matrix.shard }}/6)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      actions: read
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4, 5, 6]
+    env:
+      OMP_NUM_THREADS: '2'
+      MKL_NUM_THREADS: '2'
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: '24'
+          cache: npm
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: '3.13'
+      - name: Install locked CPU environment
+        run: >-
+          python -m pip install --require-hashes --only-binary=:all: -r build/ci/requirements-ubuntu-py313-cpu.lock
+      - run: npm ci
+      - name: Select related pytest references
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          BRANCH: ${{ github.head_ref || github.ref_name }}
+          BASE_BRANCH: ${{ github.base_ref || 'main' }}
+          EXTRA: ${{ inputs.pytest }}
+          SHARD: ${{ matrix.shard }}/6
+        run: |
+          python scripts/ci/related_checks.py select --kind pytest --repo "$REPO" --branch "$BRANCH" --base-branch "$BASE_BRANCH" --shard "$SHARD" --extra "$EXTRA" > "$RUNNER_TEMP/related-pytest.txt"
+          cat "$RUNNER_TEMP/related-pytest.txt"
+      - name: Related CPU regressions
+        run: |
+          if [ ! -s "$RUNNER_TEMP/related-pytest.txt" ]; then echo 'No related pytest reference in this shard.'; exit 0; fi
+          xargs -a "$RUNNER_TEMP/related-pytest.txt" python -m pytest -q
+
+  browser:
+    name: related browser checks (${{ matrix.shard }}/4)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    permissions:
+      contents: read
+      actions: read
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4]
+    env:
+      OMP_NUM_THREADS: '2'
+      MKL_NUM_THREADS: '2'
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: '24'
+          cache: npm
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: '3.13'
+      - name: Install locked CPU environment
+        run: >-
+          python -m pip install --require-hashes --only-binary=:all: -r build/ci/requirements-ubuntu-py313-cpu.lock
+      - run: npm ci
+      - name: Select related browser specs
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          BRANCH: ${{ github.head_ref || github.ref_name }}
+          BASE_BRANCH: ${{ github.base_ref || 'main' }}
+          EXTRA: ${{ inputs.specs }}
+        run: |
+          python scripts/ci/related_checks.py select --kind specs --repo "$REPO" --branch "$BRANCH" --base-branch "$BASE_BRANCH" --extra "$EXTRA" > "$RUNNER_TEMP/related-specs.txt"
+          cat "$RUNNER_TEMP/related-specs.txt"
+      - name: Install test browser
+        run: |
+          if [ -s "$RUNNER_TEMP/related-specs.txt" ]; then npx playwright install --with-deps chromium; fi
+      - name: Related browser checks
+        env:
+          MV_E2E_ARTIFACT_DIR: ${{ runner.temp }}/modu-e2e
+          SHARD: ${{ matrix.shard }}/4
+        run: |
+          if [ ! -s "$RUNNER_TEMP/related-specs.txt" ]; then echo 'No related browser spec.'; exit 0; fi
+          # A shard can hold no test when fewer tests than shards were selected; the selection above names every file.
+          xargs -a "$RUNNER_TEMP/related-specs.txt" npm run test:e2e:browser -- --grep-invert @owned-model --workers=2 --shard="$SHARD" --pass-with-no-tests
+      - name: Preserve browser evidence
+        if: failure()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: fast-browser-${{ github.sha }}-${{ matrix.shard }}
+          path: |
+            ${{ runner.temp }}/modu-e2e
+            !${{ runner.temp }}/modu-e2e/**/ws/**
+          retention-days: 7
+          if-no-files-found: ignore

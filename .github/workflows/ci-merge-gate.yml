@@ -1,0 +1,38 @@
+name: Merge readiness
+
+# Passes only when the full regression (ci.yml, "Linux CPU source checks") has succeeded on exactly this head commit.
+# It is its own workflow so the fast checks' result (ci-fast.yml) never waits on it: the fast lane can move its
+# change range forward while this stays red until the merge head's full regression has passed. After that run
+# succeeds, re-run this check (or push nothing new) to see it pass; any new commit needs its own full regression.
+"on":
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: merge-gate-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  full-regression:
+    name: full regression on this exact head
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      actions: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: '3.13'
+      - name: Exact-head full regression gate
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: python scripts/ci/related_checks.py full-regression --repo "$REPO" --sha "$SHA"

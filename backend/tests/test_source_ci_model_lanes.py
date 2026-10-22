@@ -368,3 +368,128 @@ def test_ci_artifact_paths_exclude_all_owned_workspaces_and_retain_original_evid
     assert evidence['if'] == 'always()'
     assert evidence['with']['retention-days'] == 14
     assert evidence['with']['if-no-files-found'] == 'error'
+
+
+def related_module():
+    spec = importlib.util.spec_from_file_location('ci_related_checks', ROOT / 'scripts/ci/related_checks.py')
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+def test_full_regression_keeps_its_jobs_and_runs_for_the_merge_head_and_main_only():
+    """Every PR update no longer queues an hour-long qualification; the merge head is dispatched instead."""
+    workflow = yaml.safe_load((ROOT/'.github/workflows/ci.yml').read_text())
+    assert workflow['name'] == 'Linux CPU source checks'
+    assert workflow['on'] == {'push': {'branches': ['main']}, 'workflow_dispatch': None}
+    assert set(workflow['jobs']) == {'source', 'browser'}
+
+
+def test_fast_lane_runs_the_full_lanes_static_commands_in_its_own_queue_and_gates_on_the_exact_head():
+    full = yaml.safe_load((ROOT/'.github/workflows/ci.yml').read_text())
+    fast = yaml.safe_load((ROOT/'.github/workflows/ci-fast.yml').read_text())
+    assert fast['on']['pull_request'] is None and set(fast['on']['workflow_dispatch']['inputs']) == {'pytest', 'specs'}
+    assert fast['permissions'] == {'contents': 'read'} and 'secrets.' not in json.dumps(fast)
+    assert fast['concurrency']['cancel-in-progress'] is True and fast['concurrency']['group'] != full['concurrency']['group']
+    # The merge gate lives in its own workflow, so a fast run's result is only the fast checks' result.
+    assert set(fast['jobs']) == {'static', 'pytest', 'browser'}
+    def run(job, name):
+        values = [step['run'] for step in job['steps'] if step.get('name') == name]
+        assert len(values) == 1, name
+        return values[0]
+    for name in ('Install locked CPU environment', 'Check preserved scope and acceptance states', 'Type checks, renderer regressions, and build'):
+        assert run(fast['jobs']['static'], name) == run(full['jobs']['source'], name) == run(full['jobs']['browser'], name)
+    assert fast['jobs']['pytest']['strategy']['matrix']['shard'] == [1, 2, 3, 4, 5, 6]
+    assert 'related_checks.py select --kind pytest' in run(fast['jobs']['pytest'], 'Select related pytest references')
+    assert '--shard "$SHARD"' in run(fast['jobs']['pytest'], 'Select related pytest references')
+    assert fast['jobs']['browser']['strategy']['matrix']['shard'] == [1, 2, 3, 4]
+    assert '--grep-invert @owned-model' in run(fast['jobs']['browser'], 'Related browser checks')
+    gate = yaml.safe_load((ROOT/'.github/workflows/ci-merge-gate.yml').read_text())
+    assert gate['on'] == {'pull_request': None, 'workflow_dispatch': None} and gate['permissions'] == {'contents': 'read'}
+    assert gate['concurrency']['group'] not in (fast['concurrency']['group'], full['concurrency']['group'])
+    assert set(gate['jobs']) == {'full-regression'} and gate['jobs']['full-regression']['name'] == 'full regression on this exact head'
+    assert 'related_checks.py full-regression' in run(gate['jobs']['full-regression'], 'Exact-head full regression gate')
+    gate_env = next(step for step in gate['jobs']['full-regression']['steps'] if step.get('name') == 'Exact-head full regression gate')['env']
+    assert gate_env['SHA'] == '${{ github.event.pull_request.head.sha || github.sha }}'
+    assert 'secrets.' not in json.dumps(gate)
+    for job in [*fast['jobs'].values(), *gate['jobs'].values()]:
+        assert job['steps'][0]['uses'] == full['jobs']['source']['steps'][0]['uses']
+        assert job['steps'][0]['with']['persist-credentials'] is False
+        # Inputs reach commands only through the environment, never through expression text in a script.
+        assert not any('${{ inputs.' in step.get('run', '') for step in job['steps'])
+
+
+def test_fast_selection_only_picks_full_lane_references_and_specs(tmp_path):
+    related = related_module()
+    references = related.full_pytest_references()
+    assert 'backend/tests/test_source_ci_model_lanes.py' in references
+    assert 'backend/tests/test_flow_package_outcome_diagnostic.py' in references
+    always = set(related.ALWAYS_PYTEST)
+    assert always <= set(references)
+    assert set(related.select_pytest([])) == always
+    assert 'backend/tests/test_application_node_writer_authority.py' in related.select_pytest(['backend/tests/test_application_node_writer_authority.py'])
+    # A changed module selects the full-lane tests that read it, by dotted import or by `from package import module`.
+    chosen = related.select_pytest(['backend/engine/local_training_worker.py'])
+    assert 'backend/tests/test_service_s1_09.py' in chosen
+    assert set(chosen) <= set(references) and len(chosen) < len(references)
+    with pytest.raises(SystemExit):
+        related.select_pytest([], extra=['backend/tests/not_in_the_full_lane.py'])
+    assert related.select_specs(['scripts/e2e/comparison-task-center.spec.ts', 'src/renderer/App.tsx']) == ['scripts/e2e/comparison-task-center.spec.ts']
+    with pytest.raises(SystemExit):
+        related.select_specs([], extra=['scripts/e2e/missing.spec.ts'])
+    # Shards split by file, keep each reference exactly once and keep the full lane's order inside a shard.
+    selected = related.select_pytest(['backend/engine/local_training_worker.py', 'backend/api/routes_training.py'])
+    shards = [related.shard(selected, index, 6) for index in range(1, 7)]
+    assert sorted(value for part in shards for value in part) == sorted(selected)
+    assert all(part == [value for value in selected if value in part] for part in shards)
+    files = [{value.split('::', 1)[0] for value in part} for part in shards]
+    assert all(not (files[a] & files[b]) for a in range(6) for b in range(a + 1, 6))
+
+
+def test_exact_head_gate_passes_only_for_a_successful_full_regression_on_that_commit():
+    related = related_module()
+    sha, other = 'a' * 40, 'b' * 40
+    ok = {'head_sha': sha, 'status': 'completed', 'conclusion': 'success', 'html_url': 'run'}
+    assert related.gate_decision([ok], sha)[0] is True
+    assert related.gate_decision([{**ok, 'head_sha': other}], sha) == (False, related.gate_decision([], sha)[1])
+    assert 'has not run' in related.gate_decision([], sha)[1]
+    assert related.gate_decision([{**ok, 'status': 'in_progress', 'conclusion': None}], sha)[0] is False
+    assert related.gate_decision([{**ok, 'conclusion': 'failure'}], sha)[0] is False
+    assert related.gate_decision([{**ok, 'conclusion': 'cancelled'}, ok], sha)[0] is True
+
+
+def _commits(repo, names):
+    """A linear history: one commit per name, each adding the file of that name; returns their SHAs."""
+    run = lambda *args: subprocess.run(['git', *args], cwd=repo, check=True, capture_output=True, text=True).stdout.strip()
+    run('init', '-q')
+    shas = []
+    for name in names:
+        (repo / name).write_text(name)
+        run('add', name)
+        run('-c', 'user.name=Fixture', '-c', 'user.email=fixture@example.invalid', 'commit', '-qm', name)
+        shas.append(run('rev-parse', 'HEAD'))
+    return shas
+
+
+def test_fast_range_moves_past_a_passing_fast_run_while_the_merge_gate_is_red(tmp_path):
+    """Fast checks passed on B; the full regression never ran there. The next run's range starts at B."""
+    related = related_module()
+    base, b, c = _commits(tmp_path, ['base.txt', 'b.txt', 'c.txt'])
+    # Only the fast workflow's passing runs are read; the separate merge gate's red result cannot hold B back.
+    found = related.last_green_fast_head('owner/repo', 'branch', 'HEAD', root=tmp_path, passed=lambda repo, branch: [b])
+    assert found == b
+    assert related.changed_files(found, 'HEAD', root=tmp_path) == ['c.txt']
+    assert related.gate_decision([], c)[0] is False, 'the merge gate stays red until the full regression passes on C'
+
+
+def test_a_cancelled_fast_run_leaves_its_changes_in_the_next_range(tmp_path):
+    """Passed on B, cancelled on C (not listed as passed), now at D: the range covers C and D."""
+    related = related_module()
+    base, b, c, d = _commits(tmp_path, ['base.txt', 'b.txt', 'c.txt', 'd.txt'])
+    found = related.last_green_fast_head('owner/repo', 'branch', 'HEAD', root=tmp_path, passed=lambda repo, branch: [b])
+    assert found == b and related.changed_files(found, 'HEAD', root=tmp_path) == ['c.txt', 'd.txt']
+    # The head itself, and commits outside this history (a force-pushed-away head), are never the base.
+    assert related.last_green_fast_head('o/r', 'b', 'HEAD', root=tmp_path, passed=lambda repo, branch: [d, 'f' * 40, b]) == b
+    assert related.last_green_fast_head('o/r', 'b', 'HEAD', root=tmp_path, passed=lambda repo, branch: []) is None
+    assert related.last_green_fast_head('o/r', 'b', 'HEAD', root=tmp_path, passed=lambda repo, branch: None) is None
+
