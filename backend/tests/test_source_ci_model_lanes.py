@@ -403,6 +403,12 @@ def test_fast_lane_runs_the_full_lanes_static_commands_in_its_own_queue_and_gate
     assert 'related_checks.py select --kind pytest' in run(fast['jobs']['pytest'], 'Select related pytest references')
     assert '--shard "$SHARD"' in run(fast['jobs']['pytest'], 'Select related pytest references')
     assert fast['jobs']['browser']['strategy']['matrix']['shard'] == [1, 2, 3, 4]
+    # A shard selects first and installs Node only when it has work; what it runs gets the full lane's setup.
+    for name in ('pytest', 'browser'):
+        steps = fast['jobs'][name]['steps']
+        select = next(index for index, step in enumerate(steps) if step.get('id') == 'select')
+        node = [index for index, step in enumerate(steps) if 'setup-node' in step.get('uses', '') or step.get('run') == 'npm ci']
+        assert len(node) == 2 and all(index > select and steps[index]['if'] == "steps.select.outputs.count != '0'" for index in node)
     assert '--grep-invert @owned-model' in run(fast['jobs']['browser'], 'Related browser checks')
     gate = yaml.safe_load((ROOT/'.github/workflows/ci-merge-gate.yml').read_text())
     assert gate['on'] == {'pull_request': None, 'workflow_dispatch': None} and gate['permissions'] == {'contents': 'read'}

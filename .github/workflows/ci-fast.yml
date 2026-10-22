@@ -86,18 +86,14 @@ jobs:
         with:
           persist-credentials: false
           fetch-depth: 0
-      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
-        with:
-          node-version: '24'
-          cache: npm
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
           python-version: '3.13'
       - name: Install locked CPU environment
         run: >-
           python -m pip install --require-hashes --only-binary=:all: -r build/ci/requirements-ubuntu-py313-cpu.lock
-      - run: npm ci
       - name: Select related pytest references
+        id: select
         env:
           GH_TOKEN: ${{ github.token }}
           REPO: ${{ github.repository }}
@@ -108,6 +104,15 @@ jobs:
         run: |
           python scripts/ci/related_checks.py select --kind pytest --repo "$REPO" --branch "$BRANCH" --base-branch "$BASE_BRANCH" --shard "$SHARD" --extra "$EXTRA" > "$RUNNER_TEMP/related-pytest.txt"
           cat "$RUNNER_TEMP/related-pytest.txt"
+          echo "count=$(grep -c . "$RUNNER_TEMP/related-pytest.txt" || true)" >> "$GITHUB_OUTPUT"
+      # Node and npm ci (which can take minutes on a cold runner) only when this shard has work.
+      - if: steps.select.outputs.count != '0'
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: '24'
+          cache: npm
+      - if: steps.select.outputs.count != '0'
+        run: npm ci
       - name: Related CPU regressions
         run: |
           if [ ! -s "$RUNNER_TEMP/related-pytest.txt" ]; then echo 'No related pytest reference in this shard.'; exit 0; fi
@@ -132,18 +137,14 @@ jobs:
         with:
           persist-credentials: false
           fetch-depth: 0
-      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
-        with:
-          node-version: '24'
-          cache: npm
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
           python-version: '3.13'
       - name: Install locked CPU environment
         run: >-
           python -m pip install --require-hashes --only-binary=:all: -r build/ci/requirements-ubuntu-py313-cpu.lock
-      - run: npm ci
       - name: Select related browser specs
+        id: select
         env:
           GH_TOKEN: ${{ github.token }}
           REPO: ${{ github.repository }}
@@ -153,9 +154,18 @@ jobs:
         run: |
           python scripts/ci/related_checks.py select --kind specs --repo "$REPO" --branch "$BRANCH" --base-branch "$BASE_BRANCH" --extra "$EXTRA" > "$RUNNER_TEMP/related-specs.txt"
           cat "$RUNNER_TEMP/related-specs.txt"
+          echo "count=$(grep -c . "$RUNNER_TEMP/related-specs.txt" || true)" >> "$GITHUB_OUTPUT"
+      # Node and npm ci (which can take minutes on a cold runner) only when this shard has work.
+      - if: steps.select.outputs.count != '0'
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: '24'
+          cache: npm
+      - if: steps.select.outputs.count != '0'
+        run: npm ci
       - name: Install test browser
-        run: |
-          if [ -s "$RUNNER_TEMP/related-specs.txt" ]; then npx playwright install --with-deps chromium; fi
+        if: steps.select.outputs.count != '0'
+        run: npx playwright install --with-deps chromium
       - name: Related browser checks
         env:
           MV_E2E_ARTIFACT_DIR: ${{ runner.temp }}/modu-e2e
