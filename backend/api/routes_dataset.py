@@ -248,8 +248,9 @@ def _has_flat_labelme_annotations(folder: Path) -> bool:
 
 def _unlabeled_image_folder(folder: Path) -> bool:
     """Images directly in the folder and no label layout at all: no JSON, no class/split/images/masks subfolder. A
-    detection or segmentation project starts from such a folder and labels it in the app (Studio overlays), so it is
-    read like a flat LabelMe folder that has no labelled image yet instead of a COCO layout it is not."""
+    detection or segmentation project starts from such a folder and labels it in the app (Studio overlays), so split,
+    drafts and metadata read it like a flat LabelMe folder that has no labelled image yet. The import counts it that way
+    for detection only: a segmentation image without a mask is a background sample, counted as before."""
     try:
         entries = list(folder.iterdir())
     except OSError:
@@ -592,7 +593,7 @@ def import_dataset(req: DatasetImportRequest):
     image_files = {p.resolve() for p in folder.iterdir() if p.is_file() and not p.name.startswith("._")
                    and p.suffix.lower() in SUPPORTED_IMAGE_EXTENSIONS}
     paired_images = _paired_labelme_images(folder)
-    unlabeled_flat = req.task in ("segmentation", "detection") and not _has_flat_labelme_annotations(folder) and _unlabeled_image_folder(folder)
+    unlabeled_flat = req.task == "detection" and not _has_flat_labelme_annotations(folder) and _unlabeled_image_folder(folder)
     flat_labelme = _has_flat_labelme_annotations(folder) or unlabeled_flat
     if flat_labelme and req.task not in ("segmentation", "detection"):
         raise HTTPException(

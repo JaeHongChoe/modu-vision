@@ -54,7 +54,8 @@ function appDeps(cancelled: () => boolean): AutoDeps {
     const training = useTrainingStore.getState();
     if (action === 'saveFlow') {
       const jobId = useEvaluationStore.getState().jobId || (training.isCurrentData ? training.jobId : null);
-      if (!jobId) return { person: '검사 흐름에 넣을 현재 모델을 찾지 못했습니다. 4단계에서 평가한 모델을 확인하세요.', step: 4 };
+      // No model on the current data (it changed after training): step 3 trains one, or moves on when one is there.
+      if (!jobId) return { back: 3, reason: '검사 흐름에 넣을 현재 데이터의 모델이 없습니다' };
       const pipeline = task === 'detection' ? await api.flowchart.getSingleDetectionTemplate(jobId)
         : await api.flowchart.getSingleSegmentationTemplate(jobId, task as Exclude<typeof task, 'detection'>);
       await api.flowchart.verifyModels({ source_dataset_path: folder, models: [{ job_id: jobId, task }] });

@@ -90,8 +90,9 @@ export type AutoRunState = {
 };
 /** A stop the person can clear right in the dialog: confirm the frozen test images' labels as truth (their press). */
 export type TruthConfirm = { kind: 'truth'; cohortId: string; versionId: string; images: number };
-/** An action's answer: null when it ran (or, for training, started), a refusal, or a stop that needs a person. */
-export type ActResult = null | string | { person: string; step: number; target?: string; confirm?: TruthConfirm };
+/** An action's answer: null when it ran (or, for training, started), a refusal, a stop that needs a person, or an earlier
+ *  step the run must go back to first (step 5's flow save with no model on the current data goes back to step 3). */
+export type ActResult = null | string | { person: string; step: number; target?: string; confirm?: TruthConfirm } | { back: number; reason: string };
 
 export interface AutoDeps {
   /** The readiness picture the footer published last (null until it has one). */
@@ -168,6 +169,16 @@ export async function runAutoProgress(deps: AutoDeps, onUpdate: (state: AutoRunS
     log(`${ACTION_TEXT[move.action]} 시작`);
     let result: ActResult;
     try { result = await deps.act(move.action); } catch (cause) { result = cause instanceof Error ? cause.message : String(cause); }
+    // Going back counts as entering that step, so a back-and-forth still meets the circling stop above.
+    if (result && typeof result === 'object' && 'back' in result) {
+      const entered = (visits.get(result.back) ?? 0) + 1;
+      visits.set(result.back, entered);
+      if (entered > 3) return finish({ state: 'stopped', stop: { reason: `${result.back}단계를 여러 번 다시 거쳤지만 ${result.reason}. 화면에서 확인하세요.`, step: result.back } });
+      log(`${ctx.stage}단계에서 ${result.back}단계로 돌아감: ${result.reason}`, 'info');
+      expectedStep = result.back;
+      await deps.setStep(result.back);
+      continue;
+    }
     if (result && typeof result === 'object') return finish({ state: 'stopped', stop: { reason: result.person, step: result.step, ...(result.target ? { target: result.target } : {}), ...(result.confirm ? { confirm: result.confirm } : {}) }, log: [...state.log, { at: deps.now(), text: result.person, tone: 'stop' }] });
     if (typeof result === 'string') return finish({ state: 'failed', stop: { reason: `${ACTION_TEXT[move.action]}: ${result}`, step: ctx.stage }, log: [...state.log, { at: deps.now(), text: `${ACTION_TEXT[move.action]}: ${result}`, tone: 'error' }] });
     log(move.action === 'train' ? `${ACTION_TEXT.train} 시작됨 · 끝날 때까지 기다립니다` : `${ACTION_TEXT[move.action]} 끝`, 'done');

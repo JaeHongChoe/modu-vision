@@ -236,22 +236,24 @@ def _image_path(project: Dict[str, Any], requested: str) -> Path:
     return candidate
 
 
-def _proposal_root(project: Dict[str, Any]) -> Path:
+def _proposal_root(project: Dict[str, Any], *, create: bool = True) -> Path:
+    """The project's suggestion folder; a read (create=False) never makes it, so listing leaves the project unchanged."""
     root = Path(project["project_dir"]) / "label_suggestions"
     if root.is_symlink():
         raise HTTPException(status_code=422, detail="Suggestion directory cannot be a symbolic link.")
-    root.mkdir(parents=True, exist_ok=True)
+    if create:
+        root.mkdir(parents=True, exist_ok=True)
     return root
 
 
-def _proposal_path(project: Dict[str, Any], suggestion_id: str) -> Path:
+def _proposal_path(project: Dict[str, Any], suggestion_id: str, *, create: bool = True) -> Path:
     if not _SUGGESTION_ID.fullmatch(suggestion_id):
         raise HTTPException(status_code=422, detail="Invalid suggestion ID.")
-    return _proposal_root(project) / f"{suggestion_id}.json"
+    return _proposal_root(project, create=create) / f"{suggestion_id}.json"
 
 
 def _read_proposal(project: Dict[str, Any], suggestion_id: str) -> Dict[str, Any]:
-    path = _proposal_path(project, suggestion_id)
+    path = _proposal_path(project, suggestion_id, create=False)
     try:
         value = json.loads(path.read_text(encoding="utf-8"))
         if not isinstance(value, dict) or value.get("id") != suggestion_id or value.get("project_id") != project["id"]:
@@ -449,7 +451,7 @@ def list_suggestions(request: Request, image_path: Optional[str] = None):
     source = _source_path(project)
     selected = str(_image_path(project, image_path)) if image_path else None
     results = []
-    for path in sorted(_proposal_root(project).glob("suggestion_*.json"), reverse=True):
+    for path in sorted(_proposal_root(project, create=False).glob("suggestion_*.json"), reverse=True):
         if not _SUGGESTION_ID.fullmatch(path.stem):
             continue
         try:
@@ -464,18 +466,19 @@ def list_suggestions(request: Request, image_path: Optional[str] = None):
     return {"suggestions": results}
 
 
-def _batch_root(project: Dict[str, Any]) -> Path:
-    root = _proposal_root(project) / "batches"
+def _batch_root(project: Dict[str, Any], *, create: bool = True) -> Path:
+    root = _proposal_root(project, create=create) / "batches"
     if root.is_symlink():
         raise HTTPException(status_code=422, detail="Batch directory cannot be a symbolic link.")
-    root.mkdir(parents=True, exist_ok=True)
+    if create:
+        root.mkdir(parents=True, exist_ok=True)
     return root
 
 
-def _batch_path(project: Dict[str, Any], batch_id: str) -> Path:
+def _batch_path(project: Dict[str, Any], batch_id: str, *, create: bool = True) -> Path:
     if not _BATCH_ID.fullmatch(batch_id):
         raise HTTPException(status_code=422, detail="Invalid batch ID.")
-    return _batch_root(project) / f"{batch_id}.json"
+    return _batch_root(project, create=create) / f"{batch_id}.json"
 
 
 def _persist_batch(project: Dict[str, Any], batch: Dict[str, Any]) -> None:
@@ -483,7 +486,7 @@ def _persist_batch(project: Dict[str, Any], batch: Dict[str, Any]) -> None:
 
 
 def _read_batch(project: Dict[str, Any], batch_id: str) -> Dict[str, Any]:
-    path = _batch_path(project, batch_id)
+    path = _batch_path(project, batch_id, create=False)
     if path.is_symlink():
         raise HTTPException(status_code=422, detail="Batch file cannot be a symbolic link.")
     try:
@@ -680,7 +683,7 @@ def start_batch(req: BatchGenerateRequest, request: Request):
 def list_batches(request: Request):
     project = get_current_project(request)
     results = []
-    for path in sorted(_batch_root(project).glob("batch_*.json"), reverse=True):
+    for path in sorted(_batch_root(project, create=False).glob("batch_*.json"), reverse=True):
         if _BATCH_ID.fullmatch(path.stem):
             try:
                 results.append(_batch_for_read(project, path.stem))

@@ -146,9 +146,14 @@ def _analyze(project):
             # Evidence of this version, or of another version with the same inspection rules (only the layout moved, E04).
             matches=[row for row in flow_evaluations if (row.get('version_id')==flow['version_id'] and row.get('graph_sha256')==flow['graph_sha256'])
                      or (flow.get('semantic_sha256') and row.get('semantic_sha256')==flow['semantic_sha256'])]
-            if flow['state']=='unverified' and any(row.get('validity',{}).get('valid') for row in matches):
+            # A run in which no image had confirmed truth measured nothing (no misses or overkills to count): the flow
+            # still waits for its test images' truth, so it never reads as evaluated.
+            measured=[row for row in matches if (row.get('coverage') or {}).get('known')!=0]
+            if flow['state']=='unverified' and any(row.get('validity',{}).get('valid') for row in measured):
                 flow['state']='current'
                 flow['reason']='Whole-flow evidence matches current inputs; deployment and quality approval are separate'
+            elif flow['state']=='unverified' and any(row.get('validity',{}).get('valid') for row in matches):
+                flow['reason']='Whole-flow evaluation ran without confirmed truth; confirm the test images\' truth and evaluate again'
             elif flow['state'] in ('unverified','current') and any(row.get('validity',{}).get('valid') is False for row in matches):
                 flow['state']='revalidation_required'
                 flow['reason']='Saved whole-flow truth or inputs changed; evaluate this version again'

@@ -66,11 +66,12 @@ export const DatasetStudio: React.FC = () => {
   const sessionChanging = useProjectStore(state => state.sharedSessionChanging);
   // The focus view folds the full-width panels above the toolbar (DATASET_HELPER_PANELS) so the sidebar and the gallery
   // keep the window's height; the choice is remembered. Off in both views until pressed (the simple view keeps 데이터 현황
-  // on screen), with one exception: a body measured under UNUSABLE_BODY_HEIGHT folds the panels once by itself for a
-  // viewer who never chose (a 0 px body is a hard failure for a first-time user). Their own press always wins afterwards.
+  // on screen), with one exception: in the simple view, a body measured under UNUSABLE_BODY_HEIGHT folds the panels once
+  // by itself for a viewer who never chose (a 0 px body is a hard failure for a first-time user). The full view keeps
+  // every panel open unless pressed (its switch is highlighted instead). Their own press always wins afterwards.
   const [focusChoice, setFocusChoice] = useState<boolean | null>(() => storedDatasetFocus());
   const [autoFolded, setAutoFolded] = useState(false);
-  const focus = focusChoice ?? autoFolded;
+  const focus = focusChoice ?? (autoFolded && !full);
   const toggleFocus = () => { const next = !focus; writeDatasetFocus(next); setFocusChoice(next); };
   // The open panels can leave the body row a few pixels tall (or none): the toolbar's switch then says so and is
   // highlighted, and the panels' layout is untouched. Only shortness matters, so the height is kept clamped at the
@@ -93,7 +94,7 @@ export const DatasetStudio: React.FC = () => {
   }, []);
   const narrowNotice = narrowBodyNotice(bodyHeight, focus);
   // Said while the panels are folded: what the screen folded by itself and how to undo it, or what the viewer folded.
-  const foldStatus = focusChoice === null && autoFolded ? AUTO_FOLD_STATUS : focusStatus(focus);
+  const foldStatus = focusChoice === null && autoFolded && !full ? AUTO_FOLD_STATUS : focusStatus(focus);
   const {
     folderPath,
     datasetKey,

@@ -321,7 +321,8 @@ export const FlowchartStudio: React.FC = () => {
     return () => observer.disconnect();
   }, [activeTab]);
 
-  // A flow 자동 진행 saved elsewhere: read the versions again so the new active version is the selected one.
+  // A flow 자동 진행 saved elsewhere: read the versions again so the new active version is the selected one, and check the
+  // shown flow's models again (the check that ran before the save saw the old model and would keep its warning up).
   const [externalSave, setExternalSave] = useState(0);
   useEffect(() => subscribeFlowSaved(() => setExternalSave((value) => value + 1)), []);
   useEffect(() => {
@@ -436,7 +437,7 @@ export const FlowchartStudio: React.FC = () => {
     return () => { cancelled = true; };
   }, [loadPipeline, loadSingleSegmentationTemplate, loadEvaluation, updateNodeData,
     folderPath, datasetKey, hasSelectedFolder, datasetIsLoading, importError,
-    allowLatestRecovery, completedCurrentJobId, evaluatedJobId, contextRevision, verificationRetry, task, isProjectBusy]);
+    allowLatestRecovery, completedCurrentJobId, evaluatedJobId, contextRevision, verificationRetry, task, isProjectBusy, externalSave]);
 
   useEffect(() => { setActionValidationError(null); }, [pipeline]);
 
@@ -1094,7 +1095,7 @@ export const FlowchartStudio: React.FC = () => {
 
           <button
             onClick={() => setImagePickerOpen(true)}
-            className="flex items-center space-x-1.5 px-2.5 py-1 bg-[#131822] hover:bg-[#1A212E] text-cyan-400 rounded border border-[#2B3547] font-bold cursor-pointer transition-colors"
+            className={simpleView ? 'workspace-button' : "flex items-center space-x-1.5 px-2.5 py-1 bg-[#131822] hover:bg-[#1A212E] text-cyan-400 rounded border border-[#2B3547] font-bold cursor-pointer transition-colors"}
           >
             <ImageIcon className="w-3 h-3" />
             <span>이미지 변경...</span>
@@ -1124,7 +1125,7 @@ export const FlowchartStudio: React.FC = () => {
           </div>
         </div>
 
-        <div hidden={activeTab!=='edit'}><FlowDraftControls blocked={isVerifyingAction||dragViewport!==null||isRoiEditing} activeVersion={!pipelineDirty&&!pipelineIsDraft&&savedVersions.some(v=>v.version_id===selectedVersionId&&v.is_active)} hasSavedVersion={Boolean(selectedVersionId)}/></div>
+        <div hidden={activeTab!=='edit'}><FlowDraftControls simple={simpleView} blocked={isVerifyingAction||dragViewport!==null||isRoiEditing} activeVersion={!pipelineDirty&&!pipelineIsDraft&&savedVersions.some(v=>v.version_id===selectedVersionId&&v.is_active)} hasSavedVersion={Boolean(selectedVersionId)}/></div>
         {/* Action Controls */}
         <div hidden={activeTab!=='edit'} className={activeTab==='edit'?"flex flex-wrap items-center justify-end gap-2":"hidden"}>
           <div className="flex rounded border border-[#2B3547] bg-[#0B0E14] p-0.5" aria-label="플로우 편집 기록">
@@ -1151,14 +1152,14 @@ export const FlowchartStudio: React.FC = () => {
           <button type="button" onClick={handleLayout}
             disabled={!pipeline || isLoading || editHeldBySave || isRunning || isVerifyingAction}
             title="연결 순서대로 노드를 배치하고 전체 흐름을 표시합니다. 실행 취소할 수 있습니다."
-            className="flex items-center gap-1.5 rounded border border-[#2B3547] bg-[#1A212E] px-3 py-1.5 text-xs font-semibold text-slate-200 hover:bg-[#222B3D] disabled:opacity-50">
+            className={simpleView ? 'workspace-button' : "flex items-center gap-1.5 rounded border border-[#2B3547] bg-[#1A212E] px-3 py-1.5 text-xs font-semibold text-slate-200 hover:bg-[#222B3D] disabled:opacity-50"}>
             <ListTree className="h-3.5 w-3.5" /> <span>흐름 정렬</span>
           </button>
           <button
             data-primary-action="true" onClick={handleSave}
             disabled={!canVerifyGraph || isVerifyingAction || isSaving || isLoading || isRunning || !pipeline || needsModel || !!graphError}
             title={!canVerifyGraph ? modelCheckMessage : graphError || (needsModel ? '각 모델 노드에 완료 모델을 선택하세요.' : undefined)}
-            className="flex items-center space-x-1.5 px-3 py-1.5 bg-cyan-800 hover:bg-cyan-700 text-white rounded border border-cyan-600 text-xs font-bold cursor-pointer transition-colors disabled:opacity-50"
+            className={simpleView ? 'workspace-button workspace-button--primary' : "flex items-center space-x-1.5 px-3 py-1.5 bg-cyan-800 hover:bg-cyan-700 text-white rounded border border-cyan-600 text-xs font-bold cursor-pointer transition-colors disabled:opacity-50"}
           >
             <Save className="w-3.5 h-3.5 text-[#94A3B8]" />
             <span>{isSaving ? (language === 'ko' ? '저장 중...' : 'Saving...') : (language === 'ko' ? '플로우 저장' : 'Save')}</span>
@@ -1978,7 +1979,7 @@ export const FlowchartStudio: React.FC = () => {
             </select>
           </label>
           <button ref={partialRunButton} type="button" onClick={handleRunToNode} disabled={!pipeline||!selectedNodeId||!selectedImage||isRunning||isLoading||!!graphError}
-            className="rounded border border-sky-700 px-3 py-1.5 text-sky-200 disabled:opacity-50" title="선택한 실행 위치에서 이 노드와 그 상류만 실행합니다. 모델 학습 서버 자동 선택 방식에서는 이 컴퓨터 CPU로 디버그합니다.">선택 노드까지 실행</button>
+            className={simpleView ? 'workspace-button' : "rounded border border-sky-700 px-3 py-1.5 text-sky-200 disabled:opacity-50"} title="선택한 실행 위치에서 이 노드와 그 상류만 실행합니다. 모델 학습 서버 자동 선택 방식에서는 이 컴퓨터 CPU로 디버그합니다.">선택 노드까지 실행</button>
           <span className="inline-flex shrink-0 gap-2">
             {isRunning && partialRun && <button type="button"
               aria-describedby="flow-partial-run-status"
@@ -2006,7 +2007,7 @@ export const FlowchartStudio: React.FC = () => {
             data-primary-action="true" onClick={handleRun}
             disabled={!selectedImage || !canVerifyGraph || !executionReady || isVerifyingAction || isRunning || isLoading || needsModel || !!graphError}
             title={!canVerifyGraph ? modelCheckMessage : graphError || (needsModel ? '각 모델 노드에 완료 모델을 선택하세요.' : undefined)}
-            className="flex items-center space-x-2 px-4 py-1.5 bg-[#10B981] hover:bg-[#059669] active:bg-[#047857] text-[#0B0E14] font-black rounded border border-[#34D399] text-xs transition-colors cursor-pointer disabled:opacity-50"
+            className={simpleView ? 'workspace-button workspace-button--primary' : "flex items-center space-x-2 px-4 py-1.5 bg-[#10B981] hover:bg-[#059669] active:bg-[#047857] text-[#0B0E14] font-black rounded border border-[#34D399] text-xs transition-colors cursor-pointer disabled:opacity-50"}
           >
             <Play className={`w-3.5 h-3.5 fill-current ${isRunning ? 'animate-spin' : ''}`} />
             <span>
@@ -2051,7 +2052,7 @@ export const FlowchartStudio: React.FC = () => {
       <FlowWorkspacePanel area={activeTab} versions={savedVersions} models={modelCatalog} onOpenImage={()=>setActiveTab('edit')}/>
       <div hidden={activeTab!=='release'}><WorkflowImpactPanel /></div>
       <section role="tabpanel" id="flow-panel-evaluate" aria-labelledby="flow-area-evaluate" hidden={activeTab!=='evaluate'}>
-      <FlowEvaluationPanel embedded visible={activeTab==='evaluate'} onEvidence={setEvaluationReceipt} sourceDatasetPath={folderPath} savedVersionId={selectedVersionId || null}
+      <FlowEvaluationPanel embedded simple={simpleView} visible={activeTab==='evaluate'} onEvidence={setEvaluationReceipt} sourceDatasetPath={folderPath} savedVersionId={selectedVersionId || null}
         contextKey={scopeKey}
         onOpenImage={imagePath=>{const image=datasetImageReference(imagePath);return useProjectStore.getState().openImageForLabeling(image.imageId,imagePath);}}
         onInspectImage={imagePath=>{const image=datasetImageReference(imagePath);useFlowchartStore.getState().setSelectedImage({source:'dataset',imagePath,fileName:image.fileName,imageId:image.imageId,thumbnailUrl:image.thumbnailUrl});setActiveTab('test');}}/>

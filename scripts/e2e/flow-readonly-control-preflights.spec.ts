@@ -60,9 +60,9 @@ const UI_SOURCE={
  "scripts/e2e/fixtures/flow_template_control.py": "81f4a1844d05021d6c4c668627a732120c11aa20e45294ba55da0bfca410572a",
  "scripts/e2e/fixtures/flow_large_dag_control.py": "6434d381ed45d68922c058544d0b515caa3d19d93d88c90028a3463a9903d871",
  "scripts/e2e/qa/appFlow.ts": "4eed3e5dad1d9d65a6b19fc9bb51a1f9b0e23911a39e7f255220bec0ce37fea2",
- "src/renderer/components/flowchart/FlowchartStudio.tsx": "ff1ed8108deff763cb356a6c8b8efbe3ca3d58ca92789e2b3d41777e1a097a4d",
+ "src/renderer/components/flowchart/FlowchartStudio.tsx": "e7625af70ed352df22770a6efda444bfa811729e18fab4f81674635f1df78b64",
  "src/renderer/components/flowchart/FlowEditorWorkspace.tsx": "e58f0b7a62572516d9ea04cbb45dafdfb104e805753e9f13a3c8f67c88210ee7",
- "src/renderer/components/flowchart/FlowDraftControls.tsx": "3bd10fc68ea4ae2dc600dfad2b6c51b56d74d213f7483923107295aac303f5a8",
+ "src/renderer/components/flowchart/FlowDraftControls.tsx": "fe003c308ecd62b03aea4106e86d446b7a71d008ba0486b36132e6a1b39eb02b",
  "src/renderer/components/flowchart/FlowGraphNavigator.tsx": "656832c214f41742d5bc0f66c9f8983c5fb6892cfaf3b42b48ee353f282da20a",
  "src/renderer/components/flowchart/FlowInspectorPanel.tsx": "c108ee18336c2d3cdc2accb200eb739b0a3252c7fcbd60f35902e66da06c6707",
  "src/renderer/components/flowchart/CustomNode.tsx": "97350539036826f52411bc8defe234d638e2c18fde5092a5f104af7557dd1828",
@@ -82,7 +82,7 @@ const UI_SOURCE={
  "scripts/e2e/fixtures/test.ts": "7a7effa184e71c02414773308e0ea88e16cf83dfbd72d77d47046f2cfc1b8d09",
  "scripts/e2e/fixtures/harness.cjs": "6fe3bb6411a28bc83c6da36ba0b2480b12de6b86fd08daa61d8d0e76d7dac950",
  "scripts/e2e/fixtures/desktop-host-shim.ts": "4f598862ec0e08189628c72bbb552f72bf8fd73f5a9a05b8da1d3ddf516dcfa6",
- "backend/api/routes_dataset.py": "5bffb45a198bb1fd1bf3ee915da8968327a1bb022d139e632888f47eaa31f884"
+ "backend/api/routes_dataset.py": "61e6b74c95534a77fe1b7a423aca577e92765202bffd6cd17240cc69d6a1546e"
 } as const;
 export function canonical(value:any):any{return Array.isArray(value)?value.map(canonical):value&&typeof value==='object'?Object.fromEntries(Object.keys(value).sort().map(key=>[key,canonical(value[key])])):value;}
 export function assertDraftRecord(record:any,pipeline:any,context:any){

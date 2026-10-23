@@ -505,3 +505,22 @@ test('모델 보조 hands over the candidates the person kept and marks a model 
   buttonWith(tree, '초안 검토에서 채택').props.onClick();
   assert.deepEqual(requests, [['p1', ['p1_c1'], 'scope:/project-B']]);
 });
+
+// U020: the product canvas and its work area take no keyboard focus, so a real canvas click leaves BODY or CANVAS as the
+// key target (a tabIndex on the work area made it a DIV). '직접 라벨 달기' still brings the work area into view, and the
+// footer button it was pressed from lets go of the keyboard.
+test('the labeling work area takes no focus, and a footer jump to it releases the pressed button', () => {
+  const studio = fs.readFileSync(path.join(__dirname, 'LabelingStudio.tsx'), 'utf8');
+  const area = studio.match(/<div ref=\{workAreaRef\} id="labeling-canvas"[^>]*>/);
+  assert.ok(area && !/tabIndex/.test(area[0]), 'no tabIndex on the work area');
+  const readiness = fs.readFileSync(path.join(__dirname, '..', 'wizard', 'workflowReadiness.ts'), 'utf8');
+  assert.match(readiness, /element\.focus\(\);[\s\S]{0,400}if\(document\.activeElement!==element&&document\.activeElement instanceof HTMLElement\)document\.activeElement\.blur\(\);/);
+});
+
+// U020 (second half): with more rows above the work area, the selected shape's fields outgrew the sidebar and a focused
+// field scrolled the overflow-hidden work area, moving the canvas under the bars. The sidebar scrolls itself instead.
+test('the labeling sidebar is its own scroll container and its list shrinks first', () => {
+  const list = fs.readFileSync(path.join(__dirname, 'AnnotationList.tsx'), 'utf8');
+  assert.match(list, /<div className="w-80 [^"]*flex flex-col h-full min-h-0 overflow-y-auto /);
+  assert.match(list, /<div className="flex-1 min-h-0 overflow-y-auto p-2 space-y-1\.5">/);
+});

@@ -206,7 +206,9 @@ export const AnnotationList: React.FC = () => {
   const selGeom = selectedAnn ? getAnnotationGeometry(selectedAnn) : null;
 
   return (
-    <div className="w-80 bg-[#131822] border-l border-[#2B3547] flex flex-col h-full select-none text-slate-200">
+    // The sidebar scrolls itself and its list shrinks first: a short work area (more rows above it) never lets a focused
+    // field scroll the work area, which would move the canvas under the bars above it.
+    <div className="w-80 bg-[#131822] border-l border-[#2B3547] flex flex-col h-full min-h-0 overflow-y-auto select-none text-slate-200">
       {/* Header: Title & Optical Calibration Scale */}
       <div className="p-3 border-b border-[#2B3547] bg-[#0B0E14] flex items-center justify-between">
         <div className="flex items-center space-x-2">
@@ -258,7 +260,7 @@ export const AnnotationList: React.FC = () => {
       )}
 
       {/* Main Annotation List */}
-      <div className="flex-1 overflow-y-auto p-2 space-y-1.5">
+      <div className="flex-1 min-h-0 overflow-y-auto p-2 space-y-1.5">
         <div className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider px-1">
           라벨 목록 ({annotations.length})
         </div>

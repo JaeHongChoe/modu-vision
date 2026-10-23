@@ -144,7 +144,7 @@ export const LabelingStudio: React.FC = () => {
       {folded('모델 보조')}
 
       {/* Center Work Area: 3-Layer Canvas + Mask Controls + Annotation Sidebar */}
-      <div ref={workAreaRef} id="labeling-canvas" tabIndex={-1} className="flex-1 flex overflow-hidden relative" data-labeling-work-area>
+      <div ref={workAreaRef} id="labeling-canvas" className="flex-1 flex overflow-hidden relative" data-labeling-work-area>
         <div className="flex-1 relative h-full bg-[#0B0E14]">
           <LabelingCanvas />
           <MaskLayerControls />

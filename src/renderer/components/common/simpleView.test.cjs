@@ -201,3 +201,12 @@ test('step 1 in the simple view: a saved split is one line, the verified version
  assert.match(studio,/\{!simpleView && \(\s*<button\s*type="button"\s*onClick=\{\(\) => setShowImports\(true\)\}/,'the full view keeps it in the toolbar');
  assert.match(studio,/\$\{simpleView \? 'hidden' : 'hidden sm:flex'\} items-center/);
 });
+
+test('step 5 in the simple view: the shared buttons, one main action per tab, and the evaluation\'s expert rows folded',()=>{
+ const studio=read('src/renderer/components/flowchart/FlowchartStudio.tsx'),draft=read('src/renderer/components/flowchart/FlowDraftControls.tsx');
+ const main=studio.match(/className=\{simpleView \? 'workspace-button workspace-button--primary' :/g)||[];
+ assert.equal(main.length,2,'플로우 저장 (편집) and 선택 이미지 검사 (테스트), each its tab\'s one main action');
+ assert.equal((studio.match(/className=\{simpleView \? 'workspace-button' :/g)||[]).length,3,'이미지 변경, 흐름 정렬 and 선택 노드까지 실행 are secondary');
+ assert.match(studio,/<FlowDraftControls simple=\{simpleView\}/);assert.match(draft,/className=\{simple\?'workspace-button':/);
+ assert.match(studio,/<FlowEvaluationPanel embedded simple=\{simpleView\}/,'the evaluation panel folds its pickers and picks its one main action');
+});

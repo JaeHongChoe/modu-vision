@@ -192,3 +192,32 @@ test('a truth stop carries what the dialog needs to let the person confirm in pl
   assert.match(source, /disabled=\{busy \|\| !reviewer\.trim\(\)\}/, 'no truth without a named reviewer');
   assert.match(source, /className=\{run\?\.stop\?\.confirm && !running \? 'workspace-button' : 'workspace-button workspace-button--primary'\}/, 'the confirm button is the one primary while it shows');
 });
+
+test('a flow save with no model on the current data goes back to step 3 by itself, then saves the flow around the new model', async () => {
+  const {runAutoProgress} = load();
+  // The data changed after training: step 5 asks for the flow save, but there is no current model to put in it.
+  const {world, calls, deps} = app({stage: 5, split: true, model: false});
+  const act = deps.act;
+  deps.act = async action => action === 'saveFlow' && !world.model ? {back: 3, reason: '검사 흐름에 넣을 현재 데이터의 모델이 없습니다'} : act(action);
+  const result = await runAutoProgress(deps, () => {}, {afterActMs: 0, pollMs: 10});
+  assert.equal(result.state, 'done');
+  assert.deepEqual(calls.slice(0, 7), ['step 3', 'train', 'step 4', 'evaluate', 'step 5', 'saveFlow', 'evaluateFlow']);
+  assert.match(result.log.map(row => row.text).join('\n'), /5단계에서 3단계로 돌아감: 검사 흐름에 넣을 현재 데이터의 모델이 없습니다/);
+  // A save that keeps sending the run back still ends at the circling stop.
+  const again = app({stage: 5, split: true, model: true});
+  const againAct = again.deps.act;
+  again.deps.act = async action => action === 'saveFlow' ? (again.calls.push(action), {back: 3, reason: '현재 모델 없음'}) : againAct(action);
+  const circled = await runAutoProgress(again.deps, () => {}, {afterActMs: 0, pollMs: 10});
+  assert.equal(circled.state, 'stopped');
+  assert.match(circled.stop.reason, /검사 흐름 저장 \(5단계\)을\(를\) 했지만 아직/);
+  assert.deepEqual(again.calls.filter(call => call === 'saveFlow').length, 2);
+});
+
+test('a flow saved by the run is what step 5 shows: its versions and its model check are read again', () => {
+  const studio = fs.readFileSync(path.join(__dirname, '..', 'flowchart', 'FlowchartStudio.tsx'), 'utf8');
+  const dialog = fs.readFileSync(path.join(__dirname, 'AutoProgressDialog.tsx'), 'utf8');
+  assert.match(dialog, /await api\.flowchart\.savePipeline\(pipeline, task, folder\);[\s\S]*announceFlowSaved\(\);/);
+  assert.match(studio, /useEffect\(\(\) => subscribeFlowSaved\(\(\) => setExternalSave\(\(value\) => value \+ 1\)\), \[\]\);/);
+  assert.match(studio, /\}, \[folderPath, hasSelectedFolder, contextRevision, verificationRetry, externalSave\]\);/, 'the saved versions');
+  assert.match(studio, /verificationRetry, task, isProjectBusy, externalSave\]\);/, 'the model check, so the old model\'s warning does not stay up');
+});

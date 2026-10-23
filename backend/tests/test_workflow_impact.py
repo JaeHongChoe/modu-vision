@@ -164,6 +164,24 @@ def test_current_valid_flow_evaluation_supersedes_invalid_history(tmp_path,monke
     assert len(report['flow_evaluations'])==2
 
 
+def test_flow_evaluation_without_confirmed_truth_is_not_evaluated(tmp_path,monkeypatch):
+    project,_=project_fixture(tmp_path);root=Path(project['project_dir'])
+    from backend.engine.flowchart_engine import get_single_segmentation_flowchart
+    from backend.engine.flow_provenance import pipeline_sha256
+    from backend.engine import flow_evaluation
+    graph=get_single_segmentation_flowchart('job_one');digest=pipeline_sha256(graph)
+    directory=root/'flowcharts'/'versions';directory.mkdir(parents=True)
+    (directory/('a'*32+'.json')).write_text(json.dumps({'version_id':'a'*32,'source_dataset_path':project['source_dataset_dir'],'pipeline':graph.model_dump(),'pipeline_hash':digest}))
+    (root/'flow_evaluations'/'runs').mkdir(parents=True)
+    unmeasured={'version_id':'a'*32,'graph_sha256':digest,'validity':{'valid':True},'coverage':{'total':2,'known':0,'unknown':2,'invalidated':0}}
+    monkeypatch.setattr(flow_evaluation,'list_evidence',lambda *_:[unmeasured])
+    report=workflow_impact.analyze(project)
+    assert report['flows'][0]['state']=='unverified' and 'without confirmed truth' in report['flows'][0]['reason']
+    # Once one image's truth is confirmed, the same evidence counts.
+    monkeypatch.setattr(flow_evaluation,'list_evidence',lambda *_:[unmeasured,{**unmeasured,'coverage':{'total':2,'known':2,'unknown':0,'invalidated':0}}])
+    assert workflow_impact.analyze(project)['flows'][0]['state']=='current'
+
+
 def test_review_eligibility_change_requires_candidate_training(tmp_path,monkeypatch):
     from backend.api import routes_dataset
     from backend.engine import dataset_metadata as dm

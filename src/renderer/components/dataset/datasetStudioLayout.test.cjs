@@ -28,3 +28,12 @@ test('the step-1 body row keeps its flex box, is measured by the focus view and 
  assert.deepEqual(classes.filter(name=>name.startsWith('min-h-[')),[],'no pixel minimum: it would clip the gallery, not restore it');
  assert.ok(!/<aside className="[^"]*min-h-\[/.test(studio.slice(body.index)),'the sidebar takes no pixel minimum either');
 });
+
+// The full view keeps every step-1 panel open unless the viewer presses 집중 보기: the one-time fold of a body measured
+// under UNUSABLE_BODY_HEIGHT is the simple view's (a 1440x900 full view folded the data readiness panel by itself).
+test('only the simple view folds the step-1 panels by itself; the full view waits for the press',()=>{
+ const studio=fs.readFileSync(path.join(__dirname,'DatasetStudio.tsx'),'utf8');
+ assert.match(studio,/const full = useProjectStore\(state => state\.viewMode\) === 'full';/);
+ assert.match(studio,/const focus = focusChoice \?\? \(autoFolded && !full\);/);
+ assert.match(studio,/const foldStatus = focusChoice === null && autoFolded && !full \? AUTO_FOLD_STATUS : focusStatus\(focus\);/);
+});

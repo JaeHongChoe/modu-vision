@@ -728,3 +728,15 @@ def test_default_batch_rejects_structured_labels_but_explicit_selection_remains_
     })
     assert explicit.status_code == 200, explicit.text
     assert _wait_for_batch(client, explicit.json()["id"])["total"] == 1
+
+
+def test_listing_drafts_and_batches_leaves_the_project_folder_unchanged(suggestion_workspace):
+    """Reads never write: listing drafts or batches (and reading an unknown one) before any draft exists does not make the
+    project's label_suggestions folder, so the project tree a person or a team copy compares stays as it was."""
+    client, project, *_ = suggestion_workspace
+    folder = Path(project["project_dir"]) / "label_suggestions"
+    assert not folder.exists()
+    assert client.get("/api/label-suggestions").json() == {"suggestions": []}
+    assert client.get("/api/label-suggestions/batches").status_code == 200
+    assert client.get("/api/label-suggestions/batches/batch_" + "0" * 32).status_code in (404, 422)
+    assert not folder.exists()

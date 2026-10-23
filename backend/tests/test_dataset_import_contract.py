@@ -288,10 +288,14 @@ def test_a_folder_of_images_with_no_label_yet_imports_for_detection_and_segmenta
         Image.new("RGB", (16, 12)).save(folder / f"part_{index:02d}.png")
     monkeypatch.setattr(routes_dataset, "SPLIT_MANIFEST_DIR", tmp_path / "manifests")
     imported = routes_dataset.import_dataset(routes_dataset.DatasetImportRequest(folder_path=str(folder), task=task, validate_images=False))
-    assert imported["total_images"] == 0
     assert imported["source_images"] == 5
-    assert imported["unlabeled_images"] == 5
-    assert imported["split_supported"] is True
+    if task == "detection":
+        assert imported["total_images"] == 0
+        assert imported["unlabeled_images"] == 5
+        assert imported["split_supported"] is True
+    else:
+        # A segmentation image without a mask is a background sample: the import counts it as it always has.
+        assert imported["total_images"] == 5
     with pytest.raises(HTTPException) as refused:
         routes_dataset.split_dataset_endpoint(routes_dataset.DatasetSplitRequest(
             folder_path=str(folder), task=task, train_ratio=0.8, val_ratio=0.1, test_ratio=0.1))
