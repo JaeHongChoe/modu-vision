@@ -282,6 +282,7 @@ export const WizardHeader: React.FC<{ simpleControls?: React.ReactNode; simpleMe
       {/* Row 1 (draggable). 모두 보기: the project, where work runs, history, language. 간단히 보기: the whole header —
           the project, the six steps, 모두 보기 and the 더 보기 menu. */}
       <div
+        data-wizard-header-row="project"
         className={`flex min-h-11 flex-wrap items-center justify-between gap-x-3 gap-y-1 ${full ? 'border-b border-[#2B3547] ' : ''}bg-[#0E121A] py-1 ${window.api?.platform === 'darwin' ? 'pl-24 pr-4' : 'px-4'}`}
         style={{ WebkitAppRegion: 'drag' } as React.CSSProperties}
       >
@@ -370,7 +371,7 @@ export const WizardHeader: React.FC<{ simpleControls?: React.ReactNode; simpleMe
 
       {/* Row 2 (모두 보기): the inspection type and the six steps. Labels wrap on a narrow window instead of being cut off. */}
       {full && (
-        <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 bg-[#131822] px-4 py-2">
+        <div data-wizard-header-row="steps" className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 bg-[#131822] px-4 py-2">
           {taskSelect}
           {stepBar}
           {modelLocation}

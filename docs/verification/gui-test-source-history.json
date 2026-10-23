@@ -1469,8 +1469,8 @@
       "test": "scripts/e2e/foundation-actual-lifecycle.spec.ts::native authentic SAM2 grounding and DINO examples generate reject reopen and cancel",
       "recorded_test_source_sha256": "2991c1d2ae7e8e70b3aa622372838f64dd9370c55bb36f98acc14e31c3538ca5",
       "retained_spec_commit": "e30f2caf2150bb9105d7e3aa0bca53dbc4b10e54",
-      "current_test_source_sha256": "bf99ac666ff0e4fcc0cdd32f5ad39c8c2829b68b45e3dc04e851b97b8604fe18",
-      "reason": "Foundation labeling with the approved official SAM2/Grounding DINO models: phrases read as the model's dot-separated English queries, per-phrase classes, unlabeled-only phrase drafts for an empty project, SAM2 entry in focus mode, batch thread roots, cached model hashes, read-only suggestion listing kept"
+      "current_test_source_sha256": "e7be431c12347d3c14584ca0f5d3280a32468656d0140e1ec58cf41e8cf17b2c",
+      "reason": "Foundation labeling with the approved official SAM2/Grounding DINO models: phrases read as the model's dot-separated English queries, per-phrase classes, unlabeled-only phrase drafts for an empty project, SAM2 entry in focus mode, batch thread roots, cached model hashes, read-only suggestion listing kept 2026-10-24: the candidate-created notice assertion now matches the shorter Korean UI wording; retained original test bytes and original execution receipt stay unchanged. This does not claim a new execution of the owned full lifecycle."
     }
   ]
 }

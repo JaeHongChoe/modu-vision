@@ -84,7 +84,7 @@ test('the simple view folds the step 3 training location, the step 4 comparison,
 test('간단히 보기 is one header row: the steps join the first row, the second row and the workspace row are 모두 보기 only, and every other control keeps its name under 더 보기',()=>{
  const header=read('src/renderer/components/wizard/WizardHeader.tsx');
  assert.match(header,/\{!full && <div[^>]*>\{stepBar\}<\/div>\}/,'the step bar sits in the first row in the simple view');
- assert.match(header,/\{full && \(\s*<div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 bg-\[#131822\] px-4 py-2">\s*\{taskSelect\}\s*\{stepBar\}\s*\{modelLocation\}/,'모두 보기 keeps the second row as it was');
+ assert.match(header,/\{full && \(\s*<div(?: data-wizard-header-row="steps")? className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 bg-\[#131822\] px-4 py-2">\s*\{taskSelect\}\s*\{stepBar\}\s*\{modelLocation\}/,'모두 보기 keeps the second row and controls as they were, with its optional layout marker');
  const menu=header.slice(header.indexOf("{ko ? '더 보기' : 'More'}</summary>"),header.indexOf('</details>}'));
  // A problem (backend not answering, a chosen server not checked) is lifted into the row instead of hiding in the menu.
  assert.match(header,/\{\(full \|\| probeProblem\) && probeNote\}\s*\{!full && engineProblem && engineChip\}/);

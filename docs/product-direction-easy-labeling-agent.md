@@ -1,5 +1,9 @@
 # 쉬운 사용 · 라벨링 보조 · 내장 도우미 설계와 실행안 (검토용)
 
+> 2026-10-24 인수 후 갱신: 앞부분의 조사표·파일 배치·단계별 실행안은 최초 설계
+> 기준도 함께 보존한다. 현재 구현/검증 여부는 11장 이후와 `docs/qa/`의 날짜별
+> 기록을 따른다. 최초 표의 “없음”이나 과거 다운로드 승인 대기를 현재 상태로 읽지 않는다.
+
 작성 2026-10-21, 같은 날 보완(기능 점검 후속 작업에서 확인한 화면 배치·글꼴·보안 사항을 1·4·5·8장에 반영). 2026-10-22 사용자 결정 반영: ① 초안 만들기는 데이터가 바뀐 뒤 학습한 모델도 허용(표시 포함), ② 도우미는 사용자 API 키 방식 먼저·ChatGPT 로그인은 약관·동작 확인 뒤, ③ "쉽다"의 통과 기준을 수치로 정하고 쉬운 사용을 최우선 축으로 둠(2·5·8장). 대상: 비개발자가 데이터를 준비하고 라벨을 달고 검사 결과까지 얻는 흐름. 이 문서는 **설계와 단계별 실행안**이며, 새 자동 라벨링 화면과 내장 도우미의 제품 코드는 이 문서를 검토한 뒤에 구현합니다. 지금 PR에서 이미 승인된 수정·검증(기능 점검 수정)은 그대로 이어 갑니다.
 
 지키는 것: 사용자 원본 이미지·라벨·클래스 이름·사용 중 모델·저장한 프로젝트와 흐름, 안전·승인·정답 검토·데이터 검증 조건. 기계가 만든 라벨은 사람이 확정하기 전까지 정답이 아니며, 기존 라벨을 몰래 덮어쓰지 않습니다. 지우기는 복구 가능한 이동(보관·백업)으로 합니다. 운영 배포, 서비스 등록, 보안 권한 확대, 계정 동의는 이 계획이 대신하지 않습니다.
@@ -83,7 +87,9 @@
 
 **1차 구현 (2026-10-23).** 주 프로세스 `src/main/assistant/`(키 보관 `keyStore.ts`, 공급자 `providers.ts`, 전송 경계 `service.ts`, 마지막 가림 `redact.ts`, 실행 ID 헤더 `runHeader.ts`, IPC `ipc.ts`), 화면 `src/renderer/components/assistant/AssistantPanel.tsx`와 `services/assistant*.ts`·`stores/useAssistantStore.ts`, 백엔드 실행 기록 `backend/api/routes_assistant.py`. OpenAI 호환은 Chat Completions와 Responses 둘 다, Anthropic은 Messages API이며 각 공급자의 함수/도구 형식을 그대로 씁니다(스트림 없는 한 번 호출, 화면은 "보내는 중"과 멈추기를 보여 줌). 요청 형식은 2026-10-23 공식 문서로 확인했습니다: Anthropic `POST /v1/messages`, `x-api-key`, `anthropic-version: 2023-06-01`, 도구 `input_schema`, `tool_use`/`tool_result`, 도구를 쓴 차례의 thinking 블록은 받은 그대로 돌려보냄; OpenAI Responses 함수 도구 `{type:"function", name, parameters}`와 `function_call`/`function_call_output`(`call_id`), 일부 최신 모델은 도구 호출에 Responses만 받음; Chat Completions는 호환 서버들이 구현한 `tools[].function`·`tool_calls`·`role:"tool"` 형식(공식 참조 페이지는 이 날 403/404로 열리지 않아 기존 계약으로 구현). 키가 없거나 인터넷이 없거나 도우미를 열지 않으면 아무것도 밖으로 나가지 않습니다.
 
-**2차(약관·실제 동작 확인 뒤 선택지로): Sign in with ChatGPT.** 아래 내용은 2026-10-21에 확인하고 2026-10-23에 다시 확인한 공식 문서 기준의 설계이며, **"이 앱이 받은 토큰으로 Responses API를 호출하는 것이 약관상 허용되고 실제로 동작하는지"를 실계정으로 확인하기 전까지 구현하지 않습니다.** 확인은 사용자가 직접 로그인·동의하는 시험으로 합니다.
+**2차(약관·실제 동작 확인 뒤 선택지로): Sign in with ChatGPT.** 공식 오픈소스 로컬 앱 연결 경로를 확인했습니다. 라이브 통합·클라이언트 등록·약관 수락·실계정 호출은 아직 하지 않았으며, 사용자/조직 권한자의 약관 확인과 사용자의 직접 로그인·플랜 동의를 남깁니다. API 키 방식의 개발·검증은 독립적으로 계속합니다.
+
+**2026-10-24 공식 근거 갱신.** [등록·로그인](https://developers.openai.com/siwc/token-sharing-open-source/sign-in), [추론](https://developers.openai.com/siwc/token-sharing-open-source/models-and-inference), [실제 SIWC 약관](https://openai.com/policies/sign-in-with-chatgpt-terms/)(2026-09-29판)을 읽었습니다. 과거의 약관 403은 조회 실패였으며 지원 불가의 근거가 아닙니다. 동적 등록과 시스템 브라우저 PKCE를 사용하고, 로컬 사용자 통제 토큰 보관·해당 사용자 활동/명시 동의 자동화·무료 SIWC 기능·개인정보 안내가 필요합니다. 약관은 통합/사용 자체를 동의로 규정하므로 권한자의 결정 없이 활성화하지 않습니다. 현재 API 키 공급자는 비스트림 JSON 응답을 쓰므로 토큰만 끼워 넣을 수 없습니다. 별도 SSE 어댑터(`store:false`, `stream:true`, `response.completed` 확인), 계정별 토큰 갱신·폐기와 도구 namespace 구현이 남습니다. 공식 가능성과 특정 계정의 실제 성공은 구분합니다.
 
 2026-10-21에 공식 문서(quickstart, open-source sign-in, Codex app-server, models and inference, accounts and sessions, errors and recovery, token reference, preview limitations, UI/UX guidelines)를 직접 확인했습니다. 이 저장소는 MIT 라이선스(`LICENSE`)이고 사용자는 오픈소스로 배포한다고 확인했습니다. 문서는 오픈소스·로컬 실행 앱에 ChatGPT 플랜 사용을 열어 두고 있으며("ChatGPT plan usage is available to all open-source partners and selected private clients"), 비공개 앱의 제공 대상 제한은 이 프로젝트의 선행 장벽으로 두지 않습니다. 유료 또는 원격 호스팅 형태로 제공하려면 별도 신청(interest form)이 필요하다고 되어 있으므로, 공유 서버가 사용자 대신 토큰을 들고 호출하는 형태는 이번 범위에서 뺍니다.
 
@@ -297,3 +303,28 @@ ChatGPT 로그인은 아직 실제 연결을 시험하지 않았고 약관 허�
 - 데스크톱 화면 CSP는 `https:`/`wss:`를 남기되, 주 프로세스가 연결된 공유 서버의 `/api`·`/ws`를 뺀 화면의 모든 HTTPS 요청을 취소합니다(공유 서버 주소는 실행 중에 정해지므로 정적 정책에 적을 수 없음). 도우미 공급자는 주 프로세스만 부릅니다. 공유 서버 연결을 주 프로세스로 옮겨 CSP에서 빼는 것은 후속.
 - 실행 ID는 기존 `ProjectContextMiddleware` 안에서 묶습니다(새 미들웨어는 원본 미들웨어 검사와 충돌).
 - 공유 서버에서 도우미 실행 기록 쓰기는 프로젝트 소유자만(권한을 넓히지 않음).
+
+
+## 12. Codex 직접 후속 작업 (2026-10-24)
+
+사용자가 남은 작업의 직접 진행을 요청한 뒤 별도
+`codex/remaining-work-20261024` 작업트리에서 이어갔다. 기존 PR #6은
+`c592b0456ed198a96e7a0e31b5354245646abf68`의 전체 회귀와 정확한 head
+병합 검사를 통과해 `11f21993187e03713354f0a76a2a52a7540ec921`로
+main에 병합됐다. 그 성공은 이 절의 새 변경에 재사용하지 않는다.
+이 절이 위 8·11장의 과거 미완료 표시보다 최신이다.
+
+| 남았던 항목 | 이번 결과와 범위 |
+| --- | --- |
+| 영구 삭제 없이 라벨을 보관·복구 | 기존 overlay 삭제 API를 사본 선발행으로 바꾸고 이력/복구 API를 추가. 원본 이미지와 원본 정답은 보존. 최신 수정 번호·팀 편집·라벨북 보호, 이미지 UUID/내용, 사본 해시, 덮어쓰기 거절, 감사·재검토, 실패 롤백을 검사. 화면에 삭제 버튼이나 도우미 삭제 도구를 추가한 것은 아님. [API 설명](qa/annotation-recovery.md) |
+| 짧은 창의 그림 영역과 팝오버 | 1024×768 QA에서 모두 보기 그림 영역 약247px, 제품 최소 1280×800에서 약247px. 저장/클래스/팀 잠금·경고를 유지. 넓은/격자 초안 팝오버가 도우미 drawer 옆의 실제 작업영역에 맞고 버튼에 스크롤 접근. 실제 Electron·격리 backend로 확인. 제품 최소 크기1280×800은 유지하며 1024는 QA override, 2560×1440은 renderer viewport emulation |
+| SAM2 장당 반복 조작 | 기본 꺼짐인 세션 옵션 '점 입력 후 후보 만들기'. 패널을 닫고 점을 찍으면 현재 설정으로 후보 한 번을 만들고 미리보기를 엶. 자동 채택/다음 이미지/재시도 없음. 범위·라벨 세트·클래스·더러운 편집 상태가 바뀐 응답은 반영하지 않음. 실모델 생성과 최종 UI 검사 결과는 [개별 기록](qa/2026-10-24-sam2-quick-point-one-shot.md) |
+| 실제 OS 키 보관 | 고유 이름의 격리 Electron 앱에서 비밀 아닌 dummy 저장→별도 프로세스 재시작/복호화→제거→재시작/없음 확인. 실제 macOS safeStorage 사용, 네트워크0·키 평문 노출0. 실제 사용자 키나 공급자 호출, 서명 패키지/타 OS 시험은 아님. [재현기](../scripts/qa/README.md) |
+| DICOM 미실행3건 | 고정 해시의 pydicom3.0.2만 격리 QA 환경과 프로젝트 .venv에 설치. 세 브라우저 검사가 양쪽 환경에서 모두 통과. base Anaconda·다른 패키지 무변경. [환경·검사 기록](qa/2026-10-24-dicom-three-browser.md) |
+| ChatGPT 로그인 가능성 | 공식 오픈소스 앱 로그인·추론·약관 문서를 이번에 직접 읽음(§4.2). 예전403 제한은 해소됐지만 사용자/조직의 약관 동의·직접 로그인·계정별 기능 검증은 남음. 현재 앱에 라이브 연결 없음 |
+| 사람 시간·현장 품질 | 실제 자료/확정 정답 지정은 사용자에게 요청해 대기. [처음 사용자·현장 평가 절차와 기록표](qa/first-use-and-field-validation.md)를 준비. 사람 기준30분/40클릭·장당 시간, 현장 품질 승인 결과는 아직 없음 |
+
+관련 검사·실제 UI·원격 CI는 [후속 QA 기록](qa/2026-10-24-remaining-work.md)에
+구분한다. 이번 변경도 최종 commit의 전체 회귀·병합 검사 통과 전에는
+병합 준비 완료로 기록하지 않는다. 사용자가 중지한 `ux` 15분 자동화는
+재개하지 않았다. 배포·서비스 등록·운영 품질 승인은 수행하지 않았다.

@@ -17,7 +17,7 @@ import { SuggestionPreview } from './SuggestionPreview';
 import { DraftGrid } from './DraftGrid';
 import { imageLeaseToken } from './teamDataWorkflow';
 import { Explain } from '../common/Explain';
-import { usePopoverRoom } from './popoverRoom';
+import { usePopoverHorizontalBounds, usePopoverRoom } from './popoverRoom';
 import { CHANGED_MODEL_MARK, DRAFT_ORDER_TEXT, MIXED_SOURCE_NOTE, OPEN_REQUEST_MISSING_TEXT, adoptable, adoptionHistory, adoptionLine, adoptionSummary, adoptionTitle, canTakeBack,
   closedDraftText, draftError, draftSourceText, gridPages, modelStats, multiAdoptionRefusal, orderDrafts, pageAdoptionRefusal, pendingImageCount, sourcesMixed, staleBatchRefusal,
   supportLimitsText, thresholdAdvice, topConfidence, defaultChoice, emptyPendingDrafts, unknownClassCandidate, UNKNOWN_CLASS_MARK, type AdoptionResult, type DraftOrder, type ModelAdoptionStats } from './draftReview';
@@ -275,6 +275,7 @@ export const DraftReviewQueue: React.FC = () => {
   // The panel hangs below its row: keep it within what is still on screen above the step footer, wherever the row is
   // scrolled to, so the adopt and take-back buttons stay reachable.
   const room = usePopoverRoom(open, rowRef);
+  const horizontal = usePopoverHorizontalBounds(open, rowRef, wide ? 1200 : 540);
 
   // Opening re-reads the drafts and models, so a model that finished training meanwhile is offered.
   const toggle = () => {
@@ -443,7 +444,7 @@ export const DraftReviewQueue: React.FC = () => {
       </button>
 
       {open && (
-        <aside style={{ maxHeight: room }} onKeyDown={(event) => event.stopPropagation()} className={`absolute right-3 top-full z-50 mt-1 flex max-h-[calc(100vh-195px)] ${wide ? 'w-[min(1200px,calc(100vw-24px))]' : 'w-[540px]'} max-w-[calc(100vw-24px)] flex-col overflow-hidden rounded-xl border border-slate-600 bg-[#151D2A] shadow-2xl`} aria-label="초안 검토">
+        <aside style={{ maxHeight: room, ...horizontal, right: horizontal ? 'auto' : undefined }} onKeyDown={(event) => event.stopPropagation()} className={`absolute right-3 top-full z-50 mt-1 flex max-h-[calc(100vh-195px)] ${wide ? 'w-[min(1200px,calc(100vw-24px))]' : 'w-[540px]'} max-w-[calc(100vw-24px)] flex-col overflow-hidden rounded-xl border border-slate-600 bg-[#151D2A] shadow-2xl`} aria-label="초안 검토">
           <div className="flex items-start justify-between border-b border-slate-700 px-4 py-3">
             <div>
               <h3 className="text-sm font-bold text-white">라벨 초안 검토</h3>

@@ -17,6 +17,7 @@ import { SuggestionPreview } from './SuggestionPreview';
 import { CHANGED_MODEL_MARK, draftError } from './draftReview';
 import { usePopoverRoom } from './popoverRoom';
 import { Explain } from '../common/Explain';
+import {startFoundationQuickPointController} from './foundationQuickPointController';
 
 // The server's refusals in the draft queue's words (an older English refusal still reads in Korean).
 const errorText = draftError;
@@ -68,12 +69,28 @@ export const ModelAssistPanel: React.FC = () => {
   const [suggestions, setSuggestions] = useState<LabelSuggestion[]>([]);
   const [selectedProposalId, setSelectedProposalId] = useState('');
   const [selectedCandidateIds, setSelectedCandidateIds] = useState<Set<string>>(new Set());
-  const [busy, setBusy] = useState<'loading' | 'generate' | 'accept' | 'reject' | null>(null);
+  const [busyState, setBusy] = useState<'loading' | 'generate' | 'accept' | 'reject' | null>(null);
+  const [quickRunning,setQuickRunning]=useState(false);
+  const busy=busyState||(quickRunning?'generate':null);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [batchRunning, setBatchRunning] = useState(false);
   const requestedProposalId = useRef('');
   const operationId = useRef(0);
+  const quickError=useRef<string|null>(null);
+  const quickNotice=useRef<{context:string;proposalId:string;text:string}|null>(null);
+  const quickBlocked=useRef(false);
+  quickBlocked.current=!!busyState||batchRunning;
+  // Closing the popover unmounts its controls. The point runner belongs to this labeling visit instead.
+  useEffect(()=>startFoundationQuickPointController({
+    isBlocked:()=>quickBlocked.current,onRunning:setQuickRunning,
+    onError:cause=>{quickError.current=errorText(cause);quickNotice.current=null;setNotice(null);setError(quickError.current);setOpen(true);},
+    onCreated:next=>{requestedProposalId.current=next.id;setSuggestions(previous=>[next,...previous]);
+      setSelectedProposalId(next.id);setSelectedCandidateIds(new Set(next.candidates.map(candidate=>candidate.id)));
+      const text=`후보 ${next.candidates.length}개를 만들었습니다. 검토 후 선택하세요.`;
+      quickNotice.current={context:currentAssistContext(),proposalId:next.id,text};
+      setError(null);setNotice(text);setOpen(true);},
+  }),[]);
 
   const proposal = useMemo(() => suggestions.find((item) => item.id === selectedProposalId), [suggestions, selectedProposalId]);
   const pendingCount = suggestions.filter((item) => item.status === 'pending').length;
@@ -85,8 +102,11 @@ export const ModelAssistPanel: React.FC = () => {
     setSuggestions([]);
     setSelectedProposalId('');
     setSelectedCandidateIds(new Set());
-    setError(null);
-    setNotice(null);
+    setError(quickError.current);quickError.current=null;
+    // Automatic opening refreshes persisted proposals. Carry its just-created notice through that one refresh,
+    // only for the originating image/project/label set; closing or changing context consumes it.
+    const pendingNotice=quickNotice.current;quickNotice.current=null;
+    setNotice(open&&pendingNotice?.context===currentAssistContext()&&pendingNotice.proposalId===requestedProposalId.current?pendingNotice.text:null);
     if (!open || !projectDir) return;
     let cancelled = false;
     setBusy('loading');
@@ -259,7 +279,7 @@ export const ModelAssistPanel: React.FC = () => {
             </section>
 
             <KoreanConditionLabeler disabled={isDirty||!!busy||batchRunning||annotationLoadStatus!=="ready"} onCreated={next=>{setSuggestions(previous=>[next,...previous]);selectProposal(next);setNotice(`${next.candidates.length}개 한국어 조건 후보를 만들었습니다. 선택 후 명시적으로 채택하세요.`);}}/>
-            <CandidateProviderControls onOpenProposal={async(path,id)=>{ await openBatchEntry({image_path:path,image_id:path.split(/[\\/]/).pop()!.replace(/\.[^.]+$/,''),proposal_id:id,status:'generated',candidate_count:0}); }} disabled={isDirty || !!busy || batchRunning || annotationLoadStatus !== "ready"} onCreated={next => { setSuggestions(previous => [next, ...previous]); selectProposal(next); setNotice(`${next.candidates.length}개 실제 추론 후보를 만들었습니다. 검토 후 선택하세요.`); }} />
+            <CandidateProviderControls onOpenProposal={async(path,id)=>{ await openBatchEntry({image_path:path,image_id:path.split(/[\\/]/).pop()!.replace(/\.[^.]+$/,''),proposal_id:id,status:'generated',candidate_count:0}); }} disabled={isDirty || !!busy || batchRunning || annotationLoadStatus !== "ready"} onCreated={next => { setSuggestions(previous => [next, ...previous]); selectProposal(next); setNotice(`후보 ${next.candidates.length}개를 만들었습니다. 검토 후 선택하세요.`); }} />
 
             {projectDir && <BulkLabelAssist execution={execution} projectDir={projectDir} modelId={modelId} threshold={threshold} keywords={keywords.split(",").map(k => k.trim()).filter(Boolean)}
               disabled={isDirty || !!busy || !useDatasetStore.getState().hasSelectedFolder}

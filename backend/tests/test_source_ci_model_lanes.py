@@ -280,6 +280,9 @@ def test_cpu_and_browser_ci_have_independent_original_bounds_and_complete_comman
     # Later publications: the owned-lifetime diagnostics after the runtime update recovery control, and the
     # beginner-path controls (truth from labels, anomaly name rules, Korean refusals) after the whole-flow review.
     later_controls = (
+        ('backend/tests/test_annotation_save_source_spelling.py ', (
+            'backend/tests/test_annotation_recovery.py',
+        )),
         ('backend/tests/test_runtime_update_recovery.py ', (
             'backend/tests/test_first_unsupported_origin_diagnostic.py',
             'backend/tests/test_owned_health_diagnostic.py',
@@ -343,12 +346,15 @@ def test_cpu_and_browser_ci_have_independent_original_bounds_and_complete_comman
     preserved = original_command.replace(marker + insertion, marker, 1)
     assert hashlib.sha256(preserved.encode()).hexdigest() == 'bcc48453cbc55193ffc09ddfab2675bc657897eb509143ebb2d52264b71742fe', 'Every original CPU selector, ordering and command bound must be preserved'
     assert hashlib.sha256(original_command.encode()).hexdigest() == '402fdf2a6f2a37e30ab2c7e52acf7236d083c819502a172e57e235558df5feee', 'Complete original CPU command plus exactly eighteen published controls must remain unchanged'
-    assert hashlib.sha256(command.encode()).hexdigest() == 'a7d348ad420579e42632c5dd579f9e57e8b622b8eb6c2acb883bbaeefe569bdc', 'All original selectors, the reviewed source controls and the later publications retain exact ordering and command bytes'
+    assert hashlib.sha256(command.encode()).hexdigest() == '26f5353c51eec79ac49ccaa513bf222a174bd3299f9161459dca9af05876e251', 'All original selectors, the reviewed source controls and the recovery control retain exact ordering and command bytes'
     assert cpu_step['env'] == {'MV_CI_RECORD_DIR': '${{ runner.temp }}/modu-ci-manifests'}
     assert step(cpu, 'Core defect baseline evidence')['run'] == 'python scripts/service_baseline_evidence.py --output "$MV_CI_RECORD_DIR/ci-baseline-evidence.json"'
     assert not any(value.get('name') in {'Install test browser', 'Browser transport and flow checks'} for value in cpu['steps'])
     assert not any(value.get('name') in {'CPU contract and recovery regressions', 'Core defect baseline evidence'} for value in browser['steps'])
     assert step(browser, 'Install test browser')['run'] == 'npx playwright install --with-deps chromium'
+    assert step(browser, 'Short-window labeling geometry')['run'] == 'node --test src/renderer/components/labeling/LabelingStudioSmallWindow.geometry.cjs'
+    browser_names = [item.get('name') for item in browser['steps']]
+    assert browser_names.index('Install test browser') < browser_names.index('Short-window labeling geometry') < browser_names.index('Browser transport and flow checks')
     browser_step = step(browser, 'Browser transport and flow checks')
     assert hashlib.sha256(browser_step['run'].encode()).hexdigest() == 'a155441e6d8ce4c2a379046d015d1abfc75496abddd6652e36e5d59c385d9085', 'Original public/owned lists and public workers2 execution must be unchanged'
     assert browser_step['env'] == {'MV_E2E_ARTIFACT_DIR': '${{ runner.temp }}/modu-e2e', 'MV_CI_RECORD_DIR': '${{ runner.temp }}/modu-ci-manifests'}

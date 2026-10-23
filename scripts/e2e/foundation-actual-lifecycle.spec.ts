@@ -62,7 +62,7 @@ test('native authentic SAM2 grounding and DINO examples generate reject reopen a
   expect(posted.positive_examples).toHaveLength(1); expect(posted.negative_examples).toHaveLength(1);
   expect(generated.status).toBe('pending'); expect(generated.candidates.length).toBeGreaterThan(0);
   expect(generated.candidates.every((row: any) => row.provenance?.feature_metadata?.pretrained_sha256 === sha(dino!))).toBe(true);
-  await expect(review).toContainText('실제 추론 후보를 만들었습니다', {timeout: 15_000});
+  await expect(review).toContainText(`후보 ${generated.candidates.length}개를 만들었습니다. 검토 후 선택하세요.`, {timeout: 15_000});
   await evidence.screenshot(window, 'native-authentic-long-prompt-and-image-examples');
   await review.getByLabel('후보 검토자 이름', {exact: true}).fill('Automated control rejection');
   await review.getByRole('button', {name: '거절', exact: true}).click();

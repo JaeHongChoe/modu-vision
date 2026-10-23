@@ -83,17 +83,20 @@ export const CandidateProviderControls:React.FC<Props>=({disabled,onCreated,onOp
   const {currentImage,annotations,selectedAnnotationId,setActiveTool,activeCategory,categories}=useAnnotationStore();
   const {images,folderPath}=useDatasetStore();const project=useProjectStore(s=>s.project);const projectDir=useProjectStore(s=>s.projectDir);
   const scope=labelingScope({projectDir,project});const [loadedScope,setLoadedScope]=useState(scope);const currentScope=loadedScope===scope;
-  const {points,boxes,pointLabel,setPointLabel,clear,bind,bindProject}=useFoundationPromptStore();
-  const [setup,setSetup]=useState<FoundationSetup|null>(null);const [prompt,setPrompt]=useState('');const [label,setLabel]=useState('defect');
-  const [positive,setPositive]=useState<RegionExample[]>([]);const [negative,setNegative]=useState<RegionExample[]>([]);
+  const {points,boxes,pointLabel,setPointLabel,clear,bind,bindProject,projectScope:promptScope,quickOptions:rememberedOptions,quickPointEnabled,setQuickPointEnabled,configureQuickPoint}=useFoundationPromptStore();
+  // The popover unmounts when closed. Its opted-in settings survive only in this visit's scope/class-bound snapshot.
+  const restored=quickPointEnabled&&promptScope===scope&&rememberedOptions?.categoryContext===JSON.stringify([activeCategory,categories])?rememberedOptions:null;
+  const initial=restored?.options;
+  const [setup,setSetup]=useState<FoundationSetup|null>(null);const [prompt,setPrompt]=useState(initial?.prompt??'');const [label,setLabel]=useState(initial?.label??'defect');
+  const [positive,setPositive]=useState<RegionExample[]>(initial?.positive_examples??[]);const [negative,setNegative]=useState<RegionExample[]>(initial?.negative_examples??[]);
   const [examplePath,setExamplePath]=useState('');const [exampleRoi,setExampleRoi]=useState('');
-  const [exclusions,setExclusions]=useState<{imagePath:string;regions:number[][]}>({imagePath:'',regions:[]});
+  const [exclusions,setExclusions]=useState<{imagePath:string;regions:number[][]}>(restored&&restored.imagePath===currentImage?.file_path?{imagePath:restored.imagePath,regions:initial?.exclude_regions??[]}:{imagePath:'',regions:[]});
   const [excludeRoi,setExcludeRoi]=useState('');
   const excludeRegions=exclusions.imagePath===currentImage?.file_path?exclusions.regions:[];
-  const [device,setDevice]=useState('cpu');const [geometry,setGeometry]=useState<'mask'|'polygon'|'bbox'>('mask');const [threshold,setThreshold]=useState(.5);const [textThreshold,setTextThreshold]=useState(.25);const [maxCandidates,setMaxCandidates]=useState(20);
-  const [sizes,setSizes]=useState<SizeControls>({min_area:0,min_width:0,min_height:0});
+  const [device,setDevice]=useState(initial?.device??'cpu');const [geometry,setGeometry]=useState<'mask'|'polygon'|'bbox'>(initial?.output_geometry??'mask');const [threshold,setThreshold]=useState(initial?.threshold??.5);const [textThreshold,setTextThreshold]=useState(initial?.text_threshold??.25);const [maxCandidates,setMaxCandidates]=useState(initial?.max_candidates??20);
+  const [sizes,setSizes]=useState<SizeControls>({min_area:initial?.min_area??0,min_width:initial?.min_width??0,min_height:initial?.min_height??0,max_area:initial?.max_area,max_width:initial?.max_width,max_height:initial?.max_height});
   const [busy,setBusy]=useState(false);const [error,setError]=useState('');const [notice,setNotice]=useState('');
-  const [featureModels,setFeatureModels]=useState<FeatureModel[]>([]);const [modelId,setModelId]=useState('');const [featureJob,setFeatureJob]=useState<FeatureJob|null>(null);
+  const [featureModels,setFeatureModels]=useState<FeatureModel[]>([]);const [modelId,setModelId]=useState(initial?.suggestion_model_id??'');const [featureJob,setFeatureJob]=useState<FeatureJob|null>(null);
   const [epochs,setEpochs]=useState(100);const [learningRate,setLearningRate]=useState(.05);
   const [checkpoint,setCheckpoint]=useState('');const [checkpointHash,setCheckpointHash]=useState('');
   const [maskDir,setMaskDir]=useState('');const [textDir,setTextDir]=useState('');const reasonId=useId();
@@ -102,13 +105,13 @@ export const CandidateProviderControls:React.FC<Props>=({disabled,onCreated,onOp
   const activeBatch=visibleBatches.find(b=>labelingJobActive(b.status));const batch=visibleBatches.find(b=>b.id===batchId);
   const running=(currentScope&&labelingJobActive(featureJob?.status))||!!activeBatch;
   const sameProject=()=>labelingScope(useProjectStore.getState())===scope;
-  useEffect(()=>{bind(currentImage?.file_path||'');setExclusions({imagePath:'',regions:[]});setExcludeRoi('');},[bind,currentImage?.file_path]);
-  useEffect(()=>{setExclusions({imagePath:'',regions:[]});setExcludeRoi('');},[scope]);
-  useEffect(()=>{setLabel(activeCategory.name);},[activeCategory.name]);
+  useEffect(()=>{bind(currentImage?.file_path||'');setExclusions(previous=>previous.imagePath===currentImage?.file_path?previous:{imagePath:'',regions:[]});setExcludeRoi('');},[bind,currentImage?.file_path]);
+  useEffect(()=>{if(!restored)setExclusions({imagePath:'',regions:[]});setExcludeRoi('');},[scope]);
+  useEffect(()=>{if(!restored)setLabel(activeCategory.name);},[activeCategory.name]);
   // A pixel mask is a segmentation label (readiness refuses it for detection training): a detection project starts on boxes.
-  useEffect(()=>{setGeometry(project?.task==='detection'?'bbox':'mask');},[project?.task]);
+  useEffect(()=>{if(!restored)setGeometry(project?.task==='detection'?'bbox':'mask');},[project?.task]);
   useEffect(()=>{
-    let active=true;setLoadedScope(scope);setBusy(false);setSetup(null);setBatches([]);setBatchId('');setFeatureJob(null);setFeatureModels([]);setPositive([]);setNegative([]);setModelId('');setBatchPaths(new Set());setExamplePath('');setExampleRoi('');setCheckpoint('');setCheckpointHash('');setMaskDir('');setTextDir('');setError('');setNotice('');bindProject(scope);
+    let active=true;setLoadedScope(scope);setBusy(false);setSetup(null);setBatches([]);setBatchId('');setFeatureJob(null);setFeatureModels([]);if(!restored){setPositive([]);setNegative([]);setModelId('');}setBatchPaths(new Set());setExamplePath('');setExampleRoi('');setCheckpoint('');setCheckpointHash('');setMaskDir('');setTextDir('');setError('');setNotice('');bindProject(scope);
     const remembered=localStorage.getItem(`foundation-feature-job:${scope}`);
     void Promise.all([provider.setup(),provider.featureModels(),provider.batches(),provider.featureJobs().then(result=>result.jobs.find(j=>j.id===remembered)||result.jobs[0]||null)])
       .then(([s,m,b,j])=>{if(active&&sameProject()){setSetup(s);setFeatureModels(m.models);setBatches(b.batches);setBatchId(b.batches[0]?.id||'');setFeatureJob(j);setCheckpoint(s.configuration.feature_checkpoint||'');setCheckpointHash(s.configuration.feature_sha256||'');setMaskDir(s.configuration.mask_model_dir||'');setTextDir(s.configuration.model_dir||'');}})
@@ -131,9 +134,21 @@ export const CandidateProviderControls:React.FC<Props>=({disabled,onCreated,onOp
     }catch(e){if(active&&sameProject())setError(workflowError(e));}};
     const timer=window.setInterval(()=>void poll(),1000);return()=>{active=false;window.clearInterval(timer);useModelAssistRunStore.getState().end();};
   },[running,activeBatch?.id,featureJob?.id,scope]);
-  const run=async(action:()=>Promise<void>)=>{if(!currentScope||!sameProject())return;setBusy(true);setError('');setNotice('');try{await action();}catch(e){if(sameProject())setError(workflowError(e));}finally{if(sameProject())setBusy(false);}};
+  const run=async(action:()=>Promise<void>,disarmQuick=false)=>{if(!currentScope||!sameProject())return;setBusy(true);setError('');setNotice('');if(disarmQuick&&useFoundationPromptStore.getState().quickPointEnabled){setQuickPointEnabled(false);setNotice('다른 작업을 시작해 점 입력 후 후보 만들기를 껐습니다. 작업이 끝나면 설정을 확인하고 다시 켜세요.');}try{await action();}catch(e){if(sameProject())setError(workflowError(e));}finally{if(sameProject())setBusy(false);}};
   const options=():FoundationOptions=>({label,prompt,device,threshold,text_threshold:textThreshold,max_candidates:maxCandidates,output_geometry:geometry,
     positive_examples:positive,negative_examples:negative,points,boxes,exclude_regions:excludeRegions,...sizes,class_ids:Object.fromEntries(categories.filter(c=>c.id>0&&c.id<=255).map(c=>[c.name,c.id])),...(modelId?{suggestion_model_id:modelId}:{})});
+  // Keep the selected settings after this popover closes. Points/boxes are read atomically from the prompt store when
+  // the next canvas point arrives; changing settings invalidates an older request without cancelling it.
+  const quickOptions=JSON.stringify({...options(),points:[],boxes:[]});
+  const quickCategory=JSON.stringify([activeCategory,categories]);
+  const quickTaskSupported=project?.task==='detection'||project?.task==='segmentation';
+  const quickReady=quickTaskSupported&&foundationAllowed(setup,prompt)&&sam2ReadinessView(setup?.providers.foundation).state!=='damaged';
+  useEffect(()=>{
+    // Checking is not an unavailable model: closing before setup answers must keep the last validated snapshot.
+    if(!setup||!currentScope)return;
+    configureQuickPoint(scope,currentImage?.file_path||'',JSON.parse(quickOptions),quickReady,quickCategory);
+    if(!quickReady&&useFoundationPromptStore.getState().quickPointEnabled){setQuickPointEnabled(false);setNotice('모델 준비 상태가 바뀌어 점 입력 후 후보 만들기를 껐습니다. 모델·프로젝트를 확인하고 다시 켜세요.');}
+  },[configureQuickPoint,setQuickPointEnabled,scope,currentImage?.file_path,quickOptions,quickReady,quickCategory,setup,currentScope]);
   const addExclusion=(selected=false)=>{
     if(!currentImage||!currentScope||!sameProject())return;
     try{
@@ -146,15 +161,15 @@ export const CandidateProviderControls:React.FC<Props>=({disabled,onCreated,onOp
   const generate=()=>run(async()=>{if(!currentImage||!setup)return;const imagePath=currentImage.file_path;
     useModelAssistRunStore.getState().begin();try{const current=await provider.setup();if(!sameProject())return;setSetup(current);const next=await provider.generate(buildFoundationRequest(imagePath,options(),current));if(sameProject()&&useAnnotationStore.getState().currentImage?.file_path===imagePath)onCreated(next);}finally{useModelAssistRunStore.getState().end();}});
   const applySetup=(next:FoundationSetup)=>{setSetup(next);setMaskDir(next.configuration.mask_model_dir||'');setTextDir(next.configuration.model_dir||'');};
-  const chooseModel=(field:'mask_model_dir'|'model_dir')=>run(async()=>{const path=await host.selectFolder({title:field==='mask_model_dir'?'로컬 SAM2 모델 폴더':'로컬 Grounding DINO 모델 폴더'});if(path&&sameProject()){const next=await provider.configure({[field]:path});if(sameProject())applySetup(next);}});
+  const chooseModel=(field:'mask_model_dir'|'model_dir')=>run(async()=>{const path=await host.selectFolder({title:field==='mask_model_dir'?'로컬 SAM2 모델 폴더':'로컬 Grounding DINO 모델 폴더'});if(path&&sameProject()){const next=await provider.configure({[field]:path});if(sameProject())applySetup(next);}},true);
   // The typed path is the browser/shared-server way to point at a folder; the backend only checks that it is a directory.
   const saveFolder=(field:'mask_model_dir'|'model_dir',path:string)=>run(async()=>{
     try{const next=await provider.configure({[field]:path.trim()});if(sameProject())applySetup(next);}
     catch(e){throw new Error(/existing local model directory/.test(workflowError(e))?'지정한 경로를 폴더로 찾지 못했습니다. 백엔드가 읽을 수 있는 폴더 경로를 입력하세요.':workflowError(e));}
-  });
+  },true);
   const saveMaskDir=()=>saveFolder('mask_model_dir',maskDir);
   // Verify re-reads readiness: file presence, sizes and the weight file's SHA256 (identification only; nothing is downloaded).
-  const verify=()=>run(async()=>{const next=await provider.setup();if(sameProject())setSetup(next);});
+  const verify=()=>run(async()=>{const next=await provider.setup();if(sameProject())setSetup(next);},true);
   const addExample=(kind:'positive'|'negative',selected=false)=>{
     try{let example:RegionExample|null;
       if(selected)example=currentImage?regionExample(currentImage.file_path,annotations.find(a=>a.id===selectedAnnotationId)):null;
@@ -175,7 +190,7 @@ export const CandidateProviderControls:React.FC<Props>=({disabled,onCreated,onOp
         if(sameProject()){setFeatureModels(models.models);setModelId(next.model_id||'');}
       }
     }
-  });
+  },true);
   const loadAll=()=>run(async()=>{if(!folderPath||!project)return;const paths:string[]=[];let total=Infinity;
     while(paths.length<total&&paths.length<5000){const page=await api.dataset.getImages({folder_path:folderPath,task:project.task,limit:500,offset:paths.length});if(!sameProject())return;paths.push(...page.items.map(i=>i.file_path));total=page.total;if(!page.items.length)break;}
     setBatchPaths(new Set(paths));if(paths.length<total)throw new Error('최대 5,000개까지 선택했습니다. 더 큰 데이터는 범위를 나눠 실행하세요.');
@@ -184,7 +199,7 @@ export const CandidateProviderControls:React.FC<Props>=({disabled,onCreated,onOp
     // Point/box coordinates are image-specific; a keyword/example batch shares only semantic prompts.
     const current=await provider.setup();if(!sameProject())return;setSetup(current);const next=await provider.startBatch({...buildFoundationRequest('',{...options(),points:[],boxes:[],exclude_regions:[]},current),image_paths:[...batchPaths]});
     if(sameProject()){setBatches(old=>[next,...old]);setBatchId(next.id);}
-  });
+  },true);
   const foundation=setup?.providers.foundation;const view=sam2ReadinessView(foundation);const official=foundation?.official_reference;
   // The backend gate passes a damaged weight file; the loader would refuse it after the click, so both generate buttons stop here.
   const damaged=view.state==='damaged';
@@ -224,12 +239,15 @@ export const CandidateProviderControls:React.FC<Props>=({disabled,onCreated,onOp
         <p className="text-amber-200">{setup?.providers.grounding_dino.error}</p>
         <label className="block">DINOv3 checkpoint 경로 (선택)<input aria-label="DINOv3 checkpoint 경로" value={checkpoint} onChange={e=>setCheckpoint(e.target.value)} className={`mt-1 w-full ${inputClass}`}/></label>
         <label className="block">DINOv3 SHA256<input aria-label="DINOv3 checkpoint SHA256" value={checkpointHash} onChange={e=>setCheckpointHash(e.target.value)} className={`mt-1 w-full ${inputClass}`}/></label>
-        <button disabled={busy||running} onClick={()=>void run(async()=>{const next=await provider.configure({feature_backbone:'dinov3_vits16',feature_checkpoint:checkpoint||null,feature_sha256:checkpointHash||null});if(sameProject())setSetup(next);})} className="rounded border border-indigo-600 px-2 py-1">DINO 경로 저장</button>
+        <button disabled={busy||running} onClick={()=>void run(async()=>{const next=await provider.configure({feature_backbone:'dinov3_vits16',feature_checkpoint:checkpoint||null,feature_sha256:checkpointHash||null});if(sameProject())setSetup(next);},true)} className="rounded border border-indigo-600 px-2 py-1">DINO 경로 저장</button>
         <p className="text-[10px] text-slate-400">선택한 backend Python 환경에 requirements-semantic-labeling.txt를 설치하고 공식 모델을 로컬 폴더에 준비하세요. 실행 중에는 모델을 다운로드하지 않습니다. 예시 이미지와 few-label 학습은 authentic DINOv3 가중치가 필요합니다.</p>
       </div></details>
     <div className="flex flex-wrap gap-2"><button disabled={!currentImage} onClick={()=>setActiveTool('foundation_point')} className="rounded border border-cyan-700 px-2 py-1">캔버스 점 prompt</button><button disabled={!currentImage} onClick={()=>setActiveTool('foundation_box')} className="rounded border border-cyan-700 px-2 py-1">캔버스 박스 prompt</button>
       <select aria-label="SAM2 점 positive negative" value={pointLabel} onChange={e=>setPointLabel(Number(e.target.value) as 0|1)} className={inputClass}><option value={1}>positive 점</option><option value={0}>negative 점</option></select><button onClick={clear} className="rounded border border-slate-600 px-2 py-1">점·박스 지우기</button></div>
     <p className="text-[10px] text-slate-400">현재 원본 좌표 · 점 {points.length} / 박스 {boxes.length}. 후보를 검토하고 채택하면 브러시 mask 또는 다각형으로 편집할 수 있습니다.</p>
+    <label className="flex items-center gap-2"><input type="checkbox" aria-label="점 입력 후 후보 만들기" checked={quickPointEnabled} disabled={!quickPointEnabled&&(!quickTaskSupported||noInference||!label.trim())} onChange={event=>setQuickPointEnabled(event.target.checked)}/>점 입력 후 후보 만들기</label>
+    {!quickTaskSupported&&<p className="text-[11px] text-amber-200">점 입력 후 후보 만들기는 검출·분할 프로젝트에서만 사용할 수 있습니다.</p>}
+    <p className="text-[11px] text-slate-400">이번 방문 동안 새 점을 찍으면 현재 설정으로 후보를 만듭니다. 결과를 확인하고 직접 채택하세요. 실행 중 추가한 점은 끝난 뒤 후보 생성 버튼으로 다시 만드세요.</p>
     <details><summary className="cursor-pointer text-cyan-200">현재 이미지 제외 영역 · {excludeRegions.length}개</summary><div className="mt-2 space-y-2">
       <input aria-label="제외할 원본 영역" value={excludeRoi} onChange={e=>setExcludeRoi(e.target.value)} placeholder="x1, y1, x2, y2 (원본 px)" className={`w-full ${inputClass}`}/>
       <button disabled={!currentScope||disabled||!currentImage||busy||running} onClick={()=>addExclusion()} className="rounded border border-slate-600 px-2 py-1">제외 영역 추가</button><button disabled={!currentScope||disabled||!currentImage||busy||running} onClick={()=>addExclusion(true)} className="ml-2 rounded border border-slate-600 px-2 py-1">선택 라벨의 박스 영역 제외</button>

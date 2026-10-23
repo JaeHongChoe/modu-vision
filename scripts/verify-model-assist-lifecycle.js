@@ -37,6 +37,8 @@ function mount() {
     '../../services/datasetWorkflow': { datasetWorkflow: workflow },
     './BulkLabelAssist': { BulkLabelAssist: 'BulkLabelAssist' },
     './CandidateProviderControls': { CandidateProviderControls: 'CandidateProviderControls' },
+    './foundationQuickPointController': {startFoundationQuickPointController:()=>()=>{}},
+    './popoverRoom': {usePopoverRoom:()=>500},
     './LabelAssistDeviceSizes': { LabelAssistDeviceSizes: 'LabelAssistDeviceSizes' },
     './KoreanConditionLabeler': { KoreanConditionLabeler: 'KoreanConditionLabeler' },
     './SuggestionPreview': { SuggestionPreview: 'SuggestionPreview' },

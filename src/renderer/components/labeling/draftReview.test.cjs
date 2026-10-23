@@ -284,6 +284,7 @@ function hookRuntime() {
       if (changed(old, deps)) { const entry = {deps}; slots[index] = entry; effects.push(() => { old?.cleanup?.(); entry.cleanup = fn(); }); }
     },
   };
+  react.useLayoutEffect = react.useEffect;
   react.default = react;
   return {react, async settle(component, cycles = 12) {
     let tree;
@@ -506,6 +507,7 @@ test('모델 보조 hands over the candidates the person kept and marks a model 
     './KoreanConditionLabeler': {KoreanConditionLabeler: 'KoreanConditionLabeler'}, './CandidateProviderControls': {CandidateProviderControls: 'CandidateProviderControls'},
     '../../services/datasetWorkflow': {datasetWorkflow: {}}, './SuggestionPreview': {SuggestionPreview: 'SuggestionPreview'}, '../common/Explain': {Explain: 'Explain'},
     './draftReview': helpers(), './popoverRoom': popoverRoom(runtime),
+    './foundationQuickPointController': {startFoundationQuickPointController:()=>()=>{}},
   });
   let tree = await runtime.settle(ModelAssistPanel);
   buttonWith(tree, '모델 보조 라벨링 패널').props.onClick(); tree = await runtime.settle(ModelAssistPanel);
