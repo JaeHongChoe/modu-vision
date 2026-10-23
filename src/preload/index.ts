@@ -52,6 +52,20 @@ const api: ElectronAPI = {
     };
   },
   platform: process.platform as 'darwin' | 'win32' | 'linux',
+  // The built-in assistant: settings, provider calls and image grants run in the main process; no key comes back.
+  assistant: {
+    getState: () => ipcRenderer.invoke('assistant:get-state'),
+    saveProvider: input => ipcRenderer.invoke('assistant:save-provider', input),
+    removeKey: provider => ipcRenderer.invoke('assistant:remove-key', provider),
+    removeProvider: provider => ipcRenderer.invoke('assistant:remove-provider', provider),
+    setActive: provider => ipcRenderer.invoke('assistant:set-active', provider),
+    listModels: provider => ipcRenderer.invoke('assistant:list-models', provider),
+    send: input => ipcRenderer.invoke('assistant:send', input),
+    cancel: requestId => ipcRenderer.invoke('assistant:cancel', requestId),
+    imageIntent: input => ipcRenderer.invoke('assistant:image-intent', input),
+    beginRun: (runId, tool) => ipcRenderer.invoke('assistant:run-begin', runId, tool),
+    endRun: runId => ipcRenderer.invoke('assistant:run-end', runId),
+  },
 };
 
 // Safely bridge to renderer process

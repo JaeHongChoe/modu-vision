@@ -94,6 +94,7 @@ from backend.api.routes_defect_gan import router as defect_gan_router
 from backend.api.routes_rotated_detection import router as rotated_detection_router
 from backend.api.routes_project import get_current_project, router as project_router
 from backend.api.routes_project_preferences import router as project_preferences_router
+from backend.api.routes_assistant import router as assistant_router
 from backend.api.routes_patch_classification import router as patch_classification_router
 from backend.api.routes_rotation import router as rotation_router
 from backend.api.routes_automated_training import router as automated_training_router
@@ -171,6 +172,10 @@ class ProjectContextMiddleware:
         except HTTPException as exc:
             return await reject(exc)
         token = current_project_context.set(state.get('project_context'))
+        # A write the person confirmed in the desktop assistant carries its run id; the central audit writers record it
+        # as `via: assistant` beside the person's own actor (attribution only, the role check above is unchanged).
+        from backend.engine import assistant_run
+        run_token = assistant_run.bind(assistant_run.run_id_from_headers(Headers(scope=scope)))
         held_start = None
         selected_body = bytearray()
         async def emit_start(message):
@@ -206,6 +211,7 @@ class ProjectContextMiddleware:
         try:
             await self.app(scope, receive, contextual_send)
         finally:
+            assistant_run.reset(run_token)
             current_project_context.reset(token)
 
 
@@ -648,6 +654,7 @@ def _admitted_create_app(project_dir: Optional[str] = None, shared_auth_dir: Opt
     app.include_router(artifacts_router)
     app.include_router(project_router)
     app.include_router(project_preferences_router)
+    app.include_router(assistant_router)
     app.include_router(accounts_router)
     app.include_router(mask_exchange_router)
     app.include_router(class_rename_router)

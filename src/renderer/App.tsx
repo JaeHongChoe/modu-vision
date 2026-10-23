@@ -33,6 +33,8 @@ import { telemetryService } from './services/websocket';
 import { getBackendPort, request } from './services/api';
 import { needsBrowserHealthProbe, startBrowserHealthProbe } from './services/browserHealth';
 import { createCatchUp, createJobEventStream } from './services/jobEventFeed';
+import { AssistantPanel } from './components/assistant/AssistantPanel';
+import { useAssistantStore } from './stores/useAssistantStore';
 
 // S1-10: after every (re)connection the app reads the job events it may have missed and re-reads its job if needed.
 const jobEventStream = createJobEventStream();
@@ -170,6 +172,7 @@ export default function App() {
               ?<button className={MENU_ITEM} onClick={()=>setWorkspace('studio')}>{language==='ko'?'모델·플로우 작업':'Models and flows'}</button>
               :<button className={MENU_ITEM} onClick={()=>setWorkspace('operator')}>{language==='ko'?'운영자 검사 화면':'Operator inspection'}</button>}
             <button className={MENU_ITEM} onClick={()=>setUtility('tasks')}>{language==='ko'?'작업 센터 · 진행 중인 작업':'Task center'}</button>
+            <button className={MENU_ITEM} onClick={()=>useAssistantStore.getState().open()}>{language==='ko'?'도우미에게 묻기':'Ask the assistant'}</button>
             <button className={MENU_ITEM} onClick={()=>setUtility('delivery')}>{language==='ko'?'패키지·장치·진단':'Packages, devices and diagnostics'}</button>
         </>}/>
 
@@ -203,6 +206,8 @@ export default function App() {
 
       {/* Global Industrial Fault Diagnostic Dialog */}
       <ErrorDiagnosticsModal />
+      {/* The assistant (product direction 4): a drawer that is null while closed; every step works without it. */}
+      <AssistantPanel />
       {firstRunOpen&&<WorkspaceDialog title="처음 시작하기" onClose={()=>setFirstRunOpen(false)}>
         <FirstRunStudio onClose={()=>setFirstRunOpen(false)} onDismiss={()=>void dismissFirstRun()}/>
       </WorkspaceDialog>}

@@ -1,20 +1,16 @@
 import fs from 'node:fs';
 import path from 'node:path';
+import type { Page } from '@playwright/test';
 import { expect, test } from './fixtures/test';
+import { installDesktopHostShim } from './fixtures/desktop-host-shim';
 
 // S0-06: renderer-side recovery and security candidates judged in the real
 // renderer and Electron main process. Shell actions are stubbed in the main
 // process so no application or document is actually opened.
 
-test('renderer policy allows a configured HTTPS shared server but not arbitrary plain HTTP', async ({ page, renderer }) => {
-  const invalidPolicySources: string[] = [];
-  page.on('console', message => {
-    if (message.text().includes('contains an invalid source')) invalidPolicySources.push(message.text());
-  });
-  await page.goto(renderer.url);
-  await expect(page.getByRole('navigation', { name: '프로젝트 작업 공간' })).toBeVisible();
-  expect(invalidPolicySources, 'the browser accepts every configured CSP source').toEqual([]);
-  const violations = await page.evaluate(async () => {
+// Requests the page cannot make under its policy; each entry is "<directive> <blocked URI>".
+async function policyViolations(page: Page): Promise<string[]> {
+  return page.evaluate(async () => {
     const blocked: string[] = [];
     document.addEventListener('securitypolicyviolation', event => blocked.push(`${event.effectiveDirective} ${event.blockedURI}`));
     await fetch('https://shared.example.invalid/api/project/list').catch(() => undefined);
@@ -25,7 +21,37 @@ test('renderer policy allows a configured HTTPS shared server but not arbitrary 
     await new Promise(resolve => setTimeout(resolve, 1000));
     return blocked;
   });
+}
+
+async function openWithPolicyWatch(page: Page, url: string): Promise<string[]> {
+  const invalidPolicySources: string[] = [];
+  page.on('console', message => {
+    if (message.text().includes('contains an invalid source')) invalidPolicySources.push(message.text());
+  });
+  await page.goto(url);
+  await expect(page.getByRole('navigation', { name: '프로젝트 작업 공간' })).toBeVisible();
+  return invalidPolicySources;
+}
+
+// The desktop policy (the preload bridge is present) admits HTTPS/WSS for the shared project server whose origin is
+// chosen at run time; the Electron main process then cancels every origin but the connected one (tested below).
+test('desktop renderer policy allows a configured HTTPS shared server but not arbitrary plain HTTP', async ({ page, renderer }) => {
+  await installDesktopHostShim(page, renderer.port);
+  expect(await openWithPolicyWatch(page, renderer.url), 'the browser accepts every configured CSP source').toEqual([]);
+  const violations = await policyViolations(page);
   expect(violations.filter(item => item.includes('shared.example.invalid')), 'HTTPS/WSS shared server is reachable').toEqual([]);
+  expect(violations.some(item => item.includes('plain.example.invalid')), 'plain HTTP to other hosts stays blocked').toBe(true);
+});
+
+// Without the bridge the page is a browser client of the server that serves it (browserSession.ts only talks to the
+// same origin), so the page narrows HTTPS/WSS to its own origin: no other host is reachable at all (§4.4 of
+// docs/product-direction-easy-labeling-agent.md; before the assistant work the browser kept the desktop policy).
+test('browser renderer policy reaches only its own origin and loopback', async ({ page, renderer }) => {
+  expect(await openWithPolicyWatch(page, renderer.url), 'the browser accepts every configured CSP source').toEqual([]);
+  const violations = await policyViolations(page);
+  expect(violations.some(item => item.startsWith('connect-src https://shared.example.invalid')), 'HTTPS to another origin is blocked').toBe(true);
+  expect(violations.some(item => item.startsWith('connect-src wss://shared.example.invalid')), 'WSS to another origin is blocked').toBe(true);
+  expect(violations.some(item => item.startsWith('img-src https://shared.example.invalid')), 'images from another origin are blocked').toBe(true);
   expect(violations.some(item => item.includes('plain.example.invalid')), 'plain HTTP to other hosts stays blocked').toBe(true);
 });
 

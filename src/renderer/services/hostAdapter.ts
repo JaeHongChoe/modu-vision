@@ -54,6 +54,12 @@ export const host = {
     }
   },
 
+  /** The assistant's main-process bridge (provider keys and calls stay in the main process); null in a browser or an
+   *  older desktop build, where every step of the app works the same without it. */
+  assistant(): NonNullable<ElectronAPI['assistant']> | null {
+    return bridge()?.assistant ?? null;
+  },
+
   // Every host call is async, so a missing feature always arrives as a rejected promise (never a synchronous throw that
   // a caller's .catch would not see).
 

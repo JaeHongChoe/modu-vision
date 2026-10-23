@@ -81,21 +81,31 @@
 
 **1차(먼저 구현): 사용자 API 키.** 사용자가 자기 키를 넣습니다. 공급자는 OpenAI 호환(Responses 또는 Chat Completions 형식의 주소+키, 지금 라벨 후보의 VLM 공급자와 같은 틀)과 Anthropic Messages API 두 가지를 지원합니다. 키는 Electron 주 프로세스가 OS 보호 저장소(`safeStorage`, 소유자 전용 권한)로만 보관하고 렌더러·백엔드·로그·프로젝트 파일에는 두지 않습니다(4.4와 같음). 비용은 키 소유자에게 청구되므로 요금·동의는 사용자가 결정합니다. 도구·실행 기록·확인 규칙(4.5·4.6)은 공급자와 무관하게 같습니다.
 
-**2차(약관·실제 동작 확인 뒤 선택지로): Sign in with ChatGPT.** 아래 내용은 2026-10-21에 확인한 공식 문서 기준의 설계이며, **"이 앱이 받은 토큰으로 Responses API를 호출하는 것이 약관상 허용되고 실제로 동작하는지"를 실계정으로 확인하기 전까지 구현하지 않습니다.** 확인은 사용자가 직접 로그인·동의하는 시험으로 합니다.
+**1차 구현 (2026-10-23).** 주 프로세스 `src/main/assistant/`(키 보관 `keyStore.ts`, 공급자 `providers.ts`, 전송 경계 `service.ts`, 마지막 가림 `redact.ts`, 실행 ID 헤더 `runHeader.ts`, IPC `ipc.ts`), 화면 `src/renderer/components/assistant/AssistantPanel.tsx`와 `services/assistant*.ts`·`stores/useAssistantStore.ts`, 백엔드 실행 기록 `backend/api/routes_assistant.py`. OpenAI 호환은 Chat Completions와 Responses 둘 다, Anthropic은 Messages API이며 각 공급자의 함수/도구 형식을 그대로 씁니다(스트림 없는 한 번 호출, 화면은 "보내는 중"과 멈추기를 보여 줌). 요청 형식은 2026-10-23 공식 문서로 확인했습니다: Anthropic `POST /v1/messages`, `x-api-key`, `anthropic-version: 2023-06-01`, 도구 `input_schema`, `tool_use`/`tool_result`, 도구를 쓴 차례의 thinking 블록은 받은 그대로 돌려보냄; OpenAI Responses 함수 도구 `{type:"function", name, parameters}`와 `function_call`/`function_call_output`(`call_id`), 일부 최신 모델은 도구 호출에 Responses만 받음; Chat Completions는 호환 서버들이 구현한 `tools[].function`·`tool_calls`·`role:"tool"` 형식(공식 참조 페이지는 이 날 403/404로 열리지 않아 기존 계약으로 구현). 키가 없거나 인터넷이 없거나 도우미를 열지 않으면 아무것도 밖으로 나가지 않습니다.
+
+**2차(약관·실제 동작 확인 뒤 선택지로): Sign in with ChatGPT.** 아래 내용은 2026-10-21에 확인하고 2026-10-23에 다시 확인한 공식 문서 기준의 설계이며, **"이 앱이 받은 토큰으로 Responses API를 호출하는 것이 약관상 허용되고 실제로 동작하는지"를 실계정으로 확인하기 전까지 구현하지 않습니다.** 확인은 사용자가 직접 로그인·동의하는 시험으로 합니다.
 
 2026-10-21에 공식 문서(quickstart, open-source sign-in, Codex app-server, models and inference, accounts and sessions, errors and recovery, token reference, preview limitations, UI/UX guidelines)를 직접 확인했습니다. 이 저장소는 MIT 라이선스(`LICENSE`)이고 사용자는 오픈소스로 배포한다고 확인했습니다. 문서는 오픈소스·로컬 실행 앱에 ChatGPT 플랜 사용을 열어 두고 있으며("ChatGPT plan usage is available to all open-source partners and selected private clients"), 비공개 앱의 제공 대상 제한은 이 프로젝트의 선행 장벽으로 두지 않습니다. 유료 또는 원격 호스팅 형태로 제공하려면 별도 신청(interest form)이 필요하다고 되어 있으므로, 공유 서버가 사용자 대신 토큰을 들고 호출하는 형태는 이번 범위에서 뺍니다.
 
 - **별도 API 키 없음.** 사용자는 브라우저에서 ChatGPT 계정으로 로그인하고 "이 앱이 내 ChatGPT 플랜을 쓰는 것"에 동의합니다. 앱은 OAuth 토큰으로 Responses API를 호출합니다. 클라이언트 비밀값이나 개발자 API 키를 앱에 넣지 않습니다.
-- **처음 등록.** 처음에는 `client_id=dynamic_agent_client`로 인가를 시작하고 `ext_agent_host_id`(이 컴퓨터의 불투명 식별자, 이메일·사용자 ID가 아닌 값)와 `agent_name_hint`(앱 이름)를 보냅니다. 콜백에서 발급된 client ID(`oaiapp_…`)를 저장하고 이후 로그인과 갱신에 씁니다.
-- **인가.** 시스템 브라우저로 `https://auth.openai.com/api/accounts/authorize`를 엽니다. PKCE(`S256`), 시도마다 새 `state`·`nonce`·verifier, 콜백은 `http://127.0.0.1:<port>/auth/callback`(localhost가 아닌 127.0.0.1, 리스너를 먼저 연 뒤 브라우저). 범위는 `openid profile email offline_access resource.invoke chatgpt.tokens.use.direct`, `resource=https://api.openai.com/v1`.
-- **토큰 교환.** `https://auth.openai.com/api/accounts/oauth/token`에 form 인코딩으로 `authorization_code` 교환. ID 토큰의 서명·발급자·대상(발급 client ID)·만료·nonce를 확인하고 `sub`를 계정 식별자로 씁니다. 응답의 granted scope에 `chatgpt.tokens.use.direct`가 없으면 로그인은 유지하되 플랜 사용은 꺼진 상태로 두고 추론하지 않습니다.
-- **수명과 갱신.** 접근 토큰 1시간, 갱신 토큰 30일(갱신할 때마다 교체). 만료 전에 `grant_type=refresh_token`으로 갱신하고, 같은 세션의 갱신은 하나씩 직렬화합니다(교체되는 토큰 경합 방지).
-- **호출.** `POST https://api.openai.com/v1/responses`, `Authorization: Bearer <access_token>`, `store: false`, `stream: true`. system 메시지 대신 `instructions`/developer 메시지. `temperature`, `max_output_tokens`, `metadata`, `user` 등은 보낼 수 없습니다. 함수 도구는 namespace로 묶거나 `additional_tools` 입력 항목으로 넣습니다. 이미지·파일 입력은 고른 모델이 받을 때만 됩니다. Files API는 쓸 수 없습니다. `response.completed`가 와야 성공으로 봅니다.
+- **처음 등록.** 처음에는 `client_id=dynamic_agent_client`로 인가를 시작하고 `ext_agent_host_id`(이 컴퓨터의 불투명 식별자: `urn:uuid:`+UUIDv4, JWK 지문 URI 또는 `did:key` 형식만; 이메일·사용자 ID가 아닌 값)와 `agent_name_hint`(앱 이름, 처음 등록에서만)를 보냅니다. 콜백에서 발급된 client ID(`oaiapp_…`)를 저장하고 이후 로그인과 갱신에 씁니다. 로그아웃 뒤에도 client ID 대응과 호스트 ID는 지우지 않습니다.
+- **인가.** 시스템 브라우저로 `https://auth.openai.com/api/accounts/authorize`를 엽니다. `response_type=code`, PKCE(`S256`, 패딩 없는 base64url `code_challenge`), 시도마다 새 `state`·`nonce`·verifier, 콜백은 `http://127.0.0.1:<port>/auth/callback`(localhost가 아닌 127.0.0.1, 바뀌는 것은 포트뿐, 리스너를 먼저 연 뒤 브라우저). 범위는 `openid profile email offline_access resource.invoke chatgpt.tokens.use.direct`, `resource=https://api.openai.com/v1`. 계정 전환에는 선택 값 `id_token_hint`·`login_hint`를 씁니다. 동의를 다시 받을 때는 `prompt=consent`; `force_reconsent=true`는 OpenAI가 이 앱에 적용을 확인해 준 뒤에만.
+- **토큰 교환.** `https://auth.openai.com/api/accounts/oauth/token`에 form 인코딩으로 `authorization_code` 교환(`resource` 포함). ID 토큰의 서명·발급자·대상(발급 client ID)·만료·nonce를 확인하고 `sub`를 계정 식별자로 씁니다. 응답의 granted scope에 `chatgpt.tokens.use.direct`가 없으면 로그인은 유지하되 플랜 사용은 꺼진 상태로 두고 추론하지 않습니다. 사용자가 플랜 사용을 거절해도 로그인은 유지하고 API 키 방식을 안내합니다.
+- **수명과 갱신.** 접근 토큰 1시간(`expires_in: 3600`), 갱신 토큰 30일(갱신할 때마다 교체). 만료 전에 `grant_type=refresh_token`으로 갱신하고(`resource` 포함, `scope`는 보내지 않음), 같은 세션의 갱신은 하나씩 직렬화합니다(교체되는 토큰 경합 방지). 토큰 응답의 `earliest_refresh_at`은 문서에 필드만 있고 뜻은 설명되지 않았습니다.
+- **호출.** `POST https://api.openai.com/v1/responses`, `Authorization: Bearer <access_token>`, `store: false`, `stream: true`, `response.completed`가 와야 성공. system 메시지 대신 `instructions`/developer 메시지(`role:"system"` 항목은 거절됨), HTTP에서는 `previous_response_id`를 쓰지 않습니다. 보낼 수 없는 값: `background`, `conversation`, `max_output_tokens`, `max_tool_calls`, `metadata`, `moderation`, `multi_agent`, `prompt`, `prompt_cache_retention`, `safety_identifier`, `temperature`, `top_logprobs`, `top_p`, `truncation`, `user`. 함수·사용자 정의 도구는 namespace로 묶거나 `additional_tools` 입력 항목으로 넣습니다. 웹 검색은 모델·정책에 따라 되고, 이미지 생성·파일 검색·Code Interpreter·컴퓨터 사용·호스팅 MCP/커넥터·`tool_search`·`programmatic_tool_calling`은 안 됩니다. 이미지·파일 입력은 고른 모델이 받을 때만 되고, 오디오·영상·음성 받아쓰기는 안 됩니다. Files API와 ChatGPT `backend-api`는 쓰지 않습니다.
 - **모델 선택.** `GET https://api.openai.com/v1/models`의 `models` 중 `visibility == "list"`의 `slug`/`display_name`을 보여 줍니다. 계정을 바꾸면 다시 읽습니다. 목록은 권한 확인이 아니며, 실제 완료된 응답이 접근을 확인합니다.
-- **한도.** 사용 한도는 스트림 중 `response.failed`의 `subscription_sharing_usage_limit_exceeded`(429) 등으로 옵니다. ChatGPT Plus의 5시간 한도는 이 플랜을 쓰는 모든 앱이 함께 씁니다. 한도에 걸리면 새 요청을 멈추고 "Manage usage"(ChatGPT 설정 → 사용량) 링크를 주 행동으로 보여 줍니다. 초기화 시각을 추측하지 않습니다.
-- **로그아웃·권한 철회.** 로그아웃은 요청을 멈추고 `https://auth.openai.com/.well-known/openid-configuration`의 `revocation_endpoint`에 갱신 토큰 폐기를 보낸 뒤 토큰을 지웁니다. 원격 폐기를 확인하지 못하면 "이 컴퓨터에서는 지웠지만 원격 폐기는 확인되지 않음"을 알립니다. 사용자는 ChatGPT 설정에서 이 앱 연결을 끊을 수 있고, OpenAI는 앱에 알려 주지 않으므로 `subscription_sharing_invalid_user`(401)나 갱신 실패를 철회로 처리해 다시 로그인을 안내합니다.
-- **오류.** 범위 없음(403 `chatpass_v2_scope_not_authorized`), 자격 없음(403 `subscription_sharing_user_not_eligible`), 지원 안 하는 입력·도구·모델(400 `subscription_sharing_unsupported_capability`), 일시 불가(503 `subscription_sharing_usage_unavailable`, 제한된 재시도) 등 문서의 복구 방식을 그대로 따르고, 요청 ID를 기술 상세에 남깁니다.
-- **표기.** 로그인 버튼은 "Continue with ChatGPT". 처음 플랜 사용이 켜질 때 한 번 "ChatGPT 플랜을 사용합니다"와 관리 위치를 알리고, 도우미 입력창 옆에 "ChatGPT 플랜 사용 중 · 사용량 관리"를 둡니다.
+- **한도.** 사용 한도는 스트림 중 `response.failed`의 `subscription_sharing_usage_limit_exceeded`(429) 등으로 옵니다. ChatGPT Plus의 5시간 한도는 이 플랜을 쓰는 모든 앱이 함께 쓰고(Pro는 5시간 한도 제외), 앱별 한도가 따로 있을 수 있습니다. 한도에 걸리면 새 요청을 멈추고 "Manage usage"(`https://chatgpt.com/settings/usage`) 링크를 주 행동으로 보여 줍니다. 초기화 시각을 추측하지 않습니다.
+- **로그아웃·권한 철회.** 로그아웃은 요청을 멈추고 `https://auth.openai.com/.well-known/openid-configuration`의 `revocation_endpoint`에 갱신 토큰 폐기(`token_type_hint=refresh_token`, `client_id`)를 보낸 뒤 토큰을 지웁니다. 빈 200 응답이 성공이며, 원격 폐기를 확인하지 못하면 "이 컴퓨터에서는 지웠지만 원격 폐기는 확인되지 않음"을 알립니다. 사용자는 ChatGPT 설정에서 이 앱 연결을 끊을 수 있고 OpenAI는 앱에 알려 주지 않습니다. `subscription_sharing_invalid_user`(401)는 곧바로 철회로 보지 않고 요청 ID를 남겨 원인을 확인하며, 다시 로그인 안내는 철회가 확인됐거나 갱신이 끝내 실패했을 때만 합니다(2026-10-23 재확인으로 고침: 이전 판은 401을 바로 철회로 처리).
+- **오류.** 범위 없음(403 `chatpass_v2_scope_not_authorized`), 권한 맥락 오류(403 `chatpass_v2_invalid_authorization_context`), 자격 없음(403 `subscription_sharing_user_not_eligible`), 지원 안 하는 경로(403 `subscription_sharing_route_not_supported`), 지원 안 하는 입력·도구·모델(400 `subscription_sharing_unsupported_capability`), 일시 불가(503 `subscription_sharing_usage_unavailable`·`subscription_sharing_user_unavailable`, 제한된 재시도), 스트림 전 코드 없는 401/403/503(403은 이용 지역일 수 있음), 갱신 오류(`invalid_refresh_token`, `token_expired`, `refresh_token_expired`, `refresh_token_invalidated`, `refresh_token_reused`, `invalid_client`)는 문서의 복구 방식을 따르고, HTTP 상태·응답 형태·오류 코드·요청 ID를 기술 상세에 남깁니다.
+- **표기.** 로그인 버튼은 "Continue with ChatGPT". 처음 플랜 사용이 켜질 때 한 번 "You're using your ChatGPT plan"/"Got it"(한국어 화면은 같은 뜻으로)을 알리고, 도우미 입력창 옆에 "Using ChatGPT plan · Manage usage"(ChatGPT 플랜 사용 중 · 사용량 관리), 한도에 걸리면 "Usage limit reached"를 둡니다.
+
+#### 2026-10-23 재확인 (구현하지 않음, 조사만)
+
+- **읽은 곳.** 10장의 공식 문서 10쪽을 2026-10-23에 다시 읽었습니다(모두 열림, 주소 변경 없음; `profiles-and-sessions`는 제목이 "Accounts and sessions"로 바뀜). 추가로 `/siwc`, `/siwc/request-client-id`, 자체 호스팅 VM, 쿡북 글(https://developers.openai.com/cookbook/articles/sign-in-with-chatgpt)을 읽었습니다. 약관 페이지(https://openai.com/policies/sign-in-with-chatgpt-terms/)와 도움말(https://help.openai.com/en/articles/20001542-using-your-chatgpt-plan-in-other-apps-and-sites)은 이 날 자동 읽기가 403으로 막혀 **직접 읽지 못했습니다.**
+- **허용된 것(문서에 적힘).** quickstart: 오픈소스 파트너 전부와 일부 비공개 클라이언트에 ChatGPT 플랜 사용 제공, 클라이언트 비밀값·파트너 API 키 불필요. 개요: 오픈소스·로컬 실행 앱 대상, 유료 또는 원격 호스팅은 interest form(https://openai.com/form/sign-in-with-chatgpt-interest/) 신청 대상. 쿡북: 로컬에서 도는 오픈소스·개인 프로젝트용. `request-client-id` 대기열은 상업 파트너의 신원 로그인용이며 `dynamic_agent_client` 흐름과는 별개입니다.
+- **문서로 확인된 것.** 위 목록의 등록·인가·토큰 교환·수명·호출 제약·모델 목록(`visibility=="list"`, 목록은 권한 확인이 아님)·한도·폐기·오류·표기 항목(2026-10-23 판으로 고친 내용 포함).
+- **확인되지 않은 것.** ① 약관이 이 사용(오픈소스 데스크톱 앱이 받은 토큰으로 Responses 호출)을 허용하는지: 약관 페이지를 읽지 못했고, 검색 요약으로만 "지원 흐름으로만 토큰 획득, 토큰은 사용자 컴퓨터에 보관, 사용자의 활동에 묶인 요청, 연결한 앱만 플랜 사용, 공유·재판매 금지" 취지를 봤으며 이는 검증되지 않았습니다. ② 대상 요금제(개발 문서는 Plus·Pro, 도움말은 Go도 적는다는 검색 요약뿐). ③ 계정별 모델과 이미지 입력. ④ namespace·`additional_tools` 도구의 실제 동작. ⑤ `earliest_refresh_at`의 뜻. Codex app-server 문서는 `env_key`=`ACCESS_TOKEN`, `-c model_provider=…`, `wire_api="responses"`, `supports_websockets=false`를 적지만 셸·MCP 도구를 막으라고는 하지 않으므로 막는 것은 우리 설계 판단입니다.
+- **사용자가 직접 해야 하는 확인(로그인·동의).** 1) 브라우저에서 약관 페이지를 직접 읽기. 2) `dynamic_agent_client`로 첫 로그인, 작업 공간 고르기, 플랜 사용 허락 뒤 `oaiapp_…` ID와 granted scope의 `chatgpt.tokens.use.direct` 확인. 3) 요금제와 토큰 응답의 `expires_in`·`refresh_token`·`earliest_refresh_at` 확인. 4) `GET /v1/models`로 보이는 모델과 이미지 입력 확인. 5) namespace 도구와 `additional_tools` 각각으로 스트림 `/v1/responses` 한 번씩, `response.completed` 확인. 6) 1시간 무렵 갱신과 갱신 토큰 교체 확인. 7) 다시 로그인해 플랜 사용을 거절했을 때 로그인 유지·플랜 꺼짐 확인. 8) ChatGPT 설정 → 사용량에서 연결 끊은 뒤 받는 요청·갱신 오류 기록. 9) 로그아웃과 폐기 200 확인. 10) 계정이 둘이면 `id_token_hint`로 전환 확인. 이 확인 전까지 2차는 구현하지 않으며, 이 앱은 `~/.codex/auth.json`이나 다른 앱의 자격 증명을 읽지 않습니다.
 
 ### 4.3 직접 호출과 Codex app-server 비교
 
@@ -110,8 +120,8 @@
 
 - **보관 위치.** 토큰은 Electron 주 프로세스만 다룹니다. 렌더러(화면)·백엔드·로그·프로젝트 파일·브라우저 저장소에는 들어가지 않습니다(지금 공유 서버 세션 토큰을 주 프로세스가 붙이는 방식과 같은 원칙). 디스크에는 OS 보호 저장소(macOS 키체인/Windows DPAPI, Electron `safeStorage`)로 암호화한 파일을 소유자 전용 권한(`0600`)으로 원자적으로 씁니다. 계정마다 client ID·토큰을 따로 둡니다.
 - **URL·로그 금지.** 토큰은 URL에 넣지 않고, `id_token_hint`가 들어간 인가 URL은 기록에서 가립니다.
-- **화면의 외부 접속 좁히기.** 지금 화면(`index.html`)의 CSP는 `connect-src`와 `img-src`에 `https:`(접속은 `wss:`도)를 통째로 허용해, 화면 코드가 아무 외부 주소로나 요청할 수 있습니다. 도우미를 넣기 전에 화면의 외부 접속을 앱이 실제로 쓰는 주소로 좁히고, `api.openai.com`·`auth.openai.com` 호출은 주 프로세스에서만 합니다(3단계의 선행 조건).
-- **보내는 내용 최소화.** 기본으로 보내는 것은 화면 단계, 상태·막힌 이유 문구, 오류 코드·메시지, 수치 요약(이미지 수, 클래스별 수, 정확도)입니다. 이미지 픽셀, 원본 경로 전체, 사용자 이름, 서버 주소는 보내지 않습니다. 경로는 파일 이름이나 상대 경로로 줄입니다. 이미지를 보여 주며 묻는 기능은 요청마다 "이 이미지 1장을 ChatGPT로 보냅니다" 확인 뒤에만 보냅니다(모델이 이미지를 받을 때만).
+- **화면의 외부 접속 좁히기.** 지금 화면(`index.html`)의 CSP는 `connect-src`와 `img-src`에 `https:`(접속은 `wss:`도)를 통째로 허용해, 화면 코드가 아무 외부 주소로나 요청할 수 있습니다. 도우미를 넣기 전에 화면의 외부 접속을 앱이 실제로 쓰는 주소로 좁히고, `api.openai.com`·`auth.openai.com` 호출은 주 프로세스에서만 합니다(3단계의 선행 조건). **반영(2026-10-23).** 화면이 실제로 닿는 곳은 자기 페이지, 이 컴퓨터의 백엔드(루프백 HTTP/WS, 포트는 실행마다 바뀜), 데스크톱 앱에서만 사람이 실행 중에 고르는 공유 서버(HTTPS/WSS) 셋입니다. 브라우저(데스크톱 연결 없음)에서는 페이지가 두 번째 CSP를 넣어 HTTPS/WSS를 자기 출처로만 좁힙니다(브라우저 세션은 같은 출처만 씀). 데스크톱의 고정 CSP는 공유 서버 주소를 미리 알 수 없어 `https:`/`wss:`를 남기고, 주 프로세스가 연결된 공유 서버의 `/api`·`/ws` 말고는 화면의 HTTPS/WSS 요청을 모두 취소합니다(공급자 주소 포함, 테스트로 고정). 공급자 호출은 주 프로세스의 Node `fetch`로만 하고(리디렉션 거절), 화면의 도우미 코드에는 네트워크 호출·브라우저 저장소가 없습니다. 데스크톱 CSP에서도 `https:`/`wss:`를 빼려면 공유 서버 연결 뒤 화면을 다시 불러오며 그 주소를 CSP에 넣거나(앱 시작 시 공유 연결 복원이 먼저 필요), 공유 서버 통신을 주 프로세스로 옮겨야 합니다(남은 일).
+- **보내는 내용 최소화.** 기본으로 보내는 것은 화면 단계, 상태·막힌 이유 문구, 오류 코드·메시지, 수치 요약(이미지 수, 클래스별 수, 정확도)입니다. 이미지 픽셀, 원본 경로 전체, 사용자 이름, 서버 주소는 보내지 않습니다. 경로는 파일 이름이나 상대 경로로 줄입니다. 이미지를 보여 주며 묻는 기능은 요청마다 "이 이미지 1장을 ChatGPT로 보냅니다" 확인 뒤에만 보냅니다(모델이 이미지를 받을 때만). 구현: 화면은 하단 안내의 그림(`currentAssistContext()`)에서 `scope`(프로젝트·원본 폴더 경로)를 빼고 수와 상태만 보내며(`services/assistantContext.ts`), 주 프로세스가 나가는 모든 글에서 경로를 파일 이름으로, 주소·이메일·키 모양을 가림 글자로 한 번 더 바꿉니다(`redact.ts`). 이미지 질문은 미리보기 확인 → 주 프로세스가 공급자 이름을 담은 확인 문구와 1회용 허가(2분) 발급 → 사람이 "이미지 1장 보내기"를 누른 뒤에만 1024px 사본을 읽어 보내며, 도구 없이 한 번만 호출합니다. 모델이 이미지를 받는다고 설정에 표시하지 않았으면 허가가 나오지 않습니다. 긴 대화는 최근 질문 단위만 남기고 앞의 질문은 한 줄 요약으로 줄입니다(추가 호출 없음).
 - **서버 상태 없음.** `store:false`라 매 요청에 필요한 맥락을 다시 보냅니다. 대화가 길어지면 요약해 보내 한도 소모를 줄입니다.
 
 ### 4.5 도구와 권한
@@ -125,9 +135,13 @@
 | 쓰기(되돌릴 수 있음) | 분할 저장, 클래스 지정, 자동 라벨 초안 만들기, 학습 시작 | 미리보기와 사용자 확인 뒤 실행, 되돌리기 경로 표시 |
 | 금지 | 모델·흐름 승인, 배포·서비스 등록, 원본 삭제, 라벨 파일 삭제(`DELETE /api/annotations`는 백업 없이 지우므로 도구로 열지 않음. 열려면 먼저 보관 이동·장부 기록으로 바꿈), 정답 확정, 계정·권한 변경, 외부로 파일 보내기 | 도우미는 실행하지 않고 "직접 하세요"로 안내 |
 
+구현된 도구(`services/assistantTools.ts`): 읽기 `read_status`·`read_dataset_summary`·`read_data_changes`·`read_evaluation_summary`·`read_draft_stats`·`read_error_details`; 이동·준비 `open_step`·`open_next_action`·`prefill_split`; 쓰기 `save_split`·`assign_class`·`generate_label_drafts`·`start_training`(미리보기에 되돌리는 방법을 적고, 패널의 "확인하고 실행"을 눌러야만 실행; 학습 시작은 3단계 준비 완료일 때만); 금지 `approve_model`·`approve_flow`·`deploy_or_register_service`·`delete_original_images`·`delete_label_files`·`confirm_ground_truth`·`adopt_drafts`·`change_account_or_permissions`·`send_files_outside`(실행하지 않고 "직접 하세요"와 위치). 모든 도구는 화면이 쓰는 저장소 함수와 서비스 호출을 그대로 써서 백엔드 역할 검사를 똑같이 거칩니다.
+
 ### 4.6 실행 기록
 
 도우미 대화와 도구 실행은 프로젝트 아래 로컬 기록(JSON Lines)에 남깁니다: 시각, 도구 이름, 인자 요약과 해시, 사용자가 확인했는지, 결과(성공·거절·오류 코드), 기존 감사 기록과의 연결(예: 클래스 지정의 `class_changed` 이벤트). 토큰·이미지·전체 경로는 남기지 않습니다. 사용자는 기록을 보고 지울 수 있습니다(지우기는 휴지통·보관 폴더 이동). 지금 공유 서버는 모든 `actor`를 로그인 사용자로 덮어쓰므로, 도우미가 부른 쓰기는 장부에서 사용자 본인 행동과 구별되지 않습니다. 도우미 도구 호출에는 실행 ID 헤더를 붙여 백엔드 감사 이벤트에 `via: assistant`와 실행 ID를 함께 남기도록 바꿉니다(권한은 그대로 사용자 역할).
+
+구현(2026-10-23): 기록은 `<project>/assistant/runs.jsonl`(한 줄에 시각·실행한 사람·도구·등급·인자 요약과 sha256·사람 확인 여부·결과와 오류 코드·실행 ID·만든 기록 연결(`class_changed`, `job:…`, `batch:…`)), 경로·주소·이메일·키 모양이 든 요약은 백엔드가 거절합니다. 패널의 "기록 비우기"는 파일을 `assistant/archive/`로 옮기며 지우지 않습니다(4 MB를 넘어도 같은 곳으로 옮김). 확인된 쓰기 도구가 실행되는 동안 주 프로세스가 그 도구의 요청 하나(같은 메서드·경로, 로컬 백엔드나 연결된 공유 서버, 최대 2분)에 `X-Modu-Assistant-Run`을 붙이고, 백엔드 `ProjectContextMiddleware`가 요청 동안 이를 묶어 이미지 메타데이터 장부(`dataset_metadata._event`, 예: `class_changed`)와 작업 장부(`job_store` 이벤트, 예: 학습 `submit`)에 `via: "assistant"`와 `assistant_run`을 남깁니다. 새 미들웨어 대신 기존 미들웨어에 넣은 것은 원본 미들웨어 구성 검사(`original_current_project_request`)가 모르는 미들웨어를 거부하기 때문입니다. 공유 서버에서 이 기록 경로는 별도 역할 규칙이 없어 쓰기는 프로젝트 소유자만 됩니다(읽기는 구성원 모두; 다른 역할 허용은 남은 결정).
 
 ### 4.7 사용자가 직접 해야 하는 것
 
@@ -204,7 +218,7 @@ ChatGPT 로그인은 아직 실제 연결을 시험하지 않았고 약관 허�
 | 초안 검토 | `src/renderer/components/labeling/DraftReviewQueue.tsx`, `backend/engine/proposal_ordering.py` | routes_label_suggestions(정렬·일괄 채택·채택 되돌리기), routes_annotation(`origin` 선택 필드), model_operations `_auto_label`(초안 저장소로), LabelingStudio(간단히 보기 주 행동) |
 | 도우미 키·호출 (1차) | `src/main/credentialStore.ts`(safeStorage·0600, 공급자별 키), `src/main/assistantClient.ts`(OpenAI 호환·Anthropic 스트림, 도구 반복) | `src/main/ipc.ts`·`src/preload/index.ts`(키 없는 IPC), CSP·요청 허용(공급자 주소는 주 프로세스에서만) |
 | 도우미 로그인 (2차, 확인 뒤) | `src/main/chatgptAuth.ts`(PKCE·등록·갱신·폐기) | 위 클라이언트에 공급자 하나 추가 |
-| 도우미 화면·도구 | `src/renderer/components/assistant/AssistantPanel.tsx`, `src/renderer/services/assistantTools.ts`(도구 목록·등급), 실행 기록 `<project>/assistant/log.jsonl` | 설정(플랜 사용·모델·로그아웃), 기술 상세(요청 ID) |
+| 도우미 화면·도구 | `src/renderer/components/assistant/AssistantPanel.tsx`, `src/renderer/services/assistantTools.ts`(도구 목록·등급), 실행 기록 `<project>/assistant/runs.jsonl`(지우기는 `archive/`로 이동) | 설정(플랜 사용·모델·로그아웃), 기술 상세(요청 ID) |
 
 ## 8. 단계별 실행안
 
@@ -244,3 +258,40 @@ ChatGPT 로그인은 아직 실제 연결을 시험하지 않았고 약관 허�
 - 미리보기 제한: https://developers.openai.com/siwc/token-sharing-open-source/preview-limitations
 - 자체 호스팅 VM: https://developers.openai.com/siwc/token-sharing-open-source/self-hosted-vms
 - UI/UX 지침: https://developers.openai.com/siwc/ui-ux-guidelines
+
+## 11. 남은 작업 추적과 기본값 결정 (2026-10-23)
+
+사용자 지시(2026-10-23 "다 하라고 해죠"): 5장·8장의 남은 항목과 3·4·5단계 도우미까지 이어서 구현·검증·실제 앱 QA. 작은 선택은 "쉬운 사용 우선, 기존 안전 조건 보존"으로 기본값을 정해 진행하고, 정답·원본·클래스/라벨북·지문/라벨 세트·평가/승인 검사를 약화하거나 새 외부 전송·보안 권한·약관 동의가 필요한 결정만 사용자에게 남깁니다.
+
+### 11.1 미결 8개의 기본값
+
+| # | 질문 | 기본값 | 근거 |
+| --- | --- | --- | --- |
+| 1 | 데이터 지문이 없는 옛 학습 기록 | 초안은 허용, '데이터가 바뀐 뒤 학습한 모델 · 평가 근거 아님'으로 표시(지금 동작 유지) | 초안은 근거가 아니고 채택 검사가 그대로라 안전 조건이 약해지지 않음 |
+| 2 | 같은 프로젝트의 다른 라벨 세트로 학습한 모델 | 기록에 라벨 세트가 있고 활성 세트와 다르면 목록에서 빼고 초안 생성 거절 | 라벨 세트 안전 조건 보존(예전 지문 검사가 막던 경우를 되살림). 라벨 세트 기록이 없는 옛 기록은 1번과 같이 처리 |
+| 3 | 이전 모델이 지금 없는 클래스 이름으로 만든 후보 | 데이터가 바뀐 모델의 후보 중 지금 클래스 목록에 없는 이름은 기본 선택에서 빼고 '지금 클래스 목록에 없는 이름' 표시. 사람이 고르면 채택 가능 | 옛 이름이 몰래 되살아나지 않게, 새 클래스 추가는 막지 않음. 빈 프로젝트(클래스 없음)는 예외 |
+| 4 | 라벨 기준서에 있는 클래스 이름 바꾸기 | 거절 유지, 기준서 발행 흐름에서 바꾸도록 안내 | 기준서는 팀 정답 기준이라 약화하지 않음 |
+| 5 | 간단히 보기 머리글이 1280px에서 두 줄 | 1440px 미만에서는 간단히 보기의 'Vision AI Studio' 글자를 숨겨 한 줄 | 결정 하나만 남기는 화면 원칙, 앱 이름은 창 제목에 있음 |
+| 6 | '연결 검사 필요'·'연결 중'이 더 보기 안 | 문제가 있을 때만 머리글 줄에 올림, 정상일 때는 더 보기 | 막힘은 메뉴를 열지 않아도 보여야 함 |
+| 7 | 집중 편집에서 클래스 이름 변경 입구가 숨음 | 집중 편집 줄에도 입구를 두고, 접힌 라벨 세트 줄에 '클래스 이름 변경'을 적음 | 필요한 입구는 어느 보기에서도 한 번에 찾음 |
+| 8 | `test_class_rename.py`의 Windows 목록 | 넣음 | 원자적 교체·경로가 Windows에서 다르게 동작할 수 있어 확인 가치가 큼, 테스트는 POSIX 전용 기능을 쓰지 않음 |
+
+### 11.2 남은 작업 (상태는 커밋마다 갱신)
+
+| 묶음 | 항목 | 상태 |
+| --- | --- | --- |
+| 2.5 | 첫 실행 안내·예제를 첫 프로젝트 경로(폴더 → 구조·작업 종류·분할 → 라벨/초안 검토 → 추천 설정 학습 → 평가 → 흐름 저장 → 검사) 순서로 | 구현·실제 앱 확인(안내 8단계, 예제 9단계에 2단계 라벨 확인·4단계 모델 평가 추가) |
+| 2.5 | 원클릭 자동 진행(기본값 한 줄, 끝난 단계 건너뜀, 멈춘 곳부터 이어 가기, 정답·초안 채택·정답 확인·승인·배포는 사람) | 구현·실제 앱 확인(분류·검출 새 프로젝트, 기존 데이터 재학습 경로). 정답 확인 정지는 대화상자 안에서 바로 확정 가능 |
+| 2.5 | 디자인 잔여 | 결정 5·6·7, 설명 한 줄+자세히(초안 패널 문단), 2단계 오른쪽 창 둘이 한 번에 하나만, 빈 초안 정리. 남은 것: 5단계 일괄 평가 화면의 전문가 요소 접기, 패널 전반의 톤 통일 |
+| QA | 3단계 학습 숫자·4단계 정확도 범위·6단계 검사 숫자, 클래스 이름 실제 적용, 팀 편집 채택 | 실제 앱 확인. Electron은 통합 뒤 확인 |
+| 측정 | 새 프로젝트 → 첫 검사 흐름 저장 | 분류 96초·6회(검사 결과까지 151초·12회), 검출(라벨 20장 직접) 157초·36회(결과까지 175초·39회). 측정 중 고친 것: 라벨 없는 폴더 가져오기, 그리면 다음 이미지로, 검출 라벨로 정답 확정, 대화상자 안 정답 확정, 빈 초안 대기 수 제외 |
+| 측정 | 라벨 장당 비교 | 직접 그리기: 장당 조작 1회(그리면 다음 켬)·자동 조작 기준 약 1.5초/장. 초안 채택: 라벨 20장·기본 12회 학습 모델은 후보 0개라 이 조건에서는 쓸 수 없음(이전 공간의 48장·정밀 모델은 페이지당 1회로 채택). 사람 기준 시간은 재지 않음 |
+| 3.3 ③ | 빈 프로젝트 첫 초안(Grounding DINO 문구·SAM2 클릭), SAM2 실제 실행 | 라벨 없는 폴더 가져오기·미라벨 초안 경로는 열림. 모델 파일(sam2.1-hiera-tiny 155.9 MB, grounding-dino-tiny 689.4 MB, Apache-2.0)과 `transformers==4.57.6` 설치는 사용자 확인 대기 |
+| 3·4·5 | 도우미(API 키) | 구현: 주 프로세스 키 보관(`safeStorage`)·OpenAI 호환/Anthropic·읽기·이동·미리보기+확인 쓰기·금지 목록·`runs.jsonl`·`via: assistant`·이미지 1장 전송 확인. 화면 CSP: 브라우저는 자기 주소로 좁힘, 데스크톱은 주 프로세스가 연결된 공유 서버의 `/api`·`/ws`만 통과(정해진 주소를 쓸 수 없는 이유는 §4.4). 실제 키 호출은 사용자 |
+| 3b | ChatGPT 로그인 | 공식 문서 재확인(§4.2). 약관 페이지는 직접 읽지 못해(403) 허용 여부 미확인, 구현하지 않음 |
+
+### 11.3 도우미 통합 때 정한 기본값 (2026-10-23)
+
+- 데스크톱 화면 CSP는 `https:`/`wss:`를 남기되, 주 프로세스가 연결된 공유 서버의 `/api`·`/ws`를 뺀 화면의 모든 HTTPS 요청을 취소합니다(공유 서버 주소는 실행 중에 정해지므로 정적 정책에 적을 수 없음). 도우미 공급자는 주 프로세스만 부릅니다. 공유 서버 연결을 주 프로세스로 옮겨 CSP에서 빼는 것은 후속.
+- 실행 ID는 기존 `ProjectContextMiddleware` 안에서 묶습니다(새 미들웨어는 원본 미들웨어 검사와 충돌).
+- 공유 서버에서 도우미 실행 기록 쓰기는 프로젝트 소유자만(권한을 넓히지 않음).

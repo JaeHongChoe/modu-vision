@@ -98,6 +98,19 @@ export type AssignmentRequest = {
   priority?: number;
 };
 
+export type AssistantRunEntry = {
+  run_id: string;
+  tool: string;
+  tier: "read" | "navigate" | "write" | "forbidden" | "conversation";
+  summary?: string;
+  args_sha256: string;
+  confirmed: boolean;
+  result: "ok" | "refused" | "error" | "cancelled";
+  error_code?: string | null;
+  provider?: "openai-compatible" | "anthropic" | null;
+  link?: string | null;
+};
+
 export type AsyncComparisonRequest = {
   source_dataset_path: string;
   task: "classification" | "detection" | "segmentation" | "anomaly" | "patch_classification";
@@ -1645,7 +1658,7 @@ export type TrainingStopRequest = {
 export type TruthFromLabelsRequest = {
   version_id: string;
   reviewer: string;
-  note?: string;
+  note?: string | null;
 };
 
 export type TruthRequest = {
@@ -1944,6 +1957,7 @@ export interface ApiRequestBody {
   "POST /api/artifacts/uploads": UploadRequest;
   "DELETE /api/artifacts/{artifact_id}": ArtifactRef;
   "POST /api/artifacts/{artifact_id}/pins": PinRequest;
+  "POST /api/assistant/runs": AssistantRunEntry;
   "POST /api/automated-training/start": StartRequest;
   "POST /api/capture-intake/adopt": backend__api__routes_capture_intake__AdoptRequest;
   "POST /api/capture-intake/candidates/{identifier}/review": backend__api__routes_capture_intake__ReviewRequest;

@@ -7,6 +7,7 @@ import { registerIpcHandlers } from './ipc';
 import { acquireAppInstanceLock } from './instanceLock';
 import {isSharedServerUrl,sharedHeaders} from './sharedSession';
 import {authenticateMainLaunch} from './applicationLaunch';
+import {assistantRuns} from './assistant/runHeader';
 
 // Determine execution mode
 const isDev = process.env.NODE_ENV === 'development' || !app.isPackaged;
@@ -100,7 +101,9 @@ async function createWindow(): Promise<BrowserWindow> {
   const packagedUrl = pathToFileURL(prodHtmlPath).href;
 
   // The CSP admits HTTPS/WSS so a shared project server can be used; only the
-  // connected server origin is actually reachable from the renderer.
+  // connected server origin is actually reachable from the renderer. Assistant
+  // providers are never reachable from here: the main process calls them with
+  // Node's own fetch (assistant/providers.ts), outside this session.
   win.webContents.session.webRequest.onBeforeRequest({ urls: ['https://*/*', 'wss://*/*'] }, (details, callback) => {
     callback({ cancel: !isSharedServerUrl(details.url) });
   });
@@ -125,12 +128,14 @@ async function createWindow(): Promise<BrowserWindow> {
     try {
       const target = new URL(details.url);
       const remoteHeaders=sharedHeaders(details.url);
+      // A write the person confirmed in the assistant panel names its run (assistant/runHeader.ts); only requests to
+      // the shared server or the local backend can carry it.
       if(Object.keys(remoteHeaders).length){
-        callback({requestHeaders:{...details.requestHeaders,...remoteHeaders}});return;
+        callback({requestHeaders:{...details.requestHeaders,...remoteHeaders,...assistantRuns.headerFor(details.url,details.method)}});return;
       }
       if (port && token && ['http:', 'ws:'].includes(target.protocol)
         && target.hostname === '127.0.0.1' && Number(target.port) === port) {
-        callback({ requestHeaders: { ...details.requestHeaders, 'X-Vision-Token': token } });
+        callback({ requestHeaders: { ...details.requestHeaders, 'X-Vision-Token': token, ...assistantRuns.headerFor(details.url, details.method) } });
         return;
       }
     } catch {

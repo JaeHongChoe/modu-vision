@@ -6,6 +6,7 @@ import type { BackendSupervisor } from './supervisor';
 import {getSharedConnection,loginSharedServer,selectSharedProject,disconnectSharedServer} from './sharedSession';
 import {DistributionManager} from './distributionStatus';
 import {PortableUpdateManager,validatedCanaryPins} from './portableUpdate';
+import {registerAssistantHandlers} from './assistant/ipc';
 
 // Documents, images and report folders the studio produces. Executables,
 // scripts, shortcuts and application bundles are never opened from the renderer.
@@ -104,6 +105,8 @@ export function registerIpcHandlers(supervisor: BackendSupervisor): void {
   ipcMain.handle('shared:login',(event,input)=>{authorizeShared(event);return loginSharedServer(input);});
   ipcMain.handle('shared:select',(event,project_id)=>{authorizeShared(event);return selectSharedProject(project_id);});
   ipcMain.handle('shared:disconnect',event=>{authorizeShared(event);return disconnectSharedServer();});
+  // The built-in assistant: keys and provider calls stay in this process (assistant/keyStore.ts, assistant/service.ts).
+  registerAssistantHandlers(authorizeShared);
   // 1. Backend Port & Status Queries (support both hyphenated and namespaced names)
   // Every renderer capability is limited to the application's own main frame.
   const getPortHandler = async (event: IpcMainInvokeEvent) => { authorizeShared(event); return supervisor.getPort(); };

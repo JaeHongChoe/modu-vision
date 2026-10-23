@@ -7,6 +7,7 @@ import { DataChangeNotice } from './DataChangeNotice';
 import { focusWorkflowTarget, progressLine, type WorkflowStep } from './workflowReadiness';
 import { assistPanelErrors, subscribeAssistContext } from '../../stores/assistContext';
 import { AUTO_TITLE, AutoProgressDialog, useAutoProgressStore } from './AutoProgressDialog';
+import { useAssistantStore } from '../../stores/useAssistantStore';
 
 /** One place for the step's state: what is done, what blocks the next action, how to clear it, and the one button
  * that does it. Moving between steps is a quiet arrow at each end so the primary action stands alone. */
@@ -50,7 +51,9 @@ export const WizardFooter = () => {
       <p className="mt-2 font-semibold">아직 필요한 것</p><ul className="mt-1 list-disc pl-5">{readiness.missingInputs.length?readiness.missingInputs.map(item=><li key={item}>{item}</li>):<li>안내된 다음 행동의 입력이 준비되었습니다.</li>}</ul>
       {panelErrors.length>0&&<><p className="mt-2 font-semibold text-red-200">패널 오류</p><ul className="mt-1 list-disc pl-5">{panelErrors.map(item=><li key={item.source}><span className="font-semibold">{item.source}</span>: {item.text}</li>)}</ul></>}
       <p className="mt-2 text-slate-400">학습·평가·승인·현장 적용은 각각의 실행 응답으로 확인합니다. 이전 결과와 다른 단계는 계속 볼 수 있습니다.</p>
-      <button className="workspace-button mt-2" onClick={refresh}>현재 입력 다시 확인</button>
+      <div className="mt-2 flex flex-wrap gap-2"><button className="workspace-button" onClick={refresh}>현재 입력 다시 확인</button>
+        {/* 5.3: from any step the assistant answers from this same picture (it is optional; nothing here needs it). */}
+        <button className="workspace-button" onClick={()=>{setExpanded(false);useAssistantStore.getState().open();}}>{ko?'도우미에게 묻기':'Ask the assistant'}</button></div>
     </section>}
     {/* One line at 1280px and wider: the status text truncates (its title holds the full text) so the canvas keeps its height. */}
     <div className="flex items-center gap-2 whitespace-nowrap">
