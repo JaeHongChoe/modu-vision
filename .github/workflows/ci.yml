@@ -202,6 +202,11 @@ jobs:
           backend/tests/test_label_suggestions.py
           backend/tests/test_team_data_api.py
           backend/tests/test_compute_label_review.py
+          backend/tests/test_draft_adoption_stats.py
+          backend/tests/test_auto_selector_origin.py
+          backend/tests/test_class_rename.py
+          backend/tests/test_foundation_labeling_api.py
+          backend/tests/test_label_candidate_api.py
           backend/tests/test_openvino_runtime.py::test_openvino_service_inference_uses_owned_worker_without_a_deadline
           backend/tests/test_runtime_deadline_sdk.py::test_runtime_ignores_unlisted_bytecode_and_preserves_all_package_bytes
           backend/tests/test_runtime_deadline_sdk.py::test_packaged_cpp_native_sdk_embeds_python_and_matches_whole_graph

@@ -1,3 +1,4 @@
+import type { LabelSuggestionStats } from './generated/apiTypes';
 import type {ParentCandidate} from '../types/parentCandidate';
 /**
  * src/renderer/services/api.ts
@@ -169,6 +170,40 @@ export interface ProjectLabelSet {
   created_at: string;
 }
 
+/** Class rename/merge (v1): names only, inside the active label set's Studio overlay files; source files never change. */
+export interface ClassRenameMapping { from: string; to: string }
+export interface ClassRenameConflict {
+  code: 'busy' | 'lease' | 'labelbook' | 'id_collision' | 'spelling' | 'role_change' | 'nothing_to_do' | 'source_only' | string;
+  message: string;
+}
+/** Inspection role of a class name (class_semantics); a rename may not move a class between roles. */
+export type ClassRenameRole = 'normal' | 'defect' | 'unknown';
+export interface ClassRenamePreview {
+  applied: boolean;
+  labelset_id: string;
+  /** source_spellings: every spelling of `from` (case and the like) the rewrite unifies into `to`. */
+  mapping: (ClassRenameMapping & { merge: boolean; source_ids: number[]; target_ids: number[]; existing_spellings: string[];
+    source_spellings: string[]; role_from: ClassRenameRole; role_to: ClassRenameRole })[];
+  overlays: { files: number; shapes: number; shapes_by_type: Record<string, number>; palette_entries: number; images: number; images_with_masks: number };
+  /** Rewritten images go back to review; `approved` is how many approvals that drops. */
+  review: { approved: number };
+  source_only: { images: number; unreadable: number };
+  labelbook: { version: number | null; names_old_class: boolean };
+  drafts: { pending: number; candidates: number };
+  flows: { versions: number; references: number };
+  models: { count: number; job_ids: string[] };
+  truth: { images: number; declarations: number };
+  conflicts: ClassRenameConflict[];
+  /** The apply sends this back; the backend refuses when any overlay changed since the preview. */
+  preview_sha256: string;
+}
+export interface ClassRenameResult extends ClassRenamePreview {
+  backup_version_id: string;
+  actor: string;
+  affected_images: string[];
+  dataset_fingerprint: string;
+}
+
 export interface ProjectBackupResult {
   archive_path: string;
   source_included: boolean;
@@ -305,6 +340,9 @@ export interface LabelSuggestionModel {
   created_at: string | null;
   checkpoint_path: string;
   source_dataset_path: string;
+  /** 'changed': trained before the data changed; it still drafts, but it is never evaluation evidence. */
+  data_state?: 'current' | 'changed';
+  trained_at?: string | null;
 }
 
 export interface OCRLabelRow {
@@ -447,6 +485,12 @@ export interface LabelSuggestion {
   /** The image's ledger identity when the draft was made; adopting under team editing takes its edit lease. */
   image_uuid?: string;
   image_revision?: number;
+  /** Where the draft came from: 'trained_model' (default for older records) or a provider name. */
+  backend?: string;
+  /** 'changed' when the model was trained before the data changed; such drafts are never evaluation evidence. */
+  model_data_state?: 'current' | 'changed';
+  /** The provider's limits as one sentence (every candidate provider stores a string). */
+  support_limits?: string;
   reviewer?: string;
   /** The adopted shapes as the label file held them right after adoption; a take-back compares against these. */
   adopted_annotations?: AnnotationItem[];
@@ -993,6 +1037,8 @@ export const api = {
 
   labelSuggestions: {
     models: () => request<{ models: LabelSuggestionModel[] }>('/api/label-suggestions/models'),
+    /** How each model's drafts fared with people (read-only). */
+    stats: (jobId?: string) => request<LabelSuggestionStats>(`/api/label-suggestions/stats${jobId ? `?job_id=${encodeURIComponent(jobId)}` : ''}`),
     list: (imagePath?: string) => request<{ suggestions: LabelSuggestion[] }>(
       `/api/label-suggestions${imagePath ? `?image_path=${encodeURIComponent(imagePath)}` : ''}`,
     ),

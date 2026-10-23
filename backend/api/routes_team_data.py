@@ -61,13 +61,13 @@ def _identity(request, fallback, roles=None):
     if account is None: return fallback
     project = get_current_project(request); store = request.app.state.accounts
     role = store.project_role(account['id'], project['id'])
-    if roles is not None and role not in roles: raise HTTPException(403, '현재 프로젝트 역할로 이 작업을 수행할 수 없습니다.')
+    if roles is not None and role not in roles: raise HTTPException(403, '현재 프로젝트 역할로 이 작업을 수행할 수 없습니다. 프로젝트 관리자에게 역할 변경을 요청하세요.')
     return account['username']
 
 
 def _error(exc):
     if isinstance(exc, dm.RevisionConflict): return HTTPException(409, {'message': str(exc), 'current': exc.current})
-    if isinstance(exc, KeyError): return HTTPException(404, '현재 프로젝트에서 이미지를 찾지 못했습니다.')
+    if isinstance(exc, KeyError): return HTTPException(404, '현재 프로젝트에서 이미지를 찾지 못했습니다. 이미지 목록을 새로고침한 뒤 다시 고르세요.')
     return HTTPException(422, str(exc))
 
 
@@ -189,7 +189,7 @@ def _quality(call):
     try:
         return call(aq)
     except FileNotFoundError as exc:
-        raise HTTPException(404, 'No such label review profile or report.') from exc
+        raise HTTPException(404, '해당 라벨 검수 프로필이나 보고서가 없습니다. 목록을 새로고침한 뒤 다시 고르세요.') from exc
     except (ValueError, KeyError, TypeError) as exc:
         raise HTTPException(422, str(exc)) from exc
 

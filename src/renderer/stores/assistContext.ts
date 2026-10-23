@@ -7,7 +7,18 @@
 type Listener = () => void;
 
 export type AssistStatus = 'ready' | 'blocked' | 'checking' | 'unknown';
-export interface AssistProgress { confirmed: number; drafts: number; remaining: number }
+/** The step's number line, one shape per step (told apart by `stage`): step 2 confirmed/drafts/remaining, step 3 the
+ * epoch counter and remaining seconds or a finished model, step 4 the evaluation's counts with the accuracy and its 95%
+ * range in whole percents (null without any image to score; dataChanged: counted before the model's data changed;
+ * unconfirmed: the impact report does not back the model or its evaluation as current), step 5 the saved version (reevaluate: its evaluation must be redone), step 6 the inspection counts (failed: images the run could not judge, only when some failed). Mirrors
+ * ReadinessProgress in components/wizard/workflowReadiness.ts (kept here so this module stays dependency-free; the
+ * publish site type-checks the two against each other). */
+export type AssistProgress =
+  | { confirmed: number; drafts: number; remaining: number }
+  | { epoch: number; totalEpochs: number; etaSeconds: number | null; completed: boolean }
+  | { samples: number; escapes: number; overkills: number; accuracy: number | null; low: number | null; high: number | null; dataChanged?: boolean; unconfirmed?: boolean }
+  | { versionId: string; evaluated: boolean; unsaved: boolean; reevaluate?: boolean }
+  | { inspected: number; total: number; ng: number; failed?: number };
 export interface AssistSnapshot {
   scope: string;
   stage: number;

@@ -57,24 +57,24 @@ def _source_path(project: Dict[str, Any], requested: Optional[str] = None) -> Pa
     if requested and Path(requested).expanduser().resolve() != source:
         raise HTTPException(status_code=422, detail="Dataset path does not match the active project's source.")
     if not source.is_dir():
-        raise HTTPException(status_code=404, detail=f"Dataset source is unavailable: {source}")
+        raise HTTPException(status_code=404, detail=f"데이터 폴더를 찾을 수 없습니다: {source}. 폴더를 원래 위치로 되돌리거나 1단계에서 다시 연결하세요.")
     return source
 
 
 def _versions_root(project: Dict[str, Any]) -> Path:
     root = Path(project["project_dir"]) / "versions"
     if root.is_symlink():
-        raise HTTPException(status_code=422, detail="Version directory cannot be a symbolic link.")
+        raise HTTPException(status_code=422, detail="버전 폴더가 바로가기(링크)로 되어 있어 쓸 수 없습니다. 프로젝트 폴더의 versions를 실제 폴더로 바꾸세요.")
     root.mkdir(parents=True, exist_ok=True)
     return root
 
 
 def _version_path(project: Dict[str, Any], version_id: str) -> Path:
     if not _VERSION_ID.fullmatch(version_id):
-        raise HTTPException(status_code=422, detail="Invalid dataset version ID.")
+        raise HTTPException(status_code=422, detail="버전 ID 형식이 올바르지 않습니다. 버전 목록에서 다시 고르세요.")
     path = _versions_root(project) / version_id
     if path.is_symlink() or not path.is_dir():
-        raise HTTPException(status_code=404, detail=f"Dataset version not found: {version_id}")
+        raise HTTPException(status_code=404, detail=f"버전을 찾을 수 없습니다: {version_id}. 버전 목록을 새로고침한 뒤 다시 고르세요.")
     return path
 
 
@@ -121,7 +121,7 @@ def _hash_and_optional_copy(path: Path, destination: Optional[Path]) -> tuple[st
                     output.write(block)
     after = path.stat()
     if before.st_size != after.st_size or before.st_mtime_ns != after.st_mtime_ns:
-        raise HTTPException(status_code=409, detail=f"Dataset file changed during snapshot: {path}")
+        raise HTTPException(status_code=409, detail=f"버전을 만드는 동안 파일이 바뀌었습니다: {path}. 파일 변경이 끝난 뒤 버전 만들기를 다시 누르세요.")
     return digest.hexdigest(), after.st_size
 
 
@@ -164,7 +164,7 @@ def _snapshot(project: Dict[str, Any], source: Path, name: str, note: str, kind:
         nonlocal total_image_bytes, copied_label_bytes, image_count, label_count
         label = kind_ == "label"
         if label and copied_label_bytes + path.stat().st_size > _MAX_LABEL_COPY_BYTES:
-            raise HTTPException(status_code=413, detail="Label files exceed the 128 MB snapshot copy limit. No images were copied.")
+            raise HTTPException(status_code=413, detail="라벨 파일 용량이 버전 복사 한도(128 MB)를 넘어 버전을 만들지 않았습니다. 라벨 폴더를 정리한 뒤 버전을 다시 만드세요.")
         backup = f"labels/{origin}/{relative.as_posix()}" if label else None
         sha256, size = _hash_and_optional_copy(path, staging / backup if backup else None)
         rows.append({
@@ -229,13 +229,13 @@ def _read_manifest(project: Dict[str, Any], version_id: str) -> tuple[Path, Dict
         if not isinstance(manifest.get("files"), list):
             raise ValueError("missing file inventory")
     except (OSError, ValueError, TypeError, KeyError) as exc:
-        raise HTTPException(status_code=422, detail=f"Corrupt dataset version {version_id}: {exc}") from exc
+        raise HTTPException(status_code=422, detail=f"버전 {version_id}의 기록이 손상되었습니다 ({exc}). 다른 버전을 고르거나 새 버전을 만드세요.") from exc
     return path, manifest
 
 
 def _require_active_labelset(project: Dict[str, Any], manifest: Dict[str, Any]) -> None:
     if manifest.get("labelset_id", "default") != project.get("active_labelset_id", "default"):
-        raise HTTPException(status_code=409, detail="Dataset version belongs to another label set. Activate that label set first.")
+        raise HTTPException(status_code=409, detail="이 버전은 다른 라벨 세트의 것입니다. 그 라벨 세트를 먼저 활성화한 뒤 복원하세요.")
 
 
 def _file_hash(path: Path, *, allow_symlink: bool = False) -> Optional[str]:
@@ -252,20 +252,20 @@ def _file_hash(path: Path, *, allow_symlink: bool = False) -> Optional[str]:
 def _safe_backup_path(version_dir: Path, row: Dict[str, Any]) -> Path:
     raw = row.get("snapshot_path")
     if not isinstance(raw, str) or not raw.startswith("labels/"):
-        raise HTTPException(status_code=422, detail="Version label backup path is invalid.")
+        raise HTTPException(status_code=422, detail="버전의 라벨 보관 경로가 올바르지 않습니다. 다른 버전을 고르거나 새 버전을 만드세요.")
     path = version_dir / raw
     if path.is_symlink() or not path.resolve().is_relative_to(version_dir.resolve()):
-        raise HTTPException(status_code=422, detail="Version label backup escaped its directory.")
+        raise HTTPException(status_code=422, detail="버전의 라벨 보관 파일이 버전 폴더 밖을 가리킵니다. 다른 버전을 고르거나 새 버전을 만드세요.")
     return path
 
 
 def _relative_path(row: Dict[str, Any]) -> Path:
     raw = row.get("relative_path")
     if not isinstance(raw, str) or not raw or "\\" in raw:
-        raise HTTPException(status_code=422, detail="Version contains an invalid relative path.")
+        raise HTTPException(status_code=422, detail="버전 기록에 올바르지 않은 상대 경로가 있습니다. 다른 버전을 고르거나 새 버전을 만드세요.")
     relative = Path(raw)
     if relative.is_absolute() or any(part in {".", ".."} for part in relative.parts):
-        raise HTTPException(status_code=422, detail="Version path leaves its label directory.")
+        raise HTTPException(status_code=422, detail="버전 기록의 라벨 경로가 라벨 폴더 밖을 가리킵니다. 다른 버전을 고르거나 새 버전을 만드세요.")
     return relative
 
 
@@ -273,7 +273,7 @@ def _relative_path(row: Dict[str, Any]) -> Path:
 def _verify(project: Dict[str, Any], version_dir: Path, manifest: Dict[str, Any]) -> Dict[str, Any]:
     source = _source_path(project)
     if str(source) != manifest["source_dataset_dir"]:
-        raise HTTPException(status_code=409, detail="The active project points to a different dataset source.")
+        raise HTTPException(status_code=409, detail="열린 프로젝트의 데이터 원본이 이 버전과 다릅니다. 버전을 만든 데이터 폴더를 다시 연결한 뒤 확인하세요.")
     studio = dataset_annotation_dir(source, routes_dataset.STUDIO_ANNOTATIONS_DIR)
     split = routes_dataset._split_manifest_file(source)
     changed: List[str] = []
@@ -281,7 +281,7 @@ def _verify(project: Dict[str, Any], version_dir: Path, manifest: Dict[str, Any]
     for row in manifest["files"]:
         origin = row["origin"]
         if origin not in {"source", "studio", "studio_scoped", "split"}:
-            raise HTTPException(status_code=422, detail="Version contains an invalid file origin.")
+            raise HTTPException(status_code=422, detail="버전 기록에 알 수 없는 파일 출처가 있습니다. 다른 버전을 고르거나 새 버전을 만드세요.")
         relative = _relative_path(row)
         if origin == "source":
             source_file = source / relative
@@ -352,15 +352,15 @@ def _restore_labels(project: Dict[str, Any], version_dir: Path, manifest: Dict[s
                 relative = _relative_path(row)
                 destination = stage_studio / source_studio.name / relative if row["origin"] == "studio" else stage_studio / relative
                 if not destination.resolve().is_relative_to(stage_studio.resolve()):
-                    raise HTTPException(status_code=422, detail="Invalid Studio label path in version.")
+                    raise HTTPException(status_code=422, detail="버전 기록의 Studio 라벨 경로가 올바르지 않습니다. 다른 버전을 고르거나 새 버전을 만드세요.")
                 destination.parent.mkdir(parents=True, exist_ok=True)
                 shutil.copyfile(_safe_backup_path(version_dir, row), destination)
                 if _file_hash(destination) != row["sha256"]:
-                    raise HTTPException(status_code=409, detail=f"Version label changed during restore: {row['relative_path']}")
+                    raise HTTPException(status_code=409, detail=f"복원하는 동안 버전 라벨이 바뀌었습니다: {row['relative_path']}. 버전 검증을 다시 한 뒤 복원하세요.")
             elif row["origin"] == "split":
                 shutil.copyfile(_safe_backup_path(version_dir, row), stage_split)
                 if _file_hash(stage_split) != row["sha256"]:
-                    raise HTTPException(status_code=409, detail="Saved split changed during restore.")
+                    raise HTTPException(status_code=409, detail="복원하는 동안 저장된 분할이 바뀌었습니다. 버전 검증을 다시 한 뒤 복원하세요.")
                 has_split_snapshot = True
 
         # Restore metadata values but keep newer audit entries and monotonic revisions.
@@ -430,11 +430,11 @@ def _restore_labels(project: Dict[str, Any], version_dir: Path, manifest: Dict[s
                     except OSError:
                         shutil.copyfile(backup_split, split)
             except (OSError, shutil.Error) as rollback_exc:
-                raise HTTPException(status_code=500, detail=f"Restore failed; rollback files retained at {backup_studio} and {backup_split}: {rollback_exc}") from exc
+                raise HTTPException(status_code=500, detail=f"복원에 실패했고 되돌리기도 실패했습니다 ({rollback_exc}). 보관된 {backup_studio}와 {backup_split}에서 라벨을 손으로 복구하세요.") from exc
             if backup_studio.exists():
                 shutil.rmtree(backup_studio)
             backup_split.unlink(missing_ok=True)
-            raise HTTPException(status_code=500, detail=f"Restore failed; previous editable labels were recovered: {exc}") from exc
+            raise HTTPException(status_code=500, detail=f"복원에 실패해 이전 라벨을 되돌렸습니다 ({exc}). 버전 검증을 다시 한 뒤 복원하세요.") from exc
 
         if backup_studio.exists():
             shutil.rmtree(backup_studio)
@@ -509,13 +509,13 @@ def restore_version(version_id: str, request: Request):
 
         active = training_job_manager.get_active_job()
         if active is not None:
-            raise HTTPException(status_code=409, detail="A training job is active. Finish or stop it before restoring labels.")
+            raise HTTPException(status_code=409, detail="학습이 진행 중입니다. 학습이 끝나거나 중지한 뒤 라벨을 복원하세요.")
         path, manifest = _read_manifest(project, version_id)
         _require_active_labelset(project, manifest)
         verification = _verify(project, path, manifest)
         if verification["status"] != "verified":
             raise HTTPException(status_code=409, detail={
-                "message": "Source files or saved labels changed; restoration was not started.",
+                "message": "원본 파일이나 저장된 라벨이 버전과 달라 복원을 시작하지 않았습니다. 버전 검증에서 바뀐 파일을 확인한 뒤 다시 복원하세요.",
                 "changed_files": verification["changed_files"],
             })
         source = _source_path(project)

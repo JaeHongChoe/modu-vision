@@ -89,7 +89,10 @@ export const TrainingController: React.FC = () => {
     if (statisticalRefit) Object.assign(modelOptions, manualTrainingRecipe('', manualImageSize));
     if (syntheticAnomaly) Object.assign(modelOptions, manualTrainingRecipe(manualEpochs, '')); }
   catch (error) { modelOptionsError = error instanceof Error ? error.message : String(error); }
-  const modelOptionsKey = JSON.stringify(modelOptions);
+  // The parent list is read again only when a field it is filtered by changes (the ones api.training.warmStartParents
+  // sends). Epochs or image size never change which parents fit, and '빠른 이어 학습' sets the epochs together with the
+  // parent it picked, which a re-read would clear.
+  const parentQueryKey = JSON.stringify(['backbone', 'model_name', 'anomaly_method', 'anomaly_backbone', 'patch_size', 'stride'].map(name => modelOptions[name] ?? null));
   const { folderPath, totalImages, split, isLoading, isSplitting, importError, splitError,
     splitSupported, splitUnavailableReason, datasetKey, splitState, classes: datasetClasses, classSplitCounts } = useDatasetStore();
   // Classes with images: one class trains a model that can only answer that class (F-03), so the start waits.
@@ -206,7 +209,7 @@ export const TrainingController: React.FC = () => {
       if (valid) setWarmParentsError(error instanceof Error ? error.message : String(error));
     });
     return () => { valid = false; };
-  }, [sourceReady, folderPath, task, preset, selectedProfileId, warmStartSupported, projectDir, project?.active_labelset_id, selectedBackbone, completedJobId, modelOptionsKey, modelOptionsError]);
+  }, [sourceReady, folderPath, task, preset, selectedProfileId, warmStartSupported, projectDir, project?.active_labelset_id, selectedBackbone, completedJobId, parentQueryKey, modelOptionsError]);
 
   useEffect(() => {
     void recoverActiveJob(sourceReady && !isLoading && !importError && project && projectDir ? {
@@ -421,6 +424,16 @@ export const TrainingController: React.FC = () => {
           isTraining={isTraining}
           language={language}
         />
+        {/* The short loop after adopting drafts: a few epochs from the newest completed model instead of a fresh run.
+            Renderer-only — it fills the warm-start parent and the epoch count the start request already carries. */}
+        {warmParents.length > 0 && !resumeState && task !== 'anomaly' && !isTraining && (
+          <div className="flex flex-wrap items-center gap-2 rounded border border-[#2B3547] bg-[#111C2A] px-3 py-2 text-xs text-slate-200">
+            <button type="button" aria-label="빠른 이어 학습" onClick={() => { const parent = warmParents.find(p => p.job_id === completedJobId) ?? warmParents[warmParents.length - 1]; setWarmParentId(parent.job_id); setManualEpochs('5'); }}
+              className="workspace-button">빠른 이어 학습</button>
+            <span className="min-w-0 text-slate-400">직전 완료 모델에서 5회만 이어 학습합니다(초안을 채택한 뒤 모델을 빨리 맞출 때). 결과는 새 후보 모델로 저장됩니다.</span>
+            {warmParentId && manualEpochs === '5' && <span className="text-cyan-200">시작 모델 …{warmParentId.slice(-8)} · 학습 횟수 5 · 아래 '학습 시작'을 누르세요.</span>}
+          </div>
+        )}
 
         {/* The simple view keeps the model structure, resume, warm start and scheduling behind one line, so the start
             button follows the recipe choice; 모두 보기 shows them as before. */}

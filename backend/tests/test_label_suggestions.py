@@ -407,19 +407,77 @@ def test_bulk_cancel_finishes_current_image_and_skips_remaining(suggestion_works
     assert observed == [first]
 
 
-def test_changed_training_fingerprint_blocks_new_single_and_bulk_proposals(suggestion_workspace):
+def test_a_model_trained_before_the_data_changed_still_drafts_and_says_so(suggestion_workspace):
+    """2026-10-22 decision: drafting is not evidence, so a same-source model keeps drafting after the data changed; the
+    model and its drafts carry data_state 'changed', and the adoption checks stay as they were."""
     client, _, _, image, labelme, studio, _ = suggestion_workspace
+    assert [(m["job_id"], m["data_state"]) for m in client.get("/api/label-suggestions/models").json()["models"]] == [("job_12345_test", "current")]
     labelme.write_text(labelme.read_text() + " ")
-    assert client.get("/api/label-suggestions/models").json()["models"] == []
-    single = client.post("/api/label-suggestions/generate", json={
-        "job_id": "job_12345_test", "image_path": str(image),
+    models = client.get("/api/label-suggestions/models").json()["models"]
+    assert [(m["job_id"], m["data_state"]) for m in models] == [("job_12345_test", "changed")]
+    single = client.post("/api/label-suggestions/generate", json={"job_id": "job_12345_test", "image_path": str(image)})
+    assert single.status_code == 200, single.text
+    assert single.json()["model_data_state"] == "changed" and single.json()["status"] == "pending"
+    bulk = client.post("/api/label-suggestions/batches", json={"job_id": "job_12345_test", "image_paths": [str(image)]})
+    assert bulk.status_code == 200, bulk.text
+    assert bulk.json()["model_data_state"] == "changed"
+    _wait_for_batch(client, bulk.json()["id"])
+    assert not list(studio.glob("*.json"))  # drafts never write labels
+    # Adoption still compares the data at review time with the draft's record: nothing changed since, so it adopts.
+    proposal = single.json()
+    reviewed = client.post(f"/api/label-suggestions/{proposal['id']}/review", json={"decision": "accept", "candidate_ids": [proposal["candidates"][0]["id"]]})
+    assert reviewed.status_code == 200, reviewed.text
+    assert reviewed.json()["backup_version_id"].startswith("v_")
+
+
+@pytest.mark.parametrize("model_state", ["current", "changed"])
+def test_a_label_save_during_a_batch_stops_it_before_more_inference(suggestion_workspace, monkeypatch, model_state):
+    """The 2026-10-22 decision lets a model trained before the data changed start a batch; it does not let a batch go on
+    drafting after the data changed under it. Saving labels by hand is not blocked while a batch runs, and every batch
+    draft is reviewed against the batch's start-time fingerprint, so the batch stops instead of making drafts nobody
+    can adopt (whose start-time model_data_state would no longer be true either)."""
+    from backend.api import routes_label_suggestions
+
+    client, project, source, first, _, _, _ = suggestion_workspace
+    client.app.include_router(routes_annotation.router)
+    second = source / "second.png"
+    third = source / "third.png"
+    Image.new("RGB", (64, 48), "white").save(second)
+    Image.new("RGB", (64, 48), "white").save(third)
+    if model_state == "current":
+        _refresh_receipt_fingerprint(project, source)
+    entered = threading.Event()
+    release = threading.Event()
+    observed: list[Path] = []
+
+    def blocking_infer(task, model_path, image_input, threshold=0.5, device=None):
+        observed.append(Path(image_input))
+        entered.set()
+        assert release.wait(3)
+        return SimpleNamespace(predictions=[{"bbox": [1, 1, 5, 5], "score": 0.9, "label": "defect"}],
+                               confidence_score=0.9, latency_ms=1.0)
+
+    monkeypatch.setattr(routes_label_suggestions, "infer", blocking_infer)
+    started = client.post("/api/label-suggestions/batches", json={
+        "job_id": "job_12345_test", "image_paths": [str(second), str(third), str(first)],
     })
-    bulk = client.post("/api/label-suggestions/batches", json={
-        "job_id": "job_12345_test", "image_paths": [str(image)],
-    })
-    assert single.status_code == 409, single.text
-    assert bulk.status_code == 409, bulk.text
-    assert not list(studio.glob("*.json"))  # Identity ledger can exist without editable labels.
+    assert started.status_code == 200, started.text
+    assert started.json()["model_data_state"] == model_state
+    assert entered.wait(2)
+    # A person saves a label on another image while the first image is being drafted.
+    current = client.get(f"/api/annotations/{first.stem}", params={"file_path": str(first)}).json()
+    saved = client.post("/api/annotations/save", json={
+        "image_id": first.stem, "image_path": str(first), "image_width": 64, "image_height": 48,
+        "annotations": [*current["annotations"], {"id": "person-shape", "type": "bbox", "label": "scratch", "bbox": [40, 30, 50, 40]}],
+        "expected_revision": current["metadata"]["revision"], "actor": "person-b"})
+    assert saved.status_code == 200, saved.text
+    release.set()
+    batch = _wait_for_batch(client, started.json()["id"])
+    assert batch["status"] == "failed"
+    assert "labels or split" in batch["error"]
+    assert [entry["status"] for entry in batch["entries"]] == ["failed", "failed", "queued"]
+    assert observed == [second], "no image is drafted after the save"
+    assert client.get("/api/label-suggestions").json()["suggestions"] == []
 
 
 def test_pending_batch_proposals_remain_reviewable_after_first_accept(suggestion_workspace, monkeypatch):

@@ -94,12 +94,13 @@ export interface AnnotationItem {
   is_normal?: boolean;
   color?: string;
   text?: string; // Preserve transcription attached to a transformed region.
-  /** Set when a person adopted this shape from a machine draft; shapes a person drew have none. */
+  /** Set when a machine chose this shape's outline (a draft a person adopted, or the auto selector's answer to a
+   *  click); shapes a person drew have none. */
   origin?: AnnotationOrigin;
 }
 
 /** Which draft, model and review an adopted shape came from (kept on later saves so the adoption can be taken back). */
-export interface AnnotationOrigin {
+export interface ModelDraftOrigin {
   kind: 'model_draft';
   proposal_id: string;
   candidate_id: string;
@@ -110,6 +111,21 @@ export interface AnnotationOrigin {
   adopted_at: string;
   backup_version_id?: string | null;
 }
+
+/** How the auto selector (OpenCV flood fill) outlined a shape for a click. It is a drawing aid, not a draft (docs
+ *  §3.3): the person saves the shape like a drawn one, and this only records how the outline was made. `fallback`
+ *  marks the small box the selector puts around the click when it finds no region. */
+export interface AutoSelectorOrigin {
+  kind: 'auto_selector';
+  backend: string;
+  seed_point?: [number, number];
+  box?: [number, number, number, number];
+  tolerance?: number;
+  fallback: boolean;
+  created_at: string;
+}
+
+export type AnnotationOrigin = ModelDraftOrigin | AutoSelectorOrigin;
 
 export interface AnnotationSavePayload {
   image_id: string;

@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import math
 import os
 import re
 import threading
@@ -306,17 +307,22 @@ def _candidate_annotations(task: str, predictions: Any, score: float, suggestion
     ]
 
 
+def _model_data_state(project: Dict[str, Any], model: Dict[str, Any]) -> str:
+    """'current' when the model's receipt fingerprint equals this project's data now, else 'changed'."""
+    from backend.api.routes_evaluation import _matches_source_dataset
+
+    return "current" if _matches_source_dataset(Path(model["checkpoint_path"]).parent, str(_source_path(project)), project["task"]) else "changed"
+
+
 def _verified_model(project: Dict[str, Any], job_id: str) -> Dict[str, Any]:
-    """Require a completed model trained on this unchanged source/label set."""
+    """Require a completed model of this task trained on this source.
+
+    A model trained before the data changed may still draft (2026-10-22 decision): drafting is not evidence, and the
+    review checks every draft against the data at adoption time. The row says which it is (data_state)."""
     model = next((item for item in _model_catalog(project) if item["job_id"] == job_id), None)
     if model is None:
         raise HTTPException(status_code=404, detail="No completed model matches this project's task and dataset.")
-    from backend.api.routes_evaluation import _matches_source_dataset
-
-    if not _matches_source_dataset(Path(model["checkpoint_path"]).parent,
-                                   str(_source_path(project)), project["task"]):
-        raise HTTPException(status_code=409, detail="The model's training dataset fingerprint no longer matches this project's labels or split.")
-    return model
+    return {**model, "data_state": _model_data_state(project, model)}
 
 
 def _project_binding_is_current(project: Dict[str, Any]) -> bool:
@@ -370,10 +376,6 @@ def _generate_proposal(project: Dict[str, Any], image: Path, model: Dict[str, An
         raise HTTPException(status_code=409, detail="Project identity, task, or source changed during inference.")
     if _dataset_fingerprint(project) != before_dataset:
         raise HTTPException(status_code=409, detail="Training dataset fingerprint changed during inference.")
-    from backend.api.routes_evaluation import _matches_source_dataset
-
-    if not _matches_source_dataset(checkpoint.parent, str(_source_path(project)), project["task"]):
-        raise HTTPException(status_code=409, detail="Training dataset fingerprint no longer matches this model.")
     suggestion_id = f"suggestion_{uuid.uuid4().hex[:24]}"
     proposal = {
         "id": suggestion_id, "project_id": project["id"], "status": "pending",
@@ -384,6 +386,7 @@ def _generate_proposal(project: Dict[str, Any], image: Path, model: Dict[str, An
         "studio_sha256": before_studio,
         "job_id": model["job_id"], "task": project["task"], "checkpoint_sha256": before_checkpoint,
         "dataset_fingerprint": before_dataset,
+        "model_data_state": model.get("data_state") or _model_data_state(project, model),
         "threshold": threshold, "confidence": round(float(result.confidence_score), 4),
         "latency_ms": round(float(result.latency_ms), 2),
         "candidates": _candidate_annotations(project["task"], result.predictions,
@@ -405,14 +408,26 @@ def _generate_proposal(project: Dict[str, Any], image: Path, model: Dict[str, An
 
 @router.get("/models")
 def list_suggestion_models(request: Request):
-    project = get_current_project(request)
-    from backend.api.routes_evaluation import _matches_source_dataset
+    """Completed models of this task trained on this source, current-data ones first.
 
-    source = str(_source_path(project))
-    return {"models": [
-        model for model in _model_catalog(project)
-        if _matches_source_dataset(Path(model["checkpoint_path"]).parent, source, project["task"])
-    ]}
+    A model whose training data changed since (data_state 'changed') can still draft; it is never evaluation
+    evidence, and the screen says so next to it."""
+    project = get_current_project(request)
+    rows = [{**model, "data_state": _model_data_state(project, model), "trained_at": model.get("created_at")}
+            for model in _model_catalog(project)]
+    rows.sort(key=lambda row: (row["data_state"] != "current", -(_sortable_time(row.get("trained_at")))))
+    return {"models": rows}
+
+
+def _sortable_time(value: Any) -> float:
+    if isinstance(value, (int, float)):
+        return float(value)
+    if isinstance(value, str):
+        try:
+            return time.mktime(time.strptime(value[:19], "%Y-%m-%dT%H:%M:%S"))
+        except ValueError:
+            return 0.0
+    return 0.0
 
 
 @router.post("/generate")
@@ -437,6 +452,7 @@ def list_suggestions(request: Request, image_path: Optional[str] = None):
             image = item.get("image_path")
             if (item.get("task") == project["task"] and isinstance(image, str)
                     and Path(image).is_relative_to(source) and (selected is None or image == selected)):
+                item.setdefault("backend", "trained_model")
                 results.append(item)
         except HTTPException:
             continue
@@ -557,15 +573,17 @@ def _run_batch(project: Dict[str, Any], model: Dict[str, Any], live: _LiveBatch)
     batch = live.batch
     checkpoint = Path(model["checkpoint_path"])
     try:
-        from backend.api.routes_evaluation import _matches_source_dataset
-
         for entry in batch["entries"]:
             if live.cancel.is_set():
                 break
-            if (not _project_binding_is_current(project) or _sha256(checkpoint) != batch["checkpoint_sha256"] or
-                    not _matches_source_dataset(checkpoint.parent, batch["source_dataset_dir"], batch["task"])):
+            # A model trained before the data changed may start a batch (its drafts say so), but the data must not
+            # change under a running batch: every draft is reviewed against the batch's start-time fingerprint, so
+            # drafts made after a label or split save could never be adopted, and the start-time model_data_state
+            # would no longer describe them.
+            if (not _project_binding_is_current(project) or _sha256(checkpoint) != batch["checkpoint_sha256"]
+                    or _dataset_fingerprint(project) != batch["review_fingerprint"]):
                 with _BATCH_LOCK:
-                    entry.update(status="failed", error="The project identity, task, source, checkpoint, or training dataset fingerprint changed during this batch.")
+                    entry.update(status="failed", error="The project identity, task, source, or checkpoint, or the labels or split, changed during this batch.")
                     batch["processed"] += 1
                     batch["failed"] += 1
                     batch["status"] = "failed"
@@ -626,6 +644,7 @@ def start_batch(req: BatchGenerateRequest, request: Request):
         "job_id": req.job_id, "task": project["task"], "threshold": req.threshold, "keywords": req.keywords,
         'device':req.device,'size_bounds':{k:getattr(req,k) for k in ('min_area','max_area','min_width','max_width','min_height','max_height')},
         "review_fingerprint": _dataset_fingerprint(project),
+        "model_data_state": model.get("data_state", "current"),
         "checkpoint_sha256": checkpoint_sha256, "status": "running",
         "created_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
         "finished_at": None, "total": len(images), "processed": 0,
@@ -682,6 +701,180 @@ def cancel_batch(batch_id: str, request: Request):
             _persist_batch(project, live.batch)
             return live.batch
         return batch
+
+
+def changed_adopted_ids(adopted: List[Dict[str, Any]], current: List[Any]) -> List[str]:
+    """The adopted shapes that no longer match the label file (edited or removed): whole-shape equality by id.
+
+    The take-back and the adoption statistics share this rule, so "edited after adoption" means the same thing in
+    both places."""
+    by_id = {item["id"]: item for item in current if isinstance(item, dict) and isinstance(item.get("id"), str)}
+    return sorted(item["id"] for item in adopted if by_id.get(item["id"]) != item)
+
+
+class LabelSuggestionThresholdAdvice(BaseModel):
+    reason: Literal["too_few", "already_high", "none_reaches", "task_not_applicable", "suggestion"]
+    reviewed_candidates: int
+    adopted_rate: Optional[float] = None
+    threshold: Optional[float] = None
+    adopted_rate_above: Optional[float] = None
+    candidates_above: Optional[int] = None
+
+
+class LabelSuggestionModelStats(BaseModel):
+    job_id: str
+    backend: str
+    drafts: int
+    pending: int
+    adopted: int
+    rejected: int
+    reverted: int
+    edited_after: int
+    edited_unknown: int
+    reviewed_candidates: int
+    adopted_candidates: int
+    rejected_candidates: int
+    mean_confidence_adopted: Optional[float] = None
+    mean_confidence_rejected: Optional[float] = None
+    advice: LabelSuggestionThresholdAdvice
+
+
+class LabelSuggestionStats(BaseModel):
+    models: List[LabelSuggestionModelStats]
+    generated_at: str
+
+
+# The slider's grid in step 2 (0.05 … 0.95).
+_THRESHOLD_GRID = [round(0.05 * step, 2) for step in range(1, 20)]
+
+
+def threshold_advice(task: str, reviewed: List[tuple], backend: str = "trained_model") -> Dict[str, Any]:
+    """A confidence threshold a person can trust, from candidates a person already judged.
+
+    ``reviewed`` holds (confidence, adopted) per candidate of accepted or rejected drafts. Honest with small samples:
+    nothing is suggested under 20 reviewed candidates, and a cut needs at least 10 candidates above it with 90% or
+    more adopted. Classification and anomaly drafts carry one candidate whose score is a class probability or an
+    anomaly score, so no cut is suggested for them. The cut is for the trained model's slider in step 2; other draft
+    sources (template match, grounding, VLM, foundation) score on their own scales, so none is suggested for them."""
+    count = len(reviewed)
+    if task not in ("detection", "segmentation") or backend != "trained_model":
+        return {"reason": "task_not_applicable", "reviewed_candidates": count}
+    if count < 20:
+        return {"reason": "too_few", "reviewed_candidates": count}
+    adopted_rate = sum(1 for _, adopted in reviewed if adopted) / count
+    if adopted_rate >= 0.9:
+        return {"reason": "already_high", "reviewed_candidates": count, "adopted_rate": round(adopted_rate, 3)}
+    for cut in _THRESHOLD_GRID:
+        above = [adopted for confidence, adopted in reviewed if confidence >= cut]
+        if len(above) >= 10 and sum(above) / len(above) >= 0.9:
+            return {"reason": "suggestion", "reviewed_candidates": count, "adopted_rate": round(adopted_rate, 3),
+                    "threshold": cut, "adopted_rate_above": round(sum(above) / len(above), 3), "candidates_above": len(above)}
+    return {"reason": "none_reaches", "reviewed_candidates": count, "adopted_rate": round(adopted_rate, 3)}
+
+
+def _candidate_confidence(value: Any) -> Optional[float]:
+    """A candidate's confidence as a finite number, or None when the draft file holds anything else."""
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        return None
+    number = float(value)
+    return number if math.isfinite(number) else None
+
+
+def _mean_confidence(values: List[float]) -> Optional[float]:
+    mean = sum(values) / len(values) if values else None
+    return round(mean, 4) if mean is not None and math.isfinite(mean) else None
+
+
+@router.get("/stats", response_model=LabelSuggestionStats)
+def suggestion_stats(request: Request, job_id: Optional[str] = None):
+    """Per model (or draft source): how its drafts fared with people. Read-only: it writes no label, ledger or
+    proposal byte (nor the suggestion folder), so a person can look at it as often as they like.
+
+    A summary, not a gate: a draft file it cannot read is left out on its own, and an adoption whose image or labels
+    can no longer be read (moved out of the source, say) counts as 'edited_unknown'."""
+    project = get_current_project(request)
+    source = _source_path(project)
+    groups: Dict[tuple, Dict[str, Any]] = {}
+    labels_cache: Dict[str, Optional[List[Any]]] = {}
+
+    def current_labels(image: Path) -> Optional[List[Any]]:
+        key = str(image)
+        if key not in labels_cache:
+            try:
+                saved = routes_annotation._get_annotations_impl(image.stem, None, key)
+            except HTTPException:
+                saved = None
+            rows = saved.get("annotations") if isinstance(saved, dict) else None
+            labels_cache[key] = rows if isinstance(rows, list) else None
+        return labels_cache[key]
+
+    folder = Path(project["project_dir"]) / "label_suggestions"
+    # _proposal_root refuses a symlinked folder; a missing one means no drafts yet and is not created by a read.
+    paths = sorted(_proposal_root(project).glob("suggestion_*.json")) if folder.is_dir() or folder.is_symlink() else []
+    for path in paths:
+        if not _SUGGESTION_ID.fullmatch(path.stem):
+            continue
+        try:
+            item = _read_proposal(project, path.stem)
+        except HTTPException:
+            continue
+        image_path = item.get("image_path")
+        if item.get("task") != project["task"] or not isinstance(image_path, str) or not Path(image_path).is_relative_to(source):
+            continue
+        if job_id and item.get("job_id") != job_id:
+            continue
+        # Work out this draft's share before any counter moves, so a malformed file leaves out only itself.
+        backend, draft_job = item.get("backend") or "trained_model", item.get("job_id") or ""
+        candidates, chosen_ids = item.get("candidates", []), item.get("accepted_candidate_ids") or []
+        if not all(isinstance(value, str) for value in (backend, draft_job)) or not all(
+                isinstance(value, list) for value in (candidates, chosen_ids)):
+            continue
+        status = item.get("status")
+        chosen = {value for value in chosen_ids if isinstance(value, str)}
+        judged = []  # (adopted, confidence or None) per candidate a person judged
+        if status in ("accepted", "rejected"):
+            for row in candidates:
+                if isinstance(row, dict):
+                    candidate_id = row.get("id")
+                    adopted = status == "accepted" and isinstance(candidate_id, str) and candidate_id in chosen
+                    judged.append((adopted, _candidate_confidence(row.get("confidence"))))
+        edited = None
+        if status == "accepted":
+            adopted_rows = item.get("adopted_annotations")
+            current = None  # stays None when the adoption record or the image's labels cannot be read
+            if isinstance(adopted_rows, list) and adopted_rows and all(
+                    isinstance(row, dict) and isinstance(row.get("id"), str) for row in adopted_rows):
+                try:
+                    current = current_labels(_image_path(project, image_path))
+                except HTTPException:
+                    pass  # the image left the source (moved or removed): whether its shapes were edited is unknown
+            if current is None:
+                edited = "edited_unknown"
+            elif changed_adopted_ids(adopted_rows, current):
+                edited = "edited_after"
+        group = groups.setdefault((backend, draft_job), {
+            "job_id": draft_job, "backend": backend, "drafts": 0, "pending": 0, "adopted": 0, "rejected": 0,
+            "reverted": 0, "edited_after": 0, "edited_unknown": 0, "reviewed": [], "adopted_candidates": 0, "rejected_candidates": 0})
+        group["drafts"] += 1
+        if status in ("pending", "rejected", "reverted"):
+            group[status] += 1
+        elif status == "accepted":
+            group["adopted"] += 1
+        for adopted, confidence in judged:
+            group["adopted_candidates" if adopted else "rejected_candidates"] += 1
+            if confidence is not None:
+                group["reviewed"].append((confidence, adopted))
+        if edited:
+            group[edited] += 1
+    models = []
+    for group in groups.values():
+        reviewed = group.pop("reviewed")
+        models.append({**group, "reviewed_candidates": len(reviewed),
+                       "mean_confidence_adopted": _mean_confidence([confidence for confidence, adopted in reviewed if adopted]),
+                       "mean_confidence_rejected": _mean_confidence([confidence for confidence, adopted in reviewed if not adopted]),
+                       "advice": threshold_advice(project["task"], reviewed, group["backend"])})
+    models.sort(key=lambda row: (-row["drafts"], row["job_id"]))
+    return {"models": models, "generated_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())}
 
 
 @router.get("/{suggestion_id}")
@@ -873,8 +1066,7 @@ def undo_adoption(suggestion_id: str, req: UndoRequest, request: Request):
         current = routes_annotation.get_annotations(image.stem, file_path=str(image)).get("annotations", [])
         if not isinstance(current, list):
             raise HTTPException(status_code=422, detail="Existing annotation file is invalid.")
-        by_id = {item.get("id"): item for item in current if isinstance(item, dict)}
-        changed = sorted(item["id"] for item in adopted if by_id.get(item["id"]) != item)
+        changed = changed_adopted_ids(adopted, current)
         if changed:
             raise HTTPException(status_code=409, detail={
                 "message": "채택한 도형이 그 뒤 바뀌어 이 채택만 되돌릴 수 없습니다. 채택 전에 남긴 데이터 버전으로 복원하세요.",

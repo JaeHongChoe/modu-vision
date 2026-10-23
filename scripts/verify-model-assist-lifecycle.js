@@ -20,9 +20,10 @@ function mount() {
   const annotation = { currentImage: image, isDirty: false, annotationLoadStatus: 'ready', reviewerName: 'Reviewer', setReviewerName() {}, loadAnnotationsForCurrent: async () => {} };
   const dataset = { images: [image], hasSelectedFolder: true, annotationsChanged: async () => { annotation.currentImage = { ...annotation.currentImage }; } };
   let operations = 0, generations = 0;
+  const openRequests = [];
   const pending = { id: 'proposal', image_path: image.file_path, image_id: 'same', created_at: new Date().toISOString(), status: 'pending', accepted_candidate_ids: [], candidates: [{ id: 'candidate', confidence: .9, annotation: { type: 'bbox', label: 'scratch', bbox: [1, 2, 5, 6] } }] };
   const store = state => Object.assign(selector => selector(state), { getState: () => state });
-  const workflow = { review: async () => ({ ...pending, status: 'accepted', accepted_candidate_ids: ['candidate'], backup_version_id: 'backup' }), generateModel: async () => { generations++; return { ...pending, id: 'next' }; } };
+  const workflow = { review: async () => ({ ...pending, status: 'rejected' }), generateModel: async () => { generations++; return { ...pending, id: 'next' }; } };
   const suggestionsApi = { models: async () => ({ models: [{ job_id: 'model' }] }), list: async () => ({ suggestions: [pending] }) };
   const stubs = {
     react, 'lucide-react': new Proxy({}, { get: (_, key) => String(key) }),
@@ -30,11 +31,16 @@ function mount() {
     '../../stores/useProjectStore': { useProjectStore: store(project) },
     '../../stores/useDatasetStore': { useDatasetStore: store(dataset) },
     '../../stores/useModelAssistRunStore': { useModelAssistRunStore: store({ begin: () => operations++, end: () => operations-- }) },
+    // Adoption happens in the one draft queue; the panel only hands the draft and its chosen candidates over.
+    '../../stores/useDraftReviewStore': { useDraftReviewStore: { getState: () => ({ requestOpen: (...args) => openRequests.push(args) }) }, draftReviewScope: () => 'scope' },
     '../../services/api': { resolveApiUrl: x => x, api: { labelSuggestions: suggestionsApi } },
     '../../services/datasetWorkflow': { datasetWorkflow: workflow },
     './BulkLabelAssist': { BulkLabelAssist: 'BulkLabelAssist' },
     './CandidateProviderControls': { CandidateProviderControls: 'CandidateProviderControls' },
     './LabelAssistDeviceSizes': { LabelAssistDeviceSizes: 'LabelAssistDeviceSizes' },
+    './KoreanConditionLabeler': { KoreanConditionLabeler: 'KoreanConditionLabeler' },
+    './SuggestionPreview': { SuggestionPreview: 'SuggestionPreview' },
+    './draftReview': { CHANGED_MODEL_MARK: '데이터가 바뀐 뒤 학습한 모델 · 평가 근거 아님' },
   };
   const filename = path.resolve(__dirname, '../src/renderer/components/labeling/ModelAssistPanel.tsx');
   const compiled = ts.transpileModule(fs.readFileSync(filename, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, jsx: ts.JsxEmit.React, esModuleInterop: true } }).outputText;
@@ -45,17 +51,24 @@ function mount() {
   const flatten = tree => !tree || typeof tree !== 'object' ? [] : [tree, ...(tree.props?.children || []).flat(Infinity).flatMap(flatten)];
   const text = tree => (tree?.props?.children || []).flat(Infinity).map(x => typeof x === 'string' ? x : x && typeof x === 'object' ? text(x) : '').join('');
   const button = (tree, label) => flatten(tree).find(x => x.type === 'button' && (x.props['aria-label'] === label || text(x).includes(label)));
-  return { render, flatten, button, annotation, project, dataset, workflow, suggestionsApi, get operations() { return operations; }, get generations() { return generations; } };
+  return { render, flatten, button, annotation, project, dataset, workflow, suggestionsApi, openRequests, get operations() { return operations; }, get generations() { return generations; } };
 }
 const settle = () => new Promise(resolve => setImmediate(resolve));
 
-test('accept survives gallery object refresh and enables another generation', async () => {
+test('adopt hands the draft and its chosen candidates to the draft queue without writing labels', async () => {
   const ui = mount();
   ui.button(ui.render(), '모델 보조 라벨링 패널').props.onClick();
   ui.render(); await settle();
-  const before = ui.annotation.currentImage;
-  ui.button(ui.render(), '선택 항목 채택').props.onClick(); await settle();
-  assert.notEqual(ui.annotation.currentImage, before, 'gallery replaced the image object');
+  ui.button(ui.render(), '초안 검토에서 채택').props.onClick(); await settle();
+  assert.deepEqual(ui.openRequests, [['proposal', ['candidate'], 'scope']]);
+  assert.equal(ui.operations, 0, 'the panel itself does not review');
+});
+
+test('reject finishes its review cleanup and enables another generation', async () => {
+  const ui = mount();
+  ui.button(ui.render(), '모델 보조 라벨링 패널').props.onClick();
+  ui.render(); await settle();
+  ui.button(ui.render(), '거절').props.onClick(); await settle();
   assert.equal(ui.operations, 0);
   const next = ui.button(ui.render(), '제안 생성');
   assert.equal(next.props.disabled, false, 'review cleanup must enable generation');
@@ -66,17 +79,17 @@ test('accept survives gallery object refresh and enables another generation', as
   assert.equal(ui.button(ui.render(), '제안 생성').props.disabled, false);
 });
 
-test('late old-labelset review cannot clear the new labelset loading state', async () => {
+test('late old-labelset reject cannot clear the new labelset loading state', async () => {
   const ui = mount();
   ui.button(ui.render(), '모델 보조 라벨링 패널').props.onClick();
   ui.render(); await settle();
   let finishReview, finishList;
   ui.workflow.review = () => new Promise(resolve => { finishReview = resolve; });
-  ui.button(ui.render(), '선택 항목 채택').props.onClick();
+  ui.button(ui.render(), '거절').props.onClick();
   ui.project.project = { ...ui.project.project, active_labelset_id: 'second' };
   ui.suggestionsApi.list = () => new Promise(resolve => { finishList = resolve; });
   ui.render();
-  finishReview({ id: 'proposal', status: 'accepted', accepted_candidate_ids: ['candidate'] });
+  finishReview({ id: 'proposal', status: 'rejected', accepted_candidate_ids: [] });
   await settle();
   assert.equal(ui.operations, 0);
   assert.equal(ui.button(ui.render(), '제안 생성').props.disabled, true, 'old review cannot unlock pending new-labelset request');

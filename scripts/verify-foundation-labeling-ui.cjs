@@ -54,6 +54,7 @@ function mountScopedComponent(component, providers) {
     createElement:(type,props,...children)=>({type,props:{...props,children}}),
     useState(initial){const i=cursor++;if(!(i in slots))slots[i]=initial;return[slots[i],value=>{slots[i]=typeof value==='function'?value(slots[i]):value;}];},
     useMemo(fn){cursor++;return fn();},
+    useId(){cursor++;return ':r0:';},
     useEffect(fn,deps){const i=cursor++;const previous=slots[i];if(!previous||deps.some((value,n)=>value!==previous.deps[n])){previous?.cleanup?.();const entry={deps};slots[i]=entry;effects.push(()=>{entry.cleanup=fn();});}},
   };
   const project={projectDir:'/project',task:'segmentation',project:{id:'own',task:'segmentation',active_labelset_id:'default',source_dataset_dir:'/source-a'}};
@@ -67,7 +68,8 @@ function mountScopedComponent(component, providers) {
     '../../stores/useAnnotationStore':{useAnnotationStore:store(annotation)},
     '../../stores/useModelAssistRunStore':{useModelAssistRunStore:store({begin(){},end(){}})},
     '../../stores/useFoundationPromptStore':{useFoundationPromptStore:store({points:[],boxes:[],pointLabel:1,setPointLabel(){},clear(){},bind(){},bindProject(){}})},
-    '../../services/hostAdapter':{host:{selectFolder:async()=>{throw new Error('Native folder selection must not run in scoped component tests');}}},
+    '../../services/hostAdapter':{host:{can:()=>false,openLink:async()=>{},selectFolder:async()=>{throw new Error('Native folder selection must not run in scoped component tests');}}},
+    '../../stores/assistContext':{reportPanelError(){}},
     '../../services/api':{api:{labelSuggestions:providers,dataset:{}}},
     '../../services/datasetWorkflow':{datasetWorkflow:{},workflowError:error=>error.message||String(error)},
     '../../services/foundationLabelingApi':{foundationLabelingApi:providers,labelingJobActive:status=>['queued','running','cancelling'].includes(status)},

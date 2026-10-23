@@ -70,13 +70,13 @@ def readiness(body:ReadinessRequest,request:Request):
     family=next((row for row in model_family_catalog()['families'] if row['task']==body.task),None)
     allowed=set(family['architectures']) if family else set()
     if body.task=='anomaly':allowed.update(('dinov3_vits16','dinov3_vitb16','dinov3_vitl16'))
-    if body.model not in allowed:raise HTTPException(422,'Choose a supported model in this family')
+    if body.model not in allowed:raise HTTPException(422,'이 작업 종류에서 지원하지 않는 모델입니다. 모델 목록에서 지원하는 모델을 고르세요.')
     actual_model=body.config_overrides.get('anomaly_backbone','dinov3_vits16') if body.task=='anomaly' and body.model=='dino_synthetic' else body.model
     checkpoint=body.pretrained_checkpoint or body.config_overrides.get('pretrained_checkpoint') or imported_weight(project,body.task,actual_model)
     inputs,input_actions=input_readiness(project,body.task)
     if body.compute_profile_id:
         profile=selected_profile(body.compute_profile_id)
-        if profile is None:raise HTTPException(404,'Selected compute profile is unavailable')
+        if profile is None:raise HTTPException(404,'선택한 연산 장치 프로필을 찾을 수 없습니다. 장치 목록을 새로고침한 뒤 다시 고르세요.')
         options=dict(body.config_overrides)
         key='model_name' if body.task=='segmentation' else 'anomaly_backbone' if body.task=='anomaly' and actual_model.startswith('dinov3_') else 'backbone'
         options[key]=actual_model
@@ -237,7 +237,7 @@ class WeightImportRequest(ReadinessRequest):
 
 @router.post('/import-weights')
 def import_weights(body:WeightImportRequest,request:Request):
-    if not body.pretrained_checkpoint:raise HTTPException(422,'Choose a pretrained file')
+    if not body.pretrained_checkpoint:raise HTTPException(422,'가져올 사전학습 가중치 파일이 없습니다. 파일을 고른 뒤 가져오기를 다시 누르세요.')
     readiness(body,request)
     try:return import_pretrained_weight(get_current_project(request),body.task,body.model,body.pretrained_checkpoint,body.expected_sha256)
     except (ValueError,OSError) as exc:raise HTTPException(422,str(exc)) from exc

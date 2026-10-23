@@ -22,7 +22,15 @@ import {
 } from 'lucide-react';
 import { useAnnotationStore } from '../../stores/useAnnotationStore';
 import { useProjectStore } from '../../stores/useProjectStore';
-import type { AnnotationItem } from '../../types';
+import type { AnnotationItem, AutoSelectorOrigin } from '../../types';
+
+// The auto selector is a drawing aid (docs §3.3): the shape is the person's, and the badge only says how it was outlined.
+function autoSelectorTitle(origin: AutoSelectorOrigin): string {
+  const prompt = origin.seed_point ? `클릭 (${Math.round(origin.seed_point[0])}, ${Math.round(origin.seed_point[1])})`
+    : origin.box ? `상자 (${origin.box.map((v) => Math.round(v)).join(', ')})` : '프롬프트 없음';
+  const tolerance = origin.tolerance == null ? '' : ` · 민감도 ${origin.tolerance}`;
+  return `오토 셀렉터(${origin.backend}) · ${prompt}${tolerance}`;
+}
 
 // Shoelace formula for polygon area
 function calculatePolygonArea(pts: Array<[number, number]>): number {
@@ -292,6 +300,10 @@ export const AnnotationList: React.FC = () => {
                     <span className="truncate text-xs font-medium text-slate-200">{ann.label}</span>
                     {ann.origin?.kind === 'model_draft' && <span title={`초안 ${ann.origin.proposal_id} · ${ann.origin.reviewer} 채택`}
                       className="flex-shrink-0 rounded bg-emerald-900/60 px-1 text-[10px] text-emerald-200">초안에서 채택</span>}
+                    {ann.origin?.kind === 'auto_selector' && <span title={autoSelectorTitle(ann.origin)}
+                      className="flex-shrink-0 rounded bg-cyan-900/60 px-1 text-[10px] text-cyan-200">오토 셀렉터</span>}
+                    {ann.origin?.kind === 'auto_selector' && ann.origin.fallback && <span title="영역을 찾지 못해 클릭 주위에 넣은 작은 상자입니다. 지우거나 직접 그리세요."
+                      className="flex-shrink-0 rounded bg-amber-900/60 px-1 text-[10px] text-amber-200">자동 선택 실패 · 대체 상자</span>}
                   </div>
 
                   <div className="flex items-center space-x-1">

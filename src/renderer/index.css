@@ -1,16 +1,18 @@
 @import './styles/design-tokens.css';
 @import './styles/theme-light.css';
 
-/* Pretendard Std (SIL Open Font License 1.1, public/fonts/PRETENDARD-LICENSE.txt): one Korean face on every OS,
-   served from the app itself so an offline install looks the same as a connected one. */
+/* Pretendard 1.3.9 variable (SIL Open Font License 1.1, public/fonts/PRETENDARD-VARIABLE-LICENSE.txt): one face with
+   Korean and Latin glyphs on every OS, served from the app itself so an offline install looks the same as a connected
+   one and Korean text wraps the same on macOS, Windows and Linux. The earlier Pretendard Std file (Latin only) stays
+   in public/fonts with its own licence but is no longer declared. */
 @font-face {
   font-family: 'Pretendard Variable';
   font-weight: 45 920;
   font-style: normal;
-  /* optional: the face is used when it is ready at first paint (a local file or a warm cache) and never swapped in
-     after text has rendered, so nothing a user or a test has already measured moves. */
-  font-display: optional;
-  src: local('Pretendard Variable'), url('/fonts/PretendardStdVariable.woff2') format('woff2-variations');
+  /* block: the file is local (asar or the test server's loopback), so the short block period costs nothing visible,
+     and text is never measured in a fallback face first — which is what made the same screen differ per OS. */
+  font-display: block;
+  src: local('Pretendard Variable'), url('/fonts/PretendardVariable.woff2') format('woff2-variations');
 }
 
 @tailwind base;
@@ -118,6 +120,9 @@
    Console-style 9-11px labels across the studios are lifted here instead of at 500 call sites. */
 .text-\[7px\], .text-\[8px\], .text-\[9px\], .text-\[10px\], .text-\[11px\] { font-size: 0.75rem; line-height: 1rem; }
 .text-xs { font-size: 0.8125rem; line-height: 1.25rem; }
+/* 간단히 보기 (App writes the view on <html>): body text is 13px at least, so the smaller classes rise to the text-xs
+   size there; 모두 보기 keeps the 12px floor above until each screen replaces its own classes. */
+html[data-view="simple"] :is(.text-\[7px\], .text-\[8px\], .text-\[9px\], .text-\[10px\], .text-\[11px\]) { font-size: 0.8125rem; line-height: 1.25rem; }
 .text-slate-500 { color: #8E9FB8; }
 .text-slate-600 { color: #7F90A8; }
 /* Line heights are whole pixels at the 16px root so the fixed header and footer rows have whole-pixel heights;

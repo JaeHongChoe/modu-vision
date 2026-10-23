@@ -9,6 +9,7 @@ import { useDatasetStore } from '../../stores/useDatasetStore';
 import { useFlowchartStore } from '../../stores/useFlowchartStore';
 import { useProjectStore } from '../../stores/useProjectStore';
 import { useInspectionRunStore } from '../../stores/useInspectionRunStore';
+import { publishInspectionProgress } from '../../stores/workflowProgress';
 import type { FlowchartPipeline } from '../../types';
 import { activeSavedVersion, savedFlowIdentity, type SavedFlowIdentity } from '../flowchart/flowHandoff';
 import { SavedFlowIdentityCard } from '../flowchart/SavedFlowIdentityCard';
@@ -355,6 +356,19 @@ export const BatchInspectionPanel: React.FC = () => {
 
   const rows = report?.rows ?? [];
   const summary = summarizeBatch(rows);
+  // The footer's step-6 number line reads the shown run's counts; cleared when the source changes or the panel closes.
+  const progressScope = JSON.stringify([folderPath, projectDir, task]);
+  const publishedScope = useRef(progressScope);
+  useEffect(() => {
+    // On a source change the old run is still in state for one render (the source reset clears it); skip that render
+    // so the new source never shows the old run's counts.
+    if (publishedScope.current !== progressScope) { publishedScope.current = progressScope; return; }
+    const counts = report ? summarizeBatch(report.rows) : null;
+    // A failed image is done too, as in the header's n/total; the footer names the failures instead of showing them as waiting.
+    publishInspectionProgress(progressScope, counts ? {inspected: counts.processed + counts.errors, total: counts.total, ng: counts.ng, ...(counts.errors ? {failed: counts.errors} : {})} : null);
+  }, [report, progressScope]);
+  // A new result replaces the counts in place; only a source change or closing the panel clears them.
+  useEffect(() => () => publishInspectionProgress(progressScope, null), [progressScope]);
   const visibleRows = filterBatchRows(rows, filter);
   const selected = visibleRows.find((row) => row.image.file_path === selectedPath) ?? visibleRows[0] ?? null;
   const previewSource=inspectionPreview(selected?.result?.annotated_image,selected?.image.thumbnail_url);

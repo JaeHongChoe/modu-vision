@@ -100,6 +100,7 @@ from backend.api.routes_automated_training import router as automated_training_r
 from backend.api.routes_geometry import router as geometry_router
 from backend.api.routes_accounts import router as accounts_router
 from backend.api.routes_mask_exchange import router as mask_exchange_router
+from backend.api.routes_class_rename import router as class_rename_router
 from backend.api.routes_artifacts import router as artifacts_router
 from backend.api.routes_dicom import router as dicom_router
 from backend.api.routes_report import router as report_router
@@ -649,6 +650,7 @@ def _admitted_create_app(project_dir: Optional[str] = None, shared_auth_dir: Opt
     app.include_router(project_preferences_router)
     app.include_router(accounts_router)
     app.include_router(mask_exchange_router)
+    app.include_router(class_rename_router)
     app.include_router(dicom_router)
     app.include_router(compute_router)
     app.include_router(dataset_router)

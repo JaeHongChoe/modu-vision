@@ -12,7 +12,8 @@ This file lists third-party components that the desktop application distributes 
 
 | Component | Version | License | Status | Source |
 | --- | --- | --- | --- | --- |
-| Pretendard Std (variable woff2) | 1.3.9 | SIL Open Font License 1.1 (`public/fonts/PRETENDARD-LICENSE.txt`) | resolved | https://github.com/orioncactus/pretendard/releases/tag/v1.3.9 |
+| Pretendard (variable woff2, Korean and Latin; the face the app declares) | 1.3.9 | SIL Open Font License 1.1 (`public/fonts/PRETENDARD-VARIABLE-LICENSE.txt`) | resolved | https://github.com/orioncactus/pretendard/releases/tag/v1.3.9 |
+| Pretendard Std (variable woff2, Latin only; kept, no longer declared) | 1.3.9 | SIL Open Font License 1.1 (`public/fonts/PRETENDARD-LICENSE.txt`) | resolved | https://github.com/orioncactus/pretendard/releases/tag/v1.3.9 |
 
 ## Electron runtime
 
@@ -41,11 +42,10 @@ This file lists third-party components that the desktop application distributes 
 
 ## Python backend runtime (inventory interpreter: Python 3.13.5 on darwin)
 
-Python dependencies are not locked. This interpreter satisfies `requirements.txt`; the list below is the declared dependency closure in that interpreter and must be regenerated from the locked release build environment for each target platform. A built backend can contain more packages and native libraries; `--frozen-build` lists its package metadata and native libraries, and `--pyz-toc` the pure-Python modules bundled inside the executable.
+Python dependencies are not locked. This interpreter does NOT satisfy `requirements.txt`; the list below is the declared dependency closure in that interpreter and must be regenerated from the locked release build environment for each target platform. A built backend can contain more packages and native libraries; `--frozen-build` lists its package metadata and native libraries, and `--pyz-toc` the pure-Python modules bundled inside the executable.
 
 | Component | Version | License | Status | Source |
 | --- | --- | --- | --- | --- |
-| annotated-doc | 0.0.4 | MIT | resolved | https://github.com/fastapi/annotated-doc |
 | annotated-types | 0.6.0 | MIT License | resolved | https://pypi.org/project/annotated-types/ |
 | anyio | 4.7.0 | MIT AND MIT License | resolved | https://github.com/agronholm/anyio |
 | certifi | 2025.8.3 | MPL-2.0 AND Mozilla Public License 2.0 (MPL 2.0) | needs_review | https://github.com/certifi/python-certifi |
@@ -55,7 +55,7 @@ Python dependencies are not locked. This interpreter satisfies `requirements.txt
 | contourpy | 1.3.1 | BSD License | resolved | https://github.com/contourpy/contourpy |
 | cryptography | 44.0.1 | Apache-2.0 OR BSD-3-Clause AND Apache Software License AND BSD License | resolved | https://github.com/pyca/cryptography |
 | cycler | 0.11.0 | BSD AND BSD License | resolved | https://github.com/matplotlib/cycler |
-| fastapi | 0.142.2 | MIT | resolved | https://github.com/fastapi/fastapi |
+| fastapi | 0.108.0 | MIT | resolved | https://github.com/tiangolo/fastapi |
 | filelock | 3.17.0 | Unlicense | resolved | https://github.com/tox-dev/py-filelock |
 | flatbuffers | 25.9.23 | Apache 2.0 AND Apache Software License | resolved | https://github.com/google/flatbuffers |
 | fonttools | 4.55.3 | MIT AND MIT License | resolved | http://github.com/fonttools/fonttools |
@@ -78,14 +78,13 @@ Python dependencies are not locked. This interpreter satisfies `requirements.txt
 | onnxruntime | 1.26.0 | MIT License | resolved | https://onnxruntime.ai |
 | opencv-python | 4.12.0.88 | Apache 2.0 AND Apache Software License | resolved | https://github.com/opencv/opencv-python |
 | opencv-python-headless | 4.12.0.88 | Apache 2.0 AND Apache Software License | resolved | https://github.com/opencv/opencv-python |
-| opentelemetry-api | 1.45.0 | Apache-2.0 | resolved | https://github.com/open-telemetry/opentelemetry-python/tree/main/opentelemetry-api |
 | packaging | 24.2 | Apache Software License AND BSD License | resolved | https://github.com/pypa/packaging |
 | pi-heif | 1.4.0 | BSD-3-Clause AND GNU Lesser General Public License v3 (LGPLv3) | needs_review | https://github.com/bigcat88/pillow_heif |
 | pillow | 12.3.0 | MIT-CMU | resolved | https://python-pillow.github.io |
 | polars | 1.40.1 | MIT License | resolved | https://www.pola.rs/ |
 | polars-runtime-32 | 1.40.1 | MIT AND MIT License | resolved | https://www.pola.rs/ |
 | protobuf | 5.29.3 | 3-Clause BSD License | resolved | https://developers.google.com/protocol-buffers/ |
-| psutil | 7.2.2 | BSD-3-Clause | resolved | https://github.com/giampaolo/psutil |
+| psutil | 5.9.0 | BSD AND BSD License | resolved | https://github.com/giampaolo/psutil |
 | pycparser | 2.21 | BSD AND BSD License | resolved | https://github.com/eliben/pycparser |
 | pydantic | 2.10.3 | MIT | resolved | https://github.com/pydantic/pydantic |
 | pydantic-core | 2.27.1 | MIT AND MIT License | resolved | https://github.com/pydantic/pydantic-core |
@@ -102,7 +101,7 @@ Python dependencies are not locked. This interpreter satisfies `requirements.txt
 | shellingham | 1.5.0 | ISC License AND ISC License (ISCL) | resolved | https://github.com/sarugaku/shellingham |
 | six | 1.17.0 | MIT AND MIT License | resolved | https://github.com/benjaminp/six |
 | sniffio | 1.3.0 | MIT OR Apache-2.0 AND Apache Software License AND MIT License | resolved | https://github.com/python-trio/sniffio |
-| starlette | 1.7.0 | BSD-3-Clause | resolved | https://github.com/Kludex/starlette |
+| starlette | 0.32.0.post1 | BSD-3-Clause | resolved | https://github.com/encode/starlette |
 | sympy | 1.13.3 | BSD AND BSD License | resolved | https://github.com/sympy/sympy |
 | threadpoolctl | 3.5.0 | BSD-3-Clause AND BSD License | resolved | https://github.com/joblib/threadpoolctl |
 | timm | 1.0.24 | Apache-2.0 AND Apache Software License | resolved | https://github.com/huggingface/pytorch-image-models |
@@ -110,8 +109,7 @@ Python dependencies are not locked. This interpreter satisfies `requirements.txt
 | torchvision | 0.24.1 | BSD | resolved | https://github.com/pytorch/vision |
 | tqdm | 4.67.1 | MPL-2.0 AND MIT AND MIT License AND Mozilla Public License 2.0 (MPL 2.0) | needs_review | https://tqdm.github.io |
 | typer-slim | 0.20.0 | MIT License | resolved | https://github.com/fastapi/typer |
-| typing-extensions | 4.16.0 | PSF-2.0 | resolved | https://github.com/python/typing_extensions |
-| typing-inspection | 0.4.4 | MIT | resolved | https://github.com/pydantic/typing-inspection |
+| typing-extensions | 4.12.2 | Python Software Foundation License | resolved | https://github.com/python/typing_extensions |
 | ultralytics | 8.4.41 | AGPL-3.0 AND GNU Affero General Public License v3 or later (AGPLv3+) | needs_decision | https://ultralytics.com |
 | ultralytics-thop | 2.0.19 | AGPL-3.0 AND GNU Affero General Public License v3 or later (AGPLv3+) | needs_decision | https://ultralytics.com |
 | urllib3 | 2.3.0 | MIT License | resolved | https://pypi.org/project/urllib3/ |
@@ -139,4 +137,5 @@ Python dependencies are not locked. This interpreter satisfies `requirements.txt
 - `python_runtime:watchfiles`: not_installed_in_inventory_environment
 - `python_environment:unlocked`: needs_review
 - `license_texts:packaging`: needs_review
+- `python_environment:requirements_not_satisfied`: needs_review
 - `frozen_backend:inventory_required`: needs_review

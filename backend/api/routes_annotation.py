@@ -14,13 +14,13 @@ import hashlib
 import os
 from contextlib import nullcontext
 from pathlib import Path
-from typing import Any, Dict, List, Literal, Optional
+from typing import Annotated, Any, Dict, List, Literal, Optional, Union
 
 import cv2
 import numpy as np
 from fastapi import APIRouter, HTTPException, Query, Request
 from fastapi.responses import Response
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Discriminator, Field, Tag, field_validator
 
 from backend.engine.dataset_loaders import BoundingBox, SUPPORTED_IMAGE_EXTENSIONS
 from backend.engine.annotation_storage import dataset_annotation_dir, scoped_annotation_root, request_project_root
@@ -61,7 +61,7 @@ def _validate_image_id(image_id: str) -> None:
     if (not image_id.strip() or image_id in {".", ".."}
             or Path(image_id).name != image_id or "/" in image_id or "\\" in image_id
             or any(ord(character) < 32 for character in image_id)):
-        raise HTTPException(status_code=422, detail="image_id must be a single image filename stem")
+        raise HTTPException(status_code=422, detail="이미지 이름이 올바르지 않습니다. 폴더 구분 문자나 제어 문자가 없는 파일 이름으로 다시 요청하세요.")
 
 
 def _trusted_annotation_directory(requested: str) -> Path:
@@ -74,11 +74,11 @@ def _trusted_annotation_directory(requested: str) -> Path:
         if value.strip()
     )
     if not any(target == root or root in target.parents for root in roots):
-        raise HTTPException(status_code=403, detail="Annotation folder is outside approved roots")
+        raise HTTPException(status_code=403, detail="라벨 저장 폴더가 허용된 위치 밖에 있습니다. 프로젝트 데이터 폴더 안의 라벨 폴더를 사용하세요.")
     return target
 
 
-class AnnotationOrigin(BaseModel):
+class ModelDraftOrigin(BaseModel):
     """Where a shape came from when a person adopted it from a machine draft. Shapes a person drew have none."""
     model_config = ConfigDict(extra="ignore")
     kind: Literal["model_draft"] = "model_draft"
@@ -90,6 +90,36 @@ class AnnotationOrigin(BaseModel):
     reviewer: str = Field(..., min_length=1, max_length=100)
     adopted_at: str = Field(..., min_length=1, max_length=40)
     backup_version_id: Optional[str] = Field(None, max_length=80)
+
+
+class AutoSelectorOrigin(BaseModel):
+    """How the auto selector (OpenCV flood fill) outlined a shape for a person's click.
+
+    The selector is a drawing aid, not a draft (docs/product-direction-easy-labeling-agent.md §3.3): the person asked
+    for the outline and saves it like a drawn shape, so this origin only records how the outline was made. `fallback`
+    marks the small box the selector puts around the click when it finds no region, so that box is never mistaken for
+    a found outline."""
+    model_config = ConfigDict(extra="ignore")
+    kind: Literal["auto_selector"]
+    backend: str = Field("opencv_flood_fill", min_length=1, max_length=40)
+    seed_point: Optional[List[float]] = Field(None, min_length=2, max_length=2)  # the click, in image pixels
+    box: Optional[List[float]] = Field(None, min_length=4, max_length=4)  # [xmin, ymin, xmax, ymax] when a box was the prompt
+    tolerance: Optional[int] = Field(None, ge=0, le=255)
+    fallback: bool = False
+    created_at: str = Field(..., min_length=1, max_length=40)
+
+
+def _annotation_origin_kind(value: Any) -> Optional[str]:
+    """The origin's kind; an origin without one is a model draft, the only kind there was before the auto selector."""
+    kind = value.get("kind", "model_draft") if isinstance(value, dict) else getattr(value, "kind", "model_draft")
+    return kind if isinstance(kind, str) else None
+
+
+# One model per kind: a save keeps whichever origin a shape carries, and an unknown kind is refused as before.
+AnnotationOrigin = Annotated[
+    Union[Annotated[ModelDraftOrigin, Tag("model_draft")], Annotated[AutoSelectorOrigin, Tag("auto_selector")]],
+    Discriminator(_annotation_origin_kind),
+]
 
 
 class AnnotationItem(BaseModel):
@@ -178,7 +208,7 @@ def _save_annotations_locked(req: AnnotationSaveRequest, target_dir: Path, file_
     """
     _validate_image_id(req.image_id)
     if req.image_path and Path(req.image_path).stem != req.image_id:
-        raise HTTPException(status_code=422, detail="image_id must match image_path filename")
+        raise HTTPException(status_code=422, detail="이미지 이름과 이미지 경로의 파일 이름이 다릅니다. 같은 이미지를 다시 고른 뒤 저장하세요.")
     if req.image_path:
         image = Path(req.image_path)
         peers = [p for p in image.parent.iterdir() if p.is_file() and p.stem == image.stem and p.suffix.lower() in SUPPORTED_IMAGE_EXTENSIONS]
@@ -255,7 +285,7 @@ def _save_annotations_locked(req: AnnotationSaveRequest, target_dir: Path, file_
                     raise ValueError("Brush mask dimensions or alpha channel are invalid")
                 brush_masks.append((rgba[:, :, 3] > 0, item.category_id or 1))
             except (ValueError, binascii.Error, cv2.error) as exc:
-                raise HTTPException(status_code=422, detail=f"Invalid brush mask: {exc}") from exc
+                raise HTTPException(status_code=422, detail=f"브러시 마스크를 읽을 수 없습니다 ({exc}). 마스크를 다시 그린 뒤 저장하세요.") from exc
 
         sanitized_items.append(item_dict)
 
@@ -283,7 +313,7 @@ def _save_annotations_locked(req: AnnotationSaveRequest, target_dir: Path, file_
             mask_file_path = str(mask_file)
         except Exception as e:
             logger.exception("Failed to rasterize polygon mask: %s", e)
-            raise HTTPException(status_code=500, detail=f"Failed to save annotation mask: {e}") from e
+            raise HTTPException(status_code=500, detail=f"마스크를 저장하지 못했습니다 ({e}). 저장 공간을 확인한 뒤 다시 저장하세요.") from e
 
     # Persist JSON file
     json_path = target_dir / f"{req.image_id}.json"
@@ -314,7 +344,7 @@ def _save_annotations_locked(req: AnnotationSaveRequest, target_dir: Path, file_
     try:
         json_bytes = json.dumps(data, indent=2, ensure_ascii=False, allow_nan=False).encode("utf-8")
     except (ValueError, TypeError) as exc:
-        raise HTTPException(status_code=422, detail=f"Invalid annotation data: {exc}") from exc
+        raise HTTPException(status_code=422, detail=f"라벨 데이터에 저장할 수 없는 값이 있습니다 ({exc}). 라벨을 다시 확인한 뒤 저장하세요.") from exc
     updates = {mask_file: mask_bytes, json_path: json_bytes}
     try:
         file_transaction.publish(updates)
@@ -342,7 +372,7 @@ def _metadata_binding(image_path):
             return None  # Legacy canvas can read before importing a project dataset.
         source = Path(saved["source_dataset_dir"]).expanduser().resolve()
     except (OSError, ValueError, KeyError, TypeError):
-        raise HTTPException(status_code=422, detail="Active project has no valid dataset source.")
+        raise HTTPException(status_code=422, detail="프로젝트의 데이터 원본을 읽을 수 없습니다. 1단계에서 이미지 폴더를 다시 연결하세요.")
     try:
         metadata_engine._visible_path(source, image_path)
     except ValueError as exc:
@@ -444,7 +474,7 @@ def _get_annotations_impl(
             with open(json_path, "r", encoding="utf-8") as f:
                 return json.load(f)
         except Exception as e:
-            raise HTTPException(status_code=500, detail=f"Failed to read annotation file: {e}")
+            raise HTTPException(status_code=500, detail=f"저장된 라벨 파일을 읽을 수 없습니다 ({e}). 파일을 고치거나 지운 뒤 이미지를 다시 여세요.")
 
     # 2. Check for adjacent LabelMe JSON file next to image
     candidate_json = None
@@ -537,10 +567,10 @@ def _get_annotations_impl(
                 }
         except (OSError, UnicodeError) as e:
             logger.warning("Failed to read LabelMe JSON %s: %s", candidate_json, e)
-            raise HTTPException(status_code=500, detail=f"Cannot read LabelMe annotations: {candidate_json.name}: {e}") from e
+            raise HTTPException(status_code=500, detail=f"LabelMe 라벨 파일 {candidate_json.name}을(를) 열 수 없습니다 ({e}). 파일 권한과 인코딩을 확인한 뒤 다시 여세요.") from e
         except Exception as e:
             logger.warning("Failed to parse LabelMe JSON %s: %s", candidate_json, e)
-            raise HTTPException(status_code=422, detail=f"Invalid LabelMe annotations: {candidate_json.name}: {e}") from e
+            raise HTTPException(status_code=422, detail=f"LabelMe 라벨 파일 {candidate_json.name}을(를) 읽을 수 없습니다 ({e}). 파일을 고치거나 옮긴 뒤 이미지를 다시 여세요.") from e
 
     # Return empty list for unannotated images
     return {
@@ -564,7 +594,7 @@ def get_annotations(image_id: str, dir_path: Optional[str] = Query(None), file_p
             try:
                 imported = source_annotations_for_image(source, Path(file_path))
             except (ValueError, KeyError, TypeError, OSError) as exc:
-                raise HTTPException(status_code=422, detail=f"Source annotation format: {exc}") from exc
+                raise HTTPException(status_code=422, detail=f"원본 라벨 형식을 변환할 수 없습니다 ({exc}). 지원하는 형식으로 바꾸거나 이 이미지에 직접 라벨을 다세요.") from exc
             if imported is not None:
                 result["annotations"] = imported
         result["metadata"] = metadata_engine.metadata_for_path(*binding, file_path)
@@ -582,18 +612,18 @@ def get_annotation_mask(
     """Serve only this image's saved mask from its dataset-scoped annotation folder."""
     _validate_image_id(image_id)
     if file_path and Path(file_path).stem != image_id:
-        raise HTTPException(status_code=422, detail="image_id must match file_path filename")
+        raise HTTPException(status_code=422, detail="이미지 이름과 파일 경로의 파일 이름이 다릅니다. 같은 이미지를 다시 고른 뒤 마스크를 요청하세요.")
     target_dir = (_trusted_annotation_directory(dir_path) if dir_path else
                   dataset_annotation_dir(Path(file_path).parent, ANNOTATIONS_DIR)
                   if file_path else scoped_annotation_root(ANNOTATIONS_DIR))
     mask_path = target_dir / "masks" / f"{image_id}.png"
     json_path = target_dir / f"{image_id}.json"
     if not json_path.is_file() or not mask_path.is_file():
-        raise HTTPException(status_code=404, detail="Annotation mask not found")
+        raise HTTPException(status_code=404, detail="저장된 마스크가 없습니다. 브러시로 마스크를 그린 뒤 저장하세요.")
     try:
         saved = json.loads(json_path.read_text(encoding="utf-8"))
         if not saved.get("mask_file"):
-            raise HTTPException(status_code=404, detail="Annotation mask not found")
+            raise HTTPException(status_code=404, detail="저장된 마스크가 없습니다. 브러시로 마스크를 그린 뒤 저장하세요.")
         mask = cv2.imread(str(mask_path), cv2.IMREAD_UNCHANGED)
         if mask is None or mask.ndim != 2:
             raise ValueError("Saved annotation mask is unreadable")
@@ -624,7 +654,7 @@ def get_annotation_mask(
     except HTTPException:
         raise
     except (OSError, UnicodeError, ValueError, cv2.error) as exc:
-        raise HTTPException(status_code=500, detail=f"Cannot read annotation mask: {exc}") from exc
+        raise HTTPException(status_code=500, detail=f"저장된 마스크를 읽을 수 없습니다 ({exc}). 마스크를 다시 그린 뒤 저장하세요.") from exc
 
 
 @router.delete("/{image_id}")
@@ -830,7 +860,7 @@ def api_shape_converter(req: ShapeConverterRequest):
     """
     if req.backend == 'foundation':
         if req.target_type not in (None,'polygon','mask') or req.source_type not in (None,'bbox'):
-            raise HTTPException(422,detail='Foundation conversion accepts a source image and box, producing an object mask or polygon')
+            raise HTTPException(422,detail='기반 모델 변환은 이미지와 상자 하나를 받아 마스크나 다각형만 만듭니다. 상자를 선택하고 결과 종류를 마스크나 다각형으로 고르세요.')
         try:
             box = req.bbox or _extract_bbox_from_data(req.data)
             resolved_path = _resolve_image_path(req.image_path,req.image_id)
@@ -841,7 +871,7 @@ def api_shape_converter(req: ShapeConverterRequest):
     # 1. Legacy fallback if source_type is omitted but bbox is passed
     if req.source_type is None and req.bbox is not None:
         if len(req.bbox) != 4:
-            raise HTTPException(status_code=400, detail="BBox must contain 4 elements [xmin, ymin, xmax, ymax]")
+            raise HTTPException(status_code=400, detail="상자 좌표는 [왼쪽, 위, 오른쪽, 아래] 네 값이어야 합니다. 상자를 다시 그린 뒤 변환하세요.")
         resolved_path = _resolve_image_path(req.image_path, req.image_id)
         try:
             res = shape_converter_bbox_to_polygon(
@@ -866,7 +896,7 @@ def api_shape_converter(req: ShapeConverterRequest):
     if not req.source_type or not req.target_type:
         raise HTTPException(
             status_code=400,
-            detail="source_type and target_type must be specified ('bbox', 'polygon', 'mask', 'rotated_bbox')",
+            detail="변환할 원본 모양과 결과 모양을 모두 골라야 합니다. 상자·다각형·마스크·회전 상자 중에서 고르세요.",
         )
 
     img_w = 512

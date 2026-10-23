@@ -1,6 +1,6 @@
 // The simple view: a first run shows the few controls each step needs, every control stays reachable (더 보기 or
-// 모두 보기), the step names read as work, the footer has one primary action, and the test launches declare the full
-// view so the existing suites keep every control on screen.
+// 모두 보기), the header is one row there, the step names read as work, the footer has one primary action, and the
+// test launches declare the full view so the existing suites keep every control on screen.
 const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path'),test=require('node:test'),ts=require('typescript');
 const read=file=>fs.readFileSync(path.resolve(__dirname,'..','..','..','..',file),'utf8');
 
@@ -47,7 +47,7 @@ test('the labeling screen starts folded in the simple view and the label set is 
  const studio=read('src/renderer/components/labeling/LabelingStudio.tsx');
  assert.match(studio,/const focus = focusChoice \?\? viewMode === 'simple';/);assert.match(studio,/collapsed=\{viewMode === 'simple'\}/);
  const bar=read('src/renderer/components/labeling/LabelSetBar.tsx');assert.match(bar,/if \(collapsed\) return <details/);
- assert.match(read('src/renderer/App.tsx'),/viewMode==='full'\?<>/);
+ assert.match(read('src/renderer/App.tsx'),/viewMode==='full'&&<nav/,'the workspace row is a 모두 보기 row');
  assert.match(read('src/renderer/index.css'),/html\[lang="ko"\] body \{ word-break: keep-all;/);
 });
 
@@ -62,23 +62,58 @@ test('the simple view shows three data counts, two tiles and one folder button r
  const header=read('src/renderer/components/wizard/WizardHeader.tsx');
  assert.match(header,/\{full && <span role="status"/,'the engine badge is a 더 보기 line in the simple view');
  const app=read('src/renderer/App.tsx');
- assert.match(app,/\(viewMode==='full'\|\|workspace==='operator'\)&&<>/);assert.match(app,/운영자 검사 화면/);
+ assert.match(app,/\{viewMode==='full'&&<nav/);assert.match(app,/운영자 검사 화면/);assert.match(app,/모델·플로우 작업/);
  const footer=read('src/renderer/components/wizard/WizardFooter.tsx');
  assert.match(footer,/다음: \$\{readiness\.nextAction\.label\}/);assert.match(footer,/sr-only">\{ko\?` · 완료 입력/);
  assert.ok(!footer.includes('`완료 입력 ${readiness.completedInputs.length} · `'),'the visible status no longer starts with a count');
 });
 
-test('the simple view folds the step 3 training location, the step 4 comparison and the second header row; wide monitors get larger type',()=>{
+test('the simple view folds the step 3 training location, the step 4 comparison, the second header row and the workspace row; wide monitors get larger type',()=>{
  const training=read('src/renderer/components/training/TrainingController.tsx');
  assert.match(training,/\{full \|\| \(jobId && status !== 'completed'\) \? block : <details/);assert.match(training,/<summary[^>]*><span[^>]*>학습 위치<\/span>/);
  const evaluation=read('src/renderer/components/evaluation/EvaluationStudio.tsx');
  assert.match(evaluation,/<summary[^>]*>현행 모델 · 후보 모델 비교<\/summary>/);assert.match(evaluation,/\{full \? <>\s*<div className="rounded border border-\[#3B5269\]/);
  const header=read('src/renderer/components/wizard/WizardHeader.tsx');
- assert.match(header,/simpleControls\?: React\.ReactNode; simpleMenu\?: React\.ReactNode/);assert.match(header,/\{!full && simpleControls\}/);assert.match(header,/\{simpleMenu\}\s*<\/div>\s*<\/details>\}/);
+ assert.match(header,/simpleControls\?: React\.ReactNode; simpleMenu\?: React\.ReactNode/);assert.match(header,/\{simpleControls\}\s*\{simpleMenu\}/,'App items are 더 보기 items');assert.match(header,/\{simpleMenu\}\s*<\/div>\s*<\/details>\}/);
  const app=read('src/renderer/App.tsx');
- assert.match(app,/<WizardHeader completedSteps=\{doneSteps\} simpleControls=\{workspace==='operator'\?null:<button/);assert.match(app,/\{\(viewMode==='full'\|\|workspace==='operator'\)&&<nav/);
+ assert.match(app,/<WizardHeader completedSteps=\{doneSteps\} simpleControls=\{<button className=\{MENU_ITEM\}/);assert.match(app,/\{viewMode==='full'&&<nav/);
  const css=read('src/renderer/index.css');
  assert.match(css,/@media \(min-width: 1920px\) \{ html \{ font-size: 18px; \} \}/);assert.match(css,/@media \(min-width: 2400px\) \{ html \{ font-size: 20px; \} \}/);
+});
+
+test('간단히 보기 is one header row: the steps join the first row, the second row and the workspace row are 모두 보기 only, and every other control keeps its name under 더 보기',()=>{
+ const header=read('src/renderer/components/wizard/WizardHeader.tsx');
+ assert.match(header,/\{!full && <div[^>]*>\{stepBar\}<\/div>\}/,'the step bar sits in the first row in the simple view');
+ assert.match(header,/\{full && \(\s*<div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 bg-\[#131822\] px-4 py-2">\s*\{taskSelect\}\s*\{stepBar\}\s*\{modelLocation\}/,'모두 보기 keeps the second row as it was');
+ const menu=header.slice(header.indexOf("{ko ? '더 보기' : 'More'}</summary>"),header.indexOf('</details>}'));
+ for(const item of ['{runOn}','{engineLabel}','{modelLocation}','{serversButton}','{taskSelect}','{historyButton}','{technicalButton}','{themeButton}','{languageButton}','{simpleControls}','{simpleMenu}'])assert.ok(menu.includes(item),`${item} is not a 더 보기 item`);
+ assert.match(header,/\{computeAlert\}/);assert.ok(!menu.includes('{computeAlert}'),'the compute alert stays in the row, where it is announced');
+ assert.match(header,/if \(event\.key !== 'Escape' \|\| !event\.currentTarget\.open\) return;/,'Escape closes the menu');
+ assert.match(header,/document\.addEventListener\('pointerdown', onPointerDown\)/,'a click outside closes the menu');
+ const app=read('src/renderer/App.tsx');
+ assert.match(app,/workspace==='operator'\s*\?<button className=\{MENU_ITEM\} onClick=\{\(\)=>setWorkspace\('studio'\)\}>\{language==='ko'\?'모델·플로우 작업'/,'the operator screen reaches the studio from the same menu');
+ assert.match(app,/document\.documentElement\.dataset\.view = viewMode/);
+});
+
+test('the operator screen in 간단히 보기 says where the user is and offers the way back; the view is on <html> before the first paint',()=>{
+ const app=read('src/renderer/App.tsx');
+ const row=app.slice(app.indexOf("{viewMode!=='full'&&workspace==='operator'&&<div"),app.indexOf('</div>}',app.indexOf("{viewMode!=='full'&&workspace==='operator'&&<div")));
+ assert.ok(row.length>0,'the simple view has no workspace row, so the operator screen needs its own line');
+ assert.match(row,/운영자 검사 화면입니다/);assert.match(row,/<button className="workspace-button whitespace-nowrap" onClick=\{\(\)=>setWorkspace\('studio'\)\}>\{language==='ko'\?'모델·플로우 작업으로 돌아가기'/);
+ assert.ok(!row.includes('workspace-button--primary'),'the way back is a secondary button');
+ assert.match(app,/useLayoutEffect\(\(\) => \{ document\.documentElement\.dataset\.view = viewMode; \}, \[viewMode\]\);/);
+});
+
+test('the simple view uses the shared secondary button, the header carries no primary action, and type never drops below 13px there',()=>{
+ const header=read('src/renderer/components/wizard/WizardHeader.tsx'),app=read('src/renderer/App.tsx');
+ assert.match(header,/const SIMPLE_CONTROL = 'workspace-button whitespace-nowrap';/);assert.match(header,/const MENU_ITEM = 'workspace-button justify-start whitespace-nowrap';/);
+ assert.match(app,/const MENU_ITEM='workspace-button justify-start whitespace-nowrap';/);
+ for(const source of [header,app])assert.ok(!source.includes('workspace-button--primary'),'the header has no primary button');
+ assert.match(header,/<summary className=\{`list-none cursor-pointer \$\{SIMPLE_CONTROL\}`\}>/);
+ for(const file of ['src/renderer/App.tsx','src/renderer/components/wizard/WizardHeader.tsx','src/renderer/components/wizard/WizardFooter.tsx','src/renderer/index.css'])assert.ok(!/text-\[(7|8|9|10|11)px\]/.test(read(file)),`${file} sets text below 12px`);
+ const css=read('src/renderer/index.css');
+ assert.match(css,/\.text-xs \{ font-size: 0\.8125rem; line-height: 1\.25rem; \}/,'the smallest body size is 13px');
+ assert.match(css,/html\[data-view="simple"\] :is\(\.text-\\\[7px\\\][^{]*\) \{ font-size: 0\.8125rem; line-height: 1\.25rem; \}/,'the simple view floors every smaller class at 13px');
 });
 
 test('a wrapped labeling toolbar keeps its height instead of hiding its second line under the next row',()=>{

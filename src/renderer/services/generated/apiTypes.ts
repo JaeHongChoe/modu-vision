@@ -39,19 +39,7 @@ export type AnnotationItem = {
   color?: string | null;
   text?: string | null;
   direction_deg?: number | null;
-  origin?: AnnotationOrigin | null;
-};
-
-export type AnnotationOrigin = {
-  kind?: "model_draft";
-  proposal_id: string;
-  candidate_id: string;
-  backend?: string;
-  job_id?: string | null;
-  checkpoint_sha256?: string | null;
-  reviewer: string;
-  adopted_at: string;
-  backup_version_id?: string | null;
+  origin?: ModelDraftOrigin | AutoSelectorOrigin | null;
 };
 
 export type AnnotationSaveRequest = {
@@ -135,6 +123,16 @@ export type AutoSelectRequest = {
   backend?: "opencv" | "foundation";
   device?: string;
   points?: Array<{ [key: string]: unknown }>;
+};
+
+export type AutoSelectorOrigin = {
+  kind: "auto_selector";
+  backend?: string;
+  seed_point?: Array<number> | null;
+  box?: Array<number> | null;
+  tolerance?: number | null;
+  fallback?: boolean;
+  created_at: string;
 };
 
 export type BatchGenerateRequest = {
@@ -266,9 +264,25 @@ export type CaptureGroupPolicyRequest = {
   policy: { [key: string]: unknown };
 };
 
+export type ClassMapping = {
+  from: string;
+  to: string;
+};
+
 export type ClassOverrideRequest = {
   image_path: string;
   class_name?: string | null;
+  actor?: string;
+};
+
+export type ClassRenameApplyRequest = {
+  mapping: Array<ClassMapping>;
+  actor?: string;
+  expected_preview_sha256: string;
+};
+
+export type ClassRenamePreviewRequest = {
+  mapping: Array<ClassMapping>;
   actor?: string;
 };
 
@@ -850,6 +864,38 @@ export type LabelSetCreateRequest = {
   name: string;
 };
 
+export type LabelSuggestionModelStats = {
+  job_id: string;
+  backend: string;
+  drafts: number;
+  pending: number;
+  adopted: number;
+  rejected: number;
+  reverted: number;
+  edited_after: number;
+  edited_unknown: number;
+  reviewed_candidates: number;
+  adopted_candidates: number;
+  rejected_candidates: number;
+  mean_confidence_adopted?: number | null;
+  mean_confidence_rejected?: number | null;
+  advice: LabelSuggestionThresholdAdvice;
+};
+
+export type LabelSuggestionStats = {
+  models: Array<LabelSuggestionModelStats>;
+  generated_at: string;
+};
+
+export type LabelSuggestionThresholdAdvice = {
+  reason: "too_few" | "already_high" | "none_reaches" | "task_not_applicable" | "suggestion";
+  reviewed_candidates: number;
+  adopted_rate?: number | null;
+  threshold?: number | null;
+  adopted_rate_above?: number | null;
+  candidates_above?: number | null;
+};
+
 export type LeaseRequest = {
   actor?: string;
   expected_revision: number;
@@ -946,6 +992,18 @@ export type ModbusConfig = {
   verdict_values?: {
     [key: string]: number;
   };
+};
+
+export type ModelDraftOrigin = {
+  kind?: "model_draft";
+  proposal_id: string;
+  candidate_id: string;
+  backend?: string;
+  job_id?: string | null;
+  checkpoint_sha256?: string | null;
+  reviewer: string;
+  adopted_at: string;
+  backup_version_id?: string | null;
 };
 
 export type NewUser = {
@@ -1892,6 +1950,8 @@ export interface ApiRequestBody {
   "POST /api/capture-intake/drift/references": DriftReferenceRequest;
   "POST /api/capture-intake/register": RegisterRequest;
   "POST /api/capture-intake/sampling": SamplingPolicyRequest;
+  "POST /api/class-rename/apply": ClassRenameApplyRequest;
+  "POST /api/class-rename/preview": ClassRenamePreviewRequest;
   "POST /api/compute/jobs": ComputeJobInput;
   "POST /api/compute/jobs/{job_id}/predict": ComputePredictionInput;
   "POST /api/compute/profiles": ProfileInput;
@@ -2091,6 +2151,7 @@ export interface ApiResponseBody {
   "GET /api/flowchart/templates/fixed-roi": FlowchartPipeline_Output;
   "GET /api/flowchart/templates/single-detection": FlowchartPipeline_Output;
   "GET /api/flowchart/templates/single-segmentation": FlowchartPipeline_Output;
+  "GET /api/label-suggestions/stats": LabelSuggestionStats;
   "GET /api/model-operations/legacy-impact": LegacyImpactReport;
   "POST /api/project/create": ProjectConfigResponse;
   "GET /api/project/current": ProjectConfigResponse;

@@ -1,7 +1,16 @@
 import {request, type LabelSuggestion} from './api';
 export interface VLMConfiguration {enabled:boolean;endpoint:string;model:string;api_key_env?:string|null;timeout_seconds?:number;max_tokens?:number}
 export interface FoundationConfiguration {vlm?:VLMConfiguration;model_dir?:string|null;mask_model_dir?:string|null;feature_backbone?:string;feature_checkpoint?:string|null;feature_sha256?:string|null}
-export interface ProviderReadiness {ready:boolean;error:string|null;limits:string;dependency_available:boolean;model_dir?:string|null;mask_model_dir?:string|null}
+/** The first blocker foundation_readiness names; absent from older backends and test mocks (ready/error stay the gate). */
+export type FoundationReadinessState='ready'|'dependency_missing'|'not_configured'|'path_invalid'|'files_missing'|'files_incomplete'|'invalid_config'|'wrong_model_type'|'device_unavailable';
+/** One file the SAM2 loader expects: present or not, with its measured size (never an expected size). */
+export interface ExpectedModelFile {name:string;present:boolean;bytes:number|null}
+/** Whether model.safetensors's header accounts for its size (read from the header only); null when the file is absent or unreadable. */
+export type WeightsCheck='ok'|'empty'|'not_safetensors'|'truncated';
+/** The reference the engine documentation names; the page, not the app, states sizes and the licence. */
+export interface OfficialModelReference {family:string;example_repo_id?:string|null;url?:string|null;api_docs_url?:string|null}
+export interface ProviderReadiness {ready:boolean;error:string|null;limits:string;dependency_available:boolean;model_dir?:string|null;mask_model_dir?:string|null;
+  state?:FoundationReadinessState;expected_files?:ExpectedModelFile[];missing_files?:string[];model_type?:string|null;weights_check?:WeightsCheck|null;model_sha256?:string|null;official_reference?:OfficialModelReference|null}
 export interface FoundationSetup {can_configure_vlm?:boolean;configuration:FoundationConfiguration;providers:{foundation:ProviderReadiness;grounding_dino:ProviderReadiness;vlm?:ProviderReadiness};labelset_id:string;labelset_version:string}
 export interface RegionExample {image_path:string;roi:[number,number,number,number]}
 export interface FoundationPoint {x:number;y:number;label:0|1}

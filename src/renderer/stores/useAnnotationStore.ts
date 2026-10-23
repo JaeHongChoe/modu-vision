@@ -705,6 +705,8 @@ export const useAnnotationStore = create<AnnotationState>((set, get) => ({
       });
       if (get().currentImage !== currentImage || get().annotationLoadStatus !== 'ready') return false;
       if (res?.result?.polygon && res.result.polygon.length >= 3) {
+        // The route also names the backend it used and says whether it fell back to a small box around the click.
+        const detail = res.result as { source?: unknown; fallback?: unknown };
         const newAnn: AnnotationItem = {
           id: `auto_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
           type: 'polygon',
@@ -714,6 +716,17 @@ export const useAnnotationStore = create<AnnotationState>((set, get) => ({
           polygon: res.result.polygon,
           points: res.result.polygon,
           bbox: res.result.bbox,
+          // The auto selector is a drawing aid, not a draft (docs §3.3): the shape joins the canvas and is saved by the
+          // person's own save like a drawn one, and its origin says the machine chose the outline. A fallback box is
+          // marked so the list and the toolbar can say the selector found nothing instead of passing it off as a shape.
+          origin: {
+            kind: 'auto_selector',
+            backend: typeof detail.source === 'string' && detail.source ? detail.source : 'opencv_flood_fill',
+            seed_point: [seedX, seedY],
+            tolerance: autoSelectTolerance,
+            fallback: detail.fallback === true,
+            created_at: new Date().toISOString(),
+          },
         };
         get().addAnnotation(newAnn);
         return true;

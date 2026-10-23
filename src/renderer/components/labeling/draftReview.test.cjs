@@ -56,7 +56,9 @@ test('a refused take-back names the data version to restore', () => {
   // A draft that no longer matches the data is refused by the server; the panel says why and what to do next.
   const stale = draftError(Object.assign(new Error('Training dataset fingerprint changed after proposal generation. Generate again.'), {status: 409}));
   assert.match(stale, /직접 고쳐 저장한 라벨/);
-  assert.match(stale, /3단계에서 다시 학습/);
+  // A model trained before the change may draft again (2026-10-22 decision), so the words no longer send people to retrain.
+  assert.doesNotMatch(stale, /3단계에서 다시 학습/);
+  assert.match(stale, /같은 모델로도 만들 수 있습니다/);
   assert.doesNotMatch(stale, /fingerprint/);
 });
 
@@ -152,9 +154,306 @@ test('several drafts adopt together only from one batch, one per image, and the 
   assert.match(summary, /1장의 초안에서 2개를 라벨로 채택/);
   assert.match(summary, /1장은 채택하지 못했습니다: b\.png · 이 이미지가 바뀌었습니다/);
   assert.match(summary, /남은 초안은 데이터가 바뀌어 멈췄습니다/);
+  assert.doesNotMatch(summary, /3단계에서 다시 학습/, 'an external batch gone stale is drafted again, not retrained');
   assert.doesNotMatch(adoptionSummary([{draft: a, adopted: 1}], false), /채택하지 못했습니다|멈췄습니다/);
   const {adoptable, draftError} = helpers();
   assert.equal(adoptable(draft('d8', '/h.png', [])), false, 'nothing to adopt: only rejectable');
   assert.equal(adoptable(a), true);
   assert.match(draftError(new Error('Select one or more proposal candidates to accept.')), /채택할 후보가 없습니다/);
+});
+
+test('every draft names its source, mixed sources get the note, and external refusals read in Korean', () => {
+  const {draftSourceText, sourcesMixed, draftError, staleBatchRefusal} = helpers();
+  assert.equal(draftSourceText({job_id: 'job_1'}), '학습 모델', 'older records without a backend are trained-model drafts');
+  assert.equal(draftSourceText({backend: 'foundation', job_id: 'foundation'}), 'SAM2');
+  assert.equal(draftSourceText({backend: 'template_match', job_id: 'template_match'}), '예시 템플릿');
+  assert.equal(draftSourceText({backend: 'trained_model', job_id: 'job_1', model_data_state: 'changed'}), '학습 모델 · 데이터가 바뀐 뒤 학습한 모델 · 평가 근거 아님',
+    'the 2026-10-22 decision\'s full mark');
+  assert.equal(sourcesMixed([draft('d1', '/a.png', [0.9]), draft('d2', '/b.png', [0.9], {backend: 'trained_model'})]), false);
+  assert.equal(sourcesMixed([draft('d1', '/a.png', [0.9]), draft('d2', '/b.png', [0.9], {backend: 'vlm'})]), true);
+  assert.match(draftError(new Error('Source labels or dataset changed; generate candidates again')), /데이터가 바뀌어/);
+  assert.match(draftError(new Error('Foundation model changed')), /모델 파일이 바뀌어/);
+  assert.equal(staleBatchRefusal(new Error('Source labels or dataset changed; generate candidates again')), true, 'an external batch gone stale stops the loop too');
+  assert.equal(staleBatchRefusal(new Error('Foundation model changed')), false);
+});
+
+test('the adoption line says how a model fared and the threshold advice stays quiet on small samples', () => {
+  const {adoptionLine, adoptionTitle, thresholdAdvice, modelStats} = helpers();
+  const row = {job_id: 'job_1', backend: 'trained_model', drafts: 7, pending: 2, adopted: 3, rejected: 1, reverted: 1, edited_after: 1, edited_unknown: 0,
+    reviewed_candidates: 6, adopted_candidates: 3, rejected_candidates: 3, mean_confidence_adopted: 0.9, mean_confidence_rejected: 0.5, advice: {reason: 'too_few', reviewed_candidates: 6}};
+  assert.equal(modelStats([row], 'job_1'), row);
+  assert.equal(modelStats([row], 'job_2'), null);
+  assert.equal(adoptionLine(row), '초안 7장 · 채택 3 · 거절 1 · 채택 뒤 수정 1 · 되돌림 1');
+  assert.equal(adoptionTitle(row), '채택 후보 평균 신뢰도 90% · 거절 후보 50%');
+  assert.match(thresholdAdvice(row), /검토한 후보 6개 — 20개부터/);
+  assert.equal(adoptionLine(null), '아직 검토한 초안이 없습니다.');
+  assert.equal(thresholdAdvice(null), '');
+  assert.match(thresholdAdvice({...row, advice: {reason: 'suggestion', reviewed_candidates: 30, threshold: 0.65, adopted_rate_above: 0.95, candidates_above: 12}}), /신뢰도 0\.65 이상은 95%가 채택/);
+  assert.match(thresholdAdvice({...row, advice: {reason: 'already_high', reviewed_candidates: 30, adopted_rate: 0.93}}), /93%를 채택.*충분/);
+  assert.match(thresholdAdvice({...row, advice: {reason: 'none_reaches', reviewed_candidates: 30}}), /다시 학습/);
+  assert.match(thresholdAdvice({...row, advice: {reason: 'task_not_applicable', reviewed_candidates: 30}}), /후보가 한 개라/);
+});
+
+test('grid pages hold one batch each, one draft per image, and a page adopts only once every tile has shown', () => {
+  const {gridPages, pageAdoptionRefusal} = helpers();
+  const b1 = (id, image, confidences = [0.8]) => draft(id, image, confidences, {batch_id: 'batch_1'});
+  const drafts = [b1('d1', '/a.png'), b1('d2', '/b.png'), b1('d3', '/c.png'), b1('d4', '/a.png'), draft('d5', '/e.png', [0.7], {batch_id: 'batch_2'}),
+    draft('d6', '/f.png', [0.7]), b1('d7', '/g.png', [])];
+  const {pages, singles} = gridPages(drafts, 2);
+  assert.deepEqual(pages.map(page => page.map(row => row.id)), [['d1', 'd2'], ['d3'], ['d5']], 'pages never cross a batch');
+  assert.deepEqual(singles.map(row => row.id), ['d4', 'd6', 'd7'], 'a second draft of an image, a draft without a batch and one without candidates stay singles');
+  const page = pages[0];
+  assert.match(pageAdoptionRefusal(page, new Set(), new Set()), /아직 보이지 않은 초안 2건/);
+  assert.match(pageAdoptionRefusal(page, new Set(), new Set(['d1'])), /아직 보이지 않은 초안 1건/);
+  assert.equal(pageAdoptionRefusal(page, new Set(), new Set(['d1', 'd2'])), null);
+  assert.equal(pageAdoptionRefusal(page, new Set(['d2']), new Set(['d1'])), null, 'an excluded tile need not have shown');
+  assert.match(pageAdoptionRefusal(page, new Set(['d1', 'd2']), new Set()), /채택할 초안이 없습니다/);
+});
+
+test('limits read as one line whether a provider stored a sentence or an older record a list, and a closed draft says what became of it', () => {
+  const {supportLimitsText, closedDraftText, OPEN_REQUEST_MISSING_TEXT} = helpers();
+  assert.equal(supportLimitsText('SAM2 IoU predictions are not calibrated. Review every proposed label.'), 'SAM2 IoU predictions are not calibrated. Review every proposed label.');
+  assert.equal(supportLimitsText(['a', '', 'b']), 'a · b');
+  assert.equal(supportLimitsText(undefined), '');
+  assert.match(closedDraftText({status: 'accepted', image_path: '/x/a.png'}), /a\.png.*이미 채택/);
+  assert.match(closedDraftText({status: 'rejected', image_path: '/x/a.png'}), /이미 거절/);
+  assert.match(closedDraftText({status: 'reverted', image_path: '/x/a.png'}), /되돌렸습니다/);
+  assert.match(OPEN_REQUEST_MISSING_TEXT, /찾지 못했습니다/);
+});
+
+test('an open request records its scope and the kept candidates, and a cleared request never reuses its nonce', () => {
+  const {useDraftReviewStore} = load(path.join(__dirname, '..', '..', 'stores', 'useDraftReviewStore.ts'));
+  useDraftReviewStore.getState().publish('scope-A', 2, 1);
+  useDraftReviewStore.getState().requestOpen('d1', ['d1_c1']);
+  const first = useDraftReviewStore.getState().openRequest;
+  assert.deepEqual({id: first.id, scope: first.scope, candidateIds: first.candidateIds}, {id: 'd1', scope: 'scope-A', candidateIds: ['d1_c1']}, 'defaults to the scope the queue published');
+  useDraftReviewStore.getState().clearOpenRequest();
+  assert.equal(useDraftReviewStore.getState().openRequest, null);
+  useDraftReviewStore.getState().requestOpen('d1', undefined, 'scope-B');
+  const second = useDraftReviewStore.getState().openRequest;
+  assert.equal(second.scope, 'scope-B');
+  assert.ok(second.nonce > first.nonce, 'a new request after a clear is a new request');
+  assert.equal('candidateIds' in second, false);
+});
+
+// A small hook runtime for the panels: render the component function, run its effects, let promises land, repeat.
+// Child components stay plain elements, so the tree is exactly what the component itself renders.
+function hookRuntime() {
+  const slots = [], effects = [];
+  let cursor = 0;
+  const changed = (old, deps) => !old || !deps || deps.length !== old.deps.length || deps.some((dep, index) => !Object.is(dep, old.deps[index]));
+  const react = {
+    createElement: (type, props, ...children) => ({type, props: {...props, children}}),
+    Fragment: 'Fragment',
+    useState(initial) {
+      const index = cursor++;
+      if (!(index in slots)) slots[index] = {value: typeof initial === 'function' ? initial() : initial};
+      const slot = slots[index];
+      return [slot.value, value => { slot.value = typeof value === 'function' ? value(slot.value) : value; }];
+    },
+    useRef(initial) { const index = cursor++; if (!(index in slots)) slots[index] = {current: initial}; return slots[index]; },
+    useMemo(fn, deps) { const index = cursor++; if (changed(slots[index], deps)) slots[index] = {deps, value: fn()}; return slots[index].value; },
+    useCallback(fn, deps) { return react.useMemo(() => fn, deps); },
+    useEffect(fn, deps) {
+      const index = cursor++, old = slots[index];
+      if (changed(old, deps)) { const entry = {deps}; slots[index] = entry; effects.push(() => { old?.cleanup?.(); entry.cleanup = fn(); }); }
+    },
+  };
+  react.default = react;
+  return {react, async settle(component, cycles = 12) {
+    let tree;
+    for (let cycle = 0; cycle < cycles; cycle++) { cursor = 0; tree = component(); effects.splice(0).forEach(fn => fn()); await new Promise(resolve => setImmediate(resolve)); }
+    return tree;
+  }};
+}
+const nodes = node => !node || typeof node !== 'object' ? [] : Array.isArray(node) ? node.flatMap(nodes) : [node, ...nodes(node.props?.children)];
+const text = node => node == null || typeof node === 'boolean' ? '' : typeof node === 'string' || typeof node === 'number' ? String(node) : Array.isArray(node) ? node.map(text).join('') : text(node.props?.children);
+const byLabel = (tree, label) => nodes(tree).find(node => node.props?.['aria-label'] === label);
+const buttonWith = (tree, words) => nodes(tree).find(node => node.type === 'button' && (node.props['aria-label'] === words || text(node).includes(words)));
+const fakeStore = state => Object.assign(selector => selector(state), {getState: () => state, setState: patch => Object.assign(state, patch)});
+// `prelude` declares module-local stand-ins (a `window` for the popover's fit), on the first line so line numbers hold.
+function loadComponent(file, mocks, prelude = '') {
+  const filename = path.join(__dirname, file), m = new Module(filename, module);
+  m.filename = filename;
+  m.paths = Module._nodeModulePaths(path.dirname(filename));
+  m.require = name => { assert.ok(Object.hasOwn(mocks, name), `${file} imports ${name}`); return mocks[name]; };
+  const output = ts.transpileModule(fs.readFileSync(filename, 'utf8'), {compilerOptions: {module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, jsx: ts.JsxEmit.React, esModuleInterop: true}}).outputText;
+  m._compile(output.replace('"use strict";', `"use strict";${prelude}`), filename);
+  return m.exports;
+}
+const icons = new Proxy({}, {get: (_, key) => String(key)});
+const row = (id, image, extra = {}) => ({id, status: 'pending', image_path: image, image_id: id, image_width: 100, image_height: 50, created_at: '2026-10-23T00:00:00Z',
+  job_id: 'job_b', batch_id: 'batch_1', candidates: [{id: `${id}_c0`, confidence: 0.8, annotation: {type: 'bbox', label: 'defect', bbox: [1, 1, 5, 5]}},
+    {id: `${id}_c1`, confidence: 0.6, annotation: {type: 'bbox', label: 'defect', bbox: [6, 6, 9, 9]}}], accepted_candidate_ids: [], ...extra});
+
+function queueFixture({drafts, request = null, models = [], stats = async () => ({models: []}), list, reviewerName = 'kai'}) {
+  const runtime = hookRuntime(), calls = {list: 0, stats: 0}, at = {scope: 'scope-B'};
+  const annotation = {currentImage: null, isDirty: false, reviewerName, setReviewerName() {}};
+  const review = {publish() {}, openRequest: request, clearOpenRequest() { review.openRequest = null; }};
+  const api = {labelSuggestions: {
+    list: async () => { calls.list++; return list ? list(at.scope) : {suggestions: drafts.map(draft => ({...draft}))}; },
+    models: async () => ({models}),
+    stats: () => { calls.stats++; return stats(); },
+  }};
+  const {DraftReviewQueue} = loadComponent('DraftReviewQueue.tsx', {
+    react: runtime.react, 'lucide-react': icons,
+    '../../services/api': {api, getProjectContext: () => null},
+    '../../services/datasetWorkflow': {datasetWorkflow: {}},
+    '../../services/teamDataApi': {teamDataApi: {}},
+    '../../stores/useAnnotationStore': {useAnnotationStore: fakeStore(annotation)},
+    '../../stores/useDatasetStore': {readDatasetAuthority: () => 'a', useDatasetStore: fakeStore({annotationsChanged: async () => {}})},
+    '../../stores/useProjectStore': {useProjectStore: fakeStore({projectDir: '/project-B', project: {source_dataset_dir: '/source-B'}, task: 'detection', openImageForLabeling: async () => true})},
+    '../../stores/useModelAssistRunStore': {useModelAssistRunStore: fakeStore({begin() {}, end() {}})},
+    '../../stores/useDraftReviewStore': {draftReviewScope: () => at.scope, useDraftReviewStore: fakeStore(review)},
+    '../../stores/workflowEvidence': {bumpWorkflowEvidence() {}, subscribeWorkflowEvidence: () => () => {}},
+    '../../stores/assistContext': {reportPanelError() {}},
+    './BulkLabelAssist': {BulkLabelAssist: 'BulkLabelAssist'}, './SuggestionPreview': {SuggestionPreview: 'SuggestionPreview'}, './DraftGrid': {DraftGrid: 'DraftGrid'},
+    './teamDataWorkflow': {imageLeaseToken: () => undefined},
+    './draftReview': helpers(),
+  }, 'var window = {innerHeight: 1000, addEventListener() {}, removeEventListener() {}};');
+  return {calls, review, at, annotation, settle: cycles => runtime.settle(DraftReviewQueue, cycles)};
+}
+
+test('an external draft whose limits are one sentence opens in the queue and shows that sentence', async () => {
+  // Every provider stores support_limits as a string; joining it like a list threw and unmounted the window.
+  const limits = 'SAM2 IoU predictions and DINO cosine scores are not calibrated class probabilities. Review every proposed label.';
+  const sam = row('suggestion_sam', '/b/one.png', {backend: 'foundation', job_id: 'foundation', batch_id: undefined, support_limits: limits});
+  const queue = queueFixture({drafts: [sam], request: {id: 'suggestion_sam', nonce: 1, scope: 'scope-B'}});
+  const block = byLabel(await queue.settle(), '선택한 초안');
+  assert.ok(block, 'the selected draft opens');
+  assert.ok(text(block).includes(limits));
+  assert.match(text(block), /출처: SAM2/);
+});
+
+test('an open request from another project is dropped, a missing draft is read once more, and every handled request is cleared', async () => {
+  const drafts = [row('d1', '/b/1.png'), row('d2', '/b/2.png', {status: 'accepted'})];
+  // Asked in project A, met in project B: dropped without a read of its own or an opened popover.
+  let queue = queueFixture({drafts, request: {id: 'from_a', nonce: 1, scope: 'scope-A'}});
+  let tree = await queue.settle(30);
+  assert.equal(queue.review.openRequest, null);
+  assert.equal(queue.calls.list, 1, 'only the queue\'s own first read');
+  assert.equal(byLabel(tree, '초안 검토 패널').props['aria-expanded'], false);
+  // Not in this project's list: one more read (it may be newer than the list), then a notice instead of reading forever.
+  queue = queueFixture({drafts, request: {id: 'gone', nonce: 2, scope: 'scope-B'}});
+  tree = await queue.settle(30);
+  assert.equal(queue.calls.list, 2);
+  assert.equal(queue.calls.stats, 2);
+  assert.equal(queue.review.openRequest, null);
+  assert.equal(byLabel(tree, '초안 검토 패널').props['aria-expanded'], true);
+  assert.match(text(tree), /그 초안을 찾지 못했습니다/);
+  // Found and waiting: opened, then cleared so coming back to step 2 does not open it again.
+  queue = queueFixture({drafts, request: {id: 'd1', nonce: 3, scope: 'scope-B'}});
+  tree = await queue.settle();
+  assert.equal(queue.review.openRequest, null);
+  assert.ok(byLabel(tree, '선택한 초안'));
+  // Found but already adopted: a notice, not an empty selection.
+  queue = queueFixture({drafts, request: {id: 'd2', nonce: 4, scope: 'scope-B'}});
+  tree = await queue.settle();
+  assert.equal(queue.review.openRequest, null);
+  assert.equal(byLabel(tree, '선택한 초안'), undefined);
+  assert.match(text(tree), /2\.png의 그 초안은 이미 채택했습니다/);
+});
+
+test('a request from 모델 보조 opens with only the candidates kept there', async () => {
+  const queue = queueFixture({drafts: [row('d1', '/b/1.png')], request: {id: 'd1', nonce: 1, scope: 'scope-B', candidateIds: ['d1_c1', 'not_this_draft']}});
+  const block = byLabel(await queue.settle(), '선택한 초안');
+  assert.deepEqual([...nodes(block).find(node => node.type === 'SuggestionPreview').props.selectedIds], ['d1_c1']);
+  assert.deepEqual(nodes(block).filter(node => node.type === 'input' && node.props.type === 'checkbox').map(node => node.props.checked), [false, true],
+    'the unchecked box stays out of 선택 후보 채택');
+});
+
+test('the grid keeps a page\'s exclusions when a tile is opened or the list is visited', async () => {
+  const drafts = [row('d1', '/b/1.png'), row('d2', '/b/2.png'), row('d3', '/b/3.png')];
+  const queue = queueFixture({drafts});
+  let tree = await queue.settle();
+  buttonWith(tree, '초안 검토 패널').props.onClick(); tree = await queue.settle();
+  buttonWith(tree, '격자 (한눈 검토)').props.onClick(); tree = await queue.settle();
+  const grid = () => nodes(tree).find(node => node.type === 'DraftGrid');
+  grid().props.onToggle('d2'); tree = await queue.settle();
+  for (const id of ['d1', 'd2', 'd3']) grid().props.onLoaded(id);
+  tree = await queue.settle();
+  assert.match(text(buttonWith(tree, '이 페이지 채택')), /2장/);
+  grid().props.onOpen(drafts[0]); tree = await queue.settle();
+  assert.ok(grid(), "'열기' stays in the grid");
+  assert.ok(byLabel(tree, '선택한 초안'), 'with the opened draft below it');
+  assert.deepEqual([...grid().props.excluded], ['d2']);
+  buttonWith(tree, '목록').props.onClick(); tree = await queue.settle();
+  buttonWith(tree, '격자 (한눈 검토)').props.onClick(); tree = await queue.settle();
+  for (const id of ['d1', 'd2', 'd3']) grid().props.onLoaded(id);
+  tree = await queue.settle();
+  assert.deepEqual([...grid().props.excluded], ['d2']);
+  assert.match(text(buttonWith(tree, '이 페이지 채택')), /2장/, 'the excluded draft is still left out');
+  assert.equal(nodes(tree).filter(node => node.props?.['aria-label'] === '초안 검토자 이름').length, 1, 'one reviewer field');
+});
+
+test('a page whose tiles have all shown says the reviewer name is what keeps it from adopting', async () => {
+  const queue = queueFixture({drafts: [row('d1', '/b/1.png'), row('d2', '/b/2.png')], reviewerName: ''});
+  let tree = await queue.settle();
+  buttonWith(tree, '초안 검토 패널').props.onClick(); tree = await queue.settle();
+  buttonWith(tree, '격자 (한눈 검토)').props.onClick(); tree = await queue.settle();
+  const grid = nodes(tree).find(node => node.type === 'DraftGrid');
+  for (const id of ['d1', 'd2']) grid.props.onLoaded(id);
+  tree = await queue.settle();
+  const reason = '검토자 이름을 입력하면 이 페이지를 채택할 수 있습니다.';
+  const adopt = buttonWith(tree, '이 페이지 채택');
+  assert.equal(adopt.props.disabled, true);
+  assert.equal(adopt.props.title, reason, 'the hover reason names the reviewer, not the tiles');
+  assert.ok(nodes(tree).some(node => node.type === 'p' && text(node) === reason), 'and the same reason shows beside the button');
+  queue.annotation.reviewerName = 'kai'; tree = await queue.settle();
+  assert.equal(buttonWith(tree, '이 페이지 채택').props.disabled, false);
+  assert.equal(buttonWith(tree, '이 페이지 채택').props.title, undefined);
+  assert.ok(!nodes(tree).some(node => text(node) === reason));
+});
+
+test('the drafts load without waiting for the adoption numbers, a failed count shows nothing, and a changed-data model carries the full mark', async () => {
+  const models = [{job_id: 'job_b', task: 'detection', data_state: 'changed'}];
+  let queue = queueFixture({drafts: [row('d1', '/b/1.png')], models, stats: () => new Promise(() => {})});
+  let tree = await queue.settle();
+  assert.match(text(byLabel(tree, '초안 검토 패널')), /검토 대기 1장/);
+  buttonWith(tree, '초안 검토 패널').props.onClick(); tree = await queue.settle();
+  assert.equal(byLabel(tree, '모델 채택률'), undefined, 'nothing until the numbers arrive');
+  assert.match(text(byLabel(tree, '초안 모델')), /job_b · detection · 데이터가 바뀐 뒤 학습한 모델 · 평가 근거 아님/);
+  queue = queueFixture({drafts: [row('d1', '/b/1.png')], models, stats: async () => { throw new Error('offline'); }});
+  tree = await queue.settle();
+  buttonWith(tree, '초안 검토 패널').props.onClick(); tree = await queue.settle();
+  assert.equal(byLabel(tree, '모델 채택률'), undefined);
+  assert.doesNotMatch(text(tree), /아직 검토한 초안이 없습니다/, 'a failed count is not "none reviewed"');
+});
+
+test('another project\'s drafts leave the screen as soon as the scope changes', async () => {
+  let pendingB;
+  const queue = queueFixture({drafts: [], list: scope => scope === 'scope-B' ? {suggestions: [row('d1', '/b/1.png')]} : new Promise(resolve => { pendingB = resolve; })});
+  let tree = await queue.settle();
+  assert.match(text(byLabel(tree, '초안 검토 패널')), /검토 대기 1장/);
+  queue.at.scope = 'scope-C';
+  tree = await queue.settle();
+  assert.ok(pendingB, 'the new scope is being read');
+  assert.match(text(byLabel(tree, '초안 검토 패널')), /검토 대기 0장/);
+});
+
+test('모델 보조 hands over the candidates the person kept and marks a model trained before the data changed', async () => {
+  const runtime = hookRuntime(), requests = [];
+  const proposal = row('p1', '/b/1.png', {batch_id: undefined});
+  const {ModelAssistPanel} = loadComponent('ModelAssistPanel.tsx', {
+    react: runtime.react, 'lucide-react': icons,
+    '../../services/api': {api: {labelSuggestions: {models: async () => ({models: [{job_id: 'job_x', task: 'detection', data_state: 'changed'}]}), list: async () => ({suggestions: [proposal]})}}},
+    '../../stores/useAnnotationStore': {useAnnotationStore: fakeStore({currentImage: {file_path: '/b/1.png', file_name: '1.png'}, isDirty: false, annotationLoadStatus: 'ready', reviewerName: 'kai', setReviewerName() {}})},
+    '../../stores/useDraftReviewStore': {draftReviewScope: input => `scope:${input.projectDir}`, useDraftReviewStore: fakeStore({requestOpen: (...args) => requests.push(args)})},
+    '../../stores/useDatasetStore': {useDatasetStore: fakeStore({images: [], hasSelectedFolder: true, annotationsChanged: async () => {}})},
+    '../../stores/useProjectStore': {useProjectStore: fakeStore({projectDir: '/project-B', project: {active_labelset_id: 'default', task: 'detection', source_dataset_dir: '/source-B'}, task: 'detection'})},
+    '../../stores/useModelAssistRunStore': {useModelAssistRunStore: fakeStore({begin() {}, end() {}})},
+    './LabelAssistDeviceSizes': {LabelAssistDeviceSizes: 'LabelAssistDeviceSizes'}, './BulkLabelAssist': {BulkLabelAssist: 'BulkLabelAssist'},
+    './KoreanConditionLabeler': {KoreanConditionLabeler: 'KoreanConditionLabeler'}, './CandidateProviderControls': {CandidateProviderControls: 'CandidateProviderControls'},
+    '../../services/datasetWorkflow': {datasetWorkflow: {}}, './SuggestionPreview': {SuggestionPreview: 'SuggestionPreview'},
+    './draftReview': helpers(),
+  });
+  let tree = await runtime.settle(ModelAssistPanel);
+  buttonWith(tree, '모델 보조 라벨링 패널').props.onClick(); tree = await runtime.settle(ModelAssistPanel);
+  const option = nodes(tree).find(node => node.type === 'option' && node.props.value === 'job_x');
+  assert.equal(text(option), 'job_x · detection · 데이터가 바뀐 뒤 학습한 모델 · 평가 근거 아님');
+  assert.match(text(tree), /데이터가 바뀐 뒤 학습한 모델 · 평가 근거 아님 — 초안만 만들 수 있고/);
+  const box = nodes(nodes(tree).find(node => node.type === 'label' && node.props.key === 'p1_c0')).find(node => node.type === 'input');
+  box.props.onChange({target: {checked: false}}); tree = await runtime.settle(ModelAssistPanel);
+  buttonWith(tree, '초안 검토에서 채택').props.onClick();
+  assert.deepEqual(requests, [['p1', ['p1_c1'], 'scope:/project-B']]);
 });

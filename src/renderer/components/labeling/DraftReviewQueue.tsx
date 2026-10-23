@@ -1,10 +1,10 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Check, CheckCheck, ChevronDown, ChevronRight, ClipboardCheck, Loader2, RotateCcw, X } from 'lucide-react';
-import { api, type LabelSuggestion, type LabelSuggestionBatchEntry, type LabelSuggestionModel } from '../../services/api';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Check, CheckCheck, ChevronDown, ChevronLeft, ChevronRight, ClipboardCheck, Loader2, RotateCcw, X } from 'lucide-react';
+import { api, getProjectContext, type LabelSuggestion, type LabelSuggestionBatchEntry, type LabelSuggestionModel } from '../../services/api';
 import { datasetWorkflow } from '../../services/datasetWorkflow';
 import { teamDataApi } from '../../services/teamDataApi';
 import { useAnnotationStore } from '../../stores/useAnnotationStore';
-import { useDatasetStore } from '../../stores/useDatasetStore';
+import { readDatasetAuthority, useDatasetStore } from '../../stores/useDatasetStore';
 import { useProjectStore } from '../../stores/useProjectStore';
 import { useModelAssistRunStore } from '../../stores/useModelAssistRunStore';
 import { draftReviewScope, useDraftReviewStore } from '../../stores/useDraftReviewStore';
@@ -13,9 +13,11 @@ import { reportPanelError } from '../../stores/assistContext';
 import { BulkLabelAssist } from './BulkLabelAssist';
 import type { LabelAssistExecution } from './LabelAssistDeviceSizes';
 import { SuggestionPreview } from './SuggestionPreview';
+import { DraftGrid } from './DraftGrid';
 import { imageLeaseToken } from './teamDataWorkflow';
-import { DRAFT_ORDER_TEXT, adoptable, adoptionHistory, adoptionSummary, canTakeBack, draftError, multiAdoptionRefusal, orderDrafts, pendingImageCount,
-  staleBatchRefusal, topConfidence, type AdoptionResult, type DraftOrder } from './draftReview';
+import { CHANGED_MODEL_MARK, DRAFT_ORDER_TEXT, MIXED_SOURCE_NOTE, OPEN_REQUEST_MISSING_TEXT, adoptable, adoptionHistory, adoptionLine, adoptionSummary, adoptionTitle, canTakeBack,
+  closedDraftText, draftError, draftSourceText, gridPages, modelStats, multiAdoptionRefusal, orderDrafts, pageAdoptionRefusal, pendingImageCount, sourcesMixed, staleBatchRefusal,
+  supportLimitsText, thresholdAdvice, topConfidence, type AdoptionResult, type DraftOrder, type ModelAdoptionStats } from './draftReview';
 
 const EXECUTION: LabelAssistExecution = { device: 'cpu', min_area: 0, min_width: 0, min_height: 0 };
 const fileName = (path: string) => path.split(/[\\/]/).pop() || path;
@@ -55,6 +57,8 @@ export const DraftReviewQueue: React.FC = () => {
   const reviewerName = useAnnotationStore((state) => state.reviewerName);
   const setReviewerName = useAnnotationStore((state) => state.setReviewerName);
   const publish = useDraftReviewStore((state) => state.publish);
+  const openRequest = useDraftReviewStore((state) => state.openRequest);
+  const clearOpenRequest = useDraftReviewStore((state) => state.clearOpenRequest);
   const beginRun = useModelAssistRunStore((state) => state.begin);
   const endRun = useModelAssistRunStore((state) => state.end);
   const [open, setOpen] = useState(false);
@@ -70,6 +74,17 @@ export const DraftReviewQueue: React.FC = () => {
   const [picks, setPicks] = useState<Set<string>>(new Set());
   const [choices, setChoices] = useState<Map<string, Set<string>>>(new Map());
   const [progress, setProgress] = useState<{ done: number; total: number } | null>(null);
+  const [stats, setStats] = useState<ModelAdoptionStats[] | null>(null);
+  // The contact-sheet review: a page of one batch's drafts; a tile counts as seen only once its image has shown.
+  const [mode, setMode] = useState<'list' | 'grid'>('list');
+  const [pageSize, setPageSize] = useState<12 | 24>(12);
+  const [page, setPage] = useState(0);
+  const [excluded, setExcluded] = useState<Set<string>>(new Set());
+  const [loadedOnPage, setLoadedOnPage] = useState<Set<string>>(new Set());
+  const [wide, setWide] = useState(false);
+  // The last list read that landed (its scope, and a count), and the open request already given its one extra read.
+  const lastRead = useRef({ scope: '', count: 0 });
+  const retriedOpen = useRef<{ nonce: number; after: number } | null>(null);
   const [busy, setBusy] = useState<'loading' | 'accept' | 'reject' | 'undo' | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
@@ -80,14 +95,30 @@ export const DraftReviewQueue: React.FC = () => {
   const scope = draftReviewScope({ projectDir, project, task });
   const live = useRef(scope);
   live.current = scope;
+  const shownScope = useRef(scope);
 
   useEffect(() => {
     let current = true;
     setError(null);
-    if (!projectDir || !project?.source_dataset_dir) { setDrafts([]); setModels([]); publish(scope, 0, 0); return; }
+    // Another project, source, label set or task: nothing of the previous one stays on screen while this one loads.
+    if (shownScope.current !== scope) {
+      shownScope.current = scope;
+      setDrafts([]); setModels([]); setStats(null); setSelectedId('');
+    }
+    if (!projectDir || !project?.source_dataset_dir) {
+      setDrafts([]); setModels([]); setStats(null);
+      lastRead.current = { scope, count: lastRead.current.count + 1 };
+      publish(scope, 0, 0);
+      return;
+    }
     setBusy((value) => value ?? 'loading');
+    // The adoption numbers come on their own: a slow count never holds up the drafts, and a failed one shows nothing.
+    api.labelSuggestions.stats().then((counted) => {
+      if (current && live.current === scope) setStats((counted?.models as ModelAdoptionStats[] | undefined) ?? null);
+    }).catch(() => { if (current && live.current === scope) setStats(null); });
     Promise.all([api.labelSuggestions.list(), api.labelSuggestions.models()]).then(([listed, catalog]) => {
       if (!current || live.current !== scope) return;
+      lastRead.current = { scope, count: lastRead.current.count + 1 };
       setDrafts(listed.suggestions);
       setModels(catalog.models);
       setModelId((previous) => catalog.models.some((model) => model.job_id === previous) ? previous : catalog.models[0]?.job_id || '');
@@ -117,6 +148,64 @@ export const DraftReviewQueue: React.FC = () => {
   const picked = pending.filter((draft) => picks.has(draft.id));
   const refusal = multiAdoptionRefusal(picked);
   const unseenPicked = picked.filter((draft) => !viewed.has(draft.id)).length;
+  const selectedModel = models.find((model) => model.job_id === modelId);
+  const modelRow = modelStats(stats, modelId);
+  const grid = useMemo(() => gridPages(pending, pageSize), [pending, pageSize]);
+  const pageDrafts = grid.pages[Math.min(page, Math.max(0, grid.pages.length - 1))] ?? [];
+  const pageRefusal = pageAdoptionRefusal(pageDrafts, excluded, loadedOnPage);
+  // What keeps '이 페이지 채택' off, said next to it: the page itself first, then the missing reviewer name.
+  const pageBlock = pageRefusal ?? (reviewerName.trim() ? null : '검토자 이름을 입력하면 이 페이지를 채택할 수 있습니다.');
+  const authority = readDatasetAuthority();
+  // With the grid's page adoption on screen, it is the one primary action and holds the one reviewer field.
+  const gridShown = mode === 'grid' && pending.length > 0 && grid.pages.length > 0;
+  const adoptStyle = gridShown ? 'border border-emerald-700 text-emerald-200 hover:bg-emerald-900/50' : 'bg-emerald-600 text-white hover:bg-emerald-500';
+  const shownPage = useRef(0);
+  shownPage.current = page;
+  // Tiles read their image only while this page is on screen; leaving the page retires the reads.
+  const tileCurrent = useRef<() => boolean>(() => false);
+  tileCurrent.current = () => live.current === scope && open && mode === 'grid';
+  const tileLive = useCallback(() => tileCurrent.current(), []);
+  // Exclusions belong to the page, so a trip to the list (or a tile's '열기') keeps them; what has shown is read again
+  // whenever the tiles come back.
+  useEffect(() => setExcluded(new Set()), [page, pageSize, scope]);
+  useEffect(() => setLoadedOnPage(new Set()), [page, mode, pageSize, scope]);
+  useEffect(() => { if (page > 0 && page >= grid.pages.length) setPage(Math.max(0, grid.pages.length - 1)); }, [grid.pages.length, page]);
+
+  // Another panel ('모델 보조') asked for one draft: open the popover on it, with only the candidates kept there. A
+  // request from another project or label set is dropped. A draft the list lacks may be newer than the list, so it is
+  // read once more; still missing after that read, the request ends with a notice. Every request is cleared once
+  // handled, so coming back to step 2 never replays it.
+  useEffect(() => {
+    if (!openRequest) return;
+    if (openRequest.scope !== scope) { clearOpenRequest(); return; }
+    if (lastRead.current.scope !== scope) return; // this scope's list has not landed yet; its landing runs this again
+    const draft = drafts.find((row) => row.id === openRequest.id);
+    if (!draft) {
+      const retry = retriedOpen.current;
+      if (!retry || retry.nonce !== openRequest.nonce) {
+        retriedOpen.current = { nonce: openRequest.nonce, after: lastRead.current.count };
+        setReloads((value) => value + 1);
+        return;
+      }
+      if (lastRead.current.count <= retry.after) return; // the extra read has not landed yet
+      clearOpenRequest();
+      setOpen(true);
+      setSelectedId('');
+      setError(null);
+      setNotice(OPEN_REQUEST_MISSING_TEXT);
+      return;
+    }
+    clearOpenRequest();
+    setOpen(true);
+    setMode('list');
+    if (draft.status !== 'pending') { setSelectedId(''); setError(null); setNotice(closedDraftText(draft)); return; }
+    choose(draft);
+    if (openRequest.candidateIds) {
+      const kept = new Set(openRequest.candidateIds.filter((id) => draft.candidates.some((candidate) => candidate.id === id)));
+      setChosen(kept);
+      setChoices((previous) => new Map(previous).set(draft.id, kept));
+    }
+  }, [openRequest, drafts, scope]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const choose = (draft: LabelSuggestion) => {
     setSelectedId(draft.id);
@@ -235,12 +324,13 @@ export const DraftReviewQueue: React.FC = () => {
   // Several drafts of one batch, one after another: each adoption keeps its own backup and origin, so each can still
   // be taken back on its own. The loop stops when the server says the batch's data changed (the rest would be
   // refused the same way) and goes on past a refusal that concerns one image only.
-  const adoptPicked = async () => {
-    const targets = picked;
+  const adoptDrafts = async (targets: LabelSuggestion[]) => {
     if (!targets.length) return;
     if (!reviewerName.trim()) { setError('검토자 이름을 입력하세요.'); return; }
-    if (refusal) { setError(refusal); return; }
-    if (unseenPicked) { setError(`미리보기로 확인하지 않은 초안 ${unseenPicked}건이 있습니다. 열어서 확인한 뒤 채택하세요.`); return; }
+    const grouping = multiAdoptionRefusal(targets);
+    if (grouping) { setError(grouping); return; }
+    const unseen = targets.filter((draft) => !viewed.has(draft.id)).length;
+    if (unseen) { setError(`미리보기로 확인하지 않은 초안 ${unseen}건이 있습니다. 열어서 확인한 뒤 채택하세요.`); return; }
     if (targets.some(sameImageDirty)) { setError('이 이미지의 수정 내용을 먼저 저장한 뒤 채택하세요.'); return; }
     const startedScope = scope;
     beginRun();
@@ -305,6 +395,12 @@ export const DraftReviewQueue: React.FC = () => {
     }
   };
 
+  const adoptPicked = () => adoptDrafts(picked);
+  const adoptPage = () => adoptDrafts(pageDrafts.filter((draft) => !excluded.has(draft.id)));
+  const tileLoaded = (id: string) => {
+    setLoadedOnPage((previous) => previous.has(id) ? previous : new Set(previous).add(id));
+    setViewed((previous) => previous.has(id) ? previous : new Set(previous).add(id));
+  };
   const pickAllViewed = () => setPicks(new Set(pending.filter((draft) => viewed.has(draft.id) && adoptable(draft)).map((draft) => draft.id)));
 
   if (!projectDir || !project?.source_dataset_dir) return null;
@@ -324,13 +420,16 @@ export const DraftReviewQueue: React.FC = () => {
       </button>
 
       {open && (
-        <aside style={{ maxHeight: room }} className="absolute right-3 top-full z-50 mt-1 flex max-h-[calc(100vh-195px)] w-[540px] max-w-[calc(100vw-24px)] flex-col overflow-hidden rounded-xl border border-slate-600 bg-[#151D2A] shadow-2xl" aria-label="초안 검토">
+        <aside style={{ maxHeight: room }} onKeyDown={(event) => event.stopPropagation()} className={`absolute right-3 top-full z-50 mt-1 flex max-h-[calc(100vh-195px)] ${wide ? 'w-[min(1200px,calc(100vw-24px))]' : 'w-[540px]'} max-w-[calc(100vw-24px)] flex-col overflow-hidden rounded-xl border border-slate-600 bg-[#151D2A] shadow-2xl`} aria-label="초안 검토">
           <div className="flex items-start justify-between border-b border-slate-700 px-4 py-3">
             <div>
               <h3 className="text-sm font-bold text-white">라벨 초안 검토</h3>
               <p className="mt-0.5 text-[11px] text-slate-400">검토 대기 {waiting}장 · 채택은 기존 라벨에 덧붙이고, 채택 직전 데이터 버전을 자동으로 남깁니다</p>
             </div>
-            <button type="button" onClick={() => setOpen(false)} aria-label="초안 검토 닫기" className="rounded p-1 text-slate-400 hover:bg-slate-700 hover:text-white"><X className="h-4 w-4" /></button>
+            <div className="flex shrink-0 items-center gap-1">
+              <button type="button" onClick={() => setWide((value) => !value)} aria-pressed={wide} className="rounded border border-slate-600 px-2 py-1 text-[11px] text-slate-200 hover:bg-slate-700">{wide ? '좁게 보기' : '넓게 보기'}</button>
+              <button type="button" onClick={() => setOpen(false)} aria-label="초안 검토 닫기" className="rounded p-1 text-slate-400 hover:bg-slate-700 hover:text-white"><X className="h-4 w-4" /></button>
+            </div>
           </div>
           <div className="space-y-4 overflow-y-auto p-4">
             {error && <p role="alert" className="rounded border border-red-800 bg-red-950/40 p-2 text-xs text-red-200">{error}</p>}
@@ -338,19 +437,24 @@ export const DraftReviewQueue: React.FC = () => {
 
             <section id="draft-create" tabIndex={-1} className="space-y-2 rounded-lg border border-slate-700 bg-[#101722] p-3" aria-label="초안 만들기">
               <h4 className="font-semibold text-slate-100">1. 초안 만들기</h4>
-              {models.length === 0 ? <p className="text-[11px] text-slate-400">지금 데이터로 학습을 마친 모델이 없습니다. 몇 장을 직접 라벨한 뒤 3단계에서 학습하면, 남은 이미지의 초안을 만들 수 있습니다.</p> : <>
+              {models.length === 0 ? <p className="text-[11px] text-slate-400">이 데이터로 학습을 마친 모델이 없습니다. 몇 장을 직접 라벨한 뒤 3단계에서 학습하면, 남은 이미지의 초안을 만들 수 있습니다.</p> : <>
                 <label className="block text-[11px] text-slate-400">초안을 만들 모델
                   <select aria-label="초안 모델" value={modelId} onChange={(event) => setModelId(event.target.value)} disabled={!!busy || batchRunning} className="mt-1 w-full rounded border border-slate-600 bg-[#1D2938] px-2 py-2 text-xs text-slate-100 disabled:opacity-50">
-                    {models.map((model) => <option value={model.job_id} key={model.job_id}>{model.job_id} · {model.task}</option>)}
+                    {models.map((model) => <option value={model.job_id} key={model.job_id}>{model.job_id} · {model.task}{model.data_state === 'changed' ? ` · ${CHANGED_MODEL_MARK}` : ''}</option>)}
                   </select>
                 </label>
+                {selectedModel?.data_state === 'changed' && <p className="text-[11px] text-amber-200">{CHANGED_MODEL_MARK} — 초안만 만들 수 있고, 채택할 때의 검사는 그대로입니다.</p>}
+                {stats && <p role="status" aria-label="모델 채택률" title={adoptionTitle(modelRow)} className="text-[11px] text-slate-400">
+                  {adoptionLine(modelRow)}{thresholdAdvice(modelRow) ? ` ${thresholdAdvice(modelRow)}` : ''}
+                  {modelRow?.advice.reason === 'suggestion' && modelRow.advice.threshold != null && <button type="button" onClick={() => setThreshold(modelRow.advice.threshold as number)} disabled={!!busy || batchRunning} className="ml-2 rounded border border-slate-600 px-1.5 py-0.5 text-slate-200 hover:bg-slate-700 disabled:opacity-40">기준 {(modelRow.advice.threshold as number).toFixed(2)} 적용</button>}
+                </p>}
                 <label className="block text-[11px] text-slate-400">후보 기준 신뢰도 <span className="font-mono text-cyan-300">{threshold.toFixed(2)}</span>
                   <input aria-label="초안 기준 신뢰도" type="range" min="0.05" max="0.95" step="0.05" value={threshold} onChange={(event) => setThreshold(Number(event.target.value))} disabled={!!busy || batchRunning} className="mt-1 block w-full accent-cyan-500" />
                 </label>
                 <BulkLabelAssist execution={EXECUTION} projectDir={projectDir} modelId={modelId} threshold={threshold} keywords={[]}
                   disabled={!!busy || isDirty} onOpenEntry={openBatchEntry}
                   onRunningChange={setBatchRunning} />
-                <p className="text-[11px] leading-relaxed text-slate-500">초안 하나를 채택하면 데이터가 바뀌어 이 모델로 새 초안은 만들 수 없게 됩니다(다시 학습 필요). 같은 묶음으로 만든 초안은 이어서 채택할 수 있으니 남은 이미지를 한 번에 만드세요. 라벨을 직접 고쳐 저장하면 남은 초안도 채택할 수 없게 되니, 남은 초안을 먼저 검토한 뒤 고치세요.</p>
+                <p className="text-[11px] leading-relaxed text-slate-500">초안을 채택하면 데이터가 바뀝니다. 그 뒤에도 이 모델로 초안을 만들 수 있고, '{CHANGED_MODEL_MARK}'으로 표시됩니다(3단계 '빠른 이어 학습'으로 모델을 맞추면 초안이 더 정확해집니다). 같은 묶음으로 만든 초안은 이어서 채택할 수 있으니 남은 이미지를 한 번에 만드세요. 라벨을 직접 고쳐 저장하면 남은 초안은 채택할 수 없게 되니, 남은 초안을 먼저 검토한 뒤 고치세요.</p>
               </>}
             </section>
 
@@ -363,8 +467,39 @@ export const DraftReviewQueue: React.FC = () => {
                   <option value="confident">확실한 것부터</option>
                 </select>
               </div>
-              <p className="text-[11px] text-slate-500">순서 기준: {DRAFT_ORDER_TEXT[order]}</p>
+              <p className="text-[11px] text-slate-500">순서 기준: {DRAFT_ORDER_TEXT[order]}{sourcesMixed(drafts) ? ` · ${MIXED_SOURCE_NOTE}` : ''}</p>
+              {pending.length > 1 && <div className="flex flex-wrap items-center gap-2 text-[11px]">
+                <span className="text-slate-400">보기</span>
+                <button type="button" aria-pressed={mode === 'list'} onClick={() => setMode('list')} className={`rounded border px-2 py-0.5 ${mode === 'list' ? 'border-cyan-500 bg-cyan-950/40 text-cyan-100' : 'border-slate-600 text-slate-200 hover:bg-slate-700'}`}>목록</button>
+                <button type="button" aria-pressed={mode === 'grid'} onClick={() => { setMode('grid'); setWide(true); }} className={`rounded border px-2 py-0.5 ${mode === 'grid' ? 'border-cyan-500 bg-cyan-950/40 text-cyan-100' : 'border-slate-600 text-slate-200 hover:bg-slate-700'}`}>격자 (한눈 검토)</button>
+                {mode === 'grid' && <select aria-label="격자 한 페이지 장수" value={pageSize} onChange={(event) => { setPageSize(Number(event.target.value) as 12 | 24); setPage(0); }} className="rounded border border-slate-600 bg-[#1D2938] px-2 py-0.5 text-slate-100">
+                  <option value={12}>12장씩</option><option value={24}>24장씩</option>
+                </select>}
+              </div>}
               {pending.length === 0 && <p className="rounded border border-slate-700 p-3 text-center text-slate-400">검토할 초안이 없습니다.</p>}
+              {mode === 'grid' && pending.length > 0 && <div className="space-y-2 rounded-lg border border-emerald-900 bg-[#0F1722] p-3" aria-label="격자 검토">
+                {grid.pages.length === 0 ? <p className="text-[11px] text-slate-400">격자로 볼 묶음이 없습니다. 아래 목록에서 하나씩 채택하세요.</p> : <>
+                  <div className="flex flex-wrap items-center justify-between gap-2 text-[11px] text-slate-300">
+                    <span>페이지 {Math.min(page, grid.pages.length - 1) + 1} / {grid.pages.length} · 묶음 {pageDrafts[0]?.batch_id?.slice(-8) ?? '-'} · 이 페이지 {pageDrafts.length}장 · 보인 것 {pageDrafts.filter((draft) => loadedOnPage.has(draft.id)).length}장</span>
+                    <span className="flex items-center gap-1">
+                      <button type="button" aria-label="이전 페이지" onClick={() => setPage((value) => Math.max(0, value - 1))} disabled={page <= 0 || !!busy} className="rounded border border-slate-600 p-1 text-slate-200 hover:bg-slate-700 disabled:opacity-40"><ChevronLeft className="h-3.5 w-3.5" /></button>
+                      <button type="button" aria-label="다음 페이지" onClick={() => setPage((value) => Math.min(grid.pages.length - 1, value + 1))} disabled={page >= grid.pages.length - 1 || !!busy} className="rounded border border-slate-600 p-1 text-slate-200 hover:bg-slate-700 disabled:opacity-40"><ChevronRight className="h-3.5 w-3.5" /></button>
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-slate-500">한 페이지는 한 묶음입니다. 타일을 눌러 이 페이지 채택에서 빼거나 넣고, 모든 타일이 보인 뒤 한 번에 채택합니다. '열기'는 캔버스에서 한 장씩 봅니다.</p>
+                  <DraftGrid drafts={pageDrafts} choices={choices} excluded={excluded} loaded={loadedOnPage} authority={authority} context={getProjectContext()} current={tileLive} disabled={busy === 'accept' || busy === 'reject' || busy === 'undo'}
+                    onToggle={(id) => setExcluded((previous) => { const next = new Set(previous); if (next.has(id)) next.delete(id); else next.add(id); return next; })}
+                    onLoaded={tileLoaded} onOpen={(draft) => void openDraft(draft)} />
+                  {pageBlock && <p className="text-[11px] text-amber-300">{pageBlock}</p>}
+                  {progress && <p role="status" className="text-[11px] text-cyan-200">채택 중 {progress.done} / {progress.total}</p>}
+                  <label className="block text-[11px]">검토자<input aria-label="초안 검토자 이름" value={reviewerName} onChange={(event) => setReviewerName(event.target.value)} className="ml-2 rounded border border-slate-600 bg-slate-900 p-1.5" /></label>
+                  <button type="button" onClick={() => void adoptPage()} disabled={!!busy || batchRunning || !!pageBlock} title={pageBlock ?? undefined}
+                    className="flex w-full items-center justify-center gap-1 rounded bg-emerald-700 px-3 py-2 font-semibold text-white hover:bg-emerald-600 disabled:cursor-not-allowed disabled:opacity-40">
+                    {progress ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <CheckCheck className="h-3.5 w-3.5" />} 이 페이지 채택 ({pageDrafts.filter((draft) => !excluded.has(draft.id)).length}장, 덧붙이기)
+                  </button>
+                  {grid.singles.length > 0 && <p className="text-[11px] text-slate-500">격자에 들어가지 않는 초안 {grid.singles.length}건(묶음 없음·후보 없음·같은 이미지)은 아래 목록에서 하나씩 채택하세요.</p>}
+                </>}
+              </div>}
               {pending.length > 1 && <div className="flex flex-wrap items-center gap-2 text-[11px] text-slate-400">
                 <span>여러 장을 한꺼번에 채택하려면 초안을 열어 미리보기로 확인한 뒤 왼쪽 상자를 고르세요. 본 것 {pending.filter((draft) => viewed.has(draft.id)).length}건 · 고른 것 {picked.length}건</span>
                 <button type="button" onClick={pickAllViewed} disabled={!!busy} className="rounded border border-slate-600 px-2 py-0.5 text-slate-200 hover:bg-slate-700 disabled:opacity-40">본 초안 모두 고르기</button>
@@ -378,12 +513,13 @@ export const DraftReviewQueue: React.FC = () => {
                   <button type="button" onClick={() => void openDraft(draft)} aria-pressed={draft.id === selectedId}
                     className={`flex min-w-0 grow items-center justify-between gap-2 rounded border px-2 py-1.5 text-left ${draft.id === selectedId ? 'border-cyan-500 bg-cyan-900/30 text-cyan-100' : 'border-slate-700 bg-slate-800/50 text-slate-200 hover:border-slate-500'}`}>
                     <span className="min-w-0 truncate">{fileName(draft.image_path)}{viewed.has(draft.id) && draft.id !== selectedId ? <span className="ml-1 text-[10px] text-slate-500">· 봄</span> : null}</span>
-                    <span className="shrink-0 text-[11px] text-slate-400">후보 {draft.candidates.length}개 · 최고 {Math.round(topConfidence(draft) * 100)}%</span>
+                    <span className="shrink-0 text-[11px] text-slate-400"><span className="mr-1 rounded bg-slate-700 px-1 text-[10px] text-slate-300">{draftSourceText(draft)}</span>후보 {draft.candidates.length}개 · 최고 {Math.round(topConfidence(draft) * 100)}%</span>
                   </button>
                 </li>)}
               </ul>
               {selected && selected.status === 'pending' && <div className="space-y-2 rounded-lg border border-cyan-900 bg-[#0F1722] p-3" aria-label="선택한 초안">
                 <SuggestionPreview proposal={selected} selectedIds={chosen} />
+                <p className="text-[11px] text-slate-400">출처: {draftSourceText(selected)}{supportLimitsText(selected.support_limits) ? <span className="ml-2 text-amber-200">{supportLimitsText(selected.support_limits)}</span> : null}</p>
                 <div className="max-h-36 space-y-1 overflow-y-auto">
                   {selected.candidates.length === 0 && <p className="rounded border border-slate-700 p-2 text-center text-slate-400">이 이미지에는 후보가 없습니다. 거절하고 직접 라벨하세요.</p>}
                   {selected.candidates.map((candidate) => <label key={candidate.id} className="flex items-center gap-2 rounded border border-slate-700 bg-slate-800/40 p-1.5">
@@ -392,10 +528,10 @@ export const DraftReviewQueue: React.FC = () => {
                     <span className="font-mono tabular-nums text-cyan-300">{Math.round(candidate.confidence * 100)}%</span>
                   </label>)}
                 </div>
-                <label className="block text-[11px]">검토자<input aria-label="초안 검토자 이름" value={reviewerName} onChange={(event) => setReviewerName(event.target.value)} className="ml-2 rounded border border-slate-600 bg-slate-900 p-1.5" /></label>
+                {!gridShown && <label className="block text-[11px]">검토자<input aria-label="초안 검토자 이름" value={reviewerName} onChange={(event) => setReviewerName(event.target.value)} className="ml-2 rounded border border-slate-600 bg-slate-900 p-1.5" /></label>}
                 <div className="flex gap-2">
                   <button type="button" onClick={() => void review('reject')} disabled={!!busy} className="flex grow items-center justify-center gap-1 rounded border border-slate-600 px-3 py-2 font-semibold text-slate-200 hover:bg-slate-700 disabled:opacity-40"><X className="h-3.5 w-3.5" /> 거절</button>
-                  <button type="button" onClick={() => void review('accept')} disabled={!!busy || batchRunning || chosen.size === 0} className="flex grow items-center justify-center gap-1 rounded bg-emerald-600 px-3 py-2 font-semibold text-white hover:bg-emerald-500 disabled:cursor-not-allowed disabled:opacity-40">{busy === 'accept' && !progress ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5" />} 선택 후보 채택 (덧붙이기)</button>
+                  <button type="button" onClick={() => void review('accept')} disabled={!!busy || batchRunning || chosen.size === 0} className={`flex grow items-center justify-center gap-1 rounded px-3 py-2 font-semibold ${adoptStyle} disabled:cursor-not-allowed disabled:opacity-40`}>{busy === 'accept' && !progress ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5" />} 선택 후보 채택 (덧붙이기)</button>
                   {pending.length > 1 && <button type="button" onClick={() => void openNext()} disabled={!!busy} aria-label="다음 초안 보기" title="다음 초안을 미리보기로 엽니다" className="flex items-center gap-1 rounded border border-slate-600 px-2 py-2 font-semibold text-slate-200 hover:bg-slate-700 disabled:opacity-40"><ChevronRight className="h-3.5 w-3.5" /> 다음</button>}
                 </div>
                 {batchRunning && <p className="text-[11px] text-amber-300">초안을 만드는 중에는 채택할 수 없습니다. 끝난 뒤 채택하세요.</p>}
@@ -406,10 +542,10 @@ export const DraftReviewQueue: React.FC = () => {
                 {!refusal && unseenPicked > 0 && <p className="text-[11px] text-amber-300">미리보기로 확인하지 않은 초안 {unseenPicked}건이 있습니다.</p>}
                 {progress && <p role="status" className="text-[11px] text-cyan-200">채택 중 {progress.done} / {progress.total}</p>}
                 <button type="button" onClick={() => void adoptPicked()} disabled={!!busy || batchRunning || !!refusal || unseenPicked > 0 || !reviewerName.trim()}
-                  className="flex w-full items-center justify-center gap-1 rounded bg-emerald-700 px-3 py-2 font-semibold text-white hover:bg-emerald-600 disabled:cursor-not-allowed disabled:opacity-40">
+                  className={`flex w-full items-center justify-center gap-1 rounded px-3 py-2 font-semibold ${gridShown ? adoptStyle : 'bg-emerald-700 text-white hover:bg-emerald-600'} disabled:cursor-not-allowed disabled:opacity-40`}>
                   {progress ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <CheckCheck className="h-3.5 w-3.5" />} 고른 초안 {picked.length}건 채택 (덧붙이기)
                 </button>
-                {!reviewerName.trim() && <p className="text-[11px] text-slate-400">검토자 이름은 초안을 연 뒤 입력합니다.</p>}
+                {!reviewerName.trim() && <p className="text-[11px] text-slate-400">{gridShown ? '검토자 이름은 위 격자의 검토자 칸에 입력합니다.' : '검토자 이름은 초안을 연 뒤 입력합니다.'}</p>}
               </div>}
             </section>
 

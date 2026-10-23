@@ -74,6 +74,9 @@ export const LabelingToolbar: React.FC<{ classification?: boolean }> = ({ classi
   const leasePending = !!editLeaseAcquiring && editLeaseAcquiring.image_uuid === metadata?.image_uuid;
   const selectedAnn = annotations.find((a) => a.id === selectedAnnotationId);
   const canConvertShape = isShapeConvertible(selectedAnn);
+  // A box the auto selector put around a click where it found no region stays marked until the person erases or
+  // redraws it; the notice follows the shape, so it cannot be closed while the box is still among the labels.
+  const autoSelectFallbackPresent = annotations.some((a) => a.origin?.kind === 'auto_selector' && a.origin.fallback);
 
   const handleFit = () => {
     const parent = document.querySelector('[data-canvas-container="true"]');
@@ -296,6 +299,17 @@ export const LabelingToolbar: React.FC<{ classification?: boolean }> = ({ classi
               className="w-16 accent-cyan-400 h-1 bg-[#1A212E] rounded cursor-pointer"
             />
           </div>
+        )}
+
+        {/* The auto selector found no region at the click and left a small box: say so until the box is gone. */}
+        {autoSelectFallbackPresent && (
+          <span
+            role="status"
+            data-testid="auto-select-fallback-notice"
+            className="ml-2 pl-2 border-l border-[#2B3547] text-xs text-amber-300 whitespace-nowrap"
+          >
+            영역을 찾지 못해 작은 상자를 넣었습니다. 지우거나 직접 그리세요.
+          </span>
         )}
 
         {/* Brush Radius Slider */}

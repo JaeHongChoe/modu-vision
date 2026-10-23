@@ -4,7 +4,7 @@
  * Dark Steel Chassis & 1px Precision Hairline Grid Architecture.
  */
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { WorkspaceDialog } from './components/common/WorkspaceDialog';
 import { TaskCenter } from './components/training/TaskCenter';
 import { ProductDeliveryWorkspace } from './components/runtime/ProductDeliveryWorkspace';
@@ -40,6 +40,8 @@ const jobEventStream = createJobEventStream();
 // polling continue meanwhile.
 const catchUpJobEvents = createCatchUp(jobEventStream, () => useTrainingStore.getState().jobId,
   () => useTrainingStore.getState().refreshCurrentJob());
+// 간단히 보기 menu items use the shared secondary button (the footer's); the 모두 보기 workspace row keeps its own styles.
+const MENU_ITEM='workspace-button justify-start whitespace-nowrap';
 
 export default function App() {
   const { language, activeStep, backendStatus, setBackendStatus, showError, syncCurrentProject, viewMode } = useProjectStore();
@@ -65,6 +67,7 @@ export default function App() {
   const firstRunOffered=useRef(false);
   // S2-01: the example marker is written by the backend into project.json and comes back with the project.
   const exampleProject=Boolean((project as {example?:unknown}|null)?.example);
+  const firstRunLabel=language==='ko'?(demo?.state==='running'?'처음 시작 · 예제 만드는 중':'처음 시작 안내'):(demo?.state==='running'?'Getting started · building example':'Getting started');
 
   useEffect(() => {
     let unsubStatus: (() => void) | undefined;
@@ -138,6 +141,10 @@ export default function App() {
     return () => media?.removeEventListener?.('change', apply);
   }, [theme]);
 
+  // The view mode is written on <html> too: the simple view's type floor (index.css) keys off it, 모두 보기 is untouched.
+  // A layout effect, so the first painted frame already has it.
+  useLayoutEffect(() => { document.documentElement.dataset.view = viewMode; }, [viewMode]);
+
   useEffect(() => {
     if (!backendStatus.healthy) return;
     // The guide's state is read after the first project sync: read together, the sync's step restore could land after a
@@ -155,32 +162,30 @@ export default function App() {
   return (
     <div className="flex flex-col h-screen w-screen bg-[#0B0E14] text-slate-200 select-none overflow-hidden font-sans">
       {/* Precision Industrial Header Frame */}
-      <WizardHeader completedSteps={doneSteps} simpleControls={workspace==='operator'?null:<button className="rounded border border-slate-600 px-3 py-1.5" onClick={()=>setFirstRunOpen(true)}>{language==='ko'?(demo?.state==='running'?'처음 시작 · 예제 만드는 중':'처음 시작 안내'):(demo?.state==='running'?'Getting started · building example':'Getting started')}</button>}
-        simpleMenu={workspace==='operator'?null:<>
-            <button className="rounded border border-slate-600 px-3 py-1.5 text-left" onClick={()=>setWorkspace('operator')}>{language==='ko'?'운영자 검사 화면':'Operator inspection'}</button>
-            <button className="rounded border border-slate-600 px-3 py-1.5 text-left" onClick={()=>setUtility('tasks')}>{language==='ko'?'작업 센터 · 진행 중인 작업':'Task center'}</button>
-            <button className="rounded border border-slate-600 px-3 py-1.5 text-left" onClick={()=>setUtility('delivery')}>{language==='ko'?'패키지·장치·진단':'Packages, devices and diagnostics'}</button>
+      {/* 간단히 보기: the first-run guide, the workspace switch, the task center and packages join the header's 더 보기 menu
+          (the only menu). 모두 보기 keeps the workspace row below, as it was. */}
+      <WizardHeader completedSteps={doneSteps} simpleControls={<button className={MENU_ITEM} onClick={()=>setFirstRunOpen(true)}>{firstRunLabel}</button>}
+        simpleMenu={<>
+            {workspace==='operator'
+              ?<button className={MENU_ITEM} onClick={()=>setWorkspace('studio')}>{language==='ko'?'모델·플로우 작업':'Models and flows'}</button>
+              :<button className={MENU_ITEM} onClick={()=>setWorkspace('operator')}>{language==='ko'?'운영자 검사 화면':'Operator inspection'}</button>}
+            <button className={MENU_ITEM} onClick={()=>setUtility('tasks')}>{language==='ko'?'작업 센터 · 진행 중인 작업':'Task center'}</button>
+            <button className={MENU_ITEM} onClick={()=>setUtility('delivery')}>{language==='ko'?'패키지·장치·진단':'Packages, devices and diagnostics'}</button>
         </>}/>
 
-      {(viewMode==='full'||workspace==='operator')&&<nav aria-label={language==='ko'?'프로젝트 작업 공간':'Project workspace'} className="flex shrink-0 items-center gap-2 border-b border-slate-700 bg-[#101722] px-4 py-1.5 text-xs">
-        {(viewMode==='full'||workspace==='operator')&&<>
+      {viewMode==='full'&&<nav aria-label={language==='ko'?'프로젝트 작업 공간':'Project workspace'} className="flex shrink-0 items-center gap-2 border-b border-slate-700 bg-[#101722] px-4 py-1.5 text-xs">
         <button className={`rounded px-3 py-1.5 ${workspace==='studio'?'bg-sky-950 text-sky-200':'text-slate-300'}`} aria-pressed={workspace==='studio'} onClick={()=>setWorkspace('studio')}>{language==='ko'?'모델·플로우 작업':'Models and flows'}</button>
         <button className={`rounded px-3 py-1.5 ${workspace==='operator'?'bg-sky-950 text-sky-200':'text-slate-300'}`} aria-pressed={workspace==='operator'} onClick={()=>setWorkspace('operator')}>{language==='ko'?'운영자 검사':'Operator inspection'}</button>
-        </>}
         <span className="flex-1"/>
-        <button className="rounded border border-slate-600 px-3 py-1.5" onClick={()=>setFirstRunOpen(true)}>{language==='ko'?(demo?.state==='running'?'처음 시작 · 예제 만드는 중':'처음 시작 안내'):(demo?.state==='running'?'Getting started · building example':'Getting started')}</button>
-        {viewMode==='full'?<>
-          <button className="rounded border border-slate-600 px-3 py-1.5" onClick={()=>setUtility('tasks')}>{language==='ko'?'작업 센터':'Task center'}</button>
-          <button className="rounded border border-slate-600 px-3 py-1.5" onClick={()=>setUtility('delivery')}>{language==='ko'?'패키지·장치·진단':'Packages, devices and diagnostics'}</button>
-        </>:<details className="relative">
-          <summary className="list-none cursor-pointer rounded border border-slate-600 px-3 py-1.5">{language==='ko'?'더 보기':'More'}</summary>
-          <div className="absolute right-0 z-30 mt-1 flex min-w-[220px] flex-col gap-1 rounded border border-slate-600 bg-[#131822] p-2 shadow-xl">
-            {workspace!=='operator'&&<button className="rounded border border-slate-600 px-3 py-1.5 text-left" onClick={()=>setWorkspace('operator')}>{language==='ko'?'운영자 검사 화면':'Operator inspection'}</button>}
-            <button className="rounded border border-slate-600 px-3 py-1.5 text-left" onClick={()=>setUtility('tasks')}>{language==='ko'?'작업 센터 · 진행 중인 작업':'Task center'}</button>
-            <button className="rounded border border-slate-600 px-3 py-1.5 text-left" onClick={()=>setUtility('delivery')}>{language==='ko'?'패키지·장치·진단':'Packages, devices and diagnostics'}</button>
-          </div>
-        </details>}
+        <button className="rounded border border-slate-600 px-3 py-1.5" onClick={()=>setFirstRunOpen(true)}>{firstRunLabel}</button>
+        <button className="rounded border border-slate-600 px-3 py-1.5" onClick={()=>setUtility('tasks')}>{language==='ko'?'작업 센터':'Task center'}</button>
+        <button className="rounded border border-slate-600 px-3 py-1.5" onClick={()=>setUtility('delivery')}>{language==='ko'?'패키지·장치·진단':'Packages, devices and diagnostics'}</button>
       </nav>}
+      {/* 간단히 보기 has no workspace row, so the operator screen says where the user is and how to get back. */}
+      {viewMode!=='full'&&workspace==='operator'&&<div className="flex shrink-0 flex-wrap items-center gap-x-3 gap-y-1 border-b border-slate-700 bg-[#101722] px-4 py-1.5 text-xs text-slate-300">
+        <span>{language==='ko'?'운영자 검사 화면입니다. 위의 작업 단계는 모델·플로우 작업에서 열립니다.':'Operator inspection screen. The steps above open in models and flows.'}</span>
+        <button className="workspace-button whitespace-nowrap" onClick={()=>setWorkspace('studio')}>{language==='ko'?'모델·플로우 작업으로 돌아가기':'Back to models and flows'}</button>
+      </div>}
       {exampleProject&&<p role="note" aria-label="예제 프로젝트" className="shrink-0 border-b border-amber-700/60 bg-amber-950/30 px-4 py-1.5 text-xs text-amber-200">예제 프로젝트 · {EXAMPLE_NOTICE}</p>}
       {/* Primary Inspection Studio Workspace with 1px Hairline Grid Containment */}
       <main key={transportRevision} className="flex-1 min-h-0 flex overflow-hidden bg-[#0B0E14]">

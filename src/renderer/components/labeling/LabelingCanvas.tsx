@@ -341,6 +341,17 @@ export const LabelingCanvas: React.FC = () => {
         ctx.lineWidth = isSelected ? 2.5 : 1.5;
         ctx.stroke();
 
+        // A box the auto selector put around a click where it found no region is machine-invented: it is drawn dashed
+        // and named on the canvas so the person erases or redraws it instead of keeping it as a found outline.
+        const fallbackBox = ann.origin?.kind === 'auto_selector' && ann.origin.fallback;
+        if (fallbackBox) {
+          ctx.setLineDash([4, 3]);
+          ctx.strokeStyle = '#fbbf24';
+          ctx.lineWidth = 1.5;
+          ctx.stroke();
+          ctx.setLineDash([]);
+        }
+
         // Polygon Label Badge
         const minX = Math.min(...polyPts.map((p) => p[0]));
         const minY = Math.min(...polyPts.map((p) => p[1]));
@@ -352,6 +363,16 @@ export const LabelingCanvas: React.FC = () => {
         ctx.fillRect(badgeVp.x, Math.max(0, badgeVp.y - 18), textWidth + 8, 18);
         ctx.fillStyle = '#ffffff';
         ctx.fillText(labelText, badgeVp.x + 4, Math.max(12, badgeVp.y - 5));
+
+        if (fallbackBox) {
+          const fallbackText = '자동 선택 실패 · 대체 상자';
+          const fallbackWidth = ctx.measureText(fallbackText).width;
+          const fallbackY = Math.max(0, badgeVp.y - 18) + 18;
+          ctx.fillStyle = 'rgba(120, 53, 15, 0.92)';
+          ctx.fillRect(badgeVp.x, fallbackY, fallbackWidth + 8, 16);
+          ctx.fillStyle = '#fde68a';
+          ctx.fillText(fallbackText, badgeVp.x + 4, fallbackY + 12);
+        }
 
         // Render vertices if selected
         if (isSelected) {

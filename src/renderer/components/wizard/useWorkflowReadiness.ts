@@ -1,17 +1,18 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { api, getApiPersistenceIdentity, getProjectContext, request, subscribeProjectContext } from '../../services/api';
 import { useProjectStore } from '../../stores/useProjectStore';
 import { useComputeStore } from '../../stores/useComputeStore';
 import { useDatasetStore } from '../../stores/useDatasetStore';
 import { useTrainingStore } from '../../stores/useTrainingStore';
-import { useEvaluationStore } from '../../stores/useEvaluationStore';
+import { computeSampleVerdict, useEvaluationStore } from '../../stores/useEvaluationStore';
 import { useAnnotationStore } from '../../stores/useAnnotationStore';
 import { flowSemanticKey, useFlowchartStore } from '../../stores/useFlowchartStore';
 import { getNextAction, type WorkflowEvidence, type WorkflowImpact } from './workflowReadiness';
 import { subscribeWorkflowEvidence, workflowEvidenceRevision } from '../../stores/workflowEvidence';
-import { publishWorkflowProgress } from '../../stores/workflowProgress';
+import { inspectionProgressFor, publishWorkflowProgress, subscribeInspectionProgress } from '../../stores/workflowProgress';
 import { stepsFromEvidence } from './stepProgress';
 import { classStartBlocker, splitMissesLabels } from '../dataset/importChecklist';
+import { wilsonInterval } from '../evaluation/sampleConfidence';
 import { draftReviewScope, useDraftReviewStore } from '../../stores/useDraftReviewStore';
 import { publishAssistContext } from '../../stores/assistContext';
 
@@ -24,7 +25,36 @@ export function useWorkflowReadiness() {
   const modelJobId=useEvaluationStore(s=>s.jobId);
   // A finished model evaluation is saved as evidence; re-read when its results arrive so step 4 can move on.
   const evaluatedSamples=useEvaluationStore(s=>s.testPredictions?.length ?? 0);
+  // Step 4's number line counts the loaded evaluation the way the evaluation screen does (same verdict, same inputs).
+  const testPredictions=useEvaluationStore(s=>s.testPredictions),confidenceThreshold=useEvaluationStore(s=>s.confidenceThreshold);
+  const overkillAnalysis=useEvaluationStore(s=>s.overkillAnalysis),classRoles=useEvaluationStore(s=>s.classSemantics?.roles);
+  const evaluation=useMemo(()=>{
+    if(!Array.isArray(testPredictions)||testPredictions.length===0)return null;
+    let escapes=0,overkills=0,right=0;
+    for(const item of testPredictions){
+      const verdict=computeSampleVerdict(item,confidenceThreshold,overkillAnalysis,classRoles);
+      if(verdict==='ESCAPE')escapes++;else if(verdict==='OVERKILL')overkills++;else if(verdict==='CORRECT_OK'||verdict==='CORRECT_NG')right++;
+    }
+    const samples=testPredictions.length;
+    // Every image without an answer to compare (REVIEW): nothing was scored, so no accuracy rather than a false 0%.
+    if(right+escapes+overkills===0)return {samples,escapes,overkills,accuracy:null,low:null,high:null};
+    // The same 95% range the step-4 card prints beside its accuracy (accuracyNote: right images of all test images).
+    const range=wilsonInterval(right,samples);
+    return {samples,escapes,overkills,accuracy:Math.round(right/samples*100),low:range?Math.round(range.low*100):null,high:range?Math.round(range.high*100):null};
+  },[testPredictions,confidenceThreshold,overkillAnalysis,classRoles]);
+  // Step 3's line reads the training store the footer already follows; the clock is rounded to 10 s so the published
+  // picture does not change on every telemetry tick. The training screen shows the same clock (total, else epoch).
+  const etaSource=training.totalEtaSeconds||training.epochEtaSeconds;
+  const etaSeconds=typeof etaSource==='number'&&Number.isFinite(etaSource)&&etaSource>0?Math.max(10,Math.round(etaSource/10)*10):null;
+  const trainingRun={epoch:training.currentEpoch??0,totalEpochs:training.totalEpochs??0,etaSeconds,current:Boolean(training.isCurrentData)};
   const flow=useFlowchartStore();
+  // Step 6's line comes from the batch inspection panel, which publishes the counts of the run it shows for this source.
+  // Read during render for the current scope, so the first render after a project or source switch never shows the
+  // previous source's counts; the state only re-renders on a publish (and once on subscribe, for one sent before it).
+  const inspectionScope=JSON.stringify([data.folderPath,projectDir,task]);
+  const [,setInspectionRevision]=useState(0);
+  useEffect(()=>{const bump=()=>setInspectionRevision(value=>value+1);bump();return subscribeInspectionProgress(bump);},[]);
+  const inspection=inspectionProgressFor(inspectionScope);
   const annotationDirty=useAnnotationStore(s=>s.isDirty);
   const draftScope=draftReviewScope({projectDir,project,task});
   const pendingDrafts=useDraftReviewStore(s=>s.scope===draftScope?s.pendingImages:0);
@@ -40,6 +70,13 @@ export function useWorkflowReadiness() {
   const apiScope=JSON.stringify([context,getApiPersistenceIdentity()]);
   const key=JSON.stringify([context,getApiPersistenceIdentity(),revision,projectDir,project?.id,task,project?.source_dataset_dir,project?.active_labelset_id,stage,data.totalImages,data.split,training.status,flow.flowIdentity.semantic_revision,annotationDirty,annotationRevision,labelbookVersion]);
   const live=useRef(key);live.current=key;
+  // Step 5's line keeps the version the last report named while an edit re-checks (see flowVersionId below). The scope
+  // holds the editor's base version, so a save or an activation never carries the version it replaced.
+  const flowScope=JSON.stringify([apiScope,projectDir,project?.id,task,project?.source_dataset_dir,data.folderPath,flow.baseVersionId]);
+  const lastFlowVersion=useRef<{scope:string;versionId?:string}|null>(null);
+  // The editor differs from the active saved version: unsaved edits, or a draft the autosave kept that is not that
+  // version (the store's own test, as for the activate button). A draft equal to the active version is not editing.
+  const flowEditing=flow.pipelineDirty||flow.pipelineIsDraft;
   const sequence=useRef(0);
   const [refresh,setRefresh]=useState(0);
   const [receipt,setReceipt]=useState<{key:string;evidence:WorkflowEvidence;versionId?:string;flowMatchesSaved?:boolean}|null>(null);
@@ -68,6 +105,7 @@ export function useWorkflowReadiness() {
       const saved=stage>=5&&versionId&&flow.pipeline?await api.flowchart.getPipelineVersion(versionId):null;
       if(!current())return;
       const flowMatchesSaved=!flow.pipeline || Boolean(saved&&flowSemanticKey(saved)===flowSemanticKey(flow.pipeline));
+      lastFlowVersion.current={scope:flowScope,versionId};
       setReceipt({key,evidence:{status:'ready',review,impact},versionId,flowMatchesSaved});
       // Share what the report proves with the step bar, so its checkmarks survive a reload without another request.
       publishWorkflowProgress(JSON.stringify([project.id,project.source_dataset_dir,project.active_labelset_id||'default',task]),stepsFromEvidence(impact,task));
@@ -75,9 +113,15 @@ export function useWorkflowReadiness() {
     return()=>{sequence.current++;};
   },[key,sourceReady,refresh,data.isLoading,data.isSplitting,training.status,flow.flowIdentity.semantic_revision,flow.pipelineDirty,flow.pipelineIsDraft,flow.baseVersionId,evidenceRevision,modelJobId,evaluatedSamples]);
   const evidence=receipt?.key===key?receipt.evidence:{status:'error' as const,error:'현재 프로젝트 근거 확인 필요'};
-  const readiness=getNextAction({stage,projectReady:Boolean(projectDir&&project),sourceReady,totalImages:data.totalImages,train:data.split.train,val:data.split.val,
+  // Every flow edit (and the draft autosave after it) starts a re-check, so step 5's line would blank until it lands.
+  // While the editor differs from the saved version, the version the last report named for this project, source and
+  // base still names what is saved, and the line reads '편집 중' whatever the report says. Only the line takes the
+  // carried id: advice past the evidence check needs a ready receipt.
+  const readyReceipt=receipt?.key===key&&receipt.evidence.status==='ready'?receipt:null;
+  const flowVersionId=readyReceipt?readyReceipt.versionId:flowEditing&&lastFlowVersion.current?.scope===flowScope?lastFlowVersion.current.versionId:null;
+  const readiness=getNextAction({stage,projectReady:Boolean(projectDir&&project),sourceReady,totalImages:data.totalImages,train:data.split.train,val:data.split.val,training:trainingRun,evaluation,inspection,flowEditing,
     busy:projectBusy||data.isLoading||data.isSplitting||annotationDirty,task,splitState:data.splitState,populatedClasses:data.hasSelectedFolder?Object.values(data.classes||{}).filter(count=>count>0).length:undefined,
-    classBlocker:data.hasSelectedFolder?classStartBlocker(data.classes||{},data.splitState==='saved'||data.splitState==='source_folders'?data.classSplitCounts??null:null,data.split):undefined,modelJobId:modelJobId || (training.isCurrentData?training.jobId:null),flowVersionId:receipt?.key===key?receipt.versionId:null,
+    classBlocker:data.hasSelectedFolder?classStartBlocker(data.classes||{},data.splitState==='saved'||data.splitState==='source_folders'?data.classSplitCounts??null:null,data.split):undefined,modelJobId:modelJobId || (training.isCurrentData?training.jobId:null),flowVersionId,
     flowDirty:flow.pipelineDirty,flowMatchesSaved:receipt?.key===key?receipt.flowMatchesSaved:false,trainingStatus:training.status,evidence,drafts:{pendingImages:pendingDrafts},
     splitMissesLabels:data.splitSupported!==false&&splitMissesLabels({totalImages:data.totalImages,split:data.split,splitState:data.splitState}),currentModels,labels});
   // The same picture the footer shows, published once per change for the footer's error list and a later assistant.

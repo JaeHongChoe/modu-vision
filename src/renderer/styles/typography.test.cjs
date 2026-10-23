@@ -24,11 +24,18 @@ test('the document is Korean and the font stack names Korean faces',()=>{
  assert.match(css,/font-family:[^;]*(Pretendard|Apple SD Gothic Neo|Malgun Gothic|Noto Sans KR)/);
 });
 
-test('the bundled Korean font ships with its licence and is declared with font-display optional (no swap after first paint)',()=>{
+test('the bundled Korean font ships with its licence and is declared with font-display block (text is never measured in a fallback face)',()=>{
  const fonts=path.resolve(__dirname,'../../../public/fonts');
- assert.ok(fs.existsSync(path.join(fonts,'PretendardStdVariable.woff2')),'font file missing');
- assert.match(fs.readFileSync(path.join(fonts,'PRETENDARD-LICENSE.txt'),'utf8'),/SIL Open Font License, Version 1\.1/);
- assert.match(css,/@font-face\s*\{[^}]*Pretendard Variable[^}]*font-display:\s*optional[^}]*PretendardStdVariable\.woff2/s);
+ const file=path.join(fonts,'PretendardVariable.woff2');
+ assert.ok(fs.existsSync(file),'font file missing');
+ // The full Pretendard variable font carries 11,172 Hangul syllables; the Latin-only Std file was 292 KB.
+ const bytes=fs.readFileSync(file);
+ assert.equal(bytes.subarray(0,4).toString('latin1'),'wOF2');
+ assert.ok(bytes.length>1_500_000,`a Korean-capable Pretendard is well over 1.5 MB, got ${bytes.length}`);
+ const licence=fs.readFileSync(path.join(fonts,'PRETENDARD-VARIABLE-LICENSE.txt'),'utf8');
+ assert.match(licence,/with Reserved Font Name Pretendard\./);
+ assert.match(licence,/SIL Open Font License, Version 1\.1/);
+ assert.match(css,/@font-face\s*\{[^}]*Pretendard Variable[^}]*font-display:\s*block[^}]*PretendardVariable\.woff2/s);
 });
 
 test('workspace tokens keep a 14px body and 36px controls',()=>{
