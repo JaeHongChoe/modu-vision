@@ -21,7 +21,16 @@ import {
   Trash2,
 } from 'lucide-react';
 import { useAnnotationStore } from '../../stores/useAnnotationStore';
-import type { AnnotationItem } from '../../types';
+import { useProjectStore } from '../../stores/useProjectStore';
+import type { AnnotationItem, AutoSelectorOrigin } from '../../types';
+
+// The auto selector is a drawing aid (docs §3.3): the shape is the person's, and the badge only says how it was outlined.
+function autoSelectorTitle(origin: AutoSelectorOrigin): string {
+  const prompt = origin.seed_point ? `클릭 (${Math.round(origin.seed_point[0])}, ${Math.round(origin.seed_point[1])})`
+    : origin.box ? `상자 (${origin.box.map((v) => Math.round(v)).join(', ')})` : '프롬프트 없음';
+  const tolerance = origin.tolerance == null ? '' : ` · 민감도 ${origin.tolerance}`;
+  return `오토 셀렉터(${origin.backend}) · ${prompt}${tolerance}`;
+}
 
 // Shoelace formula for polygon area
 function calculatePolygonArea(pts: Array<[number, number]>): number {
@@ -35,6 +44,7 @@ function calculatePolygonArea(pts: Array<[number, number]>): number {
 }
 
 export const AnnotationList: React.FC = () => {
+  const classification = useProjectStore((state) => state.task) === 'classification';
   const {
     annotations,
     selectedAnnotationId,
@@ -196,23 +206,25 @@ export const AnnotationList: React.FC = () => {
   const selGeom = selectedAnn ? getAnnotationGeometry(selectedAnn) : null;
 
   return (
-    <div className="w-80 bg-[#131822] border-l border-[#2B3547] flex flex-col h-full select-none text-slate-200">
+    // The sidebar scrolls itself and its list shrinks first: a short work area (more rows above it) never lets a focused
+    // field scroll the work area, which would move the canvas under the bars above it.
+    <div data-surface="page" className="w-80 bg-[#131822] border-l border-[#2B3547] flex flex-col h-full min-h-0 overflow-y-auto select-none text-slate-200">
       {/* Header: Title & Optical Calibration Scale */}
       <div className="p-3 border-b border-[#2B3547] bg-[#0B0E14] flex items-center justify-between">
         <div className="flex items-center space-x-2">
           <span className="w-2 h-2 rounded-full bg-cyan-400" />
           <span className="text-xs font-bold tracking-wider text-slate-200 uppercase">
-            Geometric Inspector
+            측정 정보
           </span>
         </div>
         <div className="flex items-center space-x-1.5">
           <button
             onClick={() => setIsCalibratorOpen(!isCalibratorOpen)}
-            title="Optical Calibration Settings (μm/px)"
+            title="광학 배율 설정 (μm/px)"
             className="p-1 rounded bg-[#1A212E] hover:bg-[#222B3D] border border-[#2B3547] text-slate-300 text-[10px] font-mono tabular-nums flex items-center space-x-1 cursor-pointer"
           >
             <Ruler className="w-3 h-3 text-cyan-400" />
-            <span>{pixelPitchUm > 0 ? `${pixelPitchUm} μm/px` : 'Not calibrated'}</span>
+            <span>{pixelPitchUm > 0 ? `${pixelPitchUm} μm/px` : '미보정'}</span>
           </button>
           <span className="px-1.5 py-0.5 text-[10px] font-mono tabular-nums bg-[#1A212E] border border-[#2B3547] rounded text-cyan-400 font-bold">
             {annotations.length}
@@ -225,18 +237,19 @@ export const AnnotationList: React.FC = () => {
       {isCalibratorOpen && (
         <div className="p-2.5 bg-[#1A212E] border-b border-[#2B3547] text-xs space-y-2">
           <div className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider flex items-center justify-between">
-            <span>Optical Calibration</span>
-            <span className="text-cyan-400 font-mono">{pixelPitchUm > 0 ? `1 px = ${pixelPitchUm} μm` : 'Measured scale required'}</span>
+            <span>광학 배율 (실제 길이 환산)</span>
+            <span className="text-cyan-400 font-mono">{pixelPitchUm > 0 ? `1 px = ${pixelPitchUm} μm` : '측정한 배율을 입력하세요'}</span>
           </div>
           <div className="flex items-center space-x-2">
-            <span className="text-[11px] text-slate-400">Scale:</span>
+            <span className="text-[11px] text-slate-400">픽셀당 길이:</span>
             <input
               type="number"
               step="0.1"
               min="0.1"
               max="100"
               value={pixelPitchUm || ''}
-              placeholder="Enter measured pitch"
+              placeholder="예: 2.5"
+              aria-label="픽셀당 길이 (μm)"
               onChange={(e) => setPixelPitchUm(Math.max(0, parseFloat(e.target.value) || 0))}
               className="flex-1 bg-[#131822] border border-[#2B3547] rounded px-2 py-0.5 text-xs font-mono tabular-nums text-slate-200 focus:outline-none focus:border-cyan-500"
             />
@@ -247,9 +260,9 @@ export const AnnotationList: React.FC = () => {
       )}
 
       {/* Main Annotation List */}
-      <div className="flex-1 overflow-y-auto p-2 space-y-1.5">
+      <div className="flex-1 min-h-0 overflow-y-auto p-2 space-y-1.5">
         <div className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider px-1">
-          Annotations ({annotations.length})
+          라벨 목록 ({annotations.length})
         </div>
 
         {annotations.length === 0 ? (
@@ -257,8 +270,8 @@ export const AnnotationList: React.FC = () => {
             <div className="w-8 h-8 mx-auto mb-2 text-slate-500 flex items-center justify-center">
               <Ruler className="w-5 h-5 stroke-[1.5]" />
             </div>
-            <div className="text-xs font-medium text-slate-300">No annotations on this image</div>
-            <div className="mt-1 text-[11px] text-slate-400">Select a canvas tool [1-6] to calibrate regions.</div>
+            <div className="text-xs font-medium text-slate-300">이 이미지에는 라벨이 없습니다</div>
+            <div className="mt-1 text-[11px] text-slate-400">{classification ? "이미지 분류의 정답은 위 '이 이미지의 클래스'에서 정합니다. 영역은 패치 분류·근거용이라 그리지 않아도 됩니다." : '왼쪽 도구(단축키 1~6)로 결함 영역을 그리세요.'}</div>
           </div>
         ) : (
           annotations.map((ann, idx) => {
@@ -287,6 +300,12 @@ export const AnnotationList: React.FC = () => {
                     {ann.type === 'brush_mask' && <Paintbrush className="w-3.5 h-3.5 text-emerald-400 flex-shrink-0" />}
                     {ann.type === 'tag' && <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 flex-shrink-0" />}
                     <span className="truncate text-xs font-medium text-slate-200">{ann.label}</span>
+                    {ann.origin?.kind === 'model_draft' && <span title={`초안 ${ann.origin.proposal_id} · ${ann.origin.reviewer} 채택`}
+                      className="flex-shrink-0 rounded bg-emerald-900/60 px-1 text-[10px] text-emerald-200">초안에서 채택</span>}
+                    {ann.origin?.kind === 'auto_selector' && <span title={autoSelectorTitle(ann.origin)}
+                      className="flex-shrink-0 rounded bg-cyan-900/60 px-1 text-[10px] text-cyan-200">오토 셀렉터</span>}
+                    {ann.origin?.kind === 'auto_selector' && ann.origin.fallback && <span title="영역을 찾지 못해 클릭 주위에 넣은 작은 상자입니다. 지우거나 직접 그리세요."
+                      className="flex-shrink-0 rounded bg-amber-900/60 px-1 text-[10px] text-amber-200">자동 선택 실패 · 대체 상자</span>}
                   </div>
 
                   <div className="flex items-center space-x-1">
@@ -296,7 +315,7 @@ export const AnnotationList: React.FC = () => {
                         if (ann.id) deleteAnnotation(ann.id);
                       }}
                       className="p-1 hover:text-red-400 text-slate-500 transition-colors cursor-pointer"
-                      title="Delete annotation"
+                      title="라벨 삭제"
                     >
                       <Trash2 className="w-3.5 h-3.5" />
                     </button>
@@ -335,7 +354,7 @@ export const AnnotationList: React.FC = () => {
             <div className="flex items-center space-x-1.5">
               <Crosshair className="w-3.5 h-3.5 text-cyan-400" />
               <span className="text-[11px] font-bold text-slate-200 uppercase tracking-wide">
-                Geometric Inspector
+                측정 정보
               </span>
             </div>
             <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-[#1A212E] border border-[#2B3547] text-cyan-400 uppercase">

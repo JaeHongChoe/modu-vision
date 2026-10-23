@@ -32,7 +32,7 @@ from typing import Any, Callable, Dict, List, Literal, Optional, Sequence, Tuple
 import cv2
 import numpy as np
 from PIL import Image
-from backend.engine.dicom_input import open_source_image, is_dicom, DICOM_EXTENSIONS
+from backend.engine.dicom_input import open_source_image, is_dicom, DICOM_EXTENSIONS, IMAGE_OPEN_ERRORS
 import torch
 from torch.utils.data import DataLoader, Dataset
 import torchvision.transforms.functional as TF
@@ -183,6 +183,9 @@ class DatasetSummary:
     split_counts: Dict[str, int]
     sample_size: Optional[Tuple[int, int]] = None
     folder_scanned: bool = False
+    # Classification only: "saved_manifest" (a saved split), "folders" (source train/val/test folders) or "automatic"
+    # (the loader's per-run split, which evaluation refuses). None for other tasks.
+    split_basis: Optional[str] = None
 
 
 # ============================================================================
@@ -352,6 +355,20 @@ def _read_image_rgb(path: Union[str, Path], bg_color: str = "white") -> np.ndarr
       4. Always returns uint8 RGB ndarray of shape (H, W, 3).
     """
     p_str = str(path)
+    try:
+        return _read_image_rgb_unchecked(p_str, bg_color)
+    except UndecodableImageError:
+        raise
+    except IMAGE_OPEN_ERRORS as exc:
+        # The worker's error catalog maps "corrupt image" to ERR_005; name the file so the user can find it.
+        raise UndecodableImageError(f"corrupt image file cannot be decoded: {p_str} ({type(exc).__name__})") from exc
+
+
+class UndecodableImageError(ValueError):
+    """An image file the loaders cannot decode; the message carries its path."""
+
+
+def _read_image_rgb_unchecked(p_str: str, bg_color: str = "white") -> np.ndarray:
     with open_source_image(p_str) as im:
         # Check for 16-bit / 32-bit single-channel modes (e.g. industrial TIFF/AOI)
         if im.mode in ("I;16", "I;16L", "I;16B", "I", "F"):
@@ -388,6 +405,20 @@ def _read_image_rgb(path: Union[str, Path], bg_color: str = "white") -> np.ndarr
 # ============================================================================
 # Task 1: Multi-Class Classification Dataset
 # ============================================================================
+
+def _with_class_overrides(root: Path, samples, classes):
+    """Apply the classes chosen per image in step 2 (class_overrides) to (path, label index) samples. The class list is
+    the folder classes plus every chosen class, in the usual order, so separate train/val/test datasets of one source
+    agree on the indices."""
+    from backend.engine.class_overrides import read_class_overrides, sort_classes
+    overrides = read_class_overrides(root)
+    if not overrides:
+        return samples, list(classes), {name: idx for idx, name in enumerate(classes)}
+    merged = sort_classes(list(classes) + list(overrides.values()))
+    index = {name: idx for idx, name in enumerate(merged)}
+    remapped = [(path, index[overrides.get(str(Path(path).resolve()), classes[label])]) for path, label in samples]
+    return remapped, merged, index
+
 
 class ClassificationDataset(Dataset):
     """
@@ -441,6 +472,7 @@ class ClassificationDataset(Dataset):
             image_paths = {str(path) for path, _ in all_samples}
             if image_paths != set(assignments):
                 raise ValueError("Saved split no longer matches classification images; apply the split again")
+            all_samples, self.classes, self.class_to_idx = _with_class_overrides(self.root_dir, all_samples, self.classes)
             self.samples = [
                 sample for sample in all_samples
                 if split is None or assignments[str(sample[0])] == split
@@ -463,9 +495,11 @@ class ClassificationDataset(Dataset):
                 self.samples = [(path, self.class_to_idx[local_classes[label_idx]]) for path, label_idx in local_samples]
             else:
                 self.samples = []
+            self.samples, self.classes, self.class_to_idx = _with_class_overrides(self.root_dir, self.samples, self.classes)
         else:
             self.split_basis = "automatic"
             self.samples, self.classes, self.class_to_idx = self._load_from_folder(self.root_dir, inventory_eligible=True)
+            self.samples, self.classes, self.class_to_idx = _with_class_overrides(self.root_dir, self.samples, self.classes)
             if split and split in ["train", "val"]:
                 self.samples = self._split_samples(self.samples, split, val_split, seed)
             elif split == "test":
@@ -497,7 +531,7 @@ class ClassificationDataset(Dataset):
             cidx = class_to_idx[cname]
             cdir = folder / cname
             for p in sorted(cdir.glob("*")):
-                if (p.is_file() and str(p.resolve()) not in unused
+                if (p.is_file() and str(p.resolve()) not in unused and not p.name.startswith("._")
                         and p.suffix.lower() in SUPPORTED_IMAGE_EXTENSIONS
                         and (not inventory_eligible or is_inventory_path(p.relative_to(folder).parts, "classification"))):
                     samples.append((p, cidx))
@@ -537,7 +571,8 @@ class ClassificationDataset(Dataset):
         h, w = rgb.shape[:2]
 
         if self.image_size:
-            rgb = cv2.resize(rgb, self.image_size, interpolation=cv2.INTER_LINEAR)
+            # The flow inspection node and evaluation resize through the same helper.
+            rgb = resize_model_input(rgb, self.image_size)
         elif self.max_dim and max(h, w) > self.max_dim:
             scale = self.max_dim / float(max(h, w))
             new_w = max(16, int(round(w * scale)))
@@ -916,7 +951,7 @@ class SegmentationDataset(Dataset):
         from backend.engine.dataset_usage import unused_image_paths
         unused=unused_image_paths(self.images_dir)
         for img_p in sorted(self.images_dir.glob("*")):
-            if str(img_p.resolve()) in unused:continue
+            if str(img_p.resolve()) in unused or img_p.name.startswith("._"):continue  # '._x.jpg' resource forks are not images
             if img_p.is_file() and (img_p.suffix.lower() in SUPPORTED_IMAGE_EXTENSIONS or img_p.name.lower().endswith(".jpg.jpg")):
                 clean_stem = sanitize_file_stem(img_p)
                 raw_stem = img_p.stem
@@ -1020,6 +1055,21 @@ def _folder_names(root: Path) -> List[str]:
     return names
 
 
+# Field exports often keep normal and defect shots in one folder and say which is which in the file name
+# ("nomaly20240925….jpg" beside "anomaly001.jpg"). A name that starts with a defect word is never a normal sample, a name
+# that starts with a normal word is normal wherever it sits; names that say nothing keep the folder rules.
+DEFECT_NAME_PREFIXES = ('anomaly', 'abnormal', 'defect', 'ng_', 'ng-', 'bad_', 'bad-', 'fail')
+NORMAL_NAME_PREFIXES = ('nomaly', 'normal', 'good', 'ok_', 'ok-', 'pass')
+
+
+def name_says_normal(stem: str):
+    """True / False when the file name itself says normal / defect, None when it says nothing."""
+    name = stem.casefold()
+    if name.startswith(DEFECT_NAME_PREFIXES): return False
+    if name.startswith(NORMAL_NAME_PREFIXES): return True
+    return None
+
+
 def named_child_dir(root: Path, name: str) -> Path:
     """``root / name`` for a folder name a layout fixes (train, test, val, ground_truth, test_crop_output, OK, fail, NG,
     ...), found whatever its letter case, so a case-sensitive file system (Linux, a case-sensitive Windows folder) reads
@@ -1089,7 +1139,7 @@ class AnomalyDataset(Dataset):
                     )
             if folders:
                 return sorted(p for folder in folders for p in image_paths(folder, recursive=False))
-            return sorted(image_paths(directory, recursive=False))
+            return sorted(p for p in image_paths(directory, recursive=False) if name_says_normal(p.stem) is not False)
 
         if self.split == "train":
             if self.normal_dir and self.normal_dir.is_dir():
@@ -1100,7 +1150,8 @@ class AnomalyDataset(Dataset):
                 train_dir = named_child_dir(self.root_dir, "train")
                 if train_dir.is_dir():
                     self.samples.extend((p, 0, None) for p in train_normal_paths(train_dir))
-                    if not named_child_dir(self.root_dir, "test").is_dir() and not named_child_dir(self.root_dir, "val").is_dir():
+                    if (not named_child_dir(self.root_dir, "test").is_dir() and not named_child_dir(self.root_dir, "val").is_dir()
+                            and not named_child_dir(self.root_dir, "validation").is_dir()):
                         self.samples = [
                             (p, 0, None)
                             for p in partition_normal_images(p for p, _, _ in self.samples)["train"]
@@ -1133,6 +1184,8 @@ class AnomalyDataset(Dataset):
             elif self.root_dir is not None:
                 test_dir = named_child_dir(self.root_dir, "test")
                 val_dir = named_child_dir(self.root_dir, "val")
+                if not val_dir.is_dir() and named_child_dir(self.root_dir, "validation").is_dir():
+                    val_dir = named_child_dir(self.root_dir, "validation")
 
                 if test_dir.is_dir() or val_dir.is_dir():
                     gt_dir = named_child_dir(self.root_dir, "ground_truth")
@@ -1156,6 +1209,10 @@ class AnomalyDataset(Dataset):
                                     mask_p = candidate
                             sample = (p, 0 if is_good else 1, mask_p)
                             (normal_samples if is_good else defect_samples).append(sample)
+                    # Files lying directly in the split folder: their names say which are defects.
+                    for p in sorted(image_paths(source_dir, recursive=False)):
+                        said = name_says_normal(p.stem)
+                        (defect_samples if said is False else normal_samples).append((p, 1 if said is False else 0, None))
 
                     if has_named_splits:
                         self.samples.extend(normal_samples + defect_samples)
@@ -1325,7 +1382,7 @@ def inspect_dataset(root_dir: Union[str, Path], task: str, ignore_saved_split: b
             }
             return DatasetSummary(
                 task="classification", total_images=len(all_dataset),
-                classes=counts, split_counts=split_counts,
+                classes=counts, split_counts=split_counts, split_basis="saved_manifest",
             )
         if any((root / name).is_dir() for name in ("train", "val", "test")):
             split_counts: Dict[str, int] = {name: 0 for name in ("train", "val", "test")}
@@ -1334,6 +1391,7 @@ def inspect_dataset(root_dir: Union[str, Path], task: str, ignore_saved_split: b
                 s_dir = root / split_name
                 if s_dir.is_dir():
                     samples, classes, _ = ClassificationDataset._load_from_folder(s_dir, inventory_eligible=True)
+                    samples, classes, _ = _with_class_overrides(root, samples, classes)
                     for _, label_idx in samples:
                         cname = classes[label_idx]
                         counts[cname] = counts.get(cname, 0) + 1
@@ -1344,6 +1402,7 @@ def inspect_dataset(root_dir: Union[str, Path], task: str, ignore_saved_split: b
                 total_images=total,
                 classes=counts,
                 split_counts=split_counts,
+                split_basis="folders",
             )
         else:
             ds = ClassificationDataset(root_dir=root, ignore_saved_split=ignore_saved_split)
@@ -1363,6 +1422,7 @@ def inspect_dataset(root_dir: Union[str, Path], task: str, ignore_saved_split: b
                 total_images=total,
                 classes=counts,
                 split_counts=split_counts,
+                split_basis=getattr(ds, "split_basis", "automatic"),
             )
 
     elif task_clean == "detection":
@@ -1459,7 +1519,7 @@ def inspect_dataset(root_dir: Union[str, Path], task: str, ignore_saved_split: b
             split_counts = {
                 name: sum(
                     1 for p in image_dir.glob("*")
-                    if p.is_file() and p.suffix.lower() in SUPPORTED_IMAGE_EXTENSIONS
+                    if p.is_file() and not p.name.startswith("._") and p.suffix.lower() in SUPPORTED_IMAGE_EXTENSIONS
                 ) if image_dir.is_dir() else 0
                 for name, image_dir in split_image_dirs.items()
             }
@@ -1543,4 +1603,5 @@ from backend.engine.industrial_adapters import (
     is_valid_labelme_file,
     normalize_defect_category,
     read_image_safely_rgb,
+    resize_model_input,
 )

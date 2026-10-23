@@ -7,6 +7,7 @@ import {createPortal} from 'react-dom';
 import { CheckCircle2, Pencil, Plus, RefreshCw, Server, Trash2, X } from 'lucide-react';
 import { useComputeStore } from '../../stores/useComputeStore';
 import type { ComputeProfile, ComputeProfileInput, ComputeProbeResult } from '../../services/api';
+import { SharedServerSetupGuide } from './SharedServerSetupGuide';
 
 interface Props {
   onClose: () => void;
@@ -116,6 +117,7 @@ export const ComputeServerPanel: React.FC<Props> = ({ onClose }) => {
         )}
 
         <SharedProjectPanel />
+        <SharedServerSetupGuide />
         <ServerConnectionWizard onAdd={()=>{setDraft(emptyProfile);setShowForm(true);}} onEdit={edit}/>
         <ComputeReservations />
         <div className="mt-4 flex items-center justify-between">

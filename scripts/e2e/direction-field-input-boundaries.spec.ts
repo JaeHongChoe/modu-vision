@@ -117,14 +117,14 @@ test('native independent direction rejects invalid values and persists an intent
   await io.value('/api/project/update',{source_dataset_dir:source},'PUT');await io.value('/api/dataset/import',{folder_path:source,task:'segmentation',validate_images:true});
   await io.settle();await page.reload();await expect(page.getByTitle('프로젝트 관리',{exact:true})).toContainText(project.name);
   await page.getByRole('navigation',{name:'Workflow Stages'}).getByRole('button').nth(1).click();await page.getByRole('button',{name:'집중 편집',exact:true}).click();
-  await expect.poll(async()=>Number((await page.getByTestId('canvas-hud').innerText()).match(/scale\s*([\d.]+)\s*%/)?.[1]||0)).toBeGreaterThan(100);
-  await page.getByTitle('100% Zoom (1:1)',{exact:true}).click();await expect(page.getByTestId('canvas-hud')).toContainText('100%');
+  await expect.poll(async()=>Number((await page.getByTestId('canvas-hud').innerText()).match(/배율\s*([\d.]+)\s*%/)?.[1]||0)).toBeGreaterThan(100);
+  await page.getByTitle('실제 크기 (1:1)',{exact:true}).click();await expect(page.getByTestId('canvas-hud')).toContainText('100%');
   const point=async(x:number,y:number)=>{const b=await page.locator('[data-canvas-container]').boundingBox();expect(b).not.toBeNull();return{x:b!.x+(b!.width-256)/2+x,y:b!.y+(b!.height-256)/2+y};};
   const drag=async(x1:number,y1:number,x2:number,y2:number)=>{const a=await point(x1,y1),b=await point(x2,y2);await page.mouse.move(a.x,a.y);await page.mouse.down();await page.mouse.move(b.x,b.y,{steps:8});await page.mouse.up();};
   const query='/api/annotations/part?file_path='+encodeURIComponent(image);
-  const save=async()=>{const pending=page.waitForResponse(reply=>new URL(reply.url()).pathname==='/api/annotations/save'&&reply.request().method()==='POST');await page.getByRole('button',{name:'Save Changes',exact:true}).click();const reply=await io.captured(await pending);expect(reply.status,reply.body).toBe(200);expect(JSON.parse(reply.body).status).toBe('saved');return{reply,annotation:await io.value(query)};};
+  const save=async()=>{const pending=page.waitForResponse(reply=>new URL(reply.url()).pathname==='/api/annotations/save'&&reply.request().method()==='POST');await page.getByRole('button',{name:'변경 저장',exact:true}).click();const reply=await io.captured(await pending);expect(reply.status,reply.body).toBe(200);expect(JSON.parse(reply.body).status).toBe('saved');return{reply,annotation:await io.value(query)};};
   await page.getByTitle('바운딩 박스 (BBox - 2)',{exact:true}).click();await drag(20,20,70,60);const boxInitial=await save();
-  await page.getByRole('button',{name:/^Crack(?: \d+)?$/}).click();await page.getByTitle('회전 바운딩 박스 (Rotated BBox OBB - 3)',{exact:true}).click();await page.getByTitle('100% Zoom (1:1)',{exact:true}).click();await drag(70,150,150,190);
+  await page.getByRole('button',{name:/^Crack(?: \d+)?$/}).click();await page.getByTitle('회전 바운딩 박스 (Rotated BBox OBB - 3)',{exact:true}).click();await page.getByTitle('실제 크기 (1:1)',{exact:true}).click();await drag(70,150,150,190);
   const direction=page.getByLabel('객체 독립 방향 라벨',{exact:true}),angle=page.getByText('Angle (θ)',{exact:true}).locator('..').locator('..').getByRole('spinbutton');
   await direction.fill('315');await angle.fill('30');const initial=await save();expect(initial.annotation.annotations).toHaveLength(2);
   const obb=initial.annotation.annotations.find((row:any)=>row.type==='rotated_bbox');expect(obb.rotated_bbox).toEqual([110,170,80,40,30]);expect(obb.direction_deg).toBe(315);
@@ -142,8 +142,8 @@ test('native independent direction rejects invalid values and persists an intent
   assertWrites(io.writes,[...io.calls.filter(row=>!['GET','HEAD'].includes(row.method)).map(row=>({method:row.method,route:row.route,body:row.request})),
     ...[boxInitial,initial].flatMap(row=>[{method:'POST',route:'/api/annotations/save',body:JSON.parse(row.reply.request.body!)},refresh])]);
   const before=await io.snapshot('before-invalid',routes,roots),beforeLabel=fs.readFileSync(label),beforeWorkflow=fs.readFileSync(workflow),beforeMask=fs.readFileSync(mask);const writeStart=io.writes.length;
-  for(const invalid of ['-1','360']){await direction.fill(invalid);await direction.press('Tab');await expect(direction).toHaveValue('315');await expect(angle).toHaveValue('30');await expect(page.getByTestId('annotation-save-button')).toContainText('Saved');}
-  await io.settle();await page.reload();await expect(page.getByRole('button',{name:/^Crack 1$/})).toBeVisible();await page.getByTitle('Delete annotation',{exact:true}).nth(1).locator('..').locator('..').click();
+  for(const invalid of ['-1','360']){await direction.fill(invalid);await direction.press('Tab');await expect(direction).toHaveValue('315');await expect(angle).toHaveValue('30');await expect(page.getByTestId('annotation-save-button')).toContainText('저장됨');}
+  await io.settle();await page.reload();await expect(page.getByRole('button',{name:/^Crack 1$/})).toBeVisible();await page.getByTitle('라벨 삭제',{exact:true}).nth(1).locator('..').locator('..').click();
   await expect(direction).toHaveValue('315');await expect(angle).toHaveValue('30');
   const afterInvalid=await io.snapshot('after-invalid-reopen',routes,roots);expect(afterInvalid).toEqual(before);expect(io.writes.slice(writeStart)).toEqual([]);
   await e.screenshot(page,'native-direction-invalid-existing315-angle30-reopened');
@@ -155,7 +155,7 @@ test('native independent direction rejects invalid values and persists an intent
   const expectedAnnotations=clone(initial.annotation.annotations);expectedAnnotations.find((row:any)=>row.type==='rotated_bbox').direction_deg=null;expect(empty.annotation.annotations).toEqual(expectedAnnotations);
   expect(empty.annotation.metadata.revision).toBe(initial.annotation.metadata.revision+1);expect(empty.annotation.metadata.image_uuid).toBe(initial.annotation.metadata.image_uuid);expect(empty.annotation.metadata.content_hash).toBe(originalHash);expect(empty.annotation.metadata.mask_hash).toBe(initial.annotation.metadata.mask_hash);
   assertWrites(io.writes.slice(emptyStart),[{method:'POST',route:'/api/annotations/save',body:request},refresh]);
-  await io.settle();await page.reload();await expect(page.getByRole('button',{name:/^Crack 1$/})).toBeVisible();await page.getByTitle('Delete annotation',{exact:true}).nth(1).locator('..').locator('..').click();await expect(direction).toHaveValue('');await expect(angle).toHaveValue('30');
+  await io.settle();await page.reload();await expect(page.getByRole('button',{name:/^Crack 1$/})).toBeVisible();await page.getByTitle('라벨 삭제',{exact:true}).nth(1).locator('..').locator('..').click();await expect(direction).toHaveValue('');await expect(angle).toHaveValue('30');
   const afterEmpty=await io.snapshot('after-empty-reopen',routes,roots),expectedTree=clone(before.trees);const changedPaths=Object.keys(afterEmpty.trees.project).filter(name=>JSON.stringify(afterEmpty.trees.project[name])!==JSON.stringify(before.trees.project[name]));
   expect(changedPaths.sort()).toEqual([labelRelative,workflowRelative].sort());for(const name of changedPaths)expectedTree.project[name]=afterEmpty.trees.project[name];expect(afterEmpty.trees).toEqual(expectedTree);expect(afterEmpty.storage).toEqual(before.storage);
   for(const route of stableRoutes.filter(route=>!route.startsWith('/api/dataset/metadata')))expect(afterEmpty.api[route]).toEqual(before.api[route]);
@@ -269,11 +269,11 @@ async function directionHandoffExercise(page:Page,w:Workspace,e:Evidence,origin:
    await page.waitForFunction(()=>{const canvas=document.querySelector<HTMLCanvasElement>('[data-canvas-container] > canvas:first-of-type');
     if(!canvas||canvas.width===0||canvas.height===0)return false;const context=canvas.getContext('2d');return Boolean(context&&context.getImageData(Math.floor(canvas.width/2),Math.floor(canvas.height/2),1,1).data[3]>0);
    },undefined,{timeout:10_000});
-   await page.getByTitle('100% Zoom (1:1)',{exact:true}).click();await page.getByRole('button',{name:/^Crack(?: \d+)?$/}).click();
+   await page.getByTitle('실제 크기 (1:1)',{exact:true}).click();await page.getByRole('button',{name:/^Crack(?: \d+)?$/}).click();
    await page.getByTitle('회전 바운딩 박스 (Rotated BBox OBB - 3)',{exact:true}).click();
-   await expect(page.getByTestId('canvas-hud')).toContainText(/VIEW\s*scale\s*100\s*%/,{timeout:10_000});
+   await expect(page.getByTestId('canvas-hud')).toContainText(/보기\s*배율\s*100\s*%/,{timeout:10_000});
    await page.evaluate(()=>new Promise<void>(resolve=>requestAnimationFrame(()=>requestAnimationFrame(()=>resolve()))));
-   await expect(page.getByTestId('canvas-hud')).toContainText(/VIEW\s*scale\s*100\s*%/,{timeout:10_000});
+   await expect(page.getByTestId('canvas-hud')).toContainText(/보기\s*배율\s*100\s*%/,{timeout:10_000});
   })(),frame,'loaded original pixels and stable 1:1');
   const box=await page.locator('[data-canvas-container]').boundingBox();expect(box).not.toBeNull();
   const point=(x:number,y:number)=>({x:box!.x+(box!.width-256)/2+x,y:box!.y+(box!.height-256)/2+y});const from=point(70,150),to=point(150,190);
@@ -290,13 +290,13 @@ async function directionHandoffExercise(page:Page,w:Workspace,e:Evidence,origin:
   expect(request.annotations[0].direction_deg).toBe(scope.direction);expect(request.annotations[0].rotated_bbox).toEqual([110,170,80,40,scope.angle]);
   expect(refresh.request().postDataJSON()).toEqual({folder_path:scope.source,task:'segmentation',validate_images:false});await responseBody(refresh,scope,deadline,scope.tag+'-manifest-refreshed');
   scope.saved=checkSaved(scope,await readAnnotation(scope));expect(scope.saved.metadata.revision).toBe(before.metadata.revision+1);expect(scope.saved.metadata.image_uuid).toBe(before.metadata.image_uuid);
-  expect(savedRaw.body.metadata).toEqual(scope.saved.metadata);await expect(save).toContainText('Saved');
+  expect(savedRaw.body.metadata).toEqual(scope.saved.metadata);await expect(save).toContainText('저장됨');
   await e.screenshot(page,'direction-'+scope.tag+'-distinct-direction-and-axis-saved');
  };
  const selectSaved=async(scope:DirectionHandoffScope)=>{
-  await current(scope);await expect(page.getByTitle('Delete annotation',{exact:true})).toHaveCount(1);
-  await page.getByTitle('Delete annotation',{exact:true}).locator('..').locator('..').click();
-  await expect(direction).toHaveValue(String(scope.direction));await expect(angle).toHaveValue(String(scope.angle));await expect(save).toContainText('Saved');
+  await current(scope);await expect(page.getByTitle('라벨 삭제',{exact:true})).toHaveCount(1);
+  await page.getByTitle('라벨 삭제',{exact:true}).locator('..').locator('..').click();
+  await expect(direction).toHaveValue(String(scope.direction));await expect(angle).toHaveValue(String(scope.angle));await expect(save).toContainText('저장됨');
   return checkSaved(scope,await readAnnotation(scope));
  };
  const state=async(scope:DirectionHandoffScope)=>{

@@ -25,6 +25,10 @@ let flowchartGeneration = 0;
 let flowchartSaveGeneration = 0;
 let flowchartRunInputRevision = 0;
 let flowchartRunSequence = 0;
+// Counts the user's graph edits. A load that started before an edit and finishes after it must not replace the edited,
+// unsaved graph with what it read (the studio can start a second read right after the first one shows the graph).
+let flowchartEditRevision = 0;
+function markUserEdit() { flowchartEditRevision += 1; }
 let activePartialOwner: { stop: () => Promise<boolean>; refresh: () => Promise<boolean> } | null = null;
 const HISTORY_LIMIT = 50;
 
@@ -85,6 +89,18 @@ function editedIdentity(state: { flowIdentity: FlowIdentity; pipeline: Flowchart
     : { ...state.flowIdentity, semantic_revision: state.flowIdentity.semantic_revision + 1 };
 }
 
+/** A read of the graph keeps the user's selection when that node is still in it: a click must not lose to a
+ * draft or version read that lands a moment later. A node that is gone clears the selection as before. */
+/** Whether the user edited the graph since a load began and has not saved it yet: the load keeps the edit. */
+function editedSinceLoad(editsAtStart: number, state: { pipeline: FlowchartPipeline | null; pipelineDirty: boolean }): boolean {
+  return editsAtStart !== flowchartEditRevision && Boolean(state.pipeline) && state.pipelineDirty;
+}
+
+function keptSelection(state: { selectedNodeId: string | null }, pipeline: { nodes: Array<{ id: string }> }): string | null {
+  const id = state.selectedNodeId;
+  return id && pipeline.nodes.some(node => node.id === id) ? id : null;
+}
+
 function loadedIdentity(state: { flowIdentity: FlowIdentity }): Pick<FlowchartState, 'flowIdentity' | 'executionIdentity'> {
   return { flowIdentity: { semantic_revision: state.flowIdentity.semantic_revision + 1, layout_revision: 0 }, executionIdentity: null };
 }
@@ -99,6 +115,9 @@ interface FlowchartState {
   lastRunSource: { kind: 'draft' | 'saved'; versionId: string | null } | null;
   isLoading: boolean;
   isSaving: boolean;
+  /** The save in progress is a draft save (the 650 ms autosave or 초안 저장). It never changes the graph and its result
+   * is checked against the graph on screen, so editing, undo and redo stay open while it runs; a version save holds them. */
+  isDraftSaving: boolean;
   isRunning: boolean;
   partialRun: FlowPartialRunView | null;
   activeRunningNodeId: string | null;
@@ -217,7 +236,7 @@ export function isCurrentSavedPipeline(pipeline: FlowchartPipeline, task: Vision
  * changed dataset). */
 export function isStaleBaseError(error: unknown): boolean {
   const value = error as { status?: number; message?: string } | null;
-  return value?.status === 409 && /active flow changed since/.test(String(value?.message ?? ''));
+  return value?.status === 409 && /active flow changed since|적용 중인 플로우가 바뀌었습니다/.test(String(value?.message ?? ''));
 }
 
 export const STALE_SAVE_MESSAGE = '이 편집을 시작한 뒤 다른 곳에서 활성 플로우가 바뀌었습니다. 편집 내용은 그대로 있습니다. 활성 버전을 다시 열어 확인한 뒤 저장하세요.';
@@ -395,6 +414,7 @@ export const useFlowchartStore = create<FlowchartState>((set, get) => ({
   lastRunSource: null,
   isLoading: false,
   isSaving: false,
+  isDraftSaving: false,
   isRunning: false,
   partialRun: null,
   activeRunningNodeId: null,
@@ -424,6 +444,7 @@ export const useFlowchartStore = create<FlowchartState>((set, get) => ({
     savedStartupRead = null;
     const savedScope = savedStartupScope(inspectionTask, sourceDatasetPath);
     const generation = ++flowchartGeneration;
+    const editsAtStart = flowchartEditRevision;
     set({ isLoading: true, errorMessage: null });
     try {
       let data: FlowchartPipeline;
@@ -436,10 +457,11 @@ export const useFlowchartStore = create<FlowchartState>((set, get) => ({
           if (!sameContext(context, draft.context)) throw new Error('저장 초안의 프로젝트 또는 라벨셋이 다릅니다.');
           if (!/^[a-f0-9]{64}$/.test(draft.draft_sha256)) throw new Error('저장 초안의 검증 해시를 확인하세요.');
           data = draft.pipeline;
+          if (editedSinceLoad(editsAtStart, get())) { set({ isLoading: false }); return get().pipeline; }
           set({ ...loadedIdentity(get()), pipeline: data, cleanPipeline: data, pipelineIsDraft: !draft.active_version_id,
             persistedDraftHash: draft.draft_sha256, baseVersionId: draftBase(draft),
             historyPast: [], historyFuture: [], historyGroupStart: null, canUndo: false, canRedo: false,
-            pipelineDirty: false, selectedNodeId: null, executionResult: null, lastRunSource: null,
+            pipelineDirty: false, selectedNodeId: keptSelection(get(), data), executionResult: null, lastRunSource: null,
             inspectedCrop: null, isLoading: false });
           rememberSavedStartupRead(data, draft.active_version_id, savedScope);
           return data;
@@ -463,6 +485,7 @@ export const useFlowchartStore = create<FlowchartState>((set, get) => ({
         data = await api.flowchart.getPipeline(inspectionTask, sourceDatasetPath);
       }
       if (generation !== flowchartGeneration || (canPublish && !canPublish())) return null;
+      if (editedSinceLoad(editsAtStart, get())) { set({ isLoading: false }); return get().pipeline; }
       set({
         ...loadedIdentity(get()),
         pipeline: data,
@@ -472,7 +495,7 @@ export const useFlowchartStore = create<FlowchartState>((set, get) => ({
         pipelineDirty: false,
         pipelineIsDraft: false,
         persistedDraftHash: null,
-        selectedNodeId: null,
+        selectedNodeId: keptSelection(get(), data),
         executionResult: null,
         inspectedCrop: null,
         isLoading: false,
@@ -493,15 +516,17 @@ export const useFlowchartStore = create<FlowchartState>((set, get) => ({
     const context = draftContext();
     if (!context) return null;
     const generation = ++flowchartGeneration;
+    const editsAtStart = flowchartEditRevision;
     try {
       const draft = await flowDraft.get();
       if (generation !== flowchartGeneration || !sameContext(context, draftContext())) return null;
       if (!sameContext(context, draft.context)) throw new Error('저장 초안의 프로젝트 또는 라벨셋이 다릅니다.');
       if (!/^[a-f0-9]{64}$/.test(draft.draft_sha256)) throw new Error('저장 초안의 검증 해시를 확인하세요.');
+      if (editedSinceLoad(editsAtStart, get())) return get().pipeline;
       set({ ...loadedIdentity(get()), pipeline: draft.pipeline, cleanPipeline: draft.pipeline, pipelineIsDraft: !draft.active_version_id,
         persistedDraftHash: draft.draft_sha256, baseVersionId: draftBase(draft),
         pipelineDirty: false, historyPast: [], historyFuture: [], historyGroupStart: null, canUndo: false, canRedo: false,
-        executionResult: null, lastRunSource: null, inspectedCrop: null, selectedNodeId: null, errorMessage: null });
+        executionResult: null, lastRunSource: null, inspectedCrop: null, selectedNodeId: keptSelection(get(), draft.pipeline), errorMessage: null });
       return draft.pipeline;
     } catch (error) {
       if (generation === flowchartGeneration && (error as { status?: number }).status !== 404)
@@ -516,7 +541,9 @@ export const useFlowchartStore = create<FlowchartState>((set, get) => ({
     if (!target || !context || get().isSaving || get().isRunning || get().isLoading || get().historyGroupStart || (isCurrent && !isCurrent())) return false;
     const generation = flowchartGeneration;
     const saveGeneration = ++flowchartSaveGeneration;
-    set({ isSaving: true, errorMessage: null, saveMessage: null });
+    // An edit, undo or redo made while this runs leaves the graph on screen different from target: the save then
+    // claims nothing below, and undo/redo keep the graph dirty (see undo), so the draft autosave saves it next.
+    set({ isSaving: true, isDraftSaving: true, errorMessage: null, saveMessage: null });
     try {
       const base = get().baseVersionId;
       const saved = await flowDraft.save(target, context, base === undefined ? undefined : base ?? 'none');
@@ -536,7 +563,7 @@ export const useFlowchartStore = create<FlowchartState>((set, get) => ({
         set({ errorMessage: error instanceof Error ? error.message : '초안 저장 실패' });
       return false;
     } finally {
-      if (saveGeneration === flowchartSaveGeneration) set({ isSaving: false });
+      if (saveGeneration === flowchartSaveGeneration) set({ isSaving: false, isDraftSaving: false });
     }
   },
 
@@ -553,7 +580,7 @@ export const useFlowchartStore = create<FlowchartState>((set, get) => ({
         pipeline: data, cleanPipeline: data, pipelineIsDraft: false, baseVersionId: base,
         persistedDraftHash: null,
         historyPast: [], historyFuture: [], historyGroupStart: null, canUndo: false, canRedo: false,
-        pipelineDirty: false, selectedNodeId: null,
+        pipelineDirty: false, selectedNodeId: keptSelection(get(), data),
         executionResult: null, inspectedCrop: null, isLoading: false,
       });
       return data;
@@ -620,7 +647,7 @@ export const useFlowchartStore = create<FlowchartState>((set, get) => ({
     if (!target) return false;
     const generation = flowchartGeneration;
     const saveGeneration = ++flowchartSaveGeneration;
-    set({ isSaving: true, errorMessage: null, saveMessage: null });
+    set({ isSaving: true, isDraftSaving: false, errorMessage: null, saveMessage: null });
     try {
       const saved = await api.flowchart.savePipeline(target, recipeTask, sourceDatasetPath,
         { changeReason: change?.changeReason, expectedVersionId: get().baseVersionId });
@@ -796,6 +823,7 @@ export const useFlowchartStore = create<FlowchartState>((set, get) => ({
     });
     const next = { ...current, nodes: nextNodes };
     // The earlier result stays visible as an earlier version (isExecutionResultCurrent).
+    markUserEdit();
     set({
       ...editedHistory(state),
       flowIdentity: editedIdentity(state, next),
@@ -810,6 +838,7 @@ export const useFlowchartStore = create<FlowchartState>((set, get) => ({
     const current = state.pipeline;
     if (!current) return;
     const next = { ...current, nodes: [...current.nodes, newNode] };
+    markUserEdit();
     set({
       ...editedHistory(state),
       flowIdentity: editedIdentity(state, next),
@@ -823,6 +852,7 @@ export const useFlowchartStore = create<FlowchartState>((set, get) => ({
     const state = get();
     if (!state.pipeline || (state.pipeline === pipeline && !newBasis)) return;
     const selectedNodeId = state.selectedNodeId;
+    markUserEdit();
     set({
       // An explicit recipe starts a new edit basis. Its previous stale graph must
       // not be restored by undo while retaining the newly observed active base.
@@ -853,6 +883,7 @@ export const useFlowchartStore = create<FlowchartState>((set, get) => ({
       : node);
     const next = { ...current, nodes: nextNodes };
     // Moving a node is a layout edit: results and running inspections stay valid.
+    markUserEdit();
     set({
       ...editedHistory(state),
       flowIdentity: editedIdentity(state, next),
@@ -881,9 +912,12 @@ export const useFlowchartStore = create<FlowchartState>((set, get) => ({
     const previous = state.historyPast[state.historyPast.length - 1];
     const historyPast = state.historyPast.slice(0, -1);
     const historyFuture = [...state.historyFuture, state.pipeline].slice(-HISTORY_LIMIT);
+    markUserEdit();
     set({
       flowIdentity: editedIdentity(state, previous),
-      pipeline: previous, pipelineDirty: previous !== state.cleanPipeline,
+      // While a draft save runs, the saved draft may become the graph being left: an undo back to the last saved graph
+      // stays dirty, so it is saved again rather than shown as saved while the draft holds the newer graph.
+      pipeline: previous, pipelineDirty: previous !== state.cleanPipeline || state.isDraftSaving,
       historyPast, historyFuture, canUndo: historyPast.length > 0, canRedo: true,
       selectedNodeId: state.selectedNodeId && previous.nodes.some((node) => node.id === state.selectedNodeId)
         ? state.selectedNodeId : null,
@@ -897,9 +931,10 @@ export const useFlowchartStore = create<FlowchartState>((set, get) => ({
     const next = state.historyFuture[state.historyFuture.length - 1];
     const historyFuture = state.historyFuture.slice(0, -1);
     const historyPast = [...state.historyPast, state.pipeline].slice(-HISTORY_LIMIT);
+    markUserEdit();
     set({
       flowIdentity: editedIdentity(state, next),
-      pipeline: next, pipelineDirty: next !== state.cleanPipeline,
+      pipeline: next, pipelineDirty: next !== state.cleanPipeline || state.isDraftSaving,
       historyPast, historyFuture, canUndo: true, canRedo: historyFuture.length > 0,
       selectedNodeId: state.selectedNodeId && next.nodes.some((node) => node.id === state.selectedNodeId)
         ? state.selectedNodeId : null,
@@ -937,7 +972,7 @@ export const useFlowchartStore = create<FlowchartState>((set, get) => ({
       baseVersionId: undefined,
       modelContextInvalidated: true,
       contextRevision: get().contextRevision + 1,
-      executionResult: null, lastRunSource: null, isLoading: false, isSaving: false, isRunning: false, partialRun: null,
+      executionResult: null, lastRunSource: null, isLoading: false, isSaving: false, isDraftSaving: false, isRunning: false, partialRun: null,
       activeRunningNodeId: null, selectedNodeId: null,
       selectedImage: null, isImagePickerOpen: false, inspectedCrop: null,
       saveMessage: null, errorMessage: null,

@@ -1,15 +1,33 @@
 <!doctype html>
-<html lang="en" class="dark">
+<html lang="ko" class="dark">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <!-- Local backend on a dynamic loopback port, or a shared project server.
-         Shared servers must use HTTPS/WSS (loopback HTTP is the SSH-tunnel case);
-         plain HTTP to other hosts stays blocked. -->
+    <!-- Renderer network policy (docs/product-direction-easy-labeling-agent.md §4.4). What the renderer really reaches:
+         its own page, the local backend on a dynamic loopback port (HTTP/WS) and, in the desktop app only, a shared
+         project server whose HTTPS origin the person picks at run time. A static policy cannot name that origin, so the
+         desktop policy keeps https:/wss:, and the Electron main process cancels every renderer HTTPS/WSS request except
+         the connected shared server's /api and /ws paths (src/main/index.ts, sharedSession.ts). Assistant providers are
+         called only by the main process with Node's fetch; the renderer never reaches them. Plain HTTP to other hosts
+         stays blocked everywhere. -->
     <meta
       http-equiv="Content-Security-Policy"
-      content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: http://127.0.0.1:* http://localhost:* https:; connect-src 'self' http://127.0.0.1:* http://localhost:* ws://127.0.0.1:* ws://localhost:* https: wss:;"
+      content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; object-src 'none'; base-uri 'self'; img-src 'self' data: blob: http://127.0.0.1:* http://localhost:* https:; connect-src 'self' http://127.0.0.1:* http://localhost:* ws://127.0.0.1:* ws://localhost:* https: wss:;"
     />
+    <!-- Browser (no desktop bridge): a shared server serves this page itself and the browser session only talks to the
+         same origin, so a second policy narrows HTTPS/WSS to this page's origin. Policies intersect; this one can only
+         remove sources. It runs before any other script. -->
+    <script>
+      (function () {
+        if (window.api) return;
+        var secure = location.protocol === 'https:' ? ' wss://' + location.host : '';
+        var meta = document.createElement('meta');
+        meta.httpEquiv = 'Content-Security-Policy';
+        meta.content = "img-src 'self' data: blob: http://127.0.0.1:* http://localhost:*; connect-src 'self'" + secure
+          + ' http://127.0.0.1:* http://localhost:* ws://127.0.0.1:* ws://localhost:*';
+        document.head.appendChild(meta);
+      })();
+    </script>
     <title>Vision AI Studio</title>
   </head>
   <body class="bg-industrial-850 text-slate-100 overflow-hidden select-none m-0 p-0 antialiased font-sans">

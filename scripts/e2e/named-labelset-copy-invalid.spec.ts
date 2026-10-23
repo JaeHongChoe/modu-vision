@@ -166,8 +166,8 @@ test('named labelset copy rejects its own invalid source tree with actual 422 an
       const focus = page.getByRole('button', {name: '집중 편집', exact: true});
       if (await focus.getAttribute('aria-pressed') === 'true') await focus.click();
       await page.locator('[data-labeling-filmstrip]').getByAltText(path.basename(imagePath), {exact: true}).click();
-      await expect(page.getByTitle('Delete annotation', {exact: true})).toHaveCount(1);
-      await expect(page.getByTestId('annotation-save-button')).toHaveText('Saved');
+      await expect(page.getByTitle('라벨 삭제', {exact: true})).toHaveCount(1);
+      await expect(page.getByTestId('annotation-save-button')).toHaveText('저장됨');
       const active = page.getByLabel('활성 레이블셋', {exact: true});
       await expect(active).toHaveValue('default'); await expect(active).toBeEnabled();
       await expect(active.locator('option')).toHaveCount(1); await expect(active.locator('option')).toHaveText('기본 라벨');
@@ -199,7 +199,7 @@ test('named labelset copy rejects its own invalid source tree with actual 422 an
       expect((await api('/api/project/labelsets')).value).toEqual(registry);
       expect((await api('/api/project/current')).value).toEqual(selected);
       expect((await api(annotationRoute)).value).toEqual(saved); expect(await storage()).toEqual(storageBefore);
-      await expect(page.getByTestId('annotation-save-button')).toHaveText('Saved');
+      await expect(page.getByTestId('annotation-save-button')).toHaveText('저장됨');
       await evidence.screenshot(page, 'named-labelset-copy-invalid-real422-originals-preserved');
       await settle(); assertMutations(); noNamedTarget(); expect(disk(true)).toEqual(withLinkBefore);
       completed = true;

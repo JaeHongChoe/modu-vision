@@ -13,7 +13,7 @@ class ReadinessRequest(BaseModel):
     model_config=ConfigDict(extra='forbid')
     task:str
     model:str
-    device:Literal['cpu','mps','cuda']='cpu'
+    device:Literal['auto','cpu','mps','cuda']='cpu'
     pretrained_checkpoint:str|None=None
     compute_profile_id:str|None=None
     preset:Literal['fast','precision']='fast'
@@ -70,13 +70,13 @@ def readiness(body:ReadinessRequest,request:Request):
     family=next((row for row in model_family_catalog()['families'] if row['task']==body.task),None)
     allowed=set(family['architectures']) if family else set()
     if body.task=='anomaly':allowed.update(('dinov3_vits16','dinov3_vitb16','dinov3_vitl16'))
-    if body.model not in allowed:raise HTTPException(422,'Choose a supported model in this family')
+    if body.model not in allowed:raise HTTPException(422,'이 작업 종류에서 지원하지 않는 모델입니다. 모델 목록에서 지원하는 모델을 고르세요.')
     actual_model=body.config_overrides.get('anomaly_backbone','dinov3_vits16') if body.task=='anomaly' and body.model=='dino_synthetic' else body.model
     checkpoint=body.pretrained_checkpoint or body.config_overrides.get('pretrained_checkpoint') or imported_weight(project,body.task,actual_model)
     inputs,input_actions=input_readiness(project,body.task)
     if body.compute_profile_id:
         profile=selected_profile(body.compute_profile_id)
-        if profile is None:raise HTTPException(404,'Selected compute profile is unavailable')
+        if profile is None:raise HTTPException(404,'선택한 연산 장치 프로필을 찾을 수 없습니다. 장치 목록을 새로고침한 뒤 다시 고르세요.')
         options=dict(body.config_overrides)
         key='model_name' if body.task=='segmentation' else 'anomaly_backbone' if body.task=='anomaly' and actual_model.startswith('dinov3_') else 'backbone'
         options[key]=actual_model
@@ -108,7 +108,13 @@ def readiness(body:ReadinessRequest,request:Request):
             'dependencies':{'missing':[]},'weights':weights,
             'next_actions':actions,'execution_verified':False,'training_started':False,'quality_approved':False,
             'selected_checkpoint_path':checkpoint,'prepared_dataset_path':str(dataset) if dataset else None,'probe':probe,'input':inputs}
-    result=model_readiness(body.task,actual_model,body.device,checkpoint)
+    # 'auto' is what local training does without a device: CUDA, then Apple MPS, then CPU. Report that device (F-20).
+    device=body.device
+    if device=='auto':
+        from backend.engine.device import get_device
+        resolved=get_device('auto');device='cuda' if resolved.type=='cuda' else resolved.type
+    result=model_readiness(body.task,actual_model,device,checkpoint)
+    result['runtime']['auto']=body.device=='auto'
     from backend.engine.model_execution import resolve_training_input,resolve_training_parent
     try:
         if body.family_dataset_path or body.warm_start_job_id:
@@ -124,6 +130,11 @@ def readiness(body:ReadinessRequest,request:Request):
     if input_actions:
         result['ready']=False;result['next_actions'].extend(input_actions)
     return {**result,'selected_checkpoint_path':checkpoint,'target':{'kind':'local','id':None},'training_started':False,'input':inputs}
+
+@router.get('/readiness')
+def readiness_read(request:Request,task:str,model:str,device:Literal['auto','cpu','mps','cuda']='auto',preset:Literal['fast','precision']='fast',pretrained_checkpoint:str|None=None):
+    """The same read-only local check as POST, for the step-3 card to run by itself without counting as a write (A5)."""
+    return readiness(ReadinessRequest(task=task,model=model,device=device,preset=preset,pretrained_checkpoint=pretrained_checkpoint),request)
 
 @router.get('/tasks')
 def tasks(request:Request):
@@ -226,7 +237,26 @@ class WeightImportRequest(ReadinessRequest):
 
 @router.post('/import-weights')
 def import_weights(body:WeightImportRequest,request:Request):
-    if not body.pretrained_checkpoint:raise HTTPException(422,'Choose a pretrained file')
+    if not body.pretrained_checkpoint:raise HTTPException(422,'가져올 사전학습 가중치 파일이 없습니다. 파일을 고른 뒤 가져오기를 다시 누르세요.')
     readiness(body,request)
     try:return import_pretrained_weight(get_current_project(request),body.task,body.model,body.pretrained_checkpoint,body.expected_sha256)
     except (ValueError,OSError) as exc:raise HTTPException(422,str(exc)) from exc
+
+
+class WeightPrefetchRequest(BaseModel):
+    model_config=ConfigDict(extra='forbid')
+    model:str
+
+@router.post('/prefetch-weights')
+def prefetch_weights(body:WeightPrefetchRequest,request:Request):
+    """Start downloading the model's official weights now instead of during the first training (F-12/A5)."""
+    get_current_project(request)
+    from backend.engine.weights_prefetch import start_prefetch
+    try:return start_prefetch(body.model)
+    except ValueError as exc:raise HTTPException(422,str(exc)) from exc
+
+@router.get('/prefetch-weights')
+def prefetch_weights_status(model:str,request:Request):
+    get_current_project(request)
+    from backend.engine.weights_prefetch import prefetch_status
+    return prefetch_status(model)

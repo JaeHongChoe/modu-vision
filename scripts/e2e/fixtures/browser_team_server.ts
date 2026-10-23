@@ -42,6 +42,7 @@ Path(sys.argv[2]).chmod(0o600)
       res.writeHead(404); res.end(); return;
     }
     res.setHeader('Content-Type', file.endsWith('.js') ? 'text/javascript' : file.endsWith('.css') ? 'text/css' : 'text/html');
+    if (path.basename(file) === 'index.html') { res.end(harness.withFullView(fs.readFileSync(file, 'utf8'))); return; }
     fs.createReadStream(file).pipe(res);
   });
   await new Promise<void>(resolve => server.listen(0, '127.0.0.1', resolve));
@@ -60,9 +61,13 @@ Path(sys.argv[2]).chmod(0o600)
       return {stop, backend_port_closed: closed};
     };
     const call = async (route: string, body?: unknown, token?: string, method?: string) => {
+      // One connection per fixture call. Specs run synchronous fixture scripts
+      // (execFileSync, ~10 s on hosted runners) between calls; Node 24's fetch
+      // then writes the next call to a pooled socket that uvicorn closed after
+      // its 5 s keep-alive, and the call fails with "other side closed".
       const response = await fetch(backend.baseUrl + route, {
         method: method || (body === undefined ? 'GET' : 'POST'), headers: {'Content-Type': 'application/json',
-          ...(token ? {Authorization: `Bearer ${token}`} : {'X-Vision-Token': backend.token})},
+          Connection: 'close', ...(token ? {Authorization: `Bearer ${token}`} : {'X-Vision-Token': backend.token})},
         ...(body === undefined ? {} : {body: JSON.stringify(body)})});
       if (!response.ok) throw new Error(`Fixture API ${route}: ${response.status} ${await response.text()}`);
       return response.json();

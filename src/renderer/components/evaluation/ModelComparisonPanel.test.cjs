@@ -8,7 +8,7 @@ function fixture(config={}){
  const react={useState(value){const i=index++;if(!(i in slots))slots[i]=value;return[slots[i],v=>{slots[i]=typeof v==='function'?v(slots[i]):v;dirty=true;}];},useRef(value){const i=index++;return slots[i]??(slots[i]={current:value});},useEffect(fn,deps){const i=index++;if(JSON.stringify(slots[i]?.deps)!==JSON.stringify(deps)){const previous=slots[i];slots[i]={deps};effects.push(()=>{previous?.cleanup?.();slots[i].cleanup=fn();});}}};
  const file=path.join(__dirname,'ModelComparisonPanel.tsx'),m=new Module(file,module);m.filename=file;m.paths=Module._nodeModulePaths(__dirname);const req=m.require.bind(m);
  const models=[{job_id:'incumbent',task:'classification'},{job_id:'candidate',task:'classification'}];
- m.require=n=>n==='react'?react:n.endsWith('/services/datasetWorkflow')?{datasetWorkflow:{}}:n.endsWith('/services/teamDataApi')?{teamDataApi:{}}:n.endsWith('/useAnnotationStore')?{useAnnotationStore:hook({reviewerName:'kai'})}:n.endsWith('/evidenceLabeling')?{openEvidenceLabeling:async()=>{throw new Error('Unexpected edit action');},rememberEvidenceEdit(){}}:n.endsWith('/EvidenceImageViewer')?{EvidenceImageViewer:()=>null}:n.includes('useComputeStore')?{useComputeStore:hook(compute)}:n.includes('useProjectStore')?{useProjectStore:hook({projectDir:'/project',project:{id:'p',source_dataset_dir:'/source',active_labelset_id:'default'}})}:n.endsWith('/useTaskHandoff')?{useTaskHandoff:()=>config.handoff||null}:n.includes('productDataWorkflow')?{consumeReviewContext:(_storage,_scope,ids)=>{const value=config.origin;config.origin=null;return value&&ids.includes(value.comparison_id)?value:null;},evaluationOriginScope:()=>null}:n.endsWith('/services/api')?{getApiPersistenceIdentity:()=> 'local',api:{evaluation:{comparisonModels:async(source,task)=>{catalogReads.push({source,task});if(config.catalogError)throw config.catalogError;return{models:config.models||models};},listComparisons:async()=>({comparisons:config.reports||(config.report?[config.report]:[])}),getComparison:async id=>config.getReport?config.getReport(id):config.report}},request:async(url,options)=>{urls.push(url);if(options){calls.push(JSON.parse(options.body));if(config.createError)throw config.createError;if(pending)return new Promise(resolve=>{resolveCreate=resolve;});return config.created||{job_id:'controlled',status:'completed'};}if(url.includes('/export?'))return config.export?config.export():{report:config.report,saved_report_sha256:'a'.repeat(64)};if(url.includes('/jobs/'))return config.polled||config.created||{job_id:'controlled',status:'completed',completed_images:0,total_images:0,report_id:null,error:null};return{jobs:config.jobs||[]};}}:req(n);
+ m.require=n=>n==='react'?react:n.endsWith('/utils/plainLabels')?require('../../utils/plainLabels.fixture.cjs'):n.endsWith('/services/datasetWorkflow')?{datasetWorkflow:{}}:n.endsWith('/services/teamDataApi')?{teamDataApi:{}}:n.endsWith('/useAnnotationStore')?{useAnnotationStore:hook({reviewerName:'kai'})}:n.endsWith('/evidenceLabeling')?{openEvidenceLabeling:async()=>{throw new Error('Unexpected edit action');},rememberEvidenceEdit(){}}:n.endsWith('/EvidenceImageViewer')?{EvidenceImageViewer:()=>null}:n.includes('useComputeStore')?{useComputeStore:hook(compute)}:n.includes('useProjectStore')?{useProjectStore:hook({projectDir:'/project',project:{id:'p',source_dataset_dir:'/source',active_labelset_id:'default'}})}:n.endsWith('/useTaskHandoff')?{useTaskHandoff:()=>config.handoff||null}:n.includes('productDataWorkflow')?{consumeReviewContext:(_storage,_scope,ids)=>{const value=config.origin;config.origin=null;return value&&ids.includes(value.comparison_id)?value:null;},evaluationOriginScope:()=>null}:n.endsWith('/services/api')?{getApiPersistenceIdentity:()=> 'local',api:{evaluation:{comparisonModels:async(source,task)=>{catalogReads.push({source,task});if(config.catalogError)throw config.catalogError;return{models:config.models||models};},listComparisons:async()=>({comparisons:config.reports||(config.report?[config.report]:[])}),getComparison:async id=>config.getReport?config.getReport(id):config.report}},request:async(url,options)=>{urls.push(url);if(options){calls.push(JSON.parse(options.body));if(config.createError)throw config.createError;if(pending)return new Promise(resolve=>{resolveCreate=resolve;});return config.created||{job_id:'controlled',status:'completed'};}if(url.includes('/export?'))return config.export?config.export():{report:config.report,saved_report_sha256:'a'.repeat(64)};if(url.includes('/jobs/'))return config.polled||config.created||{job_id:'controlled',status:'completed',completed_images:0,total_images:0,report_id:null,error:null};return{jobs:config.jobs||[]};}}:req(n);
  m._compile(ts.transpileModule(fs.readFileSync(file,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022,jsx:ts.JsxEmit.ReactJSX}}).outputText,file);
  function render(){index=0;dirty=false;tree=m.exports.ModelComparisonPanel({projectDir:'/project',sourceFolder:'/source',task:'classification',preferredJobId:'candidate',preferredParentJobId:'incumbent',language:'ko',...config.props});effects.splice(0).forEach(f=>f());}
  async function settle(){for(let i=0;i<8;i++){if(dirty)render();await new Promise(setImmediate);if(!dirty)return;}}
@@ -257,6 +257,35 @@ test('same-scope refresh preserves a pending comparison and its running result u
   assert.equal(f.all().find(n=>n.props?.['aria-label']==='후보 모델').props.value,'incumbent');
   assert.equal(submit().props.disabled,false);assert.equal(f.calls.length,1);assert.deepEqual(f.calls[0],submitted);
   assert(!f.all().some(n=>n.props?.role==='alert'));
+ }finally{
+  if(pendingStarted&&!resolved){f.resolve();await f.settle();}
+  global.window=priorWindow;storage.restore();
+ }
+});
+test('a preferred model that lands while the comparison is created keeps that comparison, and later reattaches it',async()=>{
+ // Step 4 names its evaluated model when the evaluation read finishes, which can be after compare was pressed.
+ const storage=persistentSelection(),priorWindow=global.window,timers=new Map();let nextTimer=0;
+ global.window={setTimeout:fn=>{const id=++nextTimer;timers.set(id,fn);return id;},clearTimeout:id=>timers.delete(id)};
+ const config={props:{preferredJobId:null,preferredParentJobId:null},polled:compareJob('stale-request','running')},f=fixture(config);
+ const section=()=>f.all().find(n=>n.props?.['aria-label']==='현행과 후보 모델 비교');
+ let pendingStarted=false,resolved=false;
+ try{
+  await f.settle();await f.change('비교 기준 모델','incumbent');await f.change('후보 모델','candidate');
+  f.defer();pendingStarted=true;const pending=f.run();await new Promise(setImmediate);await f.settle();
+  config.props.preferredJobId='candidate';config.props.preferredParentJobId='incumbent';f.render();await f.settle();
+  assert.equal(section().props['aria-busy'],true);assert.equal(f.catalogReads.length,1);
+  f.resolve();resolved=true;await pending;await f.settle();
+  assert(f.urls.some(url=>url.includes('/jobs/stale-request?')));
+  assert.equal(f.all().find(n=>n.props?.['aria-label']==='비교 작업 다시 열기').props.value,'stale-request');
+  assert(f.all().some(n=>n.props?.role==='status'&&textOf(n).startsWith('비교 ')));
+  // With the job known, a later recommendation re-reads the catalog as before and reattaches the same job.
+  config.jobs=[compareJob('stale-request','running')];
+  config.props.preferredJobId='incumbent';f.render();await f.settle();
+  assert.equal(f.catalogReads.length,2);assert.equal(section().props['aria-busy'],true);
+  assert.equal(f.all().find(n=>n.props?.['aria-label']==='비교 작업 다시 열기').props.value,'stale-request');
+  assert(f.all().some(n=>n.props?.role==='status'&&textOf(n).startsWith('비교 ')));assert.equal(f.calls.length,1);
+  assert.equal(f.all().find(n=>n.props?.['aria-label']==='비교 기준 모델').props.value,'incumbent');
+  assert.equal(f.all().find(n=>n.props?.['aria-label']==='후보 모델').props.value,'candidate');
  }finally{
   if(pendingStarted&&!resolved){f.resolve();await f.settle();}
   global.window=priorWindow;storage.restore();

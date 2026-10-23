@@ -9,17 +9,20 @@
  *   - Category Selector & Image Filmstrip
  */
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useId, useRef, useState } from 'react';
 import { useDatasetStore } from '../../stores/useDatasetStore';
 import { useAnnotationStore } from '../../stores/useAnnotationStore';
 import { useProjectStore } from '../../stores/useProjectStore';
+import { useDraftReviewStore } from '../../stores/useDraftReviewStore';
 import { LabelingToolbar } from './LabelingToolbar';
 import { CategorySelector } from './CategorySelector';
+import { ClassificationClassPicker } from './ClassificationClassPicker';
 import { LabelingCanvas } from './LabelingCanvas';
 import { MaskLayerControls } from './MaskLayerControls';
 import { AnnotationList } from './AnnotationList';
 import { ImageFilmstrip } from './ImageFilmstrip';
 import { ModelAssistPanel } from './ModelAssistPanel';
+import { DraftReviewQueue } from './DraftReviewQueue';
 import { LabelSetBar } from './LabelSetBar';
 import { ImageReviewPanel } from './ImageReviewPanel';
 import {DerivedImagePanel} from './DerivedImagePanel';
@@ -29,7 +32,12 @@ import {TeamDataPanel} from './TeamDataPanel';
 import {AnnotationDraftRecovery} from './AnnotationDraftRecovery';
 import {EvidenceEditReturn} from './EvidenceEditReturn';
 import {WorkflowImpactPanel} from '../common/WorkflowImpactPanel';
-import { FOCUS_SWITCH_NAME, focusStatus, readLabelingFocus, writeLabelingFocus, type LabelingHelperPanel } from './labelingLayout';
+import {
+  FOCUS_SWITCH_NAME, NARROW_CANVAS_HEIGHT, focusStatus, narrowCanvasNotice, storedLabelingFocus, writeLabelingFocus,
+  type LabelingHelperPanel,
+} from './labelingLayout';
+import { SpecialistFamilyNote } from '../common/SpecialistFamilyNote';
+import { reportPanelError } from '../../stores/assistContext';
 
 export const LabelingStudio: React.FC = () => {
   const { images: datasetImages } = useDatasetStore();
@@ -38,16 +46,41 @@ export const LabelingStudio: React.FC = () => {
     currentImage, annotationLoadStatus, annotationLoadError, loadAnnotationsForCurrent,
     autoSelectError, clearAutoSelectError,
   } = useAnnotationStore();
-  const { task: projectTask, isProjectBusy } = useProjectStore();
-  // Focus editing folds the helper panels so the canvas keeps the window's height; the choice is remembered.
-  const [focus, setFocus] = useState(() => readLabelingFocus());
-  const toggleFocus = () => setFocus(value => { writeLabelingFocus(!value); return !value; });
+  const { task: projectTask, isProjectBusy, viewMode } = useProjectStore();
+  // Focus editing folds the helper panels so the canvas keeps the window's height; the choice is remembered. The simple
+  // view starts folded (the image and the drawing tools first) until the user chooses otherwise.
+  // Until the viewer presses 집중 편집, focus editing follows the view: on in the simple view, off in 모두 보기. Reading
+  // it once at mount left the panels open when the screen first mounted in 모두 보기 and the viewer then switched.
+  const [focusChoice, setFocusChoice] = useState<boolean | null>(() => storedLabelingFocus());
+  const focus = focusChoice ?? viewMode === 'simple';
+  const toggleFocus = () => { const next = !focus; writeLabelingFocus(next); setFocusChoice(next); };
   // Every folded panel is named in LABELING_HELPER_PANELS (the record's keys must be exactly that list).
   const helperPanels: Record<LabelingHelperPanel, React.ReactNode> = {
     '이미지 검토': <ImageReviewPanel />, '파생 이미지': <DerivedImagePanel />, '저장된 검토 대기열': <SavedReviewQueuePanel />,
     '워크플로 영향': <WorkflowImpactPanel />, '모델 보조': <ModelAssistPanel />,
   };
   const folded = (...names: LabelingHelperPanel[]) => focus ? null : names.map(name => <React.Fragment key={name}>{helperPanels[name]}</React.Fragment>);
+  // An empty project's 'SAM2 클릭으로 그리기' unfolds 모델 보조 for this visit without changing the stored focus choice.
+  const assistRequest = useDraftReviewStore((state) => state.assistRequest);
+  const [assistUnfolded, setAssistUnfolded] = useState(false);
+  useEffect(() => { if (assistRequest) setAssistUnfolded(true); }, [assistRequest]);
+  // The settings strip gives way to the work area (WORK_AREA_BASIS), but a short window (1024x768 in 모두 보기) can still
+  // leave it short: the 집중 편집 row then says so and the switch is highlighted, but nothing is folded for the viewer.
+  // Only shortness matters, so the height is kept clamped at the threshold and resizing a roomy window does not render
+  // the screen again.
+  const workAreaRef = useRef<HTMLDivElement>(null);
+  const [workAreaHeight, setWorkAreaHeight] = useState<number | null>(null);
+  useEffect(() => {
+    const area = workAreaRef.current;
+    if (!area || typeof ResizeObserver === 'undefined') return; // never measured: no notice
+    const measure = () => setWorkAreaHeight(Math.min(Math.round(area.getBoundingClientRect().height), NARROW_CANVAS_HEIGHT));
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(area);
+    return () => observer.disconnect();
+  }, []);
+  const narrowNotice = narrowCanvasNotice(workAreaHeight, focus);
+  const narrowNoticeId = useId();
 
   // Sync vision task from project store
   useEffect(() => {
@@ -66,45 +99,69 @@ export const LabelingStudio: React.FC = () => {
     }
   }, [datasetImages, annotImages, syncDatasetImages, isProjectBusy]);
 
+  // The banners above the canvas are also listed in the footer's details, with the other panels' errors.
+  const loadError = currentImage && annotationLoadStatus === 'error' ? `기존 라벨 조회 실패: ${annotationLoadError}` : null;
+  useEffect(() => { reportPanelError('기존 라벨 조회', loadError); return () => reportPanelError('기존 라벨 조회', null); }, [loadError]);
+  useEffect(() => { reportPanelError('자동 추출', autoSelectError); return () => reportPanelError('자동 추출', null); }, [autoSelectError]);
+
   return (
     <div className="flex flex-col h-full w-full bg-[#0B0E14] text-slate-200 overflow-hidden select-none">
       {/* Top Action Toolbar */}
-      <LabelingToolbar />
+      <LabelingToolbar classification={projectTask === 'classification'} />
       <EvidenceEditReturn />
-      <div className="flex items-center justify-end gap-2 border-b border-slate-800 px-3 py-0.5 text-[11px] text-slate-400">
+      <div data-surface="bar" className="flex shrink-0 items-center justify-end gap-2 border-b border-slate-800 px-3 py-0.5 text-[11px] text-slate-400">
         {focus && <span>{focusStatus(focus)}</span>}
+        {/* One line that never adds height to the row (it would take it from the canvas). */}
+        {narrowNotice && <span id={narrowNoticeId} role="status" title={narrowNotice} className="min-w-0 truncate text-amber-200">{narrowNotice}</span>}
         <button type="button" aria-pressed={focus} onClick={toggleFocus} title={focus ? '보조 패널을 다시 보입니다' : '보조 패널을 접어 캔버스를 키웁니다'}
-          className={`rounded border px-2 py-0.5 hover:bg-slate-800 ${focus ? 'border-cyan-500 bg-cyan-950/40 text-cyan-100' : 'border-slate-600 text-slate-200'}`}>{FOCUS_SWITCH_NAME}</button>
+          aria-describedby={narrowNotice ? narrowNoticeId : undefined}
+          className={`shrink-0 rounded border px-2 py-0.5 hover:bg-slate-800 ${focus ? 'border-cyan-500 bg-cyan-950/40 text-cyan-100' : narrowNotice ? 'border-amber-400 bg-amber-950/50 text-amber-100' : 'border-slate-600 text-slate-200'}`}>{FOCUS_SWITCH_NAME}</button>
       </div>
-      <LabelSetBar compact={focus} />
-      {/* The team row stays: it loads the team settings and the label book and holds the shared editing lock. */}
-      <TeamDataPanel compact={focus} />
-      <AnnotationDraftRecovery />
-      {folded('이미지 검토', '파생 이미지', '저장된 검토 대기열', '워크플로 영향')}
-      <DicomPanel />
+      {/* The settings rows scroll in their own strip, which gives way first when the window is short: 모두 보기 keeps every
+          panel open (scroll the strip to reach them) while the work area keeps WORK_AREA_BASIS of drawing height, and a
+          panel opened in the strip takes the height back (index.css). Only rows that open inline or as dialogs live here;
+          the rows whose popovers open over the canvas stay below, outside any scroll box. The strip never holds the canvas,
+          so wheel zoom, keys and the sidebar's own scrolling are as before. */}
+      <div data-labeling-panels className="min-h-10 flex-[0_100_auto] overflow-y-auto overscroll-y-contain">
+        <LabelSetBar compact={focus} collapsed={viewMode === 'simple'} />
+        {folded('파생 이미지', '저장된 검토 대기열', '워크플로 영향')}
+        {projectTask === 'detection' && <SpecialistFamilyNote step={2} />}
+      </div>
+      <div className="shrink-0">
+        {/* The team row stays in sight: it loads the team settings and the label book and holds the shared editing lock
+            (편집 시작, its warnings and the lease alert). */}
+        <TeamDataPanel compact={focus} />
+        <AnnotationDraftRecovery />
+        {folded('이미지 검토')}
+        <DicomPanel />
 
-      {currentImage && annotationLoadStatus === 'error' && (
-        <div role="alert" className="px-4 py-2 bg-red-950/50 border-b border-red-700 text-red-200 text-xs flex items-center justify-between gap-3">
-          <span>기존 라벨 조회 실패: {annotationLoadError}. 저장을 막았습니다.</span>
-          <button type="button" onClick={() => void loadAnnotationsForCurrent()} className="px-2 py-1 rounded border border-red-500 hover:bg-red-900/50 font-semibold whitespace-nowrap">
-            다시 시도
-          </button>
-        </div>
-      )}
+        {currentImage && annotationLoadStatus === 'error' && (
+          <div role="alert" className="px-4 py-2 bg-red-950/50 border-b border-red-700 text-red-200 text-xs flex items-center justify-between gap-3">
+            <span>기존 라벨 조회 실패: {annotationLoadError}. 저장을 막았습니다.</span>
+            <button type="button" onClick={() => void loadAnnotationsForCurrent()} className="px-2 py-1 rounded border border-red-500 hover:bg-red-900/50 font-semibold whitespace-nowrap">
+              다시 시도
+            </button>
+          </div>
+        )}
 
-      {autoSelectError && (
-        <div role="alert" className="px-4 py-2 bg-amber-950/50 border-b border-amber-700 text-amber-200 text-xs flex items-center justify-between gap-3">
-          <span>{autoSelectError}</span>
-          <button type="button" onClick={clearAutoSelectError} className="text-amber-200 hover:text-white" aria-label="자동 추출 오류 닫기">닫기</button>
-        </div>
-      )}
+        {autoSelectError && (
+          <div role="alert" className="px-4 py-2 bg-amber-950/50 border-b border-amber-700 text-amber-200 text-xs flex items-center justify-between gap-3">
+            <span>{autoSelectError}</span>
+            <button type="button" onClick={clearAutoSelectError} className="text-amber-200 hover:text-white" aria-label="자동 추출 오류 닫기">닫기</button>
+          </div>
+        )}
 
-      {/* Class Tag Bar */}
-      <CategorySelector />
-      {folded('모델 보조')}
+        {/* Class Tag Bar */}
+        {/* A classification image's class is chosen here; the class bar below names the regions drawn on it. */}
+        <ClassificationClassPicker />
+        <CategorySelector />
+        {/* Draft review stays visible in focus mode: it is how drafts become labels, not an expert helper. */}
+        <DraftReviewQueue />
+        {focus && assistUnfolded ? helperPanels['모델 보조'] : folded('모델 보조')}
+      </div>
 
       {/* Center Work Area: 3-Layer Canvas + Mask Controls + Annotation Sidebar */}
-      <div className="flex-1 flex overflow-hidden relative" data-labeling-work-area>
+      <div ref={workAreaRef} id="labeling-canvas" className="flex-[1_1_248px] flex overflow-hidden relative" data-labeling-work-area>
         <div className="flex-1 relative h-full bg-[#0B0E14]">
           <LabelingCanvas />
           <MaskLayerControls />
@@ -122,7 +179,7 @@ export const LabelingStudio: React.FC = () => {
       </div>
 
       {/* Bottom Thumbnail Filmstrip */}
-      <ImageFilmstrip compact={focus} />
+      <div className="shrink-0"><ImageFilmstrip compact={focus} /></div>
     </div>
   );
 };

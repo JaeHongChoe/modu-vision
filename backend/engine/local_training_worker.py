@@ -7,6 +7,7 @@ Reattaching this process does not restore optimizer or RNG state.
 from __future__ import annotations
 
 from dataclasses import asdict
+import contextlib
 import functools
 import hashlib
 import json
@@ -507,7 +508,36 @@ def _spec(record, overrides, device, split_root, leases):
             'config_overrides': overrides or {}, 'device': device, 'split_manifest_root': split_root,
             'warm_start': parent, 'dataset_binding': record.dataset_binding,
             'source_dataset_path': record.source_dataset_path, 'dataset_fingerprint': record.dataset_fingerprint,
-            'lease_path': str(lease_path), 'lease_owner': leases.owner}
+            'lease_path': str(lease_path), 'lease_owner': leases.owner, **_data_scope_fields()}
+
+
+def _data_scope_fields():
+    """The project and label-set annotation roots of the request that starts the job. The worker re-enters them so
+    the loaders apply the same usage policy (images set to not used, team-review exclusions, gold samples and images
+    excluded because they cannot be decoded) as the request that counted the training images."""
+    from backend.engine import annotation_storage
+    project = annotation_storage.request_project_root()
+    annotations = annotation_storage._REQUEST_ANNOTATION_ROOT.get()
+    return {'project_root': str(Path(project).resolve()) if project is not None else None,
+            'annotation_root': str(Path(annotations).resolve()) if annotations is not None else None}
+
+
+@contextlib.contextmanager
+def worker_data_scope(spec):
+    """Enter the starting request's project and annotation roots (when it had them) inside the worker process."""
+    from backend.engine import annotation_storage
+    tokens = []
+    if spec.get('project_root'):
+        tokens.append((annotation_storage.reset_request_project_root,
+                       annotation_storage.set_request_project_root(Path(spec['project_root']))))
+    if spec.get('annotation_root'):
+        tokens.append((annotation_storage.reset_request_annotation_root,
+                       annotation_storage.set_request_annotation_root(Path(spec['annotation_root']))))
+    try:
+        yield
+    finally:
+        for reset, token in reversed(tokens):
+            reset(token)
 
 
 def _observe(record, status, callback, seen):
@@ -758,15 +788,16 @@ def execute_basic(spec_path):
             result = writer.update(status='aborted', cancel_acknowledged_at=time.time())
         else:
             validate_training_binding(spec.get('dataset_binding'))
-            trainer = UnifiedAutoMLTrainer(task=spec['task'], dataset_path=spec['dataset_path'], output_dir=root,
-                                         preset=spec['preset'], device=spec.get('device'), callback=callback,
-                                         config_overrides=spec.get('config_overrides'), warm_start=parent)
+            with worker_data_scope(spec):
+                trainer = UnifiedAutoMLTrainer(task=spec['task'], dataset_path=spec['dataset_path'], output_dir=root,
+                                             preset=spec['preset'], device=spec.get('device'), callback=callback,
+                                             config_overrides=spec.get('config_overrides'), warm_start=parent)
             if event.is_set() or _cancelled(root, spec['job_id']):
                 trainer.abort()
                 result = writer.update(status='aborted')
             else:
                 writer.update(status='running')
-                with split_root_scope(spec.get('split_manifest_root')):
+                with worker_data_scope(spec), split_root_scope(spec.get('split_manifest_root')):
                     trained = trainer.train(job_id=spec['job_id'])
                 validate_training_binding(spec.get('dataset_binding'))
                 state = 'aborted' if event.is_set() or _cancelled(root, spec['job_id']) else trained.get('status', 'failed')

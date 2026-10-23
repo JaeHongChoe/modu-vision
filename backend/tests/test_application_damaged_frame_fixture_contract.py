@@ -95,7 +95,9 @@ def fixture_expectations(damage, refusal, result, cpu, registry, stderr, registr
     It therefore reproduces the original two failed checks with no launch.
     """
     original = ast.parse(inspect.getsource(bridge.test_actual_controller_refuses_changed_and_replayed_original_main_drain_frames))
-    body = next(node for node in original.body[0].body if isinstance(node, ast.Try)).body
+    # The fixture body is the block its cleanup protects (the _managed_fixture_cleanup block, formerly try/finally).
+    body = next(node for node in original.body[0].body if isinstance(node, ast.With)
+                and ast.unparse(node.items[0].context_expr).startswith('_managed_fixture_cleanup(')).body
     selected = []
     for item in body:
         code = ast.unparse(item)

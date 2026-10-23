@@ -73,9 +73,9 @@ async function exercise(page:Page,workspace:Workspace,evidence:Evidence,api:Api,
   }else{
    await page.mouse.move(box!.x+35,box!.y+35);await page.mouse.down();await page.mouse.move(box!.x+90,box!.y+80,{steps:8});await page.mouse.up();
   }
-  await expect(page.getByTitle('Delete annotation',{exact:true})).toHaveCount(0);
-  await expect(page.getByRole('button',{name:'Save Changes',exact:true})).toHaveCount(0);
-  await expect(page.getByText('No annotations on this image',{exact:true})).toBeVisible();
+  await expect(page.getByTitle('라벨 삭제',{exact:true})).toHaveCount(0);
+  await expect(page.getByRole('button',{name:'변경 저장',exact:true})).toHaveCount(0);
+  await expect(page.getByText('이 이미지에는 라벨이 없습니다',{exact:true})).toBeVisible();
   await page.keyboard.press('Escape');expect(writes.slice(emptyWrites)).toEqual([]);
   const after=await emptySnapshot();expect(after).toEqual(emptyBefore);
   await screenshot(tool.action+'-empty-no-current-image');
@@ -87,7 +87,7 @@ async function exercise(page:Page,workspace:Workspace,evidence:Evidence,api:Api,
  const project=await value('/api/project/create',{name:'Owned vector service failure and stage handoff',task:'segmentation'});
  await value('/api/project/update',{source_dataset_dir:source},'PUT');await value('/api/dataset/import',{folder_path:source,task:'segmentation'});
  await page.reload();await expect(page.getByTitle('프로젝트 관리',{exact:true})).toContainText(project.name);await enter();
- await expect.poll(async()=>Number((await page.getByTestId('canvas-hud').innerText()).match(/scale\s*([\d.]+)\s*%/)?.[1]||0)).toBeGreaterThan(100);
+ await expect.poll(async()=>Number((await page.getByTestId('canvas-hud').innerText()).match(/배율\s*([\d.]+)\s*%/)?.[1]||0)).toBeGreaterThan(100);
  const current=await value('/api/project/current'),query=`/api/annotations/part?file_path=${encodeURIComponent(imagePath)}`;
  const metadataQuery='/api/dataset/metadata/image?image_path='+encodeURIComponent(imagePath);
  const metadata=await value(metadataQuery);expect(metadata.image_uuid).toBeTruthy();
@@ -115,7 +115,7 @@ async function exercise(page:Page,workspace:Workspace,evidence:Evidence,api:Api,
  };
  const draw=async(tool:Tool)=>{
   await page.getByRole('button',{name:new RegExp('^'+tool.label+'(?: \\d+)?$')}).click();await page.getByTitle(tool.title,{exact:true}).click();
-  await page.getByTitle('100% Zoom (1:1)',{exact:true}).click();await expect(page.getByTestId('canvas-hud')).toContainText('100%');
+  await page.getByTitle('실제 크기 (1:1)',{exact:true}).click();await expect(page.getByTestId('canvas-hud')).toContainText('100%');
   if(tool.type==='bbox')await drag(20,20,70,60);
   else if(tool.type==='polygon'){
    for(const[x,y]of [[120,30],[180,30],[150,80]]){const p=await point(x,y);await page.mouse.move(p.x,p.y);await expect(page.getByTestId('canvas-hud')).toContainText(new RegExp(`X:\\s*${x}\\s*px\\s*Y:\\s*${y}\\s*px`));await page.mouse.click(p.x,p.y);}
@@ -132,7 +132,7 @@ async function exercise(page:Page,workspace:Workspace,evidence:Evidence,api:Api,
  };
  for(const[i,tool]of tools.entries()){
   const baseline=await protect(tool.action+'-before-error'),prior=JSON.parse(baseline.state.annotation.body);
-  expect(prior.annotations).toHaveLength(i);await draw(tool);await expect(page.getByTitle('Delete annotation',{exact:true})).toHaveCount(i+1);
+  expect(prior.annotations).toHaveLength(i);await draw(tool);await expect(page.getByTitle('라벨 삭제',{exact:true})).toHaveCount(i+1);
   const route='**/api/annotations/save',detail='Controlled '+tool.action+' annotation save unavailable';
   await page.route(route,request=>request.fulfill({status:503,json:{detail}}));
   let failed:Awaited<ReturnType<typeof save>>;
@@ -142,7 +142,7 @@ async function exercise(page:Page,workspace:Workspace,evidence:Evidence,api:Api,
    const draft=submitted.annotations.find((a:any)=>a.type===tool.type);assertShape(draft,tool);
    for(const previous of prior.annotations){const known=tools.find(row=>row.type===previous.type)!;assertShape(submitted.annotations.find((a:any)=>a.id===previous.id),known);}
    await expect(page.getByText('Failed: '+detail,{exact:true})).toBeVisible();await expect(page.getByTestId('annotation-save-button')).toBeEnabled();
-   await expect(page.getByTitle('Delete annotation',{exact:true})).toHaveCount(i+1);const after=await exactProtected(baseline);
+   await expect(page.getByTitle('라벨 삭제',{exact:true})).toHaveCount(i+1);const after=await exactProtected(baseline);
    await screenshot(tool.action+'-error-exact503-baseline-retained');
    cells.push({action:'U030.'+tool.action,dimension:'error',failed,baseline,after,submitted});
   }finally{await page.unroute(route);}
@@ -169,12 +169,12 @@ async function exercise(page:Page,workspace:Workspace,evidence:Evidence,api:Api,
   const preparation=page.getByRole('region',{name:'공통 모델 준비'});await expect(preparation).toBeVisible();
   await expect(preparation).toContainText(project.name);await expect(preparation).toContainText('원본 1장');
   const atTraining=await exactProtected(handoff);await preparation.getByRole('button',{name:'정답 검토',exact:true}).click();
-  await expect(page.getByTitle(tool.title,{exact:true})).toBeVisible();await expect(page.getByTitle('Delete annotation',{exact:true})).toHaveCount(i+1);
+  await expect(page.getByTitle(tool.title,{exact:true})).toBeVisible();await expect(page.getByTitle('라벨 삭제',{exact:true})).toHaveCount(i+1);
   const returned=await exactProtected(handoff);expect(writes.slice(writeStart)).toEqual([]);
   expect(sha(fs.readFileSync(imagePath))).toBe(sourceSha);await screenshot(tool.action+'-handoff-stage3-truth-review-return');
   cells.push({action:'U030.'+tool.action,dimension:'handoff',retry:retried,saved,raster,mask_sha256:maskBytes===null?null:sha(maskBytes),metadata,source_sha256:sourceSha,handoff,atTraining,returned,mutations:writes.slice(writeStart)});
  }
- await page.reload();await expect(page.getByTitle('Delete annotation',{exact:true})).toHaveCount(3);
+ await page.reload();await expect(page.getByTitle('라벨 삭제',{exact:true})).toHaveCount(3);
  const reopened=await value(query);for(const tool of tools)assertShape(reopened.annotations.find((a:any)=>a.type===tool.type),tool);
  expect(sha(fs.readFileSync(imagePath))).toBe(sourceSha);
  for(const image of workspace.images)expect(sha(fs.readFileSync(image.path))).toBe(image.sha256);

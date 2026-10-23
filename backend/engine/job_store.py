@@ -192,6 +192,11 @@ class JobStore:
 
     @staticmethod
     def _event(db, job_id, revision, event, from_state, to_state, payload=None, now=None):
+        # An event recorded while a desktop-assistant run is bound (the person confirmed it in the assistant panel) names
+        # that run; events of workers and of the person's own requests are unchanged.
+        from backend.engine.assistant_run import marks
+        if marks() and (payload is None or isinstance(payload, dict)):
+            payload = {**(payload or {}), **marks()}
         seq = db.execute('SELECT COALESCE(MAX(seq), 0) + 1 FROM events WHERE job_id=?', (job_id,)).fetchone()[0]
         db.execute('INSERT INTO events VALUES(?, ?, ?, ?, ?, ?, ?, ?)',
                    (job_id, seq, revision, event, from_state, to_state,

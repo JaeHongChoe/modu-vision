@@ -101,7 +101,7 @@ async function exercise(page:Page,workspace:Workspace,evidence:Evidence,api:Api,
   if(await focus.getAttribute('aria-pressed')!=='true')await focus.click();
  };
  await enter();
- await expect.poll(async()=>Number((await page.getByTestId('canvas-hud').innerText()).match(/scale\s*([\d.]+)\s*%/)?.[1]||0)).toBeGreaterThan(100);
+ await expect.poll(async()=>Number((await page.getByTestId('canvas-hud').innerText()).match(/배율\s*([\d.]+)\s*%/)?.[1]||0)).toBeGreaterThan(100);
  await expect(page.getByText('1 / 1',{exact:true})).toBeVisible();
  const preludeWrites=writes.slice();
  // Native fixture setup uses the existing renderer fetch transport; the browser
@@ -139,10 +139,10 @@ async function exercise(page:Page,workspace:Workspace,evidence:Evidence,api:Api,
    expect(fs.readFileSync(path.join(root,relative))).toEqual(fs.readFileSync(path.join(original.folder,key,relative)));
   return after;
  };
- const rows=()=>page.getByTitle('Delete annotation',{exact:true}),undo=()=>page.getByTitle('Undo (Ctrl+Z)',{exact:true}),redo=()=>page.getByTitle('Redo (Ctrl+Y)',{exact:true});
+ const rows=()=>page.getByTitle('라벨 삭제',{exact:true}),undo=()=>page.getByTitle('실행 취소 (Ctrl+Z)',{exact:true}),redo=()=>page.getByTitle('다시 실행 (Ctrl+Y)',{exact:true});
  const saveButton=()=>page.getByTestId('annotation-save-button');
  const point=async(x:number,y:number)=>{const box=await page.locator('[data-canvas-container]').boundingBox();expect(box).not.toBeNull();return{x:box!.x+(box!.width-256)/2+x,y:box!.y+(box!.height-256)/2+y};};
- const recenter=async()=>{await page.getByTitle('100% Zoom (1:1)',{exact:true}).click();await expect(page.getByTestId('canvas-hud')).toContainText('100%');};
+ const recenter=async()=>{await page.getByTitle('실제 크기 (1:1)',{exact:true}).click();await expect(page.getByTestId('canvas-hud')).toContainText('100%');};
  const drag=async(x1:number,y1:number,x2:number,y2:number)=>{
   const a=await point(x1,y1),b=await point(x2,y2);await page.mouse.move(a.x,a.y);await page.mouse.down();await page.mouse.move(b.x,b.y,{steps:8});await page.mouse.up();
  };
@@ -170,7 +170,7 @@ async function exercise(page:Page,workspace:Workspace,evidence:Evidence,api:Api,
    images={status:loaded.status(),body:await loaded.text(),url:loaded.url(),order:order.get(loaded.request())};
    const body=JSON.parse(images.body);expect(body.total).toBe(1);expect(body.items).toHaveLength(1);expect(body.items[0].file_path).toBe(imagePath);
    await expect(page.getByText('1 / 1',{exact:true})).toBeVisible();
-   await expect(rows()).toHaveCount(expectedRows);await expect(saveButton()).toContainText('Saved');
+   await expect(rows()).toHaveCount(expectedRows);await expect(saveButton()).toContainText('저장됨');
   }
   const mutations=writes.slice(start);assertSaveCycle(mutations,status,source);
   saveCycles.push({label,reply,refresh,images,mutations});return reply;
@@ -197,13 +197,13 @@ async function exercise(page:Page,workspace:Workspace,evidence:Evidence,api:Api,
  const identity=await value(metadataQuery);expect(identity.image_uuid).toBeTruthy();expect(identity.content_hash).toBe(imageSha);
  const initialMask=await mask('initial',initial,[1,2,3]);
  // Actual reload establishes no selection/history while retaining nonempty labels.
- await page.reload();await enter();await expect(rows()).toHaveCount(3);await expect(saveButton()).toContainText('Saved');
+ await page.reload();await enter();await expect(rows()).toHaveCount(3);await expect(saveButton()).toContainText('저장됨');
  await expect(undo()).toBeDisabled();await expect(redo()).toBeDisabled();
  const invalid=await protect('invalid'),invalidWriteStart=writes.length;
  await page.getByTitle('선택 및 이동 (Select / Move - 1)',{exact:true}).click();await page.keyboard.press('Escape');
  for(const key of ['Delete','Backspace','Control+z','Control+y'])await page.keyboard.press(key);
  await expect(rows()).toHaveCount(3);await expect(undo()).toBeDisabled();await expect(redo()).toBeDisabled();
- await expect(page.getByRole('button',{name:'Save Changes',exact:true})).toHaveCount(0);
+ await expect(page.getByRole('button',{name:'변경 저장',exact:true})).toHaveCount(0);
  expect(writes.slice(invalidWriteStart)).toEqual([]);const invalidAfter=await unchanged(invalid);await screenshot('invalid-no-selection-or-history');
  cells.push({action:'U030.vector-delete-undo',dimension:'invalid',before:invalid,after:invalidAfter,mutations:writes.slice(invalidWriteStart),actual_nonempty_invalid_keys:true});
 
@@ -236,7 +236,7 @@ async function exercise(page:Page,workspace:Workspace,evidence:Evidence,api:Api,
  const read=page.waitForResponse(response=>new URL(response.url()).pathname==='/api/annotations/part'&&response.request().method()==='GET'
   &&new URL(response.url()).searchParams.get('file_path')===imagePath);
  await page.getByRole('button',{name:'현재 편집을 버리고 최신 라벨 불러오기',exact:true}).click();expect((await read).status()).toBe(200);
- await expect(rows()).toHaveCount(3);await expect(page.getByRole('button',{name:'Save Changes',exact:true})).toHaveCount(0);
+ await expect(rows()).toHaveCount(3);await expect(page.getByRole('button',{name:'변경 저장',exact:true})).toHaveCount(0);
  expect(writes.slice(cancelWriteStart)).toEqual([]);const cancelAfter=await unchanged(cancel);await screenshot('cancel-explicit-discard-restores-server-labels');
  cells.push({action:'U030.vector-delete-undo',dimension:'cancel',before:cancel,after:cancelAfter,mutations:writes.slice(cancelWriteStart),actual_discard_latest_label_read:true,history_reset_claim:false});
  await page.getByRole('button',{name:'이미지 정보·검토',exact:true}).click();

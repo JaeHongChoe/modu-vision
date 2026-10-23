@@ -1,4 +1,5 @@
-import { app, BrowserWindow, nativeTheme, shell } from 'electron';
+import { app, BrowserWindow, Menu, nativeTheme, shell } from 'electron';
+import fs from 'fs';
 import path from 'path';
 import { pathToFileURL } from 'url';
 import { BackendSupervisor } from './supervisor';
@@ -6,6 +7,7 @@ import { registerIpcHandlers } from './ipc';
 import { acquireAppInstanceLock } from './instanceLock';
 import {isSharedServerUrl,sharedHeaders} from './sharedSession';
 import {authenticateMainLaunch} from './applicationLaunch';
+import {assistantRuns} from './assistant/runHeader';
 
 // Determine execution mode
 const isDev = process.env.NODE_ENV === 'development' || !app.isPackaged;
@@ -25,6 +27,50 @@ function trustedRendererUrl(url: string, packagedUrl: string): boolean {
   } catch {
     return false;
   }
+}
+
+// The user's zoom (Ctrl/Cmd +, -, 0) is a device preference kept next to the other UI settings: a first-time user
+// with a 4K monitor or weaker eyesight can make the whole app larger once and keep it.
+const ZOOM_FILE = 'ui-zoom.json';
+const ZOOM_MIN = 0.8, ZOOM_MAX = 2.0;
+function readSavedZoom(): number {
+  try {
+    const raw = JSON.parse(fs.readFileSync(path.join(app.getPath('userData'), ZOOM_FILE), 'utf8')) as { zoom?: unknown };
+    const zoom = Number(raw.zoom);
+    return Number.isFinite(zoom) && zoom >= ZOOM_MIN && zoom <= ZOOM_MAX ? zoom : 1;
+  } catch { return 1; }
+}
+function rememberZoom(zoom: number): void {
+  try { fs.writeFileSync(path.join(app.getPath('userData'), ZOOM_FILE), JSON.stringify({ zoom })); }
+  catch { /* The zoom still applies for this session. */ }
+}
+function installZoomMenu(win: BrowserWindow): void {
+  const step = (delta: number) => {
+    const next = Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, Math.round((win.webContents.getZoomFactor() + delta) * 10) / 10));
+    win.webContents.setZoomFactor(next);
+    rememberZoom(next);
+  };
+  const reset = () => { win.webContents.setZoomFactor(1); rememberZoom(1); };
+  const isMac = process.platform === 'darwin';
+  const template: Electron.MenuItemConstructorOptions[] = [
+    ...(isMac ? [{ role: 'appMenu' as const }] : []),
+    { role: 'editMenu' },
+    { label: '보기', submenu: [
+      { label: '크게 보기', accelerator: 'CommandOrControl+=', click: () => step(0.1) },
+      { label: '크게 보기', accelerator: 'CommandOrControl+Plus', visible: false, click: () => step(0.1) },
+      { label: '작게 보기', accelerator: 'CommandOrControl+-', click: () => step(-0.1) },
+      { label: '기본 크기', accelerator: 'CommandOrControl+0', click: reset },
+      { type: 'separator' },
+      { role: 'togglefullscreen', label: '전체 화면' },
+      ...(isDev ? [{ type: 'separator' as const }, { role: 'toggleDevTools' as const }] : []),
+    ] },
+    { role: 'windowMenu', label: '창' },
+  ];
+  Menu.setApplicationMenu(Menu.buildFromTemplate(template));
+  win.webContents.on('did-finish-load', () => {
+    const saved = readSavedZoom();
+    if (saved !== 1) win.webContents.setZoomFactor(saved);
+  });
 }
 
 async function createWindow(): Promise<BrowserWindow> {
@@ -55,7 +101,9 @@ async function createWindow(): Promise<BrowserWindow> {
   const packagedUrl = pathToFileURL(prodHtmlPath).href;
 
   // The CSP admits HTTPS/WSS so a shared project server can be used; only the
-  // connected server origin is actually reachable from the renderer.
+  // connected server origin is actually reachable from the renderer. Assistant
+  // providers are never reachable from here: the main process calls them with
+  // Node's own fetch (assistant/providers.ts), outside this session.
   win.webContents.session.webRequest.onBeforeRequest({ urls: ['https://*/*', 'wss://*/*'] }, (details, callback) => {
     callback({ cancel: !isSharedServerUrl(details.url) });
   });
@@ -80,12 +128,14 @@ async function createWindow(): Promise<BrowserWindow> {
     try {
       const target = new URL(details.url);
       const remoteHeaders=sharedHeaders(details.url);
+      // A write the person confirmed in the assistant panel names its run (assistant/runHeader.ts); only requests to
+      // the shared server or the local backend can carry it.
       if(Object.keys(remoteHeaders).length){
-        callback({requestHeaders:{...details.requestHeaders,...remoteHeaders}});return;
+        callback({requestHeaders:{...details.requestHeaders,...remoteHeaders,...assistantRuns.headerFor(details.url,details.method)}});return;
       }
       if (port && token && ['http:', 'ws:'].includes(target.protocol)
         && target.hostname === '127.0.0.1' && Number(target.port) === port) {
-        callback({ requestHeaders: { ...details.requestHeaders, 'X-Vision-Token': token } });
+        callback({ requestHeaders: { ...details.requestHeaders, 'X-Vision-Token': token, ...assistantRuns.headerFor(details.url, details.method) } });
         return;
       }
     } catch {
@@ -93,6 +143,8 @@ async function createWindow(): Promise<BrowserWindow> {
     }
     callback({ requestHeaders: details.requestHeaders });
   });
+
+  installZoomMenu(win);
 
   // Smooth window display without flicker
   win.once('ready-to-show', () => {
@@ -115,18 +167,21 @@ async function createWindow(): Promise<BrowserWindow> {
     }
   });
 
-  // Load renderer
+  // Load renderer. MV_VIEW_MODE=full (the test launches) keeps every control on screen through the page URL; a user's
+  // first launch shows the simple view and a stored choice wins either way.
+  const viewMode = process.env.MV_VIEW_MODE === 'full' || process.env.MV_VIEW_MODE === 'simple' ? process.env.MV_VIEW_MODE : null;
+  const loadProd = () => win.loadFile(prodHtmlPath, viewMode ? { query: { view: viewMode } } : undefined);
   if (isDev) {
     const devServerUrl = process.env.VITE_DEV_SERVER_URL || 'http://127.0.0.1:5173';
     try {
-      await win.loadURL(devServerUrl);
+      await win.loadURL(viewMode ? `${devServerUrl}${devServerUrl.includes('?') ? '&' : '?'}view=${viewMode}` : devServerUrl);
     } catch (err) {
       console.warn(`[Main] Failed to load dev server at ${devServerUrl}, falling back to static build if present:`, err);
-      await win.loadFile(prodHtmlPath);
+      await loadProd();
     }
   } else {
     // In production, load dist/index.html
-    await win.loadFile(prodHtmlPath);
+    await loadProd();
   }
 
   win.on('closed', () => {

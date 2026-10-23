@@ -21,6 +21,23 @@ from PIL import Image
 _LOCK = threading.RLock()
 _SAM_CACHE = {}
 _FEATURE_CACHE = {}
+_SHA_CACHE = {}
+# The files the transformers SAM2 loader reads from mask_model_dir (Sam2Processor
+# and Sam2Model with local_files_only). Sizes and licences are not recorded here:
+# the official page states them, and the app never downloads a model.
+SAM2_EXPECTED_FILES = ('config.json', 'preprocessor_config.json', 'model.safetensors')
+# The reference the engine documentation names (docs/implementation-ledger/P02-labeling.md).
+SAM2_OFFICIAL_REFERENCE = {'family': 'SAM 2.1 (Hugging Face transformers format)',
+                           'example_repo_id': 'facebook/sam2.1-hiera-tiny',
+                           'url': 'https://huggingface.co/facebook/sam2.1-hiera-tiny',
+                           'api_docs_url': 'https://huggingface.co/docs/transformers/v4.57.1/model_doc/sam2'}
+# One fixed revision whose facts were read from the hub and checked against downloaded bytes (2026-10-23): a pinned
+# revision cannot change, so its weight file's size, SHA256 and licence are stated for it alone. A folder whose
+# model.safetensors has this digest holds that exact official file; any other folder is only identified by its digest.
+SAM2_OFFICIAL_PINNED = {'repo_id': 'facebook/sam2.1-hiera-tiny', 'revision': 'de431c4043854a71d8101e17995dfe596bf101a5',
+                        'url': 'https://huggingface.co/facebook/sam2.1-hiera-tiny/tree/de431c4043854a71d8101e17995dfe596bf101a5',
+                        'license': 'apache-2.0', 'weights_bytes': 155908064,
+                        'weights_sha256': '48c14467e5cf9e51870511feb72c89688e82dd74523142c0538b663e193ac2a7', 'verified_on': '2026-10-23'}
 
 
 class LabelingCancelled(RuntimeError):
@@ -65,28 +82,132 @@ def read_rgb(path, expected_sha256=None):
         return image.convert('RGB')
 
 
+def sam2_model_files(directory):
+    """Presence and measured size of each file the loader expects; nothing is fetched or guessed."""
+    root = Path(directory) if directory else None
+    rows = []
+    for name in SAM2_EXPECTED_FILES:
+        size = None
+        if root is not None:
+            try:
+                path = root / name
+                size = path.stat().st_size if path.is_file() else None
+            except OSError:
+                size = None
+        rows.append({'name': name, 'present': size is not None, 'bytes': size})
+    return rows
+
+
+def cached_file_sha256(path):
+    """SHA256 of one file, hashed again only after its size or modification time changes."""
+    path = Path(path)
+    stat = path.stat()
+    # ctime and inode change on any rewrite or replacement, even a copy that keeps the old modification time.
+    key = (str(path.resolve()), stat.st_size, stat.st_mtime_ns, stat.st_ctime_ns, stat.st_ino)
+    # A local digest, not a second lookup: another request may clear the cache in between.
+    digest = _SHA_CACHE.get(key)
+    if digest is None:
+        digest = file_sha256(path)
+        if len(_SHA_CACHE) >= 8:
+            _SHA_CACHE.clear()
+        _SHA_CACHE[key] = digest
+    return digest
+
+
+# The safetensors loader refuses a longer header (its MAX_HEADER_SIZE).
+_SAFETENSORS_MAX_HEADER = 100_000_000
+
+
+def safetensors_header_check(path):
+    """'ok', 'empty', 'not_safetensors' or 'truncated', read from the header alone.
+
+    A safetensors file is an 8-byte little-endian header length N, an N-byte JSON
+    object, then the tensor bytes; the loader requires 8 + N + the largest
+    data_offsets end to equal the file size. Nothing past the header is read, so
+    a git-lfs pointer, an interrupted copy or an empty file is named before any
+    weights load.
+    """
+    path = Path(path)
+    size = path.stat().st_size
+    if size == 0:
+        return 'empty'
+    with path.open('rb') as stream:
+        prefix = stream.read(8)
+        length = int.from_bytes(prefix, 'little') if len(prefix) == 8 else 0
+        if not 0 < length <= min(size - 8, _SAFETENSORS_MAX_HEADER):
+            return 'not_safetensors'
+        try:
+            header = json.loads(stream.read(length).decode('utf-8'))
+        except (ValueError, RecursionError):
+            return 'not_safetensors'
+    if not isinstance(header, dict):
+        return 'not_safetensors'
+    end = 0
+    for name, entry in header.items():
+        if name == '__metadata__':
+            continue
+        offsets = entry.get('data_offsets') if isinstance(entry, dict) else None
+        if not (isinstance(offsets, list) and len(offsets) == 2 and all(isinstance(v, int) and v >= 0 for v in offsets)):
+            return 'not_safetensors'
+        end = max(end, offsets[1])
+    return 'ok' if 8 + length + end == size else 'truncated'
+
+
 def foundation_readiness(setup, device='cpu'):
+    """Whether SAM2 can run, with the detail a preparation card needs.
+
+    `ready` and `error` are the gate every caller keeps using (their texts are
+    unchanged); `state` names the first blocker, `expected_files` lists what the
+    loader reads, `weights_check` says whether model.safetensors's header accounts
+    for its size, and `model_sha256` identifies the weight file's bytes only.
+    """
     directory = setup.get('mask_model_dir')
     error = None
+    state = 'ready'
+    model_type = None
     dependency = importlib.util.find_spec('transformers') is not None
+    root = Path(directory) if directory else None
+    configured = root is not None and root.is_dir()
+    files = sam2_model_files(root if configured else None)
+    missing = [row['name'] for row in files if not row['present']]
     if not dependency:
         error = 'SAM2 requires the optional transformers>=4.57.6 labeling dependencies in this backend environment.'
-    elif not directory or not Path(directory).is_dir():
+        state = 'dependency_missing'
+    elif not configured:
         error = 'Configure mask_model_dir with a local SAM2 model (for example facebook/sam2.1-hiera-tiny).'
+        state = 'not_configured' if not directory else 'path_invalid'
     else:
         try:
-            root = Path(directory)
-            if json.loads((root / 'config.json').read_text(encoding='utf-8')).get('model_type') not in ('sam2','sam2_video') or not (root / 'model.safetensors').is_file():
+            config = json.loads((root / 'config.json').read_text(encoding='utf-8'))
+            if not isinstance(config, dict):
+                raise ValueError('SAM2 config.json is not a JSON object')
+            model_type = config.get('model_type')
+            if model_type not in ('sam2','sam2_video') or not (root / 'model.safetensors').is_file():
                 error = 'SAM2 config.json and model.safetensors are required; download official weights before use.'
+                state = 'wrong_model_type' if model_type not in ('sam2', 'sam2_video') else 'files_incomplete'
         except (OSError, ValueError):
             error = 'SAM2 model configuration is missing or invalid.'
+            # config.json is unreadable JSON, or absent along with some or all of the others.
+            state = 'invalid_config' if 'config.json' not in missing else 'files_missing' if len(missing) == len(files) else 'files_incomplete'
     try:
         selected = resolve_device(device)
     except ValueError as exc:
         selected = device
         error = str(exc)
+        state = 'device_unavailable'
+    sha256 = weights_check = None
+    if configured and (root / 'model.safetensors').is_file():
+        try:
+            sha256 = cached_file_sha256(root / 'model.safetensors')
+            weights_check = safetensors_header_check(root / 'model.safetensors')
+        except OSError:
+            sha256 = weights_check = None
     return {'backend': 'foundation', 'ready': error is None, 'device': selected,
             'dependency_available': dependency, 'mask_model_dir': directory, 'error': error,
+            'state': state, 'expected_files': files, 'missing_files': missing, 'model_type': model_type,
+            'weights_check': weights_check, 'model_sha256': sha256, 'official_reference': dict(SAM2_OFFICIAL_REFERENCE),
+            'official_pinned': dict(SAM2_OFFICIAL_PINNED),
+            'official_match': sha256 == SAM2_OFFICIAL_PINNED['weights_sha256'] if sha256 else None,
             'capabilities': ['point_mask', 'box_mask', 'polygon', 'mask', 'text_with_grounding_dino',
                              'positive_negative_with_dinov3', 'batch', 'cancellation', 'few_label_classifier'],
             'limits': 'SAM2 IoU predictions and DINO cosine scores are not calibrated class probabilities. Review every proposed label.'}
@@ -272,6 +393,7 @@ def foundation_candidates(image_path, setup, *, prompt='', label='defect', point
         model = _load_sam2(setup, device)
         grounding = []
         grounding_scores={}
+        grounding_phrases={}
         grounding_receipt={}
         if prompt.strip():
             from backend.engine.label_candidate_providers import grounded_candidates,semantic_readiness,model_directory_hash
@@ -287,7 +409,10 @@ def foundation_candidates(image_path, setup, *, prompt='', label='defect', point
                     box=[max(selected[0],grounded_box[0]),max(selected[1],grounded_box[1]),min(selected[2],grounded_box[2]),min(selected[3],grounded_box[3])]
                     if box[0]>=box[2] or box[1]>=box[3]:continue
                     if points and any(p['label']==1 and not(box[0]<=p['x']<=box[2] and box[1]<=p['y']<=box[3]) for p in points):continue
+                    # Boxes come strongest first; one clipped to the same manual box keeps its first phrase and score.
+                    if tuple(box) in grounding_scores: continue
                     box_prompts.append(box);grounding_scores[tuple(box)]=float(item['confidence'])
+                    if item.get('grounding'): grounding_phrases[tuple(box)]=item['grounding']
         # Image-example searches and trained classifiers use SAM2 grid prompts,
         # never a synthetic region generator. Every output is a model mask.
         prompts = [(points, box) for box in box_prompts] if box_prompts else [(points, None)] if points and not prompt.strip() else []
@@ -314,6 +439,7 @@ def foundation_candidates(image_path, setup, *, prompt='', label='defect', point
             candidate = mask_candidate(mask, score, label, output_geometry, provenance)
             if candidate is None: continue
             if prompt.strip(): candidate['provenance']['score_kind']='minimum_mask_iou_and_grounding_score'
+            if box is not None and tuple(box) in grounding_phrases: candidate['provenance']['grounding_phrase']=grounding_phrases[tuple(box)]
             x1, y1, x2, y2 = candidate['annotation']['bbox']; area = candidate['area']
             if area < min_area or max_area is not None and area > max_area: continue
             if x2-x1 < min_width or max_width is not None and x2-x1 > max_width: continue

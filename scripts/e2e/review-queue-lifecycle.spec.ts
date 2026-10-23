@@ -182,7 +182,7 @@ async function exercise(page: Page, w: Workspace, e: Evidence, api: Api, sourceE
       // read and decode the queue's exact file instead of reusing current pixels.
       const other = page.locator('[data-labeling-filmstrip]').getByRole('img', {name: 'disagreement.png', exact: true});
       await other.click(); await expect(other.locator('..')).toHaveClass(/border-blue-500/);
-      await expect(page.getByTestId('annotation-save-button')).toHaveText('Saved');
+      await expect(page.getByTestId('annotation-save-button')).toHaveText('저장됨');
       const rawEndpoint = '/api/dataset/raw/' + encodeURIComponent(path.basename(target.file_path));
       const rawWaiting = page.waitForResponse(response => {const address = new URL(response.url());
         return response.request().method() === 'GET' && address.pathname === rawEndpoint && address.searchParams.get('file_path') === target.file_path;});
@@ -199,7 +199,7 @@ async function exercise(page: Page, w: Workspace, e: Evidence, api: Api, sourceE
       const selected = page.locator('[data-labeling-filmstrip]').getByRole('img', {name: 'error.png', exact: true});
       await expect(selected.locator('..')).toHaveClass(/border-blue-500/);
       expect(new URL((await selected.getAttribute('src'))!, page.url()).searchParams.get('file_path')).toBe(target.file_path);
-      await expect(page.getByTestId('annotation-save-button')).toHaveText('Saved'); await expect(panel.getByRole('alert')).toHaveCount(0);
+      await expect(page.getByTestId('annotation-save-button')).toHaveText('저장됨'); await expect(panel.getByRole('alert')).toHaveCount(0);
       await unchanged(); await capture(suffix, page.locator('[data-labeling-work-area]'));
       const retainedRaw = path.join(w.logs, 'queue-open-' + suffix + '.png'); fs.writeFileSync(retainedRaw, rawBytes); e.addFile(retainedRaw);
       return {real_queue_status: 200, raw_status: 200, annotation_status: 200, image_uuid: target.image_uuid,

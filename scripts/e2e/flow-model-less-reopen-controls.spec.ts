@@ -6,6 +6,15 @@ import type {Page} from '@playwright/test';
 import {test,expect,type Workspace,type Evidence} from './fixtures/test';
 import {installDesktopHostShim} from './fixtures/desktop-host-shim';
 import {png} from './qa/appFlow';
+
+/** Step 1's gallery reads its thumbnails itself and drops a read when the page leaves the step. A user sees the
+ *  gallery before moving on; the spec waits until every gallery thumbnail is displayed. */
+async function galleryReadsSettled(page:Page){
+ if(!(await page.getByRole('button',{name:'데이터셋 폴더 열기',exact:true}).isVisible()))return;
+ const thumbs=page.locator('button[aria-label$=" 라벨링에서 열기"] img');
+ await expect.poll(async()=>{const shown=await thumbs.count();const ready=await thumbs.and(page.locator('[data-read-state="ready"]')).count();return shown>0&&ready===shown;},{timeout:10_000}).toBe(true);
+}
+
 test.use({actionTimeout:10_000});
 type OwnedApi=(route:string,body?:unknown,method?:string)=>Promise<any>;
 const hash=(data:Buffer)=>crypto.createHash('sha256').update(data).digest('hex');
@@ -29,6 +38,13 @@ function splitControlTree(root:string,custody:SplitControlCustody):Record<string
   else{expect(first.isFile()).toBe(true);const pin=splitControlFile(file,custody);rows[relative]={kind:'file',raw:pin.raw,sha256:pin.sha256};}
  };walk(root,'');return rows;
 }
+// The app's answer must finish within the original 10 s frame (response.finished()). Handing the finished body to the test
+// is Playwright's work: in Electron it goes through the DevTools protocol, measured at 1-12.5 s under this spec's load
+// while the same requests finished on the network in about 15 ms. That retrieval gets its own allowance (F-22).
+const BODY_RETRIEVAL_ALLOWANCE_MS=50_000;
+// A row whose answer finished on the network within the frame may take the hand-off allowance on top; any row without a
+// recorded network completion (a retired gallery read, the test's own request) keeps the strict frame.
+function expectWithinFrame(row:any){if(row.network_finished!==undefined)expect(row.network_finished).toBeLessThanOrEqual(row.deadline);expect(row.finished).toBeLessThanOrEqual(row.deadline+(row.network_finished!==undefined?BODY_RETRIEVAL_ALLOWANCE_MS:0));}
 async function splitControlWithin<T>(operation:Promise<T>,deadline:number,label:string):Promise<T>{
  const remaining=deadline-performance.now();if(remaining<=0)throw Error('Original 10s split-control frame expired: '+label);let timer:ReturnType<typeof setTimeout>|undefined;
  try{return await Promise.race([operation,new Promise<never>((_,reject)=>{timer=setTimeout(()=>reject(Error('Original 10s split-control frame expired: '+label)),remaining);})]);}finally{if(timer!==undefined)clearTimeout(timer);}
@@ -47,36 +63,36 @@ const F064_POINTERS=[
 ] as const;
 const FLOW_DRAFT_SERVICE={
  'src/renderer/services/flowDraft.ts':'f8cd76aab7d1045c3af1fa41f68ae09daa757c0db05772f4085e2e093348b800',
- 'backend/engine/flowchart_engine.py':'958fb9f1d1047d351615f435b3ec16cb4dd5a5d21415ce886948b822f9bf7cba',
+ 'backend/engine/flowchart_engine.py':'83bb9b25c7d66f91796cdbe6a83d6c13a3728991d76dd9cf7d3f73a27938f976',
 } as const;
 const UI_SOURCE={
  "scripts/e2e/fixtures/flow_navigation_control.py": "b5752088a03ff1640510208e15a17b3f1389295c62dadabaf2ff6511a929ee73",
- "scripts/e2e/fixtures/flow_template_control.py": "2ba50b8bcafd02905f03b19ad393496d9befb453c3bab127f0966a48848cb505",
+ "scripts/e2e/fixtures/flow_template_control.py": "81f4a1844d05021d6c4c668627a732120c11aa20e45294ba55da0bfca410572a",
  "scripts/e2e/fixtures/flow_large_dag_control.py": "6434d381ed45d68922c058544d0b515caa3d19d93d88c90028a3463a9903d871",
  "scripts/e2e/qa/appFlow.ts": "4eed3e5dad1d9d65a6b19fc9bb51a1f9b0e23911a39e7f255220bec0ce37fea2",
- "src/renderer/components/flowchart/FlowchartStudio.tsx": "b046065d152575c1bd4d9a5e95eef60c15f8c56dec7c9f758173c8566b31c0e6",
- "src/renderer/components/flowchart/FlowEditorWorkspace.tsx": "2a81b6421956520cd58648a32e458150f176e1afd38f53d05403b6075e0a36a8",
- "src/renderer/components/flowchart/FlowDraftControls.tsx": "3bd10fc68ea4ae2dc600dfad2b6c51b56d74d213f7483923107295aac303f5a8",
+ "src/renderer/components/flowchart/FlowchartStudio.tsx": "e7625af70ed352df22770a6efda444bfa811729e18fab4f81674635f1df78b64",
+ "src/renderer/components/flowchart/FlowEditorWorkspace.tsx": "e58f0b7a62572516d9ea04cbb45dafdfb104e805753e9f13a3c8f67c88210ee7",
+ "src/renderer/components/flowchart/FlowDraftControls.tsx": "fe003c308ecd62b03aea4106e86d446b7a71d008ba0486b36132e6a1b39eb02b",
  "src/renderer/components/flowchart/FlowGraphNavigator.tsx": "656832c214f41742d5bc0f66c9f8983c5fb6892cfaf3b42b48ee353f282da20a",
  "src/renderer/components/flowchart/FlowInspectorPanel.tsx": "c108ee18336c2d3cdc2accb200eb739b0a3252c7fcbd60f35902e66da06c6707",
- "src/renderer/components/flowchart/CustomNode.tsx": "c0219bf9a011c5a86c7122bd100f5e88259b425164cee6d6a3e93548482e7fad",
+ "src/renderer/components/flowchart/CustomNode.tsx": "97350539036826f52411bc8defe234d638e2c18fde5092a5f104af7557dd1828",
  "src/renderer/components/flowchart/ImagePickerModal.tsx": "0ef27d643ddc2fddd5014e2c27087116eefbc87eb5dd92c95b732a401ceb6e4e",
- "src/renderer/stores/useFlowchartStore.ts": "8fdfa3a8faadf5c5f4f1ed339334486476218ee7f4aa348d4f3093578c7665f3",
- "src/renderer/services/api.ts": "ba82fc801fb827ab16b453ee4722ede933a641177be9994f6666f82965bc472e",
+ "src/renderer/stores/useFlowchartStore.ts": "99796bbeabb039f63044a05c65a343c6d1d2b4ef6a253afcd588480a9222bb35",
+ "src/renderer/services/api.ts": "423fa0e2486121dc0aab0e73e6c48e8444b404a179a0e1e3cdcc67c675c149e6",
  "src/renderer/components/flowchart/FlowWorkspacePanel.tsx": "6e7c74ae465e6a426601de756a91a9966615195f52c1e6aa9e4691b187baa8bf",
  "src/renderer/components/flowchart/FlowChangeDialog.tsx": "2e66a530f565b8211829d1cb3507bf2d9d1e7aa7173a1a37a54de98d19230347",
  "src/renderer/components/flowchart/FlowRecipeDialog.tsx": "09418ce7091fd126a9f341fddf0acb9d30f20fe955268c71ae21f25204c935ba",
- "src/renderer/components/flowchart/flowchartGraph.ts": "6243ad045d305177de33dd638a1c3f5e02440931345479c43582ee3f6ee4d76b",
+ "src/renderer/components/flowchart/flowchartGraph.ts": "2db91b8c7d514e39a1dfbb5edf60c52c82d69b3c51aadb47e17b9cfe9e640743",
  "src/renderer/components/flowchart/flowchartViewport.ts": "65564c68bb1242e5c78767cdbc1b77596815b14ef071d68bfb96b42799e5aac1",
- "src/renderer/components/common/ImagePickerModal.tsx": "4ad3777c3152c0204afc4f2d517b056f5720e0b4d2caa90c4ab383b5c994d966",
- "backend/api/routes_flowchart.py": "ef5e056bd09d695d45e52f7e5e63f43b9337061fba1e99c48e75545d8bc31330",
+ "src/renderer/components/common/ImagePickerModal.tsx": "0a1a2bf0169bc5bfb57093348aab1fde2f7b654fd2e3bc7bef49368f73dd8fec",
+ "backend/api/routes_flowchart.py": "8f8964c35542aade10baf627341ecf5190d75f62438ddfc52fdad52706cd952a",
  "src/renderer/components/flowchart/FlowNodeDebugger.tsx": "82b81c5ceb3556f4bdc14fd7a93edbe9657a528a1af140c5755aa9e6daa83a2f",
  "src/renderer/components/flowchart/flowWorkspace.ts": "17c39a0236efa5b444fcc99751bc8db95d613071c916ecf0e3ec44ebb49253e4",
  "scripts/e2e/fixtures/remaining-project-handoff.ts": "7a7c74a2f42a5d6ad991dadc97626c1f8330f962edaf73fd461d31f9c4764904",
- "scripts/e2e/fixtures/test.ts": "49171e2d0d4d7d9559416fdb43bc7dae9394129bbc237fe4f2a4cea0a7afa480",
- "scripts/e2e/fixtures/harness.cjs": "171460c1cf1697b7a44b8f86a197d2b944928381f736f81af304412126464975",
+ "scripts/e2e/fixtures/test.ts": "7a7effa184e71c02414773308e0ea88e16cf83dfbd72d77d47046f2cfc1b8d09",
+ "scripts/e2e/fixtures/harness.cjs": "6fe3bb6411a28bc83c6da36ba0b2480b12de6b86fd08daa61d8d0e76d7dac950",
  "scripts/e2e/fixtures/desktop-host-shim.ts": "4f598862ec0e08189628c72bbb552f72bf8fd73f5a9a05b8da1d3ddf516dcfa6",
- "backend/api/routes_dataset.py": "7a4bcea5d2aed6cee0f61d6a0d5c8a09e048dcc38e644d83c1c301ac59c7e801"
+ "backend/api/routes_dataset.py": "61e6b74c95534a77fe1b7a423aca577e92765202bffd6cd17240cc69d6a1546e"
 } as const;
 export function canonical(value:any):any{return Array.isArray(value)?value.map(canonical):value&&typeof value==='object'?Object.fromEntries(Object.keys(value).sort().map(key=>[key,canonical(value[key])])):value;}
 export function assertDraftRecord(record:any,pipeline:any,context:any){
@@ -101,12 +117,13 @@ export function assertSourcePixels(raw:Buffer,blue=100){
 export function assertAnomalyImport(value:any){
  expect(value).toEqual({status:'success',total_images:2,source_images:2,unlabeled_images:0,classes:{good:2},split:{train:1,val:1,test:0},corrupted_images:[],
   validation:{requested:true,checked_images:2,complete:true,scope:'all images: every image file under the folder was decoded'},split_supported:false,
-  split_unavailable_reason:'anomaly 분할은 현재 학습 데이터에 적용되지 않습니다. 원본 데이터의 train/val/test 구성을 사용하세요. / anomaly split is not applied by the training loader; use source train/val/test folders.'});
+  split_unavailable_reason:'anomaly 분할은 현재 학습 데이터에 적용되지 않습니다. 원본 데이터의 train/val/test 구성을 사용하세요. / anomaly split is not applied by the training loader; use source train/val/test folders.',
+  excluded_undecodable:{excluded:[],restored:[],recorded:true},split_state:'source_folders',labels_missing:false,expected_layout:"train/good (정상만), test/good, test/<결함 이름> (선택: ground_truth/<결함 이름>/<이름>_mask.png), 또는 OK/ 와 NG/"});
 }
 
 type FlowReply={status:number;body:string;url:string;headers:Record<string,string>};
 type FlowApi=(route:string,body?:unknown,method?:string,headers?:Record<string,string>)=>Promise<FlowReply>;
-type FlowRead={request:SplitControlRequest;started:number;deadline:number;post_baseline:boolean;complete:boolean;pending:Promise<void>;document_bootstrap?:{epoch:number;project_id:string;started:number};bootstrap_unscoped?:boolean;
+type FlowRead={request:SplitControlRequest;started:number;deadline:number;post_baseline:boolean;complete:boolean;pending:Promise<void>;document_bootstrap?:{epoch:number;project_id:string;started:number;retired_gallery_read?:boolean;failure_text?:string};bootstrap_unscoped?:boolean;
  status?:number;body?:unknown;sha256?:string;size?:number;request_context?:unknown;response_context?:unknown;finished?:number;failed?:boolean;failure?:unknown};
 type OCROwnedThumbScope={source:string;images:Array<{image:string;sha256:string}>;project:{id:string}};
 async function ocrOwnedThumbnail(page:Page,response:import('@playwright/test').Response,request:SplitControlRequest,deadline:number,origin:string,scopes:OCROwnedThumbScope[],contexts:Map<string,unknown>,custody:SplitControlCustody){
@@ -116,7 +133,7 @@ async function ocrOwnedThumbnail(page:Page,response:import('@playwright/test').R
  const rh=request.headers(),sh=response.headers(),requestContext=rh['x-vision-context']===undefined?null:JSON.parse(rh['x-vision-context']);if(rh['x-vision-project']!==undefined)expect(rh['x-vision-project']).toBe(scope.project.id);if(requestContext!==null)expect(requestContext).toEqual(contexts.get(scope.project.id));
  expect(sh['x-vision-context']).toBeDefined();const responseContext=JSON.parse(sh['x-vision-context']);expect(responseContext).toEqual(contexts.get(scope.project.id));expect(responseContext.project_id).toBe(scope.project.id);
  const sourcePin=splitControlFile(file,custody);expect(sourcePin.sha256).toBe(image.sha256);expect(sourcePin.bytes.subarray(0,8).toString('hex')).toBe('89504e470d0a1a0a');expect([sourcePin.bytes.readUInt32BE(16),sourcePin.bytes.readUInt32BE(20)]).toEqual([256,256]);
- expect(response.status()).toBe(200);expect(sh['content-type']).toBe('image/jpeg');const bytes=await splitControlWithin(response.body(),deadline,'whole owning JPEG thumbnail body');expect(bytes.length).toBeGreaterThan(0);if(sh['content-length']!==undefined)expect(sh['content-length']).toBe(String(bytes.length));expect(bytes.subarray(0,2).toString('hex')).toBe('ffd8');expect(bytes.subarray(-2).toString('hex')).toBe('ffd9');expect(await splitControlWithin(response.finished(),deadline,'owning JPEG HTTP completion')).toBeNull();
+ const revalidated=response.status()===304;if(!revalidated){expect(response.status()).toBe(200);expect(sh['content-type']).toBe('image/jpeg');}let bytes=revalidated?Buffer.alloc(0):await splitControlWithin(response.body(),deadline,'whole owning JPEG thumbnail body');if(bytes.length===0){/* A 304 is the browser revalidating a thumbnail it already holds (the server sends an ETag); it has no body, so it is read again below like an empty body. *//* The app reads gallery thumbnails with fetch and keeps a Blob (6dd4c1f); the browser then retains no body for the test. The same URL is read once more from inside the page with the same context headers, so it carries the app's own credentials (Electron adds its token only to the window's requests, never to the test's request context, F-22), and that answer is checked in full below. */const again=await splitControlWithin(page.evaluate(async ({url,headers})=>{const reply=await fetch(url,{headers,cache:'no-store'});return {status:reply.status,type:reply.headers.get('content-type'),context:reply.headers.get('x-vision-context'),bytes:Array.from(new Uint8Array(await reply.arrayBuffer()))};},{url:request.url(),headers:Object.fromEntries(Object.entries(request.headers()).filter(([key])=>key.startsWith('x-vision-')))}),deadline,'owning JPEG thumbnail re-read');expect(again.status).toBe(200);expect(again.type).toBe('image/jpeg');if(sh['x-vision-context']!==undefined)expect(JSON.parse(again.context!)).toEqual(JSON.parse(sh['x-vision-context']));bytes=Buffer.from(again.bytes);}expect(bytes.length).toBeGreaterThan(0);if(!revalidated&&sh['content-length']!==undefined)expect(sh['content-length']).toBe(String(bytes.length));expect(bytes.subarray(0,2).toString('hex')).toBe('ffd8');expect(bytes.subarray(-2).toString('hex')).toBe('ffd9');expect(await splitControlWithin(response.finished(),deadline,'owning JPEG HTTP completion')).toBeNull();
  const decoded=await splitControlWithin(page.evaluate(async data=>{let bitmap:ImageBitmap|undefined,result:{width:number;height:number;bitmap_closed:boolean}|undefined,failed=false,primary:unknown;
   try{bitmap=await createImageBitmap(new Blob([new Uint8Array(data)],{type:'image/jpeg'}));result={width:bitmap.width,height:bitmap.height,bitmap_closed:false};}catch(cause){failed=true;primary=cause;}
   finally{if(bitmap!==undefined){const owned=bitmap;bitmap=undefined;try{owned.close();if(result)result.bitmap_closed=true;}catch(cause){if(!failed){failed=true;primary=cause;}else if(primary instanceof Error)primary.message+='; owned bitmap close failed: '+String(cause);}}}
@@ -196,8 +213,23 @@ async function flowModelLessReopenExercise(page:Page,w:Workspace,e:Evidence,api:
    if(['HEAD','OPTIONS'].includes(request.method()))return;
    const row:any={request,method:request.method(),url:request.url(),body:request.postData(),post_baseline:reachedBaseline,started:performance.now(),complete:false,pending:Promise.resolve()};row.deadline=row.started+10_000;writes.push(row);
    row.pending=(async()=>{try{
+   if(u.pathname.startsWith('/api/dataset/thumbnail/')&&!row.post_baseline){
+    // Step 1's gallery owns its thumbnail reads and aborts them when the page leaves the step before a body arrives
+    // (ScopedDatasetThumbnail, 6dd4c1f). Such a read is recorded as retired by the gallery; any other failure, and
+    // every thumbnail that completes, is checked in full as before.
+    // The browser's own end event decides: a response object of an aborted read may report no failure and an empty
+    // body. Both listeners are attached in the same tick the request starts, so neither event can be missed.
+    let detach=()=>{};
+    const outcome=await splitControlWithin(new Promise<'failed'|'finished'>(resolve=>{
+     const end=(kind:'failed'|'finished')=>(ended:SplitControlRequest)=>{if(ended===request){detach();resolve(kind);}};
+     const onFailed=end('failed'),onFinished=end('finished');page.on('requestfailed',onFailed);page.on('requestfinished',onFinished);
+     detach=()=>{page.off('requestfailed',onFailed);page.off('requestfinished',onFinished);};
+    }),row.deadline,'original F064 thumbnail end event').finally(()=>detach());
+    if(outcome==='failed'){const failure=request.failure()?.errorText??'';expect(failure).toMatch(/ERR_ABORTED|aborted|cancel/i);
+     row.retired_gallery_read=true;row.failure_text=failure;row.finished=performance.now();row.complete=true;return;}
+   }
     expect(request.frame()).toBe(page.mainFrame());const response=await splitControlWithin(request.response(),row.deadline,'own original mutation response');expect(response).not.toBeNull();
-    const bytes=await splitControlWithin(response!.body(),row.deadline,'own whole mutation response');expect(await splitControlWithin(response!.finished(),row.deadline,'own original mutation finished')).toBeNull();expect(response!.status()).toBe(200);
+    expect(await splitControlWithin(response!.finished(),row.deadline,'own original mutation finished')).toBeNull();row.network_finished=performance.now();const bytes=await splitControlWithin(response!.body(),row.deadline+BODY_RETRIEVAL_ALLOWANCE_MS,'own whole mutation response');expect(response!.status()).toBe(200);
     row.status=200;row.raw_body=bytes.toString('utf8');row.sha256=hash(bytes);row.size=bytes.length;row.response=JSON.parse(row.raw_body);row.request_body=request.postDataJSON();
     const rh=request.headers(),sh=response!.headers();row.request_context=rh['x-vision-context']===undefined?null:JSON.parse(rh['x-vision-context']);row.response_context=sh['x-vision-context']===undefined?null:JSON.parse(sh['x-vision-context']);
     if(u.pathname==='/api/flowchart/draft'){
@@ -207,7 +239,7 @@ async function flowModelLessReopenExercise(page:Page,w:Workspace,e:Evidence,api:
     }else{
      expect(u.pathname).toBe('/api/project/open');expect(u.search).toBe('');expect(row.method).toBe('POST');const matches=scopes.filter(scope=>row.request_body?.project_dir===scope.project.project_dir);expect(matches).toHaveLength(1);expect(row.request_body).toEqual({project_dir:matches[0].project.project_dir});expect(row.response).toEqual(matches[0].project);expect(row.response_context).toEqual(matches[0].transport);if(row.request_context!==null)scopeFor(row.request_context);
     }
-    row.finished=performance.now();expect(row.finished).toBeLessThanOrEqual(row.deadline);row.complete=true;
+    row.finished=performance.now();expectWithinFrame(row);row.complete=true;
    }catch(cause){row.failed=true;row.failure=cause;}})();return;
   }
   const started=performance.now(),row:FlowRead={request,started,deadline:started+10_000,post_baseline:reachedBaseline,complete:false,pending:Promise.resolve(),document_bootstrap:documentBootstrap?{...documentBootstrap}:undefined};reads.push(row);
@@ -223,29 +255,33 @@ async function flowModelLessReopenExercise(page:Page,w:Workspace,e:Evidence,api:
      const bootstrapUnscoped=row.document_bootstrap!==undefined&&row.request_context===null&&(RELOAD_BOOTSTRAP_PATHS as readonly string[]).includes(u.pathname);
      if(bootstrapUnscoped){expect(u.search).toBe('');expect(rh['x-vision-project']).toBeUndefined();expect(rh['x-vision-context']).toBeUndefined();expect(row.started).toBeGreaterThanOrEqual(row.document_bootstrap!.started);expect(owner.project.id).toBe(row.document_bootstrap!.project_id);expect(row.response_context).toEqual(owner.transport);row.bootstrap_unscoped=true;}
      else if(row.post_baseline){if(u.pathname==='/api/project/current'&&row.request_context===null){expect(u.search).toBe('');expect(rh['x-vision-project']).toBeUndefined();expect(row.response_context).toEqual(owner.transport);}else{expect(row.request_context).toEqual(owner.transport);expect(rh['x-vision-project']).toBe(owner.project.id);}}
-    const bytes=await splitControlWithin(response!.body(),row.deadline,'whole original F064 API body');expect(await splitControlWithin(response!.finished(),row.deadline,'original F064 API completion')).toBeNull();row.status=response!.status();row.body=JSON.parse(bytes.toString('utf8'));row.sha256=hash(bytes);row.size=bytes.length;
+    expect(await splitControlWithin(response!.finished(),row.deadline,'original F064 API completion')).toBeNull();(row as any).network_finished=performance.now();const bytes=await splitControlWithin(response!.body(),row.deadline+BODY_RETRIEVAL_ALLOWANCE_MS,'whole original F064 API body');row.status=response!.status();row.body=JSON.parse(bytes.toString('utf8'));row.sha256=hash(bytes);row.size=bytes.length;
      if(bootstrapUnscoped){expect(row.status).toBe(200);expect(sh['content-type']).toMatch(/^application\/json(?:\s*;|$)/);if(u.pathname==='/api/dataset/revisions')expect(row.body).toEqual({active_revision:null,revisions:[]});else if(u.pathname==='/api/compute/profiles')expect(row.body).toEqual({profiles:[]});else if(u.pathname==='/api/compute/selection')expect(row.body).toEqual({compute_profile_id:null});else expect(row.body).toEqual(owner.project);}
     if(row.status!==200){
      expect(row.request_context).toEqual(owner.transport);
      if(u.pathname==='/api/dataset/library/images'){expect(u.search).toBe('?state=valid&limit=120');expect(row.status).toBe(409);expect(row.body).toEqual({detail:'No validated dataset revision is active; validate the source and accept a revision first'});}
-     else{expect(u.pathname).toBe('/api/evaluation/results');expect(u.search).toBe('?'+new URLSearchParams({source_dataset_path:owner.source,source_task:'anomaly'}).toString());expect(row.status).toBe(404);expect(row.body).toEqual({detail:'No completed training job has been selected'});}
+     else{expect(u.pathname).toBe('/api/evaluation/results');expect(u.search).toBe('?'+new URLSearchParams({source_dataset_path:owner.source,source_task:'anomaly'}).toString());expect(row.status).toBe(404);expect(row.body).toEqual({detail:'학습을 끝낸 모델을 아직 고르지 않았습니다. 학습을 먼저 끝낸 뒤 평가할 모델을 고르세요.'});}
     }else if(u.pathname==='/api/project/current'){expect(row.body).toEqual(owner.project);}
    }
-   row.finished=performance.now();expect(row.finished).toBeLessThanOrEqual(row.deadline);row.complete=true;
+   row.finished=performance.now();expectWithinFrame(row);row.complete=true;
   }catch(cause){row.failed=true;row.failure=cause;}})();
  };
+ // A row's outcome is final once its pending promise settles, so each row is checked once, the first time a drain
+ // finds it settled. Re-checking every earlier row on every drain made each later step slower (Playwright walks all
+ // recorded steps for every new expect), which ran this test past its budget on slow runners without checking more.
+ const drainedReads=new WeakSet<object>(),drainedWrites=new WeakSet<object>();
  const settle=async()=>{
   const admitted=[...reads];let drainFailed=false,firstDrain:unknown;
   for(let ordinal=0;ordinal<admitted.length;ordinal++){
-   const row=admitted[ordinal];
-   try{await row.pending;if(row.failed)throw row.failure;expect(row.complete).toBe(true);expect(row.deadline).toBe(row.started+10_000);expect(row.finished!).toBeLessThanOrEqual(row.deadline);}
+   const row=admitted[ordinal];if(drainedReads.has(row))continue;
+   try{await row.pending;if(row.failed)throw row.failure;expect(row.complete).toBe(true);expect(row.deadline).toBe(row.started+10_000);expectWithinFrame(row);drainedReads.add(row);}
    catch(cause){if(!drainFailed){drainFailed=true;firstDrain=cause;}else secondary.push({label:'later original admitted GET',ordinal,cause});}
   }
   if(drainFailed)throw firstDrain;
  };
  const settleWrites=async()=>{
   const admitted=[...writes];let drainFailed=false,firstDrain:unknown;
-  for(let ordinal=0;ordinal<admitted.length;ordinal++){const row=admitted[ordinal];try{await row.pending;if(row.failed)throw row.failure;expect(row.complete).toBe(true);expect(row.finished).toBeLessThanOrEqual(row.deadline);}catch(cause){if(!drainFailed){drainFailed=true;firstDrain=cause;}else secondary.push({label:'later original admitted mutation',ordinal,cause});}}
+  for(let ordinal=0;ordinal<admitted.length;ordinal++){const row=admitted[ordinal];if(drainedWrites.has(row))continue;try{await row.pending;if(row.failed)throw row.failure;expect(row.complete).toBe(true);expectWithinFrame(row);drainedWrites.add(row);}catch(cause){if(!drainFailed){drainFailed=true;firstDrain=cause;}else secondary.push({label:'later original admitted mutation',ordinal,cause});}}
   if(drainFailed)throw firstDrain;
  };
  const rendered=()=>page.evaluate(()=>({nodes:[...document.querySelectorAll<HTMLElement>('[data-flow-node-id]')].map(row=>({id:row.dataset.flowNodeId,label:row.querySelector('h4')?.textContent,x:parseFloat(row.style.left),y:parseFloat(row.style.top)})),edges:[...document.querySelectorAll<SVGElement>('path[data-flow-edge]')].map(row=>({id:row.dataset.flowEdge,source:row.dataset.flowFrom?.split(':')[0],target:row.dataset.flowTo?.split(':')[0]}))}));
@@ -263,7 +299,7 @@ async function flowModelLessReopenExercise(page:Page,w:Workspace,e:Evidence,api:
   const pin=splitControlFile(scope.draftFile,custody);expect(JSON.parse(pin.bytes.toString('utf8'))).toEqual(Object.fromEntries(Object.entries(scope.saved).filter(([key])=>key!=='active_version_id')));await settle();await settleWrites();return{API:replies,draft_fullpin:{path:scope.draftFile,raw9:pin.raw,sha256:pin.sha256,size:pin.bytes.length}};
  };
  const enter=async(scope:Scope)=>{
-  active=scope;transport=scope.transport;await expect(page.getByTitle('프로젝트 관리',{exact:true})).toContainText(scope.project.name);await page.getByRole('navigation',{name:'Workflow Stages'}).getByRole('button').nth(4).click();await page.getByRole('tab',{name:'편집',exact:true}).click();await expect(page.getByRole('heading',{name:'검사 플로우 편집기',exact:true})).toBeVisible();await expect(page.locator('[data-flow-node-id]')).toHaveCount(scope.saved.pipeline.nodes.length);await expect.poll(rendered).toEqual(view(scope.saved.pipeline));await savedStatus(false);await settle();await settleWrites();
+  active=scope;transport=scope.transport;await expect(page.getByTitle('프로젝트 관리',{exact:true})).toContainText(scope.project.name);await galleryReadsSettled(page);await page.getByRole('navigation',{name:'Workflow Stages'}).getByRole('button').nth(4).click();await page.getByRole('tab',{name:'편집',exact:true}).click();await expect(page.getByRole('heading',{name:'검사 플로우 편집기',exact:true})).toBeVisible();await expect(page.locator('[data-flow-node-id]')).toHaveCount(scope.saved.pipeline.nodes.length);await expect.poll(rendered).toEqual(view(scope.saved.pipeline));await savedStatus(false);await settle();await settleWrites();
  };
   const documentReload=async(initial:boolean)=>{
    expect(documentBootstrap).toBeUndefined();await settle();await settleWrites();const readStart=reads.length,phase={epoch:++documentBootstrapEpoch,project_id:A.project.id,started:performance.now()};documentBootstrap=phase;
@@ -271,7 +307,7 @@ async function flowModelLessReopenExercise(page:Page,w:Workspace,e:Evidence,api:
    // Close phase admission first; finish the exact admitted rows under each original event-start deadline.
    await settle();await settleWrites();const admitted=reads.slice(readStart).filter(row=>row.document_bootstrap?.epoch===phase.epoch),unscoped=admitted.filter(row=>row.bootstrap_unscoped===true);
    expect([...new Set(unscoped.map(row=>new URL(row.request.url()).pathname))].sort()).toEqual([...RELOAD_BOOTSTRAP_PATHS].sort());
-   for(const row of unscoped){expect(row.complete&&!row.failed).toBe(true);expect(row.status).toBe(200);expect(row.request_context).toBeNull();expect(row.response_context).toEqual(A.transport);expect(row.finished!).toBeLessThanOrEqual(row.deadline);}
+   for(const row of unscoped){expect(row.complete&&!row.failed).toBe(true);expect(row.status).toBe(200);expect(row.request_context).toBeNull();expect(row.response_context).toEqual(A.transport);expectWithinFrame(row);}
    documentBootstrapProofs.push({phase,initial,ordinary_document_navigation:true,allowlist:[...RELOAD_BOOTSTRAP_PATHS],phase_admission_closed:true,all_event_start_10s_reads_complete:true,reads:unscoped.map(({request,pending,failure,...row})=>({...row,url:request.url(),method:request.method(),failure:row.failed?String(failure):null}))});
   };
  const switchProject=async(scope:Scope)=>{
@@ -349,12 +385,15 @@ async function flowModelLessReopenExercise(page:Page,w:Workspace,e:Evidence,api:
 }
 
 test('F064 model-less inspection ROI and typed connection drafts reopen with exact saved graphs',async({page,request,renderer,workspace,evidence})=>{
- test.setTimeout(160_000);await installDesktopHostShim(page,renderer.port);
+ // Measured 114 s locally; hosted runners ran past 160 s (b445518). 240 s keeps headroom; the checks are unchanged.
+ test.setTimeout(240_000);await installDesktopHostShim(page,renderer.port);
  const api:FlowApi=async(route,body,method,headers)=>{const response=await request.fetch(renderer.origin+route,{method:method||(body===undefined?'GET':'POST'),headers,...(body===undefined?{}:{data:body}),timeout:10_000});return {status:response.status(),body:await response.text(),url:response.url(),headers:response.headers()};};
  await flowModelLessReopenExercise(page,workspace,evidence,api,false,renderer.origin,renderer.url);
 });
 test('native F064 model-less inspection ROI and typed connection drafts reopen with exact saved graphs',{tag:'@electron'},async({electronSession,workspace,evidence})=>{
- test.setTimeout(160_000);const {window}=electronSession,backend=await electronSession.waitForBackend();
+ // Electron adds the DevTools body hand-off measured above: a full passing run took 8.3 min locally (2026-10-21).
+ // 660 s is about 1.4x that run; every check is unchanged.
+ test.setTimeout(660_000);const {window}=electronSession,backend=await electronSession.waitForBackend();
  const api:FlowApi=(route,body,method,headers)=>window.evaluate(async({port,route,body,method,headers})=>{const abort=new AbortController(),timer=setTimeout(()=>abort.abort(),10_000);try{const response=await fetch(`http://127.0.0.1:${port}${route}`,{method:method||(body===undefined?'GET':'POST'),headers:{'Content-Type':'application/json',...headers},...(body===undefined?{}:{body:JSON.stringify(body)}),signal:abort.signal});return {status:response.status,body:await response.text(),url:response.url,headers:Object.fromEntries(response.headers.entries())};}finally{clearTimeout(timer);}},{port:backend.port,route,body,method,headers});
  await flowModelLessReopenExercise(window,workspace,evidence,api,true,`http://127.0.0.1:${backend.port}`);
 });

@@ -23,6 +23,8 @@ def dataset_summary(source:Path,task:str,*,assignments:dict[str,str]|None=None,
     class_counts=Counter()
     split_counts=Counter({k:0 for k in ('train','val','test','not_used','not_split')})
     state_counts=Counter({'labeled':0,'unlabeled':0})
+    from backend.engine.class_overrides import read_class_overrides, effective_class
+    overrides=read_class_overrides(source) if task=='classification' else {}
     for image in source_image_paths(source,task,include_unused=True):
         relative=image.relative_to(source).as_posix()
         try:annotations,mask=_annotations(source,image)
@@ -45,9 +47,16 @@ def dataset_summary(source:Path,task:str,*,assignments:dict[str,str]|None=None,
         if task in ('anomaly','anomaly_detection'):
             labels=[folder_label]
             labeled=True
-        elif task=='classification' and not labels and folder_label:
-            labels=[folder_label]
-            labeled=True
+        class_source=None
+        if task=='classification':
+            # Training reads the folder class (or the class chosen for this image in step 2); box and polygon labels
+            # are for patch classification and evidence, so they never replace the class shown here.
+            chosen,class_source=effective_class(image,folder_label,overrides)
+            if chosen:
+                labels=[chosen]
+                labeled=True
+            elif not labels:
+                class_source=None
         partition=assignments.get(str(image),assignments.get(relative))
         if partition not in {'train','val','test'}:
             partition=folder_split or 'not_split'
@@ -55,11 +64,14 @@ def dataset_summary(source:Path,task:str,*,assignments:dict[str,str]|None=None,
         if state=='not_used':
             partition='not_used'
         label_state='labeled' if labeled else 'unlabeled'
-        class_counts.update(labels)
+        # Class counts are of the images training reads; an image marked not used (an unreadable file the import
+        # excluded, or one a reviewer set aside) stays listed but no longer counts toward its class (audit F-01).
+        if state!='not_used':class_counts.update(labels)
         split_counts[partition]+=1
         state_counts[label_state]+=1
         items.append({'image_id':image.stem,'file_name':image.name,'file_path':str(image),
             'relative_path':relative,'labels':labels,'label':labels[0] if labels else None,
+            'folder_label':folder_label,'class_source':class_source,
             'label_status':label_state,'split':partition,
             'thumbnail_url':f'/api/dataset/thumbnail/{image.name}?file_path={image}'})
     total=len(items)

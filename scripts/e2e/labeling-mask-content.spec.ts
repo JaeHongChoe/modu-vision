@@ -31,11 +31,11 @@ async function exercise(page:Page,workspace:Workspace,evidence:Evidence,api:Owne
  const stroke=async(offset:number,from:number,to:number)=>{
   const bounds=(await page.locator('[data-canvas-container]').boundingBox())!;const x=bounds.x+bounds.width/2,y=bounds.y+bounds.height/2+offset;
   await page.mouse.move(x+from,y);await page.mouse.down();await page.mouse.move(x+to,y,{steps:12});await page.mouse.up();
-  await expect(page.getByRole('button',{name:'Save Changes',exact:true})).toBeVisible();
+  await expect(page.getByRole('button',{name:'변경 저장',exact:true})).toBeVisible();
  };
  const save=async()=>{
   const response=page.waitForResponse(r=>new URL(r.url()).pathname==='/api/annotations/save'&&r.request().method()==='POST');
-  await page.getByRole('button',{name:'Save Changes',exact:true}).click();expect((await response).status()).toBe(200);return api(query);
+  await page.getByRole('button',{name:'변경 저장',exact:true}).click();expect((await response).status()).toBe(200);return api(query);
  };
  await page.getByRole('button',{name:/^Solder Bridge(?: \d+)?$/}).click();await page.getByTitle('브러시 마스크 (Brush - 5)',{exact:true}).click();
  await stroke(0,-50,50);const first=await save();const firstMask=first.annotations.find((a:any)=>a.label==='Solder Bridge');expect(firstMask.type).toBe('brush_mask');
@@ -54,8 +54,8 @@ async function exercise(page:Page,workspace:Workspace,evidence:Evidence,api:Owne
  await stroke(0,-8,8);const erased=await save();const erasedMask=erased.annotations.find((a:any)=>a.label==='Solder Bridge');const erasedPixels=await pixels(page,erasedMask.mask_rle);
  expect(erasedPixels.painted).toBeGreaterThan(0);expect(erasedPixels.painted).toBeLessThan(firstPixels.painted);
  expect(hash(erased.annotations.find((a:any)=>a.label==='Scratch').mask_rle)).toBe(otherSha);
- await page.getByTitle('Undo (Ctrl+Z)',{exact:true}).click();const undone=await save();expect(undone.annotations.find((a:any)=>a.label==='Solder Bridge').mask_rle).toBe(firstMask.mask_rle);
- await page.getByTitle('Redo (Ctrl+Y)',{exact:true}).click();const redone=await save();expect(redone.annotations.find((a:any)=>a.label==='Solder Bridge').mask_rle).toBe(erasedMask.mask_rle);
+ await page.getByTitle('실행 취소 (Ctrl+Z)',{exact:true}).click();const undone=await save();expect(undone.annotations.find((a:any)=>a.label==='Solder Bridge').mask_rle).toBe(firstMask.mask_rle);
+ await page.getByTitle('다시 실행 (Ctrl+Y)',{exact:true}).click();const redone=await save();expect(redone.annotations.find((a:any)=>a.label==='Solder Bridge').mask_rle).toBe(erasedMask.mask_rle);
  await release();
  await page.reload();await expect(page.getByRole('button',{name:/^Solder Bridge 1$/})).toBeVisible();await expect(page.getByRole('button',{name:/^Scratch 1$/})).toBeVisible();
  const reopened=await api(query);expect(reopened.annotations.find((a:any)=>a.label==='Solder Bridge').mask_rle).toBe(erasedMask.mask_rle);

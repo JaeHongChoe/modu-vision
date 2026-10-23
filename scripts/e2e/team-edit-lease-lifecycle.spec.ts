@@ -75,19 +75,37 @@ async function exercise(page:Page,w:Workspace,e:Evidence,api:Api,native:boolean,
   const owned:any=row||{phase:'preobserver-response',method:request.method(),url:response.url(),status:response.status(),
    response_observed:performance.now(),request_start_not_captured:true,full_request_budget_claimed:false};
   if(!row){expect(request.method()).toBe('GET');owned.deadline=owned.response_observed+10_000;preobserver.push(owned);}
+  // A gallery thumbnail read can also be retired after its headers arrived, and then the browser keeps no body. The
+  // browser's own end event decides; both listeners are attached in the tick the response arrives, before its end.
+  let detach=()=>{};
+  // Only observed rows: a pre-observer response keeps the full body/finished custody, so any failure there still fails.
+  const thumbnailEnd=row&&request.method()==='GET'&&request.frame()===page.mainFrame()&&new URL(response.url()).pathname.startsWith('/api/dataset/thumbnail/')
+   ?new Promise<'failed'|'finished'>(resolve=>{const end=(kind:'failed'|'finished')=>(done:Request)=>{if(done===request){detach();resolve(kind);}};
+    const onFailed=end('failed'),onFinished=end('finished');page.on('requestfailed',onFailed);page.on('requestfinished',onFinished);
+    detach=()=>{page.off('requestfailed',onFailed);page.off('requestfinished',onFinished);};}):null;
   const task=(async()=>{
    // Eager custody uses the original request deadline, or a separately disclosed
    // response-event budget for genuinely pre-observer GETs. No start is invented.
    let timer:NodeJS.Timeout|undefined;try{
-    const [raw,finished]=await Promise.race([Promise.all([response.body(),response.finished()]),new Promise<never>((_,reject)=>{
-     timer=setTimeout(()=>reject(Error('Owned API body/finished absolute deadline expired')),Math.max(0,owned.deadline-performance.now()));})]);
+    const expiry=new Promise<never>((_,reject)=>{
+     timer=setTimeout(()=>reject(Error('Owned API body/finished absolute deadline expired')),Math.max(0,owned.deadline-performance.now()));});
+    if(thumbnailEnd&&await Promise.race([thumbnailEnd,expiry])==='failed'){owned.retired_headers_status=response.status();return{response,row:owned,raw:null};}
+    const [raw,finished]=await Promise.race([Promise.all([response.body(),response.finished()]),expiry]);
     const ended=performance.now();expect(ended).toBeLessThanOrEqual(owned.deadline);expect(finished).toBeNull();
     Object.assign(owned,{status:response.status(),response_url:response.url(),body_finished:ended,response_finished:finished,
      original_body_sha256:hash(raw),original_body_bytes:raw.length,...redact(raw)});return{response,row:owned,raw};
-   }finally{clearTimeout(timer);}
+   }finally{clearTimeout(timer);detach();}
   })();responseRows.set(response,task);pending.add(task);void task.catch(cause=>errors.push(String(cause))).finally(()=>pending.delete(task));
  };
- page.on('request',observeRequest);page.on('response',observeResponse);
+ // Leaving step 1 or the project retires the gallery's in-flight thumbnail reads (ScopedDatasetThumbnail aborts
+ // them), before or after their headers. Only an aborted main-frame GET /api/dataset/thumbnail/* is marked retired;
+ // its origin and project are checked below, and every other request still needs its full answer.
+ const observeFailed=(request:Request)=>{
+  const row=requestRows.get(request);if(!row)return;row.failure=request.failure()?.errorText??null;
+  if(request.method()==='GET'&&request.frame()===page.mainFrame()&&new URL(request.url()).pathname.startsWith('/api/dataset/thumbnail/')&&/ERR_ABORTED|aborted|cancel/i.test(row.failure??''))
+   Object.assign(row,{retired_gallery_thumbnail_read:true,retired_at:performance.now(),retired_project:request.headers()['x-vision-project']??null});
+ };
+ page.on('request',observeRequest);page.on('response',observeResponse);page.on('requestfailed',observeFailed);
  const frame=async<T,>(label:string,run:(start:number)=>Promise<T>)=>{
   const started=performance.now(),deadline=started+10_000;let timer:NodeJS.Timeout|undefined;
   try{const value=await Promise.race([run(started),new Promise<never>((_,reject)=>{timer=setTimeout(()=>reject(Error('Owned '+label+' absolute action deadline expired')),Math.max(0,deadline-performance.now()));})]);
@@ -140,8 +158,8 @@ async function exercise(page:Page,w:Workspace,e:Evidence,api:Api,native:boolean,
   const enter=async(scope:typeof A)=>{
    await expect(page.getByTitle('프로젝트 관리',{exact:true})).toContainText(scope.project.name);await stages.nth(1).click();
    const focus=page.getByRole('button',{name:'집중 편집',exact:true});if(await focus.getAttribute('aria-pressed')!=='true')await focus.click();
-   await expect(page.getByText('1 / 1',{exact:true})).toBeVisible();await expect(page.getByTitle('Delete annotation',{exact:true})).toHaveCount(1);
-   await expect(page.getByTestId('annotation-save-button')).not.toContainText('Save Changes');
+   await expect(page.getByText('1 / 1',{exact:true})).toBeVisible();await expect(page.getByTitle('라벨 삭제',{exact:true})).toHaveCount(1);
+   await expect(page.getByTestId('annotation-save-button')).not.toContainText('변경 저장');
    await expect(page.getByText('기존 라벨을 불러오는 중입니다.',{exact:true})).toHaveCount(0);
    await expect(page.getByRole('alert').filter({hasText:'기존 라벨 조회 실패'})).toHaveCount(0);
    await page.getByRole('button',{name:'팀 작업 · 라벨 기준·검수',exact:true}).click();await expect(dialog).toBeVisible();
@@ -241,8 +259,8 @@ async function exercise(page:Page,w:Workspace,e:Evidence,api:Api,native:boolean,
   });
 
   phase='cancel';await frame('cancel clean acquired edit',async()=>{
-   await acquire(A);await release(A);await expect(page.getByTitle('Delete annotation',{exact:true})).toHaveCount(1);
-   await expect(page.getByTestId('annotation-save-button')).not.toContainText('Save Changes');
+   await acquire(A);await release(A);await expect(page.getByTitle('라벨 삭제',{exact:true})).toHaveCount(1);
+   await expect(page.getByTestId('annotation-save-button')).not.toContainText('변경 저장');
   });
   const cancelled=await snapshot('cancel-clean-release',A);sameReadValues(cancelled,originalViews.A);expect(cancelled.storage).toEqual(originalViews.A.storage);
   await e.screenshot(page,prefix+'-clean-edit-explicitly-ended-without-save');
@@ -306,8 +324,10 @@ async function exercise(page:Page,w:Workspace,e:Evidence,api:Api,native:boolean,
   const cleanups=fixtureCalls.slice(callStart).filter(row=>row.method!=='GET');expect(cleanups).toHaveLength(2);
   expect(cleanups.map(row=>[row.method,row.route])).toEqual([['POST',A.route+'/lease/release'],['POST',A.route+'/lease/release']]);
   expect(allWrites.map(row=>row.status)).toEqual(native?[200,200,200,409,200,200,200,200,200,200,200]:[200,200,200,409,200,200,200,200,200]);
-  for(const row of traffic.filter(row=>row.method!=='OPTIONS'))if(row.phase!=='fixture-setup')expect(row.status).toBeDefined();
-  for(const row of traffic)expect(row.response_finished).toBeNull();
+  const retiredThumbnails=traffic.filter(row=>row.retired_gallery_thumbnail_read===true&&row.status===undefined);
+  for(const row of retiredThumbnails){expect(row.phase).not.toBe('fixture-setup');expect(new URL(row.url).origin).toBe(origin);expect([A.project.id,B.project.id]).toContain(row.retired_project);expect(row.retired_at).toBeLessThanOrEqual(row.deadline);}
+  for(const row of traffic.filter(row=>row.method!=='OPTIONS'))if(row.phase!=='fixture-setup'&&!retiredThumbnails.includes(row))expect(row.status).toBeDefined();
+  for(const row of traffic)if(!retiredThumbnails.includes(row))expect(row.response_finished).toBeNull();
   for(const row of preobserver)expect(row.method).toBe('GET');
   const proof={schema_version:1,record_id:'F024',actions:{'edit-start':['reopen','cancel','handoff']},scope:{source_ui:true,source_electron:native,
    installed_target:false,actual_model_inference:false,training:false,gpu:false,human_review_or_quality_accepted:false,parent_acceptance:false,
@@ -315,6 +335,7 @@ async function exercise(page:Page,w:Workspace,e:Evidence,api:Api,native:boolean,
    preobserver_GET_response_event_budget_only:true,full_request_budget_not_claimed_for_preobserver:true,lease_tokens_redacted:true},projects:[A.project,B.project],images:[A,B].map(scope=>({tag:scope.tag,path:scope.image,sha256:scope.image_sha256,image_uuid:scope.uuid})),
    cells,roots,snapshots,expected_rows:expectedRows,setup_calls:setupCalls,setup_write_count:13,renderer_setup_writes:traffic.slice(0,uiStart).filter(row=>!['GET','HEAD','OPTIONS'].includes(row.method)),
    all_renderer_traffic:traffic,OPTIONS_transport:transport,preobserver_responses:preobserver,ui_writes:allWrites,fixture_calls:fixtureCalls,
+   retired_gallery_thumbnail_reads:retiredThumbnails.map(row=>({index:row.index,phase:row.phase,path:new URL(row.url).pathname,project:row.retired_project,failure:row.failure,headers:row.retired_headers_status??null})),
    owned_fixture_releases:cleanups,timings,original_API_budget_ms:10_000,case_budget_ms:240_000,remaining_owned_leases:0};
   const file=path.join(w.logs,'team-edit-lease-lifecycle-proof.json');fs.writeFileSync(file,JSON.stringify(proof),{flag:'wx'});e.addFile(file);
   for(const scope of [A,B])e.addFile(scope.image);e.note('team_edit_lease_lifecycle',{proof_path:file,proof_sha256:hash(fs.readFileSync(file)),proof_size:fs.statSync(file).size,
@@ -322,7 +343,7 @@ async function exercise(page:Page,w:Workspace,e:Evidence,api:Api,native:boolean,
  }finally{
   // Never recover a failure by releasing a guessed lease, resetting state, or
   // swallowing an assertion. The owned fixture teardown retains failed runs.
-  page.off('request',observeRequest);page.off('response',observeResponse);
+  page.off('request',observeRequest);page.off('response',observeResponse);page.off('requestfailed',observeFailed);
  }
 }
 

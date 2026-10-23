@@ -7,7 +7,7 @@ test('legacy captures and drift reopen when optional authenticated sampling is u
   const jsx=(type,props)=>({type,props:props||{},children:[props?.children].flat().filter(value=>value!==null&&value!==undefined&&value!==false)});
   const file=path.join(__dirname,'CaptureIntakePanel.tsx'),loaded=new Module(file,module);
   loaded.filename=file;loaded.paths=Module._nodeModulePaths(__dirname);
-  loaded.require=ref=>({react,'react/jsx-runtime':{jsx,jsxs:jsx},'../../services/datasetWorkflow':{workflowError:error=>error.message},
+  loaded.require=ref=>({react,'react/jsx-runtime':{jsx,jsxs:jsx},'../../stores/useStepSheetStore':{useStepSheetStore:Object.assign(select=>select({open:null}),{getState:()=>({open:null,show(){}})})},'../../services/datasetWorkflow':{workflowError:error=>error.message},
     '../../services/captureIntake':{captureRoutingLabel:()=>'',captureIntake:{list:async()=>({candidates:[]}),versions:async()=>({versions:[]}),
       driftReferences:async()=>({references:[{reference_id:'ref',name:'Legacy drift reference'}]}),samplingStatus:async()=>{throw new Error('Authentication required for sampling policy');}}}}[ref]||require(ref));
   loaded._compile(ts.transpileModule(fs.readFileSync(file,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022,jsx:ts.JsxEmit.ReactJSX}}).outputText,file);

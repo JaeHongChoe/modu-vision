@@ -27,6 +27,41 @@ def workflow_impact(request: Request):
         raise HTTPException(409, str(exc)) from exc
 
 
+
+@router.get('/data-changes')
+def data_changes(request: Request, job_id: str):
+    """What changed since ``job_id`` was trained: added, removed and changed images, label files, split and classes."""
+    from backend.engine.checkpoint_paths import is_job_id
+    from backend.engine.data_changes import describe_data_changes
+    from backend.engine.workflow_impact import _data_state
+    from backend.engine.annotation_storage import set_request_annotation_root, reset_request_annotation_root
+    from backend.engine.dataset_loaders import set_request_split_root, reset_request_split_root
+    if not is_job_id(job_id):
+        raise HTTPException(422, '모델 작업 ID가 올바르지 않습니다.')
+    project = get_current_project(request)
+    root = Path(project['project_dir']).resolve()
+    meta_path = Path(project['models_dir']) / job_id / 'model_meta.json'
+    if not meta_path.is_file() or not _owned(root, meta_path):
+        raise HTTPException(404, f'이 프로젝트에 모델 {job_id}이(가) 없습니다.')
+    meta = _json(meta_path) or {}
+    training = meta.get('training_provenance') if isinstance(meta.get('training_provenance'), dict) else None
+    annotation = set_request_annotation_root(Path(project['annotations_dir']))
+    split = set_request_split_root(Path(project['dataset_dir']) / 'splits')
+    try:
+        result = describe_data_changes(project, training)
+        if result['state'] == 'current':
+            # Files match; label guidance, review policy or eligibility can still differ (the impact report's rule).
+            state, reason = _data_state(project, training)
+            if state != 'current':
+                result.update({'state': state, 'reason': reason})
+    except (ValueError, OSError, KeyError) as exc:
+        raise HTTPException(409, str(getattr(exc, 'detail', exc))) from exc
+    finally:
+        reset_request_split_root(split)
+        reset_request_annotation_root(annotation)
+    return {'job_id': job_id, **result}
+
+
 def _hash(path: Path) -> str | None:
     if not path.is_file() or path.is_symlink():
         return None

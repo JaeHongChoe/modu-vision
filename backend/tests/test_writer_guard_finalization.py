@@ -68,6 +68,9 @@ def test_controlled_finish_reads_original_committed_lease_through_admission(tmp_
         _original_cpu_fixture_nonce = 'a' * 32
         _original_cpu_fixture_supervisor = {
             'pid': 912, 'created_at': 1.0, 'command_sha256': 'b' * 64}
+        def poll(self):
+            # Modeled Popen.poll: this handle's own exit status, nothing reaped or signalled.
+            return self.returncode
         def terminate(self):
             child_calls.append('terminate original test handle')
         def wait(self, timeout):

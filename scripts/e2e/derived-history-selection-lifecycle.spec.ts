@@ -198,7 +198,7 @@ async function exercise(page: Page, w: Workspace, e: Evidence, api: Api, sourceE
     return body;
   };
   const mount = async () => {
-    await stages.getByRole('button').nth(1).click(); await expect(page.getByTestId('annotation-save-button')).toHaveText('Saved');
+    await stages.getByRole('button').nth(1).click(); await expect(page.getByTestId('annotation-save-button')).toHaveText('저장됨');
     const focus = page.getByRole('button', {name: '집중 편집', exact: true}); if (await focus.getAttribute('aria-pressed') === 'true') await focus.click();
     if (await historySummary.locator('..').getAttribute('open') === null) await historySummary.click(); await expect(panel).toBeVisible();
   };

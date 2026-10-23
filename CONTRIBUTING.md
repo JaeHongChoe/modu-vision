@@ -84,6 +84,22 @@ npm run test:renderer
   - Windows에서는 가상환경을 활성화하지 않았으므로 e2e가 쓸 Python을 지정합니다: `$env:MV_E2E_PYTHON = (Resolve-Path .venv\Scripts\python.exe)`.
 - Electron e2e: `npm run test:e2e:electron`. `npm ci`로 잠금 파일의 Electron 버전을 설치한 뒤 실행합니다.
 - 회귀 범위의 기준은 `.github/workflows/ci.yml`(Linux)과 `.github/workflows/windows-native.yml`(Windows)이 실행하는 목록입니다.
+
+### CI: 빠른 검사와 전체 회귀 (Fast checks and the full regression)
+
+- **빠른 검사**(`.github/workflows/ci-fast.yml`, "Linux fast checks")는 PR을 열거나 커밋을 올릴 때마다 돕니다. 같은 브랜치의 이전 빠른 검사는 새 커밋이 오면 멈춥니다. 작업은 병렬로 돕니다.
+  - `static`: 전체 회귀와 같은 명령으로 범위·증거 게이트, 타입 검사, 렌더러 회귀, 빌드, e2e 하네스, 릴리스 준비 검사를 합니다.
+  - `pytest`(6개로 나눔): 전체 회귀의 pytest 목록 가운데 바뀐 테스트, 바뀐 백엔드 모듈을 읽는 테스트, CI 구조 테스트를 고릅니다. 목록 밖의 테스트는 고르지 않습니다.
+  - `browser`(4개로 나눔): 바뀐 화면 e2e 스펙을 `@owned-model` 없이 돌립니다.
+  - "바뀐 것"은 이 브랜치에서 빠른 검사가 마지막으로 통과한 커밋부터 셉니다. 그런 커밋이 없으면 기준 브랜치와 갈라진 지점부터 셉니다. 중간 실행이 취소돼도 그 변경은 다음 실행이 다시 고릅니다.
+  - 고르는 규칙은 `scripts/ci/related_checks.py`에 있습니다. 화면 코드만 바뀌면 화면 스펙은 고르지 않습니다. 이때는 렌더러 회귀와 직접 앱 확인으로 보고, 필요한 스펙은 수동 실행의 `specs` 입력으로 더합니다.
+- **전체 회귀**(`.github/workflows/ci.yml`, "Linux CPU source checks", 작업 `source`·`browser`)의 테스트 목록, 단언, 시간 예산은 바뀌지 않았습니다. 바뀐 것은 실행 시점입니다. PR 커밋마다 자동으로 돌지 않고, 병합할 head에 대해 수동으로 실행합니다. main에 푸시되면 다시 돕니다.
+  - 실행: `gh workflow run ci.yml --ref <브랜치>`(또는 Actions 화면의 "Run workflow").
+  - 확인: `gh run list --workflow ci.yml --branch <브랜치>`에서 그 실행의 커밋이 PR의 마지막 커밋과 같은지 봅니다.
+- **병합 조건**: PR의 마지막 커밋에서 빠른 검사의 모든 작업이 통과해야 합니다. 같은 커밋에서 전체 회귀도 성공해야 합니다.
+  - 별도 워크플로 "Merge readiness"(`.github/workflows/ci-merge-gate.yml`)의 `full regression on this exact head`가 이 조건을 확인합니다. 전체 회귀가 통과하기 전에는 실패로 남고, 통과한 뒤 다시 실행하면 통과합니다.
+  - 게이트를 빠른 검사와 다른 워크플로에 둔 이유: 빠른 검사가 통과하면 다음 커밋의 선택 범위가 그 커밋부터 시작합니다. 전체 회귀를 아직 실행하지 않았거나 실패했어도 마찬가지입니다.
+  - 커밋을 하나라도 더 올리면 그 커밋에서 전체 회귀를 다시 실행해야 합니다.
 - 테스트는 사용자의 데이터를 바꾸지 않습니다. `backend/conftest.py`가 테스트 세션마다 임시 폴더를 만들고, 앱 데이터(작업 기록, 예약), 흐름 템플릿, 저장된 분할, 썸네일을 그 안으로 돌립니다.
   - pytest 밖에서 백엔드 스크립트나 CLI를 직접 실행할 때는 `VISION_AI_STUDIO_USER_DATA_DIR`, `MODU_FLOW_TEMPLATE_DIR`, `MODU_SPLIT_MANIFEST_DIR`, `MODU_THUMBNAIL_CACHE_DIR`를 임시 폴더로 지정하고, `VISION_RESOURCE_LEASE_DB`는 지정하지 않습니다(그러면 앱 데이터 폴더 안에 만들어집니다).
   - 테스트가 만든 가짜 프로세스에는 실제 프로세스 번호를 쓰지 마세요. 종료는 테스트가 시작한 프로세스에만, 그 핸들로 보냅니다.

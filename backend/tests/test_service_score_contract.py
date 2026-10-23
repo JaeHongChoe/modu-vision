@@ -269,7 +269,7 @@ def test_probability_optimizer_rejects_distance_without_normalizing(tmp_path):
         'test_predictions':[{'image_id':'good','ground_truth':'good','predicted_class':'good','confidence':4},
             {'image_id':'ng','ground_truth':'anomaly','predicted_class':'anomaly','confidence':9}]}
     (tmp_path/'eval_results.json').write_text(json.dumps(payload))
-    with pytest.raises(HTTPException,match='train/validation') as caught:
+    with pytest.raises(HTTPException,match='train/validation|학습/검증') as caught:
         get_overkill_underkill_analysis(str(tmp_path),0,500,25,8)
     assert caught.value.status_code==422
 

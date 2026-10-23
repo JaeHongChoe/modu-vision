@@ -84,14 +84,25 @@ interface AnnotationState {
   metadata: ImageReviewMetadata | null;
   reviewerName: string;
   setReviewerName: (name: string) => void;
+  /** 한 장에 하나씩: a finished box saves the image and moves to the next one (one drag per image instead of drag + next).
+   *  Off by default (an image can hold several defects); remembered on this device. */
+  advanceOnBox: boolean;
+  setAdvanceOnBox: (on: boolean) => void;
+  /** Counts the canvas's requests to move on; the filmstrip moves forward once per new count. */
+  advanceRequest: number;
+  requestAdvance: () => void;
   setMetadata: (metadata: ImageReviewMetadata | null) => void;
   teamEditingEnabled: boolean;
   teamReviewEnabled: boolean;
   editLease: EditLease | null;
+  /** The image whose 편집 시작 request is still waiting for its reply. Its save button stays off until the lease lands,
+   *  and a save tried in between says the lease is on its way instead of asking for 편집 시작 again. */
+  editLeaseAcquiring: { image_uuid: string } | null;
   labelbookVersion: number | null;
   setTeamEditingEnabled: (enabled:boolean) => void;
   setTeamReviewEnabled: (enabled:boolean) => void;
   setEditLease: (lease:EditLease|null) => void;
+  setEditLeaseAcquiring: (value:{ image_uuid: string }|null) => void;
   setLabelbook: (version:number|null,categories?:BookCategory[]) => void;
 
   // Persistence & History
@@ -137,6 +148,10 @@ interface AnnotationState {
   setHeatmapUrl: (url: string | null) => void;
 
   markNormal: (isNormal: boolean) => void;
+  /** Classification: the class chosen for an image (or its folder class again), applied to the open image list. */
+  /** `metadata`: the image's row after the class change (a new revision), taken for the image being edited so its next
+   *  label save is checked against that revision. */
+  applyImageClass: (filePath: string, label: string | null, classSource: 'folder' | 'override', metadata?: ImageReviewMetadata | null) => void;
   loadAnnotationsForCurrent: () => Promise<boolean>;
   saveAnnotations: () => Promise<boolean>;
 
@@ -151,19 +166,28 @@ interface AnnotationState {
   redo: () => void;
 }
 
+const LEASE_PENDING_MESSAGE = '편집 권한을 받는 중입니다. 받은 뒤 다시 저장하세요.';
+
 export const useAnnotationStore = create<AnnotationState>((set, get) => ({
   externalSelectionPath: null,
   metadata: null,
   reviewerName: typeof localStorage !== 'undefined' ? localStorage.getItem('modu-reviewer-name') || '' : '',
   setReviewerName: (name) => { if (typeof localStorage !== 'undefined') localStorage.setItem('modu-reviewer-name', name); set({ reviewerName: name }); },
+  advanceOnBox: (() => { try { return typeof localStorage !== 'undefined' && localStorage.getItem('modu-advance-on-box') === '1'; } catch { return false; } })(),
+  setAdvanceOnBox: (on) => { try { if (typeof localStorage !== 'undefined') localStorage.setItem('modu-advance-on-box', on ? '1' : '0'); } catch { /* the choice still holds for this session */ } set({ advanceOnBox: on }); },
+  advanceRequest: 0,
+  requestAdvance: () => set((state) => ({ advanceRequest: state.advanceRequest + 1 })),
   setMetadata: (metadata) => set({ metadata }),
   teamEditingEnabled:false,
   teamReviewEnabled:false,
   editLease:null,
+  editLeaseAcquiring:null,
   labelbookVersion:null,
   setTeamEditingEnabled:(enabled)=>set({teamEditingEnabled:enabled}),
   setTeamReviewEnabled:(enabled)=>set({teamReviewEnabled:enabled}),
   setEditLease:(editLease)=>set({editLease}),
+  // The 'on its way' notice of a save refused meanwhile goes with the request, so a refused 편집 시작 does not leave it behind.
+  setEditLeaseAcquiring:(editLeaseAcquiring)=>set(state=>({editLeaseAcquiring,...(!editLeaseAcquiring&&state.saveMessage===LEASE_PENDING_MESSAGE?{saveMessage:null}:{})})),
   setLabelbook:(version,categories)=>{const next=categories?.length?bookPalette(categories,get().categories):get().categories;const active=next.find(row=>row.name===get().activeCategory.name)||next[0];set({labelbookVersion:version,categories:next,...(active?{activeCategory:active,currentLabel:active.name}:{})});},
   task: 'detection',
   images: [],
@@ -211,7 +235,7 @@ export const useAnnotationStore = create<AnnotationState>((set, get) => ({
     const current = idx >= 0 ? images[idx] : null;
     set({
       images,
-      ...(!images.length?{teamEditingEnabled:false,teamReviewEnabled:false,editLease:null,labelbookVersion:null,categories:DEFAULT_CATEGORIES}:{}),
+      ...(!images.length?{teamEditingEnabled:false,teamReviewEnabled:false,editLease:null,editLeaseAcquiring:null,labelbookVersion:null,categories:DEFAULT_CATEGORIES}:{}),
       externalSelectionPath: current?.file_path === externalSelectionPath ? externalSelectionPath : null,
       metadata: null,
       loadedAnnotationContext: null,
@@ -495,6 +519,14 @@ export const useAnnotationStore = create<AnnotationState>((set, get) => ({
 
   setHeatmapUrl: (url) => set({ heatmapUrl: url }),
 
+  applyImageClass: (filePath, label, classSource, metadata) => {
+    const update = (image: ImageMeta) => image.file_path === filePath
+      ? { ...image, label, labels: label ? [label] : [], class_source: classSource } : image;
+    const { images, currentImage } = get();
+    const editing = currentImage?.file_path === filePath && metadata && get().metadata?.image_uuid === metadata.image_uuid;
+    set({ images: images.map(update), currentImage: currentImage ? update(currentImage) : currentImage, ...(editing ? { metadata } : {}) });
+  },
+
   markNormal: (isNormal) => {
     if (get().annotationLoadStatus !== 'ready') return;
     const { annotations, history } = get();
@@ -574,7 +606,11 @@ export const useAnnotationStore = create<AnnotationState>((set, get) => ({
     const { currentImage, annotations, isDirty } = get();
     if (!currentImage) return Promise.resolve(false);
     const leaseToken=imageLeaseToken(get().editLease,get().metadata?.image_uuid);
-    if(get().teamEditingEnabled&&!leaseToken){set({saveMessage:'팀 작업의 편집 시작을 누른 뒤 저장하세요. 편집 권한이 만료됐으면 다시 시작하세요.'});return Promise.resolve(false);}
+    if(get().teamEditingEnabled&&!leaseToken){
+      // 편집 시작 was pressed and its reply is on the way: say so, rather than asking for a press that already happened.
+      const acquiring=!!get().editLeaseAcquiring&&get().editLeaseAcquiring?.image_uuid===get().metadata?.image_uuid;
+      set({saveMessage:acquiring?LEASE_PENDING_MESSAGE:'팀 작업의 편집 시작을 누른 뒤 저장하세요. 편집 권한이 만료됐으면 다시 시작하세요.'});return Promise.resolve(false);
+    }
 
     set({ isSaving: true, saveMessage: 'Saving...' });
 
@@ -599,6 +635,8 @@ export const useAnnotationStore = create<AnnotationState>((set, get) => ({
             rotated_bbox: a.rotated_bbox,
             direction_deg: a.direction_deg,
             mask_rle: a.mask_rle,
+            // An adopted draft keeps where it came from; without it the adoption could not be taken back later.
+            ...(a.origin ? { origin: a.origin } : {}),
           })),
           image_width: get().imageDimensions?.width || currentImage.width || 8192,
           image_height: get().imageDimensions?.height || currentImage.height || 5464,
@@ -678,6 +716,8 @@ export const useAnnotationStore = create<AnnotationState>((set, get) => ({
       });
       if (get().currentImage !== currentImage || get().annotationLoadStatus !== 'ready') return false;
       if (res?.result?.polygon && res.result.polygon.length >= 3) {
+        // The route also names the backend it used and says whether it fell back to a small box around the click.
+        const detail = res.result as { source?: unknown; fallback?: unknown };
         const newAnn: AnnotationItem = {
           id: `auto_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
           type: 'polygon',
@@ -687,6 +727,17 @@ export const useAnnotationStore = create<AnnotationState>((set, get) => ({
           polygon: res.result.polygon,
           points: res.result.polygon,
           bbox: res.result.bbox,
+          // The auto selector is a drawing aid, not a draft (docs §3.3): the shape joins the canvas and is saved by the
+          // person's own save like a drawn one, and its origin says the machine chose the outline. A fallback box is
+          // marked so the list and the toolbar can say the selector found nothing instead of passing it off as a shape.
+          origin: {
+            kind: 'auto_selector',
+            backend: typeof detail.source === 'string' && detail.source ? detail.source : 'opencv_flood_fill',
+            seed_point: [seedX, seedY],
+            tolerance: autoSelectTolerance,
+            fallback: detail.fallback === true,
+            created_at: new Date().toISOString(),
+          },
         };
         get().addAnnotation(newAnn);
         return true;

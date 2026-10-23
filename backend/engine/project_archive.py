@@ -842,7 +842,7 @@ def _restore_archive(archive_path: Path, target_dir: Path, *, staging_dir: Path 
     if not archive_path.is_file():
         raise ArchiveError("Backup archive not found", 404)
     if target_dir.exists():
-        raise ArchiveError("Restore folder already exists; choose an empty new location", 409)
+        raise ArchiveError("복원할 폴더가 이미 있습니다. 비어 있는 새 위치를 고르세요.", 409)
     target_dir.parent.mkdir(parents=True, exist_ok=True)
     staging = staging_dir or target_dir.parent / f".{target_dir.name}.restore-{uuid.uuid4().hex}"
     if staging.parent != target_dir.parent or staging.exists() or staging.is_symlink():

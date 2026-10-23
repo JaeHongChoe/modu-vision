@@ -92,7 +92,7 @@ test('gold result outside the gallery stays selected while labels load and opens
     expect(crypto.createHash('sha256').update(await response.body()).digest('hex')).toBe(image.sha256);
     await expect(page.getByRole('dialog', { name: '팀 데이터 작업', exact: true })).toHaveCount(0);
     await expect(page.locator('[data-labeling-filmstrip] img[alt="sample-ok.png"]')).toBeVisible();
-    await expect(page.getByText('Annotations (1)', { exact: true })).toBeVisible();
+    await expect(page.getByText('라벨 목록 (1)', { exact: true })).toBeVisible();
     const canvas = page.locator('[data-canvas-container] canvas').first();
     await expect.poll(() => canvas.evaluate((element: HTMLCanvasElement) =>
       [...element.getContext('2d')!.getImageData(Math.floor(element.width / 2), Math.floor(element.height / 2), 1, 1).data]
@@ -132,7 +132,7 @@ for (const scope of ['labelset', 'project']) {
       await expect.poll(gate.delivered).toBe(true);
       await flush(page);
       await expect(page.locator('[data-labeling-filmstrip] img')).toHaveCount(0);
-      await expect(page.getByText('Annotations (0)', { exact: true })).toBeVisible();
+      await expect(page.getByText('라벨 목록 (0)', { exact: true })).toBeVisible();
       await expect(page.getByRole('dialog', { name: '팀 데이터 작업', exact: true })).toHaveCount(0);
       const current = await (await page.request.get(`${renderer.origin}/api/project/current`)).json();
       if (scope === 'labelset') expect(current).toMatchObject({ id: project.id, active_labelset_id: candidate.id });

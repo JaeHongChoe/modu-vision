@@ -6,7 +6,7 @@ import {getApiPersistenceIdentity,getProjectContext,getProjectContextGeneration,
 import {datasetWorkflow,workflowError,type ImageReviewMetadata} from '../../services/datasetWorkflow';
 import type {AnnotationItem} from '../../types';
 import {WorkspaceDialog} from '../common/WorkspaceDialog';
-import {compareDraft,readDraft,removeDraft,saveDraft,type AnnotationDraft} from './annotationDraft';
+import {compareDraft,draftKey,readDraft,removeDraft,saveDraft,type AnnotationDraft} from './annotationDraft';
 function namespace(){
  const p=useProjectStore.getState(),c=getProjectContext(),a=useAnnotationStore.getState();
  if(!p.project?.source_dataset_dir||c&&c.project_id!==p.project.id||getApiPersistenceIdentity()!=='local'&&!c)return '';
@@ -14,6 +14,8 @@ function namespace(){
 }
 type Base={metadata:ImageReviewMetadata;annotations:AnnotationItem[]};
 type Comparison={metadata:ImageReviewMetadata;annotations:AnnotationItem[];draft:AnnotationDraft};
+// What this editor last stored: the labels and base it was built from and the exact stored value.
+type Written={annotations:AnnotationItem[];base:Base;raw:string};
 const clone=<T,>(v:T):T=>JSON.parse(JSON.stringify(v));
 const button='rounded border border-slate-600 px-3 py-1.5 disabled:opacity-40';
 export function AnnotationDraftRecovery(){
@@ -21,16 +23,21 @@ export function AnnotationDraftRecovery(){
  const epoch=useSyncExternalStore(subscribeProjectContext,getProjectContextGeneration,getProjectContextGeneration);
  const scope=namespace(),imagePath=a.currentImage?.file_path||'',key=JSON.stringify([scope,imagePath,epoch]);
  const [saved,setSaved]=useState<{key:string;draft:AnnotationDraft}|null>(null),[error,setError]=useState(''),[open,setOpen]=useState(false),[comparison,setComparison]=useState<Comparison|null>(null),[accepted,setAccepted]=useState(false),[busy,setBusy]=useState(false);
- const base=useRef<Base|null>(null),owned=useRef<AnnotationDraft|null>(null);const draft=saved?.key===key?saved.draft:null;
+ const base=useRef<Base|null>(null),owned=useRef<AnnotationDraft|null>(null),written=useRef<Written|null>(null);const draft=saved?.key===key?saved.draft:null;
  const current=()=>namespace()===scope&&getProjectContextGeneration()===epoch&&useAnnotationStore.getState().currentImage?.file_path===imagePath;
  useEffect(()=>{
-  base.current=null;owned.current=null;setSaved(null);setError('');setOpen(false);setComparison(null);setAccepted(false);setBusy(false);
+  base.current=null;owned.current=null;written.current=null;setSaved(null);setError('');setOpen(false);setComparison(null);setAccepted(false);setBusy(false);
   if(!scope||!imagePath)return;
   const sync=()=>{
    if(!current())return;const state=useAnnotationStore.getState(),meta=state.metadata;
    const loaded=JSON.stringify([getApiPersistenceIdentity(),epoch,useDatasetStore.getState().folderPath,state.task]);
    if(state.annotationLoadStatus!=='ready'||state.loadedAnnotationContext!==loaded||!meta||meta.file_path!==imagePath)return;
    try{
+    // Every store change reaches here (a pan, a zoom, the refit after the work area resizes, a lease or metadata reply).
+    // While the labels and their base are the very ones last stored and the stored draft is still exactly that value,
+    // there is nothing to save: rewriting it only moved saved_at and copied the whole draft into storage again.
+    const last=written.current;
+    if(state.isDirty&&last&&owned.current&&last.annotations===state.annotations&&last.base===base.current&&localStorage.getItem(draftKey(scope,imagePath))===last.raw)return;
     const existing=readDraft(localStorage,scope,imagePath);
     if(!state.isDirty){
      if(owned.current&&meta.revision>owned.current.base_revision){removeDraft(localStorage,owned.current);owned.current=null;}
@@ -40,7 +47,7 @@ export function AnnotationDraftRecovery(){
     if(existing&&existing.nonce!==owned.current?.nonce){setSaved({key,draft:existing});return;}
     if(!base.current)return;const starting=base.current;
     const next:AnnotationDraft={schema:1,scope,image_path:imagePath,image_uuid:starting.metadata.image_uuid,source_sha256:starting.metadata.content_hash,base_revision:starting.metadata.revision,base_annotations:starting.annotations,annotations:clone(state.annotations),width:starting.metadata.width,height:starting.metadata.height,saved_at:new Date().toISOString(),nonce:owned.current?.nonce||crypto.randomUUID()};
-    saveDraft(localStorage,next);owned.current=next;setSaved({key,draft:next});setError('');
+    const raw=saveDraft(localStorage,next);owned.current=next;written.current={annotations:state.annotations,base:starting,raw};setSaved({key,draft:next});setError('');
    }catch(cause){setError('이 컴퓨터의 초안을 저장·조회하지 못했습니다: '+workflowError(cause));}
   };
   sync();const stop=useAnnotationStore.subscribe(sync),storage=()=>sync();window.addEventListener('storage',storage);return()=>{stop();window.removeEventListener('storage',storage);};
@@ -59,8 +66,9 @@ export function AnnotationDraftRecovery(){
    if(currentState.annotations!==state.annotations||currentState.isSaving||currentState.isDirty&&JSON.stringify(currentState.annotations)!==JSON.stringify(comparison.draft.annotations))throw new Error('현재 편집 내용이 초안과 다릅니다. 현재 내용을 먼저 저장하세요.');
    if(JSON.stringify(readDraft(localStorage,scope,imagePath))!==JSON.stringify(comparison.draft))throw new Error('다른 창의 새 초안이 있습니다. 다시 비교하세요.');
    const next={...comparison.draft,base_revision:fresh.metadata.revision,base_annotations:clone(fresh.annotations),nonce:crypto.randomUUID(),saved_at:new Date().toISOString()};
-   saveDraft(localStorage,next);base.current={metadata:clone(fresh.metadata),annotations:clone(fresh.annotations)};owned.current=next;
-   useAnnotationStore.setState({metadata:fresh.metadata,annotations:clone(next.annotations),isDirty:true,history:[...currentState.history,currentState.annotations].slice(-40),future:[],selectedAnnotationId:null});setSaved({key,draft:next});setOpen(false);setComparison(null);
+   // The editor takes the very labels recorded as written, so the store update below finds the applied draft stored as is.
+   const raw=saveDraft(localStorage,next),applied=clone(next.annotations);base.current={metadata:clone(fresh.metadata),annotations:clone(fresh.annotations)};owned.current=next;written.current={annotations:applied,base:base.current,raw};
+   useAnnotationStore.setState({metadata:fresh.metadata,annotations:applied,isDirty:true,history:[...currentState.history,currentState.annotations].slice(-40),future:[],selectedAnnotationId:null});setSaved({key,draft:next});setOpen(false);setComparison(null);
   }catch(cause){if(current())setError(workflowError(cause));}finally{if(current())setBusy(false);}
  };
  const discard=()=>{if(!draft||!current())return;try{if(!removeDraft(localStorage,draft))throw new Error('다른 창에서 초안이 바뀌었습니다. 다시 비교하세요.');owned.current=null;setSaved(null);setOpen(false);setComparison(null);}catch(cause){setError(workflowError(cause));}};

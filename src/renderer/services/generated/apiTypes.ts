@@ -39,6 +39,7 @@ export type AnnotationItem = {
   color?: string | null;
   text?: string | null;
   direction_deg?: number | null;
+  origin?: ModelDraftOrigin | AutoSelectorOrigin | null;
 };
 
 export type AnnotationSaveRequest = {
@@ -97,6 +98,19 @@ export type AssignmentRequest = {
   priority?: number;
 };
 
+export type AssistantRunEntry = {
+  run_id: string;
+  tool: string;
+  tier: "read" | "navigate" | "write" | "forbidden" | "conversation";
+  summary?: string;
+  args_sha256: string;
+  confirmed: boolean;
+  result: "ok" | "refused" | "error" | "cancelled";
+  error_code?: string | null;
+  provider?: "openai-compatible" | "anthropic" | null;
+  link?: string | null;
+};
+
 export type AsyncComparisonRequest = {
   source_dataset_path: string;
   task: "classification" | "detection" | "segmentation" | "anomaly" | "patch_classification";
@@ -122,6 +136,16 @@ export type AutoSelectRequest = {
   backend?: "opencv" | "foundation";
   device?: string;
   points?: Array<{ [key: string]: unknown }>;
+};
+
+export type AutoSelectorOrigin = {
+  kind: "auto_selector";
+  backend?: string;
+  seed_point?: Array<number> | null;
+  box?: Array<number> | null;
+  tolerance?: number | null;
+  fallback?: boolean;
+  created_at: string;
 };
 
 export type BatchGenerateRequest = {
@@ -251,6 +275,28 @@ export type CandidateReview = {
 export type CaptureGroupPolicyRequest = {
   expected_revision: number;
   policy: { [key: string]: unknown };
+};
+
+export type ClassMapping = {
+  from: string;
+  to: string;
+};
+
+export type ClassOverrideRequest = {
+  image_path: string;
+  class_name?: string | null;
+  actor?: string;
+};
+
+export type ClassRenameApplyRequest = {
+  mapping: Array<ClassMapping>;
+  actor?: string;
+  expected_preview_sha256: string;
+};
+
+export type ClassRenamePreviewRequest = {
+  mapping: Array<ClassMapping>;
+  actor?: string;
 };
 
 export type CohortRequest = {
@@ -831,6 +877,38 @@ export type LabelSetCreateRequest = {
   name: string;
 };
 
+export type LabelSuggestionModelStats = {
+  job_id: string;
+  backend: string;
+  drafts: number;
+  pending: number;
+  adopted: number;
+  rejected: number;
+  reverted: number;
+  edited_after: number;
+  edited_unknown: number;
+  reviewed_candidates: number;
+  adopted_candidates: number;
+  rejected_candidates: number;
+  mean_confidence_adopted?: number | null;
+  mean_confidence_rejected?: number | null;
+  advice: LabelSuggestionThresholdAdvice;
+};
+
+export type LabelSuggestionStats = {
+  models: Array<LabelSuggestionModelStats>;
+  generated_at: string;
+};
+
+export type LabelSuggestionThresholdAdvice = {
+  reason: "too_few" | "already_high" | "none_reaches" | "task_not_applicable" | "suggestion";
+  reviewed_candidates: number;
+  adopted_rate?: number | null;
+  threshold?: number | null;
+  adopted_rate_above?: number | null;
+  candidates_above?: number | null;
+};
+
 export type LeaseRequest = {
   actor?: string;
   expected_revision: number;
@@ -927,6 +1005,18 @@ export type ModbusConfig = {
   verdict_values?: {
     [key: string]: number;
   };
+};
+
+export type ModelDraftOrigin = {
+  kind?: "model_draft";
+  proposal_id: string;
+  candidate_id: string;
+  backend?: string;
+  job_id?: string | null;
+  checkpoint_sha256?: string | null;
+  reviewer: string;
+  adopted_at: string;
+  backup_version_id?: string | null;
 };
 
 export type NewUser = {
@@ -1247,7 +1337,7 @@ export type QueueRequest = {
 export type ReadinessRequest = {
   task: string;
   model: string;
-  device?: "cpu" | "mps" | "cuda";
+  device?: "auto" | "cpu" | "mps" | "cuda";
   pretrained_checkpoint?: string | null;
   compute_profile_id?: string | null;
   preset?: "fast" | "precision";
@@ -1565,6 +1655,12 @@ export type TrainingStopRequest = {
   job_id?: string | null;
 };
 
+export type TruthFromLabelsRequest = {
+  version_id: string;
+  reviewer: string;
+  note?: string | null;
+};
+
 export type TruthRequest = {
   image_path: string;
   task: string;
@@ -1579,6 +1675,11 @@ export type TruthRequest = {
   expected_revision: number;
   expected_image_revision: number;
   note?: string;
+};
+
+export type UndoRequest = {
+  actor?: string;
+  lease_token?: string | null;
 };
 
 export type UpdateRow = {
@@ -1610,7 +1711,7 @@ export type ViewRequest = {
 export type WeightImportRequest = {
   task: string;
   model: string;
-  device?: "cpu" | "mps" | "cuda";
+  device?: "auto" | "cpu" | "mps" | "cuda";
   pretrained_checkpoint?: string | null;
   compute_profile_id?: string | null;
   preset?: "fast" | "precision";
@@ -1618,6 +1719,10 @@ export type WeightImportRequest = {
   family_dataset_path?: string | null;
   warm_start_job_id?: string | null;
   expected_sha256?: string | null;
+};
+
+export type WeightPrefetchRequest = {
+  model: string;
 };
 
 export type ZeroEscapeCalibrateRequest = {
@@ -1659,6 +1764,7 @@ export type backend__api__routes_label_suggestions__ReviewRequest = {
   decision: "accept" | "reject";
   candidate_ids?: Array<string>;
   actor?: string;
+  lease_token?: string | null;
 };
 
 export type backend__api__routes_model_deployments__RollbackRequest = {
@@ -1851,12 +1957,15 @@ export interface ApiRequestBody {
   "POST /api/artifacts/uploads": UploadRequest;
   "DELETE /api/artifacts/{artifact_id}": ArtifactRef;
   "POST /api/artifacts/{artifact_id}/pins": PinRequest;
+  "POST /api/assistant/runs": AssistantRunEntry;
   "POST /api/automated-training/start": StartRequest;
   "POST /api/capture-intake/adopt": backend__api__routes_capture_intake__AdoptRequest;
   "POST /api/capture-intake/candidates/{identifier}/review": backend__api__routes_capture_intake__ReviewRequest;
   "POST /api/capture-intake/drift/references": DriftReferenceRequest;
   "POST /api/capture-intake/register": RegisterRequest;
   "POST /api/capture-intake/sampling": SamplingPolicyRequest;
+  "POST /api/class-rename/apply": ClassRenameApplyRequest;
+  "POST /api/class-rename/preview": ClassRenamePreviewRequest;
   "POST /api/compute/jobs": ComputeJobInput;
   "POST /api/compute/jobs/{job_id}/predict": ComputePredictionInput;
   "POST /api/compute/profiles": ProfileInput;
@@ -1882,6 +1991,7 @@ export interface ApiRequestBody {
   "POST /api/dataset/masks/export": MaskExportRequest;
   "POST /api/dataset/masks/import": MaskImportRequest;
   "POST /api/dataset/metadata/bulk": BulkMetadataRequest;
+  "PUT /api/dataset/metadata/class-override": ClassOverrideRequest;
   "POST /api/dataset/metadata/split": SplitRequest;
   "PATCH /api/dataset/metadata/{image_uuid}": EditRequest;
   "POST /api/dataset/operations/backups/{job_id}/restore": RestoreRequest;
@@ -1933,6 +2043,7 @@ export interface ApiRequestBody {
   "POST /api/flow-evaluations/approvals/{revision_id}/runtime-review": RuntimeFlowReviewRequest;
   "PUT /api/flow-evaluations/approvals/{revision_id}/select": FlowSelectionRequest;
   "POST /api/flow-evaluations/cohorts": CohortRequest;
+  "POST /api/flow-evaluations/cohorts/{cohort_id}/truth-from-labels": TruthFromLabelsRequest;
   "POST /api/flow-workspace/comparisons": FlowCompare;
   "POST /api/flow-workspace/templates": TemplateSave;
   "POST /api/flow-workspace/templates/{template_id}/map": TemplateMap;
@@ -1961,6 +2072,7 @@ export interface ApiRequestBody {
   "POST /api/label-suggestions/feature-train": FeatureTrainRequest;
   "POST /api/label-suggestions/generate": GenerateRequest;
   "POST /api/label-suggestions/{suggestion_id}/review": backend__api__routes_label_suggestions__ReviewRequest;
+  "POST /api/label-suggestions/{suggestion_id}/undo": UndoRequest;
   "POST /api/model-deployments/approve": ApprovalRequest;
   "POST /api/model-deployments/rollback": backend__api__routes_model_deployments__RollbackRequest;
   "POST /api/model-deployments/specialized-approve": SpecializedApprovalRequest;
@@ -2033,6 +2145,7 @@ export interface ApiRequestBody {
   "POST /api/team-data/quality/profiles/{profile_id}/retire": ActorRequest;
   "PUT /api/team-data/settings": SettingsRequest;
   "POST /api/training-workspace/import-weights": WeightImportRequest;
+  "POST /api/training-workspace/prefetch-weights": WeightPrefetchRequest;
   "POST /api/training-workspace/readiness": ReadinessRequest;
   "POST /api/training/reconnect": TrainingStopRequest;
   "POST /api/training/reservations/confirm-release": ReservationReleaseRequest;
@@ -2052,6 +2165,7 @@ export interface ApiResponseBody {
   "GET /api/flowchart/templates/fixed-roi": FlowchartPipeline_Output;
   "GET /api/flowchart/templates/single-detection": FlowchartPipeline_Output;
   "GET /api/flowchart/templates/single-segmentation": FlowchartPipeline_Output;
+  "GET /api/label-suggestions/stats": LabelSuggestionStats;
   "GET /api/model-operations/legacy-impact": LegacyImpactReport;
   "POST /api/project/create": ProjectConfigResponse;
   "GET /api/project/current": ProjectConfigResponse;

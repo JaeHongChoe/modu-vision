@@ -33,7 +33,9 @@ import { useAnnotationStore } from '../../stores/useAnnotationStore';
 import { calculateActualSize, calculateCenterZoom, calculateFitToScreen } from '../../utils/coordinateMath';
 import { isShapeConvertible } from './convertedAnnotation';
 
-export const LabelingToolbar: React.FC = () => {
+/** `classification`: the project's class comes from the folder or the class picker, so the OK-tag toggle (which
+ *  classification training never reads) is not offered. */
+export const LabelingToolbar: React.FC<{ classification?: boolean }> = ({ classification = false }) => {
   const {
     activeTool,
     setActiveTool,
@@ -54,6 +56,8 @@ export const LabelingToolbar: React.FC = () => {
     isSaving,
     saveMessage,
     annotationLoadStatus,
+    editLeaseAcquiring,
+    metadata,
     saveAnnotations,
     markNormal,
     annotations,
@@ -66,8 +70,13 @@ export const LabelingToolbar: React.FC = () => {
 
   const [isConverterOpen, setIsConverterOpen] = useState(false);
   const isNormalMarked = annotations.some((a) => a.is_normal);
+  // 편집 시작 was pressed for this image and its lease is not back yet; a save now would be refused without a request.
+  const leasePending = !!editLeaseAcquiring && editLeaseAcquiring.image_uuid === metadata?.image_uuid;
   const selectedAnn = annotations.find((a) => a.id === selectedAnnotationId);
   const canConvertShape = isShapeConvertible(selectedAnn);
+  // A box the auto selector put around a click where it found no region stays marked until the person erases or
+  // redraws it; the notice follows the shape, so it cannot be closed while the box is still among the labels.
+  const autoSelectFallbackPresent = annotations.some((a) => a.origin?.kind === 'auto_selector' && a.origin.fallback);
 
   const handleFit = () => {
     const parent = document.querySelector('[data-canvas-container="true"]');
@@ -98,85 +107,93 @@ export const LabelingToolbar: React.FC = () => {
   };
 
   return (
-    <div className="h-12 bg-[#131822] border-b border-[#2B3547] px-4 flex items-center justify-between text-slate-200 select-none">
+    // shrink-0: the studio is a column that can be shorter than its rows; a wrapped toolbar must keep both lines
+    // instead of being squeezed to its 48px minimum with the second line (the save button) under the next row.
+    <div className="min-h-12 shrink-0 bg-[#131822] border-b border-[#2B3547] px-4 py-1 flex flex-wrap items-center justify-between gap-y-1 text-slate-200 select-none whitespace-nowrap">
       {/* Tool Selector: 7 Industrial Tools */}
       <div className="flex items-center space-x-1">
         {/* Tool 1: Select / Move */}
         <button
           onClick={() => setActiveTool('select')}
           title="선택 및 이동 (Select / Move - 1)"
-          className={`p-2 rounded border transition-all cursor-pointer ${
+          className={`flex items-center px-2 py-1.5 rounded border transition-all cursor-pointer ${
             activeTool === 'select'
               ? 'bg-[#1F2E40] text-cyan-400 border-cyan-500/80 ring-1 ring-cyan-500/30 font-semibold shadow-sm'
               : 'bg-[#1A212E] hover:bg-[#222B3D] text-slate-400 hover:text-slate-200 border-[#2B3547]'
           }`}
         >
           <MousePointer className="w-4 h-4" />
+          <span className="ml-1 text-xs">선택</span>
         </button>
 
         {/* Tool 2: BBox */}
         <button
           onClick={() => setActiveTool('bbox')}
           title="바운딩 박스 (BBox - 2)"
-          className={`p-2 rounded border transition-all cursor-pointer ${
+          className={`flex items-center px-2 py-1.5 rounded border transition-all cursor-pointer ${
             activeTool === 'bbox'
               ? 'bg-[#1F2E40] text-cyan-400 border-cyan-500/80 ring-1 ring-cyan-500/30 font-semibold shadow-sm'
               : 'bg-[#1A212E] hover:bg-[#222B3D] text-slate-400 hover:text-slate-200 border-[#2B3547]'
           }`}
         >
           <Square className="w-4 h-4" />
+          <span className="ml-1 text-xs">박스</span>
         </button>
 
         {/* Tool 3: Rotated BBox (OBB) */}
         <button
           onClick={() => setActiveTool('rotated_bbox')}
           title="회전 바운딩 박스 (Rotated BBox OBB - 3)"
-          className={`p-2 rounded border transition-all cursor-pointer ${
+          className={`flex items-center px-2 py-1.5 rounded border transition-all cursor-pointer ${
             activeTool === 'rotated_bbox'
               ? 'bg-[#1F2E40] text-purple-400 border-purple-500/80 ring-1 ring-purple-500/30 font-semibold shadow-sm'
               : 'bg-[#1A212E] hover:bg-[#222B3D] text-slate-400 hover:text-slate-200 border-[#2B3547]'
           }`}
         >
           <RotateCw className="w-4 h-4" />
+          <span className="ml-1 text-xs">회전 박스</span>
         </button>
 
         {/* Tool 4: Polygon */}
         <button
           onClick={() => setActiveTool('polygon')}
           title="다각형 폴리곤 (Polygon - 4)"
-          className={`p-2 rounded border transition-all cursor-pointer ${
+          className={`flex items-center px-2 py-1.5 rounded border transition-all cursor-pointer ${
             activeTool === 'polygon'
               ? 'bg-[#1F2E40] text-amber-400 border-amber-500/80 ring-1 ring-amber-500/30 font-semibold shadow-sm'
               : 'bg-[#1A212E] hover:bg-[#222B3D] text-slate-400 hover:text-slate-200 border-[#2B3547]'
           }`}
         >
           <Scissors className="w-4 h-4" />
+          <span className="ml-1 text-xs">다각형</span>
         </button>
 
         {/* Tool 5: Brush Mask */}
         <button
           onClick={() => setActiveTool('brush')}
           title="브러시 마스크 (Brush - 5)"
-          className={`p-2 rounded border transition-all cursor-pointer ${
+          className={`flex items-center px-2 py-1.5 rounded border transition-all cursor-pointer ${
             activeTool === 'brush'
               ? 'bg-[#1F2E40] text-emerald-400 border-emerald-500/80 ring-1 ring-emerald-500/30 font-semibold shadow-sm'
               : 'bg-[#1A212E] hover:bg-[#222B3D] text-slate-400 hover:text-slate-200 border-[#2B3547]'
           }`}
         >
           <Paintbrush className="w-4 h-4" />
+          <span className="ml-1 text-xs">브러시</span>
         </button>
 
         {/* Tool 6: Eraser */}
         <button
           onClick={() => setActiveTool('eraser')}
           title="마스크 지우개 (Eraser - 6)"
-          className={`p-2 rounded border transition-all cursor-pointer ${
+          className={`flex items-center px-2 py-1.5 rounded border transition-all cursor-pointer ${
             activeTool === 'eraser'
               ? 'bg-rose-950/60 text-rose-300 border-rose-600/80 ring-1 ring-rose-500/30 font-semibold shadow-sm'
               : 'bg-[#1A212E] hover:bg-[#222B3D] text-slate-400 hover:text-slate-200 border-[#2B3547]'
           }`}
         >
           <Eraser className="w-4 h-4" />
+          <span className="ml-1 text-xs">지우개</span>
         </button>
 
         <div className="w-[1px] h-5 bg-[#2B3547] mx-1" />
@@ -284,6 +301,17 @@ export const LabelingToolbar: React.FC = () => {
           </div>
         )}
 
+        {/* The auto selector found no region at the click and left a small box: say so until the box is gone. */}
+        {autoSelectFallbackPresent && (
+          <span
+            role="status"
+            data-testid="auto-select-fallback-notice"
+            className="ml-2 pl-2 border-l border-[#2B3547] text-xs text-amber-300 whitespace-nowrap"
+          >
+            영역을 찾지 못해 작은 상자를 넣었습니다. 지우거나 직접 그리세요.
+          </span>
+        )}
+
         {/* Brush Radius Slider */}
         {(activeTool === 'brush' || activeTool === 'eraser') && (
           <div className="flex items-center space-x-2 ml-2 pl-2 border-l border-[#2B3547] text-xs">
@@ -308,7 +336,7 @@ export const LabelingToolbar: React.FC = () => {
           >
             {maskVisible ? <Eye className="w-3.5 h-3.5 text-cyan-400" /> : <EyeOff className="w-3.5 h-3.5 text-slate-500" />}
           </button>
-          <span className="text-[11px] font-mono tabular-nums text-slate-400">Mask:</span>
+          <span className="text-[11px] font-mono tabular-nums text-slate-400">마스크:</span>
           <input
             type="range"
             min="0"
@@ -326,7 +354,7 @@ export const LabelingToolbar: React.FC = () => {
       </div>
 
       {/* Normal Part (OK) 1-Click Fast Tagging */}
-      <div className="flex items-center space-x-2">
+      <div className={classification ? 'hidden' : 'flex items-center space-x-2'}>
         <button
           onClick={() => markNormal(!isNormalMarked)}
           disabled={annotationLoadStatus !== 'ready'}
@@ -337,7 +365,7 @@ export const LabelingToolbar: React.FC = () => {
           }`}
         >
           <CheckCircle2 className={`w-4 h-4 ${isNormalMarked ? 'text-[#10B981]' : 'text-slate-400'}`} />
-          <span>{isNormalMarked ? 'Normal (OK) Part' : 'Mark as Normal (OK)'}</span>
+          <span>{isNormalMarked ? '정상(OK) 부품' : '정상(OK)으로 표시'}</span>
         </button>
       </div>
 
@@ -347,7 +375,7 @@ export const LabelingToolbar: React.FC = () => {
         <button
           onClick={undo}
           disabled={annotationLoadStatus !== 'ready' || history.length === 0}
-          title="Undo (Ctrl+Z)"
+          title="실행 취소 (Ctrl+Z)"
           className="p-1.5 rounded bg-[#1A212E] hover:bg-[#222B3D] disabled:opacity-30 text-slate-300 border border-[#2B3547] cursor-pointer"
         >
           <CornerUpLeft className="w-4 h-4" />
@@ -355,7 +383,7 @@ export const LabelingToolbar: React.FC = () => {
         <button
           onClick={redo}
           disabled={annotationLoadStatus !== 'ready' || future.length === 0}
-          title="Redo (Ctrl+Y)"
+          title="다시 실행 (Ctrl+Y)"
           className="p-1.5 rounded bg-[#1A212E] hover:bg-[#222B3D] disabled:opacity-30 text-slate-300 border border-[#2B3547] cursor-pointer"
         >
           <CornerUpRight className="w-4 h-4" />
@@ -366,7 +394,7 @@ export const LabelingToolbar: React.FC = () => {
         {/* Zoom */}
         <button
           onClick={() => handleZoom(0.85)}
-          title="Zoom Out"
+          title="축소"
           className="p-1.5 rounded bg-[#1A212E] hover:bg-[#222B3D] text-slate-400 border border-[#2B3547] cursor-pointer"
         >
           <ZoomOut className="w-4 h-4" />
@@ -376,7 +404,7 @@ export const LabelingToolbar: React.FC = () => {
         </span>
         <button
           onClick={() => handleZoom(1.15)}
-          title="Zoom In"
+          title="확대"
           className="p-1.5 rounded bg-[#1A212E] hover:bg-[#222B3D] text-slate-400 border border-[#2B3547] cursor-pointer"
         >
           <ZoomIn className="w-4 h-4" />
@@ -384,14 +412,14 @@ export const LabelingToolbar: React.FC = () => {
 
         <button
           onClick={handleFit}
-          title="Fit to Screen (F)"
+          title="화면 맞춤 (F)"
           className="p-1.5 rounded bg-[#1A212E] hover:bg-[#222B3D] text-slate-400 border border-[#2B3547] cursor-pointer"
         >
           <Maximize2 className="w-4 h-4" />
         </button>
         <button
           onClick={handle100}
-          title="100% Zoom (1:1)"
+          title="실제 크기 (1:1)"
           className="p-1.5 rounded bg-[#1A212E] hover:bg-[#222B3D] text-slate-400 text-xs font-mono tabular-nums border border-[#2B3547] cursor-pointer"
         >
           1:1
@@ -403,8 +431,8 @@ export const LabelingToolbar: React.FC = () => {
         <button
           data-testid="annotation-save-button"
           onClick={() => saveAnnotations()}
-          disabled={isSaving || annotationLoadStatus !== 'ready'}
-          title={annotationLoadStatus !== 'ready' ? '기존 라벨 조회가 완료되어야 저장할 수 있습니다.' : undefined}
+          disabled={isSaving || annotationLoadStatus !== 'ready' || leasePending}
+          title={annotationLoadStatus !== 'ready' ? '기존 라벨 조회가 완료되어야 저장할 수 있습니다.' : leasePending ? '편집 권한을 받는 중입니다. 받으면 저장할 수 있습니다.' : undefined}
           className={`flex items-center space-x-1.5 px-3 py-1.5 rounded text-xs font-medium transition-colors border cursor-pointer ${
             isDirty
               ? 'bg-cyan-600 hover:bg-cyan-500 text-white border-cyan-400 shadow-sm'
@@ -412,7 +440,7 @@ export const LabelingToolbar: React.FC = () => {
           }`}
         >
           <Save className="w-3.5 h-3.5" />
-          <span>{isSaving ? 'Saving...' : saveMessage || (isDirty ? 'Save Changes' : 'Saved')}</span>
+          <span>{isSaving ? '저장 중…' : saveMessage || (isDirty ? '변경 저장' : '저장됨')}</span>
         </button>
       </div>
     </div>

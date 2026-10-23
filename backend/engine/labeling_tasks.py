@@ -57,7 +57,17 @@ def start(project, kind, payload, worker):
                'created_at': time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime()), **payload}
         cancel = threading.Event()
         def run():
+            # The worker runs outside the request, so it gets the project's own annotation, split and project roots (as
+            # the trained-model batch does): without them a project with a saved split read another split manifest, its
+            # dataset fingerprint differed from the one taken at start, and the batch failed on its first image.
+            from backend.engine.annotation_storage import (set_request_annotation_root, reset_request_annotation_root,
+                                                           set_request_project_root, reset_request_project_root)
+            from backend.engine.dataset_loaders import set_request_split_root, reset_request_split_root
+            tokens = []
             try:
+                if project.get('annotations_dir'): tokens.append((reset_request_annotation_root, set_request_annotation_root(Path(project['annotations_dir']))))
+                if project.get('dataset_dir'): tokens.append((reset_request_split_root, set_request_split_root(Path(project['dataset_dir']) / 'splits')))
+                if project.get('project_dir'): tokens.append((reset_request_project_root, set_request_project_root(Path(project['project_dir']))))
                 check_cancel(cancel); job['status'] = 'running'; write(project, job)
                 worker(job, cancel)
                 check_cancel(cancel); job['status'] = 'completed'
@@ -66,6 +76,7 @@ def start(project, kind, payload, worker):
             except Exception as exc:
                 job.update(status='failed', error=str(exc))
             finally:
+                for reset, token in reversed(tokens): reset(token)
                 job['finished_at'] = time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime())
                 with _LOCK:
                     write(project, job)

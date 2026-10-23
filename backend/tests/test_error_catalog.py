@@ -34,11 +34,12 @@ class TestErrorCatalogRegistration:
         "ERR_006",
         "ERR_007",
         "ERR_008",
+        "ERR_009",
     ]
 
-    def test_all_eight_codes_present(self):
+    def test_all_nine_codes_present(self):
         catalog = get_all_errors()
-        assert len(catalog) == 8, f"Expected exactly 8 error codes, found {len(catalog)}"
+        assert len(catalog) == 10, f"Expected exactly 10 error codes, found {len(catalog)}"
         for code in self.EXPECTED_CODES:
             assert code in catalog, f"Missing expected error code: {code}"
 

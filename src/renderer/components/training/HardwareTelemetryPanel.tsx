@@ -122,11 +122,11 @@ export const HardwareTelemetryPanel: React.FC<HardwareTelemetryPanelProps> = ({
       <div className="space-y-2 pb-3 border-b border-[#1E293B]">
         <div className="flex items-center justify-between">
           <span className="font-mono text-[11px] font-bold text-slate-200 tracking-wider">
-            HARDWARE TELEMETRY
+            장치 사용량
           </span>
           <span className="inline-flex items-center space-x-1 px-1.5 py-0.5 rounded-[2px] bg-[#0B0E14] border border-[#2B3547] text-[9px] font-mono tabular-nums text-emerald-400 font-bold">
             <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-            <span>10.0 Hz STREAM LOCKED</span>
+            <span>실시간</span>
           </span>
         </div>
 
@@ -147,7 +147,7 @@ export const HardwareTelemetryPanel: React.FC<HardwareTelemetryPanelProps> = ({
         {/* VRAM / Unified Memory */}
         <Discrete16SegmentMeter
           percent={vramPercent}
-          label="VRAM / UNIFIED MEMORY"
+          label="GPU 메모리"
           readout={`${usedGb} GB / ${totalGbEstimate.toFixed(2)} GB`}
           subtext={hardware.gpu_name || 'Hardware Accelerator'}
           icon={<HardDrive className="w-3.5 h-3.5 text-blue-400" />}
@@ -156,16 +156,16 @@ export const HardwareTelemetryPanel: React.FC<HardwareTelemetryPanelProps> = ({
         {/* Host CPU Utilization */}
         <Discrete16SegmentMeter
           percent={hardware.cpu_percent}
-          label="HOST CPU LOAD"
+          label="CPU 사용률"
           readout={`${hardware.cpu_percent.toFixed(1)}%`}
-          subtext="Worker Threads Allocation"
+          subtext="작업 스레드"
           icon={<Cpu className="w-3.5 h-3.5 text-emerald-400" />}
         />
 
         {/* System RAM Allocation */}
         <Discrete16SegmentMeter
           percent={hardware.memory_percent}
-          label="SYSTEM RAM ALLOCATION"
+          label="메모리 사용률"
           readout={`${hardware.memory_percent.toFixed(1)}%`}
           subtext="System Memory & Page Cache"
           icon={<Zap className="w-3.5 h-3.5 text-amber-400" />}
@@ -175,15 +175,15 @@ export const HardwareTelemetryPanel: React.FC<HardwareTelemetryPanelProps> = ({
       {/* Bottom Diagnostic Terminal Card */}
       <div className="p-2.5 bg-[#0B0E14] border border-[#1E293B] rounded-[3px] text-[10px] font-mono text-slate-400 space-y-1">
         <div className="flex justify-between">
-          <span className="text-slate-500">ACCELERATOR:</span>
+          <span className="text-slate-500">가속 장치:</span>
           <span className="text-slate-200 font-bold uppercase">{hardware.device_type}</span>
         </div>
         <div className="flex justify-between">
-          <span className="text-slate-500">STREAM PROTOCOL:</span>
+          <span className="text-slate-500">전송:</span>
           <span className="text-emerald-400 font-bold">WS-JSON @ 10-50Hz</span>
         </div>
         <div className="flex justify-between">
-          <span className="text-slate-500">PRECISION MODE:</span>
+          <span className="text-slate-500">연산 정밀도:</span>
           <span className="text-slate-200 font-bold">AMP FP16 / FP32 Safe</span>
         </div>
       </div>

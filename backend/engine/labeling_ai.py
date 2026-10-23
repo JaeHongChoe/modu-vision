@@ -100,8 +100,10 @@ def auto_select_contour(
             if valid_contours:
                 selected_contour = max(valid_contours, key=cv2.contourArea)
 
-    # Fallback if still None: synthetic box around seed
-    if selected_contour is None:
+    # Fallback if still None: synthetic box around seed. The box is machine-invented, so the result says so and the
+    # caller can show it as a fallback instead of a found outline.
+    fallback = selected_contour is None
+    if fallback:
         r = 12
         fallback_pts = np.array(
             [[ix - r, iy - r], [ix + r, iy - r], [ix + r, iy + r], [ix - r, iy + r]],
@@ -125,6 +127,7 @@ def auto_select_contour(
         "bbox": [float(bx), float(by), float(bx + bw), float(by + bh)],
         "area": area,
         "seed_point": [float(seed_x), float(seed_y)],
+        "fallback": fallback,
     }
 
 

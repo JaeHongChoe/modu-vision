@@ -86,9 +86,27 @@ jobs:
               backend/tests/test_offline_license_wheels.py
               backend/tests/test_flow_batch_cli.py
               backend/tests/test_product_delivery.py
+              backend/tests/test_flow_evaluation_folder_split.py
+              backend/tests/test_flow_truth_from_labels.py
+              backend/tests/test_anomaly_name_prefixes.py
+              backend/tests/test_anomaly_flat_name_layout.py
+              backend/tests/test_field_export_layouts.py
+              backend/tests/test_project_activation_race.py
+              backend/tests/test_managed_service_first_read.py
+              backend/tests/test_beginner_errors_korean.py
+              backend/tests/test_workflow_impact.py
+              backend/tests/test_audit_data_input.py
+              backend/tests/test_audit_class_overrides.py
+              backend/tests/test_audit_decision_threshold.py
+              backend/tests/test_audit_data_changes.py
+              backend/tests/test_audit_training_setup.py
+              backend/tests/test_audit_inspection_csv.py
+              backend/tests/test_audit_rotated_reuse.py
+              backend/tests/test_audit_flow_score_parity.py
               scripts/tests/test_publication_audit.py
               backend/tests/test_sdk_cancellation.py::test_interruption_reaps_the_actual_owned_child
               backend/tests/test_anomaly_folder_case.py
+              backend/tests/test_class_rename.py
           - lane: workers
             tests: >-
               backend/tests/test_service_s0_06.py

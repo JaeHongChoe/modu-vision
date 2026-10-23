@@ -59,4 +59,4 @@ def test_other_provider_rejects_exclusion_instead_of_ignoring_it(workspace,monke
     client,project,source=workspace
     monkeypatch.setattr(routes,'template_candidates',lambda *args:pytest.fail('unsupported exclusion executed'))
     response=client.post('/api/label-candidates/generate',json={'backend':'template_match','image_path':str(source/'target.png'),'exemplar_path':str(source/'exemplar.png'),'exclude_regions':[[0,0,10,10]]})
-    assert response.status_code==422 and 'foundation' in response.json()['detail']
+    assert response.status_code==422 and '제외 영역은 SAM2' in response.json()['detail']

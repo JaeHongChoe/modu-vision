@@ -4,11 +4,14 @@ import { useProjectStore } from '../../stores/useProjectStore';
 import { useDatasetStore } from '../../stores/useDatasetStore';
 import { useTrainingStore } from '../../stores/useTrainingStore';
 import { useComputeStore } from '../../stores/useComputeStore';
+import { useEvaluationStore } from '../../stores/useEvaluationStore';
 import { useFlowchartStore } from '../../stores/useFlowchartStore';
+import { flowEvaluation } from '../../services/flowEvaluation';
 import { runBatchInspection, summarizeBatch } from '../inference/batchInspection';
 import { DEMO_PROJECT_NAME, DEMO_TRAINING, runDemo, type DemoDeps } from './runDemo';
 import { EXAMPLE_NOTICE, demoStepRows, demoSummary, nextExampleName } from './firstRun';
 import { useFirstRunStore } from './firstRunStore';
+import { focusWorkflowTarget } from '../wizard/workflowReadiness';
 
 const STATUS_MARK: Record<string, string> = { pending: '○', running: '…', done: '✓', failed: '⚠' };
 
@@ -21,7 +24,7 @@ function appDeps(): DemoDeps {
       let team = true;
       try { team = getApiPersistenceIdentity() !== 'local'; } catch { /* an unreadable team address counts as a team connection */ }
       if (team) return '예제는 개인 모드의 이 컴퓨터에서만 만듭니다. 팀 서버 연결을 끊고 다시 시작하세요.';
-      if (useComputeStore.getState().selectedProfileId) return '예제는 이 컴퓨터의 CPU에서 실행합니다. 상단 Compute에서 This computer를 선택한 뒤 다시 시작하세요.';
+      if (useComputeStore.getState().selectedProfileId) return '예제는 이 컴퓨터의 CPU에서 실행합니다. 상단 "실행 위치"에서 "이 컴퓨터"를 선택한 뒤 다시 시작하세요.';
       return null;
     },
     createProject: data => project().createProject(data),
@@ -31,6 +34,10 @@ function appDeps(): DemoDeps {
       await useDatasetStore.getState().importFolder(folder, 'classification');
       const data = useDatasetStore.getState();
       return { error: data.importError || data.sourceSaveError || null, folder: data.folderPath || null };
+    },
+    recognised: () => {
+      const data = useDatasetStore.getState();
+      return { task: project().task, splitState: data.splitState ?? null, classes: data.classes || {} };
     },
     markExample: async () => {
       const marked = await request<{ id: string; example?: unknown }>('/api/onboarding/example-project', { method: 'POST' });
@@ -57,12 +64,22 @@ function appDeps(): DemoDeps {
       const training = useTrainingStore.getState();
       if (training.jobId === jobId) await training.refreshCurrentJob();
     },
+    evaluateModel: async jobId => {
+      await useEvaluationStore.getState().loadEvaluation(jobId, { folderPath: useDatasetStore.getState().folderPath, task: 'classification' });
+      const evaluation = useEvaluationStore.getState();
+      return { samples: evaluation.testPredictions.length, error: evaluation.errorMessage };
+    },
     saveFlow: async (jobId, folder) => {
       const pipeline = await api.flowchart.getSingleSegmentationTemplate(jobId, 'classification');
       await api.flowchart.verifyModels({ source_dataset_path: folder, models: [{ job_id: jobId, task: 'classification' }] });
       const saved = await api.flowchart.savePipeline(pipeline, 'classification', folder);
       await useFlowchartStore.getState().loadPipeline(true, 'classification', folder);
       return saved;
+    },
+    evaluateFlow: async versionId => {
+      const cohort = await flowEvaluation.freeze(versionId, '예제 시험 이미지');
+      const evaluated = await flowEvaluation.run(versionId, cohort.cohort_id);
+      return { evaluation_id: evaluated.evaluation_id, known: evaluated.coverage.known, escapes: evaluated.escapes.length, overkills: evaluated.overkills.length };
     },
     inspect: async folder => {
       const projectId = project().project?.id;
@@ -105,18 +122,26 @@ export function FirstRunStudio({ onClose, onDismiss }: { onClose: () => void; on
   const openExample = async (projectDir: string) => {
     if (await useProjectStore.getState().openProject(projectDir)) setStep(6);
   };
-  const setStep = (step: 1 | 3 | 6) => { onClose(); void useProjectStore.getState().setStep(step); };
+  const setStep = (step: 1 | 2 | 3 | 6) => { onClose(); void useProjectStore.getState().setStep(step); };
   return <div className="space-y-5 text-sm text-slate-200">
     <section aria-labelledby="first-run-order">
       <h3 id="first-run-order" className="font-semibold text-slate-100">처음 프로젝트를 만드는 순서</h3>
+      {/* The first-project path (product direction 5.1 #2), the same order the example below walks and 자동 진행 follows. */}
       <ol className="mt-2 list-decimal space-y-2 pl-5 text-slate-300">
-        <li><strong className="text-slate-100">작업 방식</strong> · 개인 모드는 이 컴퓨터에서 바로 시작합니다. 팀 서버를 쓰려면 상단의 서버 관리에서 서버를 추가하고 연결을 확인하세요.</li>
-        <li><strong className="text-slate-100">이 컴퓨터·서버 사전 점검</strong> · 3단계 모델 학습 허브의 이 컴퓨터 지원 상태에서 실제 사전 점검을 실행할 수 있습니다.
-          <button type="button" className="workspace-button ml-2" disabled={running} onClick={() => setStep(3)}>3단계로 이동</button></li>
-        <li><strong className="text-slate-100">프로젝트 만들기</strong> · 상단 프로젝트 이름 옆의 프로젝트 관리에서 새 프로젝트를 만듭니다.</li>
-        <li><strong className="text-slate-100">데이터 가져오기</strong> · 1단계 데이터 관리에서 데이터 폴더를 엽니다.
+        <li><strong className="text-slate-100">작업 방식</strong> · 개인 모드는 이 컴퓨터에서 바로 시작합니다. 팀 서버는 상단 더 보기의 서버 관리에서 추가합니다.</li>
+        <li><strong className="text-slate-100">프로젝트 만들기</strong> · 상단 프로젝트 이름을 눌러 새 프로젝트를 만듭니다.
+          <button type="button" className="workspace-button ml-2" disabled={running} onClick={() => { onClose(); focusWorkflowTarget('workflow-project'); }}>프로젝트 관리 열기</button></li>
+        <li><strong className="text-slate-100">이미지 폴더 열기</strong> · 1단계에서 폴더를 열면 구조와 작업 종류를 알아보고 분할 비율을 추천합니다. '이 비율로 나누기'로 저장합니다.
           <button type="button" className="workspace-button ml-2" disabled={running} onClick={() => setStep(1)}>1단계로 이동</button></li>
+        <li><strong className="text-slate-100">라벨 달기·초안 검토</strong> · 분류는 폴더 이름이 정답입니다. 검출·분할은 20장 정도 직접 그리거나, 모델이 만든 초안을 보고 채택합니다.
+          <button type="button" className="workspace-button ml-2" disabled={running} onClick={() => setStep(2)}>2단계로 이동</button></li>
+        <li><strong className="text-slate-100">학습 시작</strong> · 3단계의 추천 설정 그대로 학습을 시작합니다.
+          <button type="button" className="workspace-button ml-2" disabled={running} onClick={() => setStep(3)}>3단계로 이동</button></li>
+        <li><strong className="text-slate-100">평가</strong> · 4단계에서 정확도 범위, 놓친 불량, 잘못 잡은 정상을 확인합니다.</li>
+        <li><strong className="text-slate-100">검사 흐름 저장</strong> · 5단계에서 모델 하나로 된 기본 흐름을 저장하고 평가합니다.</li>
+        <li><strong className="text-slate-100">검사 실행</strong> · 6단계에서 검사하고 결과를 확인합니다.</li>
       </ol>
+      <p className="mt-2 text-slate-400">폴더를 연 뒤 하단의 '자동 진행'을 누르면 사람이 할 곳(정답 라벨, 초안 채택, 정답 확인, 승인)까지 이 순서로 이어서 진행합니다.</p>
     </section>
     <section aria-labelledby="first-run-example" className="rounded border border-slate-600 p-3">
       <h3 id="first-run-example" className="font-semibold text-slate-100">예제로 먼저 해보기</h3>
@@ -133,7 +158,7 @@ export function FirstRunStudio({ onClose, onDismiss }: { onClose: () => void; on
       {demo?.state === 'failed' && <p role="alert" className="mt-2 text-amber-300">예제를 만들지 못했습니다: {demo.error}</p>}
       {demo?.state === 'ready' && demo.result && <div role="status" className="mt-3 space-y-2">
         <p className="text-emerald-300">{demoSummary(demo.result)}</p>
-        <button type="button" className="workspace-button workspace-button--primary" onClick={() => setStep(6)}>검사 결과 보기 (6단계)</button>
+        <button type="button" className="workspace-button workspace-button--primary" onClick={() => { setStep(6); focusWorkflowTarget('workflow-inspection-history'); }}>검사 결과 보기 (6단계)</button>
       </div>}
     </section>
     <div className="flex justify-end gap-2">

@@ -37,10 +37,17 @@ class ManagedService:
         self.releases.mkdir(exist_ok=True)
         self.config_path=self.root/'service.json'
         if not self.config_path.exists():
-            with runtime_state_lock(self.root):
-                if not self.config_path.exists():
-                    with socket.socket() as probe:probe.bind(('127.0.0.1',0));port=probe.getsockname()[1]
-                    self.save({'port':port,'token':secrets.token_urlsafe(32),'pid':None})
+            try:
+                with runtime_state_lock(self.root):
+                    if not self.config_path.exists():
+                        with socket.socket() as probe:probe.bind(('127.0.0.1',0));port=probe.getsockname()[1]
+                        self.save({'port':port,'token':secrets.token_urlsafe(32),'pid':None})
+            except ValueError:
+                # A new project's first screens read the service and its capture groups at once: the request that
+                # lost the lock waits for the one writing this configuration instead of failing.
+                deadline=time.monotonic()+5
+                while not self.config_path.exists() and time.monotonic()<deadline:time.sleep(0.02)
+                if not self.config_path.exists():raise
         self.config=json.loads(self.config_path.read_text(encoding='utf-8'))
         self.ledger=DeploymentLedger(self.root)
     def save(self,config):

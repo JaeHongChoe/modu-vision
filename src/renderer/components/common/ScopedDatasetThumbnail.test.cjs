@@ -5,7 +5,7 @@ const tick=()=>new Promise(setImmediate),deferred=()=>{let resolve;const promise
 async function until(ready){const deadline=Date.now()+2000;while(!ready()){assert.ok(Date.now()<deadline,'owned source boundary did not settle');await tick();}}
 function load(relative,dependencies={}) {
  const file=path.resolve(__dirname,relative),m=new Module(file,module);m.filename=file;m.paths=Module._nodeModulePaths(path.dirname(file));const original=m.require.bind(m);
- m.require=name=>Object.hasOwn(dependencies,name)?dependencies[name]:original(name);
+ m.require=name=>{if(Object.hasOwn(dependencies,name))return dependencies[name];const local=path.resolve(path.dirname(file),name+'.ts');return name.startsWith('.')&&fs.existsSync(local)?load(path.relative(__dirname,local)):original(name);};
  m._compile(ts.transpileModule(fs.readFileSync(file,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022,jsx:ts.JsxEmit.ReactJSX,esModuleInterop:true}}).outputText,file);return m.exports;
 }
 const origin='https://thumbnail.invalid',B={workspace_id:'workspace',project_id:'B',actor_id:'actor',mode:'team'},A={...B,project_id:'A'};
@@ -17,7 +17,7 @@ function fixture(t,{local=false,unselected=false,noObserver=false,responseContex
  const authority=dataset.readDatasetAuthority(),context=api.getProjectContext(),pending=deferred(),calls=[],observers=[],allocated=[],revoked=[],published=[],errors=[],lifetimes=[];
  const original={fetch:global.fetch,observer:global.IntersectionObserver,create:URL.createObjectURL,revoke:URL.revokeObjectURL};
  class Observer {
-  constructor(callback){this.callback=callback;this.disconnected=false;observers.push(this);}
+  constructor(callback,options){this.callback=callback;this.options=options;this.disconnected=false;observers.push(this);}
   observe(target){this.target=target;}
   disconnect(){this.disconnected=true;}
   deliver(visible=true){this.callback([{target:this.target,isIntersecting:visible}],this);}
@@ -97,4 +97,25 @@ test('StrictMode-style cleanup then new lifetime neither reuses a revoked URL no
  const f=fixture(t),first=f.make();first.observe({});const old=f.observers[0];old.deliver();await until(()=>f.published.length===1);first.retire();
  const second=f.make();second.observe({});old.deliver();assert.equal(f.calls.length,1);f.observers[1].deliver();await until(()=>f.published.length===2);
  assert.equal(f.calls.length,2);assert.equal(f.published.length,2);assert.notEqual(f.published[0],f.published[1]);second.retire();assert.deepEqual(f.revoked,f.allocated);
+});
+test('a missing or non-string thumbnail address observes nothing and never throws (the app must not blank)',async t=>{
+ const f=fixture(t,{headersFromMain:true});await f.switchMain();
+ for(const path of [undefined,null,42,{}]){
+  const read=f.make({path});assert.doesNotThrow(()=>read.observe({}));
+ }
+ assert.equal(f.observers.length,0,'no observer is attached for an address that is not a thumbnail path');
+ assert.equal(f.calls.length,0);assert.equal(f.published.length,0);
+});
+
+test('the read-ahead margin is measured on the gallery scroll area, so clipped rows below the fold still load',async t=>{
+ const f=fixture(t,{headersFromMain:true});await f.switchMain();
+ const previous=globalThis.getComputedStyle;globalThis.getComputedStyle=node=>({overflowY:node.overflowY||'visible'});
+ t.after(()=>{if(previous)globalThis.getComputedStyle=previous;else delete globalThis.getComputedStyle;});
+ const gallery={overflowY:'auto',parentElement:{overflowY:'hidden',parentElement:null}};
+ const element={parentElement:{overflowY:'visible',parentElement:gallery}};
+ f.make().observe(element);
+ assert.equal(f.observers[0].options.root,gallery,'the nearest vertically scrolling ancestor is the root');
+ assert.equal(f.observers[0].options.rootMargin,'800px 0px');
+ f.make().observe({parentElement:{overflowY:'visible',parentElement:null}});
+ assert.equal(f.observers[1].options.root,null,'no scrolling ancestor falls back to the window');
 });

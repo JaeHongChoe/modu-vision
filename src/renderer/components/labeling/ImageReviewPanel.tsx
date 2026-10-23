@@ -1,12 +1,17 @@
 import React, { useEffect, useState } from 'react';
 import { useAnnotationStore } from '../../stores/useAnnotationStore';
 import { useProjectStore } from '../../stores/useProjectStore';
+import { useDraftReviewStore } from '../../stores/useDraftReviewStore';
 import { datasetWorkflow, workflowError, type ReviewState } from '../../services/datasetWorkflow';
 const states: Record<ReviewState,string> = { unworked: '미작업', needs_review: '검토 필요', approved: '승인됨' };
 export const ImageReviewPanel: React.FC = () => {
   const { metadata, currentImage, isDirty, isSaving, reviewerName, setReviewerName, setMetadata, loadAnnotationsForCurrent, teamReviewEnabled } = useAnnotationStore();
   const projectDir = useProjectStore(s => s.projectDir);
   const [open,setOpen] = useState(false); const [busy,setBusy] = useState(false); const [error,setError] = useState('');
+  // Step 2's right-side popovers and this sheet open one at a time (useDraftReviewStore.sidePanel).
+  const sidePanel = useDraftReviewStore((state) => state.sidePanel);
+  useEffect(() => { if (open) useDraftReviewStore.getState().showSidePanel('review'); }, [open]);
+  useEffect(() => { if (sidePanel && sidePanel !== 'review') setOpen(false); }, [sidePanel]);
   const [product,setProduct] = useState(''); const [lot,setLot] = useState(''); const [group,setGroup] = useState(''); const [tags,setTags] = useState('');
   useEffect(() => { setProduct(metadata?.product || '');setLot(metadata?.lot || '');setGroup(metadata?.group || '');setTags(metadata?.tags.join(', ') || '');setError(''); },[metadata?.revision,currentImage?.file_path,projectDir]);
   const save = async (state?: ReviewState) => {
@@ -17,7 +22,8 @@ export const ImageReviewPanel: React.FC = () => {
       if (useProjectStore.getState().projectDir === projectDir && useAnnotationStore.getState().currentImage?.file_path === path) setMetadata(next);
     } catch (cause) { setError(workflowError(cause)); } finally {setBusy(false);}
   };
-  return <div className="relative z-[65] shrink-0 border-b border-slate-700 bg-[#101722] text-xs">
+  // The open sheet drops over the bars below it (class picker, class bar, 모델 보조 at z-70), so it stacks above them.
+  return <div className={`relative ${open ? 'z-[75]' : 'z-[65]'} shrink-0 border-b border-slate-700 bg-[#101722] text-xs`}>
     <div className="flex items-center gap-3 px-4 py-2"><button type="button" onClick={()=>setOpen(!open)} aria-expanded={open} className="rounded border border-slate-600 px-2 py-1 font-semibold text-cyan-200">이미지 정보·검토</button>
       <span className={metadata?.workflow_state==='approved'?'text-emerald-300':'text-amber-300'}>{metadata ? states[metadata.workflow_state] : '이미지 선택'}</span>
       {metadata?.reviewer && <span>검토자 {metadata.reviewer}</span>}<span className="truncate text-slate-500">{metadata?.product} {metadata?.lot} {metadata?.group}</span>

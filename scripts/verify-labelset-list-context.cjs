@@ -49,7 +49,8 @@ function harness() {
   const originalRequire = moduleUnderTest.require.bind(moduleUnderTest);
   moduleUnderTest.require = (name) => {
     if (name === 'react') return react;
-    if (name === 'lucide-react') return { CopyPlus() {}, Layers3() {}, RefreshCw() {} };
+    if (name === 'lucide-react') return { CopyPlus() {}, Layers3() {}, RefreshCw() {}, Tags() {} };
+    if (name === './ClassRenameDialog') return { ClassRenameDialog: () => null, DIALOG_TITLE: '클래스 이름 변경·병합' };
     if (name === '../../stores/useProjectStore') return { useProjectStore };
     if (name === '../../services/api') return { api: { project: { listLabelsets() {
       return new Promise((resolve, reject) => { requests.push({ resolve, reject }); });
@@ -59,7 +60,7 @@ function harness() {
   moduleUnderTest._compile(compiled, source);
   const render = () => {
     cursor = 0;
-    const tree = moduleUnderTest.exports.LabelSetBar();
+    const tree = moduleUnderTest.exports.LabelSetBar({});
     while (effects.length) effects.shift()();
     return tree;
   };

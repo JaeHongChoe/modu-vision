@@ -80,7 +80,7 @@ function fixture(t, {delayInitial = false, refuseSave = false, delayReadback = f
     }
     if (call.path === '/api/flowchart/models/verify' && method === 'POST') return response({verified_job_ids: ['job_current']});
     if (call.path === '/api/flowchart/pipeline' && method === 'POST') {
-      if (refuseSave) return response({detail: 'The active flow changed since this one was opened; reopen it before saving.'}, 409);
+      if (refuseSave) return response({detail: '이 플로우를 연 뒤 적용 중인 플로우가 바뀌었습니다. 플로우를 다시 연 뒤 저장하세요.'}, 409);
       stored = {...structuredClone(call.body), execution_config: {max_workers: 1, device_slots: 1},
         nodes: call.body.nodes.map(node => ({...structuredClone(node), type: 'custom',
           data: {...structuredClone(node.data), crop_padding: 10, params: node.data.params || {}}}))};
@@ -157,7 +157,7 @@ test('a delayed opening list cannot replace the new saved/active header after sa
   f.initial.resolve(oldList); await f.settle();
   assert.equal(f.identity().selectedVersion, B, 'late pre-save rows cannot select the prior version');
   assert.equal(f.identity().activeVersion, B, 'the header retains the fresh active readback');
-  assert.match(f.header(), new RegExp(`저장\\s+${B}.*활성\\s+${B}`));
+  assert.match(f.header(), new RegExp(`저장\\s+v${B.slice(0,8)}.*활성\\s+v${B.slice(0,8)}`));
   assert.equal(walk(f.tree()).find(node => node.type === 'FlowWorkspacePanel').props.models[0].job_id, 'job_current',
     'the still-current model catalog is retained independently of stale version rows');
 });

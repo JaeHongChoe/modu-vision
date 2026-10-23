@@ -1,5 +1,7 @@
 """Finite-data spawn worker kept alive for process-tree cancellation controls."""
 import json
+import subprocess
+import sys
 import time
 import torch
 
@@ -9,7 +11,11 @@ def main():
         batch_size=2,num_workers=2,multiprocessing_context='spawn',persistent_workers=True,prefetch_factor=1)
     iterator=iter(loader)
     values=next(iterator)[0].tolist()
-    print(json.dumps({'ready':True,'values':values,'workers':[p.pid for p in iterator._workers]}),flush=True)
+    # A marked process that never watches its parent: DataLoader workers end themselves within about 5 s of losing
+    # theirs, so only this one shows a stop that spared everything but the leader.
+    marked=subprocess.Popen([sys.executable,'-c','import time; time.sleep(300)'],
+        **({'creationflags':subprocess.CREATE_NO_WINDOW} if sys.platform=='win32' else {}))
+    print(json.dumps({'ready':True,'values':values,'workers':[p.pid for p in iterator._workers],'marked':marked.pid}),flush=True)
     time.sleep(180)
 
 if __name__=='__main__':

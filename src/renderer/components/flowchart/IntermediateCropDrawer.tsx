@@ -18,6 +18,7 @@ import {
 import { useFlowchartStore } from '../../stores/useFlowchartStore';
 import type { FlowchartCrop } from '../../types';
 import {inspectionPreview} from '../inference/inspectionImage';
+import { cropLabel, stepStatusLabel } from '../../utils/plainLabels';
 
 export const IntermediateCropDrawer: React.FC<{onSelectNode?:(id:string)=>void}> = ({onSelectNode}) => {
   const { pipeline, executionResult, setInspectedCrop } = useFlowchartStore();
@@ -92,7 +93,7 @@ export const IntermediateCropDrawer: React.FC<{onSelectNode?:(id:string)=>void}>
             <div className="flex items-center space-x-2">
               <span className="w-2 h-2 rounded-full bg-[#3B82F6]" />
               <h3 className="text-xs font-bold font-mono tracking-wider text-slate-100 uppercase">
-                검사 결과 (Master Annotated View)
+                검사 결과 화면
               </h3>
             </div>
             <p className="text-[11px] text-slate-400 mt-0.5">
@@ -177,11 +178,11 @@ export const IntermediateCropDrawer: React.FC<{onSelectNode?:(id:string)=>void}>
           <table className="w-full text-left text-[11px] font-mono border-collapse">
             <thead>
               <tr className="border-b border-[#2B3547] text-slate-400 text-[10px] uppercase">
-                <th className="py-1 px-2">단계 (Stage)</th>
-                <th className="py-1 px-2">공정 모듈 (Module)</th>
-                <th className="py-1 px-2">상태 (Status)</th>
+                <th className="py-1 px-2">순서</th>
+                <th className="py-1 px-2">노드</th>
+                <th className="py-1 px-2">상태</th>
                 <th className="py-1 px-2 text-right">소요시간 (ms)</th>
-                <th className="py-1 px-2 w-36">점유율 (Takt %)</th>
+                <th className="py-1 px-2 w-36">전체 시간 중 비율</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-[#1A212E]">
@@ -208,7 +209,7 @@ export const IntermediateCropDrawer: React.FC<{onSelectNode?:(id:string)=>void}>
                         }`}
                       >
                         <span className={`w-1.5 h-1.5 rounded-full ${isStepNg || step.status === 'error' ? 'bg-[#EF4444]' : isStepPassed ? 'bg-[#10B981]' : 'bg-amber-400'}`} />
-                        <span>{step.status}{step.branch_verdict ? ` · ${step.branch_verdict}` : ''}</span>
+                        <span title={step.status}>{stepStatusLabel(step.status)}{step.branch_verdict ? ` · ${step.branch_verdict}` : ''}</span>
                       </span>
                       {step.input_count !== undefined && step.output_count !== undefined &&
                         <span className="ml-1 text-[9px] text-slate-400 tabular-nums">{step.input_count}→{step.output_count}</span>}
@@ -292,6 +293,7 @@ export const IntermediateCropDrawer: React.FC<{onSelectNode?:(id:string)=>void}>
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="부품명 / 결함 분류 검색..."
+              aria-label="부품명·결함 분류 검색"
               className="w-full bg-[#0B0E14] border border-[#2B3547] rounded pl-8 pr-2.5 py-1 text-xs font-mono text-slate-100 placeholder-slate-500 focus:outline-none focus:border-slate-400"
             />
           </div>
@@ -359,7 +361,7 @@ export const IntermediateCropDrawer: React.FC<{onSelectNode?:(id:string)=>void}>
                     {/* Top Row: Label & Verdict Badge */}
                     <div className="flex items-center justify-between">
                       <span className="font-mono font-bold text-slate-100 truncate">
-                        {crop.label}
+                        {cropLabel(crop.label)}
                       </span>
                       <span
                         className={`text-[9px] font-mono font-bold px-1.5 py-0.5 rounded ${

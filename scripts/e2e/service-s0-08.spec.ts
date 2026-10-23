@@ -68,7 +68,7 @@ async function trainAnomalyModel(page: Page, base: string, source: string): Prom
 }
 
 const flowNodes = (page: Page) => page.locator('[data-flow-node-id]');
-const inspectionNode = (page: Page) => flowNodes(page).filter({ hasText: /threshold/i }).filter({ hasNotText: /rule:/i });
+const inspectionNode = (page: Page) => flowNodes(page).filter({ hasText: /threshold|기준 점수/i }).filter({ hasNotText: /rule:|규칙:/i });  // Korean node cards (15th pass)
 const thresholdInput = (page: Page) => page.getByLabel('결함 판정 임계치');
 /** The verdict the server decided with threshold 8: a distance above 8 is NG, below is OK (at exactly 8 the rule depends on
  * the score kind, so that case is not judged). The calibrated threshold differs from 8, so a run deciding with it fails. */
@@ -99,7 +99,7 @@ test('S0-08: a model trained on the actual backend carries its calibrated thresh
   await expect(page.getByText('모델 1/1 연결')).toBeVisible();
   await expect(thresholdInput(page), 'the evaluation calibration is the flow default').toHaveValue(String(calibrated));
   await thresholdInput(page).fill('8');
-  await expect(page.getByText('결함 판정 임계치 · mahalanobis_distance')).toBeVisible();
+  await expect(page.getByText('결함 판정 기준 점수 · 마할라노비스 거리')).toBeVisible();
   const saved = page.waitForResponse(response => new URL(response.url()).pathname === '/api/flowchart/pipeline' && response.request().method() === 'POST');
   await page.getByRole('button', { name: '플로우 저장', exact: true }).click();
   await confirmFlowSave(page, 'threshold 8');

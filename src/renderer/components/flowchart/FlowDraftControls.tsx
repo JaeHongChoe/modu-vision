@@ -15,7 +15,8 @@ export function flowDraftStatus(dirty:boolean,hash:string|null,activeVersion:boo
   return '편집 초안 · 저장 전';
 }
 
-export function FlowDraftControls({blocked=false,activeVersion=false,hasSavedVersion=false}:{blocked?:boolean;activeVersion?:boolean;hasSavedVersion?:boolean}) {
+/** simple: the simple view's shared secondary button for 초안 저장 (플로우 저장 is that screen's one main action). */
+export function FlowDraftControls({blocked=false,activeVersion=false,hasSavedVersion=false,simple=false}:{blocked?:boolean;activeVersion?:boolean;hasSavedVersion?:boolean;simple?:boolean}) {
   const {pipeline,pipelineDirty,persistedDraftHash,isLoading,isSaving,isRunning,historyGroupStart}=useFlowchartStore();
   const {project,task}=useProjectStore();const {folderPath,datasetKey,isLoading:datasetLoading,importError}=useDatasetStore();
   const transport=useComputeStore(s=>s.transportRevision);const backend=getApiPersistenceIdentity();
@@ -54,7 +55,7 @@ export function FlowDraftControls({blocked=false,activeVersion=false,hasSavedVer
     <span role="status" className="rounded bg-slate-900 px-2 py-1 text-xs text-slate-200">{isLoading?'플로우 불러오는 중':flowDraftStatus(pipelineDirty,persistedDraftHash,activeVersion,hasSavedVersion)} · 배포 상태는 실행 패키지에서 확인</span>
     <button type="button" aria-label="초안 저장" disabled={!pipeline||!sourceReady||isLoading||isSaving||isRunning||blocked||Boolean(historyGroupStart)}
       onClick={async()=>{failedTarget.current=null;return persist();}} title="모델 연결 전에도 편집 내용과 ROI를 저장합니다. 실행본 활성화와 배포는 별도로 저장하세요."
-      className="flex items-center gap-1.5 rounded border border-sky-700 bg-sky-950 px-3 py-1.5 text-xs font-semibold text-sky-100 disabled:opacity-40">
+      className={simple?'workspace-button':"flex items-center gap-1.5 rounded border border-sky-700 bg-sky-950 px-3 py-1.5 text-xs font-semibold text-sky-100 disabled:opacity-40"}>
       <Save className="h-3.5 w-3.5"/>{isSaving?'저장 중…':'초안 저장'}
     </button>
   </div>;

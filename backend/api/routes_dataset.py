@@ -23,7 +23,7 @@ import threading
 import time
 import uuid
 from collections import OrderedDict
-from pathlib import Path, PurePosixPath
+from pathlib import Path, PurePath, PurePosixPath
 from typing import Any, Dict, List, Literal, Optional, Union
 
 from fastapi import APIRouter, HTTPException, Query, Request, Response
@@ -220,7 +220,7 @@ def _paired_labelme_images(folder: Path) -> set[Path]:
             if not isinstance(annotations, list):
                 raise ValueError("annotations must be a list")
         except (OSError, UnicodeError, ValueError, KeyError, TypeError) as exc:
-            raise HTTPException(status_code=422, detail=f"Invalid Studio annotation {studio_json}: {exc}") from exc
+            raise HTTPException(status_code=422, detail=f"라벨 파일을 읽을 수 없습니다 ({studio_json}): {exc}") from exc
         has_region_or_ok = any(
             isinstance(item, dict) and (
                 len(item.get("polygon") or item.get("points") or []) >= 3
@@ -244,6 +244,28 @@ def _has_flat_labelme_annotations(folder: Path) -> bool:
         return True
     studio_dir = dataset_annotation_dir(folder, STUDIO_ANNOTATIONS_DIR)
     return studio_dir.is_dir() and any(path.is_file() for path in studio_dir.glob("*.json"))
+
+
+def _unlabeled_image_folder(folder: Path) -> bool:
+    """Images directly in the folder and no label layout at all: no JSON, no class/split/images/masks subfolder. A
+    detection or segmentation project starts from such a folder and labels it in the app (Studio overlays), so split,
+    drafts and metadata read it like a flat LabelMe folder that has no labelled image yet. The import counts it that way
+    for detection only: a segmentation image without a mask is a background sample, counted as before."""
+    try:
+        entries = list(folder.iterdir())
+    except OSError:
+        return False
+    if any(entry.is_dir() and not entry.name.startswith(".") for entry in entries):
+        return False
+    if any(entry.is_file() and entry.suffix.lower() == ".json" for entry in entries):
+        return False
+    return any(entry.is_file() and not entry.name.startswith("._") and entry.suffix.lower() in SUPPORTED_IMAGE_EXTENSIONS
+               for entry in entries)
+
+
+def _flat_image_workspace(folder: Path, task: str) -> bool:
+    """A flat folder labelled in place: LabelMe or Studio labels, or (detection/segmentation) none yet."""
+    return _has_flat_labelme_annotations(folder) or (task in ("detection", "segmentation") and _unlabeled_image_folder(folder))
 
 
 def _flat_labelme_class_counts(folder: Path, paired_images: set[Path], *, count_images: bool = False) -> Dict[str, int]:
@@ -349,13 +371,13 @@ def _split_labelme_source_groups(
                     raise ValueError(f"duplicate renamed_filename: {name}")
                 source_group_by_name[name] = str(relative.parent)
     except (OSError, UnicodeError, csv.Error, ValueError) as exc:
-        raise HTTPException(status_code=422, detail=f"Invalid flatten_manifest.csv: {exc}") from exc
+        raise HTTPException(status_code=422, detail=f"flatten_manifest.csv를 읽을 수 없습니다: {exc}") from exc
 
     missing = sorted({Path(item["image_path"]).name for item in items} - source_group_by_name.keys())
     if missing:
         raise HTTPException(
             status_code=422,
-            detail=f"flatten_manifest.csv has no source group for {len(missing)} labeled image(s), including {missing[0]}",
+            detail=f"flatten_manifest.csv에 원본 그룹이 없는 라벨 이미지가 {len(missing)}장 있습니다 (예: {missing[0]})",
         )
 
     groups: Dict[str, List[Dict[str, Any]]] = {}
@@ -369,7 +391,7 @@ def _split_labelme_source_groups(
     if len(group_names) < len(active):
         raise HTTPException(
             status_code=422,
-            detail=f"flatten_manifest.csv has {len(group_names)} source groups; at least {len(active)} are needed for the requested split.",
+            detail=f"flatten_manifest.csv의 원본 그룹이 {len(group_names)}개뿐입니다. 요청한 분할에는 최소 {len(active)}개가 필요합니다.",
         )
 
     # A state retains one reproducible assignment for each possible (train, val)
@@ -395,7 +417,7 @@ def _split_labelme_source_groups(
             feasible.append((sum(value * value for value in distance), max(distance), sum(distance),
                              counts, assignment))
     if not feasible:
-        raise HTTPException(status_code=422, detail="No nonempty group-preserving split is possible.")
+        raise HTTPException(status_code=422, detail="그룹을 유지하면서 나눌 수 있는 분할이 없습니다. 이미지 그룹 수를 확인하세요.")
     _, _, _, _, selected = min(feasible)
     result: Dict[str, List[Dict[str, Any]]] = {"train": [], "val": [], "test": []}
     for group_name, partition in zip(group_names, selected):
@@ -542,8 +564,19 @@ def current_dataset_summary(request: Request, folder_path: str, task: str):
     project = get_current_project(request)
     source = project.get("source_dataset_dir")
     if not source or str(Path(folder_path).resolve()) != str(Path(source).resolve()) or task != project["task"]:
-        raise HTTPException(409, "Saved project source or task changed; reopen the current project")
+        raise HTTPException(409, "프로젝트의 데이터 원본이나 작업 종류가 바뀌었습니다. 프로젝트를 다시 여세요.")
     return import_dataset(DatasetImportRequest(folder_path=source, task=project["task"], validate_images=True))
+
+
+TASK_NAMES_KO = {"classification": "분류", "detection": "객체 검출", "segmentation": "영역 분할", "anomaly": "이상 탐지",
+                 "patch_classification": "패치 분류"}
+# What each task reads, in the words the step-1 checklist and the layout error show.
+EXPECTED_LAYOUT_KO = {
+    "classification": "클래스마다 폴더 하나 (예: 데이터/OK/*.png, 데이터/NG/*.png). 이미 나눴다면 train·val·test 아래에 같은 구조",
+    "detection": "images/train, images/val 이미지와 annotations_train.json, annotations_val.json (COCO), 또는 이미지 옆 같은 이름의 LabelMe .json",
+    "segmentation": "images/ 와 masks/ (이미지와 같은 이름의 PNG 마스크), 또는 이미지 옆 같은 이름의 LabelMe .json. 마스크 없이 불러와 2단계에서 그려도 됩니다",
+    "anomaly": "train/good (정상만), test/good, test/<결함 이름> (선택: ground_truth/<결함 이름>/<이름>_mask.png), 또는 OK/ 와 NG/",
+}
 
 
 @observe_original_dataset_UI_operation('import_dataset')
@@ -554,20 +587,31 @@ def import_dataset(req: DatasetImportRequest):
     if not folder.exists() or not folder.is_dir():
         raise HTTPException(
             status_code=404,
-            detail=format_error_response("ERR_NO_DATA", details=f"Folder not found: {req.folder_path}"),
+            detail=format_error_response("ERR_NO_DATA", details=f"폴더를 찾을 수 없습니다: {req.folder_path}"),
         )
 
     image_files = {p.resolve() for p in folder.iterdir() if p.is_file() and not p.name.startswith("._")
                    and p.suffix.lower() in SUPPORTED_IMAGE_EXTENSIONS}
     paired_images = _paired_labelme_images(folder)
-    flat_labelme = _has_flat_labelme_annotations(folder)
+    unlabeled_flat = req.task == "detection" and not _has_flat_labelme_annotations(folder) and _unlabeled_image_folder(folder)
+    flat_labelme = _has_flat_labelme_annotations(folder) or unlabeled_flat
     if flat_labelme and req.task not in ("segmentation", "detection"):
         raise HTTPException(
             status_code=422,
-            detail="This flat LabelMe NG dataset supports segmentation and detection training. Classification and anomaly training also require task-specific OK data.",
+            detail="이 LabelMe NG 폴더로는 영역 분할과 객체 검출을 학습할 수 있습니다. 분류나 이상 탐지를 학습하려면 작업에 맞는 OK 데이터가 더 필요합니다.",
         )
 
     effective_folder = _resolve_task_folder(folder, req.task)
+    # Decode the images before counting them: undecodable ones are recorded in the project's usage ledger as not used
+    # (reason decode_error; the files themselves are untouched), so the inventory and split below, the loaders and the
+    # "excluded" message all agree. A file that decodes again later becomes active on the next import.
+    validation = _validate_folder_images(folder) if req.validate_images else ([], 0, False, [])
+    undecodable = {'excluded': [], 'restored': [], 'recorded': False}
+    from backend.engine.annotation_storage import request_project_root
+    validation_project = request_project_root()
+    if req.validate_images and validation_project is not None:
+        from backend.engine.undecodable_images import exclude_undecodable
+        undecodable = {**exclude_undecodable(validation_project, folder, validation[0]), 'recorded': True}
     # An inventory listed by annotation files may name images that are missing or outside the folder; a folder-scanned
     # one is a subset of the image files under the folder, which the validation below decodes.
     listed_inventory = False
@@ -583,9 +627,9 @@ def import_dataset(req: DatasetImportRequest):
         listed_inventory = not flat_labelme
 
     try:
-        if flat_labelme and req.task == "detection":
-            summary = DatasetSummary(task="detection", total_images=len(paired_images),
-                                     classes=_flat_labelme_class_counts(folder, paired_images),
+        if flat_labelme and (req.task == "detection" or unlabeled_flat):
+            summary = DatasetSummary(task=req.task, total_images=len(paired_images),
+                                     classes={} if unlabeled_flat else _flat_labelme_class_counts(folder, paired_images),
                                      split_counts={"train": 0, "val": 0, "test": 0})
         else:
             try:
@@ -597,6 +641,7 @@ def import_dataset(req: DatasetImportRequest):
                 # Training still rejects the stale manifest until that succeeds.
                 summary = inspect_dataset(effective_folder, req.task, ignore_saved_split=True)
                 summary.split_counts = {"train": 0, "val": 0, "test": 0}
+                summary.split_basis = "stale"
             # If standard scanner found 0 images, auto-inspect via industrial adapter (LabelMe, manufacturing layout)
             if summary.total_images == 0:
                 ind_res = inspect_industrial_dataset(effective_folder, task=req.task)
@@ -612,9 +657,14 @@ def import_dataset(req: DatasetImportRequest):
                     }
     except Exception as e:
         logger.exception("Failed to inspect dataset: %s", e)
+        # A loader that cannot read the folder means the layout does not fit the task, not "too few samples": say
+        # which layout this task expects and keep the loader's own message as the technical detail.
         raise HTTPException(
             status_code=422,
-            detail=format_error_response("ERR_NO_DATA", details=str(e)),
+            detail={**format_error_response("ERR_DATA_LAYOUT", details=str(e), custom_message_kr=(
+                f"이 폴더 구조는 '{TASK_NAMES_KO.get(req.task, req.task)}' 작업과 맞지 않습니다. "
+                f"이렇게 준비하세요: {EXPECTED_LAYOUT_KO.get(req.task, '')}")),
+                "expected_layout": EXPECTED_LAYOUT_KO.get(req.task, "")},
         )
 
     # Nested LabelMe inventory comes from the same folder paths the manifest
@@ -657,8 +707,7 @@ def import_dataset(req: DatasetImportRequest):
             summary.total_images = len(selected_paths)
 
     # Optional image validation scanning
-    corrupted_images, count_checked, sampled, gaps = (
-        _validate_folder_images(folder) if req.validate_images else ([], 0, False, []))
+    corrupted_images, count_checked, sampled, gaps = validation
     if not req.validate_images:
         scope = "not requested"
     elif sampled:
@@ -675,6 +724,13 @@ def import_dataset(req: DatasetImportRequest):
         scope = "all images: every image file under the folder was decoded"
 
     split_supported, split_unavailable_reason = _split_capability(req.task, flat_labelme)
+    # What the split counts are: a saved split, the source train/val/test folders, the loader's automatic per-run split
+    # (classification only; evaluation refuses it), or a saved split that no longer matches the images.
+    if req.task == "classification":
+        split_state = {"saved_manifest": "saved", "folders": "source_folders", "automatic": "automatic",
+                       "stale": "stale"}.get(getattr(summary, "split_basis", None) or "", "saved")
+    else:
+        split_state = "saved" if grouped_assignments else "source_folders"
 
     return {
         "status": "success",
@@ -688,6 +744,15 @@ def import_dataset(req: DatasetImportRequest):
             "test": split_counts.get("test", 0),
         },
         "corrupted_images": corrupted_images,
+        # Undecodable images kept out of the inventory, splits and training (relative paths), and earlier exclusions
+        # that decode again; "recorded" is false when there is no project to record the exclusion in.
+        "excluded_undecodable": undecodable,
+        "split_state": split_state,
+        # Detection/segmentation folders whose label inventory is empty (nothing to train on until labels are drawn
+        # in step 2 or masks/annotation files are added). Import still succeeds so the user can label here.
+        "labels_missing": req.task in ("detection", "segmentation")
+                          and not any(int(v or 0) for v in (summary.classes or {}).values()),
+        "expected_layout": EXPECTED_LAYOUT_KO.get(req.task, ""),
         # An empty corrupted list after a sampled check is not a statement about the unchecked images.
         "validation": {"requested": req.validate_images, "checked_images": count_checked,
                        "complete": scope.startswith("all images"), "scope": scope},
@@ -707,7 +772,7 @@ def import_industrial_dataset_endpoint(req: IndustrialDatasetImportRequest):
     if not folder.exists() or not folder.is_dir():
         raise HTTPException(
             status_code=404,
-            detail=format_error_response("ERR_NO_DATA", details=f"Folder not found: {req.folder_path}"),
+            detail=format_error_response("ERR_NO_DATA", details=f"폴더를 찾을 수 없습니다: {req.folder_path}"),
         )
 
     options_dict = req.options.model_dump() if req.options else {}
@@ -728,8 +793,8 @@ def split_dataset_endpoint(req: DatasetSplitRequest):
     target_dir = req.folder_path or "./datasets/synthetic"
     folder = Path(target_dir).resolve()
     if not folder.is_dir():
-        raise HTTPException(status_code=404, detail=f"Dataset folder not found: {folder}")
-    flat_labelme = _has_flat_labelme_annotations(folder)
+        raise HTTPException(status_code=404, detail=f"데이터 폴더를 찾을 수 없습니다: {folder}")
+    flat_labelme = _flat_image_workspace(folder, req.task)
     if req.task == "anomaly" or (req.task == "detection" and not flat_labelme):
         raise HTTPException(
             status_code=422,
@@ -756,7 +821,7 @@ def split_dataset_endpoint(req: DatasetSplitRequest):
         )
     val_ratio = req.val_ratio if req.val_ratio is not None else 1.0 - req.train_ratio - req.test_ratio
     if val_ratio < 0 or abs(req.train_ratio + val_ratio + req.test_ratio - 1.0) > 1e-6:
-        raise HTTPException(status_code=422, detail="Train, validation and test ratios must sum to 1.")
+        raise HTTPException(status_code=422, detail="학습·검증·시험 비율의 합이 100%가 되어야 합니다.")
     effective_folder = _resolve_task_folder(folder, req.task)
 
     # Gather image items
@@ -776,13 +841,21 @@ def split_dataset_endpoint(req: DatasetSplitRequest):
         for f in effective_folder.rglob("*"):
             if f.is_file() and not f.name.startswith("._") and f.suffix.lower() in SUPPORTED_IMAGE_EXTENSIONS:
                 items.append({"image_path": str(f), "label": f.parent.name})
+    if req.task == "classification":
+        # Stratify by the class training will read: a class chosen for an image in step 2 replaces its folder name.
+        from backend.engine.class_overrides import read_class_overrides
+        chosen = read_class_overrides(effective_folder)
+        for item in items:
+            item["label"] = chosen.get(str(Path(item["image_path"]).resolve()), item["label"])
 
     paired_images = _paired_labelme_images(effective_folder)
-    if _has_flat_labelme_annotations(effective_folder):
+    if _flat_image_workspace(effective_folder, req.task):
         items = [item for item in items if Path(item["image_path"]).resolve() in paired_images]
+        if not items:
+            raise HTTPException(status_code=422, detail="라벨이 있는 이미지가 아직 없어 나눌 수 없습니다. 2단계에서 라벨을 단 뒤 다시 나누세요.")
 
     if not items:
-        raise HTTPException(status_code=422, detail="No valid images found to split.")
+        raise HTTPException(status_code=422, detail="나눌 수 있는 이미지가 없습니다. 폴더에 지원하는 이미지 파일(PNG, JPG 등)이 있는지 확인하세요.")
 
     seed = req.seed if req.seed is not None else 42
     flatten_manifest = folder / "flatten_manifest.csv"
@@ -874,7 +947,11 @@ def list_dataset_images(
                     with open_source_image(item.file_path) as opened:item.width,item.height=opened.size
                 except IMAGE_OPEN_ERRORS:
                     pass  # an undecodable image is listed without geometry; the import inspection reports it
-                paged.append(item.model_dump())
+                listed=item.model_dump()
+                if row.get('class_source'):
+                    # Classification rows say where the class comes from: the folder, or a class chosen in step 2.
+                    listed.update(class_source=row['class_source'],folder_label=row.get('folder_label'))
+                paged.append(listed)
             return {'total':len(filtered),'limit':limit,'offset':offset,'items':paged,
                     'class_split_counts':_class_split_counts([ImageMeta(**r) for r in all_rows]) if include_class_splits else None}
     effective_dir = _resolve_task_folder(target_dir, requested_task) if requested_task else target_dir
@@ -913,7 +990,7 @@ def list_dataset_images(
                 try:
                     annotations, _ = _annotations(target_dir, image)
                 except (ValueError, KeyError, OSError) as exc:
-                    raise HTTPException(422, detail=f'Cannot read source labels: {exc}') from exc
+                    raise HTTPException(422, detail=f'원본 라벨을 읽을 수 없습니다: {exc}') from exc
                 labels = list(dict.fromkeys(a['label'] for a in annotations or [] if a.get('label')))
                 label = labels[0] if labels else None
             if class_name and class_name not in labels:
@@ -943,7 +1020,7 @@ def list_dataset_images(
             try:
                 samples = AnomalyDataset(root_dir=effective_dir, split=s_name).samples
             except (OSError, ValueError) as exc:
-                raise HTTPException(status_code=422, detail=f"Cannot list anomaly {s_name} images: {exc}") from exc
+                raise HTTPException(status_code=422, detail=f"이상 탐지 {s_name} 이미지를 읽을 수 없습니다: {exc}") from exc
             for image_path, label, _mask_path in samples:
                 label_name = "defect" if label else "good"
                 if class_name and class_name != label_name:
@@ -1017,9 +1094,10 @@ def list_dataset_images(
                         img_w = jd.get("image_width", jd.get("imageWidth"))
                         img_h = jd.get("image_height", jd.get("imageHeight"))
                         shapes = jd.get("annotations", []) if json_candidate == studio_json else jd.get("shapes", [])
-                        c_labels = list(dict.fromkeys(shape['label'] for shape in shapes
-                            if isinstance(shape,dict) and isinstance(shape.get('label'),str) and shape['label']))
-                        c_label = c_labels[0] if c_labels else None
+                        if requested_task != 'classification':  # a classification image keeps its folder class
+                            c_labels = list(dict.fromkeys(shape['label'] for shape in shapes
+                                if isinstance(shape,dict) and isinstance(shape.get('label'),str) and shape['label']))
+                            c_label = c_labels[0] if c_labels else None
                     except Exception:
                         pass
                 if has_labelme and f.resolve() not in paired_images:
@@ -1102,20 +1180,20 @@ def get_raw_image(
                 break
 
     if not candidate_path or not candidate_path.exists():
-        raise HTTPException(status_code=404, detail="Image file not found")
+        raise HTTPException(status_code=404, detail="이미지 파일을 찾을 수 없습니다")
 
     stat = candidate_path.stat()
     if stat.st_size == 0:
         raise HTTPException(
             status_code=400,
-            detail=format_error_response("ERR_CORRUPT_IMAGE", details=f"Image file is empty (0 bytes): {candidate_path}"),
+            detail=format_error_response("ERR_CORRUPT_IMAGE", details=f"이미지 파일이 비어 있습니다 (0바이트): {candidate_path}"),
         )
 
     from backend.engine.dicom_input import is_dicom, normalized_view
     if is_dicom(candidate_path):
         from backend.engine.annotation_storage import request_project_root
         project_root=request_project_root()
-        if project_root is None:raise HTTPException(422,detail='DICOM display requires an active project')
+        if project_root is None:raise HTTPException(422,detail='DICOM 이미지를 보려면 먼저 프로젝트를 여세요.')
         try:receipt=normalized_view(candidate_path,project_root/'dicom_views')
         except (ValueError,OSError) as exc:raise HTTPException(422,detail=str(exc)) from exc
         return FileResponse(receipt['view_path'],media_type='image/png',headers={'X-Source-SHA256':receipt['source_sha256']})
@@ -1237,13 +1315,13 @@ class _ReadFailure(HTTPException):
 
 def _source_error(path: Path, exc: BaseException) -> HTTPException:
     if isinstance(exc, FileNotFoundError):
-        return HTTPException(status_code=404, detail="Image file not found")
+        return HTTPException(status_code=404, detail="이미지 파일을 찾을 수 없습니다")
     return _ReadFailure(status_code=400, detail=format_error_response(
         "ERR_CORRUPT_IMAGE", details=f"Cannot read image {path}: {exc}"))
 
 
 def _changed_while_read(path: Path) -> HTTPException:
-    return HTTPException(status_code=409, detail=f"{path} changed while its thumbnail was drawn; request it again")
+    return HTTPException(status_code=409, detail=f"{path}이(가) 미리보기를 만드는 동안 바뀌었습니다. 다시 요청하세요.")
 
 
 @observe_original_dataset_thumbnail_operation('hash_source')
@@ -1261,8 +1339,8 @@ def _hash_source(path: Path, copy=None) -> str:
                     copy.write(chunk)
                 except OSError as exc:  # the backend's own temporary storage, not the source
                     raise HTTPException(status_code=507, detail=(
-                        "The backend's temporary storage is full; free space in its temporary folder and request "
-                        f"the thumbnail again ({exc})")) from None
+                        "임시 저장 공간이 가득 찼습니다. 임시 폴더의 공간을 비운 뒤 미리보기를 다시 요청하세요 "
+                        f"({exc})")) from None
                 if copy.tell() > _COPY_LIMIT:  # grew past the copy budget while being read
                     raise _changed_while_read(path)
     except OSError as exc:
@@ -1278,7 +1356,7 @@ def _probe_header(path: Path) -> None:
         with original_dataset_thumbnail_image_open(Image.open,path) as probe:
             probe.size
     except FileNotFoundError:
-        raise HTTPException(status_code=404, detail="Image file not found") from None
+        raise HTTPException(status_code=404, detail="이미지 파일을 찾을 수 없습니다") from None
     except (Image.UnidentifiedImageError, Image.DecompressionBombError, SyntaxError, ValueError) as exc:
         raise HTTPException(status_code=400, detail=format_error_response(
             "ERR_CORRUPT_IMAGE", details=f"Cannot decode image {path}: {exc}")) from None
@@ -1336,17 +1414,17 @@ def get_thumbnail(
                 break
 
     if not candidate_path or not candidate_path.exists():
-        raise HTTPException(status_code=404, detail="Image file not found")
+        raise HTTPException(status_code=404, detail="이미지 파일을 찾을 수 없습니다")
 
     # Reject 0-byte files with HTTP 400 ERR_CORRUPT_IMAGE
     try:
         stat = candidate_path.stat()
     except FileNotFoundError:
-        raise HTTPException(status_code=404, detail="Image file not found")
+        raise HTTPException(status_code=404, detail="이미지 파일을 찾을 수 없습니다")
     if stat.st_size == 0:
         raise HTTPException(
             status_code=400,
-            detail=format_error_response("ERR_CORRUPT_IMAGE", details=f"Image file is empty (0 bytes): {candidate_path}"),
+            detail=format_error_response("ERR_CORRUPT_IMAGE", details=f"이미지 파일이 비어 있습니다 (0바이트): {candidate_path}"),
         )
 
     def respond(key: str, rendered: Optional[bytes] = None):
@@ -1418,12 +1496,12 @@ def _render_thumbnail(candidate_path: Path, stat: os.stat_result, size: int, dic
     except HTTPException:
         raise
     except FileNotFoundError:
-        raise HTTPException(status_code=404, detail="Image file not found") from None
+        raise HTTPException(status_code=404, detail="이미지 파일을 찾을 수 없습니다") from None
     except Exception as e:
         logger.warning("Failed to render thumbnail for %s: %s", candidate_path, e)
         raise HTTPException(
             status_code=400,
-            detail=format_error_response("ERR_CORRUPT_IMAGE", details=f"Cannot decode image {candidate_path}: {e}"),
+            detail=format_error_response("ERR_CORRUPT_IMAGE", details=f"이미지를 읽을 수 없습니다 ({candidate_path}): {e}"),
         ) from None
     _memo_put(candidate_path, stat, digest)
     key = _thumbnail_key(digest, size, decoder)
@@ -1463,15 +1541,70 @@ def ingest_source_artifact(body: DatasetArtifactIngestRequest, request: Request)
     context = authorize_artifact(request, write=True)
     project = get_current_project(request)
     if not project.get('source_dataset_dir'):
-        raise HTTPException(409, 'Select a project source dataset before ingesting artifacts')
+        raise HTTPException(409, '먼저 프로젝트의 데이터 원본을 선택하세요.')
     with storage_errors():
         try:
             with source_artifact_identity(Path(project['source_dataset_dir']), body.source_name) as (source, digest, size):
                 if digest != body.sha256:
-                    raise HTTPException(409, 'Source content hash does not match')
+                    raise HTTPException(409, '원본 내용이 기록과 다릅니다.')
                 ref = get_artifact_store(request).put_verified(context, source, digest, size, kind='source',
                                                               authorize=lambda: authorize_artifact(request, write=True))
         except ValueError as exc:
             raise HTTPException(422, str(exc)) from exc
         return receipt(context, artifact_ref=ref.model_dump(), state='referenced',
                        source_identity={'version': 'sha256-v1', 'sha256': digest, 'size_bytes': size})
+
+
+
+@router.get("/rotated-boxes")
+def step2_rotated_boxes(request: Request):
+    """Step-2 rotated boxes as rotated detection rows, read only (audit F-16 / B3); the workbench saves them itself."""
+    from backend.api.routes_project import get_current_project
+    from backend.engine.rotated_label_reuse import step2_rotated_samples
+    project = get_current_project(request)
+    source = project.get("source_dataset_dir")
+    if not source or not Path(source).is_dir():
+        raise HTTPException(status_code=409, detail="프로젝트에 원본 데이터 폴더를 먼저 연결하세요.")
+    folder = Path(source).resolve()
+    return step2_rotated_samples(folder, project.get("task") or "detection", _read_split_manifest(folder))
+
+
+class ClassOverrideRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    image_path: str = Field(min_length=1, max_length=4096)
+    # None, empty or the folder's own class returns the image to its folder class.
+    class_name: Optional[str] = Field(default=None, max_length=100)
+    actor: str = Field(default="operator", min_length=1, max_length=100)
+
+
+@router.put("/metadata/class-override")
+def set_image_class(body: ClassOverrideRequest, request: Request):
+    """Choose the class of one image in a folder-based classification project without moving the file (audit A2).
+
+    Training, evaluation, the step-1 counts, the gallery and whole-flow truth from labels all apply the choice; the
+    dataset fingerprint changes, so models, evaluations and flows built on the previous classes become stale.
+    """
+    from backend.api.routes_project import get_current_project
+    from backend.engine.class_overrides import set_class_override
+    from backend.engine.dataset_inventory import folder_label_split
+    project = get_current_project(request)
+    if project.get("task") != "classification":
+        raise HTTPException(409, "이미지별 클래스 지정은 분류 프로젝트에서만 쓸 수 있습니다.")
+    if not project.get("source_dataset_dir"):
+        raise HTTPException(409, "먼저 프로젝트의 데이터 원본을 선택하세요.")
+    source = Path(project["source_dataset_dir"]).resolve()
+    image = Path(body.image_path).expanduser().resolve()
+    if not image.is_relative_to(source):
+        raise HTTPException(422, "이미지가 프로젝트의 데이터 폴더 밖에 있습니다.")
+    folder_class, _ = folder_label_split(PurePath(image.relative_to(source).as_posix()), "classification")
+    try:
+        result = set_class_override(Path(project["project_dir"]), source, image, body.class_name, body.actor, folder_class)
+        # The change is an audit event on the image's metadata row (a new revision). The labeling editor guards its
+        # next label save with that row's revision, so it gets the new row instead of a later 'another worker' refusal.
+        from backend.engine import dataset_metadata as dm
+        result["metadata"] = dm.metadata_for_path(Path(project["project_dir"]), source, image)
+        return result
+    except FileNotFoundError as exc:
+        raise HTTPException(404, "이미지 파일을 찾을 수 없습니다.") from exc
+    except ValueError as exc:
+        raise HTTPException(422, str(exc)) from exc

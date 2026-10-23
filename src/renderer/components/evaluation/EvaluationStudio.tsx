@@ -43,11 +43,22 @@ import { ModelComparisonPanel } from './ModelComparisonPanel';
 import { ModelDeploymentPanel } from './ModelDeploymentPanel';
 import { EvaluationHistoryPanel } from './EvaluationHistoryPanel';
 import {EvaluationEvidencePanel} from './EvaluationEvidencePanel';
+import { accuracyNote, smallTestWarning } from './sampleConfidence';
+import { FieldReadinessPanel } from '../common/FieldReadinessPanel';
+import { scoreUnitLabel } from '../../utils/plainLabels';
+import { SpecialistFamilyNote } from '../common/SpecialistFamilyNote';
 
 const comparisonTasks = new Set<string>([
   'classification', 'detection', 'segmentation', 'anomaly', 'patch_classification',
   'ocr', 'rotated_detection', 'enhancement', 'rotation',
 ] satisfies FlowModelTask[]);
+
+/** Metric keys as a first-time user reads them; unknown keys keep their name. */
+const METRIC_NAMES_KO: Record<string, string> = {
+  accuracy: '정확도', precision: '정밀도', recall: '재현율', f1: 'F1', macro_precision: '정밀도 (평균)', macro_recall: '재현율 (평균)',
+  macro_f1: 'F1 (평균)', best_metric: '학습 중 최적 지표', image_auroc: '이미지 AUROC', pixel_auroc: '픽셀 AUROC', map: 'mAP', map50: 'mAP@50',
+  iou: 'IoU', mean_iou: '평균 IoU', dice: 'Dice', escape_rate: '미검률', overkill_rate: '과검률', review_rate: '확인 필요 비율',
+};
 
 export const SampleVerdictBadge: React.FC<{ verdict: SampleVerdict; compact?: boolean }> = ({
   verdict,
@@ -57,28 +68,28 @@ export const SampleVerdictBadge: React.FC<{ verdict: SampleVerdict; compact?: bo
       return (
         <span className="inline-flex items-center space-x-1 px-1.5 py-0.5 rounded-[4px] text-[10px] bg-[#450A0A] text-[#FCA5A5] border border-[#EF4444] font-mono font-bold">
           <span className="w-1.5 h-1.5 rounded-full bg-[#EF4444] animate-pulse" />
-          <span>🚨 FN 미검 (Escape)</span>
+          <span title="FN · Escape">미검 · 결함을 놓침</span>
         </span>
       );
     case 'OVERKILL':
       return (
         <span className="inline-flex items-center space-x-1 px-1.5 py-0.5 rounded-[4px] text-[10px] bg-[#451A03] text-[#FCD34D] border border-[#F59E0B] font-mono font-bold">
           <span className="w-1.5 h-1.5 rounded-full bg-[#F59E0B]" />
-          <span>⚠️ FP 과검 (Overkill)</span>
+          <span title="FP · Overkill">과검 · 정상을 결함으로</span>
         </span>
       );
     case 'CORRECT_NG':
       return (
         <span className="inline-flex items-center space-x-1 px-1.5 py-0.5 rounded-[4px] text-[10px] bg-[#083344] text-[#67E8F9] border border-[#06B6D4] font-mono font-semibold">
           <span className="w-1.5 h-1.5 rounded-full bg-[#06B6D4]" />
-          <span>🎯 TP 결함검출</span>
+          <span title="TP">결함 검출 · 맞음</span>
         </span>
       );
     case 'CORRECT_OK':
       return (
         <span className="inline-flex items-center space-x-1 px-1.5 py-0.5 rounded-[4px] text-[10px] bg-[#064E3B] text-[#6EE7B7] border border-[#10B981] font-mono font-semibold">
           <span className="w-1.5 h-1.5 rounded-full bg-[#10B981]" />
-          <span>🟢 TN 정상합격</span>
+          <span title="TN">정상 판정 · 맞음</span>
         </span>
       );
     case 'REVIEW':
@@ -90,6 +101,8 @@ export const SampleVerdictBadge: React.FC<{ verdict: SampleVerdict; compact?: bo
 export const EvaluationStudio: React.FC = () => {
   const handoff=useTaskHandoff();
   const { language, setStep, task } = useProjectStore();
+  const full = useProjectStore(state => state.viewMode) === 'full';
+  const simpleView = useProjectStore(state => state.viewMode) === 'simple';
   const projectDir = useProjectStore((state) => state.projectDir);
   const warmCandidateJobId = useTrainingStore((state) => state.status === 'completed' && state.warmStartParentJobId ? state.jobId : null);
   const warmParentJobId = useTrainingStore((state) => state.status === 'completed' ? state.warmStartParentJobId : null);
@@ -420,13 +433,37 @@ export const EvaluationStudio: React.FC = () => {
     ? computeSampleVerdict(selectedPrediction, confidenceThreshold, overkillAnalysis, classSemantics?.roles)
     : null;
 
+  const metricGrid = (
+    <div className="grid grid-cols-2 gap-2 text-xs font-mono">
+      {Object.entries(metrics).map(([k, v]) => {
+        const unavailable = v === null && (k === 'image_auroc' || k === 'pixel_auroc');
+        if (typeof v !== 'number' && !unavailable) return null;
+        const termKey = getMetricTermKey(k);
+        return (
+          <div key={k} className="p-2.5 bg-[#1A212E] rounded-[4px] border border-[#2B3547]">
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-[10px] text-slate-400 block uppercase">
+                {language === 'ko' ? (METRIC_NAMES_KO[k] || k.replace(/_/g, ' ')) : k.replace(/_/g, ' ')}
+              </span>
+              {termKey && <JargonTooltip termKey={termKey} />}
+            </div>
+            <span className="text-base font-bold text-slate-100 tabular-nums">{unavailable
+              ? (language === 'ko' ? '산출 불가' : 'Unavailable') : v.toFixed(4)}</span>
+          </div>
+        );
+      })}
+    </div>
+  );
   return (
     <div className="flex-1 flex flex-col h-full bg-[#0B0E14] text-slate-100 overflow-hidden select-none">
       <OperatorGuidanceBanner step={4} />
 
+      {/* With results on screen, the simple view keeps re-evaluating another model or test set behind one line. */}
+      {simpleView && testPredictions.length > 0 ? <details className="shrink-0 border-b border-slate-700 text-xs">
+        <summary className="cursor-pointer px-3 py-1.5 text-slate-400">다른 모델이나 시험 이미지 묶음으로 다시 평가</summary>
       <div className="flex flex-wrap items-center gap-2 border-b border-slate-700 p-2 text-xs">
         <label>평가 모델<select aria-label="평가 모델" value={requestedCohortJob || ''} onChange={event=>{modelSelectionRevision.current++;invalidateForDataChange(true);setCohortModel(event.target.value);}} className="ml-2 rounded bg-slate-800 p-1"><option value="">완료 모델 선택</option>{cohortModels.map(model=><option key={model.job_id} value={model.job_id}>{model.task} · {model.job_id}</option>)}</select></label>
-        <label>고정 테스트 코호트<select aria-label="평가 데이터 버전" value={cohortVersion} onChange={event=>{invalidateForDataChange(true);setCohortVersion(event.target.value);}} className="ml-2 rounded bg-slate-800 p-1"><option value="">기존 데이터 버전 선택</option>{cohortVersions.map(version=><option key={version.id} value={version.id}>{version.name} · {version.image_count}장 · {version.status}</option>)}</select></label>
+        <label>시험 이미지 묶음<select aria-label="평가 데이터 버전" value={cohortVersion} onChange={event=>{invalidateForDataChange(true);setCohortVersion(event.target.value);}} className="ml-2 rounded bg-slate-800 p-1"><option value="">저장한 데이터 버전 선택</option>{cohortVersions.map(version=><option key={version.id} value={version.id}>{version.name} · {version.image_count}장 · {version.status}</option>)}</select></label>
         <span>실행 위치: {selectedProfileId ? profiles.find(profile=>profile.id===selectedProfileId)?.name || selectedProfileId : '이 컴퓨터'}</span>
         <label>장치<select aria-label="평가 장치" value={evaluationDevice} onChange={event=>{invalidateForDataChange(true);setEvaluationDevice(event.target.value);}} className="ml-2 rounded bg-slate-800 p-1"><option value="cpu">CPU</option><option value="cuda:0">{selectedProfileId?'CUDA · 선택 서버 GPU '+(profiles.find(profile=>profile.id===selectedProfileId)?.gpu_selector || '0'):'CUDA · 이 컴퓨터 GPU 0'}</option>{!selectedProfileId&&<option value="mps">Metal MPS · 이 컴퓨터</option>}</select></label>
         <button aria-label="선택 코호트 평가" disabled={isLoading || !requestedCohortJob || !cohortVersion || !sourceFolder || !useComputeStore.getState().isLoaded} onClick={runSelectedCohort} className="rounded border border-blue-500 p-1">선택 코호트 평가</button>
@@ -436,15 +473,46 @@ export const EvaluationStudio: React.FC = () => {
         {executionEvidence?.execution && <span aria-label="평가 실행 기록">실행 기록 {executionEvidence.execution.receipt_id} · SHA {executionEvidence.execution.evidence_sha256}</span>}
         {(cohortError || remoteOperationError) && <span role="alert" className="text-red-300">{cohortError || remoteOperationError}</span>}
       </div>
+      </details> : <div className="flex flex-wrap items-center gap-2 border-b border-slate-700 p-2 text-xs">
+        <label>평가 모델<select aria-label="평가 모델" value={requestedCohortJob || ''} onChange={event=>{modelSelectionRevision.current++;invalidateForDataChange(true);setCohortModel(event.target.value);}} className="ml-2 rounded bg-slate-800 p-1"><option value="">완료 모델 선택</option>{cohortModels.map(model=><option key={model.job_id} value={model.job_id}>{model.task} · {model.job_id}</option>)}</select></label>
+        <label>시험 이미지 묶음<select aria-label="평가 데이터 버전" value={cohortVersion} onChange={event=>{invalidateForDataChange(true);setCohortVersion(event.target.value);}} className="ml-2 rounded bg-slate-800 p-1"><option value="">저장한 데이터 버전 선택</option>{cohortVersions.map(version=><option key={version.id} value={version.id}>{version.name} · {version.image_count}장 · {version.status}</option>)}</select></label>
+        <span>실행 위치: {selectedProfileId ? profiles.find(profile=>profile.id===selectedProfileId)?.name || selectedProfileId : '이 컴퓨터'}</span>
+        <label>장치<select aria-label="평가 장치" value={evaluationDevice} onChange={event=>{invalidateForDataChange(true);setEvaluationDevice(event.target.value);}} className="ml-2 rounded bg-slate-800 p-1"><option value="cpu">CPU</option><option value="cuda:0">{selectedProfileId?'CUDA · 선택 서버 GPU '+(profiles.find(profile=>profile.id===selectedProfileId)?.gpu_selector || '0'):'CUDA · 이 컴퓨터 GPU 0'}</option>{!selectedProfileId&&<option value="mps">Metal MPS · 이 컴퓨터</option>}</select></label>
+        <button aria-label="선택 코호트 평가" disabled={isLoading || !requestedCohortJob || !cohortVersion || !sourceFolder || !useComputeStore.getState().isLoaded} onClick={runSelectedCohort} className="rounded border border-blue-500 p-1">선택 코호트 평가</button>
+        {remoteOperation && <span>작업 {remoteOperation.op_id} · {remoteOperation.state} · 취소요청 {remoteOperation.cancel_requested_at ? '기록됨' : '없음'} · ACK {remoteOperation.cancel_acknowledged_at ? '확인' : '미확인'} · worker 종료 {remoteOperation.worker_exit_confirmed ? '확인' : '미확인'}</span>}
+        {remoteOperation && <button aria-label="원격 평가 취소" onClick={()=>void cancelSelectedCohort()} disabled={Boolean(remoteOperation.cancel_requested_at)} className="rounded border border-amber-500 p-1">취소 요청</button>}
+        {executionEvidence?.common_cohort && <span>실제 코호트 {executionEvidence.common_cohort.dataset_version_id} · {executionEvidence.common_cohort.cohort_sha256} · 추가 분석·보정·보고서 미지원 · 실제 대상 {executionEvidence.execution_target==='local'?'이 컴퓨터':executionEvidence.compute_profile_name || executionEvidence.compute_profile_id} · {executionEvidence.resolved_device || executionEvidence.device}</span>}
+        {executionEvidence?.execution && <span aria-label="평가 실행 기록">실행 기록 {executionEvidence.execution.receipt_id} · SHA {executionEvidence.execution.evidence_sha256}</span>}
+        {(cohortError || remoteOperationError) && <span role="alert" className="text-red-300">{cohortError || remoteOperationError}</span>}
+      </div>}
+      {simpleView && testPredictions.length > 0 && (() => {
+        // The simple view opens with the answer: how many test images the model got right and what it missed.
+        const right = sampleCounts.normal + sampleCounts.defect;
+        const card = (label: string, value: string, note: string, tone: string) => (
+          <div className={`rounded-lg border px-4 py-3 ${tone}`}>
+            <p className="text-xs text-slate-300">{label}</p>
+            <p className="mt-1 text-2xl font-bold leading-8 text-slate-50">{value}</p>
+            <p className="mt-0.5 text-xs text-slate-400">{note}</p>
+          </div>
+        );
+        return (
+          <section aria-label="평가 결과 한눈에 보기" className="grid shrink-0 grid-cols-2 gap-3 border-b border-[#2B3547] bg-[#0E1520] px-6 py-4 lg:grid-cols-4">
+            {card('맞힌 이미지', `${right} / ${sampleCounts.all}장`, accuracyNote(right, sampleCounts.all), 'border-emerald-700/60 bg-emerald-950/20')}
+            {card('놓친 불량 (미검)', `${sampleCounts.escape}장`, sampleCounts.escape ? '아래 목록의 미검 탭에서 이미지를 확인하세요' : '놓친 불량이 없습니다', sampleCounts.escape ? 'border-rose-700/70 bg-rose-950/30' : 'border-emerald-700/60 bg-emerald-950/20')}
+            {card('잘못 잡은 정상 (과검)', `${sampleCounts.overkill}장`, sampleCounts.overkill ? '과검 탭에서 이미지를 확인하세요' : '정상을 불량으로 잡은 이미지가 없습니다', sampleCounts.overkill ? 'border-amber-700/70 bg-amber-950/30' : 'border-emerald-700/60 bg-emerald-950/20')}
+            {card('판정 기준 점수', confidenceThreshold.toFixed(2), '오른쪽 위 기준값에서 바꿀 수 있습니다', 'border-[#2B3547] bg-[#131822]')}
+          </section>
+        );
+      })()}
 
       {/* Top Evaluation Toolbar */}
       <div className="h-14 bg-[#131822] border-b border-[#2B3547] px-6 flex items-center justify-between text-xs">
         <div className="flex items-center space-x-3">
           <Activity className="w-4 h-4 text-blue-400" />
           <h2 className="font-bold text-sm text-slate-200">
-            {language === 'ko' ? '검증 및 품질 분석 스튜디오' : 'Quality Evaluation & Inspection Studio'}
+            {simpleView && language === 'ko' ? '시험 이미지별 결과' : language === 'ko' ? '검증 및 품질 분석 스튜디오' : 'Quality Evaluation & Inspection Studio'}
           </h2>
-          {jobId && <span className="text-slate-400 font-mono text-[11px]">[{jobId}]</span>}
+          {jobId && !simpleView && <span className="text-slate-400 font-mono text-[11px]">[{jobId}]</span>}
         </div>
 
         {/* Export Buttons */}
@@ -525,6 +593,8 @@ export const EvaluationStudio: React.FC = () => {
       <div className="flex-1 flex overflow-hidden">
         {/* Left Side: Metrics & Clickable Confusion Matrix */}
         <div className="w-[500px] bg-[#131822] border-r border-[#2B3547] p-4 flex flex-col space-y-4 overflow-y-auto">
+          {/* The simple view keeps the comparison behind one line; the current model's own results stay in sight. */}
+          {full ? <>
           <div className="rounded border border-[#3B5269] bg-[#111C2A] p-2.5 text-xs text-slate-300">
             <div className="mb-2 font-semibold text-white">후보 모델 비교 유형</div>
             <div className="grid grid-cols-2 gap-2" role="group" aria-label="후보 모델 비교 유형">
@@ -543,16 +613,45 @@ export const EvaluationStudio: React.FC = () => {
             refreshRevision={comparisonRefreshRevision}
             language={language}
           />
+          </> : <details className="rounded border border-[#3B5269] bg-[#111C2A] text-xs text-slate-300">
+            <summary className="cursor-pointer p-2.5 font-semibold text-white">현행 모델 · 후보 모델 비교</summary>
+            <div className="space-y-4 p-2.5 pt-0">
+          <div className="rounded border border-[#3B5269] bg-[#111C2A] p-2.5 text-xs text-slate-300">
+            <div className="mb-2 font-semibold text-white">후보 모델 비교 유형</div>
+            <div className="grid grid-cols-2 gap-2" role="group" aria-label="후보 모델 비교 유형">
+              <button type="button" onClick={() => setComparisonTask(task)} aria-pressed={comparisonTask === task}
+                className={`rounded border px-2 py-1.5 ${comparisonTask === task ? 'border-cyan-400 bg-cyan-700/25 text-white' : 'border-[#415970] text-slate-300'}`}>프로젝트 모델</button>
+              <button type="button" onClick={() => setComparisonTask('patch_classification')} aria-pressed={comparisonTask === 'patch_classification'}
+                className={`rounded border px-2 py-1.5 ${comparisonTask === 'patch_classification' ? 'border-cyan-400 bg-cyan-700/25 text-white' : 'border-[#415970] text-slate-300'}`}>패치 분류 모델</button>
+            </div>
+          </div>
+          <ModelComparisonPanel
+            projectDir={projectDir}
+            sourceFolder={sourceFolder}
+            task={comparisonTask}
+            preferredJobId={warmCandidateJobId || jobId}
+            preferredParentJobId={warmParentJobId}
+            refreshRevision={comparisonRefreshRevision}
+            language={language}
+          />
+            </div>
+          </details>}
+          <FieldReadinessPanel />
+          <SpecialistFamilyNote step={4} />
+          {/* Approval, the inspection service, history and error analysis are a reviewer's tools: the simple view moves them
+              to one closed line at the bottom of this column so the results come first. */}
+          {!simpleView && <>
           <ModelDeploymentPanel taskOverride={comparisonTask} />
           <EvaluationHistoryPanel sourceFolder={sourceFolder} task={comparisonTask} jobId={jobId} />
           <EvaluationEvidencePanel samples={testPredictions} onSelect={path=>{const sample=testPredictions.find(item=>item.file_path===path);if(sample)void selectPrediction(sample);}}/>
+          </>}
           {/* 1-Click Zero-Escape Calibration Prominent Card */}
           <div className="p-3.5 bg-[#1A212E] rounded-[6px] border border-[#2B3547] space-y-3">
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-2">
                 <Target className="w-4 h-4 text-[#38BDF8] shrink-0" />
                 <span className="font-bold text-xs text-slate-100">
-                  {language === 'ko' ? '평가 이미지 임계값 분석' : 'Evaluation Image Threshold Analysis'}
+                  {language === 'ko' ? (simpleView ? '판정 기준 점수 맞추기' : '평가 이미지 임계값 분석') : 'Evaluation Image Threshold Analysis'}
                 </span>
                 <JargonTooltip termKey="optimal_threshold" />
               </div>
@@ -574,13 +673,13 @@ export const EvaluationStudio: React.FC = () => {
             <div className="flex items-center justify-between text-xs">
               <div className="space-y-0.5">
                 <div className="text-[10px] text-slate-400 font-mono">
-                  현재 임계값 ({metrics.score_spec?.unit || 'probability'}): <span className="text-slate-100 font-bold tabular-nums">{confidenceThreshold.toFixed(2)}</span>
+                  {simpleView ? '지금 기준 점수' : `현재 기준 점수 (${scoreUnitLabel(metrics.score_spec?.unit)})`}: <span className="text-slate-100 font-bold tabular-nums">{confidenceThreshold.toFixed(2)}</span>
                 </div>
                 <div className="text-[10px] text-[#38BDF8] font-mono">
-                  평가 표본 탐색 임계값:{' '}
+                  {simpleView ? '시험 이미지로 찾은 추천 점수' : '평가 표본 탐색 임계값'}:{' '}
                   <span className="font-bold font-mono tabular-nums text-white">
                     {hasCalibrationEvidence && overkillAnalysis?.optimal_threshold !== undefined
-                      ? `τ* = ${overkillAnalysis.optimal_threshold.toFixed(4)}`
+                      ? simpleView ? overkillAnalysis.optimal_threshold.toFixed(2) : `τ* = ${overkillAnalysis.optimal_threshold.toFixed(4)}`
                       : 'NG·OK 평가 이미지 필요'}
                   </span>
                 </div>
@@ -597,15 +696,24 @@ export const EvaluationStudio: React.FC = () => {
                 ) : (
                   <Zap className="w-3.5 h-3.5 fill-current" />
                 )}
-                <span>{isCalibrating ? '계산 중...' : '평가 임계값 적용'}</span>
+                <span>{isCalibrating ? '계산 중...' : simpleView ? '추천 점수 적용' : '평가 임계값 적용'}</span>
               </button>
             </div>
 
+            {smallTestWarning(sampleCounts.all) && (
+              <p role="note" className="rounded-[3px] border border-amber-700/60 bg-amber-950/20 p-2 text-[11px] text-amber-100">{smallTestWarning(sampleCounts.all)}</p>
+            )}
             {calibrationMessage && (
               <div className="p-2 bg-[#0B0E14] border border-[#2B3547] rounded-[3px] text-[11px] text-[#38BDF8] font-mono">
                 {calibrationMessage}
               </div>
             )}
+            {/* Where the threshold applies: export uses it at once; a flow node uses it only after "이 값 쓰기" in step 5. */}
+            <p className="text-[11px] text-slate-400">
+              {language === 'ko'
+                ? "적용한 기준 점수는 단일 모델 내보내기에 바로 쓰입니다. 검사 흐름에는 5단계 노드의 '이 값 쓰기'로 넣으세요. 이미 저장·승인한 흐름은 저절로 바뀌지 않습니다."
+                : 'An applied threshold is used by single-model export at once; add it to a flow with "Use this value" on the step 5 node. Saved or approved flows never change by themselves.'}
+            </p>
           </div>
 
           {/* Primary Metric KPI Cards */}
@@ -613,8 +721,8 @@ export const EvaluationStudio: React.FC = () => {
             {hasReportableResult && <div className="mb-3 rounded border border-[#3B5269] bg-[#111C2A] p-3 text-xs leading-relaxed text-slate-300" role="status">
               <p className="font-semibold text-slate-100">
                 {language === 'ko' ? '평가 데이터: ' : 'Evaluation data: '}
-                {metrics.evaluated_split === 'test' ? (language === 'ko' ? '시험 분할 (Test)' : 'Test partition')
-                  : metrics.evaluated_split === 'val' ? (language === 'ko' ? '검증 분할 (Validation)' : 'Validation partition')
+                {metrics.evaluated_split === 'test' ? (language === 'ko' ? '시험 분할' : 'Test partition')
+                  : metrics.evaluated_split === 'val' ? (language === 'ko' ? '검증 분할' : 'Validation partition')
                   : (language === 'ko' ? '분할 근거 미확인' : 'Partition evidence unavailable')}
               </p>
               {metrics.selection_overlap && <p className="mt-1 text-amber-200">{language === 'ko'
@@ -633,28 +741,23 @@ export const EvaluationStudio: React.FC = () => {
                 ? '이 데이터는 임계값 보정에도 사용했습니다. 보정 효과는 별도 시험 데이터에서 확인하세요.'
                 : 'This data was also used for threshold calibration. Validate the calibration on a separate test set.'}</p>}
             </div>}
+            {!(simpleView && testPredictions.length > 0) && (
+            <p role="status" aria-label="평가 요약" className="mb-2 rounded border border-[#2B3547] bg-[#131822] px-3 py-2 text-sm text-slate-100">
+              {language === 'ko'
+                ? `시험 이미지 ${sampleCounts.all}장 중 ${sampleCounts.normal + sampleCounts.defect}장 맞음 · 미검(놓친 결함) ${sampleCounts.escape} · 과검(정상을 결함으로) ${sampleCounts.overkill}`
+                : `${sampleCounts.normal + sampleCounts.defect} of ${sampleCounts.all} test images right · ${sampleCounts.escape} escapes · ${sampleCounts.overkill} overkills`}
+            </p>
+            )}
+            {/* The cards above already say how many images were right; the simple view keeps the raw metrics one click away. */}
+            {simpleView ? <details className="rounded border border-[#2B3547] bg-[#131822] text-xs text-slate-300">
+              <summary className="cursor-pointer px-3 py-2 font-semibold text-slate-200">자세한 품질 지표 <span className="font-normal text-slate-400">정밀도 · 재현율 · F1</span></summary>
+              <div className="p-2.5 pt-0">{metricGrid}</div>
+            </details> : <>
             <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">
               {language === 'ko' ? '주요 품질 지표' : 'Primary Quality Metrics'}
             </h3>
-            <div className="grid grid-cols-2 gap-2 text-xs font-mono">
-              {Object.entries(metrics).map(([k, v]) => {
-                const unavailable = v === null && (k === 'image_auroc' || k === 'pixel_auroc');
-                if (typeof v !== 'number' && !unavailable) return null;
-                const termKey = getMetricTermKey(k);
-                return (
-                  <div key={k} className="p-2.5 bg-[#1A212E] rounded-[4px] border border-[#2B3547]">
-                    <div className="flex items-center justify-between mb-1">
-                      <span className="text-[10px] text-slate-400 block uppercase">
-                        {k.replace(/_/g, ' ')}
-                      </span>
-                      {termKey && <JargonTooltip termKey={termKey} />}
-                    </div>
-                    <span className="text-base font-bold text-slate-100 tabular-nums">{unavailable
-                      ? (language === 'ko' ? '산출 불가' : 'Unavailable') : v.toFixed(4)}</span>
-                  </div>
-                );
-              })}
-            </div>
+            {metricGrid}
+            </>}
           </div>
 
           {detectionGrains && <DetectionEvaluationGrains summary={detectionGrains} language={language} />}
@@ -680,7 +783,7 @@ export const EvaluationStudio: React.FC = () => {
               }`}
             >
               <Target className="w-3.5 h-3.5" />
-              <span>{language === 'ko' ? '과검/미검 최적화 (τ*)' : 'Zero-Escape (τ*)'}</span>
+              <span>{language === 'ko' ? (simpleView ? '기준 점수별 과검·미검' : '과검/미검 최적화 (τ*)') : 'Zero-Escape (τ*)'}</span>
             </button>
           </div>
 
@@ -724,7 +827,7 @@ export const EvaluationStudio: React.FC = () => {
                     <thead>
                       <tr className="border-b border-[#2B3547]">
                         <th className="p-1.5 text-slate-400 font-mono text-[10px] uppercase text-left">
-                          True \ Pred
+                          {language === 'ko' ? '실제 \\ 판정' : 'True \\ Pred'}
                         </th>
                         {classes.map((c) => (
                           <th key={c} className="p-1.5 font-mono font-semibold text-slate-300 max-w-[80px] truncate" title={c}>
@@ -732,10 +835,10 @@ export const EvaluationStudio: React.FC = () => {
                           </th>
                         ))}
                         <th className="p-1.5 font-mono font-semibold text-slate-400 bg-[#131822] border-l border-[#2B3547] text-[10px]">
-                          Support
+                          {language === 'ko' ? '개수' : 'Support'}
                         </th>
                         <th className="p-1.5 font-mono font-semibold text-[#6EE7B7] bg-[#131822] text-[10px]">
-                          {task === 'detection' ? (language === 'ko' ? '행 일치율' : 'Row match') : 'Recall'}
+                          {task === 'detection' ? (language === 'ko' ? '행 일치율' : 'Row match') : (language === 'ko' ? '재현율' : 'Recall')}
                         </th>
                       </tr>
                     </thead>
@@ -804,7 +907,7 @@ export const EvaluationStudio: React.FC = () => {
                       {/* Bottom Marginal Row: Column Total & Precision */}
                       <tr className="border-t border-[#2B3547] bg-[#131822]">
                         <th className="p-1.5 font-mono text-slate-400 text-left text-[10px] uppercase">
-                          Pred Total
+                          {language === 'ko' ? '판정 합계' : 'Pred Total'}
                         </th>
                         {colMetrics.map((col, idx) => (
                           <td key={classes[idx]} className="p-1.5 font-mono text-slate-300 tabular-nums text-[11px]">
@@ -812,16 +915,16 @@ export const EvaluationStudio: React.FC = () => {
                           </td>
                         ))}
                         <td className="p-1.5 font-mono text-slate-400 border-l border-[#2B3547] tabular-nums text-[10px]">
-                          Total: {totalSamples}
+                          {language === 'ko' ? `합계 ${totalSamples}` : `Total: ${totalSamples}`}
                         </td>
                         <td className="p-1.5 font-mono text-slate-400 text-[10px]">
-                          Overall
+                          {language === 'ko' ? '전체' : 'Overall'}
                         </td>
                       </tr>
 
                       <tr className="border-t border-[#2B3547]/50 bg-[#131822]">
                         <th className="p-1.5 font-mono text-slate-400 text-left text-[10px] uppercase">
-                          {task === 'detection' ? (language === 'ko' ? '열 일치율' : 'Column match') : 'Precision'}
+                          {task === 'detection' ? (language === 'ko' ? '열 일치율' : 'Column match') : (language === 'ko' ? '정밀도' : 'Precision')}
                         </th>
                         {colMetrics.map((col, idx) => (
                           <td
@@ -836,7 +939,7 @@ export const EvaluationStudio: React.FC = () => {
                         <td colSpan={2} className="p-1.5 font-mono font-bold text-xs text-white bg-[#0E1624] border-l border-[#2B3547] tabular-nums">
                           {task === 'detection'
                             ? `${overallAccuracy.toFixed(1)}% ${language === 'ko' ? '클래스 일치' : 'class match'}`
-                            : `${overallAccuracy.toFixed(1)}% Acc`}
+                            : language === 'ko' ? `정확도 ${overallAccuracy.toFixed(1)}%` : `${overallAccuracy.toFixed(1)}% Acc`}
                         </td>
                       </tr>
                     </tbody>
@@ -930,6 +1033,14 @@ export const EvaluationStudio: React.FC = () => {
               </div>
             </div>
           )}
+          {simpleView && <details className="rounded border border-[#3B5269] bg-[#111C2A] text-xs text-slate-300">
+            <summary className="cursor-pointer p-2.5 font-semibold text-white">모델 승인 · 검사 서비스 · 평가 이력</summary>
+            <div className="space-y-4 p-2.5 pt-0">
+              <ModelDeploymentPanel taskOverride={comparisonTask} />
+              <EvaluationHistoryPanel sourceFolder={sourceFolder} task={comparisonTask} jobId={jobId} />
+              <EvaluationEvidencePanel samples={testPredictions} onSelect={path=>{const sample=testPredictions.find(item=>item.file_path===path);if(sample)void selectPrediction(sample);}}/>
+            </div>
+          </details>}
         </div>
 
         {/* Center/Right Side: Filtered Sample Drawer & Dual Viewport */}
@@ -978,7 +1089,7 @@ export const EvaluationStudio: React.FC = () => {
                       : 'text-slate-400 hover:text-slate-200'
                   }`}
                 >
-                  <span>FN 미검</span>
+                  <span title="FN">미검</span>
                   <span className="tabular-nums">({sampleCounts.escape})</span>
                 </button>
                 <button
@@ -992,7 +1103,7 @@ export const EvaluationStudio: React.FC = () => {
                       : 'text-slate-400 hover:text-slate-200'
                   }`}
                 >
-                  <span>FP 과검</span>
+                  <span title="FP">과검</span>
                   <span className="tabular-nums">({sampleCounts.overkill})</span>
                 </button>
               </div>
@@ -1006,7 +1117,7 @@ export const EvaluationStudio: React.FC = () => {
                       : 'text-slate-400 hover:text-slate-200'
                   }`}
                 >
-                  <span>🎯 TP 결함</span>
+                  <span title="TP">결함 맞음</span>
                   <span className="tabular-nums">({sampleCounts.defect})</span>
                 </button>
                 <button
@@ -1018,7 +1129,7 @@ export const EvaluationStudio: React.FC = () => {
                       : 'text-slate-400 hover:text-slate-200'
                   }`}
                 >
-                  <span>🟢 TN 정상</span>
+                  <span title="TN">정상 맞음</span>
                   <span className="tabular-nums">({sampleCounts.normal})</span>
                 </button>
               </div>
@@ -1107,7 +1218,7 @@ export const EvaluationStudio: React.FC = () => {
                       }).catch((cause) => setReportError(cause instanceof Error ? cause.message : '라벨 화면을 열지 못했습니다.'));
                     }} className="rounded border border-cyan-700 px-2 py-1 text-[10px] text-cyan-200 hover:bg-cyan-950 disabled:opacity-50 disabled:cursor-not-allowed">라벨 수정</button>
                     <span className="text-[10px] text-slate-400 font-mono">
-                      GT: {pred.ground_truth}
+                      정답: {pred.ground_truth}
                     </span>
                   </div>
                 </div>
@@ -1139,6 +1250,7 @@ export const EvaluationStudio: React.FC = () => {
 
             {/* Synchronized Pan/Zoom Dual Viewport */}
             <SynchronizedDualViewport
+              plain={simpleView}
               task={task}
               prediction={selectedPrediction}
               heatmapOverlayBase64={heatmapOverlayBase64}

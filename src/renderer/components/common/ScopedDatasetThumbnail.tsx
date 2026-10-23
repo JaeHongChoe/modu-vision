@@ -1,12 +1,16 @@
 import React, {useLayoutEffect, useRef, useState} from 'react';
 import {getApiPersistenceIdentity, getProjectContext, request, type ProjectContext} from '../../services/api';
+import {recordThumbnailRead} from '../../stores/thumbnailDiagnostics';
 
 function sameContext(left: ProjectContext | null, right: ProjectContext | null): boolean {
   return left === right || Boolean(left && right && left.workspace_id === right.workspace_id
     && left.project_id === right.project_id && left.actor_id === right.actor_id && left.mode === right.mode);
 }
 
-function thumbnailPath(value: string): boolean {
+/** A missing or malformed thumbnail address (an older server, a test double) leaves the image empty; it never
+ * throws inside a render or an observer, which would blank the whole app. */
+function thumbnailPath(value: unknown): value is string {
+  if (typeof value !== 'string') return false;
   const prefix = '/api/dataset/thumbnail/';
   if (!value.startsWith(prefix) || /[\\\u0000-\u001f#]/.test(value.split('?')[0]) || /[\u0000-\u001f#]/.test(value)) return false;
   try {
@@ -24,6 +28,15 @@ interface ThumbnailRead {
   failed: (error: unknown) => void;
 }
 
+/** The nearest ancestor that scrolls vertically, or null for the window. */
+function scrollArea(element: Element): Element | null {
+  if (typeof getComputedStyle !== 'function') return null;
+  for (let node = element.parentElement; node; node = node.parentElement) {
+    if (/(auto|scroll)/.test(getComputedStyle(node).overflowY)) return node;
+  }
+  return null;
+}
+
 /** Own one lazy fetch and its Blob URL; no remote URL reaches an image element. */
 export function createScopedThumbnailRead(options: ThumbnailRead): {observe: (element: Element) => void; retire: () => void} {
   const captured = options.context ? {...options.context} : null;
@@ -36,14 +49,18 @@ export function createScopedThumbnailRead(options: ThumbnailRead): {observe: (el
   const start = async () => {
     if (started || !current() || !thumbnailPath(options.path) || (transport !== 'local' && !captured)) return;
     started = true;
+    const project = captured?.project_id ?? null;
     try {
       const blob = await request<Blob>(options.path, {responseType: 'blob', projectContext: captured, signal: controller.signal});
-      if (!current()) return;
+      if (!current()) { recordThumbnailRead(options.path, project, 'stale', '응답이 오기 전에 프로젝트나 화면이 바뀌어 버림'); return; }
       const created = URL.createObjectURL(blob);
-      if (!current()) { URL.revokeObjectURL(created); return; }
+      if (!current()) { URL.revokeObjectURL(created); recordThumbnailRead(options.path, project, 'stale', '응답이 오기 전에 프로젝트나 화면이 바뀌어 버림'); return; }
       objectURL = created;
       options.publish(created);
+      recordThumbnailRead(options.path, project, 'ok');
     } catch (error) {
+      if (controller.signal.aborted) recordThumbnailRead(options.path, project, 'aborted', '화면을 떠나 읽기를 멈춤');
+      else recordThumbnailRead(options.path, project, current() ? 'failed' : 'stale', error instanceof Error ? error.message : String(error));
       if (current() && !controller.signal.aborted) options.failed(error);
     }
   };
@@ -52,11 +69,14 @@ export function createScopedThumbnailRead(options: ThumbnailRead): {observe: (el
       if (observed || !current() || !thumbnailPath(options.path) || (transport !== 'local' && !captured)
           || typeof IntersectionObserver === 'undefined') return;
       observed = true;
+      // Read thumbnails that are near view too, as the browser's own lazy images do: a gallery row just below
+      // the fold is ready when the user scrolls to it instead of showing empty boxes. The margin is measured on
+      // the gallery's own scroll area; on the window it would not reach rows clipped inside that area.
       observer = new IntersectionObserver(entries => {
         if (!current() || !entries.some(entry => entry.target === element && entry.isIntersecting)) return;
         observer?.disconnect();
         void start();
-      });
+      }, {root: scrollArea(element), rootMargin: '800px 0px'});
       observer.observe(element);
     },
     retire() {
@@ -100,6 +120,7 @@ export const ScopedDatasetThumbnail: React.FC<Props> = ({path, authority, contex
   const failed = eligible && loaded?.key === key && loaded.failed;
   return <img ref={image} src={displayed} alt={alt} className={className} loading="lazy" decoding="async"
     data-read-state={failed ? 'failed' : displayed ? 'ready' : 'pending'}
+    data-thumbnail-path={path}
     onLoad={event => { if (displayed && current() && event.currentTarget.src === displayed) onLoad?.(event); }}
     onError={() => { if (displayed && current()) setLoaded({key, url: null, failed: true}); }}/>
 };

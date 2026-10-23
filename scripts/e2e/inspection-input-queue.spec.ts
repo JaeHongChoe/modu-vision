@@ -24,7 +24,13 @@ async function exercise(page:Page,workspace:Workspace,evidence:Evidence,api:Api,
   const bad=path.join(fixture.source,'controlled-corrupt-input.png');fs.writeFileSync(bad,'controlled invalid png');
   const original=Object.keys(fixture.images)[0];
   for(let index=0;index<40;index++)fs.copyFileSync(original,path.join(fixture.source,`controlled-arrival-${index}.png`));
-  await expect.poll(async()=>{const q=await api('/api/product-delivery/operator/queue?limit=100');return q.total===57&&q.outstanding===0;},{timeout:60_000}).toBe(true);
+  // Admission and drain are separate waits, and the drain reports the counts it last saw. All 41 files are admitted
+  // about 4 s after the copy. The service then inspects them one at a time on the CPU: 26-29 s locally with two
+  // workers (0.7 s each), 1.6 s each with six local workers (41 x 1.6 = 66 s). Hosted runs of 7568f63 and 2e8aee7
+  // had not finished at 60 s. 120 s is about twice that; hosted runs reach this wait by about 90 s, so a stalled
+  // queue still fails here, with its counts, before the 240 s test limit.
+  await expect.poll(async()=>(await api('/api/product-delivery/operator/queue?limit=100')).total,{timeout:60_000}).toBe(57);
+  await expect.poll(async()=>{const q=await api('/api/product-delivery/operator/queue?limit=100');return {total:q.total,outstanding:q.outstanding};},{timeout:120_000}).toEqual({total:57,outstanding:0});
   await panel.getByText('입력 대기열·실패 재처리',{exact:true}).click();
   const queue=panel.getByRole('region',{name:'검사 입력 대기열'});
   await expect(queue).toContainText('/57');

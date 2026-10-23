@@ -7,7 +7,7 @@ function fixture(){
  const saved={source:'dataset',imagePath:'/owned/original.png',imageUuid:'saved',sha256:'a'.repeat(64),relativePath:'ng/original.png',fileName:'original.png'};
  const react={useState(initial){const i=cursor++;if(!(i in slots))slots[i]=typeof initial==='function'?initial():initial;return[slots[i],value=>{const next=typeof value==='function'?value(slots[i]):value;if(!Object.is(next,slots[i])){slots[i]=next;dirty=true;}}];},useRef(initial){const i=cursor++;return slots[i]??(slots[i]={current:initial});},useEffect(fn,deps){const i=cursor++;if(!same(slots[i]?.deps,deps)){const previous=slots[i];slots[i]={deps,cleanup:previous?.cleanup};effects.push(()=>{slots[i].cleanup?.();slots[i].cleanup=fn();});}},useLayoutEffect(){cursor++;},useSyncExternalStore(_subscribe,getSnapshot){cursor++;return getSnapshot();}};
  const jsx=(type,props)=>({type,props});const Browser=()=>null;
- const mocks={'react':react,'react/jsx-runtime':{jsx,jsxs:jsx},'lucide-react':new Proxy({},{get:()=>()=>null}),
+ const mocks={'../../utils/plainLabels':require('../../utils/plainLabels.fixture.cjs'),'react':react,'react/jsx-runtime':{jsx,jsxs:jsx},'lucide-react':new Proxy({},{get:()=>()=>null}),
   '../../stores/useDatasetStore':{useDatasetStore:s=>s({folderPath:'/owned',images:[]})},
   '../../stores/useFlowchartStore':{useFlowchartStore:()=>({selectedImage:saved,setSelectedImage:value=>confirmed.push(value)})},
   '../../stores/useProjectStore':{useProjectStore:s=>s({task:'classification',project:{id:'owned-project',active_labelset_id:'default'}})},

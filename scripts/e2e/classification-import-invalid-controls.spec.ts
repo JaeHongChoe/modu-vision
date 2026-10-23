@@ -89,12 +89,12 @@ test('classification folder import rejects a missing source and restores owning 
     await handoffWithin(expect(page.getByTitle('프로젝트 관리', {exact: true})).toContainText(project.name, opts()), deadline, 'own project title');
     await handoffWithin(expect(page.locator('span[title]').filter({hasText: source})).toHaveAttribute('title', source, opts()), deadline, 'own saved source');
     await handoffWithin(expect(page.getByText('학습 가능 이미지', {exact: true}).locator('..').getByText('6', {exact: true})).toBeVisible(opts()), deadline, 'own eligible count');
-    for (const [label, count] of [['Train:', 3], ['Val:', 2], ['Test:', 1]] as const) await handoffWithin(expect(page.getByText(label, {exact: true}).locator('..').getByText(String(count), {exact: true})).toBeVisible(opts()), deadline, 'own partition count');
+    for (const [label, count] of [['학습:', 3], ['검증:', 2], ['시험:', 1]] as const) await handoffWithin(expect(page.getByText(label, {exact: true}).locator('..').getByText(String(count), {exact: true})).toBeVisible(opts()), deadline, 'own partition count');
     const panel = page.getByRole('region', {name: '활성 라벨 세트 데이터 통계', exact: true});
     for (const [label, count] of [['전체', 6], ['라벨 완료', 6], ['라벨 미완료', 0]] as const) await handoffWithin(expect(panel.getByRole('button').filter({has: page.getByText(label, {exact: true})}).locator('strong')).toHaveText(String(count), opts()), deadline, 'own label count');
     const images = page.locator('button[aria-label$=" 라벨링에서 열기"] img'); await handoffWithin(expect(images).toHaveCount(6, opts()), deadline, 'own gallery count');
     await handoffWithin(expect.poll(() => images.evaluateAll(nodes => nodes.every(node => node instanceof HTMLImageElement && node.complete && node.naturalWidth === 32 && node.naturalHeight === 32)), opts()).toBe(true), deadline, 'all owning gallery images decoded at source dimensions');
-    expect(await handoffWithin(images.evaluateAll(nodes => nodes.map(node => new URL((node as HTMLImageElement).src).searchParams.get('file_path')).sort()), deadline, 'exact gallery source paths')).toEqual(FILES.map(relative => path.join(source, relative)).sort());
+    expect(await handoffWithin(images.evaluateAll(nodes => nodes.map(node => new URL((node as HTMLImageElement).dataset.thumbnailPath || (node as HTMLImageElement).src, location.origin).searchParams.get('file_path')).sort()), deadline, 'exact gallery source paths')).toEqual(FILES.map(relative => path.join(source, relative)).sort());
   };
   const mutations = (r: Request) => {try {if (new URL(r.url()).origin === renderer.origin && !['GET', 'HEAD', 'OPTIONS'].includes(r.method())) writes.push({method: r.method(), route: new URL(r.url()).pathname, body: r.postDataJSON()});} catch (error) {callbackFailures.push(error);}};
   let before: unknown, primary: unknown, removed: unknown; const after: Record<string, unknown> = {};
@@ -122,8 +122,8 @@ test('classification folder import rejects a missing source and restores owning 
       expect(raw7(fs.lstatSync(missing, {bigint: true}))).toEqual(raw7(owned)); expect(fs.readdirSync(missing)).toEqual([]); fs.rmdirSync(missing); expect(fs.existsSync(missing)).toBe(false); removed = {path: missing, raw7: raw7(owned), created_by_this_case: true, empty_directory_only: true};
       await handoffWithin(page.evaluate(value => {const gate = (window as any).__ownedMissingFolder; if (typeof gate.resolve !== 'function') throw Error('Owned chooser is not pending'); gate.resolve(value); gate.resolve = null;}, missing), deadline, 'release exact removed folder answer');
       const result = await body(await handoffWithin(invalid.reply, deadline, 'genuine invalid import response'), 404, deadline, 'invalid-import', invalid.request());
-      expect(invalid.request()!.postDataJSON()).toEqual({folder_path: missing, task: 'classification', validate_images: true}); expect(result.detail.error_code).toBe('ERR_NO_DATA'); expect(result.detail.details).toBe('Folder not found: ' + missing);
-      await handoffWithin(expect(page.getByRole('alert').filter({hasText: '데이터셋을 불러오지 못했습니다'})).toContainText('Folder not found: ' + missing, {timeout: remaining(deadline)}), deadline, 'actual rejected import error');
+      expect(invalid.request()!.postDataJSON()).toEqual({folder_path: missing, task: 'classification', validate_images: true}); expect(result.detail.error_code).toBe('ERR_NO_DATA'); expect(result.detail.details).toBe('폴더를 찾을 수 없습니다: ' + missing);
+      await handoffWithin(expect(page.getByRole('alert').filter({hasText: '데이터셋을 불러오지 못했습니다'})).toContainText('폴더를 찾을 수 없습니다: ' + missing, {timeout: remaining(deadline)}), deadline, 'actual rejected import error');
       await handoffWithin(expect(page.locator('button[aria-label$=" 라벨링에서 열기"] img')).toHaveCount(0, {timeout: remaining(deadline)}), deadline, 'failed selection has no stale gallery');
       const invalidStatistics = page.getByRole('region', {name: '활성 라벨 세트 데이터 통계', exact: true});
       await handoffWithin(expect(invalidStatistics).toHaveCount(1, {timeout: remaining(deadline)}), deadline, 'own statistics region remains');

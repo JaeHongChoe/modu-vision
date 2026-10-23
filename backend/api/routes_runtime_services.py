@@ -26,7 +26,8 @@ def manager(request,allowed=None):
     project=get_current_project(request)
     if project is None:raise HTTPException(409,'Open a project before managing the inspection service')
     if allowed:require_role(request,project,allowed)
-    return ManagedService(project['project_dir']),project
+    try:return ManagedService(project['project_dir']),project
+    except (ValueError,OSError) as exc:raise HTTPException(409,str(exc)) from exc
 
 def execute(action):
     try:return action()

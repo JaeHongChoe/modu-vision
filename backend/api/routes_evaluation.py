@@ -58,6 +58,7 @@ from backend.engine.dataset_loaders import (
     SegmentationDataset,
     AnomalyDataset,
     _read_image_rgb,
+    resize_model_input,
 )
 from backend.engine.device import get_device
 from backend.engine.checkpoint_paths import (
@@ -265,6 +266,29 @@ def _matches_source_dataset(
         return False
 
 
+
+def _source_mismatch_detail(output_dir: Path, source_dataset_path: Optional[str], source_task: Optional[str],
+                            job_id: str, recorded_source: Optional[str] = None) -> str:
+    """Why a completed model does not match the selected source. A model of the right task trained on this very folder
+    fails only because the folder's images, labels or split changed after training; say that, and how to get back."""
+    from backend.engine.data_changes import data_changed_message
+    receipt = completed_job_receipt(output_dir) or {}
+    try:
+        meta = json.loads((output_dir / "model_meta.json").read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        meta = {}
+    original = receipt.get("source_dataset_path") or recorded_source or (meta.get("source_dataset_path") if isinstance(meta, dict) else None)
+    task = receipt.get("task") or (meta.get("task") if isinstance(meta, dict) else None)
+    try:
+        same_source = bool(source_dataset_path and original
+                           and Path(original).expanduser().resolve() == Path(source_dataset_path).expanduser().resolve())
+    except (OSError, ValueError):
+        same_source = False
+    if same_source and (not source_task or task == source_task):
+        return data_changed_message(job_id)
+    return f"선택한 데이터셋으로 학습을 끝낸 모델이 없습니다 (작업 {job_id}). 이 데이터셋으로 학습을 먼저 끝내세요."
+
+
 def _resolve_job_artifacts(
     job_id: Optional[str] = None,
     dataset_path_override: Optional[str] = None,
@@ -277,35 +301,36 @@ def _resolve_job_artifacts(
     """
     if job_id and job_id not in ("latest", "current", "default"):
         if not is_job_id(job_id):
-            raise HTTPException(status_code=404, detail=f"Evaluation data or model checkpoint not found for job: {job_id}")
+            raise HTTPException(status_code=404, detail=f"평가할 데이터나 학습한 모델 파일을 찾을 수 없습니다 (작업 {job_id}). 학습을 먼저 끝내세요.")
         rec = _record_for_selected_checkpoint(job_id)
         if rec:
             if rec.status in ("queued", "running", "stopping", "disconnected"):
-                raise HTTPException(status_code=400, detail=f"Training job '{job_id}' is still in progress")
+                raise HTTPException(status_code=400, detail=f"학습 작업 '{job_id}'이(가) 아직 진행 중입니다. 학습이 끝난 뒤 평가하세요.")
             if rec.status in ("failed", "aborted"):
                 raise HTTPException(
                     status_code=400,
-                    detail=f"Training job '{job_id}' did not complete successfully (status: {rec.status})",
+                    detail=f"학습 작업 '{job_id}'이(가) 정상적으로 끝나지 않았습니다 (상태: {rec.status}). 학습을 다시 실행한 뒤 평가하세요.",
                 )
             model_pt = trusted_checkpoint(job_id, rec.output_dir)
             if model_pt is None:
-                raise HTTPException(status_code=404, detail=f"Evaluation model checkpoint not found for job: {job_id}")
+                raise HTTPException(status_code=404, detail=f"평가할 학습 모델 파일을 찾을 수 없습니다 (작업 {job_id}).")
             out_dir = model_pt.parent
             if not _matches_source_dataset(
                 out_dir, source_dataset_path, source_task, rec.dataset_path,
                 getattr(rec, "source_dataset_path", None), getattr(rec, "dataset_fingerprint", None),
             ):
-                raise HTTPException(status_code=404, detail=f"No completed model matches the selected dataset for job: {job_id}")
+                raise HTTPException(status_code=404, detail=_source_mismatch_detail(
+                    out_dir, source_dataset_path, source_task, job_id, getattr(rec, "source_dataset_path", None)))
             task_hint = rec.task
             dataset_hint = Path(rec.dataset_path)
             resolved_job_id = rec.job_id
         else:
             model_pt = trusted_checkpoint(job_id)
             if model_pt is None:
-                raise HTTPException(status_code=404, detail=f"Evaluation data or model checkpoint not found for job: {job_id}")
+                raise HTTPException(status_code=404, detail=f"평가할 데이터나 학습한 모델 파일을 찾을 수 없습니다 (작업 {job_id}). 학습을 먼저 끝내세요.")
             out_dir = model_pt.parent
             if not _matches_source_dataset(out_dir, source_dataset_path, source_task):
-                raise HTTPException(status_code=404, detail=f"No completed model matches the selected dataset for job: {job_id}")
+                raise HTTPException(status_code=404, detail=_source_mismatch_detail(out_dir, source_dataset_path, source_task, job_id))
             receipt = completed_job_receipt(out_dir) or {}
             task_hint = receipt.get("task")
             dataset_hint = Path(receipt["dataset_path"]) if receipt.get("dataset_path") else None
@@ -353,7 +378,7 @@ def _resolve_job_artifacts(
                 active_output = Path(active.output_dir).expanduser().resolve()
                 candidates = [p for p in candidates if p.parent.resolve() != active_output]
             if not candidates:
-                raise HTTPException(status_code=404, detail="No completed training job has been selected")
+                raise HTTPException(status_code=404, detail="학습을 끝낸 모델을 아직 고르지 않았습니다. 학습을 먼저 끝낸 뒤 평가할 모델을 고르세요.")
             newest = max(candidates, key=lambda p: p.stat().st_mtime)
             out_dir = newest.parent.resolve()
             receipt = completed_job_receipt(out_dir) or {}
@@ -363,7 +388,7 @@ def _resolve_job_artifacts(
 
     model_pt = out_dir / "best_model.pt"
     if not model_pt.is_file():
-        raise HTTPException(status_code=404, detail=f"Model checkpoint best_model.pt not found in {out_dir}")
+        raise HTTPException(status_code=404, detail=f"{out_dir}에 학습한 모델 파일(best_model.pt)이 없습니다. 학습을 먼저 끝내세요.")
 
     meta_p = out_dir / "model_meta.json"
     meta: Dict[str, Any] = {}
@@ -389,10 +414,10 @@ def _resolve_job_artifacts(
         if cand_data.exists():
             resolved_dataset = cand_data
         else:
-            raise HTTPException(status_code=404, detail="Evaluation dataset path could not be located on disk")
+            raise HTTPException(status_code=404, detail="평가할 데이터셋 폴더를 찾을 수 없습니다. 데이터셋 위치를 다시 확인하세요.")
 
     if not resolved_dataset.exists():
-        raise HTTPException(status_code=404, detail=f"Dataset path does not exist on disk: {resolved_dataset}")
+        raise HTTPException(status_code=404, detail=f"데이터셋 폴더가 없습니다: {resolved_dataset}")
 
     return out_dir, model_pt, meta, task, resolved_job_id, resolved_dataset
 
@@ -422,11 +447,11 @@ def _paired_evaluation_paths(dataset_dir: Path, task: str) -> Tuple[Path, Path, 
             continue
         labels = (dataset_dir / f"annotations_{split}.json") if task == "detection" else (dataset_dir / "masks" / split)
         if not (labels.is_file() if task == "detection" else labels.is_dir()):
-            raise HTTPException(status_code=422, detail=f"{task} {split} images exist without matching labels: {labels}")
+            raise HTTPException(status_code=422, detail=f"{task} {split} 이미지 중 라벨이 없는 것이 있습니다: {labels}. 라벨을 채운 뒤 다시 시도하세요.")
         if not any(path.is_file() and path.suffix.lower() in SUPPORTED_IMAGE_EXTENSIONS for path in images.rglob('*')):
             continue
         return images, labels, split
-    raise HTTPException(status_code=422, detail="Evaluation requires a saved test or validation partition; unpartitioned images may include training data.")
+    raise HTTPException(status_code=422, detail="평가하려면 저장된 테스트 또는 검증 분할이 필요합니다. 분할하지 않은 이미지에는 학습에 쓴 이미지가 섞여 있을 수 있으니 분할을 저장한 뒤 다시 시도하세요.")
 
 
 def _split_evidence(split: str) -> Dict[str, Any]:
@@ -446,9 +471,9 @@ def _evaluate_classification(
         selected_split = "val"
         val_ds = ClassificationDataset(root_dir=dataset_dir, split=selected_split)
     if len(val_ds.samples) == 0:
-        raise HTTPException(status_code=422, detail="No held-out classification images. Save a nonempty test or validation partition before evaluation.")
+        raise HTTPException(status_code=422, detail="평가에 쓸 분류 이미지가 없습니다. 테스트 또는 검증 분할에 이미지를 넣어 저장한 뒤 평가하세요.")
     if getattr(val_ds, "split_basis", None) == "automatic":
-        raise HTTPException(status_code=422, detail="Save the classification split before evaluation; an automatic split can change after training.")
+        raise HTTPException(status_code=422, detail="평가 전에 분류 데이터의 분할을 저장하세요. 자동 분할은 학습 뒤에 달라질 수 있습니다.")
 
     ckpt = torch.load(model_pt, map_location=device, weights_only=False)
     state_dict = ckpt["model_state_dict"] if "model_state_dict" in ckpt else ckpt
@@ -481,13 +506,13 @@ def _evaluate_classification(
     }
 
     with torch.no_grad():
-        for img_path, _ in val_ds.samples:
+        for img_path, sample_label in val_ds.samples:
             if cancel is not None and cancel.is_set(): raise InterruptedError("Common evaluation cancelled")
-            cname = img_path.parent.name
+            cname = val_ds.classes[sample_label]  # the folder class, or the class chosen for this image in step 2
             target_idx = class_to_idx.get(cname, 0)
 
             rgb = _read_image_rgb(img_path)
-            resized = cv2.resize(rgb, img_size, interpolation=cv2.INTER_LINEAR)
+            resized = resize_model_input(rgb, img_size)  # the same resize as training and the flow inspection node
             img_t = torch.from_numpy(resized.transpose(2, 0, 1)).float().unsqueeze(0) / 255.0
             img_t = img_t.to(device)
 
@@ -545,13 +570,13 @@ def _patch_manifest_for_checkpoint(dataset_dir: Path, meta: Dict[str, Any]):
     """Refuse evaluation when labeled pixels changed after this model was trained."""
     expected = meta.get("patch_provenance")
     if not isinstance(expected, dict) or not expected.get("dataset_sha256"):
-        raise HTTPException(status_code=409, detail="Patch model has no dataset provenance")
+        raise HTTPException(status_code=409, detail="이 패치 모델에는 어떤 데이터로 학습했는지 기록이 없습니다.")
     try:
         manifest = load_patch_manifest(dataset_dir)
     except (OSError, ValueError) as exc:
-        raise HTTPException(status_code=409, detail=f"Patch source or labels changed: {exc}") from exc
+        raise HTTPException(status_code=409, detail=f"패치 데이터나 라벨이 학습 뒤에 바뀌었습니다: {exc}") from exc
     if manifest.provenance["dataset_sha256"] != expected["dataset_sha256"]:
-        raise HTTPException(status_code=409, detail="Patch source or labels changed after training")
+        raise HTTPException(status_code=409, detail="패치 데이터나 라벨이 학습 뒤에 바뀌었습니다. 다시 학습한 뒤 평가하세요.")
     return manifest
 
 
@@ -567,11 +592,11 @@ def _evaluate_patch_classification(
     manifest = load_patch_manifest(dataset_dir) if allow_source_revision else _patch_manifest_for_checkpoint(dataset_dir, meta)
     selected_split = selected_split or ("test" if manifest.provenance["split_counts"]["test"] else "val")
     if selected_split not in ('val','test') or not manifest.provenance['split_counts'][selected_split]:
-        raise HTTPException(status_code=422,detail='Patch evaluation requires a nonempty explicit val or test partition')
+        raise HTTPException(status_code=422,detail='패치 평가에는 이미지가 들어 있는 검증 또는 테스트 분할이 필요합니다. 분할을 저장한 뒤 다시 시도하세요.')
     samples = [item for item in manifest.patches if item.split == selected_split]
     classes = manifest.classes
     if meta.get("classes") != classes or meta.get("normal_class") != manifest.normal_class:
-        raise HTTPException(status_code=409, detail="Patch class mapping changed after training")
+        raise HTTPException(status_code=409, detail="패치 클래스 목록이 학습 뒤에 바뀌었습니다. 다시 학습한 뒤 평가하세요.")
     checkpoint = torch.load(model_pt, map_location=device, weights_only=True)
     state_dict = checkpoint.get("model_state_dict", checkpoint)
     model = create_classification_model(
@@ -652,7 +677,7 @@ def _manifest_evaluation_dataset(task, source, image_size, class_names=None):
             dataset.evaluation_split = selected_split
         return dataset
     except (ValueError, OSError, KeyError) as exc:
-        raise HTTPException(422, f"Saved evaluation split is invalid: {exc}") from exc
+        raise HTTPException(422, f"저장된 평가 분할이 올바르지 않습니다: {exc}") from exc
 
 
 def _evaluate_detection(
@@ -670,7 +695,7 @@ def _evaluate_detection(
     metadata_names = foreground_class_names(metadata_classes) if isinstance(metadata_classes, (list, tuple)) and metadata_classes else None
     checkpoint_names = foreground_class_names(checkpoint_classes) if isinstance(checkpoint_classes, (list, tuple)) and checkpoint_classes else None
     if checkpoint_names and metadata_names and checkpoint_names != metadata_names:
-        raise HTTPException(status_code=422, detail="Detection checkpoint and model metadata have different class order")
+        raise HTTPException(status_code=422, detail="학습한 모델 파일과 모델 정보의 클래스 순서가 다릅니다. 다시 학습한 뒤 평가하세요.")
     classes = checkpoint_names or metadata_names
     if classes is None:
         train_anno = dataset_dir / "annotations_train.json"
@@ -685,14 +710,14 @@ def _evaluate_detection(
         else:
             selected_split = val_ds.evaluation_split
     except ValueError as exc:
-        raise HTTPException(status_code=422, detail=f"Detection evaluation class mapping is incompatible: {exc}") from exc
+        raise HTTPException(status_code=422, detail=f"검출 평가의 클래스 목록이 모델과 맞지 않습니다: {exc}") from exc
     if len(val_ds) == 0:
-        raise HTTPException(status_code=400, detail="No evaluation images found for detection")
+        raise HTTPException(status_code=400, detail="검출을 평가할 이미지가 없습니다. 테스트 또는 검증 분할에 이미지를 넣으세요.")
 
     classes = list(val_ds.categories.values())
     num_classes = checkpoint_detection_num_classes(state_dict, classes)
     if num_classes != len(classes) + 1:
-        raise HTTPException(status_code=422, detail="Detection checkpoint class count does not match saved class mapping")
+        raise HTTPException(status_code=422, detail="학습한 모델 파일의 클래스 수가 저장된 클래스 목록과 다릅니다. 다시 학습한 뒤 평가하세요.")
     det_preset = meta.get("detector_preset", meta.get("preset", "fast"))
     model = create_detection_model(preset=det_preset, num_classes=num_classes, pretrained=False,
                                    backbone=meta.get("backbone", ckpt.get("backbone"))).to(device)
@@ -808,7 +833,7 @@ def _evaluate_segmentation(
     else:
         selected_split = val_ds.evaluation_split
     if len(val_ds) == 0:
-        raise HTTPException(status_code=400, detail="No evaluation images found for segmentation")
+        raise HTTPException(status_code=400, detail="분할을 평가할 이미지가 없습니다. 테스트 또는 검증 분할에 이미지를 넣으세요.")
 
     num_classes = len(classes)
 
@@ -850,7 +875,7 @@ def _evaluate_segmentation(
             pred_mask = torch.argmax(logits, dim=1)[0].cpu().numpy().astype(np.uint8)
             gt_mask = target_mask.cpu().numpy().astype(np.uint8)
             if _sha256(img_p) != image_sha256:
-                raise HTTPException(409, 'Evaluation source image changed while producing pixel evidence')
+                raise HTTPException(409, '평가 결과 이미지를 만드는 동안 원본 이미지가 바뀌었습니다. 다시 평가하세요.')
 
             all_preds.append(pred_mask)
             all_targets.append(gt_mask)
@@ -955,7 +980,7 @@ def _evaluate_anomaly(
     else:
         selected_split = val_ds.evaluation_split
     if len(val_ds) == 0:
-        raise HTTPException(status_code=400, detail="No evaluation images found for anomaly detection")
+        raise HTTPException(status_code=400, detail="이상 탐지를 평가할 이미지가 없습니다. 테스트 또는 검증 분할에 이미지를 넣으세요.")
 
     classes = ["good", "anomaly"]
     num_classes = len(classes)
@@ -977,9 +1002,9 @@ def _evaluate_anomaly(
     pixel_masks = []
     mask_sources = []
     mode = meta.get("anomaly_mode", "classification")
-    if mode not in ("classification", "segmentation"): raise HTTPException(422, "Invalid anomaly mode")
+    if mode not in ("classification", "segmentation"): raise HTTPException(422, "이상 탐지 방식이 올바르지 않습니다.")
     if patch_scores and mode == 'segmentation':
-        raise HTTPException(422, 'Patch score maps do not provide trained segmentation masks')
+        raise HTTPException(422, '패치 점수 지도로는 학습한 분할 마스크를 만들 수 없습니다.')
 
     with torch.no_grad():
         for idx in range(len(val_ds)):
@@ -989,7 +1014,7 @@ def _evaluate_anomaly(
             if selected_split == 'test' and fitted_pixels:
                 decoded_hash = hashlib.sha256(str(rgb.shape).encode() + rgb.tobytes()).hexdigest()
                 if decoded_hash in fitted_pixels:
-                    raise HTTPException(422, 'Anomaly test decoded content overlaps training or calibration images')
+                    raise HTTPException(422, '이상 탐지 테스트 이미지에 학습이나 기준값 조정에 쓴 이미지가 섞여 있습니다. 테스트 이미지를 분리한 뒤 다시 시도하세요.')
             resized = rgb if patch_scores else cv2.resize(rgb, img_size, interpolation=cv2.INTER_LINEAR)
             img_t = torch.from_numpy(resized.transpose(2, 0, 1)).float().unsqueeze(0) / 255.0
             if not patch_scores:
@@ -998,7 +1023,7 @@ def _evaluate_anomaly(
             heatmap, score = model(img_t)
             heatmap_np = heatmap.detach().cpu().numpy() if isinstance(heatmap, torch.Tensor) else np.asarray(heatmap)
             heatmap_np = np.squeeze(heatmap_np).astype(np.float32)
-            if heatmap_np.ndim != 2 or not np.isfinite(heatmap_np).all(): raise HTTPException(422, "Anomaly model returned an invalid pixel map")
+            if heatmap_np.ndim != 2 or not np.isfinite(heatmap_np).all(): raise HTTPException(422, "이상 탐지 모델이 올바르지 않은 결과 지도를 돌려주었습니다.")
             maps.append(heatmap_np)
             mask = None
             if patch_scores:
@@ -1012,7 +1037,7 @@ def _evaluate_anomaly(
                 mask_sources.append({"path": None, "basis": "reviewed normal image label"})
             else:
                 mask_sources.append(None)
-                if mode == "segmentation": raise HTTPException(422, "Anomaly segmentation evaluation requires masks for every defect image")
+                if mode == "segmentation": raise HTTPException(422, "이상 영역 평가에는 모든 불량 이미지의 마스크가 필요합니다. 마스크를 채운 뒤 다시 시도하세요.")
             if mask is not None:
                 pixel_heatmaps.append(heatmap_np); pixel_masks.append(mask)
             score_f = float(score[0].item() if isinstance(score, (torch.Tensor, list)) else score)
@@ -1131,7 +1156,7 @@ def _evaluation_class_semantics(meta: Any, task: Optional[str] = None) -> Dict[s
         if recorded_roles(meta, task=task, classes=names or None) is not None:
             return dict(meta["class_semantics"])
     except ValueError as exc:
-        raise HTTPException(status_code=422, detail=f"Model class semantics record is invalid: {exc}") from exc
+        raise HTTPException(status_code=422, detail=f"모델의 클래스 의미 기록이 올바르지 않습니다: {exc}") from exc
     return class_semantics_record(names, task=task)
 
 
@@ -1162,23 +1187,23 @@ def _common_project(request):
     project=get_current_project(request)
     account=getattr(request.state,'account_user',None)
     if account and request.app.state.accounts.project_role(account['id'],project['id']) not in {'owner','reviewer','trainer'}:
-        raise HTTPException(403,'This project role cannot control remote evaluation')
+        raise HTTPException(403,'이 프로젝트에서 맡은 역할로는 원격 평가를 실행할 수 없습니다.')
     return project
 
 
 def _common_model(project,job_id):
     if not project or not isinstance(job_id,str) or not is_job_id(job_id):
-        raise HTTPException(422,'Common evaluation requires an explicit completed project job')
+        raise HTTPException(422,'공통 평가에는 이 프로젝트에서 학습을 끝낸 작업을 지정해야 합니다.')
     models=Path(project['models_dir']).resolve()
     output=models/job_id
     if output.is_symlink() or not output.is_dir() or output.parent!=models:
-        raise HTTPException(404,'Completed model is not in the active project')
+        raise HTTPException(404,'학습을 끝낸 모델이 현재 프로젝트에 없습니다.')
     from backend.remote.operations import remote_job_context
     from backend.remote.coordinator import ArtifactValidationError
     try:context=remote_job_context(output,job_id)
     except (ArtifactValidationError,ValueError,KeyError,OSError) as exc:
-        raise HTTPException(502,f'Completed remote model could not be verified: {exc}') from exc
-    if context is None:raise HTTPException(422,'Common cohort requires a completed verified remote model')
+        raise HTTPException(502,f'원격에서 학습한 모델을 확인하지 못했습니다: {exc}') from exc
+    if context is None:raise HTTPException(422,'공통 시험 이미지 묶음으로 평가하려면 원격에서 학습을 끝내고 확인된 모델이 필요합니다.')
     return context,json.loads((output/'model_meta.json').read_text(encoding='utf-8'))
 
 
@@ -1191,21 +1216,21 @@ def _run_common_evaluation(project,job_id,dataset_path,version_id,profile_id,dev
     from backend.api.routes_dataset_versions import _read_manifest,_verify
     context,meta=_common_model(project,job_id)
     if not isinstance(version_id,str) or not isinstance(profile_id,str) or device not in ('cpu','cuda:0'):
-        raise HTTPException(422,'Common evaluation requires a saved version, original profile, and explicit CPU or logical CUDA 0')
+        raise HTTPException(422,'공통 평가에는 저장된 버전, 학습할 때 쓴 장비 설정, 그리고 CPU 또는 CUDA 0 장치 지정이 필요합니다.')
     if profile_id!=context.profile.id or get_profile_store().get(profile_id)!=context.profile:
-        raise HTTPException(409,'Common evaluation currently supports the unchanged original model compute profile')
-    if source_task is not None and source_task!=context.task:raise HTTPException(409,'Common evaluation source task changed')
+        raise HTTPException(409,'공통 평가는 지금은 모델을 학습할 때 쓴 장비 설정 그대로만 실행할 수 있습니다.')
+    if source_task is not None and source_task!=context.task:raise HTTPException(409,'공통 평가 대상 모델의 작업 종류가 바뀌었습니다.')
     try:
         cohort=freeze_cohort(project,version_id,Path(dataset_path or project['source_dataset_dir']),context.task,meta,context)
         result=execute_common(context,cohort,device,force_recompute=bool(force_recompute))
         directory,manifest=_read_manifest(project,version_id)
         verification=_verify(project,directory,manifest)
         if verification['status']!='verified' or verification['editable_changed_files']:
-            raise HTTPException(409,'Common source labels or split changed during execution')
+            raise HTTPException(409,'평가하는 동안 라벨이나 분할이 바뀌었습니다. 다시 평가하세요.')
     except RemoteComputeBusy as exc:raise HTTPException(409,str(exc)) from exc
-    except RemoteDisconnected as exc:raise HTTPException(503,f'Remote evaluation connection lost; retry the same binding: {exc}') from exc
+    except RemoteDisconnected as exc:raise HTTPException(503,f'원격 평가 연결이 끊겼습니다. 같은 설정으로 다시 시도하세요: {exc}') from exc
     except ArtifactValidationError as exc:raise HTTPException(502,str(exc)) from exc
-    except (ValueError,KeyError,TypeError,OSError) as exc:raise HTTPException(422,f'Common evaluation refused: {exc}') from exc
+    except (ValueError,KeyError,TypeError,OSError) as exc:raise HTTPException(422,f'공통 평가를 실행할 수 없습니다: {exc}') from exc
     except RuntimeError as exc:raise HTTPException(409,str(exc)) from exc
     from backend.api.routes_model_comparisons import _fingerprint,_sha256
     binding={'source_dataset_path':str(cohort['source']),'dataset_fingerprint':_fingerprint(cohort['source']),
@@ -1279,11 +1304,11 @@ def run_or_load_evaluation(
     try:
         remote_context = remote_job_context(out_dir, resolved_job_id)
     except ArtifactValidationError as exc:
-        raise HTTPException(status_code=502, detail=f"Remote evaluation result could not be verified: {exc}") from exc
+        raise HTTPException(status_code=502, detail=f"원격 평가 결과를 확인하지 못했습니다: {exc}") from exc
     if remote_context is not None and ds_path_clean and resolved_dataset.resolve() != remote_context.dataset_path:
         raise HTTPException(
             status_code=422,
-            detail="Remote evaluation currently uses its original training snapshot; a different dataset path is unsupported",
+            detail="원격 평가는 지금은 학습할 때 쓴 데이터로만 할 수 있습니다. 다른 데이터셋 경로는 지원하지 않습니다.",
         )
 
     from backend.api import routes_dataset
@@ -1301,7 +1326,7 @@ def run_or_load_evaluation(
     def preserve_result(result):
         result["evaluation_contract_version"] = EVALUATION_CONTRACT_VERSION
         if _fingerprint(bound_source) != evaluation_binding["dataset_fingerprint"] or _sha256(model_pt) != evaluation_binding["checkpoint_sha256"]:
-            raise HTTPException(409, "Evaluation inputs changed during execution")
+            raise HTTPException(409, "평가하는 동안 입력 데이터가 바뀌었습니다. 다시 평가하세요.")
         from backend.engine.dataset_metadata import metadata_for_path
         project_root = out_dir.parent.parent
         remap_prepared_predictions(result.get("test_predictions", []), resolved_dataset, bound_source, out_dir)
@@ -1360,9 +1385,9 @@ def run_or_load_evaluation(
             _annotate_predictions(remote.get("test_predictions", []), remote.get("task", task), class_semantics["roles"])
             return preserve_result(remote)
     except RemoteDisconnected as exc:
-        raise HTTPException(status_code=503, detail=f"Remote evaluation connection lost; retry the same job: {exc}") from exc
+        raise HTTPException(status_code=503, detail=f"원격 평가 연결이 끊겼습니다. 같은 작업을 다시 시도하세요: {exc}") from exc
     except ArtifactValidationError as exc:
-        raise HTTPException(status_code=502, detail=f"Remote evaluation result could not be verified: {exc}") from exc
+        raise HTTPException(status_code=502, detail=f"원격 평가 결과를 확인하지 못했습니다: {exc}") from exc
 
     dev = get_device()
     effective_data = _resolve_dataset_dir(resolved_dataset, task)
@@ -1379,7 +1404,7 @@ def run_or_load_evaluation(
     elif task_clean in ("anomaly", "anomaly_detection"):
         res = _evaluate_anomaly(model_pt, meta, effective_data, dev)
     else:
-        raise HTTPException(status_code=400, detail=f"Unsupported vision task: {task}")
+        raise HTTPException(status_code=400, detail=f"지원하지 않는 작업 종류입니다: {task}")
 
     _annotate_predictions(res.get("test_predictions", []), task, class_semantics["roles"])
 
@@ -1456,7 +1481,7 @@ def get_defect_heatmap(
     if not model_file or not model_file.is_file():
         raise HTTPException(
             status_code=404,
-            detail=f"Model checkpoint not found for job: {job_id}",
+            detail=f"학습한 모델 파일을 찾을 수 없습니다 (작업 {job_id}).",
         )
 
     task = "classification"
@@ -1482,9 +1507,9 @@ def get_defect_heatmap(
                 return Response(content=png_bytes, media_type="image/png")
             return payload
     except RemoteDisconnected as exc:
-        raise HTTPException(status_code=503, detail=f"Remote inspection connection lost; retry the same image: {exc}") from exc
+        raise HTTPException(status_code=503, detail=f"원격 검사 연결이 끊겼습니다. 같은 이미지로 다시 시도하세요: {exc}") from exc
     except ArtifactValidationError as exc:
-        raise HTTPException(status_code=502, detail=f"Remote inspection result could not be verified: {exc}") from exc
+        raise HTTPException(status_code=502, detail=f"원격 검사 결과를 확인하지 못했습니다: {exc}") from exc
 
     task = "classification"
     meta_path = model_file.parent / "model_meta.json"
@@ -1513,12 +1538,12 @@ def get_defect_heatmap(
         raise HTTPException(422, str(e)) from e
     except Exception as e:
         logger.exception("Inference failed on %s: %s", img_file, e)
-        raise HTTPException(status_code=500, detail=f"Inference execution failed: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"추론을 실행하지 못했습니다: {str(e)}")
 
     overlay_bgr = cv2.cvtColor(overlay_rgb, cv2.COLOR_RGB2BGR)
     ok, png_buf = cv2.imencode(".png", overlay_bgr)
     if not ok:
-        raise HTTPException(status_code=500, detail="Failed to encode overlay image")
+        raise HTTPException(status_code=500, detail="결과 이미지를 만들지 못했습니다.")
 
     png_bytes = png_buf.tobytes()
 
@@ -1560,14 +1585,14 @@ def get_overkill_underkill_analysis(
 
     target_job = job_id or (training_job_manager.active_job_id if hasattr(training_job_manager, "active_job_id") else None)
     if not target_job:
-        raise HTTPException(status_code=422, detail="A completed training job is required for calibration analysis.")
+        raise HTTPException(status_code=422, detail="기준값 분석에는 학습을 끝낸 작업이 필요합니다. 학습을 먼저 끝내세요.")
     from backend.engine.calibration_evidence import validate_calibration_evidence
 
     source_options = {key: value for key, value in (
         ("source_dataset_path", source_dataset_path), ("source_task", source_task),
     ) if value is not None}
     if source_options and Path(target_job).is_dir():
-        raise HTTPException(422, "Selected-source calibration requires a completed job ID, not an imported evaluation directory")
+        raise HTTPException(422, "기준값 조정에는 학습을 끝낸 작업을 지정해야 합니다. 가져온 평가 폴더로는 할 수 없습니다.")
     eval_payload = None
     # Explicit directory inputs retain their import contract. Normal jobs always
     # use the checkpoint/data binding checks shared with the evaluation screen.
@@ -1582,7 +1607,7 @@ def get_overkill_underkill_analysis(
         try:
             eval_payload = run_or_load_evaluation(job_id=target_job, **source_options)
         except (ValueError, OSError) as exc:
-            raise HTTPException(422, detail=f"No usable evaluation predictions for calibration: {exc}") from exc
+            raise HTTPException(422, detail=f"기준값 조정에 쓸 평가 결과가 없습니다: {exc}") from exc
     try:
         evidence = validate_calibration_evidence(eval_payload, EVALUATION_CONTRACT_VERSION)
     except ValueError as exc:
@@ -1592,14 +1617,14 @@ def get_overkill_underkill_analysis(
     spec = eval_payload.get('metrics', {}).get('score_spec')
     if (isinstance(spec, dict) and spec.get('domain') == 'distance') or (
             task in ('anomaly', 'anomaly_detection') and not isinstance(spec, dict)):
-        raise HTTPException(422, 'Raw distance calibration requires a train/validation calibration run; the probability optimizer cannot rescale distance scores. Use the saved model threshold or a bound manual override.')
+        raise HTTPException(422, '거리 점수 모델의 기준값은 학습/검증 데이터로 조정한 값만 쓸 수 있습니다. 확률 기준으로는 거리 점수를 다시 맞출 수 없으니 저장된 모델 기준값을 쓰거나 직접 값을 지정하세요.')
     if not math.isfinite(current_threshold) or not 0 <= current_threshold <= 1:
-        raise HTTPException(422, 'Probability threshold must be between 0 and 1')
+        raise HTTPException(422, '확률 기준값은 0과 1 사이여야 합니다.')
     from backend.engine.class_semantics import recorded_roles
     try:
         class_roles = recorded_roles(eval_payload)
     except ValueError as exc:
-        raise HTTPException(422, detail=f"Evaluation class semantics record is invalid: {exc}") from exc
+        raise HTTPException(422, detail=f"평가의 클래스 의미 기록이 올바르지 않습니다: {exc}") from exc
 
     result = analyze_zero_escape(
         predictions=predictions,
@@ -1651,7 +1676,7 @@ def run_zero_escape_calibration(
         **source_options,
     )
     if result.get("total_defects", 0) == 0 or result.get("total_normals", 0) == 0:
-        raise HTTPException(status_code=422, detail="Calibration requires both NG and OK validation samples.")
+        raise HTTPException(status_code=422, detail="기준값 조정에는 검증 데이터에 OK와 NG 이미지가 모두 있어야 합니다.")
 
     optimal_th = float(result.get("optimal_threshold", current_threshold))
     target_job = result.get("job_id") or job_id
@@ -1666,18 +1691,18 @@ def run_zero_escape_calibration(
             try:
                 data = json.loads(eval_path.read_text(encoding="utf-8"))
                 if data.get('task') in ('anomaly', 'anomaly_detection') and data.get('metrics', {}).get('evaluated_split') == 'test':
-                    raise HTTPException(422, 'Anomaly test data is evaluation only; preserve its saved validation/calibration threshold')
+                    raise HTTPException(422, '이상 탐지 테스트 데이터는 평가에만 씁니다. 저장된 검증/조정 기준값을 그대로 두세요.')
                 current = validate_calibration_evidence(data, EVALUATION_CONTRACT_VERSION)
                 if current != result["calibration_evidence"]:
-                    raise HTTPException(409, "Evaluation predictions changed during calibration; retry the analysis")
+                    raise HTTPException(409, "기준값을 조정하는 동안 평가 결과가 바뀌었습니다. 분석을 다시 실행하세요.")
                 marked = mark_calibration_evidence(data, optimal_th, time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()), EVALUATION_CONTRACT_VERSION)
                 _atomic_write_json(eval_path, marked)
                 result["calibration_evidence"] = marked["calibration_evidence"]
             except ValueError as exc:
-                raise HTTPException(409, detail=f"Evaluation evidence changed during calibration: {exc}") from exc
+                raise HTTPException(409, detail=f"기준값을 조정하는 동안 평가 자료가 바뀌었습니다: {exc}") from exc
             except OSError as exc:
                 logger.warning("Could not persist calibrated threshold to %s: %s", eval_path, exc)
-                raise HTTPException(500, detail="Calibrated threshold could not be saved; previous settings are retained") from exc
+                raise HTTPException(500, detail="조정한 기준값을 저장하지 못했습니다. 이전 설정이 그대로 유지됩니다.") from exc
 
     result["calibrated"] = True
     underkill_cnt = result.get("optimal_stats", {}).get("underkill_count", 0)
@@ -1744,11 +1769,11 @@ def run_inference_benchmark(req: BenchmarkRequest):
     iters = max(5, min(req.iterations or 25, 100))
     res = req.resolution or 256
     if res < 32 or res > 2048:
-        raise HTTPException(status_code=422, detail="Benchmark resolution must be between 32 and 2048 pixels")
+        raise HTTPException(status_code=422, detail="속도 측정 해상도는 32~2048픽셀 사이여야 합니다.")
 
     model_file = _find_model_file(req.job_id) if req.job_id else None
     if not model_file or not model_file.is_file():
-        raise HTTPException(status_code=404, detail="A trained model checkpoint is required for benchmarking.")
+        raise HTTPException(status_code=404, detail="속도를 측정하려면 학습한 모델 파일이 필요합니다. 학습을 먼저 끝내세요.")
     from backend.remote.operations import remote_job_context, run_remote_benchmark
     from backend.remote.coordinator import ArtifactValidationError, RemoteDisconnected
 
@@ -1757,9 +1782,9 @@ def run_inference_benchmark(req: BenchmarkRequest):
         if remote_context is not None:
             return run_remote_benchmark(remote_context, iters, res)
     except RemoteDisconnected as exc:
-        raise HTTPException(status_code=503, detail=f"Remote benchmark connection lost; retry the same run: {exc}") from exc
+        raise HTTPException(status_code=503, detail=f"원격 속도 측정 연결이 끊겼습니다. 같은 측정을 다시 시도하세요: {exc}") from exc
     except ArtifactValidationError as exc:
-        raise HTTPException(status_code=502, detail=f"Remote benchmark result could not be verified: {exc}") from exc
+        raise HTTPException(status_code=502, detail=f"원격 속도 측정 결과를 확인하지 못했습니다: {exc}") from exc
 
     device = get_device()
     dev_name = "Metal MPS" if device.type == "mps" else ("CUDA" if device.type == "cuda" else "CPU")
@@ -1769,7 +1794,7 @@ def run_inference_benchmark(req: BenchmarkRequest):
         task = str(meta.get("task", "classification"))
         dummy_input = torch.rand((1, 3, res, res), dtype=torch.float32, device=device)
     except Exception as exc:
-        raise HTTPException(status_code=422, detail=f"Cannot load model for benchmark: {exc}") from exc
+        raise HTTPException(status_code=422, detail=f"속도 측정을 위해 모델을 불러오지 못했습니다: {exc}") from exc
 
     def synchronize() -> None:
         if device.type == "cuda":
@@ -1789,7 +1814,7 @@ def run_inference_benchmark(req: BenchmarkRequest):
                 synchronize()
                 latencies.append((time.perf_counter() - t0) * 1000.0)
     except Exception as exc:
-        raise HTTPException(status_code=422, detail=f"Model inference failed: {exc}") from exc
+        raise HTTPException(status_code=422, detail=f"모델 추론에 실패했습니다: {exc}") from exc
 
     latencies_arr = np.array(latencies)
     mean_ms = float(np.mean(latencies_arr))

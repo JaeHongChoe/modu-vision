@@ -256,17 +256,17 @@ def test_an_uncertain_reservation_is_released_only_on_an_operators_recorded_conf
     assert release(reason='no').status_code == 422, 'a reason is required'
     assert release().status_code == 409, 'no reservation to release'
     manager._leases.acquire(job_id, 'local-compute', 'all')
-    assert 'not uncertain' in release().text, 'a reservation that will be returned on exit evidence is left alone'
+    assert '확인이 필요한 상태가 아닙니다' in release().text, 'a reservation that will be returned on exit evidence is left alone'
     manager._leases.mark_uncertain_local(job_id)
     refreshed = release()
-    assert refreshed.status_code == 409 and 'refreshed this reservation' in refreshed.text, 'a heartbeat moments ago may be a live worker'
+    assert refreshed.status_code == 409 and '초 전에 예약을 갱신했으므로' in refreshed.text, 'a heartbeat moments ago may be a live worker'
     _expire(manager, job_id)
     assert release(fence=7).status_code == 409, 'only the reservation the operator saw'
     output = Path(manager.get_job(job_id).output_dir)
     output.mkdir(parents=True, exist_ok=True)
     (output / 'local_job.json').write_text('{"owner_pid": 1}', encoding='utf-8')
     monkeypatch.setattr(local_training_worker, '_liveness', lambda journal: True)
-    assert 'still running' in release().text, 'a provably alive worker keeps its device'
+    assert '아직 실행 중입니다' in release().text, 'a provably alive worker keeps its device'
     assert any(row['job_id'] == job_id for row in manager._leases.list()), 'a refused release removes nothing'
     monkeypatch.setattr(local_training_worker, '_liveness', lambda journal: None)
     released = release()
@@ -338,7 +338,7 @@ def test_the_ledger_never_records_a_release_that_did_not_happen(tmp_path, monkey
     real_release = manager._leases.release_uncertain
     monkeypatch.setattr(manager._leases, 'release_uncertain', lambda *args: False)
     changed = api.post('/api/training/reservations/confirm-release', json=body)
-    assert changed.status_code == 409 and 'changed while it was being released' in changed.text
+    assert changed.status_code == 409 and '반납하는 동안 예약 상태가 바뀌었습니다' in changed.text
     assert any(row['job_id'] == job_id for row in manager._leases.list())
     assert len(_release_events(ledger(), job_id, 'reservation_release_confirmed')) == 1
     refused = _release_events(ledger(), job_id, 'reservation_release_refused')
@@ -412,7 +412,7 @@ def test_a_real_worker_journal_keeps_the_reservation_until_its_process_has_exite
         (folder / ('local_job.json' if journal_copy == 'run folder' else f'{job_id}.json')).write_text(json.dumps(journal), encoding='utf-8')
         body = {'job_id': job_id, 'confirm': True, 'reason': 'checked the device'}
         alive = api.post('/api/training/reservations/confirm-release', json=body)
-        assert alive.status_code == 409 and 'still running' in alive.text, alive.text
+        assert alive.status_code == 409 and '아직 실행 중입니다' in alive.text, alive.text
     finally:
         child.kill()  # only the process this test started
         child.wait(30)
@@ -430,8 +430,8 @@ def test_a_recent_refresh_is_named_with_its_age_and_the_lock_table_empties(tmp_p
     with manager._leases.connect() as conn:  # refreshed 7 s ago under the 30 s lease
         conn.execute('UPDATE leases SET expires=? WHERE job_id=?', (time.time() + manager._leases.lease_seconds - 7, job_id))
     refused = api.post('/api/training/reservations/confirm-release', json={'job_id': job_id, 'confirm': True, 'reason': 'checked'})
-    assert refused.status_code == 409 and ('refreshed this reservation 7 s ago' in refused.text
-                                          or 'refreshed this reservation 8 s ago' in refused.text), refused.text
+    assert refused.status_code == 409 and ('7초 전에 예약을 갱신했으므로' in refused.text
+                                          or '8초 전에 예약을 갱신했으므로' in refused.text), refused.text
     assert routes_training._RESERVATION_RELEASE_LOCKS == {}, 'only jobs with a confirmation in progress hold a lock'
 
 
@@ -519,7 +519,7 @@ def test_a_release_outcome_or_reservation_store_failure_is_answered_truthfully(t
         raise sqlite3.OperationalError('database is locked')
     monkeypatch.setattr(manager._leases, 'release_uncertain', broken)
     failed = api.post('/api/training/reservations/confirm-release', json=body)
-    assert failed.status_code == 503 and 'nothing was released' in failed.text, failed.text
+    assert failed.status_code == 503 and '아무것도 반납하지 않았습니다' in failed.text, failed.text
     refused = _release_events(ledger(), job_id, 'reservation_release_refused')
     assert len(refused) == 1 and 'could not be written' in refused[0]['reason']
     assert any(row['job_id'] == job_id for row in manager._leases.list())

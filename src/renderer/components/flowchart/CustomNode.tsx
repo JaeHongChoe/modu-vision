@@ -44,6 +44,28 @@ interface CustomNodeProps {
   isConnectionSource?: boolean;
   /** This node's own validation problems, shown on the node (S2-05). */
   issues?: string[];
+  /** Screen language of the visible type and port words; button names stay English for automation. */
+  language?: 'ko' | 'en';
+}
+
+const NODE_TYPE_KO: Record<string, string> = {
+  input: '입력', inspection: '검사 모델', decision: '판정', output: '출력', fixed_roi: '고정 ROI',
+  blob_measure: '블롭 측정', patch_split: '패치 분할', preprocess: '전처리', measurement: '측정', aggregate: '집계',
+};
+const PAYLOAD_KO: Record<string, string> = { IMAGE: '이미지', ROI: 'ROI', RESULT: '결과', VERDICT: '판정' };
+
+/** The visible Korean words for a port label such as "IMAGE/ROI IN" or "DEFECT BOXES": what the port carries. The side
+ * of the node already says the direction (inputs left, outputs right) and the tooltip and button name repeat it, so the
+ * words stay short enough for both sides of a fixed-width node on a large monitor. Unknown labels stay as they are. */
+const TASK_KO: Record<string, string> = {classification: '분류', detection: '객체 검출', segmentation: '영역 분할', anomaly: '이상 탐지'};
+const RULE_KO: Record<string, string> = {any_ng: '하나라도 NG', all_ng: '모두 NG', any_defect_is_ng: '결함 하나라도 NG', score_gt_threshold: '최고 점수 임계치',
+  max_flaws_allowed: '허용 NG 검사 영역 수', aggregate_verdict: '집계 결과 판정', patch_recipe: '저장된 패치 판정 설정'};
+
+export function koreanPortLabel(label: string): string {
+  if (label === 'DEFECT BOXES') return '결함 박스';
+  const match = /^(.+) (IN|OUT)$/.exec(label);
+  if (!match) return label;
+  return match[1].split('/').map((part) => PAYLOAD_KO[part] ?? part).join('·');
 }
 
 export const CustomNode: React.FC<CustomNodeProps> = ({
@@ -62,6 +84,7 @@ export const CustomNode: React.FC<CustomNodeProps> = ({
   onConnectStart,
   onConnectFinish,
   isConnectionSource = false,
+  language = 'ko',
   issues = [],
 }) => {
   const nodeType = node.data.node_type;
@@ -122,6 +145,12 @@ export const CustomNode: React.FC<CustomNodeProps> = ({
   // carry in node.data.ports are not shown, since they did not say what a connection may carry.
   const { inputs, outputs } = flowNodePorts(node);
   // A detection model feeding the decision directly turns its boxes into defects; other models keep 'RESULT OUT'.
+  const shownPort = (label: string) => language === 'ko' ? koreanPortLabel(label) : label;
+  // The card's spec rows use the properties panel's Korean words on a Korean screen; English keeps the old labels.
+  const ko = language === 'ko';
+  const specLabel = (en: string, kr: string) => `${ko ? kr : en}:`;
+  const taskName = (task: string) => ko ? (TASK_KO[task] || task) : task.toUpperCase();
+  const ruleName = (rule: string) => ko ? (RULE_KO[rule] || rule) : rule;
   const outputLabel = (label: string) => nodeType === 'detection_crop' && isDetectorOnly && label === 'RESULT OUT' ? 'DEFECT BOXES' : label;
   // LED Annunciator Optical State
   const getAnnunciatorState = () => {
@@ -183,9 +212,11 @@ export const CustomNode: React.FC<CustomNodeProps> = ({
         <div className="flex items-center space-x-2">
           {getNodeIcon()}
           <span className="text-[11px] font-mono uppercase tracking-wide text-slate-200 font-bold truncate max-w-[120px]">
-            {nodeType === 'detection_crop' ? (isDetectorOnly ? 'DEFECT DETECTION' : 'ROI DETECTION')
-              : nodeType === 'fixed_roi' ? 'FIXED ROI'
-                : nodeType === 'blob_measure' ? 'BLOB MEASURE' : nodeType}
+            {language === 'ko'
+              ? (nodeType === 'detection_crop' ? (isDetectorOnly ? '결함 검출' : 'ROI 검출') : NODE_TYPE_KO[nodeType] ?? nodeType)
+              : nodeType === 'detection_crop' ? (isDetectorOnly ? 'DEFECT DETECTION' : 'ROI DETECTION')
+                : nodeType === 'fixed_roi' ? 'FIXED ROI'
+                  : nodeType === 'blob_measure' ? 'BLOB MEASURE' : nodeType}
           </span>
         </div>
 
@@ -225,55 +256,55 @@ export const CustomNode: React.FC<CustomNodeProps> = ({
         <div className="space-y-1 text-[11px] font-mono bg-[#131822] p-2 rounded border border-[#2B3547]">
           {(nodeType === 'inspection' || nodeType === 'detection_crop' || nodeType === 'preprocess') && node.data.task && (
             <div className="flex justify-between items-center">
-              <span className="text-slate-400">TASK:</span>
-              <span className="text-slate-300 font-semibold">{node.data.task.toUpperCase()}</span>
+              <span className="text-slate-400">{specLabel('TASK', '종류')}</span>
+              <span className="text-slate-300 font-semibold">{taskName(node.data.task)}</span>
             </div>
           )}
           {(nodeType === 'inspection' || nodeType === 'detection_crop' ||
             (nodeType === 'decision' && node.data.rule === 'score_gt_threshold')) && node.data.threshold !== undefined && (
             <div className="flex justify-between items-center">
-              <span className="text-slate-400">THRESHOLD:</span>
+              <span className="text-slate-400">{specLabel('THRESHOLD', '기준 점수')}</span>
               <span className="text-cyan-400 font-bold tabular-nums">
-                τ = {node.data.threshold.toFixed(2)}
+                {ko ? node.data.threshold.toFixed(2) : `τ = ${node.data.threshold.toFixed(2)}`}
               </span>
             </div>
           )}
           {nodeType === 'detection_crop' && node.data.crop_padding !== undefined && (
             <div className="flex justify-between items-center">
-              <span className="text-slate-400">ROI PADDING:</span>
+              <span className="text-slate-400">{specLabel('ROI PADDING', 'ROI 여백')}</span>
               <span className="text-slate-300 tabular-nums">{node.data.crop_padding} px</span>
             </div>
           )}
           {nodeType === 'fixed_roi' && Array.isArray(node.data.params?.roi_bbox) && (
             <div className="space-y-0.5">
-              <span className="text-slate-400">SOURCE PIXELS:</span>
+              <span className="text-slate-400">{specLabel('SOURCE PIXELS', '원본 픽셀')}</span>
               <div className="text-sky-300 tabular-nums">
                 {node.data.params?.roi_bbox?.[0]}, {node.data.params?.roi_bbox?.[1]} → {node.data.params?.roi_bbox?.[2]}, {node.data.params?.roi_bbox?.[3]}
               </div>
             </div>
           )}
-          {nodeType === 'measurement' && <div className="space-y-1 text-teal-200"><div>SOURCE LENGTH / AREA</div><div>{node.data.params?.paths?.length || 0} 경로 · {(node.data.params?.threshold_unit ?? (node.data.params?.calibration || node.data.params?.calibration_ref ? 'mm' : 'px'))==='mm'?'mm / mm²':'px / px²'}</div></div>}
+          {nodeType === 'measurement' && <div className="space-y-1 text-teal-200"><div>{ko ? '원본 길이·면적' : 'SOURCE LENGTH / AREA'}</div><div>{node.data.params?.paths?.length || 0} 경로 · {(node.data.params?.threshold_unit ?? (node.data.params?.calibration || node.data.params?.calibration_ref ? 'mm' : 'px'))==='mm'?'mm / mm²':'px / px²'}</div></div>}
           {nodeType === 'preprocess' && <div className="text-sky-200">{({learned_rotation:'학습 회전 보정',fitted_roi:'원본 회전 ROI 맞춤',enhancement:'학습 영상 개선',rotate:'회전',align:'방향 정렬',improve:'영상 개선'} as Record<string,string>)[node.data.params?.operation||'rotate']}</div>}
           {nodeType === 'blob_measure' && <>
             <div className="flex justify-between items-center">
-              <span className="text-slate-400">MIN AREA:</span>
+              <span className="text-slate-400">{specLabel('MIN AREA', '최소 면적')}</span>
               <span className="text-teal-300 tabular-nums">{node.data.params?.min_blob_area_px ?? 1} px</span>
             </div>
             <div className="flex justify-between items-center">
-              <span className="text-slate-400">NG COUNT:</span>
+              <span className="text-slate-400">{specLabel('NG COUNT', 'NG 개수')}</span>
               <span className="text-teal-300 tabular-nums">{node.data.params?.min_blob_count_for_ng ?? 1}</span>
             </div>
           </>}
           {nodeType === 'aggregate' && node.data.rule && (
             <div className="flex justify-between items-center">
-              <span className="text-slate-400">RULE:</span>
-              <span className="text-indigo-300 font-semibold">{node.data.rule.replace('_', ' ').toUpperCase()}</span>
+              <span className="text-slate-400">{specLabel('RULE', '규칙')}</span>
+              <span className="text-indigo-300 font-semibold">{ko ? ruleName(node.data.rule) : node.data.rule.replace('_', ' ').toUpperCase()}</span>
             </div>
           )}
           {nodeType === 'decision' && node.data.rule && (
             <div className="flex justify-between items-center">
-              <span className="text-slate-400">RULE:</span>
-              <span className="text-amber-400 font-semibold">{node.data.rule}</span>
+              <span className="text-slate-400">{specLabel('RULE', '규칙')}</span>
+              <span className="text-amber-400 font-semibold">{ruleName(node.data.rule)}</span>
             </div>
           )}
         </div>
@@ -290,7 +321,7 @@ export const CustomNode: React.FC<CustomNodeProps> = ({
                 disabled={editingDisabled}
                 data-flow-port={`${node.id}:in:${index}`}
                 aria-label={`Connect to ${nodeLabel} ${port.label}`}
-                title={`이 노드의 입력에 연결 (${port.label})`}
+                title={`이 노드의 입력에 연결 (${shownPort(port.label)})`}
                 onClick={(event) => { event.stopPropagation(); onConnectFinish?.(); }}
                 style={{ borderColor: getPortColor(port.payloads) }}
                 className="w-3.5 h-3.5 rounded-full bg-[#0B0E14] border-2 flex items-center justify-center shrink-0 hover:scale-125 focus:outline-cyan-400"
@@ -300,7 +331,7 @@ export const CustomNode: React.FC<CustomNodeProps> = ({
                   className="w-1 h-1 rounded-full"
                 />
               </button>
-              <span className="text-slate-300 font-bold uppercase truncate">{port.label}</span>
+              <span className="text-slate-300 font-bold uppercase truncate">{shownPort(port.label)}</span>
             </div>
           ))}
         </div>
@@ -309,13 +340,13 @@ export const CustomNode: React.FC<CustomNodeProps> = ({
         <div className="space-y-1.5 flex-1 pl-2 text-right">
           {outputs.map((port, index) => (
             <div key={port.id} className="flex items-center justify-end space-x-1.5">
-              <span className="text-slate-300 font-bold uppercase truncate">{outputLabel(port.label)}</span>
+              <span className="text-slate-300 font-bold uppercase truncate">{shownPort(outputLabel(port.label))}</span>
               <button
                 type="button"
                 disabled={editingDisabled}
                 data-flow-port={`${node.id}:out:${index}`}
                 aria-label={`Start connection from ${nodeLabel} ${outputLabel(port.label)}`}
-                title={`여기서 연결 시작 (${outputLabel(port.label)})`}
+                title={`여기서 연결 시작 (${shownPort(outputLabel(port.label))})`}
                 onClick={(event) => { event.stopPropagation(); onConnectStart?.(port.payloads); }}
                 style={{ borderColor: getPortColor(port.payloads) }}
                 className="w-3.5 h-3.5 rounded-full bg-[#0B0E14] border-2 flex items-center justify-center shrink-0 hover:scale-125 focus:outline-cyan-400"

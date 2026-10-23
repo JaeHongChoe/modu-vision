@@ -292,6 +292,9 @@ class JobRecord:
     remote_runner: Optional[Callable[[JobRecord], Dict[str, Any]]] = field(default=None, repr=False)
     remote_profile: Optional[ComputeProfile] = field(default=None, repr=False)
     launch_spec: Optional[Dict[str, Any]] = field(default=None, repr=False)
+    # The starting request's project and annotation roots, re-entered by the job's thread (threads do not inherit
+    # the request context) so remote preparation applies the same image usage policy as the request.
+    data_scope: Optional[Dict[str, Optional[str]]] = field(default=None, repr=False)
     split_manifest_root: Optional[str] = None
     warm_start: Optional[WarmStartParent] = None
     dataset_binding: Optional[Dict[str, Any]] = None
@@ -586,7 +589,13 @@ class TrainingJobManager:
         queue_when_busy: bool = True,
         priority: int = 0,
         budget: Optional[Dict[str, Any]] = None,
+        data_scope: Optional[Dict[str, Optional[str]]] = None,
     ) -> JobRecord:
+        # Threads do not inherit the request's context: keep its project and annotation roots with the job (also
+        # while it waits in the queue) so the training thread and worker apply the same image usage policy.
+        if data_scope is None:
+            from backend.engine.local_training_worker import _data_scope_fields
+            data_scope = _data_scope_fields()
         with self._lock:
             active_record = next(
                 (record for record in self._jobs.values()
@@ -595,13 +604,13 @@ class TrainingJobManager:
             if active_record is not None or not self._leases.acquire(job_id, "local-compute", "all"):
                 if ledger is None or not queue_when_busy:  # no ledger record, or the client asked not to wait
                     if active_record is not None:
-                        raise HTTPException(409, f"Another training job ({active_record.job_id}) is currently in progress.")
-                    raise HTTPException(409, "Local compute is reserved by another training or a worker preflight")
+                        raise HTTPException(409, f"다른 학습({active_record.job_id})이 진행 중입니다. 끝나기를 기다리거나 먼저 중단한 뒤 다시 시도하세요.")
+                    raise HTTPException(409, "이 컴퓨터는 다른 학습이나 학습 장비 준비 작업이 쓰고 있습니다. 끝난 뒤 다시 시도하세요.")
                 return self._wait_for_local_device_locked(job_id, ledger, priority, budget, dict(
                     task=task, dataset_path=dataset_path, output_dir=output_dir, preset=preset, device=device,
                     config_overrides=config_overrides, prepare_dataset=prepare_dataset, source_dataset_path=source_dataset_path,
                     dataset_fingerprint=dataset_fingerprint, split_manifest_root=split_manifest_root, warm_start=warm_start,
-                    dataset_binding=dataset_binding))
+                    dataset_binding=dataset_binding, data_scope=data_scope))
             # Build telemetry callback
             cb = WebSocketTelemetryCallback(job_id=job_id, max_hz=30.0)
 
@@ -677,7 +686,8 @@ class TrainingJobManager:
                 error = None
                 try:
                     logger.info("Background training thread started for job %s", job_id)
-                    with split_root_scope(split_manifest_root):
+                    from backend.engine.local_training_worker import worker_data_scope
+                    with worker_data_scope(data_scope), split_root_scope(split_manifest_root):
                         if record.preparation_cancel.is_set():
                             raise LabelMePreparationCancelled("Training preparation cancelled by user request")
                         if prepare_dataset is not None:
@@ -854,11 +864,11 @@ class TrainingJobManager:
             if type(priority) is not int or not -10 <= priority <= 10:
                 raise ValueError('Remote queue priority must be an integer between -10 and 10')
             if job_id in self._jobs:
-                raise HTTPException(status_code=409, detail=f"Training job {job_id} already exists")
+                raise HTTPException(status_code=409, detail=f"학습 작업 {job_id}이(가) 이미 있습니다.")
             if profile is None:
                 active = next((rec for rec in self._jobs.values() if rec.status in self.ACTIVE_STATES), None)
                 if active is not None:
-                    raise HTTPException(status_code=409, detail=f"Another training job ({active.job_id}) is currently in progress.")
+                    raise HTTPException(status_code=409, detail=f"다른 학습({active.job_id})이 진행 중입니다. 끝나기를 기다리거나 먼저 중단한 뒤 다시 시도하세요.")
             else:
                 if profile.id != remote_profile_id:
                     raise ValueError("Remote profile identity does not match the training job")
@@ -869,7 +879,7 @@ class TrainingJobManager:
                 ledger = _existing_ledger_link(job_id)
             queued = profile is not None and recovery_state not in ("transferring", "launching", "launched", "artifacts_verified", "completed") and self._remote_slot_busy(profile)
             if queued and not queue_when_busy:
-                raise HTTPException(409, 'Selected compute resource is busy; enable queueing to wait')
+                raise HTTPException(409, '선택한 학습 장비가 사용 중입니다. 대기열에서 차례를 기다리도록 설정한 뒤 다시 시도하세요.')
             record = JobRecord(
                 job_id=job_id, task=task, preset=preset, dataset_path=dataset_path,
                 output_dir=output_dir, status="queued" if queued else "running", remote_profile_id=remote_profile_id,
@@ -879,6 +889,8 @@ class TrainingJobManager:
                 split_manifest_root=split_manifest_root,
                 warm_start=warm_start, dataset_binding=dataset_binding, ledger=ledger,
             )
+            from backend.engine.local_training_worker import _data_scope_fields
+            record.data_scope = _data_scope_fields()
             if profile is not None and recovery_state is None:
                 from backend.remote.coordinator import persist_queued_remote_job
 
@@ -907,7 +919,7 @@ class TrainingJobManager:
                     mark_remote_journal_terminal(Path(record.output_dir), job_id, 'failed')
                     self._jobs.pop(job_id, None)
                     self._refresh_active_id()
-                    raise HTTPException(409, 'Selected compute resource became busy; no worker was launched')
+                    raise HTTPException(409, '선택한 학습 장비가 그 사이 사용 중으로 바뀌어 학습을 시작하지 못했습니다. 잠시 후 다시 시도하세요.')
                 record.status = "queued"; record.phase = "resource_reserved"
                 if job_id not in self._remote_queue: self._remote_queue.append(job_id)
                 self._watch_queue()
@@ -921,7 +933,8 @@ class TrainingJobManager:
                     from backend.engine.live_remote_control import bind_remote_control,bind_remote_recovery
                     record._global_remote_control=bind_remote_control(record,self._leases)
                     record._global_remote_recovery=bind_remote_recovery(record,self._leases) if record._global_remote_control is None else None
-                with split_root_scope(record.split_manifest_root):
+                from backend.engine.local_training_worker import worker_data_scope
+                with worker_data_scope(record.data_scope or {}), split_root_scope(record.split_manifest_root):
                     result = record.remote_runner(record)
                 state = result.get("status", "failed")
                 if state not in ("completed", "aborted", "failed", "disconnected"):
@@ -1443,10 +1456,10 @@ def _warm_start_scope(request: Request, dataset_path: Path) -> Path:
     project = get_current_project(request)
     registered_source = project.get("source_dataset_dir")
     if (not registered_source or Path(registered_source).expanduser().resolve() != dataset_path):
-        raise HTTPException(status_code=409, detail="Warm-start source must match the current project's dataset")
+        raise HTTPException(status_code=409, detail="이어서 학습할 모델은 현재 프로젝트의 데이터셋으로 학습한 것이어야 합니다. 이 프로젝트에서 학습한 모델을 고르세요.")
     models = Path(project["models_dir"])
     if models.is_symlink() or not models.is_dir() or models.resolve() != (Path(project["project_dir"]) / "models").resolve():
-        raise HTTPException(status_code=422, detail="Current project models directory is invalid")
+        raise HTTPException(status_code=422, detail="현재 프로젝트의 모델 폴더가 올바르지 않습니다. 프로젝트를 다시 연 뒤 시도하세요.")
     return models
 
 
@@ -1494,26 +1507,35 @@ def list_resume_states(dataset_path: str, task: str, request: Request, preset: s
     fingerprint = fingerprint_dataset(source)
     content = dataset_content_sha256(source)
     rows = []
+    # Stopped runs of this task that cannot resume exactly, with the reason, so a run never just disappears (F-07).
+    excluded = []
     for path in models.glob('*/latest_training_state.pt'):
         if path.is_symlink() or any(parent.is_symlink() for parent in path.parents if parent.is_relative_to(models)): continue
         try:
             from backend.api.routes_project import get_current_project
             remote_profile = _resume_profile(path, compute_profile_id, get_current_project(request)['id'])
             state = read_training_state(path); identity = state['identity']
-            if (identity['task'] != task or identity['preset'] != preset
-                    or identity.get('dataset_content_sha256') != content
-                    or not remote_profile and identity['dataset_fingerprint'] != fingerprint
-                    or not remote_profile and identity['torch_version'] != str(torch.__version__)
-                    or not remote_profile and identity.get('backend_flags') != backend_numeric_flags()
-                    or identity['device']=='mps'
-                    or state['next_epoch'] >= identity['recipe']['epochs']
+            if (identity['task'] != task or state['next_epoch'] >= identity['recipe']['epochs']
                     or state['early_stopping'].get('early_stop')): continue
+            reason = ('학습 방식이 다릅니다 (저장된 학습: ' + ('정밀' if identity['preset'] == 'precision' else '빠른') + ')'
+                      if identity['preset'] != preset else
+                      '이전 버전 앱에서 저장한 상태라 데이터가 같은지 확인할 수 없습니다' if not identity.get('dataset_content_sha256') else
+                      '학습한 뒤 데이터가 바뀌었습니다' if identity.get('dataset_content_sha256') != content
+                      or not remote_profile and identity['dataset_fingerprint'] != fingerprint else
+                      'PyTorch 버전이 달라 같은 결과를 보장할 수 없습니다' if not remote_profile and identity['torch_version'] != str(torch.__version__) else
+                      '계산 설정이 학습 때와 다릅니다' if not remote_profile and identity.get('backend_flags') != backend_numeric_flags() else
+                      'Mac GPU(MPS)로 학습한 작업은 정확히 이어갈 수 없습니다. 새로 학습하거나 완료 모델의 가중치로 시작하세요'
+                      if identity['device'] == 'mps' else None)
+            if reason:
+                excluded.append({'job_id': path.parent.name, 'next_epoch': state['next_epoch'],
+                                 'epochs': identity['recipe']['epochs'], 'device': identity['device'], 'reason': reason})
+                continue
             rows.append({'checkpoint_path': str(path), 'job_id': path.parent.name,
                 'semantics': 'exact_resume', 'boundary': state['boundary'], 'next_epoch': state['next_epoch'],
                 'global_step': state['global_step'], 'device': identity['device'], 'recipe': identity['recipe'],
                 'compute_profile_id': compute_profile_id})
         except (OSError, ValueError, KeyError, RuntimeError): continue
-    return {'states': rows}
+    return {'states': rows, 'excluded': excluded}
 
 
 @router.get("/warm-start-parents")
@@ -1527,7 +1549,7 @@ def list_warm_start_parents(
     stride: Optional[int] = None,
 ):
     if request is None:
-        raise HTTPException(status_code=409, detail="Open a project before selecting a warm-start parent")
+        raise HTTPException(status_code=409, detail="이어서 학습할 모델을 고르려면 먼저 프로젝트를 여세요.")
     source = Path(dataset_path).expanduser().resolve()
     prepared_classes = None
     if task == 'patch_classification':
@@ -1577,6 +1599,12 @@ def list_warm_start_parents(
 
 
 _IDEMPOTENCY_KEY = re.compile(r"^[A-Za-z0-9_.:-]{1,128}$")
+# Fewest images a classification class with images may have; the error catalog's ERR_002 states the same minimum. A
+# one-image class lands in only one of train, val and test, so it is never learned or never checked during training.
+# Two images do not promise a validation image: step 1's split puts every class in all three splits once every class
+# has 8 images at 80/10/10 (6 at 70/20/10, 4 at 60/20/20), and step 1 warns below that. Step 1 (importChecklist.ts
+# MIN_IMAGES_PER_CLASS) blocks below this minimum with the same sentence as the refusal below.
+MIN_CLASSIFICATION_IMAGES_PER_CLASS = 2
 
 
 @router.post("/start")
@@ -1599,7 +1627,7 @@ def _reserve_training_job(request: Request, req: TrainingStartRequest, d_path: P
     from backend.contracts.context import get_project_context
     key = request.headers.get("Idempotency-Key")
     if key is not None and not _IDEMPOTENCY_KEY.fullmatch(key):
-        raise HTTPException(422, "Idempotency-Key must be 1-128 letters, digits or the characters . _ : -")
+        raise HTTPException(422, "Idempotency-Key 헤더는 영문자, 숫자, . _ : - 문자만으로 1~128자여야 합니다.")
     context = get_project_context(request)
     project_key = request.app.state.context_registry.project_key(context)
     # The key identifies the client's request; server-derived values (data fingerprint, imported
@@ -1634,15 +1662,15 @@ def _start_training(req: TrainingStartRequest, request: Optional[Request], reser
     options = req.config_overrides or {}
     if options.get('resume_checkpoint'):
         if req.warm_start_job_id:
-            raise HTTPException(422, 'Exact resume uses single-process epoch boundaries; choose it separately from warm-start')
-        if request is None: raise HTTPException(409, 'Open the checkpoint project before exact resume')
+            raise HTTPException(422, '중단한 지점부터 정확히 이어가기는 이어서 학습하기와 함께 고를 수 없습니다. 둘 중 하나만 고르세요.')
+        if request is None: raise HTTPException(409, '중단한 지점부터 이어가려면 그 학습 모델 파일이 있는 프로젝트를 먼저 여세요.')
         from backend.api.routes_project import get_current_project
         models = Path(get_current_project(request)['models_dir']).resolve()
         checkpoint = Path(options['resume_checkpoint']).expanduser()
         if (checkpoint.name != 'latest_training_state.pt' or checkpoint.is_symlink()
                 or not checkpoint.resolve().is_relative_to(models)
                 or any(parent.is_symlink() for parent in checkpoint.parents if parent.is_relative_to(models))):
-            raise HTTPException(422, 'Exact resume checkpoint must be an owned training state in the current project models folder')
+            raise HTTPException(422, '중단한 지점부터 이어가려면 현재 프로젝트의 모델 폴더에 저장된 이 프로젝트의 학습 상태 파일이어야 합니다.')
         from backend.engine.training_resume import read_training_state
         try:
             remote_profile = _resume_profile(checkpoint, req.compute_profile_id, get_current_project(request)['id'])
@@ -1685,16 +1713,23 @@ def _start_training(req: TrainingStartRequest, request: Optional[Request], reser
         if not options.get('pretrained_checkpoint'):
             prepared=imported_weight(get_current_project(request),req.task,selected)
             if prepared:req.config_overrides={**options,'pretrained_checkpoint':prepared}
+    # A weight file whose content and name disagree (an extension-less safetensors file) is named here instead of
+    # failing inside torch.load mid-training (audit F-13). The user's file is never renamed.
+    supplied_weights=(req.config_overrides or {}).get('pretrained_checkpoint')
+    if isinstance(supplied_weights,str) and supplied_weights and not req.compute_profile_id and Path(supplied_weights).expanduser().is_file():
+        from backend.engine.weights_format import weights_file_problem
+        weights_problem=weights_file_problem(Path(supplied_weights).expanduser())
+        if weights_problem:raise HTTPException(422,weights_problem)
     if req.task=='anomaly' and (req.config_overrides or {}).get('anomaly_mode','classification') not in ('classification','segmentation'):
-        raise HTTPException(422,'Invalid anomaly purpose; choose image classification or region segmentation')
+        raise HTTPException(422,'이상 탐지 목적이 올바르지 않습니다. 이미지 분류 또는 영역 분할 중 하나를 고르세요.')
     synthetic_anomaly = (req.config_overrides or {}).get('anomaly_method') == 'dino_synthetic'
     if synthetic_anomaly:
         if req.task != 'anomaly':
-            raise HTTPException(422, 'DINO synthetic training requires the anomaly task')
+            raise HTTPException(422, 'DINO 합성 학습은 이상 탐지 작업에서만 쓸 수 있습니다.')
         try:
             validated = TrainingConfigOverrides.model_validate(req.config_overrides).model_dump(exclude_none=True)
         except ValidationError as exc:
-            raise HTTPException(422, f'Invalid DINO synthetic training options: {exc}') from exc
+            raise HTTPException(422, f'DINO 합성 학습 설정이 올바르지 않습니다: {exc}') from exc
         req.config_overrides = {**req.config_overrides, **validated}
     # Verify dataset path exists
     d_path = Path(req.dataset_path).resolve()
@@ -1708,20 +1743,20 @@ def _start_training(req: TrainingStartRequest, request: Optional[Request], reser
         from backend.api.routes_project import get_current_project
         configured_source = get_current_project(request).get("source_dataset_dir")
         if configured_source and Path(configured_source).expanduser().resolve() != d_path:
-            raise HTTPException(409, "Training source must match the current project's dataset")
+            raise HTTPException(409, "학습 데이터는 현재 프로젝트의 데이터셋이어야 합니다. 프로젝트에서 고른 데이터셋으로 다시 시도하세요.")
 
     profile = None
     if req.compute_profile_id:
         if not req.queue or req.priority != 0:
-            raise HTTPException(422, 'Remote queue uses FIFO; queue=false and nonzero priority are unsupported')
+            raise HTTPException(422, '원격 학습 대기열은 들어온 순서대로 실행됩니다. 대기 없이 실행(queue=false)이나 우선순위 지정은 지원하지 않습니다.')
         from backend.remote.profiles import get_profile_store
 
         try:
             profile = get_profile_store().get(req.compute_profile_id)
         except (KeyError, ValueError) as exc:
-            raise HTTPException(status_code=422, detail=f"Unknown compute server: {req.compute_profile_id}") from exc
+            raise HTTPException(status_code=422, detail=f"알 수 없는 학습 장비입니다: {req.compute_profile_id}. 설정에서 장비를 다시 고르세요.") from exc
         if profile is None:
-            raise HTTPException(status_code=422, detail=f"Unknown compute server: {req.compute_profile_id}")
+            raise HTTPException(status_code=422, detail=f"알 수 없는 학습 장비입니다: {req.compute_profile_id}. 설정에서 장비를 다시 고르세요.")
 
     from backend.api.routes_dataset import (
         DETECTION_SPLIT_LAYOUT_MESSAGE, SPLIT_MANIFEST_DIR, STUDIO_ANNOTATIONS_DIR,
@@ -1751,18 +1786,18 @@ def _start_training(req: TrainingStartRequest, request: Optional[Request], reser
                     if min(original.size) < req.config_overrides['patch_size']:
                         raise ValueError('DINO synthetic source dimensions must be at least patch_size; source images are never enlarged')
         except (OSError, ValueError) as exc:
-            raise HTTPException(422, f'Invalid normal-only training dataset: {exc}') from exc
+            raise HTTPException(422, f'정상 이미지만으로 학습할 데이터셋이 올바르지 않습니다: {exc}') from exc
 
     paired_images = [] if req.task == "patch_classification" else _paired_labelme_images(d_path)
     local_labelme = bool(paired_images)
 
     if req.task == "patch_classification":
         if profile is not None:
-            raise HTTPException(status_code=422, detail="Remote patch classification training is not supported yet")
+            raise HTTPException(status_code=422, detail="패치 분류 학습은 아직 원격 장비에서 할 수 없습니다. 이 컴퓨터에서 학습하세요.")
         try:
             load_patch_manifest(effective_dataset_path)
         except (OSError, ValueError) as exc:
-            raise HTTPException(status_code=422, detail=f"Invalid patch classification dataset: {exc}") from exc
+            raise HTTPException(status_code=422, detail=f"패치 분류 데이터셋이 올바르지 않습니다: {exc}") from exc
 
     if req.task == "detection" and not local_labelme and not _detection_train_val_ready(effective_dataset_path):
         saved_assignments = _read_split_manifest(d_path)
@@ -1780,25 +1815,67 @@ def _start_training(req: TrainingStartRequest, request: Optional[Request], reser
         try:
             validate_coco_detection_paths(effective_dataset_path)
         except ValueError as exc:
-            raise HTTPException(status_code=422, detail=f"Remote detection dataset is not portable: {exc}") from exc
+            raise HTTPException(status_code=422, detail=f"이 검출 데이터셋은 원격 장비로 보낼 수 없습니다: {exc}") from exc
 
     if local_labelme and req.task not in ("segmentation", "detection"):
         raise HTTPException(
             status_code=422,
-            detail="Flat LabelMe folders support segmentation and detection training. Classification or anomaly training needs task-specific OK/NG data.",
+            detail="폴더 하나에 담긴 LabelMe 데이터로는 분할과 검출 학습만 할 수 있습니다. 분류나 이상 탐지 학습에는 OK/NG로 나뉜 데이터가 필요합니다.",
         )
 
     if req.task == "classification":
         try:
-            train_count = len(ClassificationDataset(effective_dataset_path, split="train"))
-            val_count = len(ClassificationDataset(effective_dataset_path, split="val"))
+            train_set = ClassificationDataset(effective_dataset_path, split="train")
+            val_set = ClassificationDataset(effective_dataset_path, split="val")
+            test_set = ClassificationDataset(effective_dataset_path, split="test")
+            train_count = len(train_set)
+            val_count = len(val_set)
         except (OSError, ValueError) as exc:
-            raise HTTPException(status_code=422, detail=f"분류 데이터 분할을 다시 확인하세요. / Check classification split: {exc}") from exc
+            if str(exc).startswith("Saved split"):
+                raise HTTPException(status_code=422, detail=(
+                    "1단계에서 저장한 분할과 지금 폴더의 이미지가 다릅니다(이미지가 추가·삭제되었거나 이름이 바뀜). "
+                    "1단계에서 '이 비율로 나누기'로 다시 나눈 뒤 학습하세요.")) from exc
+            raise HTTPException(status_code=422, detail=f"분류 데이터 분할을 읽지 못했습니다. 1단계에서 분할을 다시 저장하세요. (기술 상세: {exc})") from exc
+        # Images per class in train, val and test. The three datasets share one class list (folder classes plus the
+        # classes chosen in step 2); an empty class folder is listed with zeros.
+        per_class = {name: [0, 0, 0] for name in train_set.classes}
+        for column, dataset in enumerate((train_set, val_set, test_set)):
+            for _, label in dataset.samples:
+                per_class.setdefault(dataset.classes[label], [0, 0, 0])[column] += 1
+        # A classifier needs at least two classes that have training images; one class only ever answers that class.
+        trained_classes = sorted(name for name, counts in per_class.items() if counts[0])
+        if len(trained_classes) < 2:
+            empty = [name for name, counts in per_class.items() if not sum(counts)]
+            untrained = [name for name, counts in per_class.items() if sum(counts) and not counts[0]]
+            only = trained_classes[0] if trained_classes else '없음'
+            raise HTTPException(status_code=422, detail=(
+                f"분류 학습에는 학습용 이미지가 있는 클래스가 2개 이상 필요합니다. 지금은 '{only}' 하나뿐입니다"
+                + (f" (빈 클래스 폴더: {', '.join(empty)})" if empty else "")
+                + (f" (학습 분할에 이미지가 없는 클래스: {', '.join(untrained)})" if untrained else "")
+                + ". 다른 클래스 폴더에 이미지를 넣고 1단계에서 다시 불러오세요."))
         if train_count == 0 or val_count == 0:
             raise HTTPException(
                 status_code=422,
                 detail="분류 학습에는 서로 분리된 train 및 val 이미지가 필요합니다. test는 val 대신 사용하지 않습니다. / Classification training requires separate train and val images; test cannot replace val.",
             )
+        # Every class with images needs the minimum (F-03): a one-image class sits in a single split, so it is either
+        # never learned or never checked during training. Empty class folders are not judged here; the import response
+        # does not list them, so step 1 could not warn first. "한 장뿐인" follows from the minimum of 2.
+        short = [f"{name} {sum(counts)}장" for name, counts in per_class.items()
+                 if 0 < sum(counts) < MIN_CLASSIFICATION_IMAGES_PER_CLASS]
+        if short:
+            raise HTTPException(status_code=422, detail=(
+                f"분류 학습에는 클래스마다 이미지가 {MIN_CLASSIFICATION_IMAGES_PER_CLASS}장 이상 필요합니다. "
+                f"부족한 클래스: {', '.join(short)}. "
+                "한 장뿐인 클래스는 학습·검증·시험 중 한 곳에만 들어가 학습되지 않거나 학습 중 확인되지 않습니다. "
+                "이 클래스에 이미지를 더 넣고 1단계에서 다시 불러오세요."))
+        # Source train/val/test folders can hold a class only under val/ or test/: an answer the model never learns.
+        # Step 1 and the step-3 start notice give the same sentence (importChecklist.ts).
+        untrained = [name for name, counts in per_class.items() if sum(counts) and not counts[0]]
+        if untrained:
+            raise HTTPException(status_code=422, detail=(
+                f"학습 분할에 이미지가 없는 클래스가 있습니다: {', '.join(untrained)}. 모델이 이 클래스를 배우지 못합니다. "
+                "1단계에서 '이 비율로 나누기'로 다시 나눈 뒤 학습하세요."))
 
     has_split_manifest = local_labelme and _split_manifest_file(d_path).is_file()
     assignments = _read_split_manifest(d_path) if has_split_manifest else {}
@@ -1808,7 +1885,7 @@ def _start_training(req: TrainingStartRequest, request: Optional[Request], reser
         # a read-only linked subset uses the split chosen in Step 1.
         resolved_assignments = {str(Path(path).resolve()): partition for path, partition in assignments.items()}
         if len(resolved_assignments) != len(assignments):
-            raise HTTPException(status_code=422, detail="Saved split contains multiple links to the same image; use unique source images.")
+            raise HTTPException(status_code=422, detail="저장된 분할에 같은 이미지가 여러 번 들어 있습니다. 이미지가 겹치지 않도록 정리한 뒤 다시 시도하세요.")
         assignments = resolved_assignments
         missing = sorted(str(image) for image in paired_images if str(image) not in assignments)
         invalid = sorted(str(image) for image in paired_images
@@ -1816,8 +1893,8 @@ def _start_training(req: TrainingStartRequest, request: Optional[Request], reser
         if missing or invalid:
             raise HTTPException(
                 status_code=422,
-                detail=("Saved split is incomplete for the current labels. Apply the train/validation split again "
-                        f"before training (missing={len(missing)}, invalid={len(invalid)})."),
+                detail=("저장된 분할이 현재 라벨과 맞지 않습니다. 학습 전에 학습/검증 분할을 다시 적용하세요 "
+                        f"(빠진 이미지={len(missing)}, 잘못된 항목={len(invalid)})."),
             )
 
     try:
@@ -1825,7 +1902,7 @@ def _start_training(req: TrainingStartRequest, request: Optional[Request], reser
             d_path, studio_root=annotation_root, split_manifest=_split_manifest_file(d_path),
         )
     except OSError as exc:
-        raise HTTPException(status_code=422, detail=f"Could not fingerprint training data: {exc}") from exc
+        raise HTTPException(status_code=422, detail=f"학습 데이터의 상태를 확인하지 못했습니다: {exc}") from exc
 
     if profile is not None:
         from backend.remote.ssh_transport import SSHTransport
@@ -1837,7 +1914,7 @@ def _start_training(req: TrainingStartRequest, request: Optional[Request], reser
         except ValueError as exc:
             raise HTTPException(
                 status_code=422,
-                detail=f"Compute server is not ready: {exc}",
+                detail=f"학습 장비가 준비되지 않았습니다: {exc}",
             ) from exc
     else:
         # An explicitly requested accelerator this computer does not have is refused, never replaced by another
@@ -1864,10 +1941,10 @@ def _start_training(req: TrainingStartRequest, request: Optional[Request], reser
     warm_start = None
     if req.warm_start_job_id:
         if request is None:
-            raise HTTPException(status_code=409, detail="Open a project before warm-start retraining")
+            raise HTTPException(status_code=409, detail="이어서 학습하려면 먼저 프로젝트를 여세요.")
         models = _warm_start_scope(request, d_path)
         if out_dir.resolve() != models.resolve():
-            raise HTTPException(status_code=422, detail="Warm-start candidate must be stored in the current project")
+            raise HTTPException(status_code=422, detail="이어서 학습할 모델은 현재 프로젝트에 저장된 것이어야 합니다.")
         try:
             architecture = architecture_for(req.task, req.preset, req.config_overrides)
             warm_start = resolve_warm_start_parent(
@@ -1890,7 +1967,7 @@ def _start_training(req: TrainingStartRequest, request: Optional[Request], reser
             try:
                 ledger.store.set_budget(ledger.job_id, {"max_runtime_s": req.max_runtime_s, "max_attempts": 1})
             except _LEDGER_ERRORS as exc:
-                raise HTTPException(503, 'The runtime budget could not be recorded; no worker was launched') from exc
+                raise HTTPException(503, '학습 시간 한도를 기록하지 못해 학습을 시작하지 않았습니다. 잠시 후 다시 시도하세요.') from exc
     # HTTP 요청은 작업 예약과 요청한 실행 예산 기록을 마친 뒤 폴더·입력 버전을 만든다.
     # 원본 지문과 고정 라벨을 작업에 연결해 출처를 남기고, 완료 결과 기록 전에 변경 여부를 확인한다.
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -1903,7 +1980,7 @@ def _start_training(req: TrainingStartRequest, request: Optional[Request], reser
             project = update_project(ProjectUpdateRequest(source_dataset_dir=str(d_path)), request)
         dataset_binding = bind_training_version(project, d_path, req.dataset_version_id)
         if dataset_binding["dataset_fingerprint"] != source_fingerprint:
-            raise HTTPException(409, "Training version fingerprint differs from selected source")
+            raise HTTPException(409, "이 학습 버전은 선택한 데이터셋과 다른 데이터로 만들어졌습니다. 데이터셋을 다시 확인하세요.")
     job_id = ledger.job_id if ledger is not None else f"job_{int(time.time())}_{str(uuid.uuid4())[:6]}"
     job_dir = out_dir / job_id
     job_dir.mkdir(parents=True, exist_ok=False)
@@ -2126,16 +2203,16 @@ def _confirm_reservation_release(req: ReservationReleaseRequest, request: Option
         # uncertain reservation survives: read it back in the request's own workspace and project.
         record = next(iter(_ledger_readback(request, req.job_id)), None)
     if record is None or not _record_in_request_project(record, request):
-        raise HTTPException(404, "Job unavailable in this project")
+        raise HTTPException(404, "이 프로젝트에서 찾을 수 없는 작업입니다.")
     lease = next((row for row in training_job_manager._leases.list() if row["job_id"] == req.job_id), None)
     if lease is None:
-        raise HTTPException(409, "This job holds no reservation")
+        raise HTTPException(409, "이 작업은 학습 장비를 예약하고 있지 않습니다.")
     if not lease.get("uncertain"):
-        raise HTTPException(409, "The reservation is not uncertain: it is returned when the worker's exit is confirmed")
+        raise HTTPException(409, "이 예약은 확인이 필요한 상태가 아닙니다. 학습 프로세스가 끝난 것이 확인되면 자동으로 반납됩니다.")
     if req.fence != lease.get("fence"):
-        raise HTTPException(409, "The reservation changed since it was shown; reload and confirm again")
+        raise HTTPException(409, "예약 상태가 화면에 표시된 뒤 바뀌었습니다. 새로 고친 뒤 다시 확인하세요.")
     if record.status in ("queued", "preparing", "running", "stopping", "cancelling"):
-        raise HTTPException(409, "The job is still active; cancel it or wait for it to end first")
+        raise HTTPException(409, "이 작업은 아직 진행 중입니다. 먼저 중단하거나 끝나기를 기다리세요.")
     # A server job's process is not inspected from here; the job's profile or, for a read-back without one, the
     # reservation's own flag says it ran on a server.
     remote = bool(record.remote_profile_id or lease.get("remote"))
@@ -2145,18 +2222,18 @@ def _confirm_reservation_release(req: ReservationReleaseRequest, request: Option
         journal = _local_journal(record)
         alive = _liveness(journal) if journal else None
         if alive is True:
-            raise HTTPException(409, "The job's worker process is still running; cancel it first")
+            raise HTTPException(409, "이 작업의 학습 프로세스가 아직 실행 중입니다. 먼저 중단하세요.")
         # Without proof of exit, a reservation refreshed until moments ago may belong to a worker that is still running
         # (a live local worker refreshes it every few seconds). Proof of exit outweighs an expiry ahead of the clock.
         expires = float(lease.get("expires") or 0)
         if alive is None and expires > time.time():
             refreshed = expires - training_job_manager._leases.lease_seconds
-            raise HTTPException(409, f"The job's worker refreshed this reservation {max(0, round(time.time() - refreshed))} s ago "
-                                     "and may still be running; confirm again once it is no longer refreshed")
+            raise HTTPException(409, f"이 작업의 학습 프로세스가 {max(0, round(time.time() - refreshed))}초 전에 예약을 갱신했으므로 아직 실행 중일 수 있습니다. "
+                                     "갱신이 멈춘 뒤 다시 확인하세요.")
         liveness = "gone" if alive is False else "unknown"
     link = record.ledger or _existing_ledger_link(req.job_id)
     if link is None:
-        raise HTTPException(409, "The job ledger is unavailable, so the release cannot be recorded; nothing was released")
+        raise HTTPException(409, "작업 기록 저장소를 열 수 없어 반납을 기록하지 못했습니다. 아무것도 반납하지 않았습니다.")
     context = getattr(getattr(request, "state", None), "project_context", None)
     actor = context.actor_id if context is not None else "local"
     try:
@@ -2164,7 +2241,7 @@ def _confirm_reservation_release(req: ReservationReleaseRequest, request: Option
                                 {"actor": actor, "reason": req.reason, "liveness": liveness, "fence": lease.get("fence"),
                                  "remote": remote, "host": lease.get("host"), "at": time.time()})
     except _LEDGER_ERRORS as exc:
-        raise HTTPException(409, f"The release could not be recorded in the job ledger ({exc}); nothing was released") from exc
+        raise HTTPException(409, f"작업 기록 저장소에 반납을 기록하지 못했습니다 ({exc}). 아무것도 반납하지 않았습니다.") from exc
     failure = None
     try:
         released = training_job_manager._leases.release_uncertain(req.job_id, lease.get("fence"))
@@ -2182,9 +2259,9 @@ def _confirm_reservation_release(req: ReservationReleaseRequest, request: Option
         logger.warning("Job ledger could not record the release outcome of %s: %s", req.job_id, exc)
         outcome_recorded = False
     if failure is not None:
-        raise HTTPException(503, f"The reservation could not be released ({failure}); nothing was released")
+        raise HTTPException(503, f"예약을 반납하지 못했습니다 ({failure}). 아무것도 반납하지 않았습니다.")
     if not released:
-        raise HTTPException(409, "The reservation changed while it was being released; reload and check again")
+        raise HTTPException(409, "반납하는 동안 예약 상태가 바뀌었습니다. 새로 고친 뒤 다시 확인하세요.")
     return {"job_id": req.job_id, "released": True, "liveness": liveness, "recorded_by": actor,
             "outcome_recorded": outcome_recorded}
 
@@ -2192,13 +2269,13 @@ def _confirm_reservation_release(req: ReservationReleaseRequest, request: Option
 @router.post("/reconnect")
 def reconnect_training(req: TrainingStopRequest,request:Request=None):
     if not req.job_id:
-        raise HTTPException(status_code=422, detail="job_id is required to reconnect an owned worker")
-    if not _record_in_request_project(training_job_manager.get_job(req.job_id),request):raise HTTPException(404,'Job unavailable in this project')
+        raise HTTPException(status_code=422, detail="다시 연결할 작업의 job_id가 필요합니다.")
+    if not _record_in_request_project(training_job_manager.get_job(req.job_id),request):raise HTTPException(404,'이 프로젝트에서 찾을 수 없는 작업입니다.')
     current = training_job_manager.get_job(req.job_id)
     record = (training_job_manager.reconnect_remote_job(req.job_id) if current and current.remote_profile_id
               else training_job_manager.reconnect_local_job(req.job_id))
     if record is None:
-        raise HTTPException(status_code=409, detail="This job cannot be reconnected")
+        raise HTTPException(status_code=409, detail="이 작업에는 다시 연결할 수 없습니다.")
     return {"job_id": record.job_id, "status": record.status, "compute_profile_id": record.remote_profile_id,
             "optimizer_resume": False}
 
@@ -2370,7 +2447,7 @@ def training_queue(request: Request):
     try:
         rows = JobScheduler(job_ledger(), training_job_manager._leases).queue_view(project_key)
     except _LEDGER_ERRORS as exc:
-        raise HTTPException(503, f"The job ledger could not be read: {exc}") from exc
+        raise HTTPException(503, f"작업 기록 저장소를 읽지 못했습니다: {exc}") from exc
     return {"jobs": rows}
 
 

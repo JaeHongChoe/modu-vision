@@ -1,4 +1,5 @@
 import {useEffect,useRef,useState} from 'react';
+import {useStepSheetStore} from '../../stores/useStepSheetStore';
 import {captureIntake,captureRoutingLabel,type CaptureCandidate,type CaptureVersion,type DriftReference,type DriftReport,type SamplingStatus} from '../../services/captureIntake';
 import {workflowError} from '../../services/datasetWorkflow';
 
@@ -14,6 +15,10 @@ const field='rounded border border-slate-600 bg-slate-950 p-2 text-slate-100';
 
 export function CaptureIntakePanel({sourceDatasetPath='',contextKey='',onUseSource}:CaptureIntakePanelProps) {
   const [open,setOpen]=useState(false),[busy,setBusy]=useState(false),[error,setError]=useState(''),[notice,setNotice]=useState('');
+  // One step-1 sheet at a time (useStepSheetStore).
+  const shownSheet=useStepSheetStore(state=>state.open);
+  useEffect(()=>{if(open)useStepSheetStore.getState().show('capture');},[open]);
+  useEffect(()=>{if(open&&shownSheet&&shownSheet!=='capture')setOpen(false);},[shownSheet]);
   const [candidates,setCandidates]=useState<CaptureCandidate[]>([]),[versions,setVersions]=useState<CaptureVersion[]>([]);
   const [selected,setSelected]=useState<Set<string>>(new Set()),[detail,setDetail]=useState<CaptureCandidate|null>(null),[preview,setPreview]=useState('');
   const [actor,setActor]=useState(''),[note,setNote]=useState(''),[name,setName]=useState('서비스 캡처 검토 버전'),[jobIds,setJobIds]=useState('');

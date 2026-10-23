@@ -151,7 +151,7 @@ async function exercise(page: Page, workspace: Workspace, evidence: Evidence, ap
     const selectedImage = page.locator('[data-labeling-filmstrip]').getByRole('img', {name: path.basename(target.file_path), exact: true});
     await expect(selectedImage.locator('..')).toHaveClass(/border-blue-500/);
     expect(new URL((await selectedImage.getAttribute('src'))!, page.url()).searchParams.get('file_path')).toBe(target.file_path);
-    await expect(page.getByTestId('annotation-save-button')).toHaveText('Saved'); await protectedState();
+    await expect(page.getByTestId('annotation-save-button')).toHaveText('저장됨'); await protectedState();
     await capture('actual-exact-original-review-handoff', page.locator('[data-labeling-work-area]'));
     controls.push({action: 'U013.readiness-diagnose', dimension: 'handoff', stage: 2, image_uuid: target.image_uuid, revision: target.revision, file_path: target.file_path, source_sha256: target.content_hash, actual_raw_response_sha256: rawSha, annotation_url: annotation.url(), raw_url: raw.url(), labels_saved: false});
     await page.getByRole('navigation', {name: 'Workflow Stages'}).getByRole('button').nth(0).click(); await openWorkflow();

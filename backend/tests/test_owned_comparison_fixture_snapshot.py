@@ -97,7 +97,7 @@ def test_original_evaluation_still_refuses_empty_or_train_only_without_loading_c
     with pytest.raises(HTTPException) as caught:
         routes_evaluation._evaluate_classification(tmp_path / 'absent.pt', {}, source, torch.device('cpu'))
     assert caught.value.status_code == 422
-    assert caught.value.detail == 'No held-out classification images. Save a nonempty test or validation partition before evaluation.'
+    assert caught.value.detail == '평가에 쓸 분류 이미지가 없습니다. 테스트 또는 검증 분할에 이미지를 넣어 저장한 뒤 평가하세요.'
 
 
 def test_explicit_fixture_environment_still_executes_that_exact_supplied_file(tmp_path, monkeypatch):

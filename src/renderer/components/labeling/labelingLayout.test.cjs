@@ -33,3 +33,21 @@ test('a canvas shown at Fit is fitted again when its area changes size; a zoomed
  assert.equal(layout.refitAfterResize(atFit,null,tall,image,fit),null,'first measure');
  assert.equal(layout.refitAfterResize(atFit,small,small,image,fit),null,'same size');
  assert.deepEqual(layout.refitAfterResize({scale:1,offsetX:0,offsetY:0},{width:0,height:0},tall,image,(w,h,iw,ih)=>w<=0||h<=0?{scale:1,offsetX:0,offsetY:0}:fit(w,h,iw,ih)),fit(tall.width,tall.height,image.width,image.height),'an image loaded into a zero-height area is fitted once it has room');});
+
+test('an unpressed 집중 편집 reads as no choice, so the screen can follow the view mode',()=>{
+ const layout=load();const values={};const storage={getItem:key=>values[key]??null,setItem:(key,value)=>{values[key]=value;}};
+ assert.equal(layout.storedLabelingFocus(storage),null);
+ layout.writeLabelingFocus(false,storage);assert.equal(layout.storedLabelingFocus(storage),false);
+ layout.writeLabelingFocus(true,storage);assert.equal(layout.storedLabelingFocus(storage),true);
+ assert.equal(layout.storedLabelingFocus({getItem:()=>{throw new Error('blocked');}}),null);
+});
+
+test('a short work area with the helper panels open points to 집중 편집; focus on, room or no measure says nothing',()=>{
+ const layout=load();const notice=layout.NARROW_CANVAS_NOTICE;
+ assert.equal(notice,'그림 영역이 좁습니다 · 집중 편집으로 보조 패널을 접을 수 있습니다');assert.ok(notice.includes(layout.FOCUS_SWITCH_NAME));
+ assert.equal(layout.NARROW_CANVAS_HEIGHT,240);
+ for(const height of [0,4,239])assert.equal(layout.narrowCanvasNotice(height,false),notice,`${height}px`);
+ for(const height of [240,493])assert.equal(layout.narrowCanvasNotice(height,false),'',`${height}px has room`);
+ assert.equal(layout.narrowCanvasNotice(4,true),'','focus editing already folded the panels');
+ assert.equal(layout.narrowCanvasNotice(null,false),'','never measured (no ResizeObserver)');
+});

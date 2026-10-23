@@ -31,7 +31,7 @@ def test_shared_handler_rejects_private_image_before_model_free_debug(tmp_path,m
         with pytest.raises(HTTPException) as error:
             flows.run_flowchart(_debug(supplied),request=SimpleNamespace(state=SimpleNamespace(account_user={'id':'user'})))
         assert error.value.status_code==422
-        assert 'project' in str(error.value.detail).lower()
+        assert 'project' in str(error.value.detail).lower() or '프로젝트' in str(error.value.detail)
     finally:reset_request_shared_scope(shared)
 
 

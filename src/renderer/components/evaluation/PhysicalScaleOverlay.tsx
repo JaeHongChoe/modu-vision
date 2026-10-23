@@ -30,8 +30,8 @@ export const PhysicalScaleOverlay: React.FC<PhysicalScaleOverlayProps> = ({
     }
 
     const calculatedPx = chosenPx * scale;
-    const label = `${chosenPx} image px`;
-    const res = `Physical scale uncalibrated (${(scale * 100).toFixed(0)}%)`;
+    const label = `이미지 ${chosenPx}px`;
+    const res = `실제 크기 미보정 (${(scale * 100).toFixed(0)}%)`;
 
     return {
       barWidthPx: Math.max(30, Math.min(220, calculatedPx)),

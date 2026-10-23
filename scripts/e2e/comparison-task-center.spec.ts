@@ -57,12 +57,22 @@ async function exercise(page: Page, workspace: Workspace, evidence: Evidence, ap
       posted++; jobId = (await response.json()).job_id;
     }
   });
+  // Step 4 names its evaluated model when its evaluation read lands, and the comparison panel then re-reads its model
+  // catalog (controls off while it loads). Choose and compare after that settles, as the operator sees it: a click in
+  // that window hits a button that turned off under it and sends nothing.
+  let evaluationLanded = false, catalogAfterEvaluation = false;
+  page.on('response', response => { if (new URL(response.url()).pathname === '/api/evaluation/results') evaluationLanded = true; });
+  page.on('requestfinished', request => {
+    if (evaluationLanded && new URL(request.url()).pathname === '/api/evaluation/model-comparisons/models') catalogAfterEvaluation = true;
+  });
   if (startupUrl) await page.goto(startupUrl); else await page.reload();
   await expect(page.getByTitle('프로젝트 관리', {exact: true})).toContainText('Comparison handoff fixture');
   await page.getByRole('navigation', {name: 'Workflow Stages'}).getByRole('button').nth(1).click();
   await expect(page.getByRole('region',{name:'판정 근거에서 시작한 라벨 편집'})).toHaveCount(0);
   await page.getByRole('navigation', {name: 'Workflow Stages'}).getByRole('button').nth(3).click();
   const panel = page.getByRole('region', {name: '현행과 후보 모델 비교'});
+  await expect.poll(() => catalogAfterEvaluation).toBe(true);
+  await expect(panel.getByText('목록 불러오는 중…', {exact: true})).toHaveCount(0);
   await panel.getByLabel('비교 기준 모델', {exact: true}).selectOption('job_fixture_incumbent');
   await panel.getByLabel('후보 모델', {exact: true}).selectOption('job_fixture_candidate');
   await panel.getByRole('button', {name: '동일 test 이미지로 비교', exact: true}).click();
@@ -208,15 +218,26 @@ async function exercise(page: Page, workspace: Workspace, evidence: Evidence, ap
   await comparisonViewer.getByRole('button',{name:'현재 라벨 편집',exact:true}).click();
   const editReturn=page.getByRole('region',{name:'판정 근거에서 시작한 라벨 편집'});
   await expect(editReturn).toContainText(editRow.image_id);
-  await expect(page.getByRole('button',{name:'Mark as Normal (OK)',exact:true})).toBeEnabled();
-  await page.getByRole('button',{name:'Mark as Normal (OK)',exact:true}).click();
+  // Step 2 of a classification project has no OK tag (the class comes from the folder or the class picker, F-04); the
+  // label edit that goes through 변경 저장 is a region drawn on the image.
+  await expect(page.getByText(`라벨 목록 (${beforeLabels.annotations.length})`,{exact:true})).toBeVisible();
+  await expect(page.getByText('기존 라벨을 불러오는 중입니다.',{exact:true})).toHaveCount(0);
+  // 모두 보기 opens every helper panel, which leaves the canvas almost no height; 집중 편집 folds them (the evidence return
+  // bar stays) as a user would before drawing.
+  await page.getByRole('button',{name:'집중 편집',exact:true}).click();
+  await expect.poll(async()=>(await page.locator('[data-canvas-container]').boundingBox())?.height??0).toBeGreaterThan(200);
+  await page.getByTitle('바운딩 박스 (BBox - 2)',{exact:true}).click();
+  const canvasBox=await page.locator('[data-canvas-container]').boundingBox();expect(canvasBox).not.toBeNull();
+  await page.mouse.move(canvasBox!.x+canvasBox!.width*.45,canvasBox!.y+canvasBox!.height*.45);await page.mouse.down();
+  await page.mouse.move(canvasBox!.x+canvasBox!.width*.55,canvasBox!.y+canvasBox!.height*.55,{steps:8});await page.mouse.up();
+  await expect(page.getByText(`라벨 목록 (${beforeLabels.annotations.length+1})`,{exact:true})).toBeVisible();
   await expect(editReturn.getByRole('button',{name:'원래 판정 근거로 돌아가기',exact:true})).toBeDisabled();
   await expect(editReturn.getByRole('button',{name:'근거 이미지의 현재 라벨 다시 열기',exact:true})).toBeDisabled();
-  await page.getByRole('button',{name:'Save Changes',exact:true}).click();
+  await page.getByRole('button',{name:'변경 저장',exact:true}).click();
   await expect(editReturn.getByRole('button',{name:'원래 판정 근거로 돌아가기',exact:true})).toBeEnabled();
   const afterLabels=await api(`/api/annotations/${editRow.image_id}?file_path=${encodeURIComponent(editRow.file_path)}`);
   expect(afterLabels.metadata.revision).toBeGreaterThan(beforeLabels.metadata.revision);
-  expect(afterLabels.annotations.some((row:any)=>row.is_normal)).toBe(true);
+  expect(afterLabels.annotations).toHaveLength(beforeLabels.annotations.length+1);expect(afterLabels.annotations[afterLabels.annotations.length-1].type).toBe('bbox');
   expect(afterLabels.metadata.content_hash).toBe(editRow.image_sha256);
   expect(beforeLabels.metadata.image_uuid).toBe(initialMetadata.image_uuid);
   expect(beforeLabels.metadata.revision).toBe(initialMetadata.revision);
@@ -252,7 +273,7 @@ async function exercise(page: Page, workspace: Workspace, evidence: Evidence, ap
   await evidence.screenshot(page,native?'native-evidence-label-reopen-error':'browser-evidence-label-reopen-error');
   await page.unroute(metadataRoute);await reopen.click();
   await expect(editReturn.getByRole('alert')).toHaveCount(0);
-  await expect(page.getByRole('button',{name:'Normal (OK) Part',exact:true})).toBeVisible();
+  await expect(page.getByText(`라벨 목록 (${afterLabels.annotations.length})`,{exact:true})).toBeVisible();
   await expect(reopen).toBeEnabled();
   await expect(editReturn).toContainText(`확인한 수정 버전 ${savedMetadata.revision}`);
   await evidence.screenshot(page,native?'native-evidence-label-reopened':'browser-evidence-label-reopened');
@@ -329,7 +350,7 @@ async function exercise(page: Page, workspace: Workspace, evidence: Evidence, ap
   expect(await api(`/api/annotations/${editRow.image_id}?file_path=${encodeURIComponent(editRow.file_path)}`)).toEqual(afterLabels);
   const cancelCustodyAfter=custody();expect(cancelCustodyAfter).toEqual(cancelCustodyBefore);expect(posted).toBe(boundaryPosts);
   await evidence.screenshot(page,native?'native-evidence-label-cancelled-read':'browser-evidence-label-cancelled-read');
-  await page.unroute(metadataRoute);page.off('request',countAnnotation);await reopen.click();await expect(page.getByRole('button',{name:'Normal (OK) Part',exact:true})).toBeVisible();await expect(reopen).toBeEnabled();
+  await page.unroute(metadataRoute);page.off('request',countAnnotation);await reopen.click();await expect(page.getByText(`라벨 목록 (${afterLabels.annotations.length})`,{exact:true})).toBeVisible();await expect(reopen).toBeEnabled();
   evidence.note('evidence_label_boundary_custody',{cells:['U030.evidence-current-label-return.error','U030.evidence-current-label-return.cancel'],
     comparison_id:secondJob.report_id,project_id:project.id,source,task:'classification',labelset_id:selectedReport.labelset_id,
     image_id:editRow.image_id,image_uuid:savedMetadata.image_uuid,image_path:editRow.file_path,image_sha256:editRow.image_sha256,

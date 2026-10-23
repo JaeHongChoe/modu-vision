@@ -130,7 +130,7 @@ def test_unproved_supersession_keeps_original_business_result_and_strict_refusal
     response=asyncio.run(original_request())
     assert response.status_code==expected_status
     if expected_status==404:assert response.json()=={'detail':'A newer saved flow supersedes this draft'}
-    else:assert response.json()=={'detail':'Saved draft is invalid: Draft context or hash differs'}
+    else:assert response.json()=={'detail':'저장된 임시 저장본이 올바르지 않습니다: Draft context or hash differs'}
     assert all(path.read_bytes()==raw for path,raw in before.items())
     assert audit.verify()=={'intact':True,'rows':0}
     snapshot=observer.snapshot();attempt=admission._UI_ancillary_requests.records[-1]

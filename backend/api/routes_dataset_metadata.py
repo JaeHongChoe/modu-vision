@@ -178,7 +178,7 @@ def grouped_split(req:SplitRequest,request:Request):
 def _split_rows(project,source):
     rows=[r for r in _rows(project,source) if r.get('usage_state','active')!='not_used']
     # Use only trainable image inventory for LabelMe; do not mark unlabeled files trainable.
-    flat=routes_dataset._has_flat_labelme_annotations(source)
+    flat=routes_dataset._flat_image_workspace(source,project['task'])
     if flat and project['task'] in {'detection','segmentation'}:
         paired=routes_dataset._paired_labelme_images(source)
         rows=[r for r in rows if Path(r['file_path']).resolve() in paired]

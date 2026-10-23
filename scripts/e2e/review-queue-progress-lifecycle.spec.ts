@@ -308,7 +308,7 @@ async function exercise(page: Page, w: Workspace, e: Evidence, api: Api, sourceE
     const selected = page.locator('[data-labeling-filmstrip]').getByRole('img', {name: path.basename(target.file_path), exact: true});
     await expect(selected.locator('..')).toHaveClass(/border-blue-500/);
     expect(new URL((await selected.getAttribute('src'))!, page.url()).searchParams.get('file_path')).toBe(target.file_path);
-    await expect(page.getByTestId('annotation-save-button')).toHaveText('Saved');
+    await expect(page.getByTestId('annotation-save-button')).toHaveText('저장됨');
     const snapshot = path.join(w.logs, 'queue-progress-' + suffix + '.png'); fs.writeFileSync(snapshot, bytes); e.addFile(snapshot);
     return {path: target.file_path, image_uuid: meta.image_uuid, source_sha256: sha(bytes), revision: meta.revision,
       raw_status: 200, annotations_status: 200, complete_original_and_annotations_equal: true};

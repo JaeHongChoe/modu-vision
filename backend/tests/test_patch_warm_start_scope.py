@@ -116,5 +116,5 @@ def test_general_parent_source_scope_does_not_adopt_patch_prepared_paths(prepare
     before = _files(Path(project['project_dir']))
     response = _parents(client, prepared, task='classification')
     assert response.status_code == 409, response.text
-    assert response.json() == {'detail': "Warm-start source must match the current project's dataset"}
+    assert response.json() == {'detail': '이어서 학습할 모델은 현재 프로젝트의 데이터셋으로 학습한 것이어야 합니다. 이 프로젝트에서 학습한 모델을 고르세요.'}
     assert _files(Path(project['project_dir'])) == before

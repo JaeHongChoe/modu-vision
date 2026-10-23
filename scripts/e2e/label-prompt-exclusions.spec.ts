@@ -14,6 +14,16 @@ async function exercise(page:Page,workspace:Workspace,evidence:Evidence,api:Api,
  // Actual missing provider gate. No route or provider replacement and no model
  // download: UI input and unavailable state do not certify learned inference.
  if(!setup.providers.foundation.ready)await expect(panel.getByRole('button',{name:'현재 이미지 SAM2 후보 생성',exact:true})).toBeDisabled();
+ // Stage 2 preparation card: a Korean state and the reason beside the disabled button, the loader's file list, and no download.
+ const card=panel.getByRole('region',{name:'SAM2 모델 준비',exact:true});await expect(card).toBeVisible();
+ if(!setup.providers.foundation.ready){await expect(card.getByRole('status')).toHaveText(/^SAM2 모델 준비 · (설치 필요|파일 없음|파일 불완전|경로 오류|장치 없음)$/);
+  // The same reason sits beside both generate buttons (the batch one inside a closed <details>), so read the paragraph the
+  // image button describes instead of matching the text across the panel (two matches would be a strict-mode violation).
+  const generate=panel.getByRole('button',{name:'현재 이미지 SAM2 후보 생성',exact:true});await expect(generate).toHaveAttribute('aria-describedby',/\S/);const described=await generate.getAttribute('aria-describedby');await expect(panel.locator(`[id="${described}"]`)).toHaveText(/^SAM2 모델이 준비되지 않았습니다\(/);
+  // A blocker keeps the card open (a ready card is one collapsed line), so its disclaimer and file list are visible here.
+  await expect(card.getByText('크기·라이선스는 공식 페이지에서 확인하세요.',{exact:false})).toBeVisible();
+  await expect(card.getByRole('list',{name:'SAM2 필요 파일'}).getByRole('listitem')).toHaveText([/^[✓✗] config\.json/,/^[✓✗] preprocessor_config\.json/,/^[✓✗] model\.safetensors/]);}
+ await expect(card.getByRole('button',{name:/내려받기|다운로드/})).toHaveCount(0);
  await panel.locator('summary').filter({hasText:'현재 이미지 제외 영역'}).click();await expect(panel.getByRole('button',{name:'제외 영역 추가',exact:true})).toBeEnabled();await panel.getByLabel('제외할 원본 영역').fill('2, 3, 10, 12');await panel.getByRole('button',{name:'제외 영역 추가',exact:true}).click();await expect(panel.getByText('제외 1: [2, 3, 10, 12]',{exact:true})).toBeVisible();
  await panel.getByLabel('제외할 원본 영역').fill('10, 3, 2, 12');await panel.getByRole('button',{name:'제외 영역 추가',exact:true}).click();await expect(panel.getByRole('alert')).toContainText('원본 좌표');await expect(panel.getByText('제외 1: [2, 3, 10, 12]',{exact:true})).toBeVisible();
  await panel.getByLabel('제외 영역 1 제거').click();await expect(panel.locator('summary').filter({hasText:'현재 이미지 제외 영역'})).toHaveText('현재 이미지 제외 영역 · 0개');
@@ -23,7 +33,7 @@ async function exercise(page:Page,workspace:Workspace,evidence:Evidence,api:Api,
  await navigate();await open.click();await expect(panel.locator('summary').filter({hasText:'현재 이미지 제외 영역'})).toHaveText('현재 이미지 제외 영역 · 0개');
  const proposals=await api('/api/label-suggestions');expect(proposals.suggestions).toHaveLength(0);
  for(const row of workspace.images){expect(sha(fs.readFileSync(row.path))).toBe(row.sha256);evidence.addFile(row.path);}
- evidence.addFile(path.join(project.project_dir,'project.json'));evidence.note('label_prompt_exclusions',{project,setup,originals:workspace.images,actual_ui_add_remove_invalid_image_switch_reload:true,no_original_label_mutation:true,no_provider_substitution_or_learned_execution:true,parent_not_promoted:true});
+ evidence.addFile(path.join(project.project_dir,'project.json'));evidence.note('label_prompt_exclusions',{project,setup,originals:workspace.images,actual_ui_add_remove_invalid_image_switch_reload:true,no_original_label_mutation:true,no_provider_substitution_or_learned_execution:true,parent_not_promoted:true,sam2_readiness_card_without_download:true});
 }
 test('exclusion controls stay image-specific and missing learned provider remains blocked',async({page,request,renderer,workspace,evidence})=>{test.setTimeout(120_000);await installDesktopHostShim(page,renderer.port);const api:Api=async(route,body,method)=>{const r=await request.fetch(renderer.origin+route,{method:method||(body===undefined?'GET':'POST'),...(body===undefined?{}:{data:body})});expect(r.ok(),await r.text()).toBe(true);return r.json();};await exercise(page,workspace,evidence,api,false,renderer.url);});
 test('native exclusion controls and honest unavailable-provider gate',{tag:'@electron'},async({electronSession,workspace,evidence})=>{test.setTimeout(120_000);const {window}=electronSession,status=await electronSession.waitForBackend();const api:Api=(route,body,method)=>window.evaluate(async({port,route,body,method})=>{const r=await fetch(`http://127.0.0.1:${port}${route}`,{method:method||(body===undefined?'GET':'POST'),...(body===undefined?{}:{headers:{'Content-Type':'application/json'},body:JSON.stringify(body)})});if(!r.ok)throw Error(`Owned labeling API ${r.status}: ${await r.text()}`);return r.json();},{port:status.port,route,body,method});await exercise(window,workspace,evidence,api,true);});

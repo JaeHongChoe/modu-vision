@@ -144,7 +144,7 @@ async function exercise(page:Page,workspace:Workspace,evidence:Evidence,api:Api,
   const selectedImage=page.locator('[data-labeling-filmstrip]').getByRole('img',{name:path.basename(image.file_path),exact:true});
   await expect(selectedImage.locator('..')).toHaveClass(/border-blue-500/);
   expect(new URL((await selectedImage.getAttribute('src'))!,page.url()).searchParams.get('file_path')).toBe(image.file_path);
-  await expect(page.getByTestId('annotation-save-button')).toHaveText('Saved');
+  await expect(page.getByTestId('annotation-save-button')).toHaveText('저장됨');
   await evidence.screenshot(page,`${native?'native':'browser'}-label-exact-original-review-handoff-no-apply`);
   expect(observed).toEqual(receipts.map(receipt=>receipt.request));expect(observed).toHaveLength(3);expect(observed.every(request=>request.mode==='preview')).toBe(true);expect(writes).toEqual([]);
   const afterLabels=await Promise.all(workspace.images.map(file=>api(annotation(file.path))));for(let index=0;index<afterLabels.length;index++){expect(afterLabels[index].annotations).toEqual(beforeLabels[index].annotations);expect(afterLabels[index].mask_file).toBe(beforeLabels[index].mask_file);}

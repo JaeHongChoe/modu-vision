@@ -1,4 +1,4 @@
-import { request, type LabelSuggestion, type LabelSuggestionBatch } from './api';
+import { request, type ClassRenameMapping, type ClassRenamePreview, type ClassRenameResult, type LabelSuggestion, type LabelSuggestionBatch } from './api';
 import {buildModelRequest} from '../components/labeling/foundationRequest';
 import type {SizeControls} from './foundationLabelingApi';
 import type { AnnotationItem } from '../types';
@@ -42,7 +42,14 @@ export const datasetWorkflow = {
   generateCandidates: (body: Record<string,unknown>) => request<CandidateProposal>('/api/label-candidates/generate',json('POST',body)),
   generateModel: (jobId: string, imagePath: string, threshold: number, keywords: string[], options: SizeControls & {device:string} = {device:'cpu',min_area:0,min_width:0,min_height:0}) => request<CandidateProposal>('/api/label-suggestions/generate',json('POST',buildModelRequest(jobId,imagePath,threshold,keywords,options))),
   startBatch: (body: Record<string,unknown>) => request<LabelSuggestionBatch>('/api/label-suggestions/batches',json('POST',body)),
-  review: (id: string, decision: string, candidateIds: string[], actor: string) => request<CandidateProposal>(`/api/label-suggestions/${id}/review`,json('POST',{decision,candidate_ids:candidateIds,actor})),
+  /** With team editing on, the reviewer's edit lease for the image goes along (the save needs it). */
+  review: (id: string, decision: string, candidateIds: string[], actor: string, leaseToken?: string) => request<CandidateProposal>(`/api/label-suggestions/${id}/review`,json('POST',{decision,candidate_ids:candidateIds,actor,...(leaseToken?{lease_token:leaseToken}:{})})),
+  /** Take back one adoption: only its shapes are removed, and only while nobody changed them since (else a 409 naming the backup). */
+  undoAdoption: (id: string, actor: string, leaseToken?: string) => request<CandidateProposal>(`/api/label-suggestions/${id}/undo`,json('POST',{actor,...(leaseToken?{lease_token:leaseToken}:{})})),
+  /** Class rename/merge preview: counts per store and conflicts; nothing is written. */
+  classRenamePreview: (mapping: ClassRenameMapping[], actor: string) => request<ClassRenamePreview>('/api/class-rename/preview',json('POST',{mapping,actor})),
+  /** Applies the previewed rename behind an automatic data version; refused (409) when the files changed since the preview. */
+  classRenameApply: (mapping: ClassRenameMapping[], actor: string, expectedPreviewSha256: string) => request<ClassRenameResult>('/api/class-rename/apply',json('POST',{mapping,actor,expected_preview_sha256:expectedPreviewSha256})),
 };
 export function workflowError(error: unknown): string {
   if (error instanceof Error) return error.message;

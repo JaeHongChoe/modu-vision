@@ -287,3 +287,27 @@ test('object count rules refuse unknown classes, booleans, duplicates and condit
  bad.nodes[1].data.params.object_requirements=[...p.nodes[1].data.params.object_requirements,...p.nodes[1].data.params.object_requirements];assert.match(graph.validateFlowchartGraph(bad,models),/클래스 이름/);
  bad.nodes[1].data.params.object_requirements=p.nodes[1].data.params.object_requirements;bad.edges[1].isBranch='pass';assert.match(graph.validateFlowchartGraph(bad,models),/조건 없이/);
 });
+test('the canvas shows Korean type and port words while button names stay English for automation',()=>{
+ const React=require('react'),{renderToStaticMarkup}=require('react-dom/server');const {CustomNode,koreanPortLabel}=compile('CustomNode.tsx',{'./flowchartViewport':{FLOW_NODE_WIDTH:272},'./flowchartGraph':graph});
+ assert.equal(koreanPortLabel('IMAGE/ROI IN'),'이미지·ROI');assert.equal(koreanPortLabel('RESULT OUT'),'결과');
+ assert.equal(koreanPortLabel('VERDICT OUT'),'판정');assert.equal(koreanPortLabel('DEFECT BOXES'),'결함 박스');assert.equal(koreanPortLabel('SOMETHING'),'SOMETHING');
+ const render=(props)=>renderToStaticMarkup(React.createElement(CustomNode,{isSelected:false,isActive:false,isPassed:false,isFlaggedNg:false,onSelect(){},...props}));
+ const ko=render({node:node('judge','decision')});
+ assert.match(ko,/>판정<\/span>/);assert.match(ko,/>결과<\/span>/);assert.match(ko,/title="이 노드의 입력에 연결 \(결과\)"/);assert.match(ko,/title="여기서 연결 시작 \(판정\)"/);
+ assert.match(ko,/aria-label="Connect to [^"]* RESULT IN"/,'the button name keeps the English port');
+ const en=render({node:node('judge','decision'),language:'en'});
+ assert.match(en,/>decision<\/span>/);assert.match(en,/>RESULT IN<\/span>/);
+});
+test('a wire selection survives a read of the same edges as a new list and drops on any change',()=>{
+ const flow={id:'f',name:'f',nodes:[node('a','input'),node('b','decision')],edges:[{id:'',source:'a',target:'b'},{id:'dup',source:'a',target:'b'},{id:'dup',source:'b',target:'a'}]};
+ const selection={index:2,edge:flow.edges[2],edges:flow.edges};
+ assert.equal(graph.rebaseFlowEdgeSelection(flow,selection),selection,'the same list keeps the same selection');
+ const reread=JSON.parse(JSON.stringify(flow));const moved=graph.rebaseFlowEdgeSelection(reread,selection);
+ assert.equal(moved.index,2);assert.equal(moved.edges,reread.edges);assert.equal(moved.edge,reread.edges[2]);
+ assert.equal(graph.selectedFlowEdge(reread,moved),reread.edges[2],'the rebased selection resolves on the new list');
+ const renamed=JSON.parse(JSON.stringify(flow));renamed.edges[0].label='changed';
+ assert.equal(graph.rebaseFlowEdgeSelection(renamed,selection),null,'a changed edge list drops the selection');
+ const shorter={...flow,edges:flow.edges.slice(0,2)};
+ assert.equal(graph.rebaseFlowEdgeSelection(shorter,selection),null);
+ assert.equal(graph.rebaseFlowEdgeSelection(flow,null),null);
+});

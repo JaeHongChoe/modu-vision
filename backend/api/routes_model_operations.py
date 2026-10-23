@@ -94,7 +94,7 @@ class LegacyImpactReport(BaseModel):
 
 def project(request):
     current=get_current_project(request)
-    if not current:raise HTTPException(409,'Open a project first')
+    if not current:raise HTTPException(409,'열린 프로젝트가 없습니다. 프로젝트를 먼저 연 뒤 다시 시도하세요.')
     return dict(current)
 
 
@@ -138,7 +138,7 @@ def legacy_impact_report(request: Request):
 def review_handoff(cycle_id:str,request:Request):
     from backend.engine.operations_review import read_handoff
     try:return read_handoff(project(request),cycle_id,accounts=getattr(request.app.state,'accounts',None))
-    except KeyError as exc:raise HTTPException(404,'Operations cycle not found') from exc
+    except KeyError as exc:raise HTTPException(404,'운영 주기 기록을 찾을 수 없습니다. 목록을 새로고침한 뒤 다시 고르세요.') from exc
     except (ValueError,OSError) as exc:raise HTTPException(409,str(exc)) from exc
 
 
@@ -150,7 +150,7 @@ def prepare_flow(cycle_id:str,payload:CandidateFlowPreparationRequest,request:Re
     current=project(request);require_role(request,current,{'owner','reviewer'})
     supplied=payload.model_dump();supplied['reviewer']=request_actor(request,payload.reviewer)
     try:return prepare_candidate_flow(current,cycle_id,**supplied)
-    except KeyError as exc:raise HTTPException(404,'Operations cycle not found') from exc
+    except KeyError as exc:raise HTTPException(404,'운영 주기 기록을 찾을 수 없습니다. 목록을 새로고침한 뒤 다시 고르세요.') from exc
     except (ValueError,OSError,OperationsBusy) as exc:raise HTTPException(409,str(exc)) from exc
 
 @router.put('/policy')
@@ -167,10 +167,10 @@ def policy(payload:OperationsPolicy,request:Request):
 def run(payload:RunRequest,request:Request):
     current,store,key=_store(request)
     from backend.engine.operations_worker import watcher_state
-    if watcher_state(current).get('running'):raise HTTPException(409,'Stop the project watcher before running a manual cycle')
+    if watcher_state(current).get('running'):raise HTTPException(409,'프로젝트 감시가 켜져 있어 수동 주기를 실행할 수 없습니다. 감시를 중지한 뒤 실행하세요.')
     event=threading.Event()
     with _LOCK:
-        if key in _EVENTS:raise HTTPException(409,'This project already has an operations cycle')
+        if key in _EVENTS:raise HTTPException(409,'이 프로젝트에서 운영 주기가 이미 실행 중입니다. 끝날 때까지 기다리거나 취소한 뒤 다시 실행하세요.')
         _EVENTS[key]=('starting',event)
     def execute():
         try:return run_cycle(current,event)
@@ -195,8 +195,8 @@ def cancel(request:Request):
 def watch_start(request:Request):
     current,store,key=_store(request)
     with _LOCK:
-        if key in _EVENTS:raise HTTPException(409,'Wait for the active cycle before starting the watcher')
-    if not store.policy():raise HTTPException(409,'Configure a policy first')
+        if key in _EVENTS:raise HTTPException(409,'운영 주기가 실행 중이라 감시를 시작할 수 없습니다. 주기가 끝난 뒤 감시를 시작하세요.')
+    if not store.policy():raise HTTPException(409,'운영 정책이 아직 없습니다. 정책을 저장한 뒤 감시를 시작하세요.')
     from backend.engine.operations_worker import start_watcher
     try:return start_watcher(current)
     except (ValueError,OSError) as exc:raise HTTPException(409,str(exc)) from exc
@@ -212,7 +212,7 @@ def models(request:Request):
     current=project(request)
     from backend.engine.model_operations import _checkpoint
     root=Path(current['models_dir']);items=[]
-    if root.is_symlink():raise HTTPException(409,'Model store is linked')
+    if root.is_symlink():raise HTTPException(409,'모델 저장 폴더가 바로가기(링크)로 연결되어 있어 읽지 않습니다. 실제 폴더로 바꾼 뒤 다시 여세요.')
     import json
     from backend.engine.checkpoint_paths import completed_job_receipt
     for metadata_path in root.glob('**/model_meta.json'):

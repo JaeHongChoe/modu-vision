@@ -17,20 +17,20 @@ async function exercise(page:Page,workspace:Workspace,evidence:Evidence,api:Owne
  await expect(page.getByTitle('프로젝트 관리',{exact:true})).toContainText('Vector content fixture');
  await page.getByRole('navigation',{name:'Workflow Stages'}).getByRole('button').nth(1).click();await page.getByRole('button',{name:'집중 편집',exact:true}).click();
  // Wait for the actual source decode and focus-layout Fit before requesting 1:1.
- await expect.poll(async()=>Number((await page.getByTestId('canvas-hud').innerText()).match(/scale\s*([\d.]+)\s*%/)?.[1]||0)).toBeGreaterThan(100);
- await page.getByTitle('100% Zoom (1:1)',{exact:true}).click();
+ await expect.poll(async()=>Number((await page.getByTestId('canvas-hud').innerText()).match(/배율\s*([\d.]+)\s*%/)?.[1]||0)).toBeGreaterThan(100);
+ await page.getByTitle('실제 크기 (1:1)',{exact:true}).click();
  await expect(page.getByTestId('canvas-hud')).toContainText('100%');
  const point=async(x:number,y:number)=>{const b=(await page.locator('[data-canvas-container]').boundingBox())!;return{x:b.x+(b.width-256)/2+x,y:b.y+(b.height-256)/2+y};};
  const drag=async(x1:number,y1:number,x2:number,y2:number)=>{const a=await point(x1,y1),b=await point(x2,y2);await page.mouse.move(a.x,a.y);await page.mouse.down();await page.mouse.move(b.x,b.y,{steps:8});await page.mouse.up();};
  const query=`/api/annotations/part?file_path=${encodeURIComponent(imagePath)}`;
- const save=async()=>{const reply=page.waitForResponse(r=>new URL(r.url()).pathname==='/api/annotations/save'&&r.request().method()==='POST');await page.getByRole('button',{name:'Save Changes',exact:true}).click();expect((await reply).status()).toBe(200);return api(query);};
+ const save=async()=>{const reply=page.waitForResponse(r=>new URL(r.url()).pathname==='/api/annotations/save'&&r.request().method()==='POST');await page.getByRole('button',{name:'변경 저장',exact:true}).click();expect((await reply).status()).toBe(200);return api(query);};
  await page.getByTitle('바운딩 박스 (BBox - 2)',{exact:true}).click();await drag(20,20,70,60);const boxSaved=await save();
  const box=boxSaved.annotations.find((a:any)=>a.type==='bbox');expect(box.label).toBe('Solder Bridge');expect(box.category_id).toBe(1);expect(box.bbox).toEqual([20,20,70,60]);
  await page.getByRole('button',{name:/^Scratch(?: \d+)?$/}).click();await page.getByTitle('다각형 폴리곤 (Polygon - 4)',{exact:true}).click();
- await page.getByTitle('100% Zoom (1:1)',{exact:true}).click();
+ await page.getByTitle('실제 크기 (1:1)',{exact:true}).click();
  const polygon=[[120,30],[180,30],[150,80]];for(const [x,y] of polygon){const p=await point(x,y);await page.mouse.click(p.x,p.y);}await page.keyboard.press('Enter');const polygonSaved=await save();
  const poly=polygonSaved.annotations.find((a:any)=>a.type==='polygon');expect(poly.label).toBe('Scratch');expect(poly.category_id).toBe(2);expect(poly.polygon).toEqual(polygon);expect(poly.points).toEqual(polygon);
- await page.getByRole('button',{name:/^Crack(?: \d+)?$/}).click();await page.getByTitle('회전 바운딩 박스 (Rotated BBox OBB - 3)',{exact:true}).click();await page.getByTitle('100% Zoom (1:1)',{exact:true}).click();await drag(70,150,150,190);
+ await page.getByRole('button',{name:/^Crack(?: \d+)?$/}).click();await page.getByTitle('회전 바운딩 박스 (Rotated BBox OBB - 3)',{exact:true}).click();await page.getByTitle('실제 크기 (1:1)',{exact:true}).click();await drag(70,150,150,190);
  await page.getByLabel('객체 독립 방향 라벨',{exact:true}).fill('315');
  const angle=page.getByText('Angle (θ)',{exact:true}).locator('..').locator('..').getByRole('spinbutton');await angle.fill('30');
  const rotatedSaved=await save();const rotated=rotatedSaved.annotations.find((a:any)=>a.type==='rotated_bbox');expect(rotated.label).toBe('Crack');expect(rotated.category_id).toBe(3);expect(rotated.rotated_bbox).toEqual([110,170,80,40,30]);expect(rotated.direction_deg).toBe(315);
@@ -38,14 +38,14 @@ async function exercise(page:Page,workspace:Workspace,evidence:Evidence,api:Owne
  await page.getByTitle('선택 및 이동 (Select / Move - 1)',{exact:true}).click();await page.keyboard.press('Shift+ArrowRight');const shiftedSaved=await save();const shifted=shiftedSaved.annotations.find((a:any)=>a.type==='rotated_bbox');
  expect(shifted.rotated_bbox).toEqual([120,170,80,40,30]);expect(shifted.direction_deg).toBe(315);
  expect(shiftedSaved.annotations.find((a:any)=>a.type==='bbox').bbox).toEqual(box.bbox);expect(shiftedSaved.annotations.find((a:any)=>a.type==='polygon').polygon).toEqual(polygon);
- await page.getByTitle('Delete annotation',{exact:true}).nth(0).click();const deleted=await save();expect(deleted.annotations).toHaveLength(2);expect(deleted.annotations.some((a:any)=>a.type==='bbox')).toBe(false);
- await page.getByTitle('Undo (Ctrl+Z)',{exact:true}).click();const restored=await save();expect(restored.annotations).toEqual(shiftedSaved.annotations);
+ await page.getByTitle('라벨 삭제',{exact:true}).nth(0).click();const deleted=await save();expect(deleted.annotations).toHaveLength(2);expect(deleted.annotations.some((a:any)=>a.type==='bbox')).toBe(false);
+ await page.getByTitle('실행 취소 (Ctrl+Z)',{exact:true}).click();const restored=await save();expect(restored.annotations).toEqual(shiftedSaved.annotations);
  await page.reload();await expect(page.getByRole('button',{name:/^Solder Bridge 1$/})).toBeVisible();await expect(page.getByRole('button',{name:/^Scratch 1$/})).toBeVisible();await expect(page.getByRole('button',{name:/^Crack 1$/})).toBeVisible();
  const reopened=await api(query);expect(reopened.annotations).toEqual(restored.annotations);expect(hash(fs.readFileSync(imagePath))).toBe(originalSha);
  const raster=await page.evaluate(async data=>{const img=new Image();await new Promise<void>((resolve,reject)=>{img.onload=()=>resolve();img.onerror=()=>reject(Error('Saved vector raster decode failed'));img.src=data;});const canvas=document.createElement('canvas');canvas.width=img.width;canvas.height=img.height;const ctx=canvas.getContext('2d')!;ctx.drawImage(img,0,0);return{width:img.width,height:img.height,classes:[[45,40],[150,45],[120,170]].map(([x,y])=>ctx.getImageData(x,y,1,1).data[0])};},'data:image/png;base64,'+fs.readFileSync(reopened.mask_file).toString('base64'));
  expect(raster).toEqual({width:256,height:256,classes:[1,2,3]});
  // Select the reopened OBB through its actual inspector row, then check the two independent values.
- await page.getByTitle('Delete annotation',{exact:true}).nth(2).locator('..').locator('..').click();
+ await page.getByTitle('라벨 삭제',{exact:true}).nth(2).locator('..').locator('..').click();
  await expect(page.getByLabel('객체 독립 방향 라벨',{exact:true})).toHaveValue('315');await expect(angle).toHaveValue('30');
  await evidence.screenshot(page,native?'native-vector-labels-reopened':'browser-vector-labels-reopened');
  evidence.note('vector_content',{project_id:project.id,image_path:imagePath,image_sha256:originalSha,annotation_snapshot:reopened,
@@ -123,16 +123,16 @@ test('native OBB angle and independent direction nudge stay owned through A B A 
   const response=await inspectResponse(await labels,owner,owner.context);expect(response.response.metadata.file_path).toBe(owner.image);expect(response.response.metadata.content_hash).toBe(owner.sha256);
   await expect(page.getByText('기존 라벨을 불러오는 중입니다.',{exact:true})).toHaveCount(0);await expect(page.getByText(/기존 라벨 조회 실패:/)).toHaveCount(0);
   // Keep the original real decode/layout gate before requesting 1:1.
-  await expect.poll(async()=>Number((await page.getByTestId('canvas-hud').innerText()).match(/scale\s*([\d.]+)\s*%/)?.[1]||0),{timeout:10_000}).toBeGreaterThan(100);
-  await page.getByTitle('100% Zoom (1:1)',{exact:true}).click();await expect(page.getByTestId('canvas-hud')).toContainText('100%');proof.visits.push({project:opened,context:owner.context,annotation_response:response});return response.response;
+  await expect.poll(async()=>Number((await page.getByTestId('canvas-hud').innerText()).match(/배율\s*([\d.]+)\s*%/)?.[1]||0),{timeout:10_000}).toBeGreaterThan(100);
+  await page.getByTitle('실제 크기 (1:1)',{exact:true}).click();await expect(page.getByTestId('canvas-hud')).toContainText('100%');proof.visits.push({project:opened,context:owner.context,annotation_response:response});return response.response;
  };
- const select=async()=>{await expect(page.getByTitle('Delete annotation',{exact:true})).toHaveCount(1);await page.getByTitle('Delete annotation',{exact:true}).locator('..').locator('..').click();};
+ const select=async()=>{await expect(page.getByTitle('라벨 삭제',{exact:true})).toHaveCount(1);await page.getByTitle('라벨 삭제',{exact:true}).locator('..').locator('..').click();};
  const angle=()=>page.getByText('Angle (θ)',{exact:true}).locator('..').locator('..').getByRole('spinbutton');
  const save=async(owner:VectorHandoffOwner,before:any,nudged:boolean)=>{
   const wire=page.waitForResponse(r=>new URL(r.url()).pathname==='/api/annotations/save'&&r.request().method()==='POST'&&r.request().postDataJSON()?.image_path===owner.image,{timeout:10_000});void wire.catch(()=>{});
-  await page.getByRole('button',{name:'Save Changes',exact:true}).click();const recorded=await inspectResponse(await wire,owner,owner.context),sent=JSON.parse(recorded.body!);expect(sent.image_id).toBe('part');expect(sent.image_path).toBe(owner.image);expect(sent.expected_revision).toBe(before.metadata.revision);expect(sent.image_width).toBe(256);expect(sent.image_height).toBe(256);expect(sent.annotations).toHaveLength(1);
+  await page.getByRole('button',{name:'변경 저장',exact:true}).click();const recorded=await inspectResponse(await wire,owner,owner.context),sent=JSON.parse(recorded.body!);expect(sent.image_id).toBe('part');expect(sent.image_path).toBe(owner.image);expect(sent.expected_revision).toBe(before.metadata.revision);expect(sent.image_width).toBe(256);expect(sent.image_height).toBe(256);expect(sent.annotations).toHaveLength(1);
   expect(sent.annotations[0].rotated_bbox).toEqual([owner.box[0]+(nudged?10:0),owner.box[1],owner.box[2],owner.box[3],owner.angle]);expect(sent.annotations[0].direction_deg).toBe(owner.direction);expect(recorded.response.status).toBe('saved');expect(recorded.response.metadata.image_uuid).toBe(before.metadata.image_uuid);expect(recorded.response.metadata.revision).toBeGreaterThan(before.metadata.revision);
-  await expect.poll(async()=>{const saved=page.getByRole('button',{name:'Saved',exact:true});return await saved.count()===1&&await saved.isVisible()&&await saved.isEnabled();},{timeout:20_000}).toBe(true);const snapshot=await read(owner);vectorHandoffGeometry(snapshot,owner,nudged);expect(snapshot.metadata.image_uuid).toBe(before.metadata.image_uuid);expect(snapshot.metadata.revision).toBe(recorded.response.metadata.revision);expect(snapshot.annotations).toEqual(sent.annotations.map((a:any)=>({...a,polygon:a.polygon??null,points:a.points??null,mask_rle:a.mask_rle??null,is_normal:a.is_normal??null,text:null})));
+  await expect.poll(async()=>{const saved=page.getByRole('button',{name:'저장됨',exact:true});return await saved.count()===1&&await saved.isVisible()&&await saved.isEnabled();},{timeout:20_000}).toBe(true);const snapshot=await read(owner);vectorHandoffGeometry(snapshot,owner,nudged);expect(snapshot.metadata.image_uuid).toBe(before.metadata.image_uuid);expect(snapshot.metadata.revision).toBe(recorded.response.metadata.revision);expect(snapshot.annotations).toEqual(sent.annotations.map((a:any)=>({...a,polygon:a.polygon??null,points:a.points??null,mask_rle:a.mask_rle??null,is_normal:a.is_normal??null,text:null})));
   proof.saves.push({project_id:owner.project.id,context:owner.context,nudged,transport:recorded,snapshot});return snapshot;
  };
  const custody=(owner:VectorHandoffOwner)=>({source:vectorHandoffTree(owner.source),annotations:vectorHandoffTree(owner.project.annotations_dir),dataset:vectorHandoffTree(owner.project.dataset_dir),models:vectorHandoffTree(owner.project.models_dir),reports:vectorHandoffTree(owner.project.reports_dir),project_manifest:vectorHandoffFile(path.join(owner.project.project_dir,'project.json'))});

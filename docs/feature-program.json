@@ -3419,7 +3419,7 @@
     },
     {
       "id": "F108",
-      "feature": "높은 신뢰도 예측을 자동 라벨로 사용",
+      "feature": "높은 신뢰도 예측을 라벨 초안으로 저장 (2단계 초안 검토에서 채택)",
       "phase": "P10",
       "priority": "P2",
       "implementation": "integrated",

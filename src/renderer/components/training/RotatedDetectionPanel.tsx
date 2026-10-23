@@ -25,6 +25,7 @@ import {RotatedBoxFitting} from './RotatedBoxFitting';
 import {useTaskHandoff} from './useTaskHandoff';
 import {selectHandoffRecord} from './taskHandoff';
 import {parseOBBRows as parseRows,formatOBBRows as formatRows,obbRecipePayload,type OBBAdapter} from './modelAdapterRecipes';
+import {mergeRotatedRows,step2ImportNotice,type Step2Rotated} from './step2RotatedRows';
 
 function errorText(cause: unknown): string {
   return cause instanceof Error ? cause.message : String(cause);
@@ -134,6 +135,17 @@ export const RotatedDetectionPanel: React.FC = () => {
     finally { if (sameProject()) setBusy(null); }
   };
 
+  // Step 2's rotated boxes go into the answer table; saving them is still the explicit button below (F-16/B3).
+  const importStep2 = async () => {
+    if (busy) return;
+    setError(''); setNotice('');
+    try {
+      const result = await request<Step2Rotated>('/api/dataset/rotated-boxes');
+      if (!sameProject()) return;
+      if (result.samples.length) { setRowsText(mergeRotatedRows(rowsText, result.samples)); setSampleCount(null); setSplitCounts(null); }
+      setNotice(step2ImportNotice(result));
+    } catch (cause) { if (sameProject()) setError(errorText(cause)); }
+  };
   const saveManifest = async () => {
     if (!datasetPath || busy) return;
     let rows: MultiRotatedSample[];
@@ -231,6 +243,8 @@ export const RotatedDetectionPanel: React.FC = () => {
         <div className="mt-1 break-all font-mono text-slate-200">{projectSource || '1단계에서 원본 이미지 폴더를 먼저 선택하세요.'}</div>
       </div>
       {datasets.length>0&&<label>프로젝트에 저장된 회전 박스 정답<select aria-label="프로젝트에 저장된 회전 박스 정답" value={datasetPath} onChange={event=>{setDatasetPath(event.target.value);setSampleCount(null);setSplitCounts(null);}} className={programInput}>{datasets.map((row,index)=><option key={row.dataset_path} value={row.dataset_path}>정답 {index+1} · {row.sample_count}장</option>)}</select></label>}
+      <button type="button" onClick={() => void importStep2()} disabled={!projectSource || !!busy || isActive}
+        className="rounded border border-cyan-700 px-3 py-1.5 text-cyan-100 hover:bg-cyan-950 disabled:opacity-40">2단계에서 그린 회전 박스 가져오기</button>
       <RotatedBoxFitting source={projectSource} scope={`${projectDir}/${projectSource}/${labelsetId}`} onAppend={row=>{setRowsText(old=>old?`${old}\n${row}`:row);setSampleCount(null);setSplitCounts(null);}}/>
       <label className="block text-slate-300">정답 표 · 이미지 상대 경로 ↹ 라벨 ↹ cx,cy,너비,높이,각도 ↹ train/val/test ↹ 객체 방향(선택)
         <textarea value={rowsText} onChange={(event) => { setRowsText(event.target.value); setSampleCount(null); setSplitCounts(null); }} rows={5}

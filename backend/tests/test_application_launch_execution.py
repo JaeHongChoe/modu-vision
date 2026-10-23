@@ -392,7 +392,20 @@ def _source_callback_failure_suffix():
     _atomic_fixture_json(original_failure_root/'projects/source-callback-failure.json',fact,exclusive=True,sort_keys=True)
    except BaseException:pass
    raise
- ex.execute_backend=failed_source
+ import atexit,threading
+ original_failure_entered=threading.Event();original_failure_settled=threading.Event()
+ def settled_source(*args,**kwargs):
+  original_failure_entered.set()
+  try:return failed_source(*args,**kwargs)
+  finally:original_failure_settled.set()
+ def await_failure_observation():
+  # The original callback runs in a daemon thread. When the sole reader fails
+  # first, interpreter exit can stop it between this observer's private write
+  # and its exclusive link. Before finalization, let only this test-owned
+  # observer finish; no production state, outcome or exit status changes.
+  if original_failure_entered.is_set():original_failure_settled.wait(10)
+ atexit.register(await_failure_observation)
+ ex.execute_backend=settled_source
 '''
 
 
@@ -443,7 +456,11 @@ def _wait_source_callback_failure(root, *, name='source-callback-failure.json'):
     while time.monotonic()<deadline:
         if path.is_file():return json.loads(path.read_bytes())
         time.sleep(.01)
-    pytest.fail('Missing exact original source failure observation: '+str(path))
+    # A writer stopped between its private write and the exclusive link leaves
+    # its unpublished temporary behind; name it so the cause stays visible.
+    partial=sorted(p.name for p in path.parent.glob('.'+name+'-*.tmp'))
+    pytest.fail('Missing exact original source failure observation: '+str(path)
+                +('; unpublished temporary: '+', '.join(partial) if partial else ''))
 
 
 def _assert_source_callback_refusal(failure, kind, snapshots, request_id):
@@ -957,6 +974,32 @@ def test_observation_script_source_embeds_the_exact_single_atomic_publisher():
         tree=ast.parse(source)
         found=[n for n in ast.walk(tree)if isinstance(n,ast.FunctionDef)and n.name=='_atomic_fixture_json']
         assert len(found)==1 and ast.dump(found[0],include_attributes=False)==ast.dump(helper,include_attributes=False)
+
+
+def test_source_failure_observer_finishes_before_backend_interpreter_exit(tmp_path):
+    """The generated settle hook, in a real interpreter: the callback thread is a
+    daemon and the sole reader fails first, as on hosted CI (2e8aee7)."""
+    import ast
+    body=ast.parse(_source_callback_failure_suffix().replace('\n ','\n').lstrip()).body
+    start=next(i for i,n in enumerate(body) if isinstance(n,ast.Import) and [a.name for a in n.names]==['atexit','threading'])
+    assert ast.unparse(body[-1])=='ex.execute_backend = settled_source'
+    hook=ast.unparse(ast.Module(body=body[start:-1],type_ignores=[]))
+    script=('import sys,threading,time\nfrom pathlib import Path\ntarget=Path(sys.argv[1])\n'
+        'def failed_source(*args,**kwargs):\n'
+        ' try:raise RuntimeError("original callback failure")\n'
+        ' except BaseException:\n'
+        '  time.sleep(.3);target.write_text("observed");raise\n'
+        +hook+'\n'
+        'def work():\n'
+        ' try:settled_source()\n'
+        ' except RuntimeError as exc:assert str(exc)=="original callback failure"\n'
+        'threading.Thread(target=work,daemon=True).start()\n'
+        'while not original_failure_entered.is_set():time.sleep(.001)\n'
+        'raise RuntimeError("sole reader failed first")\n')
+    target=tmp_path/'observed.txt'
+    result=subprocess.run([sys.executable,'-I','-c',script,str(target)],capture_output=True,timeout=30)
+    assert result.returncode==1 and b'sole reader failed first' in result.stderr
+    assert target.read_text()=='observed'
 
 
 @pytest.mark.parametrize('producer',['first-refusal','returned-scope'])

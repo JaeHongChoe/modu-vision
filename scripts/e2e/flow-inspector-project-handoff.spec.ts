@@ -47,7 +47,10 @@ async function within<T>(pending: Promise<T>, deadline: number, label: string): 
 }
 type Wire = {request: Request; phase: string; started: number; deadline: number; status?: number;
   body?: string; size?: number; sha256?: string; finished?: number; failure?: string;
-  done: Promise<void>; resolve(): void};
+  done: Promise<void>; resolve(): void;
+  // Gallery thumbnail reads only: the browser's own end event, and the retirement that event proved.
+  ended?: Promise<'failed' | 'finished'>; end?(kind: 'failed' | 'finished'): void;
+  retired?: {at: number; failure: string; project: string | null; headers_status: number | null}};
 
 
 type Scope = {tag: 'A' | 'B'; project: any; source: string; fixture: any; seeded: any;
@@ -75,6 +78,9 @@ test('F064 global inspector resize and collapse preserve owning large DAG drafts
   const sourcePins = () => Object.fromEntries(dependencies.map(file => [file, filePin(path.join(harness.REPO_ROOT, file))]));
   const pinsBefore = sourcePins(), wires: Wire[] = [], byRequest = new Map<Request, Wire>(), apiCalls: unknown[] = [];
   const pageErrors: string[] = [], consoleErrors: string[] = [], failedRequests: unknown[] = [], foreignRequests: string[] = [];
+  const retiredThumbnails: Wire[] = [];
+  const galleryThumbnail = (request: Request) => request.method() === 'GET' && request.frame() === page.mainFrame()
+    && new URL(request.url()).origin === renderer.origin && new URL(request.url()).pathname.startsWith('/api/dataset/thumbnail/');
   const writes: Array<{phase: string; method: string; route: string; body: unknown}> = [];
   const responseObjects = new Map<Request, Response>();
   const ownerResponse = (response: Response) => {responseObjects.set(response.request(), response);};
@@ -96,6 +102,8 @@ test('F064 global inspector resize and collapse preserve owning large DAG drafts
     const row: Wire = {request, phase, started: performance.now(), deadline: 0,
       done: new Promise<void>(done => {resolve = done;}), resolve: () => resolve()};
     row.deadline = row.started + 10_000; wires.push(row); byRequest.set(request, row);
+    if (galleryThumbnail(request)) {let end!: (kind: 'failed' | 'finished') => void;
+      row.ended = new Promise(settled => {end = settled;}); row.end = kind => end(kind);}
     if (!['GET', 'HEAD'].includes(request.method())) writes.push({phase, method: request.method(), route: url.pathname, body: request.postDataJSON()});
   };
   const onResponse = (response: Response) => {
@@ -103,6 +111,9 @@ test('F064 global inspector resize and collapse preserve owning large DAG drafts
     row.status = response.status();
     void (async () => {
       try {
+        // A gallery thumbnail read can be retired after its headers arrived, and then the browser keeps no body.
+        // Its own end event decides first; onFailed below judges a failed one. A finished one is checked in full.
+        if (row.ended && await within(row.ended, row.deadline, 'gallery thumbnail end event') === 'failed') return;
         const [body, terminal] = await within(Promise.all([response.body(), response.finished()]), row.deadline, 'original browser response');
         expect(terminal).toBeNull(); expect(body.length).toBeLessThanOrEqual(2 * 1024 * 1024);
         Object.assign(row, retain('browser-response', body), {finished: performance.now()}); expect(row.finished!).toBeLessThanOrEqual(row.deadline);
@@ -110,19 +121,42 @@ test('F064 global inspector resize and collapse preserve owning large DAG drafts
       } catch (error) {row.failure = String(error);} finally {row.resolve();}
     })();
   };
+  const onFinished = (request: Request) => {byRequest.get(request)?.end?.('finished');};
   const onFailed = (request: Request) => {
+    const row = byRequest.get(request), failure = request.failure()?.errorText || 'Original request failed'; row?.end?.('failed');
+    // Leaving step 1 or the project retires the gallery's in-flight thumbnail reads (ScopedDatasetThumbnail aborts
+    // them), before or after their headers. Only an aborted main-frame GET /api/dataset/thumbnail/* is set aside and
+    // recorded; settle checks it belongs to project A or B. Every other failure stays a failed request.
+    if (row?.ended && /ERR_ABORTED|aborted|cancel/i.test(failure)) {
+      row.retired = {at: performance.now(), failure, project: request.headers()['x-vision-project'] ?? null, headers_status: row.status ?? null};
+      retiredThumbnails.push(row); row.resolve(); return;
+    }
     failedRequests.push({url: request.url(), error: request.failure()});
-    const row = byRequest.get(request); if (row) {row.failure = request.failure()?.errorText || 'Original request failed'; row.resolve();}
+    if (row) {row.failure = failure; row.resolve();}
   };
   const onPageError = (error: Error) => pageErrors.push(error.message);
   const onConsole = (message: {type(): string; text(): string}) => {if (message.type() === 'error') consoleErrors.push(message.text());};
-  page.on('request', onRequest); page.on('response', onResponse); page.on('requestfailed', onFailed);
+  page.on('request', onRequest); page.on('response', onResponse); page.on('requestfailed', onFailed); page.on('requestfinished', onFinished);
   page.on('pageerror', onPageError); page.on('console', onConsole);
+  const retiredRead = (row: Wire) => {
+    const url = new URL(row.request.url()), retired = row.retired!;
+    expect(row.request.method()).toBe('GET'); expect(row.request.frame()).toBe(page.mainFrame());
+    expect(url.origin).toBe(renderer.origin); expect(url.pathname.startsWith('/api/dataset/thumbnail/')).toBe(true);
+    expect(retired.failure).toMatch(/ERR_ABORTED|aborted|cancel/i); expect(A && B).toBeTruthy();
+    expect([A!.project.id, B!.project.id]).toContain(retired.project);
+    expect(row.failure).toBeUndefined(); expect(row.body).toBeUndefined();
+    expect(retired.at).toBeGreaterThanOrEqual(row.started); expect(retired.at).toBeLessThanOrEqual(row.deadline);
+  };
   const settle = async () => {
     for (let index = 0; index < wires.length; index++) {
+      const row = wires[index];
+      // A gallery thumbnail read first waits for its own end event under its original deadline. Only a read the
+      // gallery retired is set aside; a finished or otherwise failed one is joined in full like every other read.
+      if (row.ended && !row.retired && row.finished === undefined) await within(row.done, row.deadline, 'gallery thumbnail end event');
+      if (row.retired) {retiredRead(row); continue;}
       // An already joined receipt retains its original finish/deadline. A
       // later inspection must not re-wait it against an elapsed wall clock.
-      await joinOriginalResponse(wires[index], within);
+      await joinOriginalResponse(row, within);
     }
   };
   const api = async (route: string, body?: unknown, method?: string) => {
@@ -394,14 +428,18 @@ test('F064 global inspector resize and collapse preserve owning large DAG drafts
         expect(fs.existsSync(path.join(scope.project.project_dir, 'flowcharts', 'active.json'))).toBe(false);} catch (error) {secondary.push(String(error));}
     }
     page.off('request', onRequest); page.off('response', onResponse); page.off('response', ownerResponse); page.off('requestfailed', onFailed);
-    page.off('pageerror', onPageError); page.off('console', onConsole);
+    page.off('requestfinished', onFinished); page.off('pageerror', onPageError); page.off('console', onConsole);
     e.note('F064_large_DAG_inspector_project_handoff', {...proof, projects: [A?.project, B?.project], saves, layouts, transitions, snapshots,
       policy: {global_app_local_preference: true, per_project_preference_claimed: false, graph_label_markers_saved_before_baseline: true,
-        no_model_execution: true, post_baseline_draft_writes: 0, unavailable_model_reference_is_fixture_data: true},
+        no_model_execution: true, post_baseline_draft_writes: 0, unavailable_model_reference_is_fixture_data: true,
+        set_aside_only_aborted_main_frame_gallery_thumbnail_GETs_of_A_or_B: true},
       protected_roots_scope: 'Both seven project trees, project/labelset registries, original recipe/version/six source PNGs, owning drafts and harness dataset; unrelated lifecycle SQLite/global active-project pointer is not claimed immutable.',
       rendered_graph_scope: 'All46 node IDs/labels and52 edge IDs/endpoints; complete original positions/topology are protected through original API/disk, without mirroring renderer normalization of negative coordinates.',
-      writes, api_calls: apiCalls, original_browser_wires: wires.map(({request, done, resolve, ...row}) => ({...row,
+      writes, api_calls: apiCalls, original_browser_wires: wires.map(({request, done, resolve, ended, end, ...row}) => ({...row,
         method: request.method(), url: request.url(), request_body: request.postDataJSON()})),
+      retired_gallery_thumbnail_reads: retiredThumbnails.map(row => ({phase: row.phase, method: row.request.method(),
+        path: new URL(row.request.url()).pathname, project: row.retired!.project, failure: row.retired!.failure,
+        headers_status: row.retired!.headers_status, started: row.started, retired_at: row.retired!.at, deadline: row.deadline})),
       page_errors: pageErrors, console_errors: consoleErrors, failed_requests: failedRequests, foreign_requests: foreignRequests,
       primary: primary === undefined ? null : String(primary), secondary_errors: secondary});
     if (primary instanceof Error && secondary.length) Object.defineProperty(primary, 'secondary_errors', {value: secondary});

@@ -135,3 +135,10 @@ test('actual activation during model verification keeps the earlier observed bas
  assert.notEqual(h.flowState.baseVersionId,h.activeVersion());
  }finally{h.cleanup();}
 });
+test('compact keeps the identity lines behind one closed line that still names the revision and draft state',()=>{
+ const identity={revision:7,draft:'편집 초안·저장 전',models:[],approval:'미조회'};
+ const compact=JSON.stringify(render({area:'edit',onAreaChange(){},identity,compact:true}));
+ assert.match(compact,/"type":"details"/);assert.match(compact,/흐름 정보 · 편집 r/);assert.match(compact,/플로우 식별 정보/);
+ const open=JSON.stringify(render({area:'edit',onAreaChange(){},identity}));
+ assert.doesNotMatch(open,/흐름 정보 · 편집 r/);assert.match(open,/플로우 식별 정보/);
+});

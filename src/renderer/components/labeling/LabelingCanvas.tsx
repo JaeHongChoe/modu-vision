@@ -46,6 +46,8 @@ export const LabelingCanvas: React.FC = () => {
   const baseImageRef = useRef<HTMLImageElement | null>(null);
   const maskImageRef = useRef<HTMLImageElement | null>(null);
   const otherBrushCanvasRef = useRef<HTMLCanvasElement | null>(null);
+  // The edited brush layer as it was last shown, kept on screen while its next stored mask decodes (see below).
+  const shownBrushCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const foundationPrompt = useFoundationPromptStore();
 
   const {
@@ -199,6 +201,7 @@ export const LabelingCanvas: React.FC = () => {
     }
 
     if (otherBrushCanvasRef.current) ctx.drawImage(otherBrushCanvasRef.current, sx, sy, sw, sh, dx, dy, dw, dh);
+    if (shownBrushCanvasRef.current) ctx.drawImage(shownBrushCanvasRef.current, sx, sy, sw, sh, dx, dy, dw, dh);
 
     // Blit offscreen brush canvas
     if (offscreenBrushCanvasRef.current) {
@@ -338,6 +341,17 @@ export const LabelingCanvas: React.FC = () => {
         ctx.lineWidth = isSelected ? 2.5 : 1.5;
         ctx.stroke();
 
+        // A box the auto selector put around a click where it found no region is machine-invented: it is drawn dashed
+        // and named on the canvas so the person erases or redraws it instead of keeping it as a found outline.
+        const fallbackBox = ann.origin?.kind === 'auto_selector' && ann.origin.fallback;
+        if (fallbackBox) {
+          ctx.setLineDash([4, 3]);
+          ctx.strokeStyle = '#fbbf24';
+          ctx.lineWidth = 1.5;
+          ctx.stroke();
+          ctx.setLineDash([]);
+        }
+
         // Polygon Label Badge
         const minX = Math.min(...polyPts.map((p) => p[0]));
         const minY = Math.min(...polyPts.map((p) => p[1]));
@@ -349,6 +363,16 @@ export const LabelingCanvas: React.FC = () => {
         ctx.fillRect(badgeVp.x, Math.max(0, badgeVp.y - 18), textWidth + 8, 18);
         ctx.fillStyle = '#ffffff';
         ctx.fillText(labelText, badgeVp.x + 4, Math.max(12, badgeVp.y - 5));
+
+        if (fallbackBox) {
+          const fallbackText = '자동 선택 실패 · 대체 상자';
+          const fallbackWidth = ctx.measureText(fallbackText).width;
+          const fallbackY = Math.max(0, badgeVp.y - 18) + 18;
+          ctx.fillStyle = 'rgba(120, 53, 15, 0.92)';
+          ctx.fillRect(badgeVp.x, fallbackY, fallbackWidth + 8, 16);
+          ctx.fillStyle = '#fde68a';
+          ctx.fillText(fallbackText, badgeVp.x + 4, fallbackY + 12);
+        }
 
         // Render vertices if selected
         if (isSelected) {
@@ -588,11 +612,32 @@ export const LabelingCanvas: React.FC = () => {
 
   const editableBrush = brushEditTarget(annotations,selectedAnnotationId,activeCategory.id);
   const storedBrushMask = editableBrush?.mask_rle;
+  // A stored mask decodes asynchronously (longer on a busy machine), and any redraw meanwhile (the canvases are resized
+  // and redrawn when the annotations change) painted the mask plane from emptied layers: every stroke, undo, redo and
+  // discard showed no masks at all for that moment. The layers shown so far now stay on screen until their replacement
+  // is decoded; a layer that has nothing stored any more (another image, a class without a mask) is cleared at once.
   useEffect(() => {
     const canvas = offscreenBrushCanvasRef.current;
-    if (!canvas || canvas.width !== imgDimensions.width || canvas.height !== imgDimensions.height) return;
+    if (!canvas || canvas.width !== imgDimensions.width || canvas.height !== imgDimensions.height) {
+      shownBrushCanvasRef.current = null;
+      return;
+    }
     const context = canvas.getContext('2d');
     if (!context) return;
+    if (storedBrushMask) {
+      // Strokes still paint on the cleared layer as before; the shown copy only covers the decode. A copy kept from a
+      // decode that was overtaken also takes the strokes painted since.
+      let shown = shownBrushCanvasRef.current;
+      if (!shown || shown.width !== canvas.width || shown.height !== canvas.height) {
+        shown = document.createElement('canvas');
+        shown.width = canvas.width;
+        shown.height = canvas.height;
+      }
+      shown.getContext('2d')?.drawImage(canvas, 0, 0);
+      shownBrushCanvasRef.current = shown;
+    } else {
+      shownBrushCanvasRef.current = null;
+    }
     context.clearRect(0, 0, canvas.width, canvas.height);
     if (!storedBrushMask) {
       redrawMaskRef.current();
@@ -603,6 +648,13 @@ export const LabelingCanvas: React.FC = () => {
     storedImage.onload = () => {
       if (!active) return;
       context.drawImage(storedImage, 0, 0);
+      shownBrushCanvasRef.current = null;
+      redrawMaskRef.current();
+    };
+    // An undecodable mask leaves the layer cleared, as it always did, instead of keeping the old pixels on screen.
+    storedImage.onerror = () => {
+      if (!active) return;
+      shownBrushCanvasRef.current = null;
       redrawMaskRef.current();
     };
     storedImage.src = storedBrushMask;
@@ -611,12 +663,17 @@ export const LabelingCanvas: React.FC = () => {
 
   useEffect(()=>{
     const other=document.createElement('canvas');other.width=imgDimensions.width;other.height=imgDimensions.height;
-    otherBrushCanvasRef.current=other;let active=true;
+    const layers=annotations.filter(a=>a.type==='brush_mask'&&a.id!==editableBrush?.id&&a.mask_rle);
+    // The other classes' layers are swapped in once all of them are drawn; with none, or at another size, at once.
+    const shown=otherBrushCanvasRef.current;
+    if(!layers.length||!shown||shown.width!==other.width||shown.height!==other.height)otherBrushCanvasRef.current=other;
+    let active=true;
     const context=other.getContext('2d');
-    void (async()=>{for(const annotation of annotations.filter(a=>a.type==='brush_mask'&&a.id!==editableBrush?.id&&a.mask_rle)){
+    const show=()=>{if(!active)return;otherBrushCanvasRef.current=other;redrawMaskRef.current();};
+    void (async()=>{for(const annotation of layers){
       if(!active)return;const image=await new Promise<HTMLImageElement>((resolve,reject)=>{const image=new Image();image.onload=()=>resolve(image);image.onerror=reject;image.src=annotation.mask_rle!;});
       if(active&&context)context.drawImage(image,0,0);
-    }if(active)redrawMaskRef.current();})().catch(()=>{if(active)redrawMaskRef.current();});
+    }show();})().catch(show);
     return()=>{active=false;};
   },[annotations,editableBrush?.id,imgDimensions.width,imgDimensions.height]);
 
@@ -1300,6 +1357,8 @@ export const LabelingCanvas: React.FC = () => {
           color: activeCategory.color,
         };
         addAnnotation(newAnn);
+        // 한 장에 하나씩: the finished box moves on to the next image (the image change saves it first).
+        if (useAnnotationStore.getState().advanceOnBox) useAnnotationStore.getState().requestAdvance?.();
       }
       bboxDraftRef.current = null;
       setBBoxDraft(null);
@@ -1406,11 +1465,11 @@ export const LabelingCanvas: React.FC = () => {
       {/* Precision Instrument Coordinate HUD */}
       <div
         data-testid="canvas-hud"
-        className="absolute bottom-2 left-2 z-40 bg-[#0B0E14]/90 border border-[#2B3547] rounded px-3 py-1.5 text-[11px] font-mono text-slate-300 flex items-center gap-3 shadow-md select-none pointer-events-none"
+        className="absolute bottom-2 left-2 z-40 bg-[#0B0E14]/90 border border-[#2B3547] rounded px-3 py-1.5 text-[11px] font-mono text-slate-300 flex flex-wrap items-center gap-x-3 gap-y-1 whitespace-nowrap max-w-[calc(100%-1rem)] shadow-md select-none pointer-events-none"
       >
         {/* Crosshair Cursor Coordinates: X, Y */}
         <div className="flex items-center gap-1.5">
-          <span className="text-slate-500 font-semibold tracking-wider text-[10px]">POS</span>
+          <span className="text-slate-500 font-semibold tracking-wider text-[10px]">위치</span>
           <span className="text-slate-400">X:</span>
           <span className="tabular-nums text-slate-200">{cursorX}</span>
           <span className="text-slate-500 text-[10px]">px</span>
@@ -1423,14 +1482,14 @@ export const LabelingCanvas: React.FC = () => {
 
         {/* Selected or In-Progress Geometry: W, H, Angle */}
         <div className="flex items-center gap-1.5">
-          <span className="text-slate-500 font-semibold tracking-wider text-[10px]">DIM</span>
+          <span className="text-slate-500 font-semibold tracking-wider text-[10px]">크기</span>
           <span className="text-slate-400">W:</span>
           <span className="tabular-nums text-slate-200">{activeMetrics ? activeMetrics.w : '--'}</span>
           <span className="text-slate-500 text-[10px]">px</span>
           <span className="text-slate-400 ml-1">H:</span>
           <span className="tabular-nums text-slate-200">{activeMetrics ? activeMetrics.h : '--'}</span>
           <span className="text-slate-500 text-[10px]">px</span>
-          <span className="text-slate-400 ml-1">angle</span>
+          <span className="text-slate-400 ml-1">각도</span>
           <span className="tabular-nums text-slate-200">{activeMetrics ? activeMetrics.angle : 0}</span>
           <span className="text-slate-500 text-[10px]">°</span>
         </div>
@@ -1439,11 +1498,11 @@ export const LabelingCanvas: React.FC = () => {
 
         {/* Viewport Scale & Sensor Pitch Calibration (μm) */}
         <div className="flex items-center gap-1.5">
-          <span className="text-slate-500 font-semibold tracking-wider text-[10px]">VIEW</span>
-          <span className="text-slate-400">scale</span>
+          <span className="text-slate-500 font-semibold tracking-wider text-[10px]">보기</span>
+          <span className="text-slate-400">배율</span>
           <span className="tabular-nums text-slate-200">{scalePercent}</span>
           <span className="text-slate-500 text-[10px]">%</span>
-          <span className="text-[#3B82F6] text-[10px] ml-1">(pixel pitch uncalibrated)</span>
+          <span className="text-[#3B82F6] text-[10px] ml-1">(실제 크기 미보정)</span>
         </div>
       </div>
     </div>

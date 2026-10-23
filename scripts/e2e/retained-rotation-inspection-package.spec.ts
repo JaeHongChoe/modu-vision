@@ -367,7 +367,7 @@ async function exercise(page: Page, workspace: Workspace, evidence: Evidence, ra
     else if (parsed.pathname === '/api/evaluation/results' && row.status === 404) {
       expect(Object.fromEntries(parsed.searchParams)).toEqual({source_dataset_path: source, source_task: project.task});
       expect(project.task).toBe('classification');
-      expect(row.response).toEqual({detail: 'No completed training job has been selected'});
+      expect(row.response).toEqual({detail: '학습을 끝낸 모델을 아직 고르지 않았습니다. 학습을 먼저 끝낸 뒤 평가할 모델을 고르세요.'});
     }
     else expect(row.status, row.url).toBe(200);
   }

@@ -1,8 +1,9 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Check, ChevronDown, Cpu, Loader2, RefreshCw, Sparkles, X } from 'lucide-react';
-import { api, resolveApiUrl, type LabelSuggestion, type LabelSuggestionBatchEntry, type LabelSuggestionCandidate, type LabelSuggestionModel } from '../../services/api';
+import { api, type LabelSuggestion, type LabelSuggestionBatchEntry, type LabelSuggestionCandidate, type LabelSuggestionModel } from '../../services/api';
 import type { ImageMeta } from '../../types';
 import { useAnnotationStore } from '../../stores/useAnnotationStore';
+import { draftReviewScope, useDraftReviewStore } from '../../stores/useDraftReviewStore';
 import { useDatasetStore } from '../../stores/useDatasetStore';
 import { useProjectStore } from '../../stores/useProjectStore';
 import { useModelAssistRunStore } from '../../stores/useModelAssistRunStore';
@@ -12,15 +13,13 @@ import {KoreanConditionLabeler} from './KoreanConditionLabeler';
 import { CandidateProviderControls } from './CandidateProviderControls';
 import type { FoundationProposal } from '../../services/foundationLabelingApi';
 import { datasetWorkflow, type CandidateProposal } from '../../services/datasetWorkflow';
+import { SuggestionPreview } from './SuggestionPreview';
+import { CHANGED_MODEL_MARK, draftError } from './draftReview';
+import { usePopoverRoom } from './popoverRoom';
+import { Explain } from '../common/Explain';
 
-function errorText(error: unknown): string {
-  if (error instanceof Error) return error.message;
-  if (error && typeof error === 'object') {
-    const detail = (error as Record<string, unknown>).detail;
-    if (typeof detail === 'string') return detail;
-  }
-  return '요청을 처리하지 못했습니다.';
-}
+// The server's refusals in the draft queue's words (an older English refusal still reads in Korean).
+const errorText = draftError;
 
 function candidateDetail(candidate: LabelSuggestionCandidate): string {
   const annotation = candidate.annotation;
@@ -31,31 +30,6 @@ function candidateDetail(candidate: LabelSuggestionCandidate): string {
   if (annotation.type === 'brush_mask') return '원본 픽셀 mask · 브러시/지우개로 편집 가능';
   if (annotation.type === 'polygon') return `${annotation.polygon?.length || 0}개 꼭짓점`;
   return annotation.is_normal ? '정상 이미지 태그' : '이미지 전체 태그';
-}
-
-function SuggestionPreview({ proposal, selectedIds }: { proposal: LabelSuggestion; selectedIds: Set<string> }) {
-  const imageUrl = resolveApiUrl(
-    `/api/dataset/thumbnail/${encodeURIComponent(proposal.image_id)}?file_path=${encodeURIComponent(proposal.image_path)}&size=1024`,
-  );
-  return (
-    <div className="relative w-full overflow-hidden rounded-md border border-slate-700 bg-[#0B0E14]" style={{ aspectRatio: `${proposal.image_width} / ${proposal.image_height}` }}>
-      <img src={imageUrl} alt="모델 라벨 제안 미리보기" className="absolute inset-0 h-full w-full object-contain" />
-      <svg className="absolute inset-0 h-full w-full pointer-events-none" viewBox={`0 0 ${proposal.image_width} ${proposal.image_height}`} preserveAspectRatio="xMidYMid meet" aria-hidden="true">
-        {proposal.candidates.filter((item) => selectedIds.has(item.id)).map((item) => {
-          const annotation = item.annotation;
-          if (annotation.type === 'brush_mask' && annotation.mask_rle) return <image key={item.id} href={annotation.mask_rle} x={0} y={0} width={proposal.image_width} height={proposal.image_height} opacity={.55}/>;
-          if (annotation.type === 'bbox' && annotation.bbox) {
-            const [x1, y1, x2, y2] = annotation.bbox;
-            return <rect key={item.id} x={x1} y={y1} width={x2 - x1} height={y2 - y1} fill="rgba(34,211,238,.12)" stroke="#22d3ee" strokeWidth={Math.max(2, proposal.image_width / 420)} />;
-          }
-          if (annotation.type === 'polygon' && annotation.polygon?.length) {
-            return <polygon key={item.id} points={annotation.polygon.map(([x, y]) => `${x},${y}`).join(' ')} fill="rgba(245,158,11,.2)" stroke="#f59e0b" strokeWidth={Math.max(2, proposal.image_width / 420)} />;
-          }
-          return null;
-        })}
-      </svg>
-    </div>
-  );
 }
 
 function currentAssistContext(): string {
@@ -75,6 +49,15 @@ export const ModelAssistPanel: React.FC = () => {
   const beginModelAssist = useModelAssistRunStore((state) => state.begin);
   const endModelAssist = useModelAssistRunStore((state) => state.end);
   const [open, setOpen] = useState(false);
+  // The review panel hangs below this row over the canvas: like the draft queue's, it keeps to the room left on screen.
+  const rowRef = useRef<HTMLDivElement>(null);
+  const room = usePopoverRoom(open, rowRef);
+  // One right-side popover at a time (see useDraftReviewStore.sidePanel).
+  const sidePanel = useDraftReviewStore((state) => state.sidePanel);
+  useEffect(() => { if (open) useDraftReviewStore.getState().showSidePanel('assist'); }, [open]);
+  useEffect(() => { if (sidePanel && sidePanel !== 'assist') setOpen(false); }, [sidePanel]);
+  const assistRequest = useDraftReviewStore((state) => state.assistRequest);
+  useEffect(() => { if (assistRequest) { setOpen(true); useDraftReviewStore.getState().clearAssistRequest(); } }, [assistRequest]);
   const [models, setModels] = useState<LabelSuggestionModel[]>([]);
   const [modelId, setModelId] = useState('');
   const [threshold, setThreshold] = useState(0.5);
@@ -94,6 +77,7 @@ export const ModelAssistPanel: React.FC = () => {
 
   const proposal = useMemo(() => suggestions.find((item) => item.id === selectedProposalId), [suggestions, selectedProposalId]);
   const pendingCount = suggestions.filter((item) => item.status === 'pending').length;
+  const selectedModel = models.find((item) => item.job_id === modelId);
 
   useEffect(() => {
     const token = ++operationId.current;
@@ -223,7 +207,7 @@ export const ModelAssistPanel: React.FC = () => {
   };
 
   return (
-    <div className="relative z-[70] flex h-10 shrink-0 items-center justify-between border-b border-[#2B3547] bg-[#101722] px-4 text-xs text-slate-300">
+    <div ref={rowRef} className="relative z-[70] flex h-10 shrink-0 items-center justify-between border-b border-[#2B3547] bg-[#101722] px-4 text-xs text-slate-300">
       <div className="flex min-w-0 items-center gap-2">
         <Sparkles className="h-4 w-4 text-cyan-400" />
         <span className="font-semibold text-slate-100">모델 보조 라벨링</span>
@@ -235,7 +219,7 @@ export const ModelAssistPanel: React.FC = () => {
       </button>
 
       {open && (
-        <aside className="absolute right-3 top-full z-50 mt-1 flex max-h-[calc(100vh-195px)] w-[520px] max-w-[calc(100vw-24px)] flex-col overflow-hidden rounded-xl border border-slate-600 bg-[#151D2A] shadow-2xl" aria-label="모델 보조 라벨링 검토">
+        <aside style={{ maxHeight: room }} className="absolute right-3 top-full z-50 mt-1 flex max-h-[calc(100vh-195px)] w-[520px] max-w-[calc(100vw-24px)] flex-col overflow-hidden rounded-xl border border-slate-600 bg-[#151D2A] shadow-2xl" aria-label="모델 보조 라벨링 검토">
           <div className="flex items-start justify-between border-b border-slate-700 px-4 py-3">
             <div>
               <h3 className="text-sm font-bold text-white">예측 라벨 검토</h3>
@@ -253,10 +237,11 @@ export const ModelAssistPanel: React.FC = () => {
               </div>
               <label className="block text-[11px] text-slate-400">완료된 학습 모델
                 <select value={modelId} onChange={(event) => setModelId(event.target.value)} disabled={!!busy} className="mt-1 w-full rounded border border-slate-600 bg-[#1D2938] px-2 py-2 text-xs text-slate-100 disabled:opacity-50">
-                  {models.length === 0 && <option value="">현재 데이터에 맞는 완료 모델 없음</option>}
-                  {models.map((item) => <option value={item.job_id} key={item.job_id}>{item.job_id} · {item.task}</option>)}
+                  {models.length === 0 && <option value="">이 데이터로 학습을 마친 모델 없음</option>}
+                  {models.map((item) => <option value={item.job_id} key={item.job_id}>{item.job_id} · {item.task}{item.data_state === 'changed' ? ` · ${CHANGED_MODEL_MARK}` : ''}</option>)}
                 </select>
               </label>
+              {selectedModel?.data_state === 'changed' && <p className="text-[11px] text-amber-200">{CHANGED_MODEL_MARK} — 초안만 만들 수 있고, 채택할 때의 검사는 그대로입니다.</p>}
               <label className="block text-[11px] text-slate-400">클래스 키워드 필터 (선택 사항, 쉼표 구분)<input aria-label="모델 클래스 키워드" value={keywords} onChange={event => setKeywords(event.target.value)} placeholder="scratch, crack" className="mt-1 w-full rounded border border-slate-600 bg-slate-900 p-2 text-slate-100" /></label>
               <p className="text-[10px] text-slate-500">실제 모델이 예측한 클래스 이름에 포함되는 키워드만 남깁니다.</p>
               <LabelAssistDeviceSizes value={execution} onChange={setExecution} disabled={!!busy||batchRunning}/>
@@ -269,7 +254,7 @@ export const ModelAssistPanel: React.FC = () => {
                 </button>
               </div>
               {isDirty && <p className="text-[11px] text-amber-300">수정 중인 라벨을 저장한 뒤 제안을 생성하세요.</p>}
-              {!models.length && busy !== 'loading' && <p className="text-[11px] text-slate-400">3단계에서 현재 데이터와 작업 유형으로 학습을 완료하면 모델을 선택할 수 있습니다.</p>}
+              {!models.length && busy !== 'loading' && <p className="text-[11px] text-slate-400">3단계에서 이 데이터와 작업 유형으로 학습을 마치면 모델을 선택할 수 있습니다.</p>}
               <p className="text-[11px] leading-relaxed text-slate-500">예측은 후보로만 저장됩니다. 기존 라벨과 원본 파일은 생성 시 변경되지 않습니다.</p>
             </section>
 
@@ -307,10 +292,11 @@ export const ModelAssistPanel: React.FC = () => {
                 </div>
                 {proposal.status === 'pending' ? <div className="flex gap-2">
                   <button type="button" onClick={() => void review('reject')} disabled={!!busy} className="flex grow items-center justify-center gap-1 rounded border border-slate-600 px-3 py-2 font-semibold text-slate-200 hover:bg-slate-700 disabled:opacity-40"><X className="h-3.5 w-3.5" /> 거절</button>
-                  <button type="button" onClick={() => void review('accept')} disabled={!!busy || batchRunning || selectedCandidateIds.size === 0 || isDirty || annotationLoadStatus !== 'ready'} className="flex grow items-center justify-center gap-1 rounded bg-emerald-600 px-3 py-2 font-semibold text-white hover:bg-emerald-500 disabled:cursor-not-allowed disabled:opacity-40">{busy === 'accept' ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5" />} 선택 항목 채택</button>
-                </div> : <p className="rounded border border-slate-700 p-2 text-center text-slate-300">{proposal.status === 'accepted' ? `채택 완료 · 이전 버전 ${proposal.backup_version_id}` : '거절 완료'}</p>}
-                {batchRunning && proposal.status === 'pending' && <p className="text-[11px] text-amber-300">일괄 후보 생성이 끝난 뒤 라벨을 채택할 수 있습니다.</p>}
-                {proposal.status === 'pending' && <p className="text-[11px] leading-relaxed text-slate-500">채택 직전에 라벨 버전이 자동 저장되고, 선택한 후보만 현재 라벨에 추가됩니다.</p>}
+                  {/* Every source's drafts are adopted in the one draft queue (origin, backup, take-back, team lease), with the
+                      candidates kept here and only in this project. */}
+                  <button type="button" onClick={() => useDraftReviewStore.getState().requestOpen(proposal.id, [...selectedCandidateIds], draftReviewScope(useProjectStore.getState()))} disabled={!!busy} className="flex grow items-center justify-center gap-1 rounded bg-emerald-600 px-3 py-2 font-semibold text-white hover:bg-emerald-500 disabled:opacity-40"><Check className="h-3.5 w-3.5" /> 초안 검토에서 채택</button>
+                </div> : <p className="rounded border border-slate-700 p-2 text-center text-slate-300">{proposal.status === 'accepted' ? `채택 완료 · 이전 버전 ${proposal.backup_version_id}` : proposal.status === 'reverted' ? '채택을 되돌림' : '거절 완료'}</p>}
+                {proposal.status === 'pending' && <Explain text="어디서 왔든 초안은 '초안 검토' 패널에서 채택합니다. 채택 직전에 라벨 버전이 자동 저장되고, 고른 후보만 현재 라벨에 덧붙습니다." />}
               </>}
             </section>}
           </div>

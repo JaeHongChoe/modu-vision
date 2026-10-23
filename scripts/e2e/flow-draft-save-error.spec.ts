@@ -12,7 +12,9 @@ type Reply={status:number;body:string;url:string};
 type Api=(route:string,body?:unknown,method?:string)=>Promise<Reply>;
 type Tree=Record<string,{kind:'directory'}|{kind:'file';size:number;sha256:string}>;
 type Write={method:string;url:string;body:string|null};
-type Clock={request:Request;started:number;deadline:number;finished?:number;status?:number;raw?:string;failure?:unknown;pending?:Promise<void>};
+type Clock={request:Request;started:number;deadline:number;finished?:number;status?:number;raw?:string;failure?:unknown;pending?:Promise<void>;
+ // Gallery thumbnail reads only: the browser's own end event, and the retirement that event proved.
+ ended?:Promise<'failed'|'finished'>;end?:(kind:'failed'|'finished')=>void;retired?:{at:number;failure:string;project:string|null;file_path:string|null;headers_status:number|null}};
 const sha=(raw:Buffer|string)=>crypto.createHash('sha256').update(raw).digest('hex');
 const clone=<T,>(value:T):T=>JSON.parse(JSON.stringify(value));
 const DETAIL='Controlled exact owning draft PUT unavailable';
@@ -51,7 +53,8 @@ export function assertSourcePixels(raw:Buffer,blue=100){
 export function assertAnomalyImport(value:any){
  expect(value).toEqual({status:'success',total_images:2,source_images:2,unlabeled_images:0,classes:{good:2},split:{train:1,val:1,test:0},corrupted_images:[],
   validation:{requested:true,checked_images:2,complete:true,scope:'all images: every image file under the folder was decoded'},split_supported:false,
-  split_unavailable_reason:'anomaly 분할은 현재 학습 데이터에 적용되지 않습니다. 원본 데이터의 train/val/test 구성을 사용하세요. / anomaly split is not applied by the training loader; use source train/val/test folders.'});
+  split_unavailable_reason:'anomaly 분할은 현재 학습 데이터에 적용되지 않습니다. 원본 데이터의 train/val/test 구성을 사용하세요. / anomaly split is not applied by the training loader; use source train/val/test folders.',
+  excluded_undecodable:{excluded:[],restored:[],recorded:true},split_state:'source_folders',labels_missing:false,expected_layout:"train/good (정상만), test/good, test/<결함 이름> (선택: ground_truth/<결함 이름>/<이름>_mask.png), 또는 OK/ 와 NG/"});
 }
 
 export function assertObservedDraftReplies(rows:any[],origin:string,source:string,beforeAPI:Record<string,Reply>,pipeline:any){
@@ -109,20 +112,43 @@ function protectedTree(root:string):Tree{
 async function exercise(page:Page,w:Workspace,e:Evidence,api:Api,native:boolean,url?:string){
  const writes:Write[]=[],calls:any[]=[],timings:any[]=[],snapshots:any[]=[],clocks=new Map<Request,Clock>(),preObserverResponses:any[]=[];
  const observed=(request:Request)=>{const endpoint=new URL(request.url()).pathname;if(!endpoint.startsWith('/api/')||request.method()==='OPTIONS')return;
-  const started=performance.now();clocks.set(request,{request,started,deadline:started+10_000});
+  const started=performance.now(),row:Clock={request,started,deadline:started+10_000};clocks.set(request,row);
+  if(request.method()==='GET'&&request.frame()===page.mainFrame()&&request.resourceType()==='fetch'&&endpoint.startsWith('/api/dataset/thumbnail/')){
+   let end!:(kind:'failed'|'finished')=>void;row.ended=new Promise(settled=>{end=settled;});row.end=kind=>end(kind);}
   if(!['GET','HEAD'].includes(request.method()))writes.push({method:request.method(),url:request.url(),body:request.postData()});
  };
- const failed=(request:Request)=>{const row=clocks.get(request);if(row)row.failure=request.failure()?.errorText||'Original request failed';};
+ // Leaving step 1 retires the gallery's in-flight thumbnail reads (ScopedDatasetThumbnail aborts them), before or after
+ // their headers; after the headers the browser keeps no body. The browser's own end event decides: both end listeners
+ // are attached before the request observer. Only an aborted main-frame fetch GET of one of this project's own source
+ // images is set aside and recorded; every thumbnail that finishes, and every other request, keeps its full checks.
+ const finished=(request:Request)=>{clocks.get(request)?.end?.('finished');};
+ const failed=(request:Request)=>{const row=clocks.get(request);if(!row)return;const failure=request.failure()?.errorText||'Original request failed';row.end?.('failed');
+  if(row.ended&&/ERR_ABORTED|aborted|cancel/i.test(failure)){row.retired={at:performance.now(),failure,project:request.headers()['x-vision-project']??null,file_path:new URL(request.url()).searchParams.get('file_path'),headers_status:row.status??null};return;}
+  row.failure=failure;};
  const response=(reply:Response)=>{const row=clocks.get(reply.request());if(!new URL(reply.url()).pathname.startsWith('/api/')||reply.request().method()==='OPTIONS')return;
   if(!row){preObserverResponses.push({method:reply.request().method(),url:reply.url(),status:reply.status(),request_start_clock_unavailable:true});return;}
   expect(row.pending).toBeUndefined();row.status=reply.status();row.pending=(async()=>{let timer:NodeJS.Timeout|undefined;
-   try{const [raw,terminal]=await Promise.race([Promise.all([reply.text(),reply.finished()]),new Promise<never>((_,reject)=>{timer=setTimeout(()=>reject(Error('Original response body10s deadline expired')),Math.max(0,row.deadline-performance.now()));})]);
+   try{
+    // A gallery thumbnail retired after its headers keeps no body: its own end event decides before any body read.
+    if(row.ended){const end=await Promise.race([row.ended,new Promise<never>((_,reject)=>{timer=setTimeout(()=>reject(Error('Original thumbnail end event10s deadline expired')),Math.max(0,row.deadline-performance.now()));})]);clearTimeout(timer);if(end==='failed')return;}
+    const [raw,terminal]=await Promise.race([Promise.all([reply.text(),reply.finished()]),new Promise<never>((_,reject)=>{timer=setTimeout(()=>reject(Error('Original response body10s deadline expired')),Math.max(0,row.deadline-performance.now()));})]);
     expect(terminal).toBeNull();row.finished=performance.now();expect(row.finished).toBeLessThanOrEqual(row.deadline);row.raw=raw;
    }catch(error){row.failure=error;}finally{clearTimeout(timer);}
   })();
  };
- page.on('request',observed);page.on('requestfailed',failed);page.on('response',response);
+ page.on('requestfailed',failed);page.on('requestfinished',finished);page.on('request',observed);page.on('response',response);
+ let owner:{origin:string;project:string;images:string[]}|undefined;
+ const retiredRead=(row:Clock)=>{const url=new URL(row.request.url()),retired=row.retired!;expect(owner).toBeDefined();
+  expect(row.request.method()).toBe('GET');expect(row.request.frame()).toBe(page.mainFrame());expect(row.request.resourceType()).toBe('fetch');expect(url.origin).toBe(owner!.origin);
+  expect(retired.failure).toMatch(/ERR_ABORTED|aborted|cancel/i);expect(retired.project).toBe(owner!.project);expect(owner!.images).toContain(retired.file_path);
+  expect(url.pathname).toBe('/api/dataset/thumbnail/'+path.basename(retired.file_path!));if(retired.headers_status!==null)expect([200,304]).toContain(retired.headers_status);
+  expect(row.failure).toBeUndefined();expect(row.raw).toBeUndefined();expect(retired.at).toBeGreaterThanOrEqual(row.started);expect(retired.at).toBeLessThanOrEqual(row.deadline);
+ };
  const settle=async()=>{for(const row of clocks.values()){
+  // A gallery thumbnail read first waits for its own end event under its original deadline. Only a read the gallery
+  // retired is set aside; a finished or otherwise failed one is checked in full like every other request.
+  if(row.ended&&!row.retired){let timer:NodeJS.Timeout|undefined;try{await Promise.race([row.ended,new Promise<never>((_,reject)=>{timer=setTimeout(()=>reject(Error('Original thumbnail end event10s deadline expired')),Math.max(0,row.deadline-performance.now()));})]);}finally{clearTimeout(timer);}}
+  if(row.retired){retiredRead(row);continue;}
   if(!row.pending)await expect.poll(()=>Boolean(row.pending||row.failure),{timeout:Math.max(1,row.deadline-performance.now())}).toBe(true);
   expect(row.failure).toBeUndefined();await row.pending;expect(row.failure).toBeUndefined();expect(typeof row.raw).toBe('string');expect(row.deadline).toBe(row.started+10_000);expect(row.finished!).toBeLessThanOrEqual(row.deadline);
  }};
@@ -141,6 +167,7 @@ async function exercise(page:Page,w:Workspace,e:Evidence,api:Api,native:boolean,
  const image=sourceImages[0].path,originalPNG=fs.readFileSync(image),imageHash=sha(originalPNG),pixelProof=sourceImages[0].RGB;
  const project=await value('/api/project/create',{name:'Owned flow draft save error',task:'anomaly'});await value('/api/project/update',{source_dataset_dir:source},'PUT');
  assertAnomalyImport(await value('/api/dataset/import',{folder_path:source,task:'anomaly',validate_images:true}));
+ owner={origin:new URL(calls.find(row=>row.route==='/api/project/create').url).origin,project:project.id,images:sourceImages.map(row=>row.path)};
  const ownedParent=native?path.join(w.userData,'projects'):w.projects;
  expect(path.dirname(project.project_dir)).toBe(ownedParent);expect(fs.realpathSync(project.project_dir)).toBe(project.project_dir);expect(fs.lstatSync(project.project_dir).isSymbolicLink()).toBe(false);
  const context={project_id:project.id,source_dataset_path:source,labelset_id:project.active_labelset_id||'default'};
@@ -203,13 +230,15 @@ async function exercise(page:Page,w:Workspace,e:Evidence,api:Api,native:boolean,
   expect(fs.existsSync(path.join(project.project_dir,'flowcharts/active.json'))).toBe(false);expect(fs.readFileSync(image)).toEqual(originalPNG);
   for(const row of sourceImages){const raw=fs.readFileSync(row.path);expect(raw.length).toBe(row.size);expect(sha(raw)).toBe(row.sha256);assertSourcePixels(raw,row.blue);}for(const row of w.images)expect(sha(fs.readFileSync(row.path))).toBe(row.sha256);
   await e.screenshot(page,(native?'native':'browser')+'-explicit-original-draft-save200-readback-recovers-same-edit');
-  await settle();const observedReplies=[...clocks.values()].map(({request,pending:_pending,failure:_failure,...clock})=>({method:request.method(),url:request.url(),request_body:request.postData(),...clock,raw_sha256:sha(clock.raw!),raw_size:Buffer.byteLength(clock.raw!)}));
+  await settle();const retiredThumbnails=[...clocks.values()].filter(row=>row.retired).map(row=>({method:row.request.method(),resource_type:row.request.resourceType(),url:row.request.url(),started:row.started,deadline:row.deadline,...row.retired!}));
+  for(const row of retiredThumbnails)expect(new URL(row.url).origin).toBe(origin);
+  const observedReplies=[...clocks.values()].filter(row=>!row.retired).map(({request,pending:_pending,failure:_failure,ended:_ended,end:_end,retired:_retired,...clock})=>({method:request.method(),url:request.url(),request_body:request.postData(),...clock,raw_sha256:sha(clock.raw!),raw_size:Buffer.byteLength(clock.raw!)}));
   assertObservedDraftReplies(observedReplies,origin,source,before.api,saved.pipeline);
   const proof={cell:'U012.save-draft.error',project,context,source:{path:image,sha256:imageHash,RGB:pixelProof,root:source,images:sourceImages,layout:'train/good normal-only; original disjoint partition train1/val1/test0'},roots,original_saved_record:saved,original_raw_draft_sha256:sha(originalDraft),changed_pipeline:changed,
-   rejected,accepted,recovered,after_error_preserved:true,snapshots,setup_calls:setupCalls,setup_renderer_writes:setupWrites,post_baseline_writes:writes,whole_renderer_writes:[...setupWrites,...writes],fixture_read_clocks:timings,original_observed_request_body_clocks:observedReplies,pre_observer_responses:preObserverResponses,
-   scope:{source_electron: native,actual_original_source_ui:true,installed_target:false,model_or_GPU_execution: false,cancel_covered:false,quality_or_human_or_parent_approval:false,failed_same_target_policy:'650ms autosave failure suppresses same-target automatic retry; only explicit save retries',policy_source_controls_separate_from_actual_response_slice:true}};
+   rejected,accepted,recovered,after_error_preserved:true,snapshots,setup_calls:setupCalls,setup_renderer_writes:setupWrites,post_baseline_writes:writes,whole_renderer_writes:[...setupWrites,...writes],fixture_read_clocks:timings,original_observed_request_body_clocks:observedReplies,pre_observer_responses:preObserverResponses,retired_gallery_thumbnail_reads:retiredThumbnails,
+   scope:{source_electron: native,set_aside_only_aborted_main_frame_gallery_thumbnail_fetches_of_own_source:true,actual_original_source_ui:true,installed_target:false,model_or_GPU_execution: false,cancel_covered:false,quality_or_human_or_parent_approval:false,failed_same_target_policy:'650ms autosave failure suppresses same-target automatic retry; only explicit save retries',policy_source_controls_separate_from_actual_response_slice:true}};
   const file=path.join(w.logs,'flow-draft-save-error-proof.json');fs.writeFileSync(file,JSON.stringify(proof,null,2),{flag:'wx'});e.addFile(file);e.note('flow_draft_save_error',{proof_path:file,proof_sha256:sha(fs.readFileSync(file)),proof_size:fs.statSync(file).size});
- }finally{if(fault)await page.unroute(pattern,fault);await settle();page.off('request',observed);page.off('requestfailed',failed);page.off('response',response);}
+ }finally{if(fault)await page.unroute(pattern,fault);await settle();page.off('request',observed);page.off('requestfailed',failed);page.off('requestfinished',finished);page.off('response',response);}
 }
 
 test('owning draft PUT503 preserves saved graph and explicitly recovers same dirty edit',async({page,request,renderer,workspace,evidence})=>{test.setTimeout(160_000);await installDesktopHostShim(page,renderer.port);

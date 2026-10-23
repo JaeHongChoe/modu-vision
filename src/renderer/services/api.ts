@@ -1,3 +1,4 @@
+import type { LabelSuggestionStats } from './generated/apiTypes';
 import type {ParentCandidate} from '../types/parentCandidate';
 /**
  * src/renderer/services/api.ts
@@ -5,6 +6,7 @@ import type {ParentCandidate} from '../types/parentCandidate';
  */
 
 import type { ApiRequestBody } from './generated/apiTypes';
+import type { ImageReviewMetadata } from './datasetWorkflow';
 import type {
   AnnotationItem,
   ClassSplitCounts,
@@ -168,6 +170,40 @@ export interface ProjectLabelSet {
   created_at: string;
 }
 
+/** Class rename/merge (v1): names only, inside the active label set's Studio overlay files; source files never change. */
+export interface ClassRenameMapping { from: string; to: string }
+export interface ClassRenameConflict {
+  code: 'busy' | 'lease' | 'labelbook' | 'id_collision' | 'spelling' | 'role_change' | 'nothing_to_do' | 'source_only' | string;
+  message: string;
+}
+/** Inspection role of a class name (class_semantics); a rename may not move a class between roles. */
+export type ClassRenameRole = 'normal' | 'defect' | 'unknown';
+export interface ClassRenamePreview {
+  applied: boolean;
+  labelset_id: string;
+  /** source_spellings: every spelling of `from` (case and the like) the rewrite unifies into `to`. */
+  mapping: (ClassRenameMapping & { merge: boolean; source_ids: number[]; target_ids: number[]; existing_spellings: string[];
+    source_spellings: string[]; role_from: ClassRenameRole; role_to: ClassRenameRole })[];
+  overlays: { files: number; shapes: number; shapes_by_type: Record<string, number>; palette_entries: number; images: number; images_with_masks: number };
+  /** Rewritten images go back to review; `approved` is how many approvals that drops. */
+  review: { approved: number };
+  source_only: { images: number; unreadable: number };
+  labelbook: { version: number | null; names_old_class: boolean };
+  drafts: { pending: number; candidates: number };
+  flows: { versions: number; references: number };
+  models: { count: number; job_ids: string[] };
+  truth: { images: number; declarations: number };
+  conflicts: ClassRenameConflict[];
+  /** The apply sends this back; the backend refuses when any overlay changed since the preview. */
+  preview_sha256: string;
+}
+export interface ClassRenameResult extends ClassRenamePreview {
+  backup_version_id: string;
+  actor: string;
+  affected_images: string[];
+  dataset_fingerprint: string;
+}
+
 export interface ProjectBackupResult {
   archive_path: string;
   source_included: boolean;
@@ -304,6 +340,9 @@ export interface LabelSuggestionModel {
   created_at: string | null;
   checkpoint_path: string;
   source_dataset_path: string;
+  /** 'changed': trained before the data changed; it still drafts, but it is never evaluation evidence. */
+  data_state?: 'current' | 'changed';
+  trained_at?: string | null;
 }
 
 export interface OCRLabelRow {
@@ -426,7 +465,8 @@ export interface LabelSuggestionCandidate {
 
 export interface LabelSuggestion {
   id: string;
-  status: 'pending' | 'accepted' | 'rejected';
+  /** 'reverted': an adoption that was taken back (its shapes removed again). */
+  status: 'pending' | 'accepted' | 'rejected' | 'reverted';
   created_at: string;
   reviewed_at?: string;
   image_path: string;
@@ -442,6 +482,21 @@ export interface LabelSuggestion {
   accepted_candidate_ids: string[];
   backup_version_id: string | null;
   batch_id?: string;
+  /** The image's ledger identity when the draft was made; adopting under team editing takes its edit lease. */
+  image_uuid?: string;
+  image_revision?: number;
+  /** Where the draft came from: 'trained_model' (default for older records) or a provider name. */
+  backend?: string;
+  /** 'changed' when the model was trained before the data changed; such drafts are never evaluation evidence. */
+  model_data_state?: 'current' | 'changed';
+  /** The provider's limits as one sentence (every candidate provider stores a string). */
+  support_limits?: string;
+  reviewer?: string;
+  /** The adopted shapes as the label file held them right after adoption; a take-back compares against these. */
+  adopted_annotations?: AnnotationItem[];
+  reverted_at?: string;
+  reverted_by?: string;
+  revert_backup_version_id?: string | null;
 }
 
 export interface LabelSuggestionBatchEntry {
@@ -982,6 +1037,8 @@ export const api = {
 
   labelSuggestions: {
     models: () => request<{ models: LabelSuggestionModel[] }>('/api/label-suggestions/models'),
+    /** How each model's drafts fared with people (read-only). */
+    stats: (jobId?: string) => request<LabelSuggestionStats>(`/api/label-suggestions/stats${jobId ? `?job_id=${encodeURIComponent(jobId)}` : ''}`),
     list: (imagePath?: string) => request<{ suggestions: LabelSuggestion[] }>(
       `/api/label-suggestions${imagePath ? `?image_path=${encodeURIComponent(imagePath)}` : ''}`,
     ),
@@ -1068,7 +1125,17 @@ export const api = {
         split: { train: number; val: number; test?: number };
         corrupted_images?: any[];
         validation?: DatasetQuickValidation;
+        excluded_undecodable?: { excluded: string[]; restored: string[]; recorded: boolean };
+        split_state?: 'saved' | 'source_folders' | 'automatic' | 'stale';
+        labels_missing?: boolean;
+        expected_layout?: string;
       }>('/api/dataset/import', { method: 'POST', body: JSON.stringify(data) }),
+
+    /** Classification: choose one image's class without moving the file; null returns it to its folder class. */
+    setImageClass: (data: { image_path: string; class_name: string | null; actor?: string }) =>
+      request<{ relative_path: string; class: string | null; class_source: 'folder' | 'override'; folder_class: string | null; changed: boolean;
+        metadata?: ImageReviewMetadata }>(
+        '/api/dataset/metadata/class-override', { method: 'PUT', body: JSON.stringify(data) }),
 
     currentSummary: (data: { folder_path: string; task: VisionTask }) =>
       request<{
@@ -1082,6 +1149,10 @@ export const api = {
         split: { train: number; val: number; test?: number };
         corrupted_images?: any[];
         validation?: DatasetQuickValidation;
+        excluded_undecodable?: { excluded: string[]; restored: string[]; recorded: boolean };
+        split_state?: 'saved' | 'source_folders' | 'automatic' | 'stale';
+        labels_missing?: boolean;
+        expected_layout?: string;
       }>(`/api/dataset/current-summary?${new URLSearchParams(data).toString()}`),
 
     generate: (data: {

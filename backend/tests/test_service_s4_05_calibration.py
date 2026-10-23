@@ -214,7 +214,7 @@ def test_heldout_anomaly_test_cannot_replace_persisted_calibration(tmp_path):
     with pytest.raises(HTTPException) as caught:
         run_zero_escape_calibration(job_id=str(tmp_path))
     assert caught.value.status_code == 422
-    assert 'test' in caught.value.detail.lower()
+    assert 'test' in caught.value.detail.lower() or '테스트' in caught.value.detail
     assert file.read_bytes() == original
 
 
@@ -248,6 +248,6 @@ def test_heldout_evaluation_keeps_fixed_calibration_and_refuses_decoded_overlap(
         with pytest.raises(HTTPException) as caught:
             _evaluate_anomaly(checkpoint, meta, training.root_dir, torch.device('cpu'))
         assert caught.value.status_code == 422
-        assert 'overlap' in caught.value.detail.lower()
+        assert 'overlap' in caught.value.detail.lower() or '섞여 있습니다' in caught.value.detail
     finally:
         checkpoint.unlink()

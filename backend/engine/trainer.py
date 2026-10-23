@@ -43,6 +43,7 @@ from backend.engine.dataset_loaders import (
     SegmentationDataset,
     AnomalyDataset,
     create_dataloader,
+    resize_model_input,
 )
 from backend.engine.augmentations import create_industrial_transforms
 from backend.engine.scheduler import create_optimizer_and_scheduler
@@ -991,7 +992,7 @@ def infer(
     meta = {**ckpt_meta, **meta}
 
     img_size = tuple(meta.get("image_size", [256, 256]))
-    resized_img = cv2.resize(img_np, img_size, interpolation=cv2.INTER_LINEAR)
+    resized_img = resize_model_input(img_np, img_size)
     img_t = torch.from_numpy(resized_img.transpose(2, 0, 1)).float().unsqueeze(0) / 255.0
     img_t = img_t.to(dev)
 

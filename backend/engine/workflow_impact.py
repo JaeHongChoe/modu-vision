@@ -121,7 +121,12 @@ def _analyze(project):
         for path in sorted(directory.glob('evaluation_*.json')):
             try:
                 record=history.get(path.stem);job=record.get('result',{}).get('job_id');model=index.get(job);bound=record.get('binding',{})
-                state='changed' if model and bound.get('checkpoint_sha256')!=model['checkpoint_sha256'] else 'unverified'
+                # An evaluation bound to the exact checkpoint of a model that is itself current is current; the step 4
+                # readiness waits for that state, so without it the workflow could never pass step 4. The model's data
+                # must be current too: an evaluation of a model whose training data changed is evidence to redo.
+                state=('changed' if model and bound.get('checkpoint_sha256')!=model['checkpoint_sha256']
+                       else 'revalidation_required' if model and model['data_state']=='changed'
+                       else 'current' if model and model['checkpoint_state']=='current' and model['data_state']=='current' and bound.get('checkpoint_sha256') else 'unverified')
                 evaluations.append({'evaluation_id':path.stem,'job_id':job,'state':state})
             except (ValueError,OSError,KeyError):evaluations.append({'evaluation_id':path.stem,'state':'changed'})
     approvals=[];database=root/'model_deployments.sqlite3'
@@ -141,9 +146,14 @@ def _analyze(project):
             # Evidence of this version, or of another version with the same inspection rules (only the layout moved, E04).
             matches=[row for row in flow_evaluations if (row.get('version_id')==flow['version_id'] and row.get('graph_sha256')==flow['graph_sha256'])
                      or (flow.get('semantic_sha256') and row.get('semantic_sha256')==flow['semantic_sha256'])]
-            if flow['state']=='unverified' and any(row.get('validity',{}).get('valid') for row in matches):
+            # A run in which no image had confirmed truth measured nothing (no misses or overkills to count): the flow
+            # still waits for its test images' truth, so it never reads as evaluated.
+            measured=[row for row in matches if (row.get('coverage') or {}).get('known')!=0]
+            if flow['state']=='unverified' and any(row.get('validity',{}).get('valid') for row in measured):
                 flow['state']='current'
                 flow['reason']='Whole-flow evidence matches current inputs; deployment and quality approval are separate'
+            elif flow['state']=='unverified' and any(row.get('validity',{}).get('valid') for row in matches):
+                flow['reason']='Whole-flow evaluation ran without confirmed truth; confirm the test images\' truth and evaluate again'
             elif flow['state'] in ('unverified','current') and any(row.get('validity',{}).get('valid') is False for row in matches):
                 flow['state']='revalidation_required'
                 flow['reason']='Saved whole-flow truth or inputs changed; evaluate this version again'

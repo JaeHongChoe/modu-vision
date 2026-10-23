@@ -217,9 +217,12 @@ def _mask_hash(project_root,source,image,annotation_root=None):
     return _hash(mask) if mask else None
 
 def _event(row, actor, action, changes):
+    # A change the person confirmed in the desktop assistant also names its run (via/assistant_run, §4.6); the actor
+    # stays the person.
+    from backend.engine.assistant_run import marks
     row['revision'] += 1
     row['audit'].append({'id':str(uuid.uuid4()),'at':_now(),'actor':actor,'action':action,
-                         'revision':row['revision'],'changes':changes})
+                         'revision':row['revision'],'changes':changes,**marks()})
 
 def _geometry(image):
     """(width, height, decode error): an image that cannot be decoded is listed with its error, never a failed request."""

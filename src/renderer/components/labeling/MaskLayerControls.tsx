@@ -23,12 +23,13 @@ export const MaskLayerControls: React.FC = () => {
           style={{ backgroundColor: maskVisible ? '#10B981' : '#4B5563' }}
         />
         <Layers className="w-3.5 h-3.5 text-cyan-400" />
-        <span>Mask Layer</span>
+        <span>마스크 층</span>
       </div>
 
       <button
         onClick={toggleMaskVisible}
-        title={maskVisible ? 'Hide Mask Layer' : 'Show Mask Layer'}
+        title={maskVisible ? '마스크 숨기기' : '마스크 보이기'}
+        aria-pressed={maskVisible}
         className="p-1 rounded bg-[#1A212E] hover:bg-[#222B3D] text-slate-300 border border-[#2B3547] transition-colors cursor-pointer"
       >
         {maskVisible ? (

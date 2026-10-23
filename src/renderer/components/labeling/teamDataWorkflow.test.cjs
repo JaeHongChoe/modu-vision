@@ -45,6 +45,16 @@ test('annotation save sends the valid owned lease and cannot reuse it for a diff
  m.useAnnotationStore.setState({...state,currentImage:{...state.currentImage,image_id:'b',file_path:'/source/b.png'},metadata:{image_uuid:'b',revision:1}});
  assert.equal(await m.useAnnotationStore.getState().saveAnnotations(),false);assert.equal(bodies.length,1);assert.match(m.useAnnotationStore.getState().saveMessage,/편집 시작/);
 });
+test('a save while 편집 시작 waits for its reply sends nothing and says the lease is on its way',async()=>{
+ const bodies=[];const m=load('../../stores/useAnnotationStore.ts',{'../services/api':{api:{},getApiBaseUrl:()=>''},'./useDatasetStore':{useDatasetStore:{getState:()=>({annotationsChanged:async()=>{}})}},'../services/datasetWorkflow':{datasetWorkflow:{saveAnnotations:async body=>{bodies.push(body);return{status:'saved'};}}}});
+ const state={currentImage:{image_id:'a',file_path:'/source/a.png',width:10,height:10},annotations:[],metadata:{image_uuid:'a',revision:3},imageDimensions:{width:10,height:10},annotationLoadStatus:'ready',reviewerName:'operator-a',isDirty:true,isSaving:false,teamEditingEnabled:true,editLease:null,editLeaseAcquiring:{image_uuid:'a'}};
+ m.useAnnotationStore.setState(state);assert.equal(await m.useAnnotationStore.getState().saveAnnotations(),false);assert.equal(bodies.length,0);assert.match(m.useAnnotationStore.getState().saveMessage,/편집 권한을 받는 중/);
+ m.useAnnotationStore.getState().setEditLeaseAcquiring(null);assert.equal(m.useAnnotationStore.getState().saveMessage,null);m.useAnnotationStore.setState({editLeaseAcquiring:{image_uuid:'a'}});
+ // A request for another image says nothing about this one: 편집 시작 is still needed here.
+ m.useAnnotationStore.setState({...state,editLeaseAcquiring:{image_uuid:'b'}});assert.equal(await m.useAnnotationStore.getState().saveAnnotations(),false);assert.equal(bodies.length,0);assert.match(m.useAnnotationStore.getState().saveMessage,/편집 시작을 누른 뒤/);
+ m.useAnnotationStore.setState({...state,editLeaseAcquiring:null,editLease:{image_uuid:'a',token:'lease-a',owner:'operator-a',expires_at:Date.now()/1000+60}});assert.equal(await m.useAnnotationStore.getState().saveAnnotations(),true);assert.equal(bodies[0].lease_token,'lease-a');
+ m.useAnnotationStore.setState({editLeaseAcquiring:{image_uuid:'a'}});await m.useAnnotationStore.getState().setImages([]);assert.equal(m.useAnnotationStore.getState().editLeaseAcquiring,null);
+});
 test('clearing a project drops edit ownership and policy from the previous workspace',async()=>{
  const m=load('../../stores/useAnnotationStore.ts',{'../services/api':{api:{},getApiBaseUrl:()=>''},'./useDatasetStore':{},'../services/datasetWorkflow':{datasetWorkflow:{}}});
  m.useAnnotationStore.setState({isDirty:false,teamEditingEnabled:true,teamReviewEnabled:true,labelbookVersion:3,editLease:{image_uuid:'old',token:'old-token',owner:'old',expires_at:Date.now()/1000+60}});
@@ -56,7 +66,7 @@ const jsx=(type,props)=>({type,props:props||{},children:[props?.children].flat()
 function nodes(tree){const result=[];const visit=node=>{if(node&&typeof node==='object'){result.push(node);node.children?.flat().forEach(visit);}};visit(tree);return result;}
 function panelFixture(workspacePromise){
  let epoch=0;const h=hooks();h.react.useSyncExternalStore=(_subscribe,snapshot)=>snapshot();const project={...scope,setStep:async()=>{}};const compute={transportRevision:1,selectedProfileId:null};const image={image_uuid:'a',file_path:'/source/a.png',relative_path:'a.png',revision:1,team:{edit_lease:null,assignment:null,reviews:[],review_status:'pending'}};
- const annotation={reviewerName:'operator-a',metadata:image,currentImage:{file_path:image.file_path},categories:[],editLease:null,isDirty:false,isSaving:false,setMetadata:value=>annotation.metadata=value,setTeamEditingEnabled:value=>annotation.teamEditingEnabled=value,setTeamReviewEnabled:()=>{},setLabelbook:()=>{},setEditLease:value=>annotation.editLease=value};
+ const annotation={reviewerName:'operator-a',metadata:image,currentImage:{file_path:image.file_path},categories:[],editLease:null,editLeaseAcquiring:null,isDirty:false,isSaving:false,setMetadata:value=>annotation.metadata=value,setTeamEditingEnabled:value=>annotation.teamEditingEnabled=value,setTeamReviewEnabled:()=>{},setLabelbook:()=>{},setEditLease:value=>annotation.editLease=value,setEditLeaseAcquiring:value=>annotation.editLeaseAcquiring=value};
  const workspace={scope:{project_id:'p',source:'/source',labelset_id:'default'},book:null,book_history:[],settings:{revision:1,editing_enabled:true,review_enabled:true,required_reviews:2,prevent_self_review:true,approved_only_training:true},members:[]};
  const readiness={ready:false,counts:{total:1,eligible:0,approved:0,pending:1},blockers:['승인 데이터가 없습니다.']};const calls=[];
  const api={workspace:()=>workspacePromise||Promise.resolve(workspace),image:async()=>({image:annotation.metadata}),readiness:async()=>readiness,queue:async()=>({items:[],total:0,offset:0,limit:30}),acquire:async(row,actor)=>{calls.push([row.image_uuid,actor]);return{image:{...image,revision:2,team:{...image.team,edit_lease:{owner:actor,expires_at:Date.now()/1000+120}}},lease_token:'valid-token'};}};
@@ -67,6 +77,24 @@ function panelFixture(workspacePromise){
 test('actual team panel edit-start action binds returned token to selected image',async()=>{
  const fixture=panelFixture();fixture.render();await new Promise(setImmediate);let tree=fixture.render();nodes(tree).find(node=>node.type==='button'&&node.children.some(child=>typeof child==='string'&&child.includes('팀 작업'))).props.onClick();tree=fixture.render();await nodes(tree).find(node=>node.type==='button'&&node.children.includes('편집 시작')).props.onClick();
  assert.deepEqual(fixture.calls,[['a','operator-a']]);assert.equal(fixture.annotation.editLease.token,'valid-token');assert.equal(fixture.annotation.metadata.revision,2);fixture.h.unmount();
+});
+test('edit-start marks its image lease as on its way until the reply lands, also when the request fails',async()=>{
+ for(const outcome of ['granted','refused']){
+  const fixture=panelFixture();let settle;const granted=fixture.api.acquire;fixture.api.acquire=(row,actor)=>new Promise((resolve,reject)=>settle=()=>outcome==='granted'?resolve(granted(row,actor)):reject(new Error('다른 담당자가 편집 중입니다.')));
+  fixture.render();await new Promise(setImmediate);let tree=fixture.render();nodes(tree).find(node=>node.type==='button'&&node.children.some(child=>typeof child==='string'&&child.includes('팀 작업'))).props.onClick();tree=fixture.render();
+  const pressed=nodes(tree).find(node=>node.type==='button'&&node.children.includes('편집 시작')).props.onClick();
+  assert.deepEqual(fixture.annotation.editLeaseAcquiring,{image_uuid:'a'});assert.equal(fixture.annotation.editLease,null);
+  settle();await pressed;await new Promise(setImmediate);
+  assert.equal(fixture.annotation.editLeaseAcquiring,null);assert.equal(fixture.annotation.editLease?.token,outcome==='granted'?'valid-token':undefined);fixture.h.unmount();
+ }
+});
+test('an older edit-start reply leaves a newer request for the image marked as on its way',async()=>{
+ const fixture=panelFixture();let settle;const granted=fixture.api.acquire;fixture.api.acquire=(row,actor)=>new Promise(resolve=>settle=()=>resolve(granted(row,actor)));
+ fixture.render();await new Promise(setImmediate);let tree=fixture.render();nodes(tree).find(node=>node.type==='button'&&node.children.some(child=>typeof child==='string'&&child.includes('팀 작업'))).props.onClick();tree=fixture.render();
+ const pressed=nodes(tree).find(node=>node.type==='button'&&node.children.includes('편집 시작')).props.onClick();
+ // Another panel mount pressed 편집 시작 for the same image meanwhile; its mark is a different request.
+ const newer={image_uuid:'a'};fixture.annotation.editLeaseAcquiring=newer;
+ settle();await pressed;await new Promise(setImmediate);assert.equal(fixture.annotation.editLeaseAcquiring,newer);fixture.h.unmount();
 });
 test('a delayed old-project workspace cannot enable editing in a switched project',async()=>{
  let resolve;const pending=new Promise(done=>resolve=done);const fixture=panelFixture(pending);fixture.render();fixture.project.project={...fixture.project.project,id:'new-project'};resolve({book:null,book_history:[],settings:{editing_enabled:true},members:[]});await new Promise(setImmediate);assert.equal(fixture.annotation.teamEditingEnabled,false);assert.equal(fixture.annotation.editLease,null);fixture.h.unmount();
@@ -102,4 +130,15 @@ test('a delayed lease renewal cannot replace newer saved metadata or review stat
 
 test('a delayed same-project team response cannot enable editing after the account namespace changes',async()=>{
  let resolve;const pending=new Promise(done=>resolve=done),f=panelFixture(pending);f.render();f.actorChange();resolve({book:null,book_history:[],settings:{editing_enabled:true},members:[]});await new Promise(setImmediate);assert.equal(f.annotation.teamEditingEnabled,false);assert.equal(f.annotation.editLease,null);f.h.unmount();
+});
+
+function toolbar(state){
+ const value={activeTool:'select',setActiveTool:()=>{},brushRadius:10,setBrushRadius:()=>{},autoSelectTolerance:10,setAutoSelectTolerance:()=>{},convertShape:()=>{},selectedAnnotationId:null,viewTransform:{scale:1,offsetX:0,offsetY:0},imageDimensions:{width:10,height:10},setViewTransform:()=>{},undo:()=>{},redo:()=>{},history:[],future:[],isDirty:true,isSaving:false,saveMessage:null,annotationLoadStatus:'ready',editLeaseAcquiring:null,metadata:{image_uuid:'a'},saveAnnotations:()=>{},markNormal:()=>{},annotations:[],currentImage:{file_path:'/source/a.png'},maskOpacity:0.5,setMaskOpacity:()=>{},maskVisible:true,toggleMaskVisible:()=>{},...state};
+ const module=load('./LabelingToolbar.tsx',{'react':{useState:initial=>[initial,()=>{}]},'react/jsx-runtime':{jsx,jsxs:jsx},'lucide-react':{},'../../stores/useAnnotationStore':{useAnnotationStore:()=>value},'../../utils/coordinateMath':{calculateActualSize:()=>{},calculateCenterZoom:()=>{},calculateFitToScreen:()=>{}}});
+ return nodes(module.LabelingToolbar({})).find(node=>node.props['data-testid']==='annotation-save-button');
+}
+test('the toolbar save button stays off while 편집 시작 waits for the lease of the open image',()=>{
+ const waiting=toolbar({editLeaseAcquiring:{image_uuid:'a'}});assert.equal(waiting.props.disabled,true);assert.match(waiting.props.title,/편집 권한을 받는 중/);
+ assert.equal(toolbar({editLeaseAcquiring:{image_uuid:'b'}}).props.disabled,false);assert.equal(toolbar({editLeaseAcquiring:null}).props.disabled,false);
+ assert.equal(toolbar({editLeaseAcquiring:{image_uuid:'a'},metadata:null}).props.disabled,false);
 });

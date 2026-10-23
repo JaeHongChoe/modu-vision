@@ -18,6 +18,7 @@ import type { ScoreSpec, TestPredictionItem, ViewTransform, Point, VisionTask } 
 import { calculateZoomAtPoint, calculateFitToScreen, viewportToImage } from '../../utils/coordinateMath';
 import { PhysicalScaleOverlay } from './PhysicalScaleOverlay';
 import { resolveApiUrl } from '../../services/api';
+import { scoreUnitLabel } from '../../utils/plainLabels';
 
 export interface SynchronizedDualViewportProps {
   task: VisionTask;
@@ -30,6 +31,8 @@ export interface SynchronizedDualViewportProps {
   defectScore?: number;
   groundTruth?: string;
   predictedClass?: string;
+  /** The simple view: no pixel scale boxes over the images and no cursor coordinates. */
+  plain?: boolean;
 }
 
 export const SynchronizedDualViewport: React.FC<SynchronizedDualViewportProps> = ({
@@ -43,6 +46,7 @@ export const SynchronizedDualViewport: React.FC<SynchronizedDualViewportProps> =
   defectScore,
   groundTruth,
   predictedClass,
+  plain = false,
 }) => {
   const rawSurfaceRef = useRef<HTMLDivElement | null>(null);
   const overlaySurfaceRef = useRef<HTMLDivElement | null>(null);
@@ -125,7 +129,7 @@ export const SynchronizedDualViewport: React.FC<SynchronizedDualViewportProps> =
         {/* Left: Confidence Threshold Slider */}
         <div className="flex min-w-0 flex-wrap items-center gap-2">
           <Sliders className="w-4 h-4 text-[#3B82F6]" />
-          <span className="font-semibold text-slate-300">Threshold (τ) · {scoreSpec?.unit || 'probability'}:</span>
+          <span className="font-semibold text-slate-300">{plain ? '판정 기준 점수' : `기준값 · ${scoreUnitLabel(scoreSpec?.unit)}`}:</span>
           <span className="font-mono font-bold text-[#3B82F6] tabular-nums text-sm">
             {confidenceThreshold.toFixed(2)}
           </span>
@@ -143,7 +147,7 @@ export const SynchronizedDualViewport: React.FC<SynchronizedDualViewportProps> =
 
         {/* Center: Overlay Opacity Slider */}
         <div className="flex items-center space-x-2 text-slate-400 font-mono text-[11px]">
-          <span>Opacity:</span>
+          <span>겹침 정도:</span>
           <input
             type="range"
             min="0.0"
@@ -220,7 +224,7 @@ export const SynchronizedDualViewport: React.FC<SynchronizedDualViewportProps> =
           {/* Header Tag */}
           <div className="absolute top-2 left-2 z-10 px-2 py-0.5 bg-[#0B0E14]/90 border border-[#2B3547] rounded-[3px] text-[10px] font-mono text-slate-300 flex items-center space-x-1.5">
             <span className="w-2 h-2 rounded-full bg-slate-400" />
-            <span className="font-bold">RAW INSPECTION IMAGE</span>
+            <span className="font-bold">원본 이미지</span>
           </div>
 
           {/* Canvas Render Surface */}
@@ -243,17 +247,17 @@ export const SynchronizedDualViewport: React.FC<SynchronizedDualViewportProps> =
                 />
               </div>
             ) : (
-              <span className="text-slate-400 font-mono text-xs">No sample selected</span>
+              <span className="text-slate-400 text-xs">왼쪽 목록에서 이미지를 고르면 여기에 원본이 보입니다</span>
             )}
           </div>
 
           {/* Physical Scale Overlay */}
-          <PhysicalScaleOverlay scale={rawTransform.scale} />
+          {!plain && <PhysicalScaleOverlay scale={rawTransform.scale} />}
 
           {/* Bottom Readout */}
           <div className="p-2 bg-[#0B0E14] border-t border-[#2B3547] text-[10px] font-mono tabular-nums text-slate-400 flex justify-between">
-            <span>GT: <strong className="text-slate-200">{prediction ? groundTruth || '—' : '—'}</strong></span>
-            <span>{task === 'detection' ? 'TOP BOX (no τ/IoU)' : 'PRED'}: <strong className="text-slate-200">{prediction ? predictedClass || '—' : '—'}</strong></span>
+            <span>정답: <strong className="text-slate-200">{prediction ? groundTruth || '—' : '—'}</strong></span>
+            <span>{task === 'detection' ? '가장 높은 박스 (기준값 없이)' : '판정'}: <strong className="text-slate-200">{prediction ? predictedClass || '—' : '—'}</strong></span>
           </div>
         </div>
 
@@ -270,7 +274,7 @@ export const SynchronizedDualViewport: React.FC<SynchronizedDualViewportProps> =
           {/* Header Tag */}
           <div className="absolute top-2 left-2 z-10 px-2 py-0.5 bg-[#0B0E14]/90 border border-[#2B3547] rounded-[3px] text-[10px] font-mono text-slate-300 flex items-center space-x-1.5">
             <span className="w-2 h-2 rounded-full bg-[#EF4444] animate-pulse" />
-            <span className="font-bold text-[#EF4444]">{task === 'detection' ? 'DETECTION BOX OVERLAY' : 'DEFECT HEATMAP OVERLAY'}</span>
+            <span className="font-bold text-[#EF4444]">{task === 'detection' ? 'DETECTION BOX OVERLAY' : '결함 열지도'}</span>
             {heatmapLoading && <span className="text-[#3B82F6] text-[9px] animate-pulse ml-1">[UPDATING...]</span>}
           </div>
 
@@ -306,18 +310,18 @@ export const SynchronizedDualViewport: React.FC<SynchronizedDualViewportProps> =
                 )}
               </div>
             ) : (
-              <span className="text-slate-400 font-mono text-xs">No overlay available</span>
+              <span className="text-slate-400 text-xs">이 이미지에는 표시할 결함 위치가 없습니다</span>
             )}
           </div>
 
           {/* Physical Scale Overlay */}
-          <PhysicalScaleOverlay scale={overlayTransform.scale} />
+          {!plain && <PhysicalScaleOverlay scale={overlayTransform.scale} />}
 
           {/* Bottom Readout */}
           <div className="p-2 bg-[#0B0E14] border-t border-[#2B3547] text-[10px] font-mono tabular-nums text-slate-400 flex justify-between">
-            <span>{task === 'detection' ? 'MAX BOX SCORE' : 'DEFECT SCORE'}: <strong className="text-slate-200">{prediction && defectScore != null ? `${(defectScore * 100).toFixed(1)}%` : '—'}</strong></span>
-            <span>{task === 'detection' ? `IMAGE τ=${confidenceThreshold.toFixed(2)}` : 'VERDICT'}: <strong className={prediction && defectScore != null ? (defectScore >= confidenceThreshold ? 'text-[#EF4444]' : 'text-[#10B981]') : 'text-slate-400'}>
-              {prediction && defectScore != null ? (defectScore >= confidenceThreshold ? (task === 'detection' ? 'NG' : 'REJECT (NG)') : (task === 'detection' ? 'OK' : 'PASS (OK)')) : '—'}
+            <span>{task === 'detection' ? '최대 박스 점수' : '결함 점수'}: <strong className="text-slate-200">{prediction && defectScore != null ? `${(defectScore * 100).toFixed(1)}%` : '—'}</strong></span>
+            <span>{task === 'detection' ? `IMAGE τ=${confidenceThreshold.toFixed(2)}` : '판정'}: <strong className={prediction && defectScore != null ? (defectScore >= confidenceThreshold ? 'text-[#EF4444]' : 'text-[#10B981]') : 'text-slate-400'}>
+              {prediction && defectScore != null ? (defectScore >= confidenceThreshold ? (task === 'detection' ? 'NG' : '불량 (NG)') : (task === 'detection' ? 'OK' : '정상 (OK)')) : '—'}
             </strong></span>
           </div>
         </div>
@@ -325,7 +329,7 @@ export const SynchronizedDualViewport: React.FC<SynchronizedDualViewportProps> =
 
       {/* Bottom Reticle Telemetry Strip */}
       <div className="min-h-8 shrink-0 bg-[#0B0E14] border-t border-[#2B3547] px-3 py-1 flex flex-wrap gap-2 items-center justify-between text-[11px] font-mono tabular-nums text-slate-400">
-        <div className="flex items-center space-x-4">
+        <div className={plain ? 'hidden' : 'flex items-center space-x-4'}>
           <span className="flex items-center space-x-1">
             <Crosshair className="w-3 h-3 text-[#3B82F6]" />
             <span>X: {cursorPos?.x ?? 0} px</span>
@@ -333,8 +337,8 @@ export const SynchronizedDualViewport: React.FC<SynchronizedDualViewportProps> =
           <span>Y: {cursorPos?.y ?? 0} px</span>
         </div>
         <div className="flex items-center space-x-3 text-slate-500 text-[10px]">
-          <span>Physical scale uncalibrated</span>
-          <span>Zoom: {(transform.scale * 100).toFixed(0)}%</span>
+          {!plain && <span>실제 크기 미보정</span>}
+          <span>{plain ? '확대' : 'Zoom:'} {(transform.scale * 100).toFixed(0)}%</span>
         </div>
       </div>
     </div>

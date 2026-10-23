@@ -35,14 +35,14 @@ async function exercise(page:Page,workspace:Workspace,evidence:Evidence,api:Api,
   await panel.getByRole('button',{name:'검수 기록 저장',exact:true}).click();
   await expect(panel).toContainText('모델 OK · 운영 REVIEW');
   await page.keyboard.press('F1');await expect(panel.getByRole('complementary',{name:'작업자 도움말'})).toBeVisible();
-  await page.getByTitle('Toggle Language (KR / EN)').click();
+  await page.getByRole('button',{name:'언어 전환 (KR / EN)'}).click();
   panel=page.getByRole('region',{name:'Operator inspection workspace',exact:true});
   await expect(panel.getByRole('complementary',{name:'Operator help'})).toContainText('Keyboard actions use the same permissions.');
   await expect(panel).toContainText('Model OK · Operator REVIEW');
   await expect(panel.getByLabel('Operator inspection image',{exact:true})).toHaveValue(image);
   await page.keyboard.press('Escape');await expect(panel.getByRole('complementary')).toHaveCount(0);
   await page.reload();
-  await expect(page.getByTitle('Toggle Language (KR / EN)')).toContainText('EN');
+  await expect(page.getByRole('button',{name:'언어 전환 (KR / EN)'})).toContainText('한국어');
   await page.getByRole('button',{name:'Operator inspection',exact:true}).click();
   panel=page.getByRole('region',{name:'Operator inspection workspace',exact:true});
   await expect(panel).toContainText('Model OK · Operator REVIEW');

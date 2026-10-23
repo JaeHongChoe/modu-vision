@@ -269,6 +269,18 @@ def read_image_safely_rgb(
     return rgb
 
 
+def resize_model_input(rgb: np.ndarray, size: Sequence[int]) -> np.ndarray:
+    """
+    Resize an RGB image to a model's fixed (width, height) input size.
+
+    Classification training, evaluation and single-image inference, and the flow
+    inspection node all resize through this one function, so a trained model sees
+    the same pixels in every path. Models are trained with bilinear resizing, so it
+    is used whether the image is smaller or larger than the input size.
+    """
+    return cv2.resize(rgb, (int(size[0]), int(size[1])), interpolation=cv2.INTER_LINEAR)
+
+
 # ============================================================================
 # 1. Hierarchical Classification Adapter
 # ============================================================================

@@ -580,10 +580,25 @@ def _fixture_readonly_managed_launch(root):
     return None
 
 
+def wait_ordinary_stop(projects, child, *, seconds):
+    """The backend fixture writes this when the main asks it to stop. When it never comes, say how the controller and
+    the main ended (exit code, bounded stop diagnostic) instead of only that the file is missing."""
+    try:return wait_file(projects/'ordinary-stop-requested.json',seconds=seconds)
+    except pytest.fail.Exception:
+        stop=projects/'managed-stop-result.json'
+        try:result=json.loads(stop.read_bytes()) if stop.is_file() else None
+        except ValueError:result={'error':'stop result not complete JSON'}
+        pytest.fail(f'No ordinary stop request reached the backend fixture within {seconds}s; controller exit code '
+                    f'{child.poll()!r}; main stop result '+(_managed_stop_diagnostic(projects,result) if result else 'absent'))
+
+
 def finish_managed(child, root):
     # Cooperative only for this test-owned backend/main; original controller
     # Popen may be stopped only after its authenticated original main is reaped.
-    if child.returncode is not None:return
+    # poll() reaps only this test's own controller handle (no signal). A controller that already ended needs no stop;
+    # returncode alone stays None until a poll, and an exited but unreaped controller reads as a zombie below.
+    if child.poll() is not None:return
+    import psutil
     projects=root/'projects';(projects/'drain.trigger').touch()
     # An already-authenticated original main exit cannot publish a later
     # ordinary-stop file. Observe that fact only inside the original first5s.
@@ -592,10 +607,17 @@ def finish_managed(child, root):
     while not (projects/'ordinary-stop-requested.json').is_file():
         if time.monotonic()>=first_deadline:
             pytest.fail('Missing controlled original fixture output: '+str(projects/'ordinary-stop-requested.json'))
+        if child.poll() is not None:return
         try:row=_fixture_readonly_managed_launch(root)
         except LeaseTransitionBusy:
             time.sleep(max(0,min(.05,first_deadline-time.monotonic())));continue
-        if row is not None and _fixture_terminal_main_exited(child,row,first_deadline):
+        try:exited=row is not None and _fixture_terminal_main_exited(child,row,first_deadline)
+        except psutil.NoSuchProcess:
+            # It ended between the poll above and the identity read. Only this handle's own reap may say so; a live
+            # process still has to match the retained identity exactly.
+            if child.poll() is None:raise
+            return
+        if exited:
             child.terminate();child.wait(timeout=5);return
         time.sleep(max(0,min(.01,first_deadline-time.monotonic())))
     wait_file(projects/'ordinary-stop-requested.json',seconds=5,absolute_deadline=first_deadline)
@@ -728,7 +750,7 @@ def test_actual_source_cpu_then_managed_drain_and_original_node_exit_keeps_lease
         try:
             with pytest.raises(BlockingIOError):fcntl.flock(probe,fcntl.LOCK_EX|fcntl.LOCK_NB)
         finally:os.close(probe)
-        ordinary=json.loads(wait_file(projects/'ordinary-stop-requested.json',seconds=3))
+        ordinary=json.loads(wait_ordinary_stop(projects,child,seconds=3))
         assert ordinary=={'pid':server['pid'],'requested':True}
         (projects/'exit.trigger').touch()
         result=json.loads(wait_file(projects/'managed-stop-result.json',seconds=5))
@@ -862,6 +884,49 @@ def test_managed_cleanup_success_retains_original_body_error_or_result(monkeypat
     assert caught.value is primary and not getattr(primary,'__notes__',[])
     with _managed_fixture_cleanup(object(),object()):calls.append('body')
     assert calls==['cleanup','body','cleanup']
+
+
+class _ModeledControllerHandle:
+    """Modeled Popen only: poll answers come from a list and terminate is recorded, never sent anywhere."""
+    def __init__(self, polls):
+        self.polls=list(polls);self.calls=[]
+    def poll(self):
+        self.calls.append('poll');return self.polls.pop(0) if len(self.polls)>1 else self.polls[0]
+    def terminate(self):self.calls.append('terminate')
+    def wait(self, timeout=None):self.calls.append('wait');return 0
+
+
+def test_finish_managed_reaps_a_controller_that_already_ended_without_stopping_it(tmp_path):
+    (tmp_path/'projects').mkdir();child=_ModeledControllerHandle([1])
+    finish_managed(child,tmp_path)
+    assert child.calls==['poll'] and not (tmp_path/'projects'/'drain.trigger').exists()
+
+
+@pytest.mark.parametrize('still_running',[False,True])
+def test_finish_managed_identity_read_race_needs_the_handles_own_exit(tmp_path,monkeypatch,still_running):
+    """An exited but unreaped controller reads as a zombie; only its own handle's exit lets cleanup end quietly."""
+    import psutil
+    (tmp_path/'projects').mkdir()
+    child=_ModeledControllerHandle([None,None,None] if still_running else [None,None,0])
+    monkeypatch.setitem(globals(),'_fixture_readonly_managed_launch',lambda root:{'state':'claimed'})
+    def zombie(*args):raise psutil.ZombieProcess(os.getpid())  # an exception value only; no process is read or signalled
+    monkeypatch.setitem(globals(),'_fixture_terminal_main_exited',zombie)
+    if still_running:
+        with pytest.raises(psutil.ZombieProcess):finish_managed(child,tmp_path)
+    else:finish_managed(child,tmp_path)
+    assert child.calls==['poll','poll','poll'] and 'terminate' not in child.calls
+
+
+def test_missing_ordinary_stop_names_how_the_controller_and_main_ended(tmp_path):
+    projects=tmp_path/'projects';projects.mkdir();child=_ModeledControllerHandle([3])
+    (projects/'managed-stop-result.json').write_text(json.dumps({'direct_exit':None,'signal':'SIGKILL',
+        'error':'Error: Original backend exit is unverified after the shutdown deadline'}))
+    with pytest.raises(pytest.fail.Exception) as caught:wait_ordinary_stop(projects,child,seconds=.05)
+    message=str(caught.value)
+    assert message.startswith('No ordinary stop request reached the backend fixture within 0.05s; controller exit code 3;')
+    assert 'unverified after the shutdown deadline' in message and 'SIGKILL' in message
+    with pytest.raises(pytest.fail.Exception) as caught:wait_ordinary_stop(projects/'absent',child,seconds=.05)
+    assert str(caught.value).endswith('main stop result absent')
 
 
 def _assert_writer_snapshot_raw(snapshot, registry_raw, publication_raw):
@@ -1231,7 +1296,8 @@ def test_actual_controller_refuses_changed_and_replayed_original_main_drain_fram
     """Owned real source channel; only the test-origin frame is intentionally damaged."""
     values=managed_stack(tmp_path,monkeypatch,damage=damage);root=values[0];projects=root/'projects'
     child,ack=start_cpu_stack(values,prefix=['-c',_source_cpu_settlement_fixture_prefix()])
-    try:
+    # The cleanup keeps this body's own failure; a cleanup error is added as a note instead of replacing it.
+    with _managed_fixture_cleanup(child,root):
         _,cpu=_wait_receipt_and_cpu_settlement(root,ack['nonce'],child)
         assert cpu['semantic_output']['final_verdict']=='OK'
         controls={p:p.read_bytes() for p in [root/'application-active.json',root/'global-active.json']}
@@ -1242,7 +1308,7 @@ def test_actual_controller_refuses_changed_and_replayed_original_main_drain_fram
         assert refusal['writer_drain']['receipt'] is None and refusal['writer_drain']['backend_exit'] is None
         assert refusal['writer_drain']['phase']==('enrolled' if damage=='changed_nonce' else 'closing')
         assert not (projects/'managed-drain-received.json').exists()
-        ordinary=json.loads(wait_file(projects/'ordinary-stop-requested.json',seconds=3))
+        ordinary=json.loads(wait_ordinary_stop(projects,child,seconds=3))
         assert ordinary['pid']==cpu['backend_process']['pid']
         (projects/'exit.trigger').touch()
         result=json.loads(wait_file(projects/'managed-stop-result.json',seconds=5))
@@ -1259,4 +1325,3 @@ def test_actual_controller_refuses_changed_and_replayed_original_main_drain_fram
         with pytest.raises(ValueError):assert_quiescent(root)
         (projects/'managed-damaged-frame-proof.json').write_bytes(canonical({'damage':damage,'cpu':cpu,'refusal':refusal,
             'stop':result,'registry':snapshot,'backend_stderr':stderr,'private_fixture_channel_close_after_durable_refusal':True,'native':False,'whole_tree':False,'lease_release':False}))
-    finally:finish_managed(child,root)

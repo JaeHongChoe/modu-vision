@@ -143,7 +143,7 @@ function statistics(images: Workspace['images'], source: string, assignments: Re
     const file = path.join(source, relative), label = relative.split('/')[0], split = assignments[relative];
     expect(['train', 'val', 'test']).toContain(split);
     return {image_id: path.basename(file, '.png'), file_name: path.basename(file), file_path: file, relative_path: relative,
-      labels: [label], label, label_status: 'labeled', split, thumbnail_url: `/api/dataset/thumbnail/${path.basename(file)}?file_path=${file}`};
+      labels: [label], label, class_source: 'folder', folder_label: label, label_status: 'labeled', split, thumbnail_url: `/api/dataset/thumbnail/${path.basename(file)}?file_path=${file}`};
   });
   const counts = Object.fromEntries(['train', 'val', 'test', 'not_used', 'not_split'].map(part => [part, {count: items.filter(row => row.split === part).length, ratio: items.filter(row => row.split === part).length / 2}]));
   return {total: 2, labeling: {labeled: {count: 2, ratio: 1}, unlabeled: {count: 0, ratio: 0}}, assignments: counts,
@@ -294,12 +294,14 @@ async function exercise(page: Page, w: Workspace, e: Evidence, rawApi: Api, nati
     expect(automaticImport[0]).toMatchObject({method: 'POST', query: '', request_body: {folder_path: w.dataset, task: 'classification', validate_images: false}, status: 200, finished: null});
     expect(automaticImport[0].response).toEqual({status: 'success', total_images: 2, source_images: 2, unlabeled_images: 0, classes: {ng: 1, ok: 1},
       split: {train: 1, val: 1, test: 0}, corrupted_images: [], validation: {requested: false, checked_images: 0, complete: false, scope: 'not requested'},
-      split_supported: true, split_unavailable_reason: null});
+      split_supported: true, split_unavailable_reason: null, excluded_undecodable: {excluded: [], restored: [], recorded: false},
+      split_state: 'saved', labels_missing: false, expected_layout: "클래스마다 폴더 하나 (예: 데이터/OK/*.png, 데이터/NG/*.png). 이미 나눴다면 train·val·test 아래에 같은 구조"});
     for (const row of automaticImages) {
       expect(row).toMatchObject({method: 'GET', request_body: null, status: 200, finished: null});
       expect(Object.fromEntries(new URLSearchParams(row.query))).toEqual({folder_path: w.dataset, task: 'classification', limit: '48', offset: '0'});
       const expectedItems = statistics(w.images, w.dataset, assignments).items.map(item => ({image_id: item.image_id, file_name: item.file_name,
-        file_path: item.file_path, width: 32, height: 32, split: item.split, label: item.label, labels: item.labels, thumbnail_url: item.thumbnail_url}));
+        file_path: item.file_path, width: 32, height: 32, split: item.split, label: item.label, labels: item.labels, class_source: item.class_source, folder_label: item.folder_label,
+        thumbnail_url: item.thumbnail_url}));
       expect(row.response).toEqual({total: 2, limit: 48, offset: 0, items: expectedItems,
         class_split_counts: {ng: {train: 0, val: 1, test: 0}, ok: {train: 1, val: 0, test: 0}}});
     }

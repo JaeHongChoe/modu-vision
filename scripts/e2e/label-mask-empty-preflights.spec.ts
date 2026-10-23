@@ -39,19 +39,19 @@ async function splitControlBody(response:import('@playwright/test').Response,dea
 // Original renderer/backend requests, state, source files and custody checks remain real.
 const harness=require('./fixtures/harness.cjs');
 const UI_SOURCE={
-  "src/renderer/components/dataset/DatasetWorkflowPanel.tsx": "e973ea1f07c2296f8c227608b1ad0ccef8f5abb01c94bcd4f7bb7b9511a4c6f4",
+  "src/renderer/components/dataset/DatasetWorkflowPanel.tsx": "7feda4f4c50fee1906b72224a307d7a4840cf914e034613f5c3227e3182db09a",
   "src/renderer/components/dataset/ExternalMaskExchangePanel.tsx": "6a5d0fd5e8b57d05ae7e91b47ba447eac694a5f7c37509da9d2fbe8d7924f7a4",
-  "backend/api/routes_dataset.py": "7a4bcea5d2aed6cee0f61d6a0d5c8a09e048dcc38e644d83c1c301ac59c7e801",
+  "backend/api/routes_dataset.py": "61e6b74c95534a77fe1b7a423aca577e92765202bffd6cd17240cc69d6a1546e",
   "backend/api/routes_mask_exchange.py": "f66d4f4273692bf3c46f038c25b56a60ad4b4db5ba3dee9d31c3bac6dcd9a7c5",
   "backend/engine/annotation_formats.py": "dd046ef5e66187577217fe7de19ec6cf0376db5abf30d1b845c5b36a66e9a90c",
   "backend/engine/mask_exchange.py": "e12e6e0f10e9af2267e2f511cc7526ee98f088f0d778ce8959b7e9d6b72fafeb",
-  "src/renderer/services/datasetWorkflow.ts": "67a0b469b78b0d991921244d81d571c954e5c9bda5b767f1c3b0d55270f90bab",
-  "backend/api/routes_dataset_metadata.py": "dbe9ca7edab694241693ce942c56cb013223fcd2f26d76f898a3a947805b489a",
+  "src/renderer/services/datasetWorkflow.ts": "3c11c8f624b5dc972b0ee9eefba2279893e01b45eed7342988fe87546d3cf2fc",
+  "backend/api/routes_dataset_metadata.py": "2e737167ef2b32417c1a7cf5e10e32a676819641574bedb4cedea28d669da442",
   "scripts/e2e/fixtures/desktop-host-shim.ts": "4f598862ec0e08189628c72bbb552f72bf8fd73f5a9a05b8da1d3ddf516dcfa6",
-  "scripts/e2e/fixtures/harness.cjs": "171460c1cf1697b7a44b8f86a197d2b944928381f736f81af304412126464975",
-  "scripts/e2e/fixtures/test.ts": "49171e2d0d4d7d9559416fdb43bc7dae9394129bbc237fe4f2a4cea0a7afa480",
+  "scripts/e2e/fixtures/harness.cjs": "6fe3bb6411a28bc83c6da36ba0b2480b12de6b86fd08daa61d8d0e76d7dac950",
+  "scripts/e2e/fixtures/test.ts": "7a7effa184e71c02414773308e0ea88e16cf83dfbd72d77d47046f2cfc1b8d09",
   "scripts/e2e/qa/appFlow.ts": "4eed3e5dad1d9d65a6b19fc9bb51a1f9b0e23911a39e7f255220bec0ce37fea2",
-  "src/renderer/services/hostAdapter.ts": "f1776e473ca9f46565e8b1ad6ed3ed0df2362a4ca351911ffec7aa80640f6d0c"
+  "src/renderer/services/hostAdapter.ts": "3e71fb8fdd9169fccd99391d1f5a95a06e22ea20cd1e065a2aadcbcbc0058261"
 } as const;
 const POINTERS=['/records/116/actions/1/scenarios/empty','/records/117/actions/0/scenarios/empty','/records/117/actions/1/scenarios/empty','/records/117/actions/2/scenarios/empty'] as const;
 type OCROwnedThumbScope={source:string;images:Array<{image:string;sha256:string}>;project:{id:string}};
@@ -62,7 +62,7 @@ async function ocrOwnedThumbnail(page:Page,response:import('@playwright/test').R
  const rh=request.headers(),sh=response.headers(),requestContext=rh['x-vision-context']===undefined?null:JSON.parse(rh['x-vision-context']);if(rh['x-vision-project']!==undefined)expect(rh['x-vision-project']).toBe(scope.project.id);if(requestContext!==null)expect(requestContext).toEqual(contexts.get(scope.project.id));
  expect(sh['x-vision-context']).toBeDefined();const responseContext=JSON.parse(sh['x-vision-context']);expect(responseContext).toEqual(contexts.get(scope.project.id));expect(responseContext.project_id).toBe(scope.project.id);
  const sourcePin=splitControlFile(file,custody);expect(sourcePin.sha256).toBe(image.sha256);expect(sourcePin.bytes.subarray(0,8).toString('hex')).toBe('89504e470d0a1a0a');expect([sourcePin.bytes.readUInt32BE(16),sourcePin.bytes.readUInt32BE(20)]).toEqual([256,256]);
- expect(response.status()).toBe(200);expect(sh['content-type']).toBe('image/jpeg');const bytes=await splitControlWithin(response.body(),deadline,'whole owning JPEG thumbnail body');expect(bytes.length).toBeGreaterThan(0);if(sh['content-length']!==undefined)expect(sh['content-length']).toBe(String(bytes.length));expect(bytes.subarray(0,2).toString('hex')).toBe('ffd8');expect(bytes.subarray(-2).toString('hex')).toBe('ffd9');expect(await splitControlWithin(response.finished(),deadline,'owning JPEG HTTP completion')).toBeNull();
+ const revalidated=response.status()===304;if(!revalidated){expect(response.status()).toBe(200);expect(sh['content-type']).toBe('image/jpeg');}let bytes=revalidated?Buffer.alloc(0):await splitControlWithin(response.body(),deadline,'whole owning JPEG thumbnail body');if(bytes.length===0){/* A 304 is the browser revalidating a thumbnail it already holds (the server sends an ETag); it has no body, so it is read again below like an empty body. *//* The app reads gallery thumbnails with fetch and keeps a Blob (6dd4c1f); the browser then retains no body for the test. The same URL is read once more from inside the page with the same context headers, so it carries the app's own credentials (Electron adds its token only to the window's requests, never to the test's request context, F-22), and that answer is checked in full below. */const again=await splitControlWithin(page.evaluate(async ({url,headers})=>{const reply=await fetch(url,{headers,cache:'no-store'});return {status:reply.status,type:reply.headers.get('content-type'),context:reply.headers.get('x-vision-context'),bytes:Array.from(new Uint8Array(await reply.arrayBuffer()))};},{url:request.url(),headers:Object.fromEntries(Object.entries(request.headers()).filter(([key])=>key.startsWith('x-vision-')))}),deadline,'owning JPEG thumbnail re-read');expect(again.status).toBe(200);expect(again.type).toBe('image/jpeg');if(sh['x-vision-context']!==undefined)expect(JSON.parse(again.context!)).toEqual(JSON.parse(sh['x-vision-context']));bytes=Buffer.from(again.bytes);}expect(bytes.length).toBeGreaterThan(0);if(!revalidated&&sh['content-length']!==undefined)expect(sh['content-length']).toBe(String(bytes.length));expect(bytes.subarray(0,2).toString('hex')).toBe('ffd8');expect(bytes.subarray(-2).toString('hex')).toBe('ffd9');expect(await splitControlWithin(response.finished(),deadline,'owning JPEG HTTP completion')).toBeNull();
  const decoded=await splitControlWithin(page.evaluate(async data=>{let bitmap:ImageBitmap|undefined,result:{width:number;height:number;bitmap_closed:boolean}|undefined,failed=false,primary:unknown;
   try{bitmap=await createImageBitmap(new Blob([new Uint8Array(data)],{type:'image/jpeg'}));result={width:bitmap.width,height:bitmap.height,bitmap_closed:false};}catch(cause){failed=true;primary=cause;}
   finally{if(bitmap!==undefined){const owned=bitmap;bitmap=undefined;try{owned.close();if(result)result.bitmap_closed=true;}catch(cause){if(!failed){failed=true;primary=cause;}else if(primary instanceof Error)primary.message+='; owned bitmap close failed: '+String(cause);}}}

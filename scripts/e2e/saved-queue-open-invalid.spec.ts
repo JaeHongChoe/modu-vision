@@ -35,7 +35,9 @@ function replaceOneOwnedByte(file:string,expected:FilePin,offset:number,next:num
  const changed=readFile(file,custody),wanted=Buffer.from(expected.bytes);wanted[offset]=next;expect(changed.bytes).toEqual(wanted);
  for(const i of[0,1,2,3,4,7,8])expect(changed.raw9[i]).toBe(expected.raw9[i]);return changed;
 }
-type Read={request:Request;started:number;deadline:number;owned:Promise<void>;status?:number;sha256?:string;bytes?:Buffer;finished?:number;error?:unknown;failed:boolean};
+type Read={request:Request;started:number;deadline:number;owned:Promise<void>;status?:number;sha256?:string;bytes?:Buffer;finished?:number;error?:unknown;failed:boolean;
+ // Gallery thumbnail reads only: the retirement the browser's own end event proved.
+ retired?:{at:number;failure:string;headers_status:number|null;file_path:string}};
 
 test('saved queue open refuses an actual invalid owned evaluation record without changing the selected queue or originals',async({page,renderer,workspace,evidence})=>{
  // One browser-only U015.saved-queue-open.invalid cell. No cancel, success,
@@ -66,18 +68,33 @@ test('saved queue open refuses an actual invalid owned evaluation record without
  const state=async()=>{const out:Record<string,any>={};for(const endpoint of endpoints)out[endpoint]=await api(endpoint);for(const input of inputs)out[annotation(input)]=await api(annotation(input));return out;};await state();
  const reads:Read[]=[],writes:Array<{method:string;path:string;body:string|null}>=[],pageErrors:string[]=[],consoleErrors:Array<{text:string;url:string}>=[],non2xx:Array<{request:Request;status:number;url:string}>=[];
  let invalidArmed=false,invalidRequest:Request|undefined;
+ // Leaving step 1 retires the gallery's in-flight thumbnail reads (ScopedDatasetThumbnail aborts them), before or after
+ // their headers; after the headers the browser keeps no body. The browser's own end event decides: both listeners are
+ // attached before the request observer, so no end can be missed. Only an aborted main-frame fetch GET of one of this
+ // project's own inputs is set aside and recorded; every thumbnail that finishes, and every other GET, is checked in full.
+ const thumbnailEnds=new Map<Request,{ended:Promise<'failed'|'finished'>;resolve:(kind:'failed'|'finished')=>void;at?:number}>();
+ const thumbnailEnd=(kind:'failed'|'finished')=>(request:Request)=>{const row=thumbnailEnds.get(request);if(row&&row.at===undefined){row.at=performance.now();row.resolve(kind);}};
+ const thumbnailFailed=thumbnailEnd('failed'),thumbnailFinished=thumbnailEnd('finished');
  const observe=(request:Request)=>{const u=new URL(request.url());if(u.origin!==renderer.origin||!u.pathname.startsWith('/api/'))return;
   if(!['GET','HEAD','OPTIONS'].includes(request.method()))writes.push({method:request.method(),path:u.pathname,body:request.postData()});
   if(request.method()!=='GET')return;const started=performance.now();
   if(invalidArmed&&request.url()===queueURL){invalidRequest=request;invalidArmed=false;}
   const row:Read={request,started,deadline:started+10_000,owned:Promise.resolve(),failed:false};reads.push(row);
-  row.owned=(async()=>{const response=await handoffWithin(request.response(),row.deadline,'original UI GET response');expect(response).not.toBeNull();const invalid=request===invalidRequest;
+  if(u.pathname.startsWith('/api/dataset/thumbnail/')&&request.frame()===page.mainFrame()&&request.resourceType()==='fetch'){let resolve:(kind:'failed'|'finished')=>void=()=>{};const ended=new Promise<'failed'|'finished'>(done=>{resolve=done;});thumbnailEnds.set(request,{ended,resolve});}
+  const end=thumbnailEnds.get(request);
+  row.owned=(async()=>{
+   if(end&&await handoffWithin(end.ended,row.deadline,'original gallery thumbnail end event')==='failed'){const failure=request.failure()?.errorText??'';
+    expect(failure).toMatch(/ERR_ABORTED|aborted|cancel/i);expect(request.headers()['x-vision-project']).toBe(project.id);expect(Array.from(u.searchParams.keys())).toEqual(['file_path']);
+    const file=u.searchParams.get('file_path')!;expect(inputs.map(input=>input.file)).toContain(file);expect(u.pathname).toBe('/api/dataset/thumbnail/'+path.basename(file));expect(end.at!).toBeLessThan(row.deadline);
+    const headers=await handoffWithin(request.response(),row.deadline,'retired thumbnail headers');if(headers!==null)expect([200,304]).toContain(headers.status());
+    row.retired={at:end.at!,failure,headers_status:headers?.status()??null,file_path:file};return;}
+   const response=await handoffWithin(request.response(),row.deadline,'original UI GET response');expect(response).not.toBeNull();const invalid=request===invalidRequest;
    expect(response!.status()).toBe(invalid?422:200);const bytes=await handoffWithin(response!.body(),row.deadline,'complete original UI GET body');expect(await handoffWithin(response!.finished(),row.deadline,'original UI GET finish')).toBeNull();
    if(invalid){expect(request.frame()).toBe(page.mainFrame());expect(await handoffWithin(request.headerValue('x-vision-project'),row.deadline,'own project header')).toBe(project.id);const context=await handoffWithin(request.headerValue('x-vision-context'),row.deadline,'own context header');expect(context).not.toBeNull();expect(JSON.parse(context!).project_id).toBe(project.id);expect(JSON.parse(bytes.toString('utf8'))).toEqual({detail:'Evaluation integrity failure'});expect(request.postData()).toBeNull();}
    row.status=response!.status();row.bytes=bytes;row.sha256=hash(bytes);row.finished=performance.now();expect(row.finished).toBeLessThan(row.deadline);
   })().catch(error=>{row.failed=true;row.error=error;});
  };
- const settle=async()=>{for(const r of reads){await r.owned;if(r.failed)throw r.error;expect(r.finished).toBeDefined();}};
+ const settle=async()=>{for(const r of reads){await r.owned;if(r.failed)throw r.error;if(r.retired)continue;expect(r.finished).toBeDefined();}};
  const pageError=(error:Error)=>pageErrors.push(error.message),consoleError=(message:{type():string;text():string;location():{url:string}})=>{if(message.type()==='error')consoleErrors.push({text:message.text(),url:message.location().url});};
  const responseError=(response:import('@playwright/test').Response)=>{if(response.status()>=400)non2xx.push({request:response.request(),status:response.status(),url:response.url()});};
  const panel=page.getByRole('region',{name:'저장된 검토 큐',exact:true}),choice=panel.getByRole('combobox',{name:'저장 검토 큐 선택',exact:true}),open=panel.getByRole('button',{name:'현재 항목 열기',exact:true});
@@ -88,7 +105,7 @@ test('saved queue open refuses an actual invalid owned evaluation record without
  let plannedInvalidBytes:Buffer|undefined;let mutationAttempted=false,restored=false,completed=false,failed=false,primary:unknown,proof:unknown;const secondary:Array<{stage:string;error:string}>=[];
  const retain=(stage:string,error:unknown)=>{if(!failed){failed=true;primary=error;}else secondary.push({stage,error:String(error)});};
  const compareExceptOwnedReport=(original:ReturnType<typeof snapshot>,current:ReturnType<typeof snapshot>)=>{expect(current.source).toEqual(original.source);expect(Object.keys(current.project)).toEqual(Object.keys(original.project));for(const key of Object.keys(original.project))if(key!==reportRelative)expect(current.project[key]).toEqual(original.project[key]);};
- page.on('request',observe);page.on('pageerror',pageError);page.on('console',consoleError);page.on('response',responseError);
+ page.on('requestfailed',thumbnailFailed);page.on('requestfinished',thumbnailFinished);page.on('request',observe);page.on('pageerror',pageError);page.on('console',consoleError);page.on('response',responseError);
  try{
   const startupDeadline=performance.now()+10_000;await handoffWithin(page.goto(renderer.url),startupDeadline,'original document mount');await handoffWithin(expect(page.getByTitle('프로젝트 관리',{exact:true})).toContainText(project.name),startupDeadline,'own project title');
   await page.getByRole('navigation',{name:'Workflow Stages'}).getByRole('button').nth(1).click();const focus=page.getByRole('button',{name:'집중 편집',exact:true});if(await focus.getAttribute('aria-pressed')==='true')await focus.click();
@@ -112,7 +129,7 @@ test('saved queue open refuses an actual invalid owned evaluation record without
   await expect(choice).toHaveValue(queue.id);await expect(panel).toContainText('검토 진행 0 / 3');await expect(open).toBeEnabled();expect(await remembered()).toEqual(rememberedBefore);expect(snapshot()).toEqual(invalidBaseline);expect(writes).toEqual([]);expect(pageErrors).toEqual([]);
   expect(non2xx).toHaveLength(1);expect(non2xx[0]).toEqual({request:invalidRequest,status:422,url:queueURL});expect(consoleErrors).toEqual([{text:'Failed to load resource: the server responded with a status of 422 (Unprocessable Entity)',url:queueURL}]);
   await evidence.screenshot(page,'browser-queue-real-invalid-origin422-selected-queue-unchanged');
-  proof={schema:'modu-vision.U015-saved-queue-open-invalid/v1',cells:['U015.saved-queue-open.invalid'],own_project:project,source,controlled_fixture:fixture,selected_queue:queue,remembered_before:rememberedBefore,remembered_after:await remembered(),actual_request:{method:invalidRequest!.method(),url:invalidRequest!.url(),body:invalidRequest!.postData(),main_frame:invalidRequest!.frame()===page.mainFrame()},actual_response:{status:actual[0].status,bytes:actual[0].bytes!.length,sha256:actual[0].sha256,body:JSON.parse(actual[0].bytes!.toString('utf8')),started:actual[0].started,deadline:actual[0].deadline,finished:actual[0].finished},one_owned_report_mutation:{path:fixture.path,original_evidence_copy:originalEvidence,offset,original_sha256:originOriginal.sha256,invalid_sha256:originInvalid.sha256,original_raw9:originOriginal.raw9,invalid_raw9:originInvalid.raw9,only_field:'evidence_sha256',same_length_same_inode_mode_owner_nlink:true},original_project_and_source:before,invalid_baseline:invalidBaseline,after_click:snapshot(),after_baseline_nonGET_requests:writes,expected_real_backend_HTTP422:true,controlled_HTTP_response_or_abort:false,no_page_route_or_fulfill:true,backend_rejects_actual_fixture_file_integrity:true,no_cancel_or_other_passed_cell_credit:true};completed=true;
+  proof={schema:'modu-vision.U015-saved-queue-open-invalid/v1',cells:['U015.saved-queue-open.invalid'],own_project:project,source,controlled_fixture:fixture,selected_queue:queue,remembered_before:rememberedBefore,remembered_after:await remembered(),actual_request:{method:invalidRequest!.method(),url:invalidRequest!.url(),body:invalidRequest!.postData(),main_frame:invalidRequest!.frame()===page.mainFrame()},actual_response:{status:actual[0].status,bytes:actual[0].bytes!.length,sha256:actual[0].sha256,body:JSON.parse(actual[0].bytes!.toString('utf8')),started:actual[0].started,deadline:actual[0].deadline,finished:actual[0].finished},one_owned_report_mutation:{path:fixture.path,original_evidence_copy:originalEvidence,offset,original_sha256:originOriginal.sha256,invalid_sha256:originInvalid.sha256,original_raw9:originOriginal.raw9,invalid_raw9:originInvalid.raw9,only_field:'evidence_sha256',same_length_same_inode_mode_owner_nlink:true},original_project_and_source:before,invalid_baseline:invalidBaseline,after_click:snapshot(),after_baseline_nonGET_requests:writes,expected_real_backend_HTTP422:true,controlled_HTTP_response_or_abort:false,no_page_route_or_fulfill:true,backend_rejects_actual_fixture_file_integrity:true,no_cancel_or_other_passed_cell_credit:true,retired_gallery_thumbnail_reads:reads.filter(r=>r.retired).map(r=>({url:r.request.url(),started:r.started,deadline:r.deadline,resource_type:r.request.resourceType(),...r.retired}))};completed=true;
  }catch(error){retain('scenario',error);}finally{
   try{await settle();}catch(error){retain('owned original GET closure',error);}
   // Restore only the one owned byte even on an assertion failure. Metadata
@@ -123,8 +140,8 @@ test('saved queue open refuses an actual invalid owned evaluation record without
     if(before)compareExceptOwnedReport(before,snapshot());evidence.note('queue_invalid_owned_report_restoration',{path:fixture.path,original_sha256:originOriginal.sha256,restored_sha256:final.sha256,original_raw9:originOriginal.raw9,restored_raw9:final.raw9,body_exact:true,mtime_ctime_not_reset_or_claimed_unchanged:true});
    }catch(error){retain('exact owned report body restoration',error);}}
   if(restored&&baselineState){try{expect(await state()).toEqual(baselineState);expect(await remembered()).toEqual(rememberedBefore);expect(writes).toEqual([]);}catch(error){retain('restored original API bodies and selection',error);}}
-  try{page.off('request',observe);page.off('pageerror',pageError);page.off('console',consoleError);page.off('response',responseError);expect(custody.opened).toBe(custody.closed);expect(custody.uncertain).toEqual([]);}catch(error){retain('owned observer and FD closure',error);}
-  evidence.note('queue_open_invalid_progress',{proof,completed,restored,FDs:custody,read_ledger:reads.map(r=>({url:r.request.url(),method:r.request.method(),started:r.started,deadline:r.deadline,status:r.status,sha256:r.sha256,finished:r.finished,failure:r.failed?String(r.error):null})),writes,page_errors:pageErrors,console_errors:consoleErrors,non2xx:non2xx.map(r=>({url:r.url,status:r.status,owning_invalid:r.request===invalidRequest})),first_exception:failed?String(primary):null,secondary,controlled_saved_reports_not_inference:true,product_source_or_existing_tests_changed:false,cancel_or_native_or_installed_or_parent_acceptance:false});
+  try{page.off('request',observe);page.off('requestfailed',thumbnailFailed);page.off('requestfinished',thumbnailFinished);page.off('pageerror',pageError);page.off('console',consoleError);page.off('response',responseError);expect(custody.opened).toBe(custody.closed);expect(custody.uncertain).toEqual([]);}catch(error){retain('owned observer and FD closure',error);}
+  evidence.note('queue_open_invalid_progress',{proof,completed,restored,FDs:custody,read_ledger:reads.map(r=>({url:r.request.url(),method:r.request.method(),started:r.started,deadline:r.deadline,status:r.status,sha256:r.sha256,finished:r.finished,failure:r.failed?String(r.error):null,retired_gallery_thumbnail_read:r.retired??null})),writes,page_errors:pageErrors,console_errors:consoleErrors,non2xx:non2xx.map(r=>({url:r.url,status:r.status,owning_invalid:r.request===invalidRequest})),first_exception:failed?String(primary):null,secondary,controlled_saved_reports_not_inference:true,product_source_or_existing_tests_changed:false,cancel_or_native_or_installed_or_parent_acceptance:false});
  }
  if(failed)throw primary;expect(completed).toBe(true);expect(restored).toBe(true);
 });

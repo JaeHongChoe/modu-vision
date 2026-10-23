@@ -44,6 +44,13 @@ interface DatasetState {
   isSplitting: boolean;
   showGeneratorModal: boolean;
   corruptedImages: any[];
+  /** Undecodable images the import kept out of the inventory, splits and training (source files untouched). */
+  excludedUndecodable: { excluded: string[]; restored: string[]; recorded: boolean } | null;
+  /** Where the split counts come from: saved, source train/val/test folders, automatic (not saved) or stale. */
+  splitState: 'saved' | 'source_folders' | 'automatic' | 'stale' | null;
+  /** Detection/segmentation folder with no labels yet, and the layout this task expects. */
+  labelsMissing: boolean;
+  expectedLayout: string;
   /** What the quick inspection decoded; null when it was not requested or the backend predates the field. */
   quickValidation: DatasetQuickValidation | null;
 
@@ -92,6 +99,11 @@ function importErrorMessage(error: unknown, fallback = 'Dataset import failed'):
   if (error instanceof Error) return error.message;
   if (typeof error === 'string') return error;
   if (error && typeof error === 'object') {
+    // A layout mismatch names the layout the task expects in Korean; the loader's own message is the technical detail.
+    const record = error as Record<string, unknown>;
+    if (record.error_code === 'ERR_DATA_LAYOUT' && typeof record.message_ko === 'string') {
+      return typeof record.details === 'string' && record.details ? `${record.message_ko} (기술 상세: ${record.details})` : record.message_ko;
+    }
     for (const key of ['details', 'message_ko', 'detail', 'message']) {
       const value = (error as Record<string, unknown>)[key];
       if (typeof value === 'string' && value) return value;
@@ -135,6 +147,10 @@ export const useDatasetStore = create<DatasetState>((set, get) => ({
   isSplitting: false,
   showGeneratorModal: false,
   corruptedImages: [],
+  excludedUndecodable: null,
+  splitState: null,
+  labelsMissing: false,
+  expectedLayout: '',
   quickValidation: null,
 
   setFolderPath: (folderPath) => {
@@ -148,7 +164,7 @@ export const useDatasetStore = create<DatasetState>((set, get) => ({
       splitSupported: null, splitUnavailableReason: null,
       totalImages: 0, sourceImages: 0, unlabeledImages: 0,
       classes: {}, classCountUnit: null, classSplitCounts: null, split: { train: 0, val: 0, test: 0 },
-      images: [], totalImagesCount: 0, corruptedImages: [], quickValidation: null,
+      images: [], totalImagesCount: 0, corruptedImages: [], excludedUndecodable: null, splitState: null, labelsMissing: false, expectedLayout: '', quickValidation: null,
       activeSplitFilter: 'all', activeClassFilter: null, activeLabelFilter: 'all', page: 1, isLoading: false, isSplitting: false,
     });
   },
@@ -202,7 +218,7 @@ export const useDatasetStore = create<DatasetState>((set, get) => ({
       folderPath: folder, hasSelectedFolder: true, datasetKey: key, sourceAuthority: null, importError: null, sourceSaveError: null, splitError: null,
       splitSupported: null, splitUnavailableReason: null,
       images: [], totalImagesCount: 0, totalImages: 0,
-      sourceImages: 0, unlabeledImages: 0, classes: {}, classCountUnit: null, classSplitCounts: null, corruptedImages: [], quickValidation: null,
+      sourceImages: 0, unlabeledImages: 0, classes: {}, classCountUnit: null, classSplitCounts: null, corruptedImages: [], excludedUndecodable: null, splitState: null, labelsMissing: false, expectedLayout: '', quickValidation: null,
       split: { train: 0, val: 0, test: 0 },
       activeSplitFilter: 'all', activeClassFilter: null, activeLabelFilter: 'all', page: 1, isLoading: true, isSplitting: false,
     });
@@ -267,6 +283,10 @@ export const useDatasetStore = create<DatasetState>((set, get) => ({
           test: res.split.test || 0,
         },
         corruptedImages: res.corrupted_images || [],
+        excludedUndecodable: res.excluded_undecodable ?? null,
+        splitState: res.split_state ?? null,
+        labelsMissing: Boolean(res.labels_missing),
+        expectedLayout: res.expected_layout ?? '',
         quickValidation: res.validation ?? null,
         lastImportedKey: key,
         page: 1,
@@ -354,8 +374,20 @@ export const useDatasetStore = create<DatasetState>((set, get) => ({
         isSplitting: false,
         trainRatio: ratio,
         split: res.split,
+        splitState: 'saved',
         classSplitCounts: null,
       });
+      // The folder may have changed since it was imported (images added or removed): read the counts again so the
+      // screen shows the images the saved split actually covers.
+      if (folderPath && task) {
+        try {
+          const fresh = await api.dataset.import({ folder_path: folderPath, task, validate_images: false });
+          if (current()) set({ totalImages: fresh.total_images, sourceImages: fresh.source_images ?? fresh.total_images,
+            classes: fresh.classes || {}, split: { train: fresh.split.train, val: fresh.split.val, test: fresh.split.test || 0 },
+            splitState: fresh.split_state ?? 'saved' });
+        } catch { /* the split itself is saved; the next import refreshes the counts */ }
+      }
+      if (!current()) return;
       await get().loadImages(1);
     } catch (err) {
       if (!current()) return;
@@ -393,6 +425,8 @@ export const useDatasetStore = create<DatasetState>((set, get) => ({
         classes: res.classes || {},
         classCountUnit: task === 'detection' ? 'objects' : 'images',
         split: { train: res.split.train, val: res.split.val, test: res.split.test || 0 },
+        splitState: res.split_state ?? get().splitState,
+        labelsMissing: Boolean(res.labels_missing),
         importError: null,
         page: 1,
       });

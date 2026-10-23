@@ -155,7 +155,7 @@ def test_flowchart_pipeline_lifecycle(client, monkeypatch, tmp_path, test_image)
     inspection_image.write_bytes(test_image.read_bytes())
     run_resp = client.post("/api/flowchart/run", json={"pipeline": pipeline, "image_path": str(inspection_image)})
     assert run_resp.status_code == 409
-    assert "Model job is missing" in run_resp.json()["detail"]
+    assert "Model job is missing" in run_resp.json()["detail"] or "모델이 연결되어 있지 않습니다" in run_resp.json()["detail"]
 
 
 def test_export_runtime_package(client):

@@ -17,7 +17,9 @@ test('S2-01: a first start guides the order and builds the example end to end on
   const guide = page.getByRole('dialog', { name: '처음 시작하기' });
   await expect(guide).toBeVisible({ timeout: 60_000 });
   const order = guide.locator('ol').first();
-  for (const item of ['작업 방식', '이 컴퓨터·서버 사전 점검', '프로젝트 만들기', '데이터 가져오기']) await expect(order.getByText(item, { exact: true })).toBeVisible();
+  // The first-project path a beginner acts in (product direction 5.1 #2), the same order the example walks.
+  const items = await order.getByRole('listitem').allInnerTexts();
+  expect(items.map(text => text.split(' · ')[0].trim())).toEqual(['작업 방식', '프로젝트 만들기', '이미지 폴더 열기', '라벨 달기·초안 검토', '학습 시작', '평가', '검사 흐름 저장', '검사 실행']);
   await expect(guide.getByText(/실제 공정의 품질 승인이나 배포 근거로 쓸 수 없습니다/)).toBeVisible();
   await evidence.screenshot(page, 's201-01-guide');
 

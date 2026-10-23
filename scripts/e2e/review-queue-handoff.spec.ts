@@ -16,7 +16,7 @@ async function canvasSourceCentres(page:Page,rasterPan={x:0,y:0}){
  return page.locator('[data-canvas-container]').evaluate((container,rasterPan)=>{
   const canvas=container.querySelector('canvas'),hud=document.querySelector('[data-testid="canvas-hud"]') as HTMLElement|null;
   const rect=container.getBoundingClientRect(),dpr=window.devicePixelRatio||1;
-  const scale=Number(hud?.innerText.match(/scale\s*([\d.]+)\s*%/)?.[1]||0)/100;
+  const scale=Number(hud?.innerText.match(/배율\s*([\d.]+)\s*%/)?.[1]||0)/100;
   if(!canvas||!scale)return null;
   const ctx=canvas.getContext('2d');if(!ctx)return null;
   const x0=(rect.width-64*scale)/2+rasterPan.x,y0=(rect.height-64*scale)/2+rasterPan.y;
@@ -73,7 +73,7 @@ async function exercise(page:Page,w:Workspace,e:Evidence,api:Api,native:boolean,
  const remainingCanvas=()=>{const remaining=canvasDeadline-Date.now();expect(remaining).toBeGreaterThan(0);return remaining;};
  await expect.poll(async()=>{const probe=await canvasSourceCentres(page);return probe?.pixels.every((value,index)=>index%4===2?value===100:index%4===3?value===255:true)||false;},{timeout:remainingCanvas()}).toBe(true);
  await page.getByTitle('바운딩 박스 (BBox - 2)',{exact:true}).click();
- await page.getByTitle('100% Zoom (1:1)',{exact:true}).click();await expect(page.getByTestId('canvas-hud')).toContainText('100%');
+ await page.getByTitle('실제 크기 (1:1)',{exact:true}).click();await expect(page.getByTestId('canvas-hud')).toContainText('100%');
  const beforeAlignment=await canvasSourceCentres(page);expect(beforeAlignment).not.toBeNull();
  const rasterPan=canvasRasterAlignment(beforeAlignment!),panBounds=(await page.locator('[data-canvas-container]').boundingBox())!;
  expect(panBounds.width).toBe(beforeAlignment!.css_width);expect(panBounds.height).toBe(beforeAlignment!.css_height);
@@ -86,10 +86,10 @@ async function exercise(page:Page,w:Workspace,e:Evidence,api:Api,native:boolean,
  const bounds=(await page.locator('[data-canvas-container]').boundingBox())!;
  expect(bounds.width).toBe(canvasMapping!.css_width);expect(bounds.height).toBe(canvasMapping!.css_height);
  const pt=(v:number)=>({x:bounds.x+canvasMapping!.offset_x+v,y:bounds.y+canvasMapping!.offset_y+v});const a=pt(10),b=pt(30);
- await page.mouse.move(a.x,a.y);await page.mouse.down();await page.mouse.move(b.x,b.y,{steps:6});await page.mouse.up();await expect(page.getByRole('button',{name:'Save Changes',exact:true})).toBeVisible();await page.getByRole('button',{name:'집중 편집',exact:true}).click();await page.locator('summary').filter({hasText:'저장 검토 큐 · 오류·불일치·임계값 우선'}).click();await expect(choice).toHaveValue(first.id);
+ await page.mouse.move(a.x,a.y);await page.mouse.down();await page.mouse.move(b.x,b.y,{steps:6});await page.mouse.up();await expect(page.getByRole('button',{name:'변경 저장',exact:true})).toBeVisible();await page.getByRole('button',{name:'집중 편집',exact:true}).click();await page.locator('summary').filter({hasText:'저장 검토 큐 · 오류·불일치·임계값 우선'}).click();await expect(choice).toHaveValue(first.id);
  const review=panel.getByRole('button',{name:'검토 완료 · 다음',exact:true}),skip=panel.getByRole('button',{name:'보류 · 다음',exact:true}),prepare=panel.getByRole('button',{name:'수정·검수 데이터로 학습 준비',exact:true});
  await expect(review).toBeDisabled();await expect(skip).toBeDisabled();await expect(prepare).toBeDisabled();expect(await api('/api/data-workbench/review-queues/'+first.id)).toEqual(first);await e.screenshot(page,`${native?'native':'browser'}-queue-unsaved-guards`);
- response=page.waitForResponse(r=>new URL(r.url()).pathname==='/api/annotations/save'&&r.request().method()==='POST');await page.getByRole('button',{name:'Save Changes',exact:true}).click();expect((await response).status()).toBe(200);await expect(prepare).toBeEnabled();
+ response=page.waitForResponse(r=>new URL(r.url()).pathname==='/api/annotations/save'&&r.request().method()==='POST');await page.getByRole('button',{name:'변경 저장',exact:true}).click();expect((await response).status()).toBe(200);await expect(prepare).toBeEnabled();
  const saved=await api('/api/annotations/error?file_path='+encodeURIComponent(inputs[0].file));expect(saved.annotations).toHaveLength(1);expect(saved.annotations[0].bbox).toEqual([10,10,30,30]);expect(saved.metadata.workflow_state).not.toBe('approved');
  await api('/api/team-data/settings',{expected_revision:1,actor:'owned-functional-fixture',changes:{review_enabled:true,approved_only_training:true}},'PUT');
  const blocked=await api('/api/team-data/readiness');expect(blocked.ready).toBe(false);expect(blocked.counts.eligible).toBe(0);await prepare.click();await expect(panel.getByRole('alert')).toContainText('학습에 사용할 이미지가 없습니다.');await expect(panel).toBeVisible();

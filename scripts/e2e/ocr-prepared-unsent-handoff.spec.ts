@@ -42,21 +42,22 @@ const harness=require('./fixtures/harness.cjs');
 const UI_SOURCE={
  "src/renderer/components/training/OCRWorkbench.tsx": "769a2316ba1770bccd1c6c78987d99ee779ddf64d82f4c080ad5280924e51125",
  "backend/api/routes_ocr.py": "f3a3c76fdf6789e13239c4f980fdd677aaa811e94e55c4151165b2e7f99fcc29",
- "src/renderer/services/api.ts": "ba82fc801fb827ab16b453ee4722ede933a641177be9994f6666f82965bc472e",
+ "src/renderer/services/api.ts": "423fa0e2486121dc0aab0e73e6c48e8444b404a179a0e1e3cdcc67c675c149e6",
  "backend/engine/prepared_family_datasets.py": "656b31e84535da564ea3325b5d88f95414951ec7bf30c58970c72c9645b0f53d",
  "src/renderer/components/training/ProjectImagePicker.tsx": "96d972f0a2afc0791b0c7b68365c36ce65c4c6527e29af509a12cd88e73b9522",
- "src/renderer/components/training/TrainingPreparationPanel.tsx": "a277c3211e69335627a40c99a8f1761d7bd71c470ec101cdcb64e53705c16c91",
+ "src/renderer/components/training/TrainingPreparationPanel.tsx": "2b8fd81f3188d4fcda2add4e1bb32b2c31a681c4b9c7257193c00823ee968262",
  "src/renderer/components/training/useSpecializedTraining.ts": "d0291891ab24c05a5078429c909be256565dd88e49424e9f736c819101f7c25e",
  "src/renderer/components/training/TrainingRuntimeSettings.tsx": "d9f6ad8b79c0a6639521ab4d2b9f3efc76a3d5962222666e8a8f03da86009080",
- "src/renderer/stores/useProjectStore.ts": "3eca2fbca3e3a5cd528dee9f80f87fe4b126d52392b9b7bdececc5b0e48453c3",
- "src/renderer/components/training/TeamTrainingReadiness.tsx": "09d60b30478f906a1c92a514fb71d5727146e3ff1fdc90e04cb9861f12444b92",
+ "src/renderer/stores/useProjectStore.ts": "e8b9619b256664d7a4dfb53ae137865adea3bb62a5dd6c0e7becca2ea8e78647",
+ "src/renderer/components/training/TeamTrainingReadiness.tsx": "f835409d64acd7972b6253b94c280793e1bc47b00decc6b47d8fcd498c1ea984",
  "src/renderer/components/training/WarmStartSelector.tsx": "e5817228ee17f5b4e2e07f9f8fb43293f636a2cb51a51dbfc15720c16665007f",
  "backend/engine/ocr.py": "1e42167362e251c567f0e5c66a7a678f1907f98df46302fcfa0a638c8a803fd1",
- "backend/api/routes_dataset.py": "7a4bcea5d2aed6cee0f61d6a0d5c8a09e048dcc38e644d83c1c301ac59c7e801",
+ "backend/api/routes_dataset.py": "61e6b74c95534a77fe1b7a423aca577e92765202bffd6cd17240cc69d6a1546e",
  "src/renderer/components/training/modelAdapterRecipes.ts": "b5423202cb00e407e477053c7f081ea072754e27e028f97e029fb8fb04dd298b",
  "src/renderer/components/training/ProgramWorkbenchControls.tsx": "f982a95aefdd2b5360bedefbe4703e80bdd81d18e3a24e5cbcbc9297a2b95a51"
 } as const;
-type OCREmptyWire={request:SplitControlRequest;deadline:number;complete:boolean;status?:number;sha256?:string;body?:unknown;request_context?:unknown;response_context?:unknown;expected_refusal?:string;failure?:string};
+type OCREmptyWire={request:SplitControlRequest;deadline:number;complete:boolean;status?:number;sha256?:string;body?:unknown;request_context?:unknown;response_context?:unknown;expected_refusal?:string;failure?:string;retired_gallery_read?:boolean;retired?:OCRRetiredThumbnail};
+type OCRRetiredThumbnail={failure:string;headers_status:number|null;owner_project_id:string;file_path:string;resource_type:string;request_context:unknown;response_context:unknown};
 type OCROwnedThumbScope={source:string;images:Array<{image:string;sha256:string}>;project:{id:string}};
 async function ocrOwnedThumbnail(page:Page,response:import('@playwright/test').Response,request:SplitControlRequest,deadline:number,origin:string,scopes:OCROwnedThumbScope[],contexts:Map<string,unknown>,custody:SplitControlCustody){
  const u=new URL(request.url());expect(request.method()).toBe('GET');expect(u.origin).toBe(origin);expect(Array.from(u.searchParams.keys()).sort()).toEqual(['file_path']);
@@ -65,13 +66,42 @@ async function ocrOwnedThumbnail(page:Page,response:import('@playwright/test').R
  const rh=request.headers(),sh=response.headers(),requestContext=rh['x-vision-context']===undefined?null:JSON.parse(rh['x-vision-context']);if(rh['x-vision-project']!==undefined)expect(rh['x-vision-project']).toBe(scope.project.id);if(requestContext!==null)expect(requestContext).toEqual(contexts.get(scope.project.id));
  expect(sh['x-vision-context']).toBeDefined();const responseContext=JSON.parse(sh['x-vision-context']);expect(responseContext).toEqual(contexts.get(scope.project.id));expect(responseContext.project_id).toBe(scope.project.id);
  const sourcePin=splitControlFile(file,custody);expect(sourcePin.sha256).toBe(image.sha256);expect(sourcePin.bytes.subarray(0,8).toString('hex')).toBe('89504e470d0a1a0a');expect([sourcePin.bytes.readUInt32BE(16),sourcePin.bytes.readUInt32BE(20)]).toEqual([256,256]);
- expect(response.status()).toBe(200);expect(sh['content-type']).toBe('image/jpeg');const bytes=await splitControlWithin(response.body(),deadline,'whole owning JPEG thumbnail body');expect(bytes.length).toBeGreaterThan(0);if(sh['content-length']!==undefined)expect(sh['content-length']).toBe(String(bytes.length));expect(bytes.subarray(0,2).toString('hex')).toBe('ffd8');expect(bytes.subarray(-2).toString('hex')).toBe('ffd9');expect(await splitControlWithin(response.finished(),deadline,'owning JPEG HTTP completion')).toBeNull();
+ const revalidated=response.status()===304;if(!revalidated){expect(response.status()).toBe(200);expect(sh['content-type']).toBe('image/jpeg');}let bytes=revalidated?Buffer.alloc(0):await splitControlWithin(response.body(),deadline,'whole owning JPEG thumbnail body');if(bytes.length===0){/* A 304 is the browser revalidating a thumbnail it already holds (the server sends an ETag); it has no body, so it is read again below like an empty body. *//* The app reads gallery thumbnails with fetch and keeps a Blob (6dd4c1f); the browser then retains no body for the test. The same URL is read once more from inside the page with the same context headers, so it carries the app's own credentials (Electron adds its token only to the window's requests, never to the test's request context, F-22), and that answer is checked in full below. */const again=await splitControlWithin(page.evaluate(async ({url,headers})=>{const reply=await fetch(url,{headers,cache:'no-store'});return {status:reply.status,type:reply.headers.get('content-type'),context:reply.headers.get('x-vision-context'),bytes:Array.from(new Uint8Array(await reply.arrayBuffer()))};},{url:request.url(),headers:Object.fromEntries(Object.entries(request.headers()).filter(([key])=>key.startsWith('x-vision-')))}),deadline,'owning JPEG thumbnail re-read');expect(again.status).toBe(200);expect(again.type).toBe('image/jpeg');if(sh['x-vision-context']!==undefined)expect(JSON.parse(again.context!)).toEqual(JSON.parse(sh['x-vision-context']));bytes=Buffer.from(again.bytes);}expect(bytes.length).toBeGreaterThan(0);if(!revalidated&&sh['content-length']!==undefined)expect(sh['content-length']).toBe(String(bytes.length));expect(bytes.subarray(0,2).toString('hex')).toBe('ffd8');expect(bytes.subarray(-2).toString('hex')).toBe('ffd9');expect(await splitControlWithin(response.finished(),deadline,'owning JPEG HTTP completion')).toBeNull();
  const decoded=await splitControlWithin(page.evaluate(async data=>{let bitmap:ImageBitmap|undefined,result:{width:number;height:number;bitmap_closed:boolean}|undefined,failed=false,primary:unknown;
   try{bitmap=await createImageBitmap(new Blob([new Uint8Array(data)],{type:'image/jpeg'}));result={width:bitmap.width,height:bitmap.height,bitmap_closed:false};}catch(cause){failed=true;primary=cause;}
   finally{if(bitmap!==undefined){const owned=bitmap;bitmap=undefined;try{owned.close();if(result)result.bitmap_closed=true;}catch(cause){if(!failed){failed=true;primary=cause;}else if(primary instanceof Error)primary.message+='; owned bitmap close failed: '+String(cause);}}}
   if(failed)throw primary;return result!;
  },Array.from(bytes)),deadline,'full owning JPEG decode and bitmap closure');expect(decoded).toEqual({width:128,height:128,bitmap_closed:true});expect(splitControlFile(file,custody)).toEqual(sourcePin);
  return {status:200,sha256:hash(bytes),body:{kind:'owning_binary_thumbnail',media_type:'image/jpeg',byte_length:bytes.length,whole_body_sha256:hash(bytes),decoded,default_size:128,source_geometry:{width:256,height:256},file_path:file,source_image_sha256:sourcePin.sha256,source_raw9:sourcePin.raw,query:Object.fromEntries(u.searchParams.entries()),owner_project_id:scope.project.id,request_context:requestContext,response_context:responseContext,response_finished:null,no_JSON_decode:true,no_cache_status_exception:true}};
+}
+// Step 1's gallery retires its own in-flight thumbnail reads when the page leaves the step or the project
+// (ScopedDatasetThumbnail aborts them, 6dd4c1f), before or after their headers. After the headers the browser keeps no
+// body, so response.body() fails ("No data found for resource") or finished() never settles. The browser's own end
+// event decides: both listeners are attached before the request observer, so no end can be missed. Only an aborted
+// main-frame fetch GET of one of this spec's own originals is set aside, with its URL, owner, contexts and any headers
+// checked; every thumbnail that finishes, and every other GET, keeps its full status, body and completion checks.
+type OCRThumbnailEnd='failed'|'finished';
+function ocrThumbnailEnds(page:Page,origin:string){
+ const ends=new Map<SplitControlRequest,{ended:Promise<OCRThumbnailEnd>;resolve:(kind:OCRThumbnailEnd)=>void}>();
+ const end=(kind:OCRThumbnailEnd)=>(request:SplitControlRequest)=>{ends.get(request)?.resolve(kind);};const onFailed=end('failed'),onFinished=end('finished');
+ return {
+  attach:()=>{page.on('requestfailed',onFailed);page.on('requestfinished',onFinished);},
+  detach:()=>{page.off('requestfailed',onFailed);page.off('requestfinished',onFinished);},
+  track:(request:SplitControlRequest)=>{const u=new URL(request.url());if(request.method()!=='GET'||u.origin!==origin||!u.pathname.startsWith('/api/dataset/thumbnail/')||request.frame()!==page.mainFrame()||request.resourceType()!=='fetch')return;
+   let resolve:(kind:OCRThumbnailEnd)=>void=()=>{};const ended=new Promise<OCRThumbnailEnd>(done=>{resolve=done;});ends.set(request,{ended,resolve});},
+  ended:(request:SplitControlRequest)=>ends.get(request)?.ended,
+ };
+}
+async function ocrRetiredThumbnail(page:Page,request:SplitControlRequest,deadline:number,origin:string,scopes:OCROwnedThumbScope[],contexts:Map<string,unknown>):Promise<OCRRetiredThumbnail>{
+ const u=new URL(request.url());expect(request.method()).toBe('GET');expect(u.origin).toBe(origin);expect(request.frame()===page.mainFrame()).toBe(true);expect(request.resourceType()).toBe('fetch');expect(Array.from(u.searchParams.keys()).sort()).toEqual(['file_path']);
+ const matches=scopes.flatMap(scope=>scope.images.filter(image=>path.join(scope.source,image.image)===u.searchParams.get('file_path')).map(image=>({scope,image})));expect(matches).toHaveLength(1);const {scope,image}=matches[0],file=path.join(scope.source,image.image);
+ expect(u.pathname).toBe('/api/dataset/thumbnail/'+path.basename(image.image));expect(Object.fromEntries(u.searchParams.entries())).toEqual({file_path:file});expect(contexts.has(scope.project.id)).toBe(true);
+ const rh=request.headers(),requestContext=rh['x-vision-context']===undefined?null:JSON.parse(rh['x-vision-context']);if(rh['x-vision-project']!==undefined)expect(rh['x-vision-project']).toBe(scope.project.id);if(requestContext!==null)expect(requestContext).toEqual(contexts.get(scope.project.id));
+ const failure=request.failure()?.errorText??'';expect(failure).toMatch(/ERR_ABORTED|aborted|cancel/i);
+ // Headers that arrived before the abort are still the owner's: status, media type and response context are checked.
+ const headers=await splitControlWithin(request.response(),deadline,'retired owning thumbnail headers');let responseContext:unknown=null;
+ if(headers!==null){expect([200,304]).toContain(headers.status());const sh=headers.headers();if(headers.status()===200)expect(sh['content-type']).toBe('image/jpeg');expect(sh['x-vision-context']).toBeDefined();responseContext=JSON.parse(sh['x-vision-context']);expect(responseContext).toEqual(contexts.get(scope.project.id));}
+ return {failure,headers_status:headers===null?null:headers.status(),owner_project_id:scope.project.id,file_path:file,resource_type:request.resourceType(),request_context:requestContext,response_context:responseContext};
 }
 // Prepared truth ownership; abandon only an unsent draft, then inspect saved A/B/A handoff.
 async function ocrPreparedUnsentHandoffExercise(page:Page,w:Workspace,e:Evidence,api:OwnedApi,native:boolean,origin:string,url?:string){
@@ -92,13 +122,19 @@ async function ocrPreparedUnsentHandoffExercise(page:Page,w:Workspace,e:Evidence
  };
  const A=await make('A'),B=await make('B');
  const ownedContexts=new Map<string,unknown>();
+ const thumbnailEnds=ocrThumbnailEnds(page,origin);
  const reads:OCREmptyWire[]=[],writes:Array<{method:string;path:string;body:string|null}>=[],modelRequests:Array<{method:string;path:string;body:string|null}>=[];
  const observe=(request:SplitControlRequest)=>{const u=new URL(request.url());if(u.origin!==origin||!u.pathname.startsWith('/api/'))return;
-  if(request.method()==='GET')reads.push({request,deadline:performance.now()+10_000,complete:false});
+  if(request.method()==='GET'){reads.push({request,deadline:performance.now()+10_000,complete:false});thumbnailEnds.track(request);}
   else if(!['HEAD','OPTIONS'].includes(request.method())){const row={method:request.method(),path:u.pathname,body:request.postData()};writes.push(row);if(u.pathname.startsWith('/api/ocr/')||/\/(train|training|jobs|evaluate|predict)(\/|$)/.test(u.pathname))modelRequests.push(row);}
  };
  const settleOriginalReads=async()=>{for(const row of reads){if(row.complete)continue;try{
-  const response=await splitControlWithin(row.request.response(),row.deadline,'original owned empty API GET');expect(response).not.toBeNull();
+  // Step 1's gallery aborts its own thumbnail reads when the page leaves the step (6dd4c1f), before or after the
+  // headers: the browser's end event decides, and the retired read is checked and recorded, not credited.
+  const ended=thumbnailEnds.ended(row.request);
+  if(ended!==undefined&&await splitControlWithin(ended,row.deadline,'original owned thumbnail end event')==='failed'){row.retired=await ocrRetiredThumbnail(page,row.request,row.deadline,origin,[A,B],ownedContexts);row.retired_gallery_read=true;row.complete=true;continue;}
+  const response=await splitControlWithin(row.request.response(),row.deadline,'original owned empty API GET');
+  expect(response).not.toBeNull();
   const u=new URL(row.request.url()),rh=row.request.headers(),sh=response!.headers();
   row.request_context=rh['x-vision-context']===undefined?null:JSON.parse(rh['x-vision-context']);row.response_context=sh['x-vision-context']===undefined?null:JSON.parse(sh['x-vision-context']);
   if(u.pathname.startsWith('/api/dataset/thumbnail/')){
@@ -143,8 +179,8 @@ async function ocrPreparedUnsentHandoffExercise(page:Page,w:Workspace,e:Evidence
  const reopens:Array<unknown>=[];
  const readSaved=async(scope:typeof A,label:string)=>{const deadline=performance.now()+10_000,waiting=page.waitForResponse(reply=>{const u=new URL(reply.url());return reply.request().method()==='GET'&&u.origin===origin&&u.pathname==='/api/ocr/manifest'&&u.searchParams.get('dataset_path')===scope.prepared.dataset_path;},{timeout:10_000});void waiting.catch(()=>{});await splitControlWithin(ocr.getByRole('button',{name:'저장된 정답 읽기',exact:true}).click(),deadline,'real owning saved truth read');const wire=await splitControlWithin(waiting,deadline,'whole owning prepared manifest'),u=new URL(wire.url());expect(Array.from(u.searchParams.keys()).sort()).toEqual(['dataset_path']);expect(Object.fromEntries(u.searchParams.entries())).toEqual({dataset_path:scope.prepared.dataset_path});const rh=wire.request().headers(),sh=wire.headers();expect(rh['x-vision-project']).toBe(scope.project.id);expect(JSON.parse(rh['x-vision-context'])).toEqual(ownedContexts.get(scope.project.id));if(sh['x-vision-context']!==undefined)expect(JSON.parse(sh['x-vision-context'])).toEqual(ownedContexts.get(scope.project.id));const full=await splitControlBody(wire,deadline);expect(full.body).toEqual(scope.prepared);await splitControlWithin(expect(table).toHaveValue(scope.TSV),deadline,'literal whole saved truth rendered');await splitControlWithin(expect(train).toBeEnabled(),deadline,'valid saved local training enabled');expect(splitControlFile(scope.manifest,custody)).toEqual(scope.manifestPin);expect(splitControlTree(scope.prepared.dataset_path,custody)).toEqual(scope.preparedTree);reopens.push({label,project_id:scope.project.id,query:{dataset_path:scope.prepared.dataset_path},response:full,response_finished:null});return full;};
  const beforeInitialization=treeState();
- let baseline:ReturnType<typeof treeState>|undefined,proof:Record<string,unknown>|undefined,failed=false,primary:unknown,removed=false,completedAssertions=false;const secondary:string[]=[];
- page.on('request',observe);
+ let baseline:ReturnType<typeof treeState>|undefined,proof:Record<string,unknown>|undefined,failed=false,primary:unknown,removed=false,endsRemoved=false,completedAssertions=false;const secondary:string[]=[];
+ thumbnailEnds.attach();page.on('request',observe);
  try{
   await initialize(B,async()=>{if(url)await page.goto(url);else await page.reload();},'B first prepared owning initialization',true);await readSaved(B,'B initial full saved truth');await initialize(A,()=>switchProject(A),'A first prepared owning initialization',true);await readSaved(A,'A initial full saved truth');await settleOriginalReads();baseline=treeState();expect(baseline.A.source).toEqual(beforeInitialization.A.source);expect(baseline.B.source).toEqual(beforeInitialization.B.source);
   const initializationChanges:Record<string,unknown>={};for(const tag of ['A','B']as const){const prior=beforeInitialization[tag].project,current=baseline[tag].project;initializationChanges[tag]=Array.from(new Set([...Object.keys(prior),...Object.keys(current)])).sort().filter(name=>JSON.stringify(prior[name])!==JSON.stringify(current[name])).map(name=>({relative:name,before:prior[name]??null,after:current[name]??null}));}const writeStart=writes.length;expect(modelRequests).toEqual([]);
@@ -161,12 +197,13 @@ async function ocrPreparedUnsentHandoffExercise(page:Page,w:Workspace,e:Evidence
  finally{
   try{page.off('request',observe);removed=true;}catch(cause){secondary.push('request observer removal: '+String(cause));if(!failed){failed=true;primary=cause;}}
   try{await settleOriginalReads();expect(reads.every(row=>row.complete&&!row.failure)).toBe(true);}catch(cause){secondary.push('original GET closure: '+String(cause));if(!failed){failed=true;primary=cause;}}
+  try{thumbnailEnds.detach();endsRemoved=true;}catch(cause){secondary.push('thumbnail end observer removal: '+String(cause));if(!failed){failed=true;primary=cause;}}
   if(baseline!==undefined){try{expect(treeState()).toEqual(baseline);}catch(cause){secondary.push('final full target tree: '+String(cause));if(!failed){failed=true;primary=cause;}}}
   try{expect(sourceState()).toEqual(sourceBefore);}catch(cause){secondary.push('final exact UI_SOURCE custody: '+String(cause));if(!failed){failed=true;primary=cause;}}
   try{expect(custody.opened).toBe(custody.closed);expect(custody.uncertain).toEqual([]);}catch(cause){secondary.push('owned FD closure: '+String(cause));if(!failed){failed=true;primary=cause;}}
-  try{e.note('ocr_prepared_unsent_handoff_closure',{first_exception:failed?String(primary):null,secondary,all_owned_FDs_closed:custody.opened===custody.closed&&custody.uncertain.length===0,FD_ledger:custody,request_observer_removed:removed,all_original_GETs_complete:reads.every(row=>row.complete&&!row.failure),actual_success_assertions_completed:completedAssertions});}catch(cause){secondary.push('closure receipt: '+String(cause));if(!failed){failed=true;primary=cause;}}
+  try{e.note('ocr_prepared_unsent_handoff_closure',{first_exception:failed?String(primary):null,secondary,all_owned_FDs_closed:custody.opened===custody.closed&&custody.uncertain.length===0,FD_ledger:custody,request_observer_removed:removed,thumbnail_end_observer_removed:endsRemoved,all_original_GETs_complete:reads.every(row=>row.complete&&!row.failure),retired_gallery_thumbnail_reads:reads.filter(row=>row.retired_gallery_read===true).map(row=>({url:row.request.url(),...row.retired})),actual_success_assertions_completed:completedAssertions});}catch(cause){secondary.push('closure receipt: '+String(cause));if(!failed){failed=true;primary=cause;}}
  }
- if(failed)throw primary;expect(removed).toBe(true);expect(completedAssertions).toBe(true);expect(proof).toBeTruthy();e.note('OCR_prepared_unsent_handoff',proof);
+ if(failed)throw primary;expect(removed).toBe(true);expect(endsRemoved).toBe(true);expect(completedAssertions).toBe(true);expect(proof).toBeTruthy();e.note('OCR_prepared_unsent_handoff',proof);
 }
 test('OCR unsent alphabet draft and saved alphabet split handoff preserve whole originals',async({page,request,renderer,workspace,evidence})=>{
  await installDesktopHostShim(page,renderer.port);const api:OwnedApi=async(route,body,method)=>{const response=await request.fetch(renderer.origin+route,{method:method||(body===undefined?'GET':'POST'),...(body===undefined?{}:{data:body})});expect(response.status()).toBe(200);const bytes=await response.body();return JSON.parse(bytes.toString('utf8'));};await ocrPreparedUnsentHandoffExercise(page,workspace,evidence,api,false,renderer.origin,renderer.url);

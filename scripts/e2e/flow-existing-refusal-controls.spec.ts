@@ -6,6 +6,15 @@ import type {Page} from '@playwright/test';
 import {test,expect,type Workspace,type Evidence} from './fixtures/test';
 import {installDesktopHostShim} from './fixtures/desktop-host-shim';
 import {png} from './qa/appFlow';
+
+/** Step 1's gallery reads its thumbnails itself and drops a read when the page leaves the step. A user sees the
+ *  gallery before moving on; the spec waits until every gallery thumbnail is displayed. */
+async function galleryReadsSettled(page:Page){
+ if(!(await page.getByRole('button',{name:'데이터셋 폴더 열기',exact:true}).isVisible()))return;
+ const thumbs=page.locator('button[aria-label$=" 라벨링에서 열기"] img');
+ await expect.poll(async()=>{const shown=await thumbs.count();const ready=await thumbs.and(page.locator('[data-read-state="ready"]')).count();return shown>0&&ready===shown;},{timeout:10_000}).toBe(true);
+}
+
 test.use({actionTimeout:10_000});
 type OwnedApi=(route:string,body?:unknown,method?:string)=>Promise<any>;
 const hash=(data:Buffer)=>crypto.createHash('sha256').update(data).digest('hex');
@@ -52,32 +61,32 @@ const F064_POINTERS=[
 ] as const;
 const UI_SOURCE={
  "scripts/e2e/fixtures/flow_navigation_control.py": "b5752088a03ff1640510208e15a17b3f1389295c62dadabaf2ff6511a929ee73",
- "scripts/e2e/fixtures/flow_template_control.py": "2ba50b8bcafd02905f03b19ad393496d9befb453c3bab127f0966a48848cb505",
+ "scripts/e2e/fixtures/flow_template_control.py": "81f4a1844d05021d6c4c668627a732120c11aa20e45294ba55da0bfca410572a",
  "scripts/e2e/fixtures/flow_large_dag_control.py": "6434d381ed45d68922c058544d0b515caa3d19d93d88c90028a3463a9903d871",
  "scripts/e2e/qa/appFlow.ts": "4eed3e5dad1d9d65a6b19fc9bb51a1f9b0e23911a39e7f255220bec0ce37fea2",
- "src/renderer/components/flowchart/FlowchartStudio.tsx": "b046065d152575c1bd4d9a5e95eef60c15f8c56dec7c9f758173c8566b31c0e6",
- "src/renderer/components/flowchart/FlowEditorWorkspace.tsx": "2a81b6421956520cd58648a32e458150f176e1afd38f53d05403b6075e0a36a8",
- "src/renderer/components/flowchart/FlowDraftControls.tsx": "3bd10fc68ea4ae2dc600dfad2b6c51b56d74d213f7483923107295aac303f5a8",
+ "src/renderer/components/flowchart/FlowchartStudio.tsx": "e7625af70ed352df22770a6efda444bfa811729e18fab4f81674635f1df78b64",
+ "src/renderer/components/flowchart/FlowEditorWorkspace.tsx": "e58f0b7a62572516d9ea04cbb45dafdfb104e805753e9f13a3c8f67c88210ee7",
+ "src/renderer/components/flowchart/FlowDraftControls.tsx": "fe003c308ecd62b03aea4106e86d446b7a71d008ba0486b36132e6a1b39eb02b",
  "src/renderer/components/flowchart/FlowGraphNavigator.tsx": "656832c214f41742d5bc0f66c9f8983c5fb6892cfaf3b42b48ee353f282da20a",
  "src/renderer/components/flowchart/FlowInspectorPanel.tsx": "c108ee18336c2d3cdc2accb200eb739b0a3252c7fcbd60f35902e66da06c6707",
- "src/renderer/components/flowchart/CustomNode.tsx": "c0219bf9a011c5a86c7122bd100f5e88259b425164cee6d6a3e93548482e7fad",
+ "src/renderer/components/flowchart/CustomNode.tsx": "97350539036826f52411bc8defe234d638e2c18fde5092a5f104af7557dd1828",
  "src/renderer/components/flowchart/ImagePickerModal.tsx": "0ef27d643ddc2fddd5014e2c27087116eefbc87eb5dd92c95b732a401ceb6e4e",
- "src/renderer/stores/useFlowchartStore.ts": "8fdfa3a8faadf5c5f4f1ed339334486476218ee7f4aa348d4f3093578c7665f3",
- "src/renderer/services/api.ts": "ba82fc801fb827ab16b453ee4722ede933a641177be9994f6666f82965bc472e",
+ "src/renderer/stores/useFlowchartStore.ts": "99796bbeabb039f63044a05c65a343c6d1d2b4ef6a253afcd588480a9222bb35",
+ "src/renderer/services/api.ts": "423fa0e2486121dc0aab0e73e6c48e8444b404a179a0e1e3cdcc67c675c149e6",
  "src/renderer/components/flowchart/FlowWorkspacePanel.tsx": "6e7c74ae465e6a426601de756a91a9966615195f52c1e6aa9e4691b187baa8bf",
  "src/renderer/components/flowchart/FlowChangeDialog.tsx": "2e66a530f565b8211829d1cb3507bf2d9d1e7aa7173a1a37a54de98d19230347",
  "src/renderer/components/flowchart/FlowRecipeDialog.tsx": "09418ce7091fd126a9f341fddf0acb9d30f20fe955268c71ae21f25204c935ba",
- "src/renderer/components/flowchart/flowchartGraph.ts": "6243ad045d305177de33dd638a1c3f5e02440931345479c43582ee3f6ee4d76b",
+ "src/renderer/components/flowchart/flowchartGraph.ts": "2db91b8c7d514e39a1dfbb5edf60c52c82d69b3c51aadb47e17b9cfe9e640743",
  "src/renderer/components/flowchart/flowchartViewport.ts": "65564c68bb1242e5c78767cdbc1b77596815b14ef071d68bfb96b42799e5aac1",
- "src/renderer/components/common/ImagePickerModal.tsx": "4ad3777c3152c0204afc4f2d517b056f5720e0b4d2caa90c4ab383b5c994d966",
- "backend/api/routes_flowchart.py": "ef5e056bd09d695d45e52f7e5e63f43b9337061fba1e99c48e75545d8bc31330",
+ "src/renderer/components/common/ImagePickerModal.tsx": "0a1a2bf0169bc5bfb57093348aab1fde2f7b654fd2e3bc7bef49368f73dd8fec",
+ "backend/api/routes_flowchart.py": "8f8964c35542aade10baf627341ecf5190d75f62438ddfc52fdad52706cd952a",
  "src/renderer/components/flowchart/FlowNodeDebugger.tsx": "82b81c5ceb3556f4bdc14fd7a93edbe9657a528a1af140c5755aa9e6daa83a2f",
  "src/renderer/components/flowchart/flowWorkspace.ts": "17c39a0236efa5b444fcc99751bc8db95d613071c916ecf0e3ec44ebb49253e4",
  "scripts/e2e/fixtures/remaining-project-handoff.ts": "7a7c74a2f42a5d6ad991dadc97626c1f8330f962edaf73fd461d31f9c4764904",
- "scripts/e2e/fixtures/test.ts": "49171e2d0d4d7d9559416fdb43bc7dae9394129bbc237fe4f2a4cea0a7afa480",
- "scripts/e2e/fixtures/harness.cjs": "171460c1cf1697b7a44b8f86a197d2b944928381f736f81af304412126464975",
+ "scripts/e2e/fixtures/test.ts": "7a7effa184e71c02414773308e0ea88e16cf83dfbd72d77d47046f2cfc1b8d09",
+ "scripts/e2e/fixtures/harness.cjs": "6fe3bb6411a28bc83c6da36ba0b2480b12de6b86fd08daa61d8d0e76d7dac950",
  "scripts/e2e/fixtures/desktop-host-shim.ts": "4f598862ec0e08189628c72bbb552f72bf8fd73f5a9a05b8da1d3ddf516dcfa6",
- "backend/api/routes_dataset.py": "7a4bcea5d2aed6cee0f61d6a0d5c8a09e048dcc38e644d83c1c301ac59c7e801"
+ "backend/api/routes_dataset.py": "61e6b74c95534a77fe1b7a423aca577e92765202bffd6cd17240cc69d6a1546e"
 } as const;
 const DIALOG_SOURCE={
  "src/renderer/components/flowchart/flowRecipes.ts": "56b176c1d85124b9a4c3333d543a137b1adc12592e6386c636a514a45ebac17b",
@@ -107,13 +116,14 @@ export function assertSourcePixels(raw:Buffer,blue=100){
 export function assertAnomalyImport(value:any){
  expect(value).toEqual({status:'success',total_images:2,source_images:2,unlabeled_images:0,classes:{good:2},split:{train:1,val:1,test:0},corrupted_images:[],
   validation:{requested:true,checked_images:2,complete:true,scope:'all images: every image file under the folder was decoded'},split_supported:false,
-  split_unavailable_reason:'anomaly 분할은 현재 학습 데이터에 적용되지 않습니다. 원본 데이터의 train/val/test 구성을 사용하세요. / anomaly split is not applied by the training loader; use source train/val/test folders.'});
+  split_unavailable_reason:'anomaly 분할은 현재 학습 데이터에 적용되지 않습니다. 원본 데이터의 train/val/test 구성을 사용하세요. / anomaly split is not applied by the training loader; use source train/val/test folders.',
+  excluded_undecodable:{excluded:[],restored:[],recorded:true},split_state:'source_folders',labels_missing:false,expected_layout:"train/good (정상만), test/good, test/<결함 이름> (선택: ground_truth/<결함 이름>/<이름>_mask.png), 또는 OK/ 와 NG/"});
 }
 
 type FlowReply={status:number;body:string;url:string;headers:Record<string,string>};
 type FlowApi=(route:string,body?:unknown,method?:string,headers?:Record<string,string>)=>Promise<FlowReply>;
 type FlowRead={request:SplitControlRequest;started:number;deadline:number;post_baseline:boolean;complete:boolean;pending:Promise<void>;
- status?:number;body?:unknown;sha256?:string;size?:number;request_context?:unknown;response_context?:unknown;finished?:number;failed?:boolean;failure?:unknown};
+ status?:number;body?:unknown;sha256?:string;size?:number;request_context?:unknown;response_context?:unknown;finished?:number;failed?:boolean;failure?:unknown;retired_gallery_read?:boolean;failure_text?:string};
 type OCROwnedThumbScope={source:string;images:Array<{image:string;sha256:string}>;project:{id:string}};
 async function ocrOwnedThumbnail(page:Page,response:import('@playwright/test').Response,request:SplitControlRequest,deadline:number,origin:string,scopes:OCROwnedThumbScope[],contexts:Map<string,unknown>,custody:SplitControlCustody){
  const u=new URL(request.url());expect(request.method()).toBe('GET');expect(u.origin).toBe(origin);expect(Array.from(u.searchParams.keys()).sort()).toEqual(['file_path']);
@@ -122,7 +132,7 @@ async function ocrOwnedThumbnail(page:Page,response:import('@playwright/test').R
  const rh=request.headers(),sh=response.headers(),requestContext=rh['x-vision-context']===undefined?null:JSON.parse(rh['x-vision-context']);if(rh['x-vision-project']!==undefined)expect(rh['x-vision-project']).toBe(scope.project.id);if(requestContext!==null)expect(requestContext).toEqual(contexts.get(scope.project.id));
  expect(sh['x-vision-context']).toBeDefined();const responseContext=JSON.parse(sh['x-vision-context']);expect(responseContext).toEqual(contexts.get(scope.project.id));expect(responseContext.project_id).toBe(scope.project.id);
  const sourcePin=splitControlFile(file,custody);expect(sourcePin.sha256).toBe(image.sha256);expect(sourcePin.bytes.subarray(0,8).toString('hex')).toBe('89504e470d0a1a0a');expect([sourcePin.bytes.readUInt32BE(16),sourcePin.bytes.readUInt32BE(20)]).toEqual([256,256]);
- expect(response.status()).toBe(200);expect(sh['content-type']).toBe('image/jpeg');const bytes=await splitControlWithin(response.body(),deadline,'whole owning JPEG thumbnail body');expect(bytes.length).toBeGreaterThan(0);if(sh['content-length']!==undefined)expect(sh['content-length']).toBe(String(bytes.length));expect(bytes.subarray(0,2).toString('hex')).toBe('ffd8');expect(bytes.subarray(-2).toString('hex')).toBe('ffd9');expect(await splitControlWithin(response.finished(),deadline,'owning JPEG HTTP completion')).toBeNull();
+ const revalidated=response.status()===304;if(!revalidated){expect(response.status()).toBe(200);expect(sh['content-type']).toBe('image/jpeg');}let bytes=revalidated?Buffer.alloc(0):await splitControlWithin(response.body(),deadline,'whole owning JPEG thumbnail body');if(bytes.length===0){/* A 304 is the browser revalidating a thumbnail it already holds (the server sends an ETag); it has no body, so it is read again below like an empty body. *//* The app reads gallery thumbnails with fetch and keeps a Blob (6dd4c1f); the browser then retains no body for the test. The same URL is read once more from inside the page with the same context headers, so it carries the app's own credentials (Electron adds its token only to the window's requests, never to the test's request context, F-22), and that answer is checked in full below. */const again=await splitControlWithin(page.evaluate(async ({url,headers})=>{const reply=await fetch(url,{headers,cache:'no-store'});return {status:reply.status,type:reply.headers.get('content-type'),context:reply.headers.get('x-vision-context'),bytes:Array.from(new Uint8Array(await reply.arrayBuffer()))};},{url:request.url(),headers:Object.fromEntries(Object.entries(request.headers()).filter(([key])=>key.startsWith('x-vision-')))}),deadline,'owning JPEG thumbnail re-read');expect(again.status).toBe(200);expect(again.type).toBe('image/jpeg');if(sh['x-vision-context']!==undefined)expect(JSON.parse(again.context!)).toEqual(JSON.parse(sh['x-vision-context']));bytes=Buffer.from(again.bytes);}expect(bytes.length).toBeGreaterThan(0);if(!revalidated&&sh['content-length']!==undefined)expect(sh['content-length']).toBe(String(bytes.length));expect(bytes.subarray(0,2).toString('hex')).toBe('ffd8');expect(bytes.subarray(-2).toString('hex')).toBe('ffd9');expect(await splitControlWithin(response.finished(),deadline,'owning JPEG HTTP completion')).toBeNull();
  const decoded=await splitControlWithin(page.evaluate(async data=>{let bitmap:ImageBitmap|undefined,result:{width:number;height:number;bitmap_closed:boolean}|undefined,failed=false,primary:unknown;
   try{bitmap=await createImageBitmap(new Blob([new Uint8Array(data)],{type:'image/jpeg'}));result={width:bitmap.width,height:bitmap.height,bitmap_closed:false};}catch(cause){failed=true;primary=cause;}
   finally{if(bitmap!==undefined){const owned=bitmap;bitmap=undefined;try{owned.close();if(result)result.bitmap_closed=true;}catch(cause){if(!failed){failed=true;primary=cause;}else if(primary instanceof Error)primary.message+='; owned bitmap close failed: '+String(cause);}}}
@@ -186,6 +196,21 @@ async function flowRefusalExercise(page:Page,w:Workspace,e:Evidence,api:FlowApi,
   if(request.method()!=='GET'){if(!['HEAD','OPTIONS'].includes(request.method()))writes.push({method:request.method(),url:request.url(),body:request.postData(),post_baseline:reachedBaseline});return;}
   const started=performance.now(),row:FlowRead={request,started,deadline:started+10_000,post_baseline:reachedBaseline,complete:false,pending:Promise.resolve()};reads.push(row);
   row.pending=(async()=>{try{
+   if(u.pathname.startsWith('/api/dataset/thumbnail/')&&!row.post_baseline){
+    // Step 1's gallery owns its thumbnail reads and aborts them when the page leaves the step before a body arrives
+    // (ScopedDatasetThumbnail, 6dd4c1f). Such a read is recorded as retired by the gallery; any other failure, and
+    // every thumbnail that completes, is checked in full as before.
+    // The browser's own end event decides: a response object of an aborted read may report no failure and an empty
+    // body. Both listeners are attached in the same tick the request starts, so neither event can be missed.
+    let detach=()=>{};
+    const outcome=await splitControlWithin(new Promise<'failed'|'finished'>(resolve=>{
+     const end=(kind:'failed'|'finished')=>(ended:SplitControlRequest)=>{if(ended===request){detach();resolve(kind);}};
+     const onFailed=end('failed'),onFinished=end('finished');page.on('requestfailed',onFailed);page.on('requestfinished',onFinished);
+     detach=()=>{page.off('requestfailed',onFailed);page.off('requestfinished',onFinished);};
+    }),row.deadline,'original F064 thumbnail end event').finally(()=>detach());
+    if(outcome==='failed'){const failure=request.failure()?.errorText??'';expect(failure).toMatch(/ERR_ABORTED|aborted|cancel/i);
+     row.retired_gallery_read=true;row.failure_text=failure;row.finished=performance.now();row.complete=true;return;}
+   }
    const response=await splitControlWithin(request.response(),row.deadline,'original F064 API GET response');expect(response).not.toBeNull();
    expect(request.frame()).toBe(page.mainFrame());expect(request.postData()).toBeNull();
    const rh=request.headers(),sh=response!.headers();row.request_context=rh['x-vision-context']===undefined?null:JSON.parse(rh['x-vision-context']);row.response_context=sh['x-vision-context']===undefined?null:JSON.parse(sh['x-vision-context']);
@@ -203,7 +228,7 @@ async function flowRefusalExercise(page:Page,w:Workspace,e:Evidence,api:FlowApi,
      if(u.pathname==='/api/dataset/library/images'){
       expect(u.search).toBe('?state=valid&limit=120');expect(row.status).toBe(409);expect(row.body).toEqual({detail:'No validated dataset revision is active; validate the source and accept a revision first'});
      }else{
-      expect(u.pathname).toBe('/api/evaluation/results');expect(u.search).toBe('?'+new URLSearchParams({source_dataset_path:source,source_task:'anomaly'}).toString());expect(row.status).toBe(404);expect(row.body).toEqual({detail:'No completed training job has been selected'});
+      expect(u.pathname).toBe('/api/evaluation/results');expect(u.search).toBe('?'+new URLSearchParams({source_dataset_path:source,source_task:'anomaly'}).toString());expect(row.status).toBe(404);expect(row.body).toEqual({detail:'학습을 끝낸 모델을 아직 고르지 않았습니다. 학습을 먼저 끝낸 뒤 평가할 모델을 고르세요.'});
      }
     }else if(u.pathname==='/api/project/current'){expect((row.body as any).id).toBe(project.id);expect((row.body as any).source_dataset_dir).toBe(source);}
    }
@@ -242,7 +267,7 @@ async function flowRefusalExercise(page:Page,w:Workspace,e:Evidence,api:FlowApi,
  try{
   if(url)await page.goto(url);else await page.reload();await expect(page.getByTitle('프로젝트 관리',{exact:true})).toContainText(project.name);
   await settle();const current=await readReply('/api/project/current');const rawContext=current.reply.headers['x-vision-context'];expect(rawContext).toBeDefined();expect(JSON.parse(rawContext)).toEqual(transport);contexts.set(project.id,transport);
-  await page.getByRole('navigation',{name:'Workflow Stages'}).getByRole('button').nth(4).click();await page.getByRole('tab',{name:'편집',exact:true}).click();
+  await galleryReadsSettled(page);await page.getByRole('navigation',{name:'Workflow Stages'}).getByRole('button').nth(4).click();await page.getByRole('tab',{name:'편집',exact:true}).click();
   await expect(page.getByRole('heading',{name:'검사 플로우 편집기',exact:true})).toBeVisible();await expect(page.locator('[data-flow-node-id]')).toHaveCount(5);expect(await rendered()).toEqual(expectedView);
    const quick=page.locator('details').filter({has:page.locator('summary').filter({hasText:/^빠른 노드 추가·연결·실행 자원$/})});await expect(quick).toHaveCount(1);if(await quick.getAttribute('open')===null)await quick.locator(':scope > summary').click();await clean();
    const storageState=()=>page.evaluate(()=>Object.fromEntries(Object.keys(localStorage).sort().map(key=>[key,localStorage.getItem(key)])));

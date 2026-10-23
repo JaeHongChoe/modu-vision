@@ -108,10 +108,57 @@ function rememberUserLanguage(storage: Pick<Storage, 'setItem'> | undefined, lan
   catch { /* Keep the choice for this session when persistence is unavailable. */ }
 }
 
+// Port, device and hash readouts stay behind this switch; a first-time user sees plain words by default.
+const TECHNICAL_KEY = 'modu:technical-details:v1';
+function readTechnicalDetails(storage?: Pick<Storage, 'getItem'>): boolean {
+  try { return storage?.getItem(TECHNICAL_KEY) === '1'; }
+  catch { return false; }
+}
+function rememberTechnicalDetails(storage: Pick<Storage, 'setItem'> | undefined, value: boolean): void {
+  try { storage?.setItem(TECHNICAL_KEY, value ? '1' : '0'); }
+  catch { /* Keep the choice for this session when persistence is unavailable. */ }
+}
+
+// A first-time user sees the few controls each step needs ('simple'); '모두 보기' ('full') shows every control. The
+// stored choice wins; before any choice, the page URL may carry ?view= (the e2e harness and the test Electron launch use
+// it to keep every control on screen for the existing suites).
+export type ViewMode = 'simple' | 'full';
+const VIEW_MODE_KEY = 'modu:view-mode:v1';
+export function readViewMode(storage?: Pick<Storage, 'getItem'>, search = ''): ViewMode {
+  try { const stored = storage?.getItem(VIEW_MODE_KEY); if (stored === 'simple' || stored === 'full') return stored; }
+  catch { /* fall through to the page URL */ }
+  let param: string | null = null;
+  try { param = new URLSearchParams(search).get('view'); } catch { param = null; }
+  return param === 'full' || param === 'simple' ? param : 'simple';
+}
+function rememberViewMode(storage: Pick<Storage, 'setItem'> | undefined, mode: ViewMode): void {
+  try { storage?.setItem(VIEW_MODE_KEY, mode); }
+  catch { /* Keep the choice for this session when persistence is unavailable. */ }
+}
+
+// The colour theme is a device preference: 'system' follows the OS until the user picks one.
+export type ThemeChoice = 'system' | 'light' | 'dark';
+const THEME_KEY = 'modu:theme:v1';
+function readTheme(storage?: Pick<Storage, 'getItem'>): ThemeChoice {
+  try { const value = storage?.getItem(THEME_KEY); return value === 'light' || value === 'dark' ? value : 'system'; }
+  catch { return 'system'; }
+}
+function rememberTheme(storage: Pick<Storage, 'setItem'> | undefined, theme: ThemeChoice): void {
+  try { storage?.setItem(THEME_KEY, theme); }
+  catch { /* Keep the choice for this session when persistence is unavailable. */ }
+}
+/** The theme actually shown for a choice, given whether the OS prefers light. */
+export function resolveTheme(choice: ThemeChoice, systemPrefersLight: boolean): 'light' | 'dark' {
+  return choice === 'system' ? (systemPrefersLight ? 'light' : 'dark') : choice;
+}
+
 interface ProjectState {
   activeStep: WizardStep;
   task: VisionTask;
   language: Language;
+  technicalDetails: boolean;
+  viewMode: ViewMode;
+  theme: ThemeChoice;
   backendPort: number | null;
   backendStatus: BackendStatus;
   activeError: ErrorCatalogItem | null;
@@ -121,8 +168,14 @@ interface ProjectState {
   recentProjects: RecentProject[];
   isProjectBusy: boolean;
   projectError: string | null;
+  /** True while a shared-server login, project switch or logout is still running. Each one ends by rebuilding the
+   * step views, which cancels a ZIP upload started meanwhile, so the data step holds new uploads until it is false. */
+  sharedSessionChanging: boolean;
 
   setStep: (step: WizardStep) => Promise<void>;
+  setTechnicalDetails: (value: boolean) => void;
+  setViewMode: (mode: ViewMode) => void;
+  setTheme: (theme: ThemeChoice) => void;
   openImageForLabeling: (imageId: string, filePath: string, expected?:{imageSha256:string;revision:number;isCurrent?:()=>boolean}) => Promise<boolean>;
   /** Changes the project task; the outcome always names the task that is actually active. */
   updateTask: (task: VisionTask) => Promise<TaskChangeOutcome>;
@@ -151,28 +204,47 @@ function projectErrorMessage(error: unknown): string {
   return '프로젝트를 열지 못했습니다.';
 }
 
-export async function saveOpenEdits(options?: {allowCleanDisconnect?: boolean}): Promise<void> {
+/** Why saving the open work for a project switch (or a create, backup or restore) is refused right now, or null.
+ * The project manager disables those actions with the same answer, so it never offers a switch that the click then
+ * refuses; right after start, for one, the current project's saved source is still being read. */
+export function projectSwitchRefusal(): string | null {
   if (useModelAssistRunStore.getState().activeOperations > 0) {
-    throw new Error('모델 보조 라벨링 요청이 진행 중입니다. 완료 후 프로젝트를 전환하세요.');
+    return '모델 보조 라벨링 요청이 진행 중입니다. 완료 후 프로젝트를 전환하세요.';
   }
   if (useInspectionRunStore.getState().isRunning) {
-    throw new Error('일괄 검사가 진행 중입니다. 완료 후 프로젝트를 전환하세요.');
+    return '일괄 검사가 진행 중입니다. 완료 후 프로젝트를 전환하세요.';
   }
   const dataset = useDatasetStore.getState();
   if (dataset.isLoading || dataset.isSplitting || dataset.isGenerating) {
-    throw new Error('데이터 작업이 진행 중입니다. 완료 후 프로젝트를 전환하세요.');
+    return '데이터 작업이 진행 중입니다. 완료 후 프로젝트를 전환하세요.';
   }
-  const training = useTrainingStore.getState();
-  if (training.isTraining) {
-    throw new Error('학습이 진행 중입니다. 작업이 끝난 후 프로젝트를 전환하세요.');
+  if (useTrainingStore.getState().isTraining) {
+    return '학습이 진행 중입니다. 작업이 끝난 후 프로젝트를 전환하세요.';
   }
   const flow = useFlowchartStore.getState();
   if (flow.isRunning) {
-    throw new Error('플로우 실행이 진행 중입니다. 완료 후 프로젝트를 전환하세요.');
+    return '플로우 실행이 진행 중입니다. 완료 후 프로젝트를 전환하세요.';
   }
   if (flow.isLoading || flow.isSaving) {
-    throw new Error('플로우를 불러오거나 저장하는 중입니다. 완료 후 프로젝트를 전환하세요.');
+    return '플로우를 불러오거나 저장하는 중입니다. 완료 후 프로젝트를 전환하세요.';
   }
+  return null;
+}
+
+/** Calls the listener whenever a store that projectSwitchRefusal reads changes. */
+export function subscribeProjectSwitchRefusal(listener: () => void): () => void {
+  const stops = [
+    useModelAssistRunStore.subscribe(listener), useInspectionRunStore.subscribe(listener), useDatasetStore.subscribe(listener),
+    useTrainingStore.subscribe(listener), useFlowchartStore.subscribe(listener),
+  ];
+  return () => { for (const stop of stops) stop(); };
+}
+
+export async function saveOpenEdits(options?: {allowCleanDisconnect?: boolean}): Promise<void> {
+  const refusal = projectSwitchRefusal();
+  if (refusal) throw new Error(refusal);
+  const dataset = useDatasetStore.getState();
+  const flow = useFlowchartStore.getState();
   const currentProject = useProjectStore.getState().project;
   // Logout is authenticated independently of project membership. A clean view
   // must remain disconnectable after revocation; unsaved work retains the
@@ -278,6 +350,9 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
   activeStep: 1,
   task: 'classification',
   language: readUserLanguage(viewStorage()),
+  technicalDetails: readTechnicalDetails(viewStorage()),
+  viewMode: readViewMode(viewStorage(), typeof window === 'undefined' ? '' : window.location?.search ?? ''),
+  theme: readTheme(viewStorage()),
   backendPort: null,
   backendStatus: { port: null, healthy: false, pid: null },
   activeError: null,
@@ -287,6 +362,7 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
   recentProjects: [],
   isProjectBusy: false,
   projectError: null,
+  sharedSessionChanging: false,
 
   setStep: async (step) => {
     if (step === get().activeStep) return;
@@ -423,6 +499,9 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
   setTask: (task) => get().updateTask(task),
 
   setLanguage: (language) => { rememberUserLanguage(viewStorage(), language); set({ language }); },
+  setTechnicalDetails: (technicalDetails) => { rememberTechnicalDetails(viewStorage(), technicalDetails); set({ technicalDetails }); },
+  setViewMode: (viewMode) => { rememberViewMode(viewStorage(), viewMode); set({ viewMode }); },
+  setTheme: (theme) => { rememberTheme(viewStorage(), theme); set({ theme }); },
   setBackendStatus: (status) => {
     setCachedPort(status.port);
     set({ backendStatus: status, backendPort: status.port });

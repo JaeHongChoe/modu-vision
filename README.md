@@ -9,6 +9,8 @@
 [![Linux CPU source checks](https://github.com/JaeHongChoe/modu-vision/actions/workflows/ci.yml/badge.svg)](https://github.com/JaeHongChoe/modu-vision/actions/workflows/ci.yml)
 [![Node.js 24](https://img.shields.io/badge/Node.js-24-339933)](package.json)
 [![Python 3.13](https://img.shields.io/badge/Python-3.13-3776AB)](CONTRIBUTING.md)
+[![Electron 44](https://img.shields.io/badge/Electron-44-47848F)](package-lock.json)
+[![Windows 11 x64](https://img.shields.io/badge/Windows-11%20x64-0078D4)](https://github.com/JaeHongChoe/modu-vision/actions/workflows/windows-native.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
 [작업 흐름](#작업-흐름) · [주요 기능](#주요-기능) · [빠른 시작](#빠른-시작) · [패키징](#데스크톱-패키징) · [문서](#문서)
@@ -96,7 +98,7 @@ GAN은 생성 데이터를 검토해 학습에 채택하는 용도이며, 검사
 
 ### 개발 환경
 
-**Git, Node.js 24, Python 3.13**을 준비합니다. Windows·Linux 명령은 CPU용 해시 잠금 파일을 사용합니다. macOS arm64는 별도 잠금 파일이 없어 `requirements.txt`를 사용합니다. GPU 학습에는 장치에 맞는 드라이버와 Python 의존성 구성이 추가로 필요합니다.
+**Git, Node.js 24, Python 3.13**을 준비합니다. 고정 버전은 **Python**: 3.13, **Node.js**: 24, **Electron**: 44입니다(Electron 44는 `package-lock.json`이 고정합니다). Windows·Linux 명령은 CPU용 해시 잠금 파일을 사용합니다. macOS arm64는 별도 잠금 파일이 없어 `requirements.txt`를 사용합니다. GPU 학습에는 장치에 맞는 드라이버와 Python 의존성 구성이 추가로 필요합니다.
 
 ### 1. 저장소 받기
 

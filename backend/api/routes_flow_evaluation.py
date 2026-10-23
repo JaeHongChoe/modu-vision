@@ -1,5 +1,8 @@
 """Separate saved whole-flow evaluation history, with immutable cohort inputs."""
-from fastapi import APIRouter, Request
+from pathlib import Path
+from typing import Optional
+
+from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel, ConfigDict, Field, StrictBool
 
 from backend.api.routes_project import get_current_project
@@ -144,6 +147,31 @@ def cohorts(request: Request):
 @router.get('/cohorts/{cohort_id}')
 def cohort(cohort_id: str, request: Request):
     return execute(lambda: flow_evaluation.read_cohort(get_current_project(request), cohort_id))
+
+
+class TruthFromLabelsRequest(BaseModel):
+    model_config = ConfigDict(extra='forbid')
+    version_id: str = Field(pattern=r'^[0-9a-f]{32}$')
+    reviewer: str = Field(min_length=1, max_length=100)
+    note: Optional[str] = Field(default=None, max_length=2000)
+
+
+@router.post('/cohorts/{cohort_id}/truth-from-labels')
+def truth_from_labels(cohort_id: str, body: TruthFromLabelsRequest, request: Request):
+    """A reviewer confirms the folder labels of a frozen cohort as its explicit truth in one step. Each image still gets
+    its own dated declaration with the reviewer's name; images whose folder names no class stay unknown."""
+    project = get_current_project(request); require_role(request, project, {'owner', 'reviewer'})
+    reviewer = request_actor(request, body.reviewer)
+    def labels_for(image_path: str):
+        # The labels the person sees in step 2 for this image (Studio edits over the source file), read like the canvas.
+        from backend.api import routes_annotation
+        try:
+            saved = routes_annotation._get_annotations_impl(Path(image_path).stem, None, image_path)
+        except HTTPException:
+            return None
+        return saved.get('annotations') if isinstance(saved, dict) else None
+    return execute(lambda: flow_evaluation.confirm_truth_from_labels(project, cohort_id, body.version_id, reviewer=reviewer, note=body.note,
+                                                                     labels_for=labels_for))
 
 
 @router.post('')

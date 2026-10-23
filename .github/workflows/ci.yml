@@ -3,7 +3,9 @@ name: Linux CPU source checks
 "on":
   push:
     branches: [main]
-  pull_request:
+  # The full regression qualifies the head that will be merged, not every pull-request update: each update gets the
+  # fast lane (ci-fast.yml), whose "full regression on this exact head" job passes only after this workflow has
+  # passed on that commit. Run it for a PR head with: gh workflow run ci.yml --ref <branch>
   workflow_dispatch:
 
 # Public contribution runs have no deployment, signing, or GPU credentials.
@@ -21,7 +23,10 @@ jobs:
     runs-on: ubuntu-24.04
     # The recorded 5098dac run exhausted 35 minutes after CPU checks passed.
     # Both lanes retain their full selected suites and isolated workspaces.
-    timeout-minutes: 75
+    # Measured on hosted runners (2026-10-20, runs 39396577197, 39381902182, 39398496681, 39407506214): setup ~3.5 min,
+    # the CPU contract step 50-71 min, the defect baseline step ~2.7 min, so up to ~77 min in all; 75 cut off the last
+    # step after the contract step had passed. 110 keeps ~40% headroom for runner speed; no selection is dropped.
+    timeout-minutes: 110
     env:
       OMP_NUM_THREADS: '2'
       MKL_NUM_THREADS: '2'
@@ -176,6 +181,33 @@ jobs:
           backend/tests/test_whole_flow_approval.py
           backend/tests/test_whole_flow_service.py
           backend/tests/test_whole_flow_runtime_review.py
+          backend/tests/test_flow_evaluation_folder_split.py
+          backend/tests/test_flow_truth_from_labels.py
+          backend/tests/test_anomaly_name_prefixes.py
+          backend/tests/test_anomaly_flat_name_layout.py
+          backend/tests/test_field_export_layouts.py
+          backend/tests/test_project_activation_race.py
+          backend/tests/test_managed_service_first_read.py
+          backend/tests/test_beginner_errors_korean.py
+          backend/tests/test_workflow_impact.py
+          backend/tests/test_audit_data_input.py
+          backend/tests/test_audit_class_overrides.py
+          backend/tests/test_audit_decision_threshold.py
+          backend/tests/test_audit_data_changes.py
+          backend/tests/test_audit_training_setup.py
+          backend/tests/test_audit_inspection_csv.py
+          backend/tests/test_audit_rotated_reuse.py
+          backend/tests/test_audit_flow_score_parity.py
+          backend/tests/test_draft_adoption_undo.py
+          backend/tests/test_label_suggestions.py
+          backend/tests/test_team_data_api.py
+          backend/tests/test_compute_label_review.py
+          backend/tests/test_draft_adoption_stats.py
+          backend/tests/test_auto_selector_origin.py
+          backend/tests/test_class_rename.py
+          backend/tests/test_foundation_labeling_api.py
+          backend/tests/test_label_candidate_api.py
+          backend/tests/test_assistant_run_log.py
           backend/tests/test_openvino_runtime.py::test_openvino_service_inference_uses_owned_worker_without_a_deadline
           backend/tests/test_runtime_deadline_sdk.py::test_runtime_ignores_unlisted_bytecode_and_preserves_all_package_bytes
           backend/tests/test_runtime_deadline_sdk.py::test_packaged_cpp_native_sdk_embeds_python_and_matches_whole_graph
@@ -380,7 +412,8 @@ jobs:
     runs-on: ubuntu-24.04
     # The recorded 5098dac run exhausted 35 minutes after CPU checks passed.
     # Both lanes retain their full selected suites and isolated workspaces.
-    timeout-minutes: 75
+    # Measured on hosted runners (same runs): 48-69 min in all, the browser step up to 64 min. 100 keeps ~40% headroom.
+    timeout-minutes: 100
     env:
       OMP_NUM_THREADS: '2'
       MKL_NUM_THREADS: '2'

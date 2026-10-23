@@ -15,11 +15,22 @@ export const FOCUS_SWITCH_NAME = '집중 편집';
 // Reading localStorage itself can throw (blocked site data), so it is read inside the callers' try.
 const browserStorage = (): Storage | undefined => globalThis.localStorage;
 
-export function readLabelingFocus(storage?: Pick<Storage, 'getItem'> | null): boolean {
+export function readLabelingFocus(storage?: Pick<Storage, 'getItem'> | null, fallback = false): boolean {
   try {
-    return (storage === undefined ? browserStorage() : storage)?.getItem(KEY) === '1';
+    const stored = (storage === undefined ? browserStorage() : storage)?.getItem(KEY);
+    return stored === '1' || stored === '0' ? stored === '1' : fallback;
   } catch {
-    return false;
+    return fallback;
+  }
+}
+
+/** The viewer's own 집중 편집 choice, or null when they never pressed it (the screen then follows the view mode). */
+export function storedLabelingFocus(storage?: Pick<Storage, 'getItem'> | null): boolean | null {
+  try {
+    const stored = (storage === undefined ? browserStorage() : storage)?.getItem(KEY);
+    return stored === '1' ? true : stored === '0' ? false : null;
+  } catch {
+    return null;
   }
 }
 
@@ -34,6 +45,28 @@ export function writeLabelingFocus(focus: boolean, storage?: Pick<Storage, 'setI
 /** What focus editing folded, said while it is on (SAM2 lives in the model assist panel). */
 export function focusStatus(focus: boolean): string {
   return focus ? `접은 패널: ${LABELING_HELPER_PANELS.map(name => name === '모델 보조' ? '모델 보조(SAM2)' : name).join(' · ')}` : '';
+}
+
+// Below this work area height there is little left to draw in: Fit keeps 32 px of padding above and below the image,
+// and the mask controls (top) and the view readout (bottom) cover roughly 60 px and 35 px of the canvas, so a 240 px
+// area leaves the image at most 176 px and about 145 px clear of both. 모두 보기 at 1440x900 in a classification project
+// left a few pixels.
+export const NARROW_CANVAS_HEIGHT = 240;
+
+// The work area's share before the settings strip (the label set, and in 모두 보기 the derived image, saved queue and
+// workflow impact panels and the specialist note) gets any height: the strip scrolls and gives way first. At 1440x900
+// the rows that stay put (tools, the 집중 편집 row, the team row with the shared editing lock, image review, classes,
+// drafts, model assist) and the filmstrip leave about 310 px, so the drawing area keeps about 248 px (just above
+// NARROW_CANVAS_HEIGHT) and the strip about 60 px, the label set in use. Taller windows give the strip its full height
+// first; the work area grows past this with the window. It is the literal flex-basis in LabelingStudio's work area
+// class (Tailwind needs the literal).
+export const WORK_AREA_BASIS = 248;
+export const NARROW_CANVAS_NOTICE = '그림 영역이 좁습니다 · 집중 편집으로 보조 패널을 접을 수 있습니다';
+
+/** The hint next to 집중 편집 while the open helper panels leave the work area short: '' when focus editing is on, the
+ *  area has room, or it was never measured (no ResizeObserver). The screen never folds the panels by itself. */
+export function narrowCanvasNotice(height: number | null, focus: boolean): string {
+  return !focus && height !== null && height < NARROW_CANVAS_HEIGHT ? NARROW_CANVAS_NOTICE : '';
 }
 
 type View = { scale: number; offsetX: number; offsetY: number };

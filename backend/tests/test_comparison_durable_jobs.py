@@ -239,7 +239,7 @@ def test_http_source_drift_before_worker_fails_without_inference(tmp_path,monkey
     pending[0]()
     row=client.get('/api/evaluation/model-comparisons/jobs/'+first['job_id'],params={'source_dataset_path':str(source),'task':'classification'}).json()
     assert row['status']=='failed' and not row['report_id']
-    assert 'inputs changed' in row['error'].lower()
+    assert 'inputs changed' in row['error'].lower() or '입력이 바뀌었습니다' in row['error']
 
 
 def test_cancel_between_verified_checkpoint_and_atomic_finish_is_aborted(tmp_path,monkeypatch):

@@ -12,7 +12,7 @@ async function prepare(page:Page,renderer:RendererServer,workspace:Workspace){
  await installDesktopHostShim(page,renderer.port);
  await page.addInitScript(folder=>{(window as unknown as {api:{selectFolder:()=>Promise<string>}}).api.selectFolder=async()=>folder;},dataset);
  await page.goto(renderer.url);await createProject(page,'S209 CPU runtime budget','영역 분할');await pickDataset(page);
- await expect(page.getByText(/Train:\s*40/)).toBeVisible();await stage(page,'03','오토딥러닝').click();
+ await expect(page.getByText(/학습:\s*40/)).toBeVisible();await stage(page,'03','오토딥러닝').click();
  await page.getByLabel('학습 모델 구조').selectOption({label:'UNet · 기존 구조'});
  await page.getByText('다음 학습 배치·로컬 장치 설정',{exact:true}).click();await page.getByLabel('다음 학습 로컬 장치',{exact:true}).selectOption('cpu');
  await page.locator('summary',{hasText:'학습 실행 예산·대기열'}).click();return dataset;

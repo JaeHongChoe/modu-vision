@@ -9,7 +9,9 @@ const barColor = {active: 'bg-cyan-500', uncertain: 'bg-amber-500', completed: '
 
 /** S2-09: the progress of one training job, shown the same way in every model family's workbench: its state, where it
  *  runs, epochs and loss, a failure with its recorded cause, the next action, and cancel or reconnect when they apply. */
-export function JobProgressView({job, busy, onCancel, onReconnect, showActions = true}: {job: JobRecord | null; busy: boolean; onCancel: () => void; onReconnect?: () => void; showActions?: boolean}) {
+/** `plain` (the simple view of step 3) counts in Korean, leaves the loss to the chart below it, and drops the exit and
+ *  reservation record once a job finished cleanly; warnings and failures read the same either way. */
+export function JobProgressView({job, busy, onCancel, onReconnect, showActions = true, plain = false}: {job: JobRecord | null; busy: boolean; onCancel: () => void; onReconnect?: () => void; showActions?: boolean; plain?: boolean}) {
   const profiles = useComputeStore((state) => state.profiles);
   if (!job) return null;
   const view = jobProgress(job);
@@ -24,11 +26,11 @@ export function JobProgressView({job, busy, onCancel, onReconnect, showActions =
   const where = view.server ? profiles.find((profile) => profile.id === view.server)?.name || '저장 서버' : '이 컴퓨터';
   return <div role="status" aria-label="학습 작업 상태" className="space-y-2 rounded border border-[#344255] bg-[#0B1520] p-3">
     <p className="flex flex-wrap items-center gap-x-3 gap-y-1">
-      <strong className={toneColor[view.tone]}>{view.tone === 'active' && <Loader2 className="mr-1 inline h-4 w-4 animate-spin" />}{view.label}</strong>
+      <strong className={toneColor[view.tone]}>{view.tone === 'active' && <Loader2 className="mr-1 inline h-4 w-4 animate-spin" />}{plain && view.tone === 'completed' ? '학습 완료' : view.label}</strong>
       <span className="text-slate-300">{where}</span>
-      {(view.totalEpochs > 0 || view.epoch > 0) && <span>epoch {view.epoch}/{view.totalEpochs || '?'}</span>}
-      {view.batches > 0 && <span>batch {view.batch}/{view.batches}</span>}
-      {view.loss !== null && <span className="text-slate-400">손실 {view.loss.toFixed(4)}</span>}
+      {(view.totalEpochs > 0 || view.epoch > 0) && <span>{plain ? `학습 ${view.epoch}/${view.totalEpochs || '?'}회` : `epoch ${view.epoch}/${view.totalEpochs || '?'}`}</span>}
+      {view.batches > 0 && <span>{plain ? `단계 ${view.batch}/${view.batches}` : `batch ${view.batch}/${view.batches}`}</span>}
+      {view.loss !== null && !plain && <span className="text-slate-400">손실 {view.loss.toFixed(4)}</span>}
     </p>
     {view.totalEpochs > 0 && <div role="progressbar" aria-label="학습 진행률" aria-valuemin={0} aria-valuemax={view.totalEpochs} aria-valuenow={view.epoch}
       className="h-1.5 overflow-hidden rounded bg-slate-800"><div className={`h-full ${barColor[view.tone]}`} style={{width: `${Math.min(100, (view.epoch / view.totalEpochs) * 100)}%`}} /></div>}
@@ -36,7 +38,7 @@ export function JobProgressView({job, busy, onCancel, onReconnect, showActions =
     {job.status === 'queued' && <p className="text-slate-300">{Number.isInteger(job.queue_position) && job.queue_position > 0 ? `이 프로젝트 대기 순서: ${job.queue_position}` : '대기 순서 미확인'} · {waitReason[job.wait_reason] || '대기 사유를 다시 확인하세요.'}</p>}
     {observation && <div className="space-y-1 text-xs">
       {observation.steps.length > 0 && <ol aria-label="취소 확인 단계" className="flex flex-wrap gap-2">{observation.steps.map(step => <li key={step.label} className={step.done ? 'text-emerald-300' : 'text-slate-400'}>{step.done ? '✓' : '○'} {step.label}</li>)}</ol>}
-      {observation.facts.length > 0 && <p>{observation.facts.join(' · ')}</p>}
+      {observation.facts.length > 0 && !(plain && view.tone === 'completed') && <p>{observation.facts.join(' · ')}</p>}
     </div>}
     {view.nextAction && <p className={view.tone === 'failed' ? 'text-rose-200' : 'text-amber-200'}>다음 행동: {view.nextAction}</p>}
     {showActions && (view.canCancel || stopping || (view.canReconnect && onReconnect)) && <div className="flex flex-wrap gap-2">

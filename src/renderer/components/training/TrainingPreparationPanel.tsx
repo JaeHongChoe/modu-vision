@@ -10,10 +10,17 @@ import {useComputeStore} from '../../stores/useComputeStore';
 import {familyPreparation} from './trainingWorkflow';
 import {programButton} from './ProgramWorkbenchControls';
 import {TeamTrainingReadiness} from './TeamTrainingReadiness';
+import {WeightsPrefetch,prefetchSupported} from './WeightsPrefetch';
 
-type Readiness={ready:boolean;model:string;execution_verified:boolean;dependencies:{missing:string[]};runtime:{available:boolean;device:string;reason:string};weights:{state:string;filename?:string;sha256?:string|null;origin?:string|null;content_verified:boolean};next_actions:string[];selected_checkpoint_path?:string|null};
-export function TrainingPreparationPanel({family,model,preset='fast',checkpoint='',device='cpu',config={},datasetPath,warmStartJobId,onCheckpointChange}:{family:ModelFamily;model?:string;preset?:TrainingPreset;checkpoint?:string;device?:'cpu'|'cuda'|'mps';config?:Record<string,unknown>;datasetPath?:string;warmStartJobId?:string;onCheckpointChange?:(path:string)=>void}) {
-  const {project,projectDir,setStep}=useProjectStore();const dataset=useDatasetStore();const compute=useComputeStore();
+type Readiness={ready:boolean;model:string;execution_verified:boolean;dependencies:{missing:string[]};runtime:{available:boolean;device:string;reason:string;auto?:boolean};weights:{state:string;filename?:string;sha256?:string|null;origin?:string|null;content_verified:boolean;problem?:string};next_actions:string[];selected_checkpoint_path?:string|null};
+type LocalDevice='auto'|'cpu'|'cuda'|'mps';
+/** The device the card names: what the check resolved (auto included, F-20), or the choice until it has run. */
+export function deviceLabel(device:LocalDevice,check:{runtime:{available:boolean;device:string;auto?:boolean}}|null):string{
+  if(check?.runtime.available)return `${check.runtime.device.split(':')[0].toUpperCase()}${check.runtime.auto?' (자동 선택)':''}`;
+  return device==='auto'?'자동 선택':device.toUpperCase();
+}
+export function TrainingPreparationPanel({family,model,preset='fast',checkpoint='',device='cpu',config={},datasetPath,warmStartJobId,onCheckpointChange}:{family:ModelFamily;model?:string;preset?:TrainingPreset;checkpoint?:string;device?:LocalDevice;config?:Record<string,unknown>;datasetPath?:string;warmStartJobId?:string;onCheckpointChange?:(path:string)=>void}) {
+  const {project,projectDir,setStep,viewMode}=useProjectStore();const simpleView=viewMode==='simple';const dataset=useDatasetStore();const compute=useComputeStore();
   const [checked,setChecked]=useState<{scope:string;value:Readiness}|null>(null);const [error,setError]=useState('');const [busy,setBusy]=useState(false);
   const [epoch,setEpoch]=useState(getProjectContextGeneration);
   const generation=getProjectContextGeneration(),identity=getApiPersistenceIdentity();
@@ -52,18 +59,31 @@ export function TrainingPreparationPanel({family,model,preset='fast',checkpoint=
     finally{if(same())setBusy(false);}
   };
   useEffect(()=>{setChecked(null);setError('');setBusy(false);},[scope]);
+  // On this computer the check is a read, so the card runs it by itself and shows the device and weights (A5).
+  const read=async()=>{
+    if(!same()||!model)return;
+    try{
+      const query=new URLSearchParams({task:family,model,device,preset,...(checkpoint?{pretrained_checkpoint:checkpoint}:{})});
+      const result=await request<Readiness>(`/api/training-workspace/readiness?${query}`);
+      if(same())setChecked(previous=>previous?.scope===scope?previous:{scope,value:result});
+    }catch{/* the manual check shows the reason */}
+  };
+  const automatic=!compute.selectedProfileId&&Boolean(source)&&Boolean(model)&&!datasetPath&&!warmStartJobId;
+  useEffect(()=>{if(!automatic)return;const timer=setTimeout(()=>void read(),400);return()=>clearTimeout(timer);},[scope,automatic]);
   return <section aria-label="공통 모델 준비" className="rounded-xl border border-slate-600 bg-[#101A28] p-4 text-sm text-slate-200">
     <h2 className="flex items-center gap-2 font-semibold"><CheckCircle className="h-4 w-4 text-cyan-300" />{prep.label} 준비</h2>
     <ol className="mt-3 grid gap-2 md:grid-cols-3">
       <li className="rounded border border-slate-700 p-3"><strong>1. 프로젝트 이미지</strong><p className="mt-1 text-slate-300">{source?`${project?.name} · 원본 ${dataset.sourceImages||dataset.totalImages}장 · 학습 대상 ${dataset.totalImages}장`:'프로젝트에 원본 이미지를 연결하세요.'}</p><button type="button" onClick={()=>void setStep(1)} className={`${programButton} mt-2`}>데이터 확인</button></li>
       <li className="rounded border border-slate-700 p-3"><strong>2. 정답·시험 분리</strong><p className="mt-1 text-slate-300">{prep.truth}</p><button type="button" onClick={()=>void setStep(2)} className={`${programButton} mt-2`}>정답 검토</button></li>
-      <li className="rounded border border-slate-700 p-3"><strong>3. 모델·실행 환경</strong><p className="mt-1 text-slate-300">{compute.selectedProfileId?`새 학습: ${compute.profiles.find(row=>row.id===compute.selectedProfileId)?.name || '선택 서버'}`:`이 컴퓨터 · ${device.toUpperCase()}`}</p><button type="button" disabled={busy||!source} onClick={()=>void inspect()} className={`${programButton} mt-2`}><RefreshCw className="mr-1 inline h-3 w-3" />{busy?'확인 중…':compute.selectedProfileId?'서버 준비 검사':'로컬 준비 검사'}</button></li>
+      <li className="rounded border border-slate-700 p-3"><strong>3. 모델·실행 환경</strong><p className="mt-1 text-slate-300">{compute.selectedProfileId?`새 학습: ${compute.profiles.find(row=>row.id===compute.selectedProfileId)?.name || '선택 서버'}`:`이 컴퓨터 · ${deviceLabel(device,check)}`}</p><button type="button" disabled={busy||!source} onClick={()=>void inspect()} className={`${programButton} mt-2`}><RefreshCw className="mr-1 inline h-3 w-3" />{busy?'확인 중…':compute.selectedProfileId?'서버 준비 검사':'로컬 준비 검사'}</button></li>
     </ol>
     <TeamTrainingReadiness />
-    <p className="mt-3 text-slate-300">다음 행동: {prep.route}</p><p className="mt-1 text-slate-400">평가: {prep.evaluation}</p>
+    {!simpleView&&<><p className="mt-3 text-slate-300">다음 행동: {prep.route}</p><p className="mt-1 text-slate-400">평가: {prep.evaluation}</p></>}
     {compute.selectedProfileId&&<p className="mt-2 text-slate-400">선택 서버의 모델별 준비 상태를 확인합니다. 학습 작업을 등록하거나 모델을 다운로드하지 않습니다.</p>}
-    {check&&<div role="status" className="mt-3 rounded border border-slate-600 p-3"><strong className={check.ready?'text-emerald-300':'text-amber-200'}>{check.ready?'준비 항목 확인됨':'준비 필요'}</strong><p className="mt-1">장치: {check.runtime.available?check.runtime.device:check.runtime.reason} · 가중치: {({file_available:'파일 있음 · 학습 시 구조 검증',unreadable:'파일 읽기·안정된 해시 확인 실패',not_required:'별도 사전학습 파일 불필요',transfer_ready:'프로젝트 파일 해시 확인 · 학습 시 서버로 전송',server_file_available:'서버 캐시 파일 있음 · 학습 시 구조 검증',parent_verified:'부모 모델 해시·호환 구조 확인'} as Record<string,string>)[check.weights.state]||'준비 필요'}</p>{check.weights.sha256&&<p className="mt-2 break-all" aria-label="사전학습 파일 식별 정보">{check.weights.filename} · {check.weights.origin==='explicit_file'?'지정한 파일':'캐시 파일'} · SHA256: {check.weights.sha256}<span className="block text-slate-400">파일 내용의 식별값입니다. 제공처 진위·모델 구조·품질 승인을 뜻하지 않습니다.</span></p>}{check.dependencies.missing.length>0&&<p className="mt-1 text-amber-200">설치 필요: {check.dependencies.missing.join(', ')}</p>}{check.weights.state==='missing'&&<p className="mt-1">공식 사전학습 파일을 준비하고 아래 상세 설정에서 가져오세요. 접근 승인이 필요한 모델은 제공처 승인 절차를 완료하세요.</p>}{check.next_actions.length>0&&<ul className="mt-2 list-disc pl-5 text-amber-200">{check.next_actions.map(action=><li key={action}>{action}</li>)}</ul>}<p className="mt-1 text-slate-400">실제 학습·추론 실행과 모델 품질 승인은 아직 확인하지 않았습니다.</p></div>}
-    {onCheckpointChange&&<button type="button" disabled={busy||!(check?.model||model)} onClick={()=>void importFile()} className={`${programButton} mt-3`}>사전학습 파일 선택·프로젝트에 가져오기</button>}
+    {check&&<div role="status" className="mt-3 rounded border border-slate-600 p-3"><strong className={check.ready?'text-emerald-300':'text-amber-200'}>{check.ready?'준비 항목 확인됨':'준비 필요'}</strong><p className="mt-1">장치: {check.runtime.available?check.runtime.device:check.runtime.reason} · 가중치: {({file_available:'파일 있음 · 학습 시 구조 검증',unreadable:'파일 읽기·안정된 해시 확인 실패',wrong_format:'파일 형식이 이름과 맞지 않음',not_required:'별도 사전학습 파일 불필요',transfer_ready:'프로젝트 파일 해시 확인 · 학습 시 서버로 전송',server_file_available:'서버 캐시 파일 있음 · 학습 시 구조 검증',parent_verified:'부모 모델 해시·호환 구조 확인'} as Record<string,string>)[check.weights.state]||'준비 필요'}</p>{check.weights.sha256&&<p className="mt-2 break-all" aria-label="사전학습 파일 식별 정보">{check.weights.filename} · {check.weights.origin==='explicit_file'?'지정한 파일':'캐시 파일'} · SHA256: {check.weights.sha256}<span className="block text-slate-400">파일 내용의 식별값입니다. 제공처 진위·모델 구조·품질 승인을 뜻하지 않습니다.</span></p>}{check.dependencies.missing.length>0&&<p className="mt-1 text-amber-200">설치 필요: {check.dependencies.missing.join(', ')}</p>}{check.weights.state==='missing'&&(!compute.selectedProfileId&&prefetchSupported(check.model)?<WeightsPrefetch model={check.model} onDone={()=>void read()} />:<p className="mt-1">공식 사전학습 파일을 준비하고 아래 상세 설정에서 가져오세요. 접근 승인이 필요한 모델은 제공처 승인 절차를 완료하세요.</p>)}{check.weights.problem&&<p role="alert" className="mt-1 text-amber-200">{check.weights.problem}</p>}{check.next_actions.length>0&&<ul className="mt-2 list-disc pl-5 text-amber-200">{check.next_actions.map(action=><li key={action}>{action}</li>)}</ul>}<p className="mt-1 text-slate-400">실제 학습·추론 실행과 모델 품질 승인은 아직 확인하지 않았습니다.</p></div>}
+    {!simpleView&&onCheckpointChange&&<button type="button" disabled={busy||!(check?.model||model)} onClick={()=>void importFile()} className={`${programButton} mt-3`}>사전학습 파일 선택·프로젝트에 가져오기</button>}
+    {/* The simple view keeps the readiness result in view; the route, the evaluation note and the pretrained import wait here. */}
+    {simpleView&&<details className="mt-3 text-xs text-slate-400"><summary className="cursor-pointer">학습 순서·사전학습 파일</summary><p className="mt-2 text-slate-300">다음 행동: {prep.route}</p><p className="mt-1">평가: {prep.evaluation}</p>{onCheckpointChange&&<button type="button" disabled={busy||!(check?.model||model)} onClick={()=>void importFile()} className={`${programButton} mt-3`}>사전학습 파일 선택·프로젝트에 가져오기</button>}</details>}
     {check?.dependencies.missing.length ? <details className="mt-3 rounded border border-slate-600 p-3"><summary className="cursor-pointer text-slate-300">실행 환경 준비 방법</summary><p className="mt-2">패키지된 앱은 필요한 의존성을 포함한 앱 버전을 설치하세요. 개발·서버 실행은 앱에 설정된 Python 환경에 아래 패키지를 설치한 뒤 준비 검사를 다시 실행하세요. 공유·원격 환경은 서버 관리 화면의 연결 검사에서 해당 Python/Docker 환경을 확인하세요.</p><code className="mt-2 block break-all text-slate-200">python -m pip install {check.dependencies.missing.map(name=>name==='PIL'?'Pillow':name).join(' ')}</code><button type="button" onClick={()=>void host.openLink('https://pytorch.org/get-started/locally/')} className={`${programButton} mt-2`}>PyTorch 공식 설치 안내</button></details>:null}
     {error&&<p role="alert" className="mt-3 text-rose-200">{error}</p>}
   </section>;

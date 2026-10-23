@@ -193,4 +193,160 @@ def test_mutated_foundation_feature_weights_block_review(workspace,monkeypatch,t
     weights.write_bytes(b'changed feature bytes')
     reviewed=client.post('/api/label-suggestions/'+proposal['id']+'/review',json={
         'decision':'accept','candidate_ids':[proposal['candidates'][0]['id']]})
-    assert reviewed.status_code==409
+    assert reviewed.status_code==409 and reviewed.json()['detail']==routes._PROVENANCE_CHANGED_AT_REVIEW
+
+
+def test_setup_readiness_names_the_blocker_and_the_files_the_loader_expects(workspace,monkeypatch,tmp_path):
+    # Stage 2 (SAM2 preparation card): readiness keeps ready/error as the gate and adds the first blocker,
+    # the loader's file list with measured sizes, and the weight file's SHA256 as identification only.
+    # Nothing is downloaded and no size or licence is asserted by the backend.
+    import hashlib,importlib.util
+    from pathlib import Path
+    client,project,source=workspace
+    installed={'transformers':True};real_find_spec=importlib.util.find_spec
+    def find_spec(name,*args,**kwargs):
+        if name=='transformers':return object() if installed['transformers'] else None
+        return real_find_spec(name,*args,**kwargs)
+    monkeypatch.setattr(importlib.util,'find_spec',find_spec)
+    names=['config.json','preprocessor_config.json','model.safetensors']
+    def foundation():
+        response=client.get('/api/label-candidates/setup');assert response.status_code==200,response.text
+        return response.json()['providers']['foundation']
+    readiness=foundation()
+    assert readiness['ready'] is False and 'SAM2' in readiness['error'] and readiness['state']=='not_configured'
+    assert readiness['expected_files']==[{'name':name,'present':False,'bytes':None} for name in names]
+    assert readiness['missing_files']==names and readiness['model_sha256'] is None and readiness['model_type'] is None
+    assert readiness['official_reference']['url']=='https://huggingface.co/facebook/sam2.1-hiera-tiny'
+    assert not {'size','bytes','license','sha256'}&{key.lower() for key in readiness['official_reference']}
+    folder=tmp_path/'sam2';folder.mkdir()
+    saved=client.put('/api/label-candidates/setup',json={'mask_model_dir':str(folder)})
+    assert saved.status_code==200,saved.text
+    readiness=saved.json()['providers']['foundation']
+    assert readiness['ready'] is False and 'SAM2' in readiness['error'] and readiness['state']=='files_missing'
+    config=json.dumps({'model_type':'sam2'});weights=b'not real weights, identification only'
+    (folder/'config.json').write_text(config,encoding='utf-8');(folder/'model.safetensors').write_bytes(weights)
+    readiness=foundation()
+    # The gate is unchanged: config.json + model.safetensors make it ready; the processor file is only listed as missing.
+    assert readiness['ready'] is True and readiness['error'] is None and readiness['state']=='ready'
+    assert readiness['missing_files']==['preprocessor_config.json'] and readiness['model_type']=='sam2'
+    assert [(row['name'],row['present'],row['bytes']) for row in readiness['expected_files']]==[
+        ('config.json',True,len(config.encode('utf-8'))),('preprocessor_config.json',False,None),('model.safetensors',True,len(weights))]
+    assert readiness['model_sha256']==hashlib.sha256(weights).hexdigest()
+    # A rewritten weight file gets a new identification (the cache keys on the file's size and modification time).
+    (folder/'model.safetensors').write_bytes(weights+b' rewritten')
+    assert foundation()['model_sha256']==hashlib.sha256(weights+b' rewritten').hexdigest()
+    (folder/'config.json').write_text(json.dumps({'model_type':'grounding-dino'}),encoding='utf-8')
+    readiness=foundation()
+    assert readiness['ready'] is False and 'SAM2' in readiness['error']
+    assert readiness['state']=='wrong_model_type' and readiness['model_type']=='grounding-dino'
+    (folder/'config.json').write_text('{not json',encoding='utf-8')
+    readiness=foundation()
+    assert readiness['ready'] is False and 'SAM2' in readiness['error'] and readiness['state']=='invalid_config'
+    partial=tmp_path/'partial';partial.mkdir();(partial/'model.safetensors').write_bytes(weights)
+    assert client.put('/api/label-candidates/setup',json={'mask_model_dir':str(partial)}).status_code==200
+    readiness=foundation()
+    assert readiness['ready'] is False and 'SAM2' in readiness['error'] and readiness['state']=='files_incomplete'
+    assert readiness['missing_files']==['config.json','preprocessor_config.json']
+    # A missing dependency is the first blocker, while the folder's files are still reported.
+    installed['transformers']=False
+    readiness=foundation()
+    assert readiness['ready'] is False and 'SAM2' in readiness['error'] and readiness['dependency_available'] is False
+    assert readiness['state']=='dependency_missing' and readiness['expected_files'][2]['present'] is True
+    installed['transformers']=True
+    # A configured folder that no longer exists is a path problem, not a file problem.
+    (Path(project['project_dir'])/'semantic_labeling.json').write_text(json.dumps({'mask_model_dir':str(tmp_path/'gone')}),encoding='utf-8')
+    readiness=foundation()
+    assert readiness['ready'] is False and 'SAM2' in readiness['error'] and readiness['state']=='path_invalid'
+    assert readiness['expected_files']==[{'name':name,'present':False,'bytes':None} for name in names]
+    refused=client.post('/api/label-candidates/generate',json={'backend':'foundation','image_path':str(source/'target.png'),'points':[{'x':8,'y':4,'label':1}]})
+    assert refused.status_code==422 and 'SAM2' in refused.json()['detail']
+
+
+def _weight_files(folder):
+    """Weight files a user can end up with: a genuine one, and the damaged copies a download or clone leaves behind."""
+    from safetensors.numpy import save_file
+    genuine=folder/'genuine.safetensors'
+    save_file({'image_encoder.weight':np.arange(1000,dtype=np.float32),'mask_decoder.bias':np.zeros((3,5),np.int64)},str(genuine),metadata={'format':'pt'})
+    data=genuine.read_bytes();header=8+int.from_bytes(data[:8],'little')
+    damaged={
+        # What `git clone` of the official repository leaves without git-lfs.
+        'lfs_pointer':b'version https://git-lfs.github.com/spec/v1\noid sha256:'+b'0'*64+b'\nsize 155906050\n',
+        'empty':b'',
+        'truncated':data[:-100],
+        'header_only':data[:header],
+        'extra_bytes':data+b'\0'*16,
+        'short':b'\x01\x02',
+        'zero_length_header':(0).to_bytes(8,'little')+b'{}',
+        'array_header':(2).to_bytes(8,'little')+b'[]',
+        'no_offsets':(len(b'{"a":{"dtype":"F32"}}')).to_bytes(8,'little')+b'{"a":{"dtype":"F32"}}',
+    }
+    paths={}
+    for name,payload in damaged.items():
+        paths[name]=folder/f'{name}.safetensors';paths[name].write_bytes(payload)
+    return genuine,paths
+
+
+def test_safetensors_header_check_agrees_with_the_loader_without_reading_past_the_header(tmp_path,monkeypatch):
+    # Stage 2: readiness names a weight file the loader would refuse (a git-lfs pointer, an interrupted copy, an
+    # empty file) from its header alone. The real safetensors loader is the oracle for every verdict.
+    from safetensors import safe_open
+    from backend.engine import foundation_labeling as foundation
+    genuine,damaged=_weight_files(tmp_path)
+    def loads(path):
+        try:
+            with safe_open(str(path),framework='numpy') as stream:
+                return sorted(stream.keys())
+        except Exception:
+            return None
+    assert foundation.safetensors_header_check(genuine)=='ok'
+    assert loads(genuine)==['image_encoder.weight','mask_decoder.bias']
+    expected={'lfs_pointer':'not_safetensors','empty':'empty','truncated':'truncated','header_only':'truncated',
+              'extra_bytes':'truncated','short':'not_safetensors','zero_length_header':'not_safetensors',
+              'array_header':'not_safetensors','no_offsets':'not_safetensors'}
+    assert {name:foundation.safetensors_header_check(path) for name,path in damaged.items()}==expected
+    assert all(loads(path) is None for path in damaged.values()),'every file named damaged is one the loader refuses'
+    # Only the 8-byte length and the header are read: a header length beyond the loader's limit is refused unread.
+    monkeypatch.setattr(foundation,'_SAFETENSORS_MAX_HEADER',16)
+    assert foundation.safetensors_header_check(genuine)=='not_safetensors'
+    reads=[]
+    class Recorder(io.BytesIO):
+        def read(self,size=-1):
+            reads.append(size);return super().read(size)
+    monkeypatch.setattr(foundation,'_SAFETENSORS_MAX_HEADER',100_000_000)
+    data=genuine.read_bytes();original_open=type(genuine).open
+    monkeypatch.setattr(type(genuine),'open',lambda self,*args,**kwargs:Recorder(data) if self==genuine else original_open(self,*args,**kwargs))
+    assert foundation.safetensors_header_check(genuine)=='ok'
+    assert reads==[8,int.from_bytes(data[:8],'little')],reads
+
+
+def test_setup_readiness_flags_damaged_weights_and_a_non_object_config_without_changing_the_gate(workspace,monkeypatch,tmp_path):
+    # ready/error stay the gate every caller reads; weights_check is the card's evidence that model.safetensors is a
+    # complete safetensors file. A config.json that is valid JSON but not an object is invalid_config, not a 500.
+    import importlib.util,shutil
+    client,project,source=workspace
+    real_find_spec=importlib.util.find_spec
+    monkeypatch.setattr(importlib.util,'find_spec',lambda name,*args,**kwargs:object() if name=='transformers' else real_find_spec(name,*args,**kwargs))
+    weights=tmp_path/'weights';weights.mkdir();genuine,damaged=_weight_files(weights)
+    folder=tmp_path/'sam2';folder.mkdir()
+    (folder/'config.json').write_text(json.dumps({'model_type':'sam2'}),encoding='utf-8')
+    (folder/'preprocessor_config.json').write_text('{}',encoding='utf-8')
+    assert client.put('/api/label-candidates/setup',json={'mask_model_dir':str(folder)}).status_code==200
+    def foundation():
+        response=client.get('/api/label-candidates/setup');assert response.status_code==200,response.text
+        return response.json()['providers']['foundation']
+    for name,expected in [('lfs_pointer','not_safetensors'),('truncated','truncated'),('empty','empty')]:
+        shutil.copyfile(damaged[name],folder/'model.safetensors')
+        readiness=foundation()
+        assert (readiness['ready'],readiness['error'],readiness['state'])==(True,None,'ready'),name
+        assert readiness['weights_check']==expected,name
+        assert readiness['expected_files'][2]['bytes']==damaged[name].stat().st_size,name
+    shutil.copyfile(genuine,folder/'model.safetensors')
+    readiness=foundation()
+    assert (readiness['ready'],readiness['state'],readiness['weights_check'])==(True,'ready','ok')
+    for config in ['null','[]','"sam2"']:
+        (folder/'config.json').write_text(config,encoding='utf-8')
+        readiness=foundation()
+        assert (readiness['ready'],readiness['state'])==(False,'invalid_config'),config
+        assert readiness['error']=='SAM2 model configuration is missing or invalid.',config
+    (folder/'model.safetensors').unlink()
+    assert foundation()['weights_check'] is None,'no weight file, no verdict'

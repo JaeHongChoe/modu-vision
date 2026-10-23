@@ -44,6 +44,50 @@ export interface ElectronAPI {
   onBackendStatusChange: (callback: (status: BackendStatus) => void) => () => void;
   onBackendCrashed: (callback: (data: CrashEventData) => void) => () => void;
   platform: 'darwin' | 'win32' | 'linux';
+  /** The built-in assistant (main process only holds keys and calls providers); absent in a browser and in older shims. */
+  assistant?: AssistantBridge;
+}
+
+/** Built-in assistant contract (docs/product-direction-easy-labeling-agent.md §4). The renderer never receives a key:
+ *  only whether one is stored. Provider calls run in the Electron main process. */
+export type AssistantProviderId = 'openai-compatible' | 'anthropic';
+/** OpenAI-compatible request format: Chat Completions or Responses. */
+export type AssistantApiFormat = 'chat' | 'responses';
+export interface AssistantProviderPublic {provider:AssistantProviderId;baseUrl:string;model:string;format:AssistantApiFormat|null;hasKey:boolean;supportsImages:boolean;label:string}
+export interface AssistantConfigState {providers:AssistantProviderPublic[];active:AssistantProviderId|null;encryptionAvailable:boolean}
+export interface AssistantProviderInput {provider:AssistantProviderId;baseUrl:string;model:string;format?:AssistantApiFormat;supportsImages:boolean;
+  /** Sent once from the key field straight to the main process; never returned. */ key?:string;activate?:boolean}
+export interface AssistantToolSpec {name:string;description:string;parameters:Record<string,unknown>}
+export interface AssistantToolCall {id:string;name:string;arguments:Record<string,unknown>;argumentsError?:boolean}
+export type AssistantMessage =
+  | {role:'user';text:string}
+  | {role:'assistant';text:string;toolCalls?:AssistantToolCall[];
+     /** The provider's own blocks for this turn (Anthropic thinking/tool_use), sent back unchanged; opaque here. */ replay?:unknown}
+  | {role:'tool';toolCallId:string;name:string;content:string;isError?:boolean};
+export interface AssistantImageInput {grantId:string;mediaType:'image/png'|'image/jpeg'|'image/webp';base64:string}
+export interface AssistantSendInput {requestId:string;context:Record<string,unknown>;messages:AssistantMessage[];tools:AssistantToolSpec[];image?:AssistantImageInput}
+export type AssistantErrorCode = 'no_provider'|'no_key'|'storage_unavailable'|'bad_key'|'forbidden'|'billing'|'not_found'|'bad_request'
+  |'rate_limited'|'overloaded'|'server'|'network'|'timeout'|'cancelled'|'bad_response'|'invalid_input'|'image_refused';
+export interface AssistantError {code:AssistantErrorCode;reason:string;action:string;status?:number;requestId?:string;detail?:string}
+export type AssistantSendResult =
+  | {ok:true;text:string;toolCalls:AssistantToolCall[];replay?:unknown;stop:'end'|'tool'|'length';requestId?:string}
+  | {ok:false;error:AssistantError};
+export type AssistantModelList = {ok:true;models:{id:string;label:string}[]} | {ok:false;error:AssistantError};
+export type AssistantImageGrant = {ok:true;grantId:string;message:string;providerLabel:string;expiresAt:number} | {ok:false;error:AssistantError};
+export interface AssistantBridge {
+  getState:()=>Promise<AssistantConfigState>;
+  saveProvider:(input:AssistantProviderInput)=>Promise<AssistantConfigState>;
+  removeKey:(provider:AssistantProviderId)=>Promise<AssistantConfigState>;
+  removeProvider:(provider:AssistantProviderId)=>Promise<AssistantConfigState>;
+  setActive:(provider:AssistantProviderId)=>Promise<AssistantConfigState>;
+  listModels:(provider:AssistantProviderId)=>Promise<AssistantModelList>;
+  send:(input:AssistantSendInput)=>Promise<AssistantSendResult>;
+  cancel:(requestId:string)=>Promise<boolean>;
+  /** Step one of an image question: names the provider for the person's confirmation; no pixels move yet. */
+  imageIntent:(input:{fileName:string})=>Promise<AssistantImageGrant>;
+  /** Arms the run-id header on the one backend write a confirmed tool makes; endRun disarms it. */
+  beginRun:(runId:string,tool:string)=>Promise<boolean>;
+  endRun:(runId:string)=>Promise<void>;
 }
 
 export interface NativeSignature {status:'verified'|'unsigned'|'invalid'|'unavailable'|'development';reason:string;publisher?:string;platform:string;checked_at:string}

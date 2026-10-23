@@ -8,6 +8,7 @@ import logging
 import os
 import re
 import tempfile
+import threading
 import time
 import traceback
 import uuid
@@ -88,20 +89,31 @@ def _project_root(request: Request) -> Path:
     return Path(getattr(request.app.state, "project_dir", Path.cwd() / "projects")).resolve()
 
 
+# Serialises project activation with the lazy first activation in get_current_project. Without it, a first
+# GET /api/project/current that was still loading the saved pointer could finish after a concurrent create/open
+# and put the older project back as current (issue #9).
+_ACTIVATION_LOCK = threading.RLock()
+
+
 def _activate_project(request: Request, project: Dict[str, Any]) -> Dict[str, Any]:
+    with _ACTIVATION_LOCK:
+        return _activate_project_locked(request, project)
+
+
+def _activate_project_locked(request: Request, project: Dict[str, Any]) -> Dict[str, Any]:
     account=getattr(request.state,'account_user',None)
     accounts=getattr(request.app.state,'accounts',None)
     try:
         if project.get("active_labelset_id", "default") == "default":
             migrate_legacy_dataset_overlay(project)
     except (OSError, ValueError) as exc:
-        raise HTTPException(422,detail=f'Project activation failed; legacy annotation migration needs recovery: {exc}') from exc
+        raise HTTPException(422,detail=f'프로젝트를 열지 못했습니다. 예전 라벨 저장소를 옮기는 중 문제가 생겼습니다: {exc}') from exc
     try:
         from backend.api.routes_dataset import migrate_legacy_split_manifest
 
         migrate_legacy_split_manifest(project)
     except (OSError, ValueError) as exc:
-        raise HTTPException(422,detail=f'Project activation failed; legacy split migration needs recovery: {exc}') from exc
+        raise HTTPException(422,detail=f'프로젝트를 열지 못했습니다. 예전 분할 기록을 옮기는 중 문제가 생겼습니다: {exc}') from exc
     if account and accounts:
         accounts.register_project(project['id'],project['project_dir'],account['id'])
         request.state.scoped_project=project
@@ -124,7 +136,7 @@ def _activate_project(request: Request, project: Dict[str, Any]) -> Dict[str, An
                     _atomic_bytes(path,raw)
             except OSError:logger.error('Activation pointer recovery failed for %s',path.name)
         set_active_project_models_dir(prior_models)
-        raise HTTPException(status_code=422, detail=f'Project activation failed: {exc}') from exc
+        raise HTTPException(status_code=422, detail=f'프로젝트를 열지 못했습니다: {exc}') from exc
     request.app.state.current_project = project
     return project
 
@@ -148,9 +160,9 @@ def _load_project(path: Path) -> Dict[str, Any]:
 def _load_project_unfenced(path: Path) -> Dict[str, Any]:
     manifest = path / "project.json"
     if not path.is_dir():
-        raise HTTPException(status_code=404, detail=f"Project directory not found: {path}")
+        raise HTTPException(status_code=404, detail=f"프로젝트 폴더를 찾을 수 없습니다: {path}")
     if not manifest.is_file():
-        raise HTTPException(status_code=422, detail=f"No project.json in {path}. Create a project here first.")
+        raise HTTPException(status_code=422, detail=f"{path}에 프로젝트 파일(project.json)이 없습니다. 이 위치에 새 프로젝트를 먼저 만드세요.")
     stage = "manifest-compatibility"
     try:
         # Opening/authorizing an active project validates its manifest. A full
@@ -206,7 +218,7 @@ def _load_project_unfenced(path: Path) -> Dict[str, Any]:
                     diagnostics.append(f"via={'/'.join(operations)}")
                 break
             cause = cause.__cause__
-        raise HTTPException(status_code=422, detail=f"Invalid project.json: {exc} [{';'.join(diagnostics)}]") from exc
+        raise HTTPException(status_code=422, detail=f"프로젝트 파일(project.json)을 읽을 수 없습니다: {exc} [{';'.join(diagnostics)}]") from exc
     if any(project[key] != saved.get(key) for key in
            ("project_dir", "dataset_dir", "models_dir", "reports_dir", "annotations_dir")):
         _write_json(manifest, project)
@@ -336,7 +348,7 @@ def compatibility_recover(req:CompatibilityRecoveryRequest,request:Request):
 def compatibility_global_preview(request:Request):
     account=getattr(request.state,'account_user',None)
     if account and not account.get('administrator'):
-        raise HTTPException(403,'Global migration inventory requires workspace administrator permission')
+        raise HTTPException(403,'전체 저장소 변환 목록은 작업 공간 관리자만 볼 수 있습니다.')
     from backend.engine.project_migration import preview_global_migration
     import os
     root=Path(os.environ.get('VISION_AI_STUDIO_USER_DATA_DIR') or Path.home()/'.modu_vision')
@@ -349,9 +361,9 @@ def _compatibility_scope(directory,request,write=False):
     if not account:return
     selected=getattr(request.state,'scoped_project',None)
     if not selected or Path(directory).expanduser().resolve()!=Path(selected['project_dir']).resolve():
-        raise HTTPException(403,'Compatibility checks must address the selected authorized project')
+        raise HTTPException(403,'호환성 확인은 현재 선택한 프로젝트에만 할 수 있습니다.')
     if write and request.app.state.accounts.project_role(account['id'],selected['id'])!='owner':
-        raise HTTPException(403,'Project owner permission is required for schema migration')
+        raise HTTPException(403,'저장 형식 변환은 프로젝트 소유자만 할 수 있습니다.')
 
 
 @router.post("/create", response_model=ProjectConfigResponse)
@@ -371,11 +383,11 @@ def create_project(req: ProjectCreateRequest, request: Request):
         path = (_project_root(request) / (slug or f"project_{uuid.uuid4().hex[:8]}")).resolve()
     manifest = path / "project.json"
     if template is not None and path.exists():
-        raise HTTPException(409, detail='A template requires a fresh project location')
+        raise HTTPException(409, detail='템플릿으로 만들 때는 비어 있는 새 위치를 지정하세요.')
     if manifest.exists():
-        raise HTTPException(status_code=409, detail=f"Project already exists at {path}. Open it instead.")
+        raise HTTPException(status_code=409, detail=f"{path}에 프로젝트가 이미 있습니다. 새로 만들지 말고 열어서 사용하세요.")
     if path.exists() and not path.is_dir():
-        raise HTTPException(status_code=409, detail=f"A file already exists at {path}.")
+        raise HTTPException(status_code=409, detail=f"{path}에 같은 이름의 파일이 이미 있습니다. 다른 위치를 지정하세요.")
 
     path.mkdir(parents=True, exist_ok=True)
     for dirname in ("dataset", "models", "reports", "annotations"):
@@ -420,11 +432,19 @@ def get_current_project(request: Request):
     scoped=getattr(request.state,'scoped_project',None)
     if scoped is not None:return scoped
     if getattr(request.state,'account_user',None) is not None:
-        raise HTTPException(409,'Select an authorized shared project first')
+        raise HTTPException(409,'먼저 권한이 있는 공유 프로젝트를 선택하세요.')
     project = getattr(request.app.state, "current_project", None)
     if project is not None:
         return project
+    with _ACTIVATION_LOCK:
+        # Another request may have activated a project while this one waited: that choice stands.
+        project = getattr(request.app.state, "current_project", None)
+        if project is not None:
+            return project
+        return _activate_saved_or_default_project(request)
 
+
+def _activate_saved_or_default_project(request: Request):
     pointer = _project_root(request) / _ACTIVE_FILE_NAME
     try:
         path = json.loads(pointer.read_text(encoding="utf-8"))["project_dir"]
@@ -448,7 +468,7 @@ def _project_context_mutation(project):
     try:
         with_context.__enter__()
     except ValueError as exc:
-        raise HTTPException(status_code=409, detail="Project release authorization is in progress; retry the project change") from exc
+        raise HTTPException(status_code=409, detail="프로젝트의 배포 승인 작업이 진행 중입니다. 끝난 뒤 다시 시도하세요.") from exc
     try:
         yield _load_project(Path(project["project_dir"]))
     finally:
@@ -463,7 +483,7 @@ def update_project(req: ProjectUpdateRequest, request: Request):
             source = Path(updates["source_dataset_dir"]).expanduser().resolve()
             workspace = Path(project["project_dir"]).resolve()
             if workspace == source or workspace.is_relative_to(source):
-                raise HTTPException(status_code=422, detail="Project workspace cannot be inside its dataset source. Choose a separate project directory.")
+                raise HTTPException(status_code=422, detail="프로젝트 폴더는 데이터 원본 폴더 안에 둘 수 없습니다. 다른 폴더를 지정하세요.")
             updates["source_dataset_dir"] = str(source)
         project.update(updates)
         project["updated_at"] = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
@@ -507,7 +527,7 @@ def select_labelset(set_id: str, request: Request):
             activate_labelset(Path(current["project_dir"]), set_id)
             return _activate_project(request, _load_project(Path(current["project_dir"])))
     except KeyError as exc:
-        raise HTTPException(status_code=404, detail=f"Label set not found: {set_id}") from exc
+        raise HTTPException(status_code=404, detail=f"라벨 세트를 찾을 수 없습니다: {set_id}") from exc
     except (ValueError, OSError) as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
 
@@ -549,7 +569,7 @@ def retention_policy(req: RetentionPolicyRequest,request: Request):
 
 @router.post('/retention/pins')
 def retention_pin(req: RetentionPinRequest,request: Request):
-    if req.owner.startswith(('derived:','backup:','deployment:')):raise HTTPException(422,'System retention pin owners are reserved')
+    if req.owner.startswith(('derived:','backup:','deployment:')):raise HTTPException(422,'시스템이 쓰는 보존 고정 이름은 사용할 수 없습니다.')
     return _retention_action(request,lambda store,project:{'pinned':store.pin('manual:'+req.owner,req.paths,reason=req.reason)})
 
 

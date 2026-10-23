@@ -12,7 +12,7 @@ for(const viewport of [{width:1366,height:768},{width:1920,height:1080}])test(`s
     const footer=page.getByRole('contentinfo');
     await expect(footer.getByRole('status')).toContainText(/완료 입력/,{timeout:5000});
     await expect(footer.getByRole('button',{name:/권장 행동:/})).toHaveCount(1);
-    await expect(footer.getByRole('status')).toContainText(/부족|확인 필요|확인 중/);
+    await expect(footer.getByRole('status')).toContainText(/부족|확인 필요|확인 중|다음 할 일/);
     expect(await footer.evaluate(el=>el.scrollWidth<=el.clientWidth)).toBe(true);
   }
   await evidence.screenshot(page,`s203-sixth-stage-${viewport.width}`);
@@ -66,7 +66,7 @@ test('new readiness reply wins and failed read stays unverified',async({page,req
   await page.getByRole('navigation',{name:'Workflow Stages'}).getByRole('button').nth(1).click();
   const footer=page.getByRole('contentinfo');
   await expect.poll(()=>Boolean(release)).toBe(true);
-  await footer.getByRole('button',{name:'입력 상세',exact:true}).click();
+  await footer.getByRole('button',{name:'왜 그런가요?',exact:true}).click();
   await footer.getByRole('button',{name:'현재 입력 다시 확인',exact:true}).click();
   await expect(footer.getByRole('status')).toContainText('NEW 검수 입력 부족');
   const response=page.waitForResponse(r=>new URL(r.url()).pathname==='/api/team-data/readiness');

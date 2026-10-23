@@ -235,7 +235,7 @@ def test_different_target_is_refused_before_upload(common_workspace):
 def test_common_request_does_not_weaken_legacy_dataset_override(common_workspace):
     client, _, source, _, _, remote, jobs = common_workspace
     response = client.get('/api/evaluation/results', params={'job_id': jobs[0].name, 'dataset_path': str(source)})
-    assert response.status_code == 422 and 'snapshot' in response.text
+    assert response.status_code == 422 and ('snapshot' in response.text or '학습할 때 쓴 데이터로만' in response.text)
     assert remote.uploaded == [] and remote.launches == 0
 
 

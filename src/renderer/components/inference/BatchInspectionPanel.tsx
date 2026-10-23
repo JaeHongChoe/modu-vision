@@ -5,10 +5,12 @@ import { inspectionCountKey, startInspectionCountRead, type InspectionCountState
 import type { DatasetStatistics } from '../../services/projectPreferences';
 import { flowExecutionOptions, type FlowExecutionChoice } from '../flowchart/flowExecution';
 import { useComputeStore } from '../../stores/useComputeStore';
+import { registerAutoRun } from '../../stores/autoRunChannel';
 import { useDatasetStore } from '../../stores/useDatasetStore';
 import { useFlowchartStore } from '../../stores/useFlowchartStore';
 import { useProjectStore } from '../../stores/useProjectStore';
 import { useInspectionRunStore } from '../../stores/useInspectionRunStore';
+import { publishInspectionProgress } from '../../stores/workflowProgress';
 import type { FlowchartPipeline } from '../../types';
 import { activeSavedVersion, savedFlowIdentity, type SavedFlowIdentity } from '../flowchart/flowHandoff';
 import { SavedFlowIdentityCard } from '../flowchart/SavedFlowIdentityCard';
@@ -18,6 +20,7 @@ import {openSelectedInspectionRun} from './inspectionHistorySelection';
 import {EvidenceImageViewer} from '../common/EvidenceImageViewer';
 import {inspectionEvidence, safeSnapshot, type EvidenceView} from '../common/evidenceViewer';
 import {inspectionPreview,inspectionThumbnail} from './inspectionImage';
+import { cropLabel } from '../../utils/plainLabels';
 import {
   batchSourceResetKey, filterBatchRows, isBatchSourceCurrent, isBatchSourceReady,
   isInspectionHistoryContextCurrent, inspectionRunMatchesSource, createInspectionHistoryContext, createInspectionRunExitGuard,
@@ -46,6 +49,9 @@ const stateColors: Record<string, string> = {
 };
 let activeBatchOperation = 0;
 
+/** Node step states as the batch result lists them; unknown states show as recorded. */
+const STEP_STATUS_KO: Record<string, string> = {passed: '통과', flagged_ng: 'NG 표시', skipped: '건너뜀', failed: '실패', error: '오류', review: '검토 필요'};
+
 export const BatchInspectionPanel: React.FC = () => {
   const handoff=useTaskHandoff();const requestedRun=handoff?.kind==='inspection'?handoff.jobId:undefined;
   const executionChoiceOverride = useFlowchartStore(state => state.executionChoiceOverride);
@@ -60,6 +66,7 @@ export const BatchInspectionPanel: React.FC = () => {
   const projectDir = useProjectStore((state) => state.projectDir);
   const project = useProjectStore((state) => state.project);
   const setStep = useProjectStore((state) => state.setStep);
+  const technicalDetails = useProjectStore((state) => state.technicalDetails);
   const hasUnsavedDraft = useFlowchartStore((state) => state.pipelineDirty);
   const { folderPath, datasetKey, hasSelectedFolder, importError, sourceSaveError, isLoading: datasetIsLoading,
     isSplitting, lastImportedKey, staleDatasetKeys } = useDatasetStore();
@@ -84,6 +91,8 @@ export const BatchInspectionPanel: React.FC = () => {
   const [evidenceView,setEvidenceView]=useState<{scope:string;view:EvidenceView}|null>(null);
   const evidenceRequest=useRef(0);
   const stopReasonRef = useRef<BatchStopReason>(null);
+  // The last run's failure, read by 원클릭 자동 진행 right after the run it asked for (state would be one render late).
+  const lastRunError = useRef<string | null>(null);
   const exitGuardRef = useRef<ReturnType<typeof createInspectionRunExitGuard> | null>(null);
   const ownedOperationRef = useRef<number | null>(null);
   const historyRequestRef = useRef(0);
@@ -273,6 +282,7 @@ export const BatchInspectionPanel: React.FC = () => {
     setSelectedPath(null);
     setFilter('all');
     setError(null);
+    lastRunError.current = null;
     try {
       const { pipelines } = await api.flowchart.listPipelines(sourceFolder);
       const currentActive = activeSavedVersion(pipelines);
@@ -335,7 +345,8 @@ export const BatchInspectionPanel: React.FC = () => {
       }
     } catch (cause) {
       if (currentSource() && stopReasonRef.current !== 'user_stop') {
-        setError(cause instanceof Error ? cause.message : String(cause));
+        lastRunError.current = cause instanceof Error ? cause.message : String(cause);
+        setError(lastRunError.current);
       }
     } finally {
       if (createdRunId) runGuard?.release(createdRunId);
@@ -348,8 +359,29 @@ export const BatchInspectionPanel: React.FC = () => {
     }
   };
 
+  // 원클릭 자동 진행 presses this panel's own '검사 시작' with the scope and run location shown here.
+  useEffect(() => registerAutoRun('inspect', async () => {
+    if (isRunning) return '검사가 이미 진행 중입니다. 끝난 뒤 다시 누르세요.';
+    if (!sourceReady || !savedFlow || savedFlowLoading || !executionReady || !project) return '6단계 검사를 시작할 수 없습니다. 저장한 검사 흐름과 실행 위치를 확인하세요.';
+    await handleStart();
+    return lastRunError.current;
+  }), [isRunning, sourceReady, savedFlow, savedFlowLoading, executionReady, project, scope, executionChoice, selectedProfileId]); // eslint-disable-line react-hooks/exhaustive-deps
+
   const rows = report?.rows ?? [];
   const summary = summarizeBatch(rows);
+  // The footer's step-6 number line reads the shown run's counts; cleared when the source changes or the panel closes.
+  const progressScope = JSON.stringify([folderPath, projectDir, task]);
+  const publishedScope = useRef(progressScope);
+  useEffect(() => {
+    // On a source change the old run is still in state for one render (the source reset clears it); skip that render
+    // so the new source never shows the old run's counts.
+    if (publishedScope.current !== progressScope) { publishedScope.current = progressScope; return; }
+    const counts = report ? summarizeBatch(report.rows) : null;
+    // A failed image is done too, as in the header's n/total; the footer names the failures instead of showing them as waiting.
+    publishInspectionProgress(progressScope, counts ? {inspected: counts.processed + counts.errors, total: counts.total, ng: counts.ng, ...(counts.errors ? {failed: counts.errors} : {})} : null);
+  }, [report, progressScope]);
+  // A new result replaces the counts in place; only a source change or closing the panel clears them.
+  useEffect(() => () => publishInspectionProgress(progressScope, null), [progressScope]);
   const visibleRows = filterBatchRows(rows, filter);
   const selected = visibleRows.find((row) => row.image.file_path === selectedPath) ?? visibleRows[0] ?? null;
   const previewSource=inspectionPreview(selected?.result?.annotated_image,selected?.image.thumbnail_url);
@@ -524,7 +556,7 @@ export const BatchInspectionPanel: React.FC = () => {
         refreshKey={reviewQueueRevision} disabled={isRunning}
         onOpen={(runId, imagePath) => { void openHistoryRun(runId, imagePath); }} />
 
-      <div className="rounded-lg border border-[#2B3547] bg-[#0E1420] px-3 py-3" aria-label="검사 이력">
+      <div id="workflow-inspection-history" tabIndex={-1} className="rounded-lg border border-[#2B3547] bg-[#0E1420] px-3 py-3 outline-none" aria-label="검사 이력">
         <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
           <div className="flex items-center gap-2 text-xs font-semibold text-slate-100">
             <History className="h-4 w-4 text-sky-400" /> 검사 이력
@@ -546,7 +578,7 @@ export const BatchInspectionPanel: React.FC = () => {
           >
             <span className="block truncate text-[11px] font-semibold text-slate-100">{item.pipeline_name}</span>
             <span className="mt-1 block truncate font-mono text-[10px] text-sky-300" title={item.saved_version_id || '이전 형식의 검사 기록'}>
-              {item.saved_version_id ? `저장 버전 ${item.saved_version_id.slice(0, 8)}` : '저장 버전 미기록'} · 그래프 {item.pipeline_hash.slice(0, 8)}
+              {item.saved_version_id ? `저장 버전 ${item.saved_version_id.slice(0, 8)}` : '저장 버전 미기록'}{technicalDetails && ` · 그래프 ${item.pipeline_hash.slice(0, 8)}`}
             </span>
             <span className="mt-1 block text-[10px] text-slate-400">{new Date(item.created_at).toLocaleString('ko-KR')} · {item.status === 'completed' ? '완료' : item.status === 'stopped' ? '중단' : '진행 중'}</span>
             <span className="mt-1 block text-[10px] text-slate-300">{item.total}장 · NG {item.counts.NG || 0} · 검토 {item.counts.REVIEW || 0}</span>
@@ -569,11 +601,11 @@ export const BatchInspectionPanel: React.FC = () => {
               {report.execution_config.execution_target !== 'model_compute' && ` · ${report.execution_config.device.toUpperCase()}`}
               {report.execution_config.execution_target === 'model_compute' && ' · 실제 장치는 이미지별 기록에서 확인'}
             </p>}
-            <div className="grid gap-1.5 sm:grid-cols-2">
+            {technicalDetails ? <div className="grid gap-1.5 sm:grid-cols-2">
               <span className="break-all">저장 플로우 버전 <strong className="font-mono text-slate-100">{report.saved_version_id || '이전 기록 · 미기록'}</strong></span>
               <span className="break-all">그래프 SHA-256 <strong className="font-mono text-slate-100" title={report.pipeline_hash}>{report.pipeline_hash || '이전 기록 · 미기록'}</strong></span>
-            </div>
-            {Object.entries(report.model_sha256 || {}).length > 0 ? <div className="mt-2 space-y-1 border-t border-sky-800/50 pt-2">
+            </div> : <p className="text-slate-400">저장한 검사 플로우 {report.saved_version_id ? `v${report.saved_version_id.slice(0, 8)}` : '(이전 기록)'}로 검사했습니다. 버전 해시는 상단 "기술 상세"에서 볼 수 있습니다.</p>}
+            {!technicalDetails ? null : Object.entries(report.model_sha256 || {}).length > 0 ? <div className="mt-2 space-y-1 border-t border-sky-800/50 pt-2">
               <span className="font-semibold text-sky-200">검사 시작 시 검증한 체크포인트</span>
               {Object.entries(report.model_sha256 || {}).map(([jobId, digest]) => <div key={jobId} className="grid gap-0.5 sm:grid-cols-[minmax(150px,0.35fr)_minmax(0,1fr)]">
                 <span className="truncate font-mono" title={jobId}>{jobId}</span>
@@ -627,7 +659,8 @@ export const BatchInspectionPanel: React.FC = () => {
                     <div className="flex min-w-0 items-center gap-2"><ImageIcon className="h-4 w-4 shrink-0 text-cyan-400" /><strong className="truncate text-slate-100" title={selected.image.file_path}>{selected.image.file_name}</strong></div>
                     <span className={`${stateColors[selected.state]}`}>{stateNames[selected.state]}</span>
                   </div>
-                  <p className="break-all text-[10px] text-slate-400">원본: {selected.image.file_path}</p>
+                  {/* The full path and the image hash are records for 기술 상세; the file name above carries the path as its tooltip. */}
+                  {technicalDetails && <p className="break-all text-[10px] text-slate-400">원본: {selected.image.file_path}</p>}
                   <button type="button" onClick={()=>void openEvidence()} className="rounded border border-sky-700 px-3 py-2 text-xs text-sky-200">원본·판정 근거 보기</button>
                   {evidenceView?.scope===resetKey&&<EvidenceImageViewer evidence={evidenceView.view} onClose={closeEvidence} returnLabel="검사 결과로 돌아가기"/>}
                   <button type="button" disabled={isRunning} onClick={() => {
@@ -635,7 +668,7 @@ export const BatchInspectionPanel: React.FC = () => {
                       if (!opened) setError('선택한 이미지의 라벨 화면을 열지 못했습니다. 검사 데이터 출처와 저장 상태를 확인하세요.');
                     }).catch((cause) => setError(cause instanceof Error ? cause.message : '라벨 화면을 열지 못했습니다.'));
                   }} className="rounded border border-cyan-700 px-3 py-1 text-xs text-cyan-200 hover:bg-cyan-950 disabled:opacity-40">이 이미지 라벨 수정</button>
-                  {selected.image_sha256 && <p className="break-all font-mono text-[10px] text-slate-500">검사 원본 SHA-256: {selected.image_sha256}</p>}
+                  {technicalDetails && selected.image_sha256 && <p className="break-all font-mono text-[10px] text-slate-500">검사 원본 SHA-256: {selected.image_sha256}</p>}
                   <div className="flex h-48 items-center justify-center overflow-hidden rounded border border-[#243043] bg-black">
                     {previewSource
                       ? <img src={resolveApiUrl(previewSource)} alt={`${selected.image.file_name} ${previewIsResult?'검사 미리보기':'원본 썸네일'}`} className="h-full w-full object-contain" />
@@ -659,7 +692,7 @@ export const BatchInspectionPanel: React.FC = () => {
                           {selected.result.execution_steps.map((step, index) => (
                             <div key={`${step.node_id}-${index}`} className="flex items-center justify-between rounded border border-[#243043] px-2 py-1 text-[11px] text-slate-300">
                               <span className="truncate" title={step.node_id}>{step.name || step.node_id}</span>
-                              <span className="shrink-0 font-mono">{step.status} · {Number(step.latency_ms).toFixed(1)}ms</span>
+                              <span className="shrink-0 font-mono">{STEP_STATUS_KO[step.status] || step.status} · {Number(step.latency_ms).toFixed(1)}ms</span>
                             </div>
                           ))}
                         </div>
@@ -673,7 +706,7 @@ export const BatchInspectionPanel: React.FC = () => {
                                 {crop.crop_thumbnail&&safeSnapshot(crop.crop_thumbnail)
                                   ? <img src={crop.crop_thumbnail} alt={crop.label} className="h-16 w-full object-contain" />
                                   : <span className="text-amber-200">저장된 ROI 이미지 없음</span>}
-                                <div className="truncate">{crop.label}</div><div>{crop.verdict} · {Number(crop.defect_score).toFixed(2)}</div>
+                                <div className="truncate">{cropLabel(crop.label)}</div><div>{crop.verdict} · {Number(crop.defect_score).toFixed(2)}</div>
                               </div>
                             ))}
                           </div>

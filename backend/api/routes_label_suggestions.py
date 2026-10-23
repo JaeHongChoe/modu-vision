@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import math
 import os
 import re
 import threading
@@ -70,11 +71,32 @@ class GenerateRequest(BaseModel):
     max_height: Optional[float] = Field(None,ge=0)
 
 
+# Ledger events that advance an image's revision without touching its labels: taking or giving back the edit lease
+# that team editing requires. Everything else (a save, a class change, a review, an assignment) makes a draft stale.
+_LEASE_ONLY_EVENTS = {"edit_lease_acquired", "edit_lease_released"}
+
+
+def _changed_since_draft(metadata: Dict[str, Any], proposal: Dict[str, Any]) -> bool:
+    """Whether the image changed since the draft was made, apart from edit-lease events.
+
+    The labels and the image are compared by content hash before this; the revision catches the other ledger
+    changes. A reviewer must take the edit lease to adopt under team editing, and that alone must not refuse them."""
+    drafted = proposal.get("image_revision")
+    if drafted is None or metadata["revision"] == drafted:
+        return False
+    later = [event for event in metadata.get("audit", []) if int(event.get("revision", 0)) > int(drafted)]
+    if len(later) != metadata["revision"] - drafted:
+        return True
+    return any(event.get("action") not in _LEASE_ONLY_EVENTS for event in later)
+
+
 class ReviewRequest(BaseModel):
     model_config = ConfigDict(extra="ignore")
     decision: Literal["accept", "reject"]
     candidate_ids: List[str] = Field(default_factory=list)
     actor: str = Field("operator", min_length=1, max_length=100)
+    # With team editing on, a save needs the image's edit lease; the reviewer passes the one they hold.
+    lease_token: Optional[str] = Field(None, min_length=1, max_length=200)
 
 
 class BatchGenerateRequest(BaseModel):
@@ -128,14 +150,14 @@ def list_feature_suggestion_models(request: Request):
 def get_feature_training(job_id: str, request: Request):
     from backend.engine import labeling_tasks
     try: return labeling_tasks.read(get_current_project(request),job_id)
-    except FileNotFoundError as exc: raise HTTPException(404,detail='Feature training job not found') from exc
+    except FileNotFoundError as exc: raise HTTPException(404,detail='특징 학습 작업을 찾을 수 없습니다. 작업 목록을 새로고침한 뒤 다시 고르세요.') from exc
     except ValueError as exc: raise HTTPException(422,detail=str(exc)) from exc
 
 @router.post('/feature-train/{job_id}/cancel')
 def cancel_feature_training(job_id: str, request: Request):
     from backend.engine import labeling_tasks
     try: return labeling_tasks.cancel(get_current_project(request),job_id)
-    except FileNotFoundError as exc: raise HTTPException(404,detail='Feature training job not found') from exc
+    except FileNotFoundError as exc: raise HTTPException(404,detail='특징 학습 작업을 찾을 수 없습니다. 작업 목록을 새로고침한 뒤 다시 고르세요.') from exc
     except ValueError as exc: raise HTTPException(422,detail=str(exc)) from exc
 
 
@@ -172,6 +194,11 @@ def _model_catalog(project: Dict[str, Any]) -> List[Dict[str, Any]]:
         recorded_source = receipt.get("source_dataset_path")
         if not isinstance(recorded_source, str) or Path(recorded_source).expanduser().resolve() != source:
             continue
+        # A model trained under another label set of this project learned that set's classes and truth: it does not
+        # draft into the active one (2026-10-23 default; a receipt that names no label set predates the record).
+        trained_set = (receipt.get("training_provenance") or {}).get("labelset_id") if isinstance(receipt.get("training_provenance"), dict) else None
+        if isinstance(trained_set, str) and trained_set != project.get("active_labelset_id", "default"):
+            continue
         meta_path = directory / "model_meta.json"
         try:
             meta = json.loads(meta_path.read_text(encoding="utf-8"))
@@ -198,42 +225,44 @@ def _image_path(project: Dict[str, Any], requested: str) -> Path:
     source = _source_path(project)
     requested_path = Path(requested).expanduser()
     if not requested_path.is_absolute():
-        raise HTTPException(status_code=422, detail="Image path must be absolute.")
+        raise HTTPException(status_code=422, detail="이미지 경로가 전체 경로(절대 경로)가 아닙니다. 이미지 목록에서 이미지를 다시 고르세요.")
     # A symlinked image within the imported tree is allowed, while arbitrary
     # paths outside its visible dataset hierarchy are not.
     candidate = Path(os.path.abspath(requested_path))
     if not candidate.is_relative_to(source) or candidate.suffix.lower() not in SUPPORTED_IMAGE_EXTENSIONS:
-        raise HTTPException(status_code=422, detail="Image is outside the active dataset.")
+        raise HTTPException(status_code=422, detail="이미지가 현재 데이터 폴더 밖에 있거나 지원하지 않는 형식입니다. 현재 데이터의 이미지 목록에서 다시 고르세요.")
     if not candidate.is_file():
-        raise HTTPException(status_code=404, detail="Image is unavailable.")
+        raise HTTPException(status_code=404, detail="이미지 파일을 찾을 수 없습니다. 이미지 목록을 새로고침한 뒤 다시 고르세요.")
     return candidate
 
 
-def _proposal_root(project: Dict[str, Any]) -> Path:
+def _proposal_root(project: Dict[str, Any], *, create: bool = True) -> Path:
+    """The project's suggestion folder; a read (create=False) never makes it, so listing leaves the project unchanged."""
     root = Path(project["project_dir"]) / "label_suggestions"
     if root.is_symlink():
-        raise HTTPException(status_code=422, detail="Suggestion directory cannot be a symbolic link.")
-    root.mkdir(parents=True, exist_ok=True)
+        raise HTTPException(status_code=422, detail="초안 폴더가 바로가기(링크)로 되어 있어 쓸 수 없습니다. 프로젝트 폴더의 label_suggestions를 실제 폴더로 바꾸세요.")
+    if create:
+        root.mkdir(parents=True, exist_ok=True)
     return root
 
 
-def _proposal_path(project: Dict[str, Any], suggestion_id: str) -> Path:
+def _proposal_path(project: Dict[str, Any], suggestion_id: str, *, create: bool = True) -> Path:
     if not _SUGGESTION_ID.fullmatch(suggestion_id):
-        raise HTTPException(status_code=422, detail="Invalid suggestion ID.")
-    return _proposal_root(project) / f"{suggestion_id}.json"
+        raise HTTPException(status_code=422, detail="초안 ID 형식이 올바르지 않습니다. 초안 목록에서 다시 고르세요.")
+    return _proposal_root(project, create=create) / f"{suggestion_id}.json"
 
 
 def _read_proposal(project: Dict[str, Any], suggestion_id: str) -> Dict[str, Any]:
-    path = _proposal_path(project, suggestion_id)
+    path = _proposal_path(project, suggestion_id, create=False)
     try:
         value = json.loads(path.read_text(encoding="utf-8"))
         if not isinstance(value, dict) or value.get("id") != suggestion_id or value.get("project_id") != project["id"]:
-            raise ValueError("proposal identity mismatch")
+            raise ValueError('ID나 프로젝트가 맞지 않음')
         return value
     except FileNotFoundError as exc:
-        raise HTTPException(status_code=404, detail="Suggestion not found.") from exc
+        raise HTTPException(status_code=404, detail="초안을 찾을 수 없습니다. 초안 목록을 새로고침한 뒤 다시 고르세요.") from exc
     except (OSError, ValueError) as exc:
-        raise HTTPException(status_code=422, detail=f"Invalid suggestion: {exc}") from exc
+        raise HTTPException(status_code=422, detail=f'초안 기록을 읽을 수 없습니다 ({exc}). 이 초안 대신 초안을 새로 만드세요.') from exc
 
 
 def _candidate_annotations(task: str, predictions: Any, score: float, suggestion_id: str) -> List[Dict[str, Any]]:
@@ -285,17 +314,22 @@ def _candidate_annotations(task: str, predictions: Any, score: float, suggestion
     ]
 
 
-def _verified_model(project: Dict[str, Any], job_id: str) -> Dict[str, Any]:
-    """Require a completed model trained on this unchanged source/label set."""
-    model = next((item for item in _model_catalog(project) if item["job_id"] == job_id), None)
-    if model is None:
-        raise HTTPException(status_code=404, detail="No completed model matches this project's task and dataset.")
+def _model_data_state(project: Dict[str, Any], model: Dict[str, Any]) -> str:
+    """'current' when the model's receipt fingerprint equals this project's data now, else 'changed'."""
     from backend.api.routes_evaluation import _matches_source_dataset
 
-    if not _matches_source_dataset(Path(model["checkpoint_path"]).parent,
-                                   str(_source_path(project)), project["task"]):
-        raise HTTPException(status_code=409, detail="The model's training dataset fingerprint no longer matches this project's labels or split.")
-    return model
+    return "current" if _matches_source_dataset(Path(model["checkpoint_path"]).parent, str(_source_path(project)), project["task"]) else "changed"
+
+
+def _verified_model(project: Dict[str, Any], job_id: str) -> Dict[str, Any]:
+    """Require a completed model of this task trained on this source.
+
+    A model trained before the data changed may still draft (2026-10-22 decision): drafting is not evidence, and the
+    review checks every draft against the data at adoption time. The row says which it is (data_state)."""
+    model = next((item for item in _model_catalog(project) if item["job_id"] == job_id), None)
+    if model is None:
+        raise HTTPException(status_code=404, detail="고른 모델은 이 프로젝트의 작업 종류와 데이터로 학습을 마친 모델이 아닙니다. 모델 목록을 새로고침한 뒤 다시 고르세요.")
+    return {**model, "data_state": _model_data_state(project, model)}
 
 
 def _project_binding_is_current(project: Dict[str, Any]) -> bool:
@@ -337,22 +371,18 @@ def _generate_proposal(project: Dict[str, Any], image: Path, model: Dict[str, An
     before_studio = _sha256(studio_json)
     before_dataset = _dataset_fingerprint(project)
     if not before_image or not before_checkpoint:
-        raise HTTPException(status_code=409, detail="Image or checkpoint became unavailable.")
+        raise HTTPException(status_code=409, detail="이미지나 모델 파일을 읽을 수 없게 되었습니다. 파일이 제자리에 있는지 확인한 뒤 초안을 다시 만드세요.")
     with Image.open(image) as pil:
         width, height = pil.size
     result = infer(task=project["task"], model_path=checkpoint, image_input=image,
                    threshold=threshold, device=device)
     if (_sha256(image) != before_image or _sha256(checkpoint) != before_checkpoint
             or _sha256(labelme) != before_labelme or _sha256(studio_json) != before_studio):
-        raise HTTPException(status_code=409, detail="Image, labels, or checkpoint changed during inference.")
+        raise HTTPException(status_code=409, detail="초안을 만드는 동안 이 이미지·라벨이나 모델 파일이 바뀌었습니다. 변경이 끝난 뒤 초안을 다시 만드세요.")
     if not _project_binding_is_current(project):
-        raise HTTPException(status_code=409, detail="Project identity, task, or source changed during inference.")
+        raise HTTPException(status_code=409, detail="초안을 만드는 동안 프로젝트나 작업 종류, 데이터 폴더가 바뀌었습니다. 지금 프로젝트를 확인한 뒤 초안을 다시 만드세요.")
     if _dataset_fingerprint(project) != before_dataset:
-        raise HTTPException(status_code=409, detail="Training dataset fingerprint changed during inference.")
-    from backend.api.routes_evaluation import _matches_source_dataset
-
-    if not _matches_source_dataset(checkpoint.parent, str(_source_path(project)), project["task"]):
-        raise HTTPException(status_code=409, detail="Training dataset fingerprint no longer matches this model.")
+        raise HTTPException(status_code=409, detail="초안을 만드는 동안 데이터(이미지·라벨·분할)가 바뀌었습니다. 변경이 끝난 뒤 초안을 다시 만드세요.")
     suggestion_id = f"suggestion_{uuid.uuid4().hex[:24]}"
     proposal = {
         "id": suggestion_id, "project_id": project["id"], "status": "pending",
@@ -363,6 +393,7 @@ def _generate_proposal(project: Dict[str, Any], image: Path, model: Dict[str, An
         "studio_sha256": before_studio,
         "job_id": model["job_id"], "task": project["task"], "checkpoint_sha256": before_checkpoint,
         "dataset_fingerprint": before_dataset,
+        "model_data_state": model.get("data_state") or _model_data_state(project, model),
         "threshold": threshold, "confidence": round(float(result.confidence_score), 4),
         "latency_ms": round(float(result.latency_ms), 2),
         "candidates": _candidate_annotations(project["task"], result.predictions,
@@ -384,14 +415,26 @@ def _generate_proposal(project: Dict[str, Any], image: Path, model: Dict[str, An
 
 @router.get("/models")
 def list_suggestion_models(request: Request):
-    project = get_current_project(request)
-    from backend.api.routes_evaluation import _matches_source_dataset
+    """Completed models of this task trained on this source, current-data ones first.
 
-    source = str(_source_path(project))
-    return {"models": [
-        model for model in _model_catalog(project)
-        if _matches_source_dataset(Path(model["checkpoint_path"]).parent, source, project["task"])
-    ]}
+    A model whose training data changed since (data_state 'changed') can still draft; it is never evaluation
+    evidence, and the screen says so next to it."""
+    project = get_current_project(request)
+    rows = [{**model, "data_state": _model_data_state(project, model), "trained_at": model.get("created_at")}
+            for model in _model_catalog(project)]
+    rows.sort(key=lambda row: (row["data_state"] != "current", -(_sortable_time(row.get("trained_at")))))
+    return {"models": rows}
+
+
+def _sortable_time(value: Any) -> float:
+    if isinstance(value, (int, float)):
+        return float(value)
+    if isinstance(value, str):
+        try:
+            return time.mktime(time.strptime(value[:19], "%Y-%m-%dT%H:%M:%S"))
+        except ValueError:
+            return 0.0
+    return 0.0
 
 
 @router.post("/generate")
@@ -408,7 +451,7 @@ def list_suggestions(request: Request, image_path: Optional[str] = None):
     source = _source_path(project)
     selected = str(_image_path(project, image_path)) if image_path else None
     results = []
-    for path in sorted(_proposal_root(project).glob("suggestion_*.json"), reverse=True):
+    for path in sorted(_proposal_root(project, create=False).glob("suggestion_*.json"), reverse=True):
         if not _SUGGESTION_ID.fullmatch(path.stem):
             continue
         try:
@@ -416,24 +459,26 @@ def list_suggestions(request: Request, image_path: Optional[str] = None):
             image = item.get("image_path")
             if (item.get("task") == project["task"] and isinstance(image, str)
                     and Path(image).is_relative_to(source) and (selected is None or image == selected)):
+                item.setdefault("backend", "trained_model")
                 results.append(item)
         except HTTPException:
             continue
     return {"suggestions": results}
 
 
-def _batch_root(project: Dict[str, Any]) -> Path:
-    root = _proposal_root(project) / "batches"
+def _batch_root(project: Dict[str, Any], *, create: bool = True) -> Path:
+    root = _proposal_root(project, create=create) / "batches"
     if root.is_symlink():
-        raise HTTPException(status_code=422, detail="Batch directory cannot be a symbolic link.")
-    root.mkdir(parents=True, exist_ok=True)
+        raise HTTPException(status_code=422, detail="일괄 초안 폴더가 바로가기(링크)로 되어 있어 쓸 수 없습니다. 프로젝트 폴더의 label_suggestions/batches를 실제 폴더로 바꾸세요.")
+    if create:
+        root.mkdir(parents=True, exist_ok=True)
     return root
 
 
-def _batch_path(project: Dict[str, Any], batch_id: str) -> Path:
+def _batch_path(project: Dict[str, Any], batch_id: str, *, create: bool = True) -> Path:
     if not _BATCH_ID.fullmatch(batch_id):
-        raise HTTPException(status_code=422, detail="Invalid batch ID.")
-    return _batch_root(project) / f"{batch_id}.json"
+        raise HTTPException(status_code=422, detail="일괄 초안 ID 형식이 올바르지 않습니다. 일괄 초안 기록에서 다시 고르세요.")
+    return _batch_root(project, create=create) / f"{batch_id}.json"
 
 
 def _persist_batch(project: Dict[str, Any], batch: Dict[str, Any]) -> None:
@@ -441,20 +486,20 @@ def _persist_batch(project: Dict[str, Any], batch: Dict[str, Any]) -> None:
 
 
 def _read_batch(project: Dict[str, Any], batch_id: str) -> Dict[str, Any]:
-    path = _batch_path(project, batch_id)
+    path = _batch_path(project, batch_id, create=False)
     if path.is_symlink():
-        raise HTTPException(status_code=422, detail="Batch file cannot be a symbolic link.")
+        raise HTTPException(status_code=422, detail="일괄 초안 기록 파일이 바로가기(링크)로 되어 있어 읽지 않습니다. 실제 파일로 바꾼 뒤 다시 여세요.")
     try:
         batch = json.loads(path.read_text(encoding="utf-8"))
         if (not isinstance(batch, dict) or batch.get("id") != batch_id
                 or batch.get("project_id") != project["id"]
                 or batch.get("source_dataset_dir") != project.get("source_dataset_dir")):
-            raise ValueError("batch identity mismatch")
+            raise ValueError('ID·프로젝트·데이터 폴더가 맞지 않음')
         return batch
     except FileNotFoundError as exc:
-        raise HTTPException(status_code=404, detail="Batch not found in this project.") from exc
+        raise HTTPException(status_code=404, detail="이 프로젝트에서 그 일괄 초안 기록을 찾을 수 없습니다. 목록을 새로고침한 뒤 다시 고르세요.") from exc
     except (OSError, ValueError) as exc:
-        raise HTTPException(status_code=422, detail=f"Invalid batch: {exc}") from exc
+        raise HTTPException(status_code=422, detail=f'일괄 초안 기록을 읽을 수 없습니다 ({exc}). 일괄 초안을 새로 만드세요.') from exc
 
 
 def _project_batch_key(project: Dict[str, Any]) -> str:
@@ -490,7 +535,7 @@ def _batch_images(project: Dict[str, Any], requested: Optional[List[str]]) -> Li
             path.stem for path in source.iterdir()
             if path.is_file() and path.suffix.lower() in SUPPORTED_IMAGE_EXTENSIONS
         }
-        flat_labelme = routes_dataset._has_flat_labelme_annotations(source)
+        flat_labelme = routes_dataset._flat_image_workspace(source, project["task"])
         structured = (
             project["task"] not in {"detection", "segmentation"}
             or not root_images or not flat_labelme
@@ -502,7 +547,7 @@ def _batch_images(project: Dict[str, Any], requested: Optional[List[str]]) -> Li
         if structured:
             raise HTTPException(
                 status_code=422,
-                detail="Automatic unlabeled selection supports flat LabelMe datasets only. Select images explicitly for COCO, YOLO, or class-folder datasets.",
+                detail="미라벨 전체 선택은 평면 LabelMe 데이터에서만 됩니다. COCO·YOLO·폴더형 데이터는 이미지를 직접 선택하세요.",
             )
         result = []
         offset = 0
@@ -520,12 +565,12 @@ def _batch_images(project: Dict[str, Any], requested: Optional[List[str]]) -> Li
                     result.append(image)
                     seen.add(str(image))
                     if len(result) > 5000:
-                        raise HTTPException(status_code=413, detail="More than 5,000 unlabeled images. Select a smaller batch.")
+                        raise HTTPException(status_code=413, detail="미라벨 이미지가 5,000장을 넘어 한 번에 만들 수 없습니다. 이미지를 직접 선택해 5,000장 이하로 나눠 만드세요.")
             offset += len(page["items"])
             if offset >= page["total"] or not page["items"]:
                 break
     if not result:
-        raise HTTPException(status_code=422, detail="No images selected for model-assisted labeling.")
+        raise HTTPException(status_code=422, detail="초안을 만들 이미지가 없습니다. 이미지를 하나 이상 고르세요.")
     return result
 
 
@@ -536,15 +581,17 @@ def _run_batch(project: Dict[str, Any], model: Dict[str, Any], live: _LiveBatch)
     batch = live.batch
     checkpoint = Path(model["checkpoint_path"])
     try:
-        from backend.api.routes_evaluation import _matches_source_dataset
-
         for entry in batch["entries"]:
             if live.cancel.is_set():
                 break
-            if (not _project_binding_is_current(project) or _sha256(checkpoint) != batch["checkpoint_sha256"] or
-                    not _matches_source_dataset(checkpoint.parent, batch["source_dataset_dir"], batch["task"])):
+            # A model trained before the data changed may start a batch (its drafts say so), but the data must not
+            # change under a running batch: every draft is reviewed against the batch's start-time fingerprint, so
+            # drafts made after a label or split save could never be adopted, and the start-time model_data_state
+            # would no longer describe them.
+            if (not _project_binding_is_current(project) or _sha256(checkpoint) != batch["checkpoint_sha256"]
+                    or _dataset_fingerprint(project) != batch["review_fingerprint"]):
                 with _BATCH_LOCK:
-                    entry.update(status="failed", error="The project identity, task, source, checkpoint, or training dataset fingerprint changed during this batch.")
+                    entry.update(status="failed", error="일괄 초안을 만드는 동안 프로젝트·작업 종류·데이터 폴더·모델 파일이나 라벨·분할이 바뀌어 멈췄습니다. 남은 이미지는 일괄 초안을 다시 시작해 만드세요.")
                     batch["processed"] += 1
                     batch["failed"] += 1
                     batch["status"] = "failed"
@@ -598,13 +645,14 @@ def start_batch(req: BatchGenerateRequest, request: Request):
     images = _batch_images(project, req.image_paths)
     checkpoint_sha256 = _sha256(Path(model["checkpoint_path"]))
     if checkpoint_sha256 is None:
-        raise HTTPException(status_code=409, detail="Checkpoint became unavailable.")
+        raise HTTPException(status_code=409, detail="모델 파일을 읽을 수 없게 되었습니다. 모델 목록을 새로고침한 뒤 다시 고르세요.")
     batch_id = f"batch_{uuid.uuid4().hex[:24]}"
     batch = {
         "id": batch_id, "project_id": project["id"], "source_dataset_dir": str(_source_path(project)),
         "job_id": req.job_id, "task": project["task"], "threshold": req.threshold, "keywords": req.keywords,
         'device':req.device,'size_bounds':{k:getattr(req,k) for k in ('min_area','max_area','min_width','max_width','min_height','max_height')},
         "review_fingerprint": _dataset_fingerprint(project),
+        "model_data_state": model.get("data_state", "current"),
         "checkpoint_sha256": checkpoint_sha256, "status": "running",
         "created_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
         "finished_at": None, "total": len(images), "processed": 0,
@@ -615,7 +663,7 @@ def start_batch(req: BatchGenerateRequest, request: Request):
     cancel = threading.Event()
     with _BATCH_LOCK:
         if project_key in _LIVE_BATCHES:
-            raise HTTPException(status_code=409, detail="A model-assisted labeling batch is already running for this project.")
+            raise HTTPException(status_code=409, detail="이 프로젝트에서 일괄 초안 만들기가 이미 진행 중입니다. 끝나거나 취소한 뒤 다시 시작하세요.")
         _persist_batch(project, batch)
         live = _LiveBatch(batch=batch, cancel=cancel, thread=threading.Thread(
             target=lambda: _run_batch(project, model, live), name=f"LabelBatch-{batch_id}", daemon=True,
@@ -627,7 +675,7 @@ def start_batch(req: BatchGenerateRequest, request: Request):
             del _LIVE_BATCHES[project_key]
             batch.update(status="failed", error=str(exc), finished_at=time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()))
             _persist_batch(project, batch)
-            raise HTTPException(status_code=500, detail="Could not start model-assisted labeling batch.") from exc
+            raise HTTPException(status_code=500, detail="일괄 초안 만들기를 시작하지 못했습니다. 잠시 뒤 다시 시작하세요.") from exc
     return batch
 
 
@@ -635,7 +683,7 @@ def start_batch(req: BatchGenerateRequest, request: Request):
 def list_batches(request: Request):
     project = get_current_project(request)
     results = []
-    for path in sorted(_batch_root(project).glob("batch_*.json"), reverse=True):
+    for path in sorted(_batch_root(project, create=False).glob("batch_*.json"), reverse=True):
         if _BATCH_ID.fullmatch(path.stem):
             try:
                 results.append(_batch_for_read(project, path.stem))
@@ -663,9 +711,208 @@ def cancel_batch(batch_id: str, request: Request):
         return batch
 
 
+def changed_adopted_ids(adopted: List[Dict[str, Any]], current: List[Any]) -> List[str]:
+    """The adopted shapes that no longer match the label file (edited or removed): whole-shape equality by id.
+
+    The take-back and the adoption statistics share this rule, so "edited after adoption" means the same thing in
+    both places."""
+    by_id = {item["id"]: item for item in current if isinstance(item, dict) and isinstance(item.get("id"), str)}
+    return sorted(item["id"] for item in adopted if by_id.get(item["id"]) != item)
+
+
+class LabelSuggestionThresholdAdvice(BaseModel):
+    reason: Literal["too_few", "already_high", "none_reaches", "task_not_applicable", "suggestion"]
+    reviewed_candidates: int
+    adopted_rate: Optional[float] = None
+    threshold: Optional[float] = None
+    adopted_rate_above: Optional[float] = None
+    candidates_above: Optional[int] = None
+
+
+class LabelSuggestionModelStats(BaseModel):
+    job_id: str
+    backend: str
+    drafts: int
+    pending: int
+    adopted: int
+    rejected: int
+    reverted: int
+    edited_after: int
+    edited_unknown: int
+    reviewed_candidates: int
+    adopted_candidates: int
+    rejected_candidates: int
+    mean_confidence_adopted: Optional[float] = None
+    mean_confidence_rejected: Optional[float] = None
+    advice: LabelSuggestionThresholdAdvice
+
+
+class LabelSuggestionStats(BaseModel):
+    models: List[LabelSuggestionModelStats]
+    generated_at: str
+
+
+# The slider's grid in step 2 (0.05 … 0.95).
+_THRESHOLD_GRID = [round(0.05 * step, 2) for step in range(1, 20)]
+
+
+def threshold_advice(task: str, reviewed: List[tuple], backend: str = "trained_model") -> Dict[str, Any]:
+    """A confidence threshold a person can trust, from candidates a person already judged.
+
+    ``reviewed`` holds (confidence, adopted) per candidate of accepted or rejected drafts. Honest with small samples:
+    nothing is suggested under 20 reviewed candidates, and a cut needs at least 10 candidates above it with 90% or
+    more adopted. Classification and anomaly drafts carry one candidate whose score is a class probability or an
+    anomaly score, so no cut is suggested for them. The cut is for the trained model's slider in step 2; other draft
+    sources (template match, grounding, VLM, foundation) score on their own scales, so none is suggested for them."""
+    count = len(reviewed)
+    if task not in ("detection", "segmentation") or backend != "trained_model":
+        return {"reason": "task_not_applicable", "reviewed_candidates": count}
+    if count < 20:
+        return {"reason": "too_few", "reviewed_candidates": count}
+    adopted_rate = sum(1 for _, adopted in reviewed if adopted) / count
+    if adopted_rate >= 0.9:
+        return {"reason": "already_high", "reviewed_candidates": count, "adopted_rate": round(adopted_rate, 3)}
+    for cut in _THRESHOLD_GRID:
+        above = [adopted for confidence, adopted in reviewed if confidence >= cut]
+        if len(above) >= 10 and sum(above) / len(above) >= 0.9:
+            return {"reason": "suggestion", "reviewed_candidates": count, "adopted_rate": round(adopted_rate, 3),
+                    "threshold": cut, "adopted_rate_above": round(sum(above) / len(above), 3), "candidates_above": len(above)}
+    return {"reason": "none_reaches", "reviewed_candidates": count, "adopted_rate": round(adopted_rate, 3)}
+
+
+def _candidate_confidence(value: Any) -> Optional[float]:
+    """A candidate's confidence as a finite number, or None when the draft file holds anything else."""
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        return None
+    number = float(value)
+    return number if math.isfinite(number) else None
+
+
+def _mean_confidence(values: List[float]) -> Optional[float]:
+    mean = sum(values) / len(values) if values else None
+    return round(mean, 4) if mean is not None and math.isfinite(mean) else None
+
+
+@router.get("/stats", response_model=LabelSuggestionStats)
+def suggestion_stats(request: Request, job_id: Optional[str] = None):
+    """Per model (or draft source): how its drafts fared with people. Read-only: it writes no label, ledger or
+    proposal byte (nor the suggestion folder), so a person can look at it as often as they like.
+
+    A summary, not a gate: a draft file it cannot read is left out on its own, and an adoption whose image or labels
+    can no longer be read (moved out of the source, say) counts as 'edited_unknown'."""
+    project = get_current_project(request)
+    source = _source_path(project)
+    groups: Dict[tuple, Dict[str, Any]] = {}
+    labels_cache: Dict[str, Optional[List[Any]]] = {}
+
+    def current_labels(image: Path) -> Optional[List[Any]]:
+        key = str(image)
+        if key not in labels_cache:
+            try:
+                saved = routes_annotation._get_annotations_impl(image.stem, None, key)
+            except HTTPException:
+                saved = None
+            rows = saved.get("annotations") if isinstance(saved, dict) else None
+            labels_cache[key] = rows if isinstance(rows, list) else None
+        return labels_cache[key]
+
+    folder = Path(project["project_dir"]) / "label_suggestions"
+    # _proposal_root refuses a symlinked folder; a missing one means no drafts yet and is not created by a read.
+    paths = sorted(_proposal_root(project).glob("suggestion_*.json")) if folder.is_dir() or folder.is_symlink() else []
+    for path in paths:
+        if not _SUGGESTION_ID.fullmatch(path.stem):
+            continue
+        try:
+            item = _read_proposal(project, path.stem)
+        except HTTPException:
+            continue
+        image_path = item.get("image_path")
+        if item.get("task") != project["task"] or not isinstance(image_path, str) or not Path(image_path).is_relative_to(source):
+            continue
+        if job_id and item.get("job_id") != job_id:
+            continue
+        # Work out this draft's share before any counter moves, so a malformed file leaves out only itself.
+        backend, draft_job = item.get("backend") or "trained_model", item.get("job_id") or ""
+        candidates, chosen_ids = item.get("candidates", []), item.get("accepted_candidate_ids") or []
+        if not all(isinstance(value, str) for value in (backend, draft_job)) or not all(
+                isinstance(value, list) for value in (candidates, chosen_ids)):
+            continue
+        status = item.get("status")
+        chosen = {value for value in chosen_ids if isinstance(value, str)}
+        judged = []  # (adopted, confidence or None) per candidate a person judged
+        if status in ("accepted", "rejected"):
+            for row in candidates:
+                if isinstance(row, dict):
+                    candidate_id = row.get("id")
+                    adopted = status == "accepted" and isinstance(candidate_id, str) and candidate_id in chosen
+                    judged.append((adopted, _candidate_confidence(row.get("confidence"))))
+        edited = None
+        if status == "accepted":
+            adopted_rows = item.get("adopted_annotations")
+            current = None  # stays None when the adoption record or the image's labels cannot be read
+            if isinstance(adopted_rows, list) and adopted_rows and all(
+                    isinstance(row, dict) and isinstance(row.get("id"), str) for row in adopted_rows):
+                try:
+                    current = current_labels(_image_path(project, image_path))
+                except HTTPException:
+                    pass  # the image left the source (moved or removed): whether its shapes were edited is unknown
+            if current is None:
+                edited = "edited_unknown"
+            elif changed_adopted_ids(adopted_rows, current):
+                edited = "edited_after"
+        group = groups.setdefault((backend, draft_job), {
+            "job_id": draft_job, "backend": backend, "drafts": 0, "pending": 0, "adopted": 0, "rejected": 0,
+            "reverted": 0, "edited_after": 0, "edited_unknown": 0, "reviewed": [], "adopted_candidates": 0, "rejected_candidates": 0})
+        group["drafts"] += 1
+        if status in ("pending", "rejected", "reverted"):
+            group[status] += 1
+        elif status == "accepted":
+            group["adopted"] += 1
+        for adopted, confidence in judged:
+            group["adopted_candidates" if adopted else "rejected_candidates"] += 1
+            if confidence is not None:
+                group["reviewed"].append((confidence, adopted))
+        if edited:
+            group[edited] += 1
+    models = []
+    for group in groups.values():
+        reviewed = group.pop("reviewed")
+        models.append({**group, "reviewed_candidates": len(reviewed),
+                       "mean_confidence_adopted": _mean_confidence([confidence for confidence, adopted in reviewed if adopted]),
+                       "mean_confidence_rejected": _mean_confidence([confidence for confidence, adopted in reviewed if not adopted]),
+                       "advice": threshold_advice(project["task"], reviewed, group["backend"])})
+    models.sort(key=lambda row: (-row["drafts"], row["job_id"]))
+    return {"models": models, "generated_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())}
+
+
 @router.get("/{suggestion_id}")
 def get_suggestion(suggestion_id: str, request: Request):
     return _read_proposal(get_current_project(request), suggestion_id)
+
+
+def adopted_candidates(proposal: Dict[str, Any], selected_ids: set, reviewer: str,
+                       backup_version_id: Optional[str]) -> List[Dict[str, Any]]:
+    """The selected candidates as label shapes that remember which draft, model and review they came from."""
+    adopted_at = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+    shapes = []
+    for candidate in proposal.get("candidates", []):
+        if candidate["id"] not in selected_ids:
+            continue
+        shape = dict(candidate["annotation"])
+        shape["origin"] = {
+            "kind": "model_draft", "proposal_id": proposal["id"], "candidate_id": candidate["id"],
+            "backend": proposal.get("backend") or "trained_model", "job_id": proposal.get("job_id"),
+            "checkpoint_sha256": proposal.get("checkpoint_sha256"), "reviewer": reviewer,
+            "adopted_at": adopted_at, "backup_version_id": backup_version_id,
+        }
+        shapes.append(shape)
+    return shapes
+
+
+def saved_adoption(image: Path, candidate_ids: set) -> List[Dict[str, Any]]:
+    """The adopted shapes exactly as the label file now holds them; undo compares against these."""
+    saved = routes_annotation.get_annotations(image.stem, file_path=str(image)).get("annotations", [])
+    return [item for item in saved if isinstance(item, dict) and item.get("id") in candidate_ids]
 
 
 def _restore_bytes(path: Path, previous: Optional[bytes]) -> None:
@@ -685,7 +932,7 @@ def review_suggestion(suggestion_id: str, req: ReviewRequest, request: Request):
     with _REVIEW_LOCK, _VERSION_LOCK, metadata_engine.metadata_transaction(Path(project["project_dir"]), _source_path(project), Path(project["annotations_dir"])):
         proposal = _read_proposal(project, suggestion_id)
         if proposal["status"] != "pending":
-            raise HTTPException(status_code=409, detail="Suggestion has already been reviewed.")
+            raise HTTPException(status_code=409, detail="이 초안은 이미 채택하거나 거절했습니다. 초안 목록을 새로고침하세요.")
         if req.decision == "reject":
             proposal.update(status="rejected", reviewer=req.actor, reviewed_at=time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()))
             _write_json(_proposal_path(project, suggestion_id), proposal)
@@ -694,17 +941,17 @@ def review_suggestion(suggestion_id: str, req: ReviewRequest, request: Request):
             from backend.api.routes_label_candidates import review_external_proposal
             return review_external_proposal(project, proposal, req)
         if proposal.get("task") != project["task"]:
-            raise HTTPException(status_code=409, detail="Project task changed after proposal generation.")
+            raise HTTPException(status_code=409, detail="작업 종류가 바뀌어 이 초안은 채택할 수 없습니다. 거절하세요.")
 
         with _BATCH_LOCK:
             if _project_batch_key(project) in _LIVE_BATCHES:
-                raise HTTPException(status_code=409, detail="Finish or cancel the active label batch before accepting candidates.")
+                raise HTTPException(status_code=409, detail="일괄 초안 만들기가 진행 중입니다. 끝나거나 취소한 뒤 채택하세요.")
 
         selected_ids = set(req.candidate_ids)
         candidates = proposal.get("candidates", [])
         available = {item["id"] for item in candidates}
         if not selected_ids or not selected_ids.issubset(available):
-            raise HTTPException(status_code=422, detail="Select one or more proposal candidates to accept.")
+            raise HTTPException(status_code=422, detail="채택할 후보가 없습니다. 후보 없는 초안은 거절하세요.")
         image = _image_path(project, proposal["image_path"])
         model = next((item for item in _model_catalog(project) if item["job_id"] == proposal["job_id"]), None)
         checkpoint = Path(model["checkpoint_path"]) if model else None
@@ -715,7 +962,7 @@ def review_suggestion(suggestion_id: str, req: ReviewRequest, request: Request):
                 or _sha256(image.with_suffix(".json")) != proposal["labelme_sha256"]
                 or _sha256(json_path) != proposal["studio_sha256"]
                 or checkpoint is None or _sha256(checkpoint) != proposal["checkpoint_sha256"]):
-            raise HTTPException(status_code=409, detail="Image, labels, or checkpoint changed after proposal generation. Generate again.")
+            raise HTTPException(status_code=409, detail="초안을 만든 뒤 이 이미지·라벨이나 모델 파일이 바뀌어 채택할 수 없습니다. 이 초안은 거절하고 초안을 새로 만드세요.")
         batch = _read_batch(project, proposal["batch_id"]) if proposal.get("batch_id") else None
         expected_fingerprint = (
             batch.get("review_fingerprint") if batch is not None else proposal.get("dataset_fingerprint")
@@ -727,26 +974,34 @@ def review_suggestion(suggestion_id: str, req: ReviewRequest, request: Request):
         else:
             matches_training = _dataset_fingerprint(project) == expected_fingerprint
         if not matches_training:
-            raise HTTPException(status_code=409, detail="Training dataset fingerprint changed after proposal generation. Generate again.")
+            raise HTTPException(status_code=409, detail="초안을 만든 뒤 데이터가 바뀌어(직접 고쳐 저장한 라벨 등) 이 초안은 채택할 수 없습니다. 이 초안은 거절해 정리하고 남은 이미지의 초안을 새로 만드세요.")
         from backend.api.routes_training import training_job_manager
         if training_job_manager.get_active_job() is not None:
-            raise HTTPException(status_code=409, detail="Finish or stop active training before accepting labels.")
+            raise HTTPException(status_code=409, detail="학습이 진행 중입니다. 학습이 끝나거나 멈춘 뒤 채택하세요.")
 
         metadata = metadata_engine.metadata_for_path(Path(project["project_dir"]), _source_path(project), image, Path(project["annotations_dir"]))
-        if proposal.get("image_revision") is not None and proposal["image_revision"] != metadata["revision"]:
-            raise HTTPException(status_code=409, detail="Another reviewer changed this image; generate candidates again.")
+        if _changed_since_draft(metadata, proposal):
+            raise HTTPException(status_code=409, detail="다른 검토자가 이 이미지를 바꿨습니다. 이 초안은 거절하고 초안을 새로 만드세요.")
         current = routes_annotation.get_annotations(image.stem, file_path=str(image))
         existing = current.get("annotations", [])
         if not isinstance(existing, list):
-            raise HTTPException(status_code=422, detail="Existing annotation file is invalid.")
+            raise HTTPException(status_code=422, detail="저장된 라벨 파일의 형식이 올바르지 않습니다. 이 이미지를 라벨링에서 열어 라벨을 다시 저장하세요.")
         accepted = [item["annotation"] for item in candidates if item["id"] in selected_ids]
-        annotation_request = routes_annotation.AnnotationSaveRequest(
+        # Validate the merged labels before taking the backup; the saved request below adds each shape's origin.
+        routes_annotation.AnnotationSaveRequest(
             image_id=image.stem, image_path=str(image), annotations=[*existing, *accepted],
             image_width=proposal["image_width"], image_height=proposal["image_height"], actor=req.actor, expected_revision=metadata["revision"],
+            lease_token=req.lease_token,
         )
         backup = _snapshot(project, _source_path(project),
                            f"모델 라벨 채택 전 · {image.name}",
                            f"Before accepting {suggestion_id}", "auto_backup")
+        annotation_request = routes_annotation.AnnotationSaveRequest(
+            image_id=image.stem, image_path=str(image),
+            annotations=[*existing, *adopted_candidates(proposal, selected_ids, req.actor, backup["id"])],
+            image_width=proposal["image_width"], image_height=proposal["image_height"], actor=req.actor, expected_revision=metadata["revision"],
+            lease_token=req.lease_token,
+        )
         previous_json = json_path.read_bytes() if json_path.is_file() else None
         previous_mask = mask_path.read_bytes() if mask_path.is_file() else None
         previous_proposal = _proposal_path(project, suggestion_id).read_bytes()
@@ -762,7 +1017,7 @@ def review_suggestion(suggestion_id: str, req: ReviewRequest, request: Request):
                 _persist_batch(project, batch)
             proposal.update(
                 status="accepted", reviewer=req.actor, accepted_candidate_ids=sorted(selected_ids),
-                backup_version_id=backup["id"],
+                backup_version_id=backup["id"], adopted_annotations=saved_adoption(image, selected_ids),
                 reviewed_at=time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
             )
             _write_json(_proposal_path(project, suggestion_id), proposal)
@@ -772,5 +1027,95 @@ def review_suggestion(suggestion_id: str, req: ReviewRequest, request: Request):
             _restore_bytes(_proposal_path(project, suggestion_id), previous_proposal)
             if batch_path is not None:
                 _restore_bytes(batch_path, previous_batch)
+            raise
+        return proposal
+
+
+class UndoRequest(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    actor: str = Field("operator", min_length=1, max_length=100)
+    lease_token: Optional[str] = Field(None, min_length=1, max_length=200)
+
+
+@router.post("/{suggestion_id}/undo")
+def undo_adoption(suggestion_id: str, req: UndoRequest, request: Request):
+    """Take back one adoption: remove exactly the shapes it added, only while nobody has changed them since.
+
+    The label file is backed up first. When an adopted shape was edited or removed, nothing is written and the
+    reply names the data version taken before the adoption, so the person can restore it knowingly."""
+    from backend.api.shared_authorization import request_actor
+    actor = request_actor(request, req.actor)
+    project = get_current_project(request)
+    source = _source_path(project)
+    with _REVIEW_LOCK, _VERSION_LOCK, metadata_engine.metadata_transaction(Path(project["project_dir"]), source, Path(project["annotations_dir"])):
+        proposal = _read_proposal(project, suggestion_id)
+        if proposal["status"] != "accepted":
+            raise HTTPException(status_code=409, detail="이 초안은 채택된 상태가 아니라 되돌릴 수 없습니다. 초안 목록을 새로고침해 상태를 확인하세요.")
+        adopted = proposal.get("adopted_annotations")
+        if not adopted:
+            raise HTTPException(status_code=409, detail={
+                "message": "이 채택은 도형 단위 되돌리기 기록이 없습니다. 채택 전에 남긴 데이터 버전으로 복원하세요.",
+                "backup_version_id": proposal.get("backup_version_id")})
+        external = proposal.get("backend") in {"template_match", "grounding_dino", "foundation", "vlm"}
+        from backend.api.routes_training import training_job_manager
+        if training_job_manager.get_active_job() is not None:
+            raise HTTPException(status_code=409, detail="학습이 진행 중입니다. 학습이 끝나거나 멈춘 뒤 되돌리세요.")
+        if external:
+            from backend.engine import labeling_tasks
+            if labeling_tasks.active(project):
+                raise HTTPException(status_code=409, detail="라벨 작업이 진행 중입니다. 끝나거나 취소한 뒤 되돌리세요.")
+            batch = labeling_tasks.read(project, proposal["batch_id"]) if proposal.get("batch_id") else None
+        else:
+            with _BATCH_LOCK:
+                if _project_batch_key(project) in _LIVE_BATCHES:
+                    raise HTTPException(status_code=409, detail="일괄 초안 만들기가 진행 중입니다. 끝나거나 취소한 뒤 되돌리세요.")
+            batch = _read_batch(project, proposal["batch_id"]) if proposal.get("batch_id") else None
+        image = _image_path(project, proposal["image_path"])
+        current = routes_annotation.get_annotations(image.stem, file_path=str(image)).get("annotations", [])
+        if not isinstance(current, list):
+            raise HTTPException(status_code=422, detail="저장된 라벨 파일의 형식이 올바르지 않습니다. 이 이미지를 라벨링에서 열어 라벨을 다시 저장하세요.")
+        changed = changed_adopted_ids(adopted, current)
+        if changed:
+            raise HTTPException(status_code=409, detail={
+                "message": "채택한 도형이 그 뒤 바뀌어 이 채택만 되돌릴 수 없습니다. 채택 전에 남긴 데이터 버전으로 복원하세요.",
+                "backup_version_id": proposal.get("backup_version_id"), "changed_candidate_ids": changed})
+        adopted_ids = {item["id"] for item in adopted}
+        remaining = [item for item in current if not (isinstance(item, dict) and item.get("id") in adopted_ids)]
+        metadata = metadata_engine.metadata_for_path(Path(project["project_dir"]), source, image, Path(project["annotations_dir"]))
+        before = _dataset_fingerprint(project)
+        # The same label folder each review path writes (and restores on failure).
+        studio = (dataset_annotation_dir(image.parent, Path(project["annotations_dir"]), use_scope=False) if external
+                  else dataset_annotation_dir(image.parent, routes_dataset.STUDIO_ANNOTATIONS_DIR))
+        json_path, mask_path = studio / f"{image.stem}.json", studio / "masks" / f"{image.stem}.png"
+        save = routes_annotation.AnnotationSaveRequest(
+            image_id=image.stem, image_path=str(image), annotations=remaining, image_width=proposal["image_width"],
+            image_height=proposal["image_height"], actor=actor, expected_revision=metadata["revision"], lease_token=req.lease_token)
+        backup = _snapshot(project, source, f"채택 되돌리기 전 · {image.name}", f"Before taking back {suggestion_id}", "auto_backup")
+        proposal_path = _proposal_path(project, suggestion_id)
+        previous = {path: (path.read_bytes() if path.is_file() else None) for path in (json_path, mask_path, proposal_path)}
+        if batch is not None:
+            if external:
+                from backend.engine import labeling_tasks
+                batch_path = labeling_tasks._root(project) / f"{batch['id']}.json"
+            else:
+                batch_path = _batch_path(project, batch["id"])
+            previous[batch_path] = batch_path.read_bytes() if batch_path.is_file() else None
+        try:
+            routes_annotation.save_annotations(save, request)
+            # The take-back is a reviewed change, like an adoption: the batch's remaining drafts stay reviewable
+            # only when nothing else changed the dataset since the last reviewed change.
+            if batch is not None and batch.get("review_fingerprint") == before:
+                batch["review_fingerprint"] = _dataset_fingerprint(project)
+                if external:
+                    from backend.engine import labeling_tasks
+                    labeling_tasks.write(project, batch)
+                else:
+                    _persist_batch(project, batch)
+            proposal.update(status="reverted", reverted_by=actor, revert_backup_version_id=backup["id"],
+                            reverted_at=time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()))
+            _write_json(proposal_path, proposal)
+        except Exception:
+            for path, data in previous.items():
+                _restore_bytes(path, data)
             raise
         return proposal

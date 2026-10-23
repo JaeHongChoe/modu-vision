@@ -4,6 +4,8 @@ import { api, type DatasetVersionSummary, type DatasetVersionVerification } from
 
 interface Props {
   datasetPath: string;
+  /** The version a model was trained on, marked and scrolled to when the footer's data-change notice opens the dialog. */
+  highlightVersionId?: string | null;
   onClose: () => void;
   onRestored: () => Promise<void>;
 }
@@ -21,7 +23,7 @@ function statusText(status: string): string {
   return '검증 필요';
 }
 
-export const DatasetVersionPanel: React.FC<Props> = ({ datasetPath, onClose, onRestored }) => {
+export const DatasetVersionPanel: React.FC<Props> = ({ datasetPath, highlightVersionId = null, onClose, onRestored }) => {
   const [versions, setVersions] = useState<DatasetVersionSummary[]>([]);
   const [checks, setChecks] = useState<Partial<Record<string, DatasetVersionVerification>>>({});
   const [name, setName] = useState('');
@@ -165,8 +167,9 @@ export const DatasetVersionPanel: React.FC<Props> = ({ datasetPath, onClose, onR
                 const check = checks[item.id];
                 const status = check?.status || item.status;
                 const confirm = confirmRestoreId === item.id;
-                return <div key={item.id} className={`rounded-lg border p-4 ${confirm ? 'border-amber-500/70 bg-[#30291E]' : 'border-[#354960] bg-[#172538]'}`}>
-                  <div className="flex items-start justify-between gap-3"><div className="min-w-0"><div className="flex flex-wrap items-center gap-2"><span className="text-sm font-semibold text-white">{item.name}</span>{item.kind === 'auto_backup' && <span className="rounded border border-amber-700/60 px-1.5 py-0.5 text-[9px] font-bold text-amber-300">자동 백업</span>}</div><div className="mt-1.5 flex items-center gap-1.5 text-[10px] text-slate-500"><Clock3 className="h-3 w-3" />{item.created_at.replace('T', ' ').replace('Z', ' UTC')} · {item.id}</div></div><span className={`shrink-0 rounded border px-2 py-1 text-[10px] font-medium ${status === 'verified' ? 'border-emerald-700/50 bg-emerald-950/30 text-emerald-300' : status === 'changed' || status === 'corrupt' ? 'border-red-700/50 bg-red-950/30 text-red-300' : 'border-[#52647B] text-slate-400'}`}>{statusText(status)}</span></div>
+                return <div key={item.id} ref={item.id === highlightVersionId ? (node) => node?.scrollIntoView({ block: 'nearest' }) : undefined}
+                  className={`rounded-lg border p-4 ${confirm ? 'border-amber-500/70 bg-[#30291E]' : item.id === highlightVersionId ? 'border-cyan-500/80 bg-[#172538]' : 'border-[#354960] bg-[#172538]'}`}>
+                  <div className="flex items-start justify-between gap-3"><div className="min-w-0"><div className="flex flex-wrap items-center gap-2"><span className="text-sm font-semibold text-white">{item.name}</span>{item.kind === 'auto_backup' && <span className="rounded border border-amber-700/60 px-1.5 py-0.5 text-[9px] font-bold text-amber-300">자동 백업</span>}{item.id === highlightVersionId && <span className="rounded border border-cyan-600/70 px-1.5 py-0.5 text-[9px] font-bold text-cyan-200">모델을 학습한 버전</span>}</div><div className="mt-1.5 flex items-center gap-1.5 text-[10px] text-slate-500"><Clock3 className="h-3 w-3" />{item.created_at.replace('T', ' ').replace('Z', ' UTC')} · {item.id}</div></div><span className={`shrink-0 rounded border px-2 py-1 text-[10px] font-medium ${status === 'verified' ? 'border-emerald-700/50 bg-emerald-950/30 text-emerald-300' : status === 'changed' || status === 'corrupt' ? 'border-red-700/50 bg-red-950/30 text-red-300' : 'border-[#52647B] text-slate-400'}`}>{statusText(status)}</span></div>
                   {item.note && <p className="mt-2 text-xs leading-5 text-slate-400">{item.note}</p>}
                   <div className="mt-3 grid grid-cols-3 gap-2 text-[11px]"><div className="rounded border border-[#33475E] bg-[#101B2A] px-2.5 py-2"><span className="block text-[9px] text-slate-500">원본 이미지</span><strong className="mt-0.5 block font-mono text-slate-100">{item.image_count ?? '—'}장</strong></div><div className="rounded border border-[#33475E] bg-[#101B2A] px-2.5 py-2"><span className="block text-[9px] text-slate-500">보관된 라벨 파일</span><strong className="mt-0.5 block font-mono text-slate-100">{item.label_file_count ?? '—'}개</strong></div><div className="rounded border border-[#33475E] bg-[#101B2A] px-2.5 py-2"><span className="block text-[9px] text-slate-500">이미지 원본 크기</span><strong className="mt-0.5 block font-mono text-slate-100">{typeof item.total_image_bytes === 'number' ? sizeText(item.total_image_bytes) : '—'}</strong></div></div>
                   {check && <div className="mt-3 rounded border border-[#34495E] bg-[#112031] px-3 py-2 text-[11px] leading-5 text-slate-300"><div className="flex items-center gap-1.5"><FileCheck2 className="h-3.5 w-3.5 text-sky-400" />검증 파일 {check.checked_file_count}개 · 현재 편집과 다른 파일 {check.editable_changed_files.length}개</div>{check.changed_files.length > 0 && <div className="mt-1 break-all text-red-300">변경/손상: {check.changed_files.slice(0, 3).join(', ')}{check.changed_files.length > 3 ? ` 외 ${check.changed_files.length - 3}개` : ''}</div>}</div>}

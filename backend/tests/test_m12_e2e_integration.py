@@ -27,7 +27,7 @@ Stage 4: Zero-Escape Calibration & Concurrency
 
 Stage 5: Multi-Model Flowchart Chaining
   - Executes chained Stage 1 Detection -> Safe ROI Crop -> Stage 2 Anomaly -> Stage 3 Decision on real manufacturing images.
-  - Validates safe_crop_roi invariants: boundary clamping, context padding, >= 16px dimension guarantee, and 224x224 bicubic resizing.
+  - Validates safe_crop_roi invariants: boundary clamping, context padding, >= 16px dimension guarantee, and 224x224 resizing with the training resize (bilinear).
 
 Stage 6: Standalone Runtime Exporter
   - Subprocess execution of an optional exported infer.py on a configured defect image.
@@ -585,7 +585,7 @@ class TestM12Stage5FlowchartChaining:
             assert len(result["execution_steps"]) >= 4
 
     def test_stage5_safe_roi_cropping_invariants(self):
-        """Verifies boundary clamping, context padding, >= 16px dimension guarantee, and 224x224 bicubic resizing."""
+        """Verifies boundary clamping, context padding, >= 16px dimension guarantee, and 224x224 resizing with the training resize (bilinear)."""
         # Create base test canvas
         canvas = np.full((300, 400, 3), 100, dtype=np.uint8)
         img_h, img_w = canvas.shape[:2]

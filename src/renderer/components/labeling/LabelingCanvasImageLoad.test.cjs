@@ -55,14 +55,20 @@ function fixture() {
     getBoundingClientRect: () => rect,
     addEventListener() {}, removeEventListener() {},
   };
+  // Each canvas keeps what was drawn on it since its last clear: an image by its source, a canvas by its own content.
   const canvas = name => {
+    const target = {width: 0, height: 0, style: {}, content: [],
+      getBoundingClientRect: () => rect, addEventListener() {}, removeEventListener() {}};
     const ctx = {
-      clearRect() {}, setTransform() {}, save() {}, restore() {},
-      drawImage(...args) { draws.push({canvas: name, image: args[0], arguments: args.slice(1)}); },
+      clearRect() { target.content = []; }, setTransform() {}, save() {}, restore() {},
+      drawImage(...args) {
+        draws.push({canvas: name, image: args[0], arguments: args.slice(1)});
+        target.content = [...target.content, ...(args[0]?.content ?? [args[0]?.url])];
+      },
       measureText: () => ({width: 0}),
     };
-    return {width: 0, height: 0, style: {}, getContext: () => ctx,
-      getBoundingClientRect: () => rect, addEventListener() {}, removeEventListener() {}};
+    target.getContext = () => ctx;
+    return target;
   };
   const canvases = ['base', 'mask', 'vector'].map(canvas);
   let offscreen = 0;
@@ -99,7 +105,7 @@ function fixture() {
     '../../stores/useAnnotationStore': {useAnnotationStore: hook(annotation)},
     '../../stores/useProjectStore': {useProjectStore: hook(project)},
     '../../stores/useFoundationPromptStore': {useFoundationPromptStore: hook(foundation)},
-    './foundationRequest': {brushEditTarget: () => null},
+    './foundationRequest': load(path.resolve(__dirname, 'foundationRequest.ts')),
     '../../services/api': {resolveApiUrl: route => 'http://127.0.0.1:' + project.backendPort + route},
     './labelingShortcuts': {resolveLabelingShortcut: () => null},
     './labelingLayout': layout,
@@ -144,7 +150,7 @@ function fixture() {
   }
   render();
   return {images, annotation, project, foundation, math, dimensions, transforms, draws, sourceAssignments, warnings,
-    render, select, complete, observation, unmount, close};
+    render, select, complete, observation, unmount, close, maskPlane: () => [...canvases[1].content].sort()};
 }
 
 test('current raw image commits its natural dimensions, fitted view and actual base draw without another load', () => {
@@ -268,4 +274,60 @@ test('an explicitly selected evidence image outside the current gallery still lo
     f.annotation.externalSelectionPath=f.annotation.currentImage.file_path;f.render();
     assert.match(f.images.at(-1).src,/raw\/a\.png/);assert.equal(f.sourceAssignments.length,2);
   }finally{f.close();}
+});
+
+// A stored brush mask decodes asynchronously, and the canvases are resized and redrawn when the annotations change: the
+// mask plane must keep the layers it showed until their replacements are decoded (raster-edit-lifecycle caught the
+// plane empty right after a stroke and after a redo).
+const brushMask = (id, category_id, mask_rle) => ({id, type: 'brush_mask', label: id, category_id, mask_rle});
+const settle = () => new Promise(resolve => setImmediate(resolve));
+function decode(f, url, outcome = 'onload') {
+  const image = f.images.filter(row => row.src === url).at(-1); assert.ok(image, url);
+  image[outcome]?.(outcome === 'onerror' ? new Error('Controlled undecodable mask') : undefined); // an error may have no handler
+}
+async function brushFixture() {
+  const f = fixture();
+  f.annotation.maskVisible = true; f.annotation.activeCategory = {id: 1, color: '#ff0000'};
+  f.complete(f.images[0]);
+  f.annotation.annotations = [brushMask('a', 1, 'data:a1'), brushMask('b', 2, 'data:b')]; f.render();
+  decode(f, 'data:a1'); decode(f, 'data:b'); await settle();
+  assert.deepEqual(f.maskPlane(), ['data:a1', 'data:b']);
+  return f;
+}
+
+test('a changed stored brush mask keeps both shown layers on the mask plane until it is decoded', async () => {
+  const f = await brushFixture(); try {
+    f.annotation.annotations = [brushMask('a', 1, 'data:a2'), brushMask('b', 2, 'data:b')]; f.render(); await settle();
+    assert.deepEqual(f.maskPlane(), ['data:a1', 'data:b'], 'The redraw after the change still shows the edited and the other layer');
+    decode(f, 'data:b'); await settle();
+    assert.deepEqual(f.maskPlane(), ['data:a1', 'data:b']);
+    decode(f, 'data:a2'); await settle();
+    assert.deepEqual(f.maskPlane(), ['data:a2', 'data:b']);
+  } finally { f.close(); }
+});
+
+test('an overtaken brush decode keeps the first shown pixels and only the latest stored mask lands', async () => {
+  const f = await brushFixture(); try {
+    f.annotation.annotations = [brushMask('a', 1, 'data:a2'), brushMask('b', 2, 'data:b')]; f.render();
+    f.annotation.annotations = [brushMask('a', 1, 'data:a3'), brushMask('b', 2, 'data:b')]; f.render(); await settle();
+    assert.deepEqual(f.maskPlane(), ['data:a1', 'data:b']);
+    decode(f, 'data:a2'); await settle();
+    assert.deepEqual(f.maskPlane(), ['data:a1', 'data:b'], 'An overtaken decode lands nowhere');
+    decode(f, 'data:a3'); decode(f, 'data:b'); await settle();
+    assert.deepEqual(f.maskPlane(), ['data:a3', 'data:b']);
+  } finally { f.close(); }
+});
+
+test('a brush layer with nothing stored, an undecodable mask or another image clears at once', async () => {
+  const f = await brushFixture(); try {
+    f.annotation.annotations = [brushMask('a', 1, 'data:a2'), brushMask('b', 2, 'data:b')]; f.render();
+    decode(f, 'data:a2', 'onerror'); decode(f, 'data:b'); await settle();
+    assert.deepEqual(f.maskPlane(), ['data:b'], 'An undecodable stored mask leaves its layer cleared, as before');
+    f.annotation.annotations = [brushMask('b', 2, 'data:b')]; f.render(); decode(f, 'data:b'); await settle();
+    assert.deepEqual(f.maskPlane(), ['data:b'], 'A class without a stored mask shows nothing for it');
+    // Every image switch in the store empties the annotations together with the new image.
+    f.annotation.currentImage = {image_id: 'c', file_path: '/controlled/c.png', file_name: 'c.png'}; f.annotation.annotations = [];
+    f.render(); await settle();
+    assert.deepEqual(f.maskPlane(), [], 'Nothing of the previous image stays on the mask plane');
+  } finally { f.close(); }
 });

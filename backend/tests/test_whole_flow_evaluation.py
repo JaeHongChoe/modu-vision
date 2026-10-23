@@ -185,7 +185,7 @@ def test_whole_flow_truth_roles_use_the_same_record_as_engine_checkpoint(workspa
     if matching:
         assert flow_evaluation.verified_models(project, graph)[('job_eval','classification')]['metadata']['class_semantics'] == roles
     else:
-        with pytest.raises(ValueError, match='roles'):
+        with pytest.raises(ValueError, match='클래스 역할'):
             flow_evaluation.verified_models(project, graph)
 
 
@@ -207,7 +207,7 @@ def test_whole_flow_rejects_metadata_vocabulary_different_from_completed_checkpo
     monkeypatch.setattr(routes_evaluation, '_matches_source_dataset', lambda *args: True)
     monkeypatch.setattr(routes_training.training_job_manager, 'get_job', lambda *args: None)
     monkeypatch.setattr(operations, 'verify_downloaded_checkpoint', lambda *args: None)
-    with pytest.raises(ValueError, match='vocabulary'):
+    with pytest.raises(ValueError, match='클래스 목록'):
         flow_evaluation.verified_models(project, graph)
 
 
@@ -296,7 +296,7 @@ def test_freeze_rejects_train_images_and_cross_split_pixel_duplicates(modules, w
     evaluation, _ = modules; project, _, version, checkpoint = workspace
     split = next((Path(project['dataset_dir'])/'splits').glob('*.json'))
     value=json.loads(split.read_text()); value['assignments']['normal.png']='train';split.write_text(json.dumps(value))
-    with pytest.raises(ValueError,match='test|held'):
+    with pytest.raises(ValueError,match='시험'):
         evaluation.freeze_cohort(project, version, relative_paths=['normal.png'], model_provider=model_provider(checkpoint))
     source=Path(project['source_dataset_dir']); (source/'duplicate.png').write_bytes((source/'defect.png').read_bytes())
     value['assignments']['duplicate.png']='train';split.write_text(json.dumps(value))

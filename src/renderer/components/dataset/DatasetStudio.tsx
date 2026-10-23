@@ -32,15 +32,69 @@ import {useDeliveryScope} from '../runtime/useDeliveryScope';
 import {DataReadinessPanel} from './DataReadinessPanel';
 import {DatasetStatisticsPanel} from './DatasetStatisticsPanel';
 import { OperatorGuidanceBanner } from '../common/OperatorGuidanceBanner';
+import { SimpleViewFold } from '../common/SimpleViewFold';
+import { BrowserFolderPathInput } from './BrowserFolderPathInput';
+import { ImportTaskSwitch } from './ImportTaskSwitch';
 import { JargonTooltip } from '../common/JargonTooltip';
 import { GuardrailBanner } from '../common/GuardrailBanner';
 import { classDistributionStats } from './classDistribution';
+import { calibratorView, severeClassImbalance, splitStatus } from './splitCalibrator';
+import { importChecks } from './importChecklist';
 import { isSplitUnavailable } from '../../utils/datasetSplitCapability';
 import { ScopedDatasetThumbnail } from '../common/ScopedDatasetThumbnail';
+import { subscribeDataVersionRequest, takeDataVersionRequest } from '../../stores/dataVersionRequest';
+import { FieldReadinessPanel } from '../common/FieldReadinessPanel';
+import { SpecialistFamilyNote } from '../common/SpecialistFamilyNote';
+import {
+  AUTO_FOLD_STATUS, FOCUS_SWITCH_NAME, FOLD_STATUS_SHORT, NARROW_BODY_HEIGHT, NARROW_BODY_NOTICE_SHORT, autoFoldDecision, focusStatus, narrowBodyNotice,
+  storedDatasetFocus, writeDatasetFocus,
+} from './datasetLayout';
+
+const SPLIT_BADGE_KO: Record<string, string> = { train: '학습', val: '검증', test: '시험', not_split: '미분할', not_used: '미사용' };
+
+/** The narrow-body notice's id for the switch's aria-describedby (one DatasetStudio mounts; the render tests' React mock has no useId). */
+const NARROW_NOTICE_ID = 'dataset-narrow-notice';
+
+/** Shown while a shared login, project switch or logout runs: it rebuilds this step, which would cancel a ZIP upload. */
+const SESSION_CHANGING_NOTICE = '공동 작업 서버 연결을 바꾸는 중입니다. 끝나면 검증된 데이터 버전을 열 수 있습니다.';
 
 export const DatasetStudio: React.FC = () => {
   const {key:sourceContextKey}=useDeliveryScope();
   const { task, language, projectDir, openImageForLabeling, project } = useProjectStore();
+  const full = useProjectStore(state => state.viewMode) === 'full';
+  const simpleView = useProjectStore(state => state.viewMode) === 'simple';
+  const sessionChanging = useProjectStore(state => state.sharedSessionChanging);
+  // The focus view folds the full-width panels above the toolbar (DATASET_HELPER_PANELS) so the sidebar and the gallery
+  // keep the window's height; the choice is remembered. Off in both views until pressed (the simple view keeps 데이터 현황
+  // on screen), with one exception: in the simple view, a body measured under UNUSABLE_BODY_HEIGHT folds the panels once
+  // by itself for a viewer who never chose (a 0 px body is a hard failure for a first-time user). The full view keeps
+  // every panel open unless pressed (its switch is highlighted instead). Their own press always wins afterwards.
+  const [focusChoice, setFocusChoice] = useState<boolean | null>(() => storedDatasetFocus());
+  const [autoFolded, setAutoFolded] = useState(false);
+  const focus = focusChoice ?? (autoFolded && !full);
+  const toggleFocus = () => { const next = !focus; writeDatasetFocus(next); setFocusChoice(next); };
+  // The open panels can leave the body row a few pixels tall (or none): the toolbar's switch then says so and is
+  // highlighted, and the panels' layout is untouched. Only shortness matters, so the height is kept clamped at the
+  // threshold and resizing a roomy window does not render the screen again.
+  const bodyRef = useRef<HTMLDivElement>(null);
+  const [bodyHeight, setBodyHeight] = useState<number | null>(null);
+  useEffect(() => {
+    const body = bodyRef.current;
+    if (!body || typeof ResizeObserver === 'undefined') return; // never measured: no notice, no fold by itself
+    const measure = () => {
+      const height = Math.round(body.getBoundingClientRect().height);
+      setBodyHeight(Math.min(height, NARROW_BODY_HEIGHT));
+      // Folds once: the fold itself gives the body room, and a later press is the viewer's choice (never unset here).
+      if (autoFoldDecision(height, storedDatasetFocus())) setAutoFolded(true);
+    };
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(body);
+    return () => observer.disconnect();
+  }, []);
+  const narrowNotice = narrowBodyNotice(bodyHeight, focus);
+  // Said while the panels are folded: what the screen folded by itself and how to undo it, or what the viewer folded.
+  const foldStatus = focusChoice === null && autoFolded && !full ? AUTO_FOLD_STATUS : focusStatus(focus);
   const {
     folderPath,
     datasetKey,
@@ -69,6 +123,10 @@ export const DatasetStudio: React.FC = () => {
     isLoading,
     isSplitting,
     corruptedImages,
+    excludedUndecodable,
+    splitState,
+    labelsMissing,
+    expectedLayout,
     quickValidation,
     setSplitFilter,
     setClassFilter,
@@ -97,8 +155,16 @@ export const DatasetStudio: React.FC = () => {
 
   // Thumbnail Grid Density (S: compact 96px, M: default 144px, L: detailed 200px)
   const [density, setDensity] = useState<'S' | 'M' | 'L'>('M');
+  const [splitOpen, setSplitOpen] = useState(false);
   const [openingImageId, setOpeningImageId] = useState<string | null>(null);
   const [showVersions, setShowVersions] = useState(false);
+  // The footer's data-change notice asks for the version a model was trained on; take the request now or when it comes.
+  const [highlightVersionId, setHighlightVersionId] = useState<string | null>(null);
+  useEffect(() => {
+    const open = () => { const wanted = takeDataVersionRequest(); if (wanted) { setHighlightVersionId(wanted.versionId); setShowVersions(true); } };
+    open();
+    return subscribeDataVersionRequest(open);
+  }, []);
   const [showImports, setShowImports] = useState(false);
   // The active validated version of this project (full validation), so the step can say validation is done.
   const [activeRevision, setActiveRevision] = useState<DatasetRevisionRow | null>(null);
@@ -140,12 +206,14 @@ export const DatasetStudio: React.FC = () => {
   const [imgDimensions, setImgDimensions] = useState<Record<string, { w: number; h: number }>>({});
 
   // Precision 3-Way Split Calibrator Ratios (Train / Val / Test)
-  const [splitRatios, setSplitRatios] = useState<{ train: number; val: number; test: number }>(() => {
+  // `touchedFor` names the dataset whose calibrator the user changed: until then the saved split is shown.
+  const [splitRatios, setSplitRatios] = useState<{ train: number; val: number; test: number; touchedFor?: string | null }>(() => {
     const train = Math.round(trainRatio * 100) || 70;
     const remaining = 100 - train;
     const val = Math.round(remaining / 2);
     return { train, val, test: remaining - val };
   });
+  const calibratorTouched = Boolean(datasetKey) && splitRatios.touchedFor === datasetKey;
 
   const handleImageLoad = (filePath: string, naturalWidth: number, naturalHeight: number) => {
     setImgDimensions((prev) => {
@@ -155,7 +223,7 @@ export const DatasetStudio: React.FC = () => {
   };
 
   const handlePresetSplit = (t: number, v: number, te: number) => {
-    setSplitRatios({ train: t, val: v, test: te });
+    setSplitRatios({ train: t, val: v, test: te, touchedFor: datasetKey });
     setTrainRatio(t / 100);
   };
 
@@ -163,7 +231,7 @@ export const DatasetStudio: React.FC = () => {
     const remaining = 100 - newTrain;
     const newVal = Math.round(remaining * (2 / 3));
     const newTest = remaining - newVal;
-    setSplitRatios({ train: newTrain, val: newVal, test: newTest });
+    setSplitRatios({ train: newTrain, val: newVal, test: newTest, touchedFor: datasetKey });
     setTrainRatio(newTrain / 100);
   };
 
@@ -221,25 +289,26 @@ export const DatasetStudio: React.FC = () => {
 
   // Class distribution calculation
   const classEntries = Object.entries(classes);
-  const distribution = classDistributionStats(task, classes, classCountUnit === 'images' ? sourceImages : totalImages, classCountUnit ?? undefined);
+  const distribution = classDistributionStats(task, classes, classCountUnit === 'images' ? (totalImages || sourceImages) : totalImages, classCountUnit ?? undefined);
+  const isImbalanced = severeClassImbalance(classes);
   const maxClassCount = Math.max(...Object.values(classes), 1);
-  const minClassCount = Math.min(...Object.values(classes), 1);
-  const isImbalanced = classEntries.length > 1 && maxClassCount / minClassCount > 20;
-
-  // Calibrator estimates; status cards and gallery tabs use the saved split instead.
-  const trainCount = Math.round(totalImages * (splitRatios.train / 100));
-  const valCount = Math.round(totalImages * (splitRatios.val / 100));
-  const testCount = Math.max(0, totalImages - trainCount - valCount);
   const appliedTotal = split.train + split.val + split.test;
-  const showAppliedSplit = splitUnavailableForTask && appliedTotal > 0;
-  const shownCounts = showAppliedSplit ? split : { train: trainCount, val: valCount, test: testCount };
-  const shownRatios = showAppliedSplit
-    ? {
-        train: Math.round((split.train / appliedTotal) * 100),
-        val: Math.round((split.val / appliedTotal) * 100),
-        test: 100 - Math.round((split.train / appliedTotal) * 100) - Math.round((split.val / appliedTotal) * 100),
-      }
-    : splitRatios;
+
+  // The saved split until the calibrator is touched; status cards and gallery tabs always use the saved split.
+  const calibrator = calibratorView({ touched: calibratorTouched, locked: splitUnavailableForTask, applied: split, totalImages, ratios: splitRatios });
+  const showAppliedSplit = calibrator.mode === 'applied';
+  // A saved split needs no attention from a first-time user: the simple view shows its counts on one line and keeps
+  // the presets, slider and apply button one click away.
+  // Labels come from what the backend says the split is (saved, source folders, automatic or stale), so an unsaved
+  // automatic split is never shown as saved and only a saved one folds to a single line.
+  const splitInfo = splitStatus({ mode: calibrator.mode, splitState, locked: splitUnavailableForTask });
+  const splitFolded = simpleView && splitInfo.foldable && !splitOpen;
+  const checklist = (importChecks({ task, totalImages: totalImages || 0, classes: classes || {}, split: split || { train: 0, val: 0, test: 0 },
+    splitState: splitState ?? null, classSplitCounts: classSplitCounts ?? null, corrupted: corruptedImages?.length ?? 0,
+    excludedUndecodable: excludedUndecodable ?? null, labelsMissing: Boolean(labelsMissing), expectedLayout: expectedLayout || '',
+    splitLocked: splitUnavailableForTask }) as ReturnType<typeof importChecks> | null) ?? [];
+  const shownCounts = calibrator.counts;
+  const shownRatios = calibrator.ratios;
 
   const gridClassByDensity = {
     S: 'grid grid-cols-[repeat(auto-fill,minmax(96px,1fr))] gap-2',
@@ -250,29 +319,45 @@ export const DatasetStudio: React.FC = () => {
   return (
     <div className="flex-1 flex flex-col h-full bg-[#0B0E14] text-slate-100 overflow-hidden">
       <OperatorGuidanceBanner step={1} />
-      <DatasetWorkflowPanel />
-      <CaptureIntakePanel sourceDatasetPath={folderPath} contextKey={sourceContextKey} onUseSource={source=>importFolder(source,task,false)}/>
-      <DerivedDatasetPanel sourceDatasetPath={folderPath} contextKey={sourceContextKey} onUseSource={source=>importFolder(source,task,false)}/>
-      <WorkflowImpactPanel />
+      {/* The focus view folds these three panels (DATASET_HELPER_PANELS, in this order). The step title above, the
+          alert and session rows and the toolbar below never fold. */}
+      {!focus && <>
+      <SimpleViewFold label="데이터 관리 도구" hint="이미지 검토·그룹 분할·라벨 교환, 현장 캡처, 파생 편집, 변경 영향 확인">
+        <DatasetWorkflowPanel />
+        <CaptureIntakePanel sourceDatasetPath={folderPath} contextKey={sourceContextKey} onUseSource={source=>importFolder(source,task,false)}/>
+        <DerivedDatasetPanel sourceDatasetPath={folderPath} contextKey={sourceContextKey} onUseSource={source=>importFolder(source,task,false)}/>
+        <WorkflowImpactPanel />
+        {!full && <DataReadinessPanel />}
+      </SimpleViewFold>
       <DatasetStatisticsPanel />
-      <DataReadinessPanel />
+      {full && <DataReadinessPanel />}
+      </>}
       {sourceSaveError && (
         <div role="alert" className="border-b border-amber-700 bg-amber-950/40 px-4 py-2 text-xs text-amber-200">
           {sourceSaveError}
         </div>
       )}
+      {sessionChanging && (
+        <div role="status" className="border-b border-sky-800/50 bg-sky-950/20 px-4 py-2 text-xs text-sky-200">
+          {SESSION_CHANGING_NOTICE}
+        </div>
+      )}
       {/* Top Action Toolbar (Dark Steel Panel #131822) */}
-      <div className="p-3 bg-[#131822] border-b border-[#2B3547] flex items-center justify-between">
-        <div className="flex items-center space-x-3">
+      <div className="p-3 bg-[#131822] border-b border-[#2B3547] flex items-center justify-between gap-3">
+        {/* 모두 보기 at 1024px: the left group is wider than the window, so it scrolls sideways and the right group (집중 보기,
+            the split counts) stays on screen. Only there: the simple view's 더 보기 menu below would be clipped by it. */}
+        <div className={`flex items-center space-x-3${full ? ' min-w-0 overflow-x-auto whitespace-nowrap' : ''}`}>
           <button
             onClick={handleSelectFolder}
             disabled={isLoading}
             className="flex items-center space-x-2 px-3 py-1.5 bg-blue-600 hover:bg-blue-500 rounded-[4px] text-xs font-semibold text-white border border-blue-400 transition-tactile cursor-pointer"
           >
             <FolderOpen className="w-4 h-4" />
-            <span>{language === 'ko' ? '데이터셋 폴더 열기' : 'Open Dataset Folder'}</span>
+            <span className="whitespace-nowrap">{language === 'ko' ? '데이터셋 폴더 열기' : 'Open Dataset Folder'}</span>
           </button>
+          <BrowserFolderPathInput disabled={isLoading} onImport={folder => importFolder(folder, task, undefined, false).catch(() => {})} />
 
+          {full ? <>
           <button
             onClick={() => setShowGeneratorModal(true)}
             className="flex items-center space-x-2 px-3 py-1.5 bg-[#1A212E] hover:bg-[#222B3D] border border-[#2B3547] rounded-[4px] text-xs font-semibold transition-tactile text-amber-300 cursor-pointer"
@@ -292,48 +377,116 @@ export const DatasetStudio: React.FC = () => {
             <span>데이터 버전</span>
           </button>
 
+          </> : <details className="relative">
+            <summary className="list-none cursor-pointer whitespace-nowrap rounded-[4px] border border-[#2B3547] bg-[#1A212E] px-3 py-1.5 text-xs font-semibold text-slate-300">{language === 'ko' ? '더 보기' : 'More'}</summary>
+            <div className="absolute left-0 z-30 mt-1 flex min-w-[200px] flex-col gap-1 rounded border border-[#3B4B63] bg-[#131822] p-2 shadow-xl">
+          <button
+            onClick={() => setShowGeneratorModal(true)}
+            className="flex items-center space-x-2 px-3 py-1.5 bg-[#1A212E] hover:bg-[#222B3D] border border-[#2B3547] rounded-[4px] text-xs font-semibold transition-tactile text-amber-300 cursor-pointer"
+          >
+            <Sparkles className="w-4 h-4 text-amber-400" />
+            <span>{language === 'ko' ? '합성 데이터 생성기' : 'Procedural Generator'}</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setShowVersions(true)}
+            disabled={!hasSelectedFolder || !projectDir || isLoading}
+            title={hasSelectedFolder ? '데이터와 라벨 버전 저장·검증·복원' : '데이터셋을 먼저 불러오세요'}
+            className="flex items-center gap-2 rounded-[4px] border border-sky-700/60 bg-sky-950/30 px-3 py-1.5 text-xs font-semibold text-sky-200 hover:bg-sky-900/40 disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            <FolderArchive className="h-4 w-4" />
+            <span>데이터 버전</span>
+          </button>
+          {/* The simple view keeps the verified-version workflow here instead of in the toolbar. */}
+          {simpleView && (
+            <button
+              type="button"
+              onClick={() => setShowImports(true)}
+              disabled={!hasSelectedFolder || !project?.id || isLoading || sessionChanging}
+              title={sessionChanging ? SESSION_CHANGING_NOTICE : hasSelectedFolder ? '모든 이미지를 열어 검증한 고정 버전을 만들고 채택합니다' : '데이터셋을 먼저 불러오세요'}
+              className="flex items-center gap-2 rounded-[4px] border border-emerald-700/60 bg-emerald-950/30 px-3 py-1.5 text-xs font-semibold text-emerald-200 hover:bg-emerald-900/40 disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              <ListChecks className="h-4 w-4" />
+              <span className="whitespace-nowrap">검증된 데이터 버전</span>
+            </button>
+          )}
+
+            </div>
+          </details>}
+          {!simpleView && (
           <button
             type="button"
             onClick={() => setShowImports(true)}
-            disabled={!hasSelectedFolder || !project?.id || isLoading}
-            title={hasSelectedFolder ? '모든 이미지를 열어 검증한 고정 버전을 만들고 채택합니다' : '데이터셋을 먼저 불러오세요'}
+            disabled={!hasSelectedFolder || !project?.id || isLoading || sessionChanging}
+            title={sessionChanging ? SESSION_CHANGING_NOTICE : hasSelectedFolder ? '모든 이미지를 열어 검증한 고정 버전을 만들고 채택합니다' : '데이터셋을 먼저 불러오세요'}
             className="flex items-center gap-2 rounded-[4px] border border-emerald-700/60 bg-emerald-950/30 px-3 py-1.5 text-xs font-semibold text-emerald-200 hover:bg-emerald-900/40 disabled:cursor-not-allowed disabled:opacity-40"
           >
             <ListChecks className="h-4 w-4" />
-            <span>검증된 데이터 버전</span>
+            <span className="whitespace-nowrap">검증된 데이터 버전</span>
           </button>
+          )}
 
-          <span className="text-xs text-slate-400 font-mono truncate max-w-sm" title={folderPath}>
-            {folderPath}
+          {/* The simple view names the folder, not its whole path (the tooltip keeps the path). */}
+          <span className={`text-xs text-slate-400 truncate max-w-sm ${simpleView ? '' : 'font-mono'}`} title={folderPath}>
+            {simpleView && folderPath ? `폴더: ${folderPath.split(/[\\/]/).filter(Boolean).pop()}` : folderPath}
           </span>
         </div>
 
-        {/* Partition Status Annunciator */}
-        <div className="flex items-center space-x-3 bg-[#0B0E14] px-3 py-1.5 rounded-[4px] border border-[#2B3547] text-xs font-mono tabular-nums">
-          <div className="flex items-center space-x-1.5">
-            <span className="w-2 h-2 rounded-full bg-[#3B82F6]" />
-            <span className="text-slate-400">Train:</span>
-            <span className="font-bold text-blue-400">{split.train}</span>
-          </div>
-          <span className="w-[1px] h-3 bg-[#2B3547]" />
-          <div className="flex items-center space-x-1.5">
-            <span className="w-2 h-2 rounded-full bg-[#F59E0B]" />
-            <span className="text-slate-400">Val:</span>
-            <span className="font-bold text-amber-400">{split.val}</span>
-          </div>
-          <span className="w-[1px] h-3 bg-[#2B3547]" />
-          <div className="flex items-center space-x-1.5">
-            <span className="w-2 h-2 rounded-full bg-[#10B981]" />
-            <span className="text-slate-400">Test:</span>
-            <span className="font-bold text-emerald-400">{split.test}</span>
+        {/* The focus switch and the Partition Status Annunciator (the gallery tabs below show the same counts in the
+            simple view). One group on this row that never wraps or shrinks: a new row would take its height from the body.
+            The fold/narrow hints start at width 0 and take only the row's leftover room (full text in the title, and the
+            switch turns amber), so on a short row the left group's buttons keep their room. */}
+        <div className="flex shrink-0 grow items-center justify-end gap-2">
+          {focus && <span title={foldStatus} className="w-0 min-w-0 max-w-sm grow truncate text-right text-[11px] text-slate-400"><span className="xl:hidden">{FOLD_STATUS_SHORT}</span><span className="hidden xl:inline">{foldStatus}</span></span>}
+          {narrowNotice && <span id={NARROW_NOTICE_ID} role="status" title={narrowNotice} className="w-0 min-w-0 max-w-xs grow truncate text-right text-[11px] text-amber-200"><span className="xl:hidden">{NARROW_BODY_NOTICE_SHORT}</span><span className="hidden xl:inline">{narrowNotice}</span></span>}
+          <button type="button" aria-pressed={focus} onClick={toggleFocus} title={focus ? '위쪽 패널을 다시 보입니다' : '위쪽 패널을 접어 목록과 갤러리를 키웁니다'}
+            aria-describedby={narrowNotice ? NARROW_NOTICE_ID : undefined}
+            className={`shrink-0 rounded border px-2 py-0.5 text-[11px] hover:bg-slate-800 ${focus ? 'border-cyan-500 bg-cyan-950/40 text-cyan-100' : narrowNotice ? 'border-amber-400 bg-amber-950/50 text-amber-100' : 'border-slate-600 text-slate-200'}`}>{FOCUS_SWITCH_NAME}</button>
+          <div className={`${simpleView ? 'hidden' : 'flex'} shrink-0 items-center space-x-3 bg-[#0B0E14] px-3 py-1.5 rounded-[4px] border border-[#2B3547] text-xs font-mono tabular-nums`}>
+            <div className="flex items-center space-x-1.5">
+              <span className="w-2 h-2 rounded-full bg-[#3B82F6]" />
+              <span className="text-slate-400">{language === 'ko' ? '학습' : 'Train'}:</span>
+              <span className="font-bold text-blue-400">{split.train}</span>
+            </div>
+            <span className="w-[1px] h-3 bg-[#2B3547]" />
+            <div className="flex items-center space-x-1.5">
+              <span className="w-2 h-2 rounded-full bg-[#F59E0B]" />
+              <span className="text-slate-400">{language === 'ko' ? '검증' : 'Val'}:</span>
+              <span className="font-bold text-amber-400">{split.val}</span>
+            </div>
+            <span className="w-[1px] h-3 bg-[#2B3547]" />
+            <div className="flex items-center space-x-1.5">
+              <span className="w-2 h-2 rounded-full bg-[#10B981]" />
+              <span className="text-slate-400">{language === 'ko' ? '시험' : 'Test'}:</span>
+              <span className="font-bold text-emerald-400">{split.test}</span>
+            </div>
           </div>
         </div>
       </div>
 
       {/* Main Studio Body: Left Sidebar (Stats, Split Calibrator & Distribution) + Right (Gallery) */}
-      <div className="flex-1 flex overflow-hidden">
-        {/* Left Stats, Split Calibrator & Class Distribution Panel */}
-        <aside className="w-84 bg-[#131822] border-r border-[#2B3547] p-3 flex flex-col space-y-3 overflow-y-auto">
+      <div ref={bodyRef} className="flex-1 flex overflow-hidden" data-dataset-work-area>
+        {/* Left Stats, Split Calibrator & Class Distribution Panel. A fixed width that never shrinks: `w-84` is not on
+            this Tailwind 3 scale, so the sidebar took its longest unwrapped line (a checklist warning is ~2000px) and
+            left the gallery zero pixels wide, off screen, with only the first cards inside its lazy-read margin. */}
+        <aside data-surface="page" className="w-[21rem] shrink-0 bg-[#131822] border-r border-[#2B3547] p-3 flex flex-col space-y-3 overflow-y-auto">
+          {/* Before-training checks from the import result: what will block training or step 4, and what is weak. */}
+          {hasSelectedFolder && checklist.length > 0 && (
+            <section aria-label="학습 전 점검" className="rounded-[4px] border border-[#2B3547] bg-[#1A212E] p-2.5 text-xs">
+              <h3 className="mb-1.5 font-semibold text-slate-100">학습 전 점검</h3>
+              <ul className="space-y-1">
+                {checklist.map(check => (
+                  <li key={check.id} data-check={check.id} data-level={check.level}
+                    className={check.level === 'block' ? 'text-rose-200' : check.level === 'warn' ? 'text-amber-200' : 'text-emerald-200'}>
+                    <span aria-hidden="true">{check.level === 'block' ? '✕ ' : check.level === 'warn' ? '! ' : '✓ '}</span>{check.text}
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
+          {hasSelectedFolder && <FieldReadinessPanel />}
+          {hasSelectedFolder && <SpecialistFamilyNote step={1} />}
           {/* Summary KPI Readout Tiles */}
           <div className="grid grid-cols-2 gap-2 text-xs">
             <div className="p-2.5 bg-[#1A212E] rounded-[4px] border border-[#2B3547]">
@@ -352,6 +505,7 @@ export const DatasetStudio: React.FC = () => {
                 {classEntries.length}
               </span>
             </div>
+            {full && <>
             <div className="p-2.5 bg-[#1A212E] rounded-[4px] border border-[#2B3547]">
               <div className="flex items-center justify-between">
                 <span className="text-slate-400 block text-[10px] tracking-wide uppercase mb-0.5">
@@ -374,6 +528,7 @@ export const DatasetStudio: React.FC = () => {
                 {split.val + split.test}
               </span>
             </div>
+            </>}
           </div>
 
           {split.train + split.val + split.test === 0 && totalImages > 0 && (
@@ -411,9 +566,10 @@ export const DatasetStudio: React.FC = () => {
                 </span>
               </div>
               <p className="text-[11px] text-red-300">
-                {language === 'ko'
-                  ? 'ERR_005: 0바이트 또는 헤더 손상 이미지가 제외되었습니다.'
-                  : 'Corrupted image headers were excluded.'}
+                {language !== 'ko' ? (excludedUndecodable?.recorded ? 'Unreadable images were left out of training and splits; the files are unchanged.' : 'Unreadable images found; reopen the project and import again to leave them out.')
+                  : excludedUndecodable?.recorded
+                    ? `읽을 수 없는 이미지 ${excludedUndecodable.excluded.length}장을 학습·분할에서 뺐습니다 (원본 파일은 그대로): ${excludedUndecodable.excluded.slice(0, 5).join(', ')}${excludedUndecodable.excluded.length > 5 ? ' …' : ''}`
+                    : '읽을 수 없는 이미지가 있습니다. 프로젝트를 열고 다시 불러오면 학습에서 자동으로 빠집니다.'}
               </p>
             </div>
           )}
@@ -444,18 +600,22 @@ export const DatasetStudio: React.FC = () => {
               <div className="flex items-center space-x-1.5">
                 <Sliders className="w-3.5 h-3.5 text-blue-400" />
                 <span className="text-xs font-bold text-slate-200 tracking-wide uppercase">
-                  {showAppliedSplit
-                    ? (language === 'ko' ? '원본 폴더 분할' : 'Source Folder Split')
-                    : (language === 'ko' ? '3-Way 분할 캘리브레이터' : '3-Way Split Calibrator')}
+                  {language === 'ko' ? `학습 · 검증 · 시험 분할 (${splitInfo.label})`
+                    : showAppliedSplit ? 'Train / val / test split (saved)' : 'Train / val / test split (preview)'}
                 </span>
               </div>
-              <JargonTooltip termKey="early_stopping" />
+              {simpleView && splitInfo.foldable ? <span className="flex items-center gap-2 text-[11px] text-slate-300">
+                {splitFolded && <span className="tabular-nums">학습 {calibrator.counts.train} · 검증 {calibrator.counts.val} · 시험 {calibrator.counts.test}</span>}
+                <button type="button" aria-expanded={!splitFolded} onClick={() => setSplitOpen(open => !open)} className="rounded border border-[#2B3547] px-2 py-0.5 text-slate-200 hover:bg-[#222B3D]">{splitFolded ? '바꾸기' : '접기'}</button>
+              </span> : <JargonTooltip termKey="early_stopping" />}
             </div>
+            <div className={splitFolded ? 'hidden' : 'flex flex-col space-y-2.5'}>
 
-            {!showAppliedSplit && <p className="text-[11px] text-slate-400">
-              {language === 'ko' ? '아래는 분할 예상입니다. 적용 버튼을 눌러야 저장된 분할이 변경됩니다.'
-                : 'Preview below. Saved splits change when you select Apply.'}
-            </p>}
+            <p className={`text-xs ${splitInfo.tone === 'warn' ? 'text-amber-200' : 'text-slate-400'}`} role={splitInfo.tone === 'warn' ? 'status' : undefined}>
+              {language === 'ko' ? splitInfo.description
+                : showAppliedSplit ? (splitUnavailableForTask ? 'The source folder\'s own split is used.' : 'This is the saved split. Pick a ratio below and apply it to change it.')
+                : 'Preview of the new split. Saved splits change when you select Apply.'}
+            </p>
 
             {/* Quick Calibration Presets */}
             <div className="grid grid-cols-3 gap-1.5">
@@ -493,28 +653,28 @@ export const DatasetStudio: React.FC = () => {
                 <div
                   className="bg-[#3B82F6] h-full transition-all duration-200"
                   style={{ width: `${shownRatios.train}%` }}
-                  title={`Train: ${shownRatios.train}% (${shownCounts.train}장)`}
+                  title={`학습: ${shownRatios.train}% (${shownCounts.train}장)`}
                 />
                 <div
                   className="bg-[#F59E0B] h-full transition-all duration-200"
                   style={{ width: `${shownRatios.val}%` }}
-                  title={`Val: ${shownRatios.val}% (${shownCounts.val}장)`}
+                  title={`검증: ${shownRatios.val}% (${shownCounts.val}장)`}
                 />
                 <div
                   className="bg-[#10B981] h-full transition-all duration-200"
                   style={{ width: `${shownRatios.test}%` }}
-                  title={`Test: ${shownRatios.test}% (${shownCounts.test}장)`}
+                  title={`시험: ${shownRatios.test}% (${shownCounts.test}장)`}
                 />
               </div>
               <div className="flex items-center justify-between text-[10px] font-mono tabular-nums">
                 <span className="text-blue-400 font-semibold">
-                  Train: {shownRatios.train}% ({shownCounts.train})
+                  {language === 'ko' ? '학습' : 'Train'}: {shownRatios.train}% ({shownCounts.train})
                 </span>
                 <span className="text-amber-400 font-semibold">
-                  Val: {shownRatios.val}% ({shownCounts.val})
+                  {language === 'ko' ? '검증' : 'Val'}: {shownRatios.val}% ({shownCounts.val})
                 </span>
                 <span className="text-emerald-400 font-semibold">
-                  Test: {shownRatios.test}% ({shownCounts.test})
+                  {language === 'ko' ? '시험' : 'Test'}: {shownRatios.test}% ({shownCounts.test})
                 </span>
               </div>
             </div>
@@ -542,7 +702,9 @@ export const DatasetStudio: React.FC = () => {
             {/* Apply Split Button */}
             <button
               type="button"
-              onClick={() => void applySplit(splitRatios.train / 100, splitRatios.val / 100, splitRatios.test / 100).catch(() => {})}
+              onClick={() => void applySplit(splitRatios.train / 100, splitRatios.val / 100, splitRatios.test / 100)
+                .then(() => setSplitRatios(prev => ({ ...prev, touchedFor: null })))
+                .catch(() => {})}
               disabled={!sourceIsCurrent || isSplitting || totalImages === 0 || splitUnavailableForTask}
               title={splitUnavailableForTask ? splitUnavailableHint : undefined}
               className="w-full py-1.5 bg-[#2563EB] hover:bg-blue-500 text-white rounded-[4px] border border-blue-400 text-xs font-semibold flex items-center justify-center space-x-1.5 transition-tactile cursor-pointer disabled:opacity-40"
@@ -554,7 +716,7 @@ export const DatasetStudio: React.FC = () => {
                     ? '분할 연산 중...'
                     : 'Splitting...'
                   : language === 'ko'
-                  ? '3-Way 분할 적용'
+                  ? simpleView ? '이 비율로 나누기' : '3-Way 분할 적용'
                   : 'Apply 3-Way Split'}
               </span>
             </button>
@@ -566,6 +728,7 @@ export const DatasetStudio: React.FC = () => {
                 {splitError}
               </div>
             )}
+            </div>
           </div>
 
           {/* Digital Class Gauges */}
@@ -578,7 +741,7 @@ export const DatasetStudio: React.FC = () => {
                     ? (language === 'ko' ? '마스크 채널별 이미지 수' : 'Images per Mask Channel')
                     : distribution.countUnit === 'objects'
                     ? (language === 'ko' ? '클래스별 객체 주석 분포' : 'Annotated Objects by Class')
-                    : (language === 'ko' ? '클래스별 계측 분포' : 'Class Digital Gauges')}
+                    : (language === 'ko' ? '클래스별 이미지 수' : 'Class Digital Gauges')}
                 </span>
               </div>
               <span className="text-[11px] font-mono tabular-nums text-slate-400 bg-[#0B0E14] px-1.5 py-0.5 rounded border border-[#2B3547]">
@@ -605,8 +768,8 @@ export const DatasetStudio: React.FC = () => {
             {classCountUnit === 'images' && classEntries.length > 0 && (
               <p className="mb-2 text-[10px] text-slate-400">
                 {language === 'ko'
-                  ? `원본 이미지 ${sourceImages}장 기준입니다. 여러 클래스가 있는 이미지는 클래스별로 각각 집계합니다.`
-                  : `Percentages use ${sourceImages} source images. Images with multiple classes count once in each class.`}
+                  ? `학습에 쓰는 이미지 ${totalImages || sourceImages}장 기준입니다${sourceImages > totalImages && totalImages ? ` (사용 안 함 ${sourceImages - totalImages}장 제외)` : ''}. 여러 클래스가 있는 이미지는 클래스별로 각각 집계합니다.`
+                  : `Percentages use the ${totalImages || sourceImages} images training reads. Images with multiple classes count once in each class.`}
               </p>
             )}
 
@@ -683,25 +846,25 @@ export const DatasetStudio: React.FC = () => {
                           ? (confirmedClassSplit ? '적용된 분할' : '분할 예상')
                           : (confirmedClassSplit ? 'Applied split' : 'Split preview')}</span>
                         <div className="flex space-x-2">
-                          <span className="text-blue-400">T: {cTrain}</span>
-                          <span className="text-amber-400">V: {cVal}</span>
-                          <span className="text-emerald-400">Test: {cTest}</span>
+                          <span className="text-blue-400">{language === 'ko' ? '학습' : 'T'}: {cTrain}</span>
+                          <span className="text-amber-400">{language === 'ko' ? '검증' : 'V'}: {cVal}</span>
+                          <span className="text-emerald-400">{language === 'ko' ? '시험' : 'Test'}: {cTest}</span>
                         </div>
                         <div className="w-16 bg-[#0B0E14] h-1 rounded-[1px] overflow-hidden flex border border-[#2B3547]/60">
                           <div
                             className="bg-[#3B82F6] h-full"
                             style={{ width: `${count > 0 ? (cTrain / count) * 100 : 0}%` }}
-                            title={`Train: ${cTrain}`}
+                            title={`학습: ${cTrain}`}
                           />
                           <div
                             className="bg-[#F59E0B] h-full"
                             style={{ width: `${count > 0 ? (cVal / count) * 100 : 0}%` }}
-                            title={`Val: ${cVal}`}
+                            title={`검증: ${cVal}`}
                           />
                           <div
                             className="bg-[#10B981] h-full"
                             style={{ width: `${count > 0 ? (cTest / count) * 100 : 0}%` }}
-                            title={`Test: ${cTest}`}
+                            title={`시험: ${cTest}`}
                           />
                         </div>
                       </div>}
@@ -719,6 +882,7 @@ export const DatasetStudio: React.FC = () => {
             <div role="alert" className="m-4 mb-0 p-3 bg-red-950/30 border border-red-500/40 rounded text-xs text-red-200">
               <div className="font-semibold mb-1">{language === 'ko' ? '데이터셋을 불러오지 못했습니다' : 'Could not import dataset'}</div>
               <div>{importError}</div>
+              <ImportTaskSwitch error={importError} folder={folderPath} onImport={(folder, nextTask) => importFolder(folder, nextTask, undefined, false)} />
             </div>
           )}
           {imageOpenError && (
@@ -819,9 +983,9 @@ export const DatasetStudio: React.FC = () => {
             {/* Density Toggle + Sensor Scale + Pagination */}
             <div className="flex items-center space-x-4 text-slate-400">
               {/* Defect Physical Scale Indicator (μm unit) */}
-              <div className="hidden sm:flex items-center space-x-1.5 text-[11px] font-mono bg-[#0B0E14] px-2 py-1 rounded-[4px] border border-[#2B3547]">
-                <span className="text-slate-400">Pixel Pitch:</span>
-                <span className="text-slate-200 tabular-nums font-semibold">Not calibrated</span>
+              <div className={`${simpleView ? 'hidden' : 'hidden sm:flex'} items-center space-x-1.5 text-[11px] font-mono bg-[#0B0E14] px-2 py-1 rounded-[4px] border border-[#2B3547]`}>
+                <span className="text-slate-400">픽셀당 길이:</span>
+                <span className="text-slate-200 tabular-nums font-semibold">미보정</span>
               </div>
 
               {/* Thumbnail Density Toggle (S: 96px, M: 144px, L: 200px) */}
@@ -857,6 +1021,7 @@ export const DatasetStudio: React.FC = () => {
                 <div className="flex space-x-1">
                   <button
                     disabled={page <= 1}
+                    aria-label="이전 페이지"
                     onClick={() => loadImages(page - 1)}
                     className="p-1 rounded-[3px] bg-[#1A212E] hover:bg-[#222B3D] text-slate-300 disabled:opacity-30 border border-[#2B3547] cursor-pointer"
                   >
@@ -864,6 +1029,7 @@ export const DatasetStudio: React.FC = () => {
                   </button>
                   <button
                     disabled={page >= totalPages}
+                    aria-label="다음 페이지"
                     onClick={() => loadImages(page + 1)}
                     className="p-1 rounded-[3px] bg-[#1A212E] hover:bg-[#222B3D] text-slate-300 disabled:opacity-30 border border-[#2B3547] cursor-pointer"
                   >
@@ -929,7 +1095,7 @@ export const DatasetStudio: React.FC = () => {
                               : 'bg-slate-600 text-white'
                           }`}
                         >
-                          {img.split}
+                          {language === 'ko' ? (SPLIT_BADGE_KO[img.split] ?? img.split) : img.split}
                         </span>
                         {/* Resolution Hover Overlay / Badge */}
                         <span className="absolute bottom-1 right-1 font-mono tabular-nums text-[9px] bg-[#0B0E14]/90 text-slate-200 px-1 py-0.5 rounded-[2px] border border-[#2B3547] opacity-80 group-hover:opacity-100 transition-opacity">
@@ -979,7 +1145,7 @@ export const DatasetStudio: React.FC = () => {
       {showImports && project?.id && <DatasetImportPanel projectId={project.id} datasetPath={folderPath}
         registeredSource={project.source_dataset_dir || null} task={task}
         onClose={() => setShowImports(false)} onAccepted={() => { loadActiveRevision(); }} />}
-      {showVersions && <DatasetVersionPanel datasetPath={folderPath} onClose={() => setShowVersions(false)} onRestored={async () => {
+      {showVersions && <DatasetVersionPanel datasetPath={folderPath} highlightVersionId={highlightVersionId} onClose={() => { setShowVersions(false); setHighlightVersionId(null); }} onRestored={async () => {
         await importFolder(folderPath, task, false);
       }} />}
     </div>

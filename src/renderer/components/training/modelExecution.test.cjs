@@ -2,8 +2,8 @@ const assert=require('node:assert/strict'),test=require('node:test'),fs=require(
 function hostAdapterModule(name='hostAdapter.ts'){const file=path.join(__dirname,'..','..','services',name);const m=new Module(file,module);m.filename=file;m.paths=Module._nodeModulePaths(path.dirname(file));const original=m.require.bind(m);m.require=key=>key==='./browserSession'?hostAdapterModule('browserSession.ts'):original(key);m._compile(ts.transpileModule(fs.readFileSync(file,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText,file);return m.exports;}
 function load(file,mocks={}){const name=path.resolve(__dirname,file);assert.ok(fs.existsSync(name),'Workflow implementation exists');const m=new Module(name,module);m.filename=name;m.paths=Module._nodeModulePaths(path.dirname(name));const req=m.require.bind(m);m.require=key=>{
  if(key in mocks)return mocks[key];if(key==='../../services/hostAdapter')return hostAdapterModule();
- const target=key.startsWith('.')?path.resolve(path.dirname(name),key+'.ts'):null;
- return target&&fs.existsSync(target)?load(target,mocks):req(key);
+ const target=key.startsWith('.')?[key+'.ts',key+'.tsx'].map(item=>path.resolve(path.dirname(name),item)).find(item=>fs.existsSync(item)):null;
+ return target?load(target,mocks):req(key);
 };m._compile(ts.transpileModule(fs.readFileSync(name,'utf8'),{fileName:name,compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022,jsx:ts.JsxEmit.ReactJSX}}).outputText,name);return m.exports;}
 test('patch evaluation uses the selected explicit recipe and never its legacy local evaluate alias',async()=>{
  const calls=[],target={isLoaded:true,selectedProfileId:'patch-worker',profiles:[{id:'patch-worker'}],transportRevision:0};

@@ -34,10 +34,14 @@ def source_image_paths(source,task,*,include_unused=False):
     return sorted(p for p in inventory_root(source,task).rglob('*') if p.is_file() and str(p.resolve()) not in unused and (not exclude_project or not p.is_relative_to(project))
                   and is_inventory_path(p.relative_to(source).parts,task))
 
+from backend.engine.dataset_loaders import name_says_normal as _name_says_normal
+
 def is_anomaly_normal(image,source=None):
     path=Path(image)
     if source is not None:path=path.relative_to(Path(source))
     parts=path.parts[:-1]
+    said=_name_says_normal(path.stem)
+    if said is not None:return said
     if len(parts)==1 and parts[0]=='train':return True
     return any(part.casefold() in NORMAL_NAMES or part=='test_crop_output' for part in parts)
 

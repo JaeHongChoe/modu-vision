@@ -5,6 +5,9 @@ import type { Page } from '@playwright/test';
 import { expect, test } from './fixtures/test';
 import { installDesktopHostShim } from './fixtures/desktop-host-shim';
 
+// LabelingStudio's work area basis (labelingLayout.ts WORK_AREA_BASIS).
+const WORK_AREA_BASIS = 248;
+
 // UI finish from the native app QA (Codex): on a 1440x900 window the stacked helper panels above the labeling canvas
 // left it a small strip. Focus editing folds them; the canvas itself (not only its area) takes the height and an image
 // shown at Fit is fitted again, the choice survives a reload, and the label set, the classes, the team row with the
@@ -38,7 +41,7 @@ function largePng(width: number, height: number): Buffer {
 
 // The HUD's scale (percent of the image's pixels per screen pixel).
 const hudScale = (page: Page) => page.evaluate(() => {
-  const label = [...document.querySelectorAll('span')].find(span => span.textContent === 'scale');
+  const label = [...document.querySelectorAll('span')].find(span => span.textContent === '배율');
   return Number(label?.nextElementSibling?.textContent);
 });
 
@@ -63,18 +66,24 @@ test('focus editing gives the labeling canvas the window height, refits the imag
   await expect.poll(() => hudScale(page), { timeout: 90_000, message: 'the large image is fitted' }).toBeLessThan(100);
   await page.waitForTimeout(500);
   const before = { canvas: await canvasHeight(page), scale: await hudScale(page) };
+  // 모두 보기 keeps a drawing area too (it was a 67 px strip under the stacked rows): the settings rows scroll in their
+  // own strip that gives way first, so the canvas keeps the work area's basis and the short-area notice stays away.
+  expect(before.canvas, 'the full view keeps a practical drawing area').toBeGreaterThanOrEqual(WORK_AREA_BASIS - 4);
+  await expect(page.getByRole('status').filter({ hasText: '그림 영역이 좁습니다' })).toHaveCount(0);
+  await expect(page.locator('[data-labeling-panels]').getByLabel('레이블셋 목록 새로고침')).toBeVisible();
   await evidence.screenshot(page, 'labeling-full-layout');
 
   // Switched on in place, with no pointer input after it: the canvas element grows and the image is fitted to it.
   await page.mouse.move(5, 5);
   await toggle.click();
-  await expect.poll(() => canvasHeight(page), { message: 'the canvas element itself takes the height' }).toBeGreaterThan(before.canvas * 2);
+  // The gain is a smaller ratio than against the old 67 px strip (about 248 -> 412 px at 1440x900), still well over a third.
+  await expect.poll(() => canvasHeight(page), { message: 'the canvas element itself takes the height' }).toBeGreaterThan(before.canvas * 1.4);
   await expect.poll(() => hudScale(page), { message: 'the image shown at Fit is fitted again to the larger canvas' }).toBeGreaterThan(before.scale * 1.5);
   await expect(focusSwitch(true)).toBeVisible();
   const focused = { canvas: await canvasHeight(page), scale: await hudScale(page) };
   // What focus editing keeps: the label set in use, the classes, and compact rows.
   await expect(page.getByLabel('레이블셋 목록 새로고침')).toBeVisible();
-  await expect(page.getByTitle('Add new category')).toBeVisible();
+  await expect(page.getByTitle('클래스 추가')).toBeVisible();
   await expect(page.getByText('활성 레이블셋의 편집 라벨만 학습·평가에 사용합니다', { exact: false })).toHaveCount(0);
   const filmstrip = page.locator('[data-labeling-filmstrip]');
   const focusFilmstrip = (await filmstrip.boundingBox())!.height;
@@ -91,7 +100,7 @@ test('focus editing gives the labeling canvas the window height, refits the imag
   await page.reload();
   await openLabeling(page, 'Labeling focus');
   await expect(focusSwitch(true)).toBeVisible();
-  await expect.poll(() => canvasHeight(page), { message: 'a remembered focus layout opens with the tall canvas' }).toBeGreaterThan(before.canvas * 2);
+  await expect.poll(() => canvasHeight(page), { message: 'a remembered focus layout opens with the tall canvas' }).toBeGreaterThan(before.canvas * 1.4);
   await focusSwitch(true).click();
   await expect(focusSwitch(false)).toBeVisible();
   await expect.poll(() => canvasHeight(page)).toBeLessThan(focused.canvas);
@@ -114,7 +123,7 @@ test('the shared editing lock is taken, renewed and kept in focus editing, and a
   };
   const save = async () => {
     const saved = page.waitForResponse(response => response.url().includes('/api/annotations/save'));
-    await page.locator('button', { hasText: /^(Saved|Save Changes)$/ }).first().click();
+    await page.locator('button', { hasText: /^(저장됨|변경 저장)$/ }).first().click();
     return (await saved).status();
   };
   await page.setViewportSize({ width: 1440, height: 900 });
