@@ -20,6 +20,7 @@ import { useProjectStore } from '../../stores/useProjectStore';
 import { useDatasetStore } from '../../stores/useDatasetStore';
 import { useTrainingStore } from '../../stores/useTrainingStore';
 import { useComputeStore } from '../../stores/useComputeStore';
+import { registerAutoRun } from '../../stores/autoRunChannel';
 import { OperatorGuidanceBanner } from '../common/OperatorGuidanceBanner';
 import { GuardrailBanner } from '../common/GuardrailBanner';
 import { LedAnnunciator, LedState } from '../common/LedAnnunciator';
@@ -257,6 +258,17 @@ export const TrainingController: React.FC = () => {
     }
     catch (error) { setActionError(error instanceof Error ? error.message : '학습 시작에 실패했습니다.'); }
   };
+
+  // 원클릭 자동 진행 presses this screen's own start with the settings shown here (see stores/autoRunChannel.ts).
+  useEffect(() => registerAutoRun('train', async () => {
+    if (isTraining) return null;
+    if (!canStart || useProjectStore.getState().isProjectBusy) return startBlocker || '학습을 시작할 수 없습니다. 3단계 화면의 안내를 확인하세요.';
+    try {
+      if (resumeState) setNextSettings({ batchSize: Number(resumeState.recipe.batch_size) || undefined, device: resumeState.device });
+      await startTraining(folderPath, task, resumeState ? undefined : warmParentId || undefined, modelOptions, schedulingOptions);
+    } catch (error) { return error instanceof Error ? error.message : '학습 시작에 실패했습니다.'; }
+    return useTrainingStore.getState().startError || null;
+  }), [isTraining, canStart, startBlocker, folderPath, task, warmParentId, resumeState, JSON.stringify(modelOptions), JSON.stringify(schedulingOptions)]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleAbort = async () => {
     await stopTraining();

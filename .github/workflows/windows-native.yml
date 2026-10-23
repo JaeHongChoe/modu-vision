@@ -106,6 +106,7 @@ jobs:
               scripts/tests/test_publication_audit.py
               backend/tests/test_sdk_cancellation.py::test_interruption_reaps_the_actual_owned_child
               backend/tests/test_anomaly_folder_case.py
+              backend/tests/test_class_rename.py
           - lane: workers
             tests: >-
               backend/tests/test_service_s0_06.py

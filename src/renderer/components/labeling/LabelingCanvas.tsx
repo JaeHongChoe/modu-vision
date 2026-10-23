@@ -1357,6 +1357,8 @@ export const LabelingCanvas: React.FC = () => {
           color: activeCategory.color,
         };
         addAnnotation(newAnn);
+        // 한 장에 하나씩: the finished box moves on to the next image (the image change saves it first).
+        if (useAnnotationStore.getState().advanceOnBox) useAnnotationStore.getState().requestAdvance?.();
       }
       bboxDraftRef.current = null;
       setBBoxDraft(null);

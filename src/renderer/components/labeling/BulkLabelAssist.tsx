@@ -8,6 +8,7 @@ import type {LabelAssistExecution} from './LabelAssistDeviceSizes';
 import { datasetWorkflow } from '../../services/datasetWorkflow';
 import {labelingScope} from './foundationRequest';
 import { reportPanelError } from '../../stores/assistContext';
+import { Explain } from '../common/Explain';
 
 function errorText(error: unknown): string {
   if (error instanceof Error) return error.message;
@@ -40,6 +41,9 @@ interface Props {
   onOpenEntry: (entry: LabelSuggestionBatchEntry) => Promise<void>;
   onRunningChange: (running: boolean) => void;
 }
+
+/** Shown when a whole batch found nothing: the model is not ready to draft yet (too few labels or too short a training). */
+export const EMPTY_BATCH_TEXT = '이 모델은 아직 어느 이미지에서도 후보를 찾지 못했습니다. 라벨을 더 단 뒤 다시 학습하거나 3단계 \'빠른 이어 학습\'으로 몇 회 더 학습한 뒤 다시 만드세요. 빈 초안은 검토 대기에 넣지 않습니다.';
 
 export const BulkLabelAssist: React.FC<Props> = ({ projectDir, modelId, threshold, keywords = [], execution, disabled, onOpenEntry, onRunningChange }) => {
   const folderPath = useDatasetStore((state) => state.folderPath);
@@ -226,6 +230,8 @@ export const BulkLabelAssist: React.FC<Props> = ({ projectDir, modelId, threshol
             <div className="flex justify-between"><span>{statusText(selectedBatch.status)}</span><span className="font-mono text-cyan-300">{selectedBatch.processed} / {selectedBatch.total}</span></div>
             <div className="h-1.5 overflow-hidden rounded bg-slate-700"><div className="h-full bg-cyan-500 transition-all" style={{ width: `${selectedBatch.total ? 100 * selectedBatch.processed / selectedBatch.total : 0}%` }} /></div>
             <p className="text-slate-400">후보 있는 이미지 {selectedBatch.generated} · 후보 0개 {selectedBatch.zero_candidates} · 실패 {selectedBatch.failed}</p>
+            {/* A finished batch that found nothing on any image: say why that happens and what helps, instead of a list of empty drafts. */}
+            {selectedBatch.status === 'completed' && selectedBatch.processed > 0 && selectedBatch.generated === 0 && selectedBatch.zero_candidates > 0 && <p role="status" className="text-amber-200">{EMPTY_BATCH_TEXT}</p>}
             {selectedBatch.error && <p className="text-red-300">{selectedBatch.error}</p>}
           </div>
           <div className="max-h-40 space-y-1 overflow-y-auto">
@@ -238,7 +244,7 @@ export const BulkLabelAssist: React.FC<Props> = ({ projectDir, modelId, threshol
           </div>
         </>}
       </div>}
-      <p className="text-[10px] leading-relaxed text-slate-500">생성된 후보는 프로젝트에 저장됩니다. 채택할 이미지를 열어 각 후보를 확인하세요. 작업을 취소하면 완료된 후보는 유지됩니다. 생성 중 작업 유형이나 데이터 출처를 변경하면 배치가 중단됩니다.</p>
+      <Explain text="생성된 후보는 프로젝트에 저장됩니다. 채택할 이미지를 열어 각 후보를 확인하세요. 작업을 취소하면 완료된 후보는 유지됩니다. 생성 중 작업 유형이나 데이터 출처를 변경하면 배치가 중단됩니다." />
     </section>
   );
 };

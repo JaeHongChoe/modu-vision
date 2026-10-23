@@ -84,6 +84,13 @@ interface AnnotationState {
   metadata: ImageReviewMetadata | null;
   reviewerName: string;
   setReviewerName: (name: string) => void;
+  /** 한 장에 하나씩: a finished box saves the image and moves to the next one (one drag per image instead of drag + next).
+   *  Off by default (an image can hold several defects); remembered on this device. */
+  advanceOnBox: boolean;
+  setAdvanceOnBox: (on: boolean) => void;
+  /** Counts the canvas's requests to move on; the filmstrip moves forward once per new count. */
+  advanceRequest: number;
+  requestAdvance: () => void;
   setMetadata: (metadata: ImageReviewMetadata | null) => void;
   teamEditingEnabled: boolean;
   teamReviewEnabled: boolean;
@@ -166,6 +173,10 @@ export const useAnnotationStore = create<AnnotationState>((set, get) => ({
   metadata: null,
   reviewerName: typeof localStorage !== 'undefined' ? localStorage.getItem('modu-reviewer-name') || '' : '',
   setReviewerName: (name) => { if (typeof localStorage !== 'undefined') localStorage.setItem('modu-reviewer-name', name); set({ reviewerName: name }); },
+  advanceOnBox: (() => { try { return typeof localStorage !== 'undefined' && localStorage.getItem('modu-advance-on-box') === '1'; } catch { return false; } })(),
+  setAdvanceOnBox: (on) => { try { if (typeof localStorage !== 'undefined') localStorage.setItem('modu-advance-on-box', on ? '1' : '0'); } catch { /* the choice still holds for this session */ } set({ advanceOnBox: on }); },
+  advanceRequest: 0,
+  requestAdvance: () => set((state) => ({ advanceRequest: state.advanceRequest + 1 })),
   setMetadata: (metadata) => set({ metadata }),
   teamEditingEnabled:false,
   teamReviewEnabled:false,

@@ -23,7 +23,13 @@ export function orderDrafts(drafts: LabelSuggestion[], order: DraftOrder): Label
 
 /** Images that still have a draft waiting for a person (several drafts on one image count once). */
 export function pendingImageCount(drafts: LabelSuggestion[]): number {
-  return new Set(drafts.filter((draft) => draft.status === 'pending').map((draft) => draft.image_path)).size;
+  return new Set(drafts.filter((draft) => draft.status === 'pending' && draft.candidates.length > 0).map((draft) => draft.image_path)).size;
+}
+
+/** Drafts that found nothing: no work waits on them (their images still count as remaining), so they are not counted as
+ *  waiting and are closed together in one press (each one recorded as rejected; labels unchanged). */
+export function emptyPendingDrafts(drafts: LabelSuggestion[]): LabelSuggestion[] {
+  return drafts.filter((draft) => draft.status === 'pending' && draft.candidates.length === 0);
 }
 
 /** An adoption that recorded its shapes, so it can be taken back on its own. */
@@ -110,6 +116,22 @@ export function sourcesMixed(drafts: Pick<LabelSuggestion, 'backend' | 'status'>
 }
 
 /** A draft with nothing to adopt: it can only be rejected, so it never joins a multi-adoption. */
+/** Shown beside a candidate whose class is not in the project's class list now (a model trained before a rename). */
+export const UNKNOWN_CLASS_MARK = '지금 클래스 목록에 없는 이름';
+
+/** A candidate an older model drafted with a class the project no longer has. Only for drafts of a model trained
+ *  before the data changed, and only when the project has classes at all (an empty project's first drafts name new
+ *  classes on purpose). */
+export function unknownClassCandidate(draft: Pick<LabelSuggestion, 'model_data_state'>, label: string, known: ReadonlySet<string>): boolean {
+  return draft.model_data_state === 'changed' && known.size > 0 && !known.has(label);
+}
+
+/** The candidates chosen until the person changes them: all of them, except an older model's candidates whose class the
+ *  project no longer has — those stay unchecked (the person can still check one; adding a class is allowed). */
+export function defaultChoice(draft: LabelSuggestion, known: ReadonlySet<string>): Set<string> {
+  return new Set(draft.candidates.filter((candidate) => !unknownClassCandidate(draft, candidate.annotation.label, known)).map((candidate) => candidate.id));
+}
+
 export function adoptable(draft: LabelSuggestion): boolean {
   return draft.status === 'pending' && draft.candidates.length > 0;
 }

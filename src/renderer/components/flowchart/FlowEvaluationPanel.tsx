@@ -105,6 +105,10 @@ export function FlowEvaluationPanel({sourceDatasetPath='',savedVersionId,context
   const refreshHistory=async()=>{const rows=await flowEvaluation.history();return rows.evaluations;};
   const visibleRecords=result?.records.filter(row=>row.truth==='UNKNOWN'||row.error||row.decision==='REVIEW'||row.truth!==row.decision)||[];
   const compatible=cohorts.filter(row=>scope&&isCompatibleFlowCohort(row,scope));
+  // With none chosen, the newest cohort of this scope is the one shown (자동 진행 froze it), so the person lands on its
+  // truth confirmation in one step. Choosing a cohort is only a selection; confirming truth stays the person's press.
+  const newestCompatible=compatible.reduce<string>((newest,row)=>!newest||row.created_at>(compatible.find(item=>item.cohort_id===newest)?.created_at||'')?row.cohort_id:newest,'');
+  useEffect(()=>{if(!cohort&&newestCompatible)setCohort(newestCompatible);},[cohort,newestCompatible]);
   // A result read from history or finished after a version switch can belong to another version.
   const resultMatchesVersion=Boolean(result&&result.version_id===version);
   const openImage=async(imagePath:string)=>{
@@ -146,7 +150,7 @@ export function FlowEvaluationPanel({sourceDatasetPath='',savedVersionId,context
       </details>
       {/* The folder labels become the cohort's reviewed truth in one step; the reviewer's name goes on every declaration. */}
       {cohort&&scope&&scope.task!=='mixed'&&<div className="flex flex-wrap items-center gap-2 rounded border border-slate-700 bg-[#0F1826] p-2">
-        <span className="text-slate-200">시험 묶음의 폴더 라벨(OK/NG)을 정답으로 확정하려면 검토자 이름을 적고 누르세요.</span>
+        <span className="text-slate-200">{scope.task==='detection'?'시험 묶음 이미지의 라벨(불량 상자는 NG, 정상 표시는 OK, 라벨 없음은 미확인)을':'시험 묶음의 폴더 라벨(OK/NG)을'} 정답으로 확정하려면 검토자 이름을 적고 누르세요.</span>
         <label>검토자<input aria-label="정답 일괄 확정 검토자" value={reviewer} onChange={e=>setReviewer(e.target.value)} className={`${field} ml-2 w-32`}/></label>
         <button className={button} disabled={busy||!reviewer.trim()} onClick={()=>void run(async current=>{
           // A frozen cohort records each image's truth; confirming labels changes that truth, so the same split is frozen again
@@ -155,7 +159,7 @@ export function FlowEvaluationPanel({sourceDatasetPath='',savedVersionId,context
           const refrozen=value.declared>0?await flowEvaluation.freeze(version,`${(cohortName.trim()||'시험 묶음')} · 정답 확정`):null;
           if(!current())return;
           if(refrozen){setCohorts(previous=>[refrozen,...previous]);setCohort(refrozen.cohort_id);}
-          setNotice(`정답 확정 ${value.declared}개 · 이미 같음 ${value.kept}개 · 폴더에 클래스 이름이 없어 미확인 ${value.skipped}개.${refrozen?` 확정한 정답으로 시험 묶음을 다시 고정했습니다(${refrozen.count}장).`:''} 이제 "선택 코호트 평가"를 누르면 미검·과검이 계산됩니다.`);
+          setNotice(`정답 확정 ${value.declared}개 · 이미 같음 ${value.kept}개 · ${scope?.task==='detection'?'라벨이 없어':'폴더에 클래스 이름이 없어'} 미확인 ${value.skipped}개.${refrozen?` 확정한 정답으로 시험 묶음을 다시 고정했습니다(${refrozen.count}장).`:''} 이제 "선택 코호트 평가"를 누르면 미검·과검이 계산됩니다.`);
         })}>라벨을 정답으로 확정</button>
       </div>}
       <div className="flex flex-wrap items-center gap-2"><input aria-label="시험 코호트 이름" value={cohortName} onChange={e=>setCohortName(e.target.value)} className={field}/><button className={button} disabled={busy||!version||!scope||!cohortName.trim()} onClick={()=>void run(async current=>{const value=await flowEvaluation.freeze(version,cohortName);if(current()){setCohorts(previous=>[value,...previous]);setCohort(value.cohort_id);setNotice(`저장된 시험 분할 ${value.count}개를 고정했습니다.`);}})}>현재 시험 분할을 새 코호트로 고정</button><span className="text-slate-400">시험 분할 저장이 필요합니다. 학습·검증 분할과 동일한 이미지 내용은 거부합니다.</span></div>

@@ -430,6 +430,22 @@ def test_a_model_trained_before_the_data_changed_still_drafts_and_says_so(sugges
     assert reviewed.json()["backup_version_id"].startswith("v_")
 
 
+def test_a_model_trained_under_another_label_set_does_not_draft_into_the_active_one(suggestion_workspace):
+    """2026-10-23 default for an open decision: a receipt that names another label set of this project is left out of
+    the model list and refused for drafts; one that names the active set (or none, an older receipt) still drafts."""
+    client, project, _, image, _, _, checkpoint = suggestion_workspace
+    receipt_path = checkpoint.parent / "job_receipt.json"
+    receipt = json.loads(receipt_path.read_text())
+    receipt["training_provenance"] = {"labelset_id": "other_set"}
+    receipt_path.write_text(json.dumps(receipt))
+    assert client.get("/api/label-suggestions/models").json()["models"] == []
+    refused = client.post("/api/label-suggestions/generate", json={"job_id": "job_12345_test", "image_path": str(image)})
+    assert refused.status_code == 404
+    receipt["training_provenance"] = {"labelset_id": project.get("active_labelset_id", "default")}
+    receipt_path.write_text(json.dumps(receipt))
+    assert [m["job_id"] for m in client.get("/api/label-suggestions/models").json()["models"]] == ["job_12345_test"]
+
+
 @pytest.mark.parametrize("model_state", ["current", "changed"])
 def test_a_label_save_during_a_batch_stops_it_before_more_inference(suggestion_workspace, monkeypatch, model_state):
     """The 2026-10-22 decision lets a model trained before the data changed start a batch; it does not let a batch go on

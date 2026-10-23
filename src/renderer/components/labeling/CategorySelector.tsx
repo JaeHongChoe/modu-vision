@@ -11,6 +11,8 @@ import { useProjectStore } from '../../stores/useProjectStore';
 
 export const CategorySelector: React.FC = () => {
   const { categories, activeCategory, setActiveCategory, addCategory, annotations, labelbookVersion } = useAnnotationStore();
+  const advanceOnBox = useAnnotationStore((state) => state.advanceOnBox);
+  const setAdvanceOnBox = useAnnotationStore((state) => state.setAdvanceOnBox);
   const [newCatName, setNewCatName] = useState('');
   const [isAdding, setIsAdding] = useState(false);
   const [showSamples, setShowSamples] = useState(false);
@@ -20,6 +22,7 @@ export const CategorySelector: React.FC = () => {
   const simpleView = useProjectStore((state) => state.viewMode) === 'simple';
   // Classification takes each image's class from its folder or the class picker above; this bar names drawn regions.
   const classification = useProjectStore((state) => state.task) === 'classification';
+  const detection = useProjectStore((state) => state.task) === 'detection';
   const datasetClasses = Object.keys(useDatasetStore((state) => state.classes) || {});
   const countOf = (cat: { id: number; name: string }) => annotations.filter((a) => a.category_id === cat.id || a.label === cat.name).length;
   const isUnusedSample = (cat: { id: number; name: string }) => simpleView && !labelbookVersion && cat.name !== 'OK'
@@ -118,6 +121,12 @@ export const CategorySelector: React.FC = () => {
           <Plus className="w-3.5 h-3.5" />
         </button>
       )}
+      {/* 한 장에 하나씩 (detection): one drag per image instead of drag + next; off by default for images with several defects. */}
+      {detection && setAdvanceOnBox && <label className="ml-2 flex items-center gap-1 whitespace-nowrap text-xs text-slate-300"
+        title="켜면 상자를 하나 그릴 때마다 저장하고 다음 이미지로 넘어갑니다. 한 장에 결함이 여러 개면 끄세요.">
+        <input type="checkbox" checked={Boolean(advanceOnBox)} onChange={(event) => setAdvanceOnBox(event.target.checked)} className="accent-cyan-500" />
+        그리면 다음 이미지로
+      </label>}
     </div>
   );
 };

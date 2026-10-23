@@ -12,6 +12,8 @@ function deps(overrides={}){const calls=[];let clock=0;const statuses=['running'
   startTraining:async folder=>{calls.push(['train',folder]);return 'job_1';},trainingError:()=>null,
   jobStatus:async id=>{calls.push(['status',id]);return {status:statuses.shift()||'completed'};},
   trainingEnded:async id=>{calls.push(['ended',id]);},
+  recognised:()=>({task:'classification',splitState:'source_folders',classes:{OK:32,NG:32}}),
+  evaluateModel:async job=>{calls.push(['evaluate_model',job]);return {samples:12,error:null};},
   saveFlow:async(job,folder)=>{calls.push(['flow',job,folder]);return {version_id:'abcdef1234567890'};},
   evaluateFlow:async version=>{calls.push(['evaluate',version]);return {evaluation_id:'eval_1',known:12,escapes:0,overkills:1};},
   inspect:async folder=>{calls.push(['inspect',folder]);return {run_id:'run_1',counts:{OK:5,NG:7},images:12};},
@@ -21,13 +23,20 @@ test('the example runs dataset, project, import (then marks it), training until 
  const {deps:d,calls}=deps();const updates=[];const final=await runDemo(d,state=>updates.push(state));
  assert.equal(final.state,'ready');
  assert.deepEqual(final.result,{project_id:'project_1',project_name:DEMO_PROJECT_NAME,job_id:'job_1',flow_version_id:'abcdef1234567890',run_id:'run_1',counts:{OK:5,NG:7},images:12,evaluation:{evaluation_id:'eval_1',known:12,escapes:0,overkills:1}});
- assert.deepEqual(calls.map(c=>Array.isArray(c)?c[0]:c),['dataset','project','import','mark','train','status','status','status','ended','flow','evaluate','inspect']);
+ assert.deepEqual(calls.map(c=>Array.isArray(c)?c[0]:c),['dataset','project','import','mark','train','status','status','status','ended','evaluate_model','flow','evaluate','inspect']);
  assert.equal(calls.find(c=>c[0]==='evaluate')[1],'abcdef1234567890','the saved version is the one evaluated');
  assert.deepEqual(calls[1][1],{name:DEMO_PROJECT_NAME,task:'classification'});
  assert.equal(calls.find(c=>c[0]==='train')[1],'/private/ud/examples/demo-v1','training uses the folder the import settled on');
- assert.deepEqual(Object.values(final.steps).map(s=>s.status),['done','done','done','done','done','done','done']);
+ assert.deepEqual(Object.keys(final.steps),['dataset','project','import','labels','train','evaluate_model','flow','evaluate','inspect'],'the first-project path, in order');
+ assert.ok(Object.values(final.steps).every(s=>s.status==='done'));
+ assert.equal(final.steps.import.detail,'분류 · 폴더의 학습·검증·시험 분할');assert.equal(final.steps.labels.detail,'OK 32장 · NG 32장');assert.equal(final.steps.evaluate_model.detail,'시험 이미지 12장');
  assert.equal(final.steps.train.detail,'작업 job_1');assert.equal(final.steps.flow.detail,'저장 버전 abcdef12');assert.equal(final.steps.evaluate.detail,'12장 · 미검 0 · 과검 1');
  assert.ok(updates.some(state=>state.steps.train?.status==='running'),'each step is shown running before done');});
+test('a folder with one class stops at the labels step, and a failed model evaluation stops before the flow',async()=>{const {runDemo}=load();
+ let {deps:d,calls}=deps({recognised:()=>({task:'classification',splitState:'source_folders',classes:{OK:64}})});
+ let final=await runDemo(d,()=>{});assert.equal(final.state,'failed');assert.equal(final.steps.labels.status,'failed');assert.match(final.error,/클래스가 1개만/);assert.ok(!calls.some(c=>c[0]==='train'));
+ ({deps:d,calls}=deps({evaluateModel:async()=>({samples:0,error:'현재 데이터로 학습한 모델이 없습니다.'})}));
+ final=await runDemo(d,()=>{});assert.equal(final.steps.evaluate_model.status,'failed');assert.ok(!calls.some(c=>c[0]==='flow'));});
 test('a failed training names its step, keeps the later steps pending and ends failed',async()=>{const {runDemo}=load();
  const {deps:d,calls}=deps({jobStatus:async()=>({status:'failed',error:{message:'out of memory'}})});
  const final=await runDemo(d,()=>{});

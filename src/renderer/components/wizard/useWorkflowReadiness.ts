@@ -119,7 +119,7 @@ export function useWorkflowReadiness() {
   // carried id: advice past the evidence check needs a ready receipt.
   const readyReceipt=receipt?.key===key&&receipt.evidence.status==='ready'?receipt:null;
   const flowVersionId=readyReceipt?readyReceipt.versionId:flowEditing&&lastFlowVersion.current?.scope===flowScope?lastFlowVersion.current.versionId:null;
-  const readiness=getNextAction({stage,projectReady:Boolean(projectDir&&project),sourceReady,totalImages:data.totalImages,train:data.split.train,val:data.split.val,training:trainingRun,evaluation,inspection,flowEditing,
+  const readiness=getNextAction({stage,projectReady:Boolean(projectDir&&project),sourceReady,totalImages:data.totalImages,sourceImages:data.sourceImages,train:data.split.train,val:data.split.val,training:trainingRun,evaluation,inspection,flowEditing,
     busy:projectBusy||data.isLoading||data.isSplitting||annotationDirty,task,splitState:data.splitState,populatedClasses:data.hasSelectedFolder?Object.values(data.classes||{}).filter(count=>count>0).length:undefined,
     classBlocker:data.hasSelectedFolder?classStartBlocker(data.classes||{},data.splitState==='saved'||data.splitState==='source_folders'?data.classSplitCounts??null:null,data.split):undefined,modelJobId:modelJobId || (training.isCurrentData?training.jobId:null),flowVersionId,
     flowDirty:flow.pipelineDirty,flowMatchesSaved:receipt?.key===key?receipt.flowMatchesSaved:false,trainingStatus:training.status,evidence,drafts:{pendingImages:pendingDrafts},

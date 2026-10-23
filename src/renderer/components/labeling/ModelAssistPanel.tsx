@@ -15,6 +15,7 @@ import type { FoundationProposal } from '../../services/foundationLabelingApi';
 import { datasetWorkflow, type CandidateProposal } from '../../services/datasetWorkflow';
 import { SuggestionPreview } from './SuggestionPreview';
 import { CHANGED_MODEL_MARK } from './draftReview';
+import { Explain } from '../common/Explain';
 
 function errorText(error: unknown): string {
   if (error instanceof Error) return error.message;
@@ -53,6 +54,10 @@ export const ModelAssistPanel: React.FC = () => {
   const beginModelAssist = useModelAssistRunStore((state) => state.begin);
   const endModelAssist = useModelAssistRunStore((state) => state.end);
   const [open, setOpen] = useState(false);
+  // One right-side popover at a time (see useDraftReviewStore.sidePanel).
+  const sidePanel = useDraftReviewStore((state) => state.sidePanel);
+  useEffect(() => { if (open) useDraftReviewStore.getState().showSidePanel('assist'); }, [open]);
+  useEffect(() => { if (sidePanel && sidePanel !== 'assist') setOpen(false); }, [sidePanel]);
   const [models, setModels] = useState<LabelSuggestionModel[]>([]);
   const [modelId, setModelId] = useState('');
   const [threshold, setThreshold] = useState(0.5);
@@ -291,7 +296,7 @@ export const ModelAssistPanel: React.FC = () => {
                       candidates kept here and only in this project. */}
                   <button type="button" onClick={() => useDraftReviewStore.getState().requestOpen(proposal.id, [...selectedCandidateIds], draftReviewScope(useProjectStore.getState()))} disabled={!!busy} className="flex grow items-center justify-center gap-1 rounded bg-emerald-600 px-3 py-2 font-semibold text-white hover:bg-emerald-500 disabled:opacity-40"><Check className="h-3.5 w-3.5" /> 초안 검토에서 채택</button>
                 </div> : <p className="rounded border border-slate-700 p-2 text-center text-slate-300">{proposal.status === 'accepted' ? `채택 완료 · 이전 버전 ${proposal.backup_version_id}` : proposal.status === 'reverted' ? '채택을 되돌림' : '거절 완료'}</p>}
-                {proposal.status === 'pending' && <p className="text-[11px] leading-relaxed text-slate-500">어디서 왔든 초안은 '초안 검토' 패널에서 채택합니다. 채택 직전에 라벨 버전이 자동 저장되고, 고른 후보만 현재 라벨에 덧붙습니다.</p>}
+                {proposal.status === 'pending' && <Explain text="어디서 왔든 초안은 '초안 검토' 패널에서 채택합니다. 채택 직전에 라벨 버전이 자동 저장되고, 고른 후보만 현재 라벨에 덧붙습니다." />}
               </>}
             </section>}
           </div>

@@ -194,6 +194,11 @@ export const WizardHeader: React.FC<{ simpleControls?: React.ReactNode; simpleMe
       {selectedProbe?.ready ? (ko ? `준비 완료 · ${selectedProbe.device_name || '장치 확인됨'}` : `Ready · ${selectedProbe.device_name || 'device verified'}`) : (ko ? '연결 검사 필요' : 'Connection check needed')}
     </span>
   );
+  // 간단히 보기 keeps these two in 더 보기 while all is well and lifts them into the row while they report a problem
+  // (the backend not answering yet, a chosen server not checked), so a person never has to open a menu to see why.
+  const engineProblem = !isHealthy;
+  const probeProblem = Boolean(selectedProfileId && !loadError && !selectedProbe?.ready);
+  const engineChip = <span role="status" className={`rounded border px-2.5 py-1 text-sm ${engineTone}`}>{engineLabel}</span>;
   const historyButton = <button type="button" onClick={() => setShowProvenance(true)} className={control}>{ko ? '데이터·판정 이력' : 'Data and verdict history'}</button>;
   const technicalButton = (
     <button type="button" aria-pressed={technicalDetails} onClick={() => setTechnicalDetails(!technicalDetails)} className={`${control} ${technicalDetails ? PRESSED : ''}`}>
@@ -281,7 +286,8 @@ export const WizardHeader: React.FC<{ simpleControls?: React.ReactNode; simpleMe
         style={{ WebkitAppRegion: 'drag' } as React.CSSProperties}
       >
         <div className="flex flex-wrap items-center gap-2" style={noDrag}>
-          <span className="text-sm font-bold tracking-wide text-slate-100">Vision AI Studio</span>
+          {/* 간단히 보기 drops the wordmark below 1440px so the project, the steps and the two toggles fit one row. */}
+          <span className={`text-sm font-bold tracking-wide text-slate-100${full ? '' : ' hidden min-[1440px]:inline'}`}>Vision AI Studio</span>
           <button type="button" onClick={() => setShowProjectPanel(true)} title={ko ? '프로젝트 관리' : 'Manage projects'} className={`group flex max-w-xs items-center gap-1.5 ${QUIET}`}>
             <FolderKanban className="h-4 w-4 shrink-0 text-cyan-400" aria-hidden="true" />
             <span className="truncate font-semibold">{projectName}</span>
@@ -292,7 +298,8 @@ export const WizardHeader: React.FC<{ simpleControls?: React.ReactNode; simpleMe
           {full && serversButton}
           {full && loadingNote}
           {computeAlert}
-          {full && probeNote}
+          {(full || probeProblem) && probeNote}
+          {!full && engineProblem && engineChip}
         </div>
 
         {/* 간단히 보기: the six steps share the row. On a narrow window the bar moves to a line of its own, and when even
@@ -341,8 +348,8 @@ export const WizardHeader: React.FC<{ simpleControls?: React.ReactNode; simpleMe
             >
               {runOn}
               {loadingNote}
-              {probeNote}
-              <span role="status" className={`rounded border px-2.5 py-1 text-sm ${engineTone}`}>{engineLabel}</span>
+              {!probeProblem && probeNote}
+              {!engineProblem && engineChip}
               {modelLocation}
               {serversButton}
               <hr className="my-1 border-[#2B3547]" />

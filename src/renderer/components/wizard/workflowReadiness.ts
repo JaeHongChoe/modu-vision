@@ -24,7 +24,8 @@ export type ReadinessAction = { stage: WorkflowStep; status: 'ready' | 'blocked'
   dataChangedJobId?: string;
   /** The step's number line (see ReadinessProgress); absent when the step has nothing to count yet. */
   progress?: ReadinessProgress };
-export type ReadinessContext = { stage: WorkflowStep; projectReady: boolean; sourceReady: boolean; totalImages: number; train: number; val: number; busy: boolean; task: string; modelJobId?: string | null; flowVersionId?: string | null; flowDirty: boolean; flowMatchesSaved?: boolean; splitState?: 'saved' | 'source_folders' | 'automatic' | 'stale' | null; populatedClasses?: number; classBlocker?: string | null; trainingStatus?: string; evidence: WorkflowEvidence; /** Images with machine drafts waiting for a person (step 2's draft review). */ drafts?: { pendingImages: number };
+export type ReadinessContext = { stage: WorkflowStep; projectReady: boolean; sourceReady: boolean; totalImages: number; /** Every image in the source, labelled or not (a detection or segmentation folder starts with none labelled); the
+   *  import check counts these, training counts totalImages. */ sourceImages?: number; train: number; val: number; busy: boolean; task: string; modelJobId?: string | null; flowVersionId?: string | null; flowDirty: boolean; flowMatchesSaved?: boolean; splitState?: 'saved' | 'source_folders' | 'automatic' | 'stale' | null; populatedClasses?: number; classBlocker?: string | null; trainingStatus?: string; evidence: WorkflowEvidence; /** Images with machine drafts waiting for a person (step 2's draft review). */ drafts?: { pendingImages: number };
   /** The saved split leaves out labeled images (newly labeled or adopted), so it counts none until applied again. */ splitMissesLabels?: boolean;
   /** Models trained on exactly the current data (they can draft the unlabeled images). */ currentModels?: number;
   /** Step 2's label counts when the task has them (detection, segmentation): images in the source and those without a label. */ labels?: { total: number; unlabeled: number };
@@ -49,8 +50,9 @@ export function getNextAction(input: ReadinessContext): ReadinessAction {
   // stays through it (a running job goes straight to '모델 준비됨'), beside blocked and checking states alike.
   if(stage>=3)stageProgress=(stage===3?stepThreeProgress(input):stage===4?stepFourProgress(input):stage===5?stepFiveProgress(input):stepSixProgress(input))??undefined;
   if(input.busy)return result('checking',['프로젝트·데이터 변경 확인 중'],'데이터 변경 상태 보기',1);
-  if(!input.sourceReady || input.totalImages<1)return result('blocked',['현재 원본의 이미지 가져오기 필요'],'데이터 가져오기 (1단계)',1,'workflow-data');
-  completedInputs.push(`현재 원본 이미지 ${input.totalImages}장`);
+  const imported=Math.max(input.totalImages,input.sourceImages??0);
+  if(!input.sourceReady || imported<1)return result('blocked',['현재 원본의 이미지 가져오기 필요'],'데이터 가져오기 (1단계)',1,'workflow-data');
+  completedInputs.push(`현재 원본 이미지 ${imported}장`);
   if(stage===1)return result('ready',[],'라벨 확인하기 (2단계)',2);
   if(evidence.status!=='ready')return result(evidence.status==='checking'?'checking':'unknown',[evidence.error || '현재 입력 근거 확인 중'],'준비도 다시 확인',stage,undefined,'refresh');
   if(!evidence.review)return result('unknown',['현재 입력의 검수·이력 근거 확인 필요'],'준비도 다시 확인',stage,undefined,'refresh');
@@ -231,7 +233,7 @@ export function openFoldsAround(element: Element) {
 export function focusWorkflowTarget(target?: string) {
   if(!target || typeof document==='undefined')return;
   let attempts=0;
-  const focus=()=>{const label=target==='workflow-label-review'?'팀 작업 · 라벨 기준·검수':target==='workflow-data'?'데이터셋 폴더 열기':null;const element=document.getElementById(target)||(target==='workflow-project'?document.querySelector<HTMLElement>('[title="프로젝트 관리"]'):label?Array.from(document.querySelectorAll<HTMLButtonElement>('button')).find(button=>button.textContent?.trim()===label):null);if(element){openFoldsAround(element);if(element.getAttribute('role')==='tab'&&element.getAttribute('aria-selected')!=='true')element.click();element.scrollIntoView({block:'center'});element.focus();}else{
+  const focus=()=>{const label=target==='workflow-label-review'?'팀 작업 · 라벨 기준·검수':target==='workflow-data'?'데이터셋 폴더 열기':null;const element=document.getElementById(target)||(target==='workflow-project'?document.querySelector<HTMLElement>('[title="프로젝트 관리"]'):label?Array.from(document.querySelectorAll<HTMLButtonElement>('button')).find(button=>button.textContent?.trim()===label):null);if(element){openFoldsAround(element);if(element.getAttribute('role')==='tab'&&element.getAttribute('aria-selected')!=='true')element.click();if(element.hasAttribute('data-workflow-open-on-focus')&&element.getAttribute('aria-expanded')==='false')element.click();element.scrollIntoView({block:'center'});element.focus();}else{
     // A target inside a closed popover names its opener with data-workflow-opens; open it, then look again.
     const opener=document.querySelector<HTMLElement>(`[data-workflow-opens="${target}"]`);if(opener&&opener.getAttribute('aria-expanded')==='false')opener.click();
     if(++attempts<12)requestAnimationFrame(focus);}};

@@ -1,5 +1,8 @@
 """Separate saved whole-flow evaluation history, with immutable cohort inputs."""
-from fastapi import APIRouter, Request
+from pathlib import Path
+from typing import Optional
+
+from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel, ConfigDict, Field, StrictBool
 
 from backend.api.routes_project import get_current_project
@@ -150,7 +153,7 @@ class TruthFromLabelsRequest(BaseModel):
     model_config = ConfigDict(extra='forbid')
     version_id: str = Field(pattern=r'^[0-9a-f]{32}$')
     reviewer: str = Field(min_length=1, max_length=100)
-    note: str = Field(default='폴더 라벨을 검토해 정답으로 확정', max_length=2000)
+    note: Optional[str] = Field(default=None, max_length=2000)
 
 
 @router.post('/cohorts/{cohort_id}/truth-from-labels')
@@ -159,7 +162,16 @@ def truth_from_labels(cohort_id: str, body: TruthFromLabelsRequest, request: Req
     its own dated declaration with the reviewer's name; images whose folder names no class stay unknown."""
     project = get_current_project(request); require_role(request, project, {'owner', 'reviewer'})
     reviewer = request_actor(request, body.reviewer)
-    return execute(lambda: flow_evaluation.confirm_truth_from_labels(project, cohort_id, body.version_id, reviewer=reviewer, note=body.note))
+    def labels_for(image_path: str):
+        # The labels the person sees in step 2 for this image (Studio edits over the source file), read like the canvas.
+        from backend.api import routes_annotation
+        try:
+            saved = routes_annotation._get_annotations_impl(Path(image_path).stem, None, image_path)
+        except HTTPException:
+            return None
+        return saved.get('annotations') if isinstance(saved, dict) else None
+    return execute(lambda: flow_evaluation.confirm_truth_from_labels(project, cohort_id, body.version_id, reviewer=reviewer, note=body.note,
+                                                                     labels_for=labels_for))
 
 
 @router.post('')

@@ -19,6 +19,10 @@ interface DraftReviewState {
   /** `scope` defaults to the one the queue last published. */
   requestOpen: (id: string, candidateIds?: string[], scope?: string) => void;
   clearOpenRequest: () => void;
+  /** Step 2's two right-side popovers (the draft queue and 모델 보조) open one at a time: opening one names it here and
+   *  the other closes, so neither covers the other. */
+  sidePanel: 'drafts' | 'assist' | null;
+  showSidePanel: (panel: 'drafts' | 'assist') => void;
 }
 
 let lastNonce = 0;
@@ -33,6 +37,8 @@ export const useDraftReviewStore = create<DraftReviewState>((set) => ({
     openRequest: { id, nonce: ++lastNonce, scope: scope ?? state.scope, ...(candidateIds ? { candidateIds: [...candidateIds] } : {}) },
   })),
   clearOpenRequest: () => set({ openRequest: null }),
+  sidePanel: null,
+  showSidePanel: (sidePanel) => set({ sidePanel }),
 }));
 
 export function draftReviewScope(input: {

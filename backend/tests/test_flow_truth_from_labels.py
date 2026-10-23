@@ -47,3 +47,33 @@ def test_reviewer_name_is_required(labelled_workspace):
     project, version, cohort = labelled_workspace
     with pytest.raises(ValueError, match='검토자'):
         flow_evaluation.confirm_truth_from_labels(project, cohort['cohort_id'], version, reviewer='  ')
+
+
+def test_detection_truth_comes_only_from_positive_labels_a_person_made():
+    roles = {'defect': 'defect', 'scratch': 'defect', 'OK': 'normal', 'background': 'normal'}
+    verdict = flow_evaluation._shape_label_verdict
+    assert verdict([{'type': 'bbox', 'label': 'scratch'}, {'type': 'bbox', 'label': 'defect'}], roles) == ('NG', ['defect', 'scratch'])
+    assert verdict([{'type': 'tag', 'label': 'OK', 'is_normal': True}], roles) == ('OK', [])
+    assert verdict([], roles) is None, 'an empty label is never a normal truth'
+    assert verdict(None, roles) is None
+    assert verdict([{'type': 'bbox', 'label': 'unnamed_role'}], roles) is None, 'a box of a class with no defect role decides nothing'
+    assert verdict([{'type': 'tag', 'label': 'OK', 'is_normal': True}, {'type': 'bbox', 'label': 'unnamed_role'}], roles) is None
+
+
+def test_a_detection_cohort_is_confirmed_from_each_image_s_labels_under_the_reviewer(monkeypatch):
+    from backend.engine import image_truth
+    samples = [{'relative_path': f'{name}.png', 'image_path': f'/src/{name}.png'} for name in ('boxed', 'normal', 'blank')]
+    monkeypatch.setattr(flow_evaluation, 'read_cohort', lambda project, cohort_id: {'samples': samples})
+    monkeypatch.setattr(flow_evaluation, 'describe_scope', lambda project, version_id, model_provider=None: {
+        'task': 'detection', 'classes': ['defect'], 'class_semantics': {'roles': {'defect': 'defect', 'OK': 'normal'}}})
+    monkeypatch.setattr(image_truth, 'read_truth', lambda *args, **kwargs: {'verdict': 'UNKNOWN', 'defect_classes': [], 'invalidated': False,
+                                                                             'truth_revision': None, 'image_revision': 'r'})
+    declared = []
+    monkeypatch.setattr(image_truth, 'declare_truth', lambda project, path, **kwargs: declared.append((path, kwargs['verdict'], kwargs['defect_classes'], kwargs['reviewer'], kwargs['note'])))
+    labels = {'/src/boxed.png': [{'type': 'bbox', 'label': 'defect'}], '/src/normal.png': [{'type': 'tag', 'label': 'OK', 'is_normal': True}], '/src/blank.png': []}
+    result = flow_evaluation.confirm_truth_from_labels({'source_dataset_dir': '/src'}, 'cohort_x', 'v' * 32, reviewer='kim', labels_for=labels.get)
+    assert result['declared'] == 2 and result['skipped'] == 1 and result['unknown'] == ['blank.png']
+    assert declared == [('/src/boxed.png', 'NG', ['defect'], 'kim', '이미지의 라벨을 검토해 정답으로 확정'),
+                        ('/src/normal.png', 'OK', [], 'kim', '이미지의 라벨을 검토해 정답으로 확정')]
+    with pytest.raises(ValueError, match='라벨로 확정'):
+        flow_evaluation.confirm_truth_from_labels({'source_dataset_dir': '/src'}, 'cohort_x', 'v' * 32, reviewer='kim')

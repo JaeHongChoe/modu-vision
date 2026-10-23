@@ -3,8 +3,8 @@ const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('n
 const guide=fs.readFileSync(path.resolve(__dirname,'FirstRunStudio.tsx'),'utf8');
 const batch=fs.readFileSync(path.resolve(__dirname,'../inference/BatchInspectionPanel.tsx'),'utf8');
 
-test('the guide lists project, data, training in that order and does not send a first-timer to step 3 before step 1',()=>{
- const order=['프로젝트 만들기','데이터 가져오기','학습 시작'].map(label=>guide.indexOf(label));
+test('the guide lists the first-project path in order and does not send a first-timer to step 3 before step 1',()=>{
+ const order=['프로젝트 만들기','이미지 폴더 열기','라벨 달기·초안 검토','학습 시작','평가','검사 흐름 저장','검사 실행'].map(label=>guide.indexOf(`>${label}</strong>`));
  assert.ok(order.every(i=>i>=0),`missing labels: ${order}`);
  assert.deepEqual([...order].sort((a,b)=>a-b),order,'guide items are out of order');
  assert.ok(guide.indexOf('1단계로 이동')<guide.indexOf('3단계로 이동'),'the step-3 jump comes before the step-1 jump');

@@ -32,7 +32,7 @@ function mount() {
     '../../stores/useDatasetStore': { useDatasetStore: store(dataset) },
     '../../stores/useModelAssistRunStore': { useModelAssistRunStore: store({ begin: () => operations++, end: () => operations-- }) },
     // Adoption happens in the one draft queue; the panel only hands the draft and its chosen candidates over.
-    '../../stores/useDraftReviewStore': { useDraftReviewStore: { getState: () => ({ requestOpen: (...args) => openRequests.push(args) }) }, draftReviewScope: () => 'scope' },
+    '../../stores/useDraftReviewStore': { useDraftReviewStore: store({ requestOpen: (...args) => openRequests.push(args), sidePanel: null, showSidePanel() {} }), draftReviewScope: () => 'scope' },
     '../../services/api': { resolveApiUrl: x => x, api: { labelSuggestions: suggestionsApi } },
     '../../services/datasetWorkflow': { datasetWorkflow: workflow },
     './BulkLabelAssist': { BulkLabelAssist: 'BulkLabelAssist' },
@@ -41,6 +41,7 @@ function mount() {
     './KoreanConditionLabeler': { KoreanConditionLabeler: 'KoreanConditionLabeler' },
     './SuggestionPreview': { SuggestionPreview: 'SuggestionPreview' },
     './draftReview': { CHANGED_MODEL_MARK: '데이터가 바뀐 뒤 학습한 모델 · 평가 근거 아님' },
+    '../common/Explain': { Explain: 'Explain' },
   };
   const filename = path.resolve(__dirname, '../src/renderer/components/labeling/ModelAssistPanel.tsx');
   const compiled = ts.transpileModule(fs.readFileSync(filename, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, jsx: ts.JsxEmit.React, esModuleInterop: true } }).outputText;

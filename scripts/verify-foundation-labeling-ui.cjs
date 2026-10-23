@@ -70,6 +70,7 @@ function mountScopedComponent(component, providers) {
     '../../stores/useFoundationPromptStore':{useFoundationPromptStore:store({points:[],boxes:[],pointLabel:1,setPointLabel(){},clear(){},bind(){},bindProject(){}})},
     '../../services/hostAdapter':{host:{can:()=>false,openLink:async()=>{},selectFolder:async()=>{throw new Error('Native folder selection must not run in scoped component tests');}}},
     '../../stores/assistContext':{reportPanelError(){}},
+    '../common/Explain':{Explain:'Explain'},
     '../../services/api':{api:{labelSuggestions:providers,dataset:{}}},
     '../../services/datasetWorkflow':{datasetWorkflow:{},workflowError:error=>error.message||String(error)},
     '../../services/foundationLabelingApi':{foundationLabelingApi:providers,labelingJobActive:status=>['queued','running','cancelling'].includes(status)},

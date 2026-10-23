@@ -246,6 +246,27 @@ def _has_flat_labelme_annotations(folder: Path) -> bool:
     return studio_dir.is_dir() and any(path.is_file() for path in studio_dir.glob("*.json"))
 
 
+def _unlabeled_image_folder(folder: Path) -> bool:
+    """Images directly in the folder and no label layout at all: no JSON, no class/split/images/masks subfolder. A
+    detection or segmentation project starts from such a folder and labels it in the app (Studio overlays), so it is
+    read like a flat LabelMe folder that has no labelled image yet instead of a COCO layout it is not."""
+    try:
+        entries = list(folder.iterdir())
+    except OSError:
+        return False
+    if any(entry.is_dir() and not entry.name.startswith(".") for entry in entries):
+        return False
+    if any(entry.is_file() and entry.suffix.lower() == ".json" for entry in entries):
+        return False
+    return any(entry.is_file() and not entry.name.startswith("._") and entry.suffix.lower() in SUPPORTED_IMAGE_EXTENSIONS
+               for entry in entries)
+
+
+def _flat_image_workspace(folder: Path, task: str) -> bool:
+    """A flat folder labelled in place: LabelMe or Studio labels, or (detection/segmentation) none yet."""
+    return _has_flat_labelme_annotations(folder) or (task in ("detection", "segmentation") and _unlabeled_image_folder(folder))
+
+
 def _flat_labelme_class_counts(folder: Path, paired_images: set[Path], *, count_images: bool = False) -> Dict[str, int]:
     """Count the active source or Studio regions without parsing LabelMe as COCO."""
     source_annotations = {
@@ -571,7 +592,8 @@ def import_dataset(req: DatasetImportRequest):
     image_files = {p.resolve() for p in folder.iterdir() if p.is_file() and not p.name.startswith("._")
                    and p.suffix.lower() in SUPPORTED_IMAGE_EXTENSIONS}
     paired_images = _paired_labelme_images(folder)
-    flat_labelme = _has_flat_labelme_annotations(folder)
+    unlabeled_flat = req.task in ("segmentation", "detection") and not _has_flat_labelme_annotations(folder) and _unlabeled_image_folder(folder)
+    flat_labelme = _has_flat_labelme_annotations(folder) or unlabeled_flat
     if flat_labelme and req.task not in ("segmentation", "detection"):
         raise HTTPException(
             status_code=422,
@@ -604,9 +626,9 @@ def import_dataset(req: DatasetImportRequest):
         listed_inventory = not flat_labelme
 
     try:
-        if flat_labelme and req.task == "detection":
-            summary = DatasetSummary(task="detection", total_images=len(paired_images),
-                                     classes=_flat_labelme_class_counts(folder, paired_images),
+        if flat_labelme and (req.task == "detection" or unlabeled_flat):
+            summary = DatasetSummary(task=req.task, total_images=len(paired_images),
+                                     classes={} if unlabeled_flat else _flat_labelme_class_counts(folder, paired_images),
                                      split_counts={"train": 0, "val": 0, "test": 0})
         else:
             try:
@@ -771,7 +793,7 @@ def split_dataset_endpoint(req: DatasetSplitRequest):
     folder = Path(target_dir).resolve()
     if not folder.is_dir():
         raise HTTPException(status_code=404, detail=f"데이터 폴더를 찾을 수 없습니다: {folder}")
-    flat_labelme = _has_flat_labelme_annotations(folder)
+    flat_labelme = _flat_image_workspace(folder, req.task)
     if req.task == "anomaly" or (req.task == "detection" and not flat_labelme):
         raise HTTPException(
             status_code=422,
@@ -826,8 +848,10 @@ def split_dataset_endpoint(req: DatasetSplitRequest):
             item["label"] = chosen.get(str(Path(item["image_path"]).resolve()), item["label"])
 
     paired_images = _paired_labelme_images(effective_folder)
-    if _has_flat_labelme_annotations(effective_folder):
+    if _flat_image_workspace(effective_folder, req.task):
         items = [item for item in items if Path(item["image_path"]).resolve() in paired_images]
+        if not items:
+            raise HTTPException(status_code=422, detail="라벨이 있는 이미지가 아직 없어 나눌 수 없습니다. 2단계에서 라벨을 단 뒤 다시 나누세요.")
 
     if not items:
         raise HTTPException(status_code=422, detail="나눌 수 있는 이미지가 없습니다. 폴더에 지원하는 이미지 파일(PNG, JPG 등)이 있는지 확인하세요.")

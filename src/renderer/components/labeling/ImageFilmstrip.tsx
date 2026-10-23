@@ -43,6 +43,14 @@ export const ImageFilmstrip: React.FC<{ compact?: boolean }> = ({ compact = fals
     if (currentImageIndex < images.length - 1) await nextImage();
     else if (page < pageCount) await changePage(page + 1);
   };
+  // 한 장에 하나씩: the canvas asks to move on after a finished box; each new request moves forward once.
+  const advanceRequest = useAnnotationStore((state) => state.advanceRequest);
+  const handledAdvance = React.useRef(advanceRequest);
+  React.useEffect(() => {
+    if (!advanceRequest || advanceRequest === handledAdvance.current) return;
+    handledAdvance.current = advanceRequest;
+    if (canGoForward) void goForward();
+  }, [advanceRequest]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <div data-labeling-filmstrip className={`${compact ? 'h-8' : 'h-20'} bg-slate-950 border-t border-slate-800 px-3 flex items-center space-x-2 select-none`}>

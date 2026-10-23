@@ -15,9 +15,10 @@ import type { LabelAssistExecution } from './LabelAssistDeviceSizes';
 import { SuggestionPreview } from './SuggestionPreview';
 import { DraftGrid } from './DraftGrid';
 import { imageLeaseToken } from './teamDataWorkflow';
+import { Explain } from '../common/Explain';
 import { CHANGED_MODEL_MARK, DRAFT_ORDER_TEXT, MIXED_SOURCE_NOTE, OPEN_REQUEST_MISSING_TEXT, adoptable, adoptionHistory, adoptionLine, adoptionSummary, adoptionTitle, canTakeBack,
   closedDraftText, draftError, draftSourceText, gridPages, modelStats, multiAdoptionRefusal, orderDrafts, pageAdoptionRefusal, pendingImageCount, sourcesMixed, staleBatchRefusal,
-  supportLimitsText, thresholdAdvice, topConfidence, type AdoptionResult, type DraftOrder, type ModelAdoptionStats } from './draftReview';
+  supportLimitsText, thresholdAdvice, topConfidence, defaultChoice, emptyPendingDrafts, unknownClassCandidate, UNKNOWN_CLASS_MARK, type AdoptionResult, type DraftOrder, type ModelAdoptionStats } from './draftReview';
 
 const EXECUTION: LabelAssistExecution = { device: 'cpu', min_area: 0, min_width: 0, min_height: 0 };
 const fileName = (path: string) => path.split(/[\\/]/).pop() || path;
@@ -62,6 +63,10 @@ export const DraftReviewQueue: React.FC = () => {
   const beginRun = useModelAssistRunStore((state) => state.begin);
   const endRun = useModelAssistRunStore((state) => state.end);
   const [open, setOpen] = useState(false);
+  // One right-side popover at a time: opening this one closes 모델 보조, and 모델 보조 opening closes this one.
+  const sidePanel = useDraftReviewStore((state) => state.sidePanel);
+  useEffect(() => { if (open) useDraftReviewStore.getState().showSidePanel('drafts'); }, [open]);
+  useEffect(() => { if (sidePanel && sidePanel !== 'drafts') setOpen(false); }, [sidePanel]);
   const [drafts, setDrafts] = useState<LabelSuggestion[]>([]);
   const [models, setModels] = useState<LabelSuggestionModel[]>([]);
   const [modelId, setModelId] = useState('');
@@ -73,6 +78,9 @@ export const DraftReviewQueue: React.FC = () => {
   const [viewed, setViewed] = useState<Set<string>>(new Set());
   const [picks, setPicks] = useState<Set<string>>(new Set());
   const [choices, setChoices] = useState<Map<string, Set<string>>>(new Map());
+  const datasetClasses = useDatasetStore((state) => state.classes);
+  const knownClasses = useMemo(() => new Set(Object.keys(datasetClasses ?? {})), [datasetClasses]);
+  const choiceFor = (draft: LabelSuggestion) => choices.get(draft.id) ?? defaultChoice(draft, knownClasses);
   const [progress, setProgress] = useState<{ done: number; total: number } | null>(null);
   const [stats, setStats] = useState<ModelAdoptionStats[] | null>(null);
   // The contact-sheet review: a page of one batch's drafts; a tile counts as seen only once its image has shown.
@@ -145,6 +153,7 @@ export const DraftReviewQueue: React.FC = () => {
   const history = useMemo(() => adoptionHistory(drafts).slice(0, 20), [drafts]);
   const selected = drafts.find((draft) => draft.id === selectedId);
   const waiting = pendingImageCount(drafts);
+  const empty = useMemo(() => emptyPendingDrafts(drafts), [drafts]);
   const picked = pending.filter((draft) => picks.has(draft.id));
   const refusal = multiAdoptionRefusal(picked);
   const unseenPicked = picked.filter((draft) => !viewed.has(draft.id)).length;
@@ -209,7 +218,7 @@ export const DraftReviewQueue: React.FC = () => {
 
   const choose = (draft: LabelSuggestion) => {
     setSelectedId(draft.id);
-    setChosen(choices.get(draft.id) ?? new Set(draft.candidates.map((candidate) => candidate.id)));
+    setChosen(choiceFor(draft));
     setViewed((previous) => previous.has(draft.id) ? previous : new Set(previous).add(draft.id));
     setError(null);
     setNotice(null);
@@ -321,6 +330,32 @@ export const DraftReviewQueue: React.FC = () => {
     }
   };
 
+  // Drafts that found nothing are closed together: each is recorded as rejected under the reviewer (labels unchanged),
+  // so the list and the footer count only drafts with something to review.
+  const closeEmpty = async () => {
+    if (!empty.length) return;
+    if (!reviewerName.trim()) { setError('검토자 이름을 입력하세요.'); return; }
+    const startedScope = scope;
+    beginRun();
+    setBusy('reject');
+    setError(null);
+    setNotice(null);
+    let closed = 0;
+    try {
+      for (const draft of empty) {
+        if (live.current !== startedScope) return;
+        await datasetWorkflow.review(draft.id, 'reject', [], reviewerName);
+        closed += 1;
+      }
+      setNotice(`후보 없는 초안 ${closed}건을 닫았습니다. 라벨은 바뀌지 않았습니다. 그 이미지들은 기준 신뢰도를 낮춰 다시 만들거나 직접 라벨하세요.`);
+    } catch (cause) {
+      if (live.current === startedScope) setError(draftError(cause));
+    } finally {
+      endRun();
+      if (live.current === startedScope) { setBusy(null); setReloads((value) => value + 1); }
+    }
+  };
+
   // Several drafts of one batch, one after another: each adoption keeps its own backup and origin, so each can still
   // be taken back on its own. The loop stops when the server says the batch's data changed (the rest would be
   // refused the same way) and goes on past a refusal that concerns one image only.
@@ -344,7 +379,7 @@ export const DraftReviewQueue: React.FC = () => {
     try {
       for (const draft of targets) {
         if (live.current !== startedScope) return;
-        const candidateIds = [...(choices.get(draft.id) ?? draft.candidates.map((candidate) => candidate.id))];
+        const candidateIds = [...choiceFor(draft)];
         try {
           const lease = await leaseFor(draft, reviewerName);
           let updated: LabelSuggestion;
@@ -413,7 +448,7 @@ export const DraftReviewQueue: React.FC = () => {
         <span className="truncate text-slate-500">모델이 만든 라벨 초안은 사람이 채택해야 라벨이 됩니다</span>
       </div>
       {/* The footer's '초안 만들기' lands on the section inside this popover: it names this button as its opener. */}
-      <button id="draft-review-queue" type="button" onClick={toggle} aria-expanded={open} aria-label="초안 검토 패널" data-workflow-opens="draft-create"
+      <button id="draft-review-queue" type="button" onClick={toggle} aria-expanded={open} aria-label="초안 검토 패널" data-workflow-opens="draft-create" data-workflow-open-on-focus
         className="ml-3 flex shrink-0 items-center gap-1.5 rounded-md border border-emerald-800 bg-emerald-950/40 px-3 py-1.5 font-semibold text-emerald-200 hover:bg-emerald-900/50">
         검토 대기 {waiting}장
         <ChevronDown className={`h-3.5 w-3.5 transition-transform ${open ? 'rotate-180' : ''}`} />
@@ -454,7 +489,7 @@ export const DraftReviewQueue: React.FC = () => {
                 <BulkLabelAssist execution={EXECUTION} projectDir={projectDir} modelId={modelId} threshold={threshold} keywords={[]}
                   disabled={!!busy || isDirty} onOpenEntry={openBatchEntry}
                   onRunningChange={setBatchRunning} />
-                <p className="text-[11px] leading-relaxed text-slate-500">초안을 채택하면 데이터가 바뀝니다. 그 뒤에도 이 모델로 초안을 만들 수 있고, '{CHANGED_MODEL_MARK}'으로 표시됩니다(3단계 '빠른 이어 학습'으로 모델을 맞추면 초안이 더 정확해집니다). 같은 묶음으로 만든 초안은 이어서 채택할 수 있으니 남은 이미지를 한 번에 만드세요. 라벨을 직접 고쳐 저장하면 남은 초안은 채택할 수 없게 되니, 남은 초안을 먼저 검토한 뒤 고치세요.</p>
+                <Explain text={`초안을 채택하면 데이터가 바뀝니다. 그 뒤에도 이 모델로 초안을 만들 수 있고, '${CHANGED_MODEL_MARK}'으로 표시됩니다(3단계 '빠른 이어 학습'으로 모델을 맞추면 초안이 더 정확해집니다). 같은 묶음으로 만든 초안은 이어서 채택할 수 있으니 남은 이미지를 한 번에 만드세요. 라벨을 직접 고쳐 저장하면 남은 초안은 채택할 수 없게 되니, 남은 초안을 먼저 검토한 뒤 고치세요.`} />
               </>}
             </section>
 
@@ -467,6 +502,11 @@ export const DraftReviewQueue: React.FC = () => {
                   <option value="confident">확실한 것부터</option>
                 </select>
               </div>
+              {empty.length > 0 && <div className="flex flex-wrap items-center gap-2 rounded border border-slate-700 bg-slate-900/40 p-2 text-[11px] text-slate-300">
+                <span>후보 없는 초안 {empty.length}건 · 검토할 것이 없어 대기 수에서 뺐습니다.</span>
+                <button type="button" className="workspace-button" disabled={!!busy || batchRunning || !reviewerName.trim()} onClick={() => void closeEmpty()}
+                  title={reviewerName.trim() ? '거절로 기록하고 닫습니다. 라벨은 바뀌지 않습니다.' : '검토자 이름을 입력하면 닫을 수 있습니다.'}>모두 닫기</button>
+              </div>}
               <p className="text-[11px] text-slate-500">순서 기준: {DRAFT_ORDER_TEXT[order]}{sourcesMixed(drafts) ? ` · ${MIXED_SOURCE_NOTE}` : ''}</p>
               {pending.length > 1 && <div className="flex flex-wrap items-center gap-2 text-[11px]">
                 <span className="text-slate-400">보기</span>
@@ -486,8 +526,8 @@ export const DraftReviewQueue: React.FC = () => {
                       <button type="button" aria-label="다음 페이지" onClick={() => setPage((value) => Math.min(grid.pages.length - 1, value + 1))} disabled={page >= grid.pages.length - 1 || !!busy} className="rounded border border-slate-600 p-1 text-slate-200 hover:bg-slate-700 disabled:opacity-40"><ChevronRight className="h-3.5 w-3.5" /></button>
                     </span>
                   </div>
-                  <p className="text-[11px] text-slate-500">한 페이지는 한 묶음입니다. 타일을 눌러 이 페이지 채택에서 빼거나 넣고, 모든 타일이 보인 뒤 한 번에 채택합니다. '열기'는 캔버스에서 한 장씩 봅니다.</p>
-                  <DraftGrid drafts={pageDrafts} choices={choices} excluded={excluded} loaded={loadedOnPage} authority={authority} context={getProjectContext()} current={tileLive} disabled={busy === 'accept' || busy === 'reject' || busy === 'undo'}
+                  <Explain text="한 페이지는 한 묶음입니다. 타일을 눌러 이 페이지 채택에서 빼거나 넣고, 모든 타일이 보인 뒤 한 번에 채택합니다. '열기'는 캔버스에서 한 장씩 봅니다." />
+                  <DraftGrid drafts={pageDrafts} choices={new Map(pageDrafts.map((draft) => [draft.id, choiceFor(draft)]))} excluded={excluded} loaded={loadedOnPage} authority={authority} context={getProjectContext()} current={tileLive} disabled={busy === 'accept' || busy === 'reject' || busy === 'undo'}
                     onToggle={(id) => setExcluded((previous) => { const next = new Set(previous); if (next.has(id)) next.delete(id); else next.add(id); return next; })}
                     onLoaded={tileLoaded} onOpen={(draft) => void openDraft(draft)} />
                   {pageBlock && <p className="text-[11px] text-amber-300">{pageBlock}</p>}
@@ -524,7 +564,7 @@ export const DraftReviewQueue: React.FC = () => {
                   {selected.candidates.length === 0 && <p className="rounded border border-slate-700 p-2 text-center text-slate-400">이 이미지에는 후보가 없습니다. 거절하고 직접 라벨하세요.</p>}
                   {selected.candidates.map((candidate) => <label key={candidate.id} className="flex items-center gap-2 rounded border border-slate-700 bg-slate-800/40 p-1.5">
                     <input type="checkbox" checked={chosen.has(candidate.id)} disabled={!!busy} onChange={(event) => chooseCandidate(candidate.id, event.target.checked)} className="accent-cyan-500" />
-                    <span className="grow text-slate-100">{candidate.annotation.label} <span className="text-[10px] text-slate-400">{candidate.annotation.type}</span></span>
+                    <span className="grow text-slate-100">{candidate.annotation.label} <span className="text-[10px] text-slate-400">{candidate.annotation.type}</span>{unknownClassCandidate(selected, candidate.annotation.label, knownClasses) && <span className="ml-1 text-[11px] text-amber-200">{UNKNOWN_CLASS_MARK}</span>}</span>
                     <span className="font-mono tabular-nums text-cyan-300">{Math.round(candidate.confidence * 100)}%</span>
                   </label>)}
                 </div>
@@ -561,7 +601,7 @@ export const DraftReviewQueue: React.FC = () => {
                   </button>}
                 </li>)}
               </ul>
-              <p className="text-[11px] leading-relaxed text-slate-500">되돌리기는 이 채택으로 더한 도형만 뺍니다. 그 도형을 고쳤다면 되돌리지 않고, 채택 전에 남긴 데이터 버전으로 복원하도록 안내합니다.</p>
+              <Explain text="되돌리기는 이 채택으로 더한 도형만 뺍니다. 그 도형을 고쳤다면 되돌리지 않고, 채택 전에 남긴 데이터 버전으로 복원하도록 안내합니다." />
             </section>
           </div>
         </aside>

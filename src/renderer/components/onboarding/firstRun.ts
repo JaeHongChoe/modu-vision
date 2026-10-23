@@ -2,7 +2,7 @@
 // server, creating a project, bringing data) and offers a small example that runs end to end on this computer's
 // CPU without network, GPU or accounts. The example's results are never a quality approval of a real process.
 
-export type DemoStepId = 'dataset' | 'project' | 'import' | 'train' | 'flow' | 'evaluate' | 'inspect';
+export type DemoStepId = 'dataset' | 'project' | 'import' | 'labels' | 'train' | 'evaluate_model' | 'flow' | 'evaluate' | 'inspect';
 export type DemoStepStatus = 'pending' | 'running' | 'done' | 'failed';
 export type DemoResult = {
   project_id: string; project_name: string; job_id: string; flow_version_id: string; run_id: string;
@@ -19,14 +19,18 @@ export type DemoState = {
 export type ExampleProjectRef = { id: string; name: string; project_dir: string };
 export type OnboardingState = { version: 1; dismissed: boolean; demo: DemoState; example_projects?: ExampleProjectRef[]; team?: boolean };
 
+/** The example walks the first-project path in the order the guide lists it (product direction 5.1 #2): folder →
+ *  structure, task and split → labels → training with the default settings → evaluation → saved flow → inspection. */
 export const DEMO_STEPS: Array<[DemoStepId, string]> = [
   ['dataset', '합성 예제 이미지 만들기'],
   ['project', '예제 프로젝트 만들기'],
-  ['import', '데이터 가져오기'],
-  ['train', '이 컴퓨터 CPU로 짧게 학습'],
-  ['flow', '검사 플로우 저장'],
-  ['evaluate', '시험 이미지로 플로우 평가'],
-  ['inspect', '테스트 이미지 검사·기록'],
+  ['import', '1단계 · 폴더 열기 → 구조·작업 종류·분할 확인'],
+  ['labels', '2단계 · 라벨 확인 (분류는 폴더 이름이 정답)'],
+  ['train', '3단계 · 추천 설정으로 학습 (이 컴퓨터 CPU)'],
+  ['evaluate_model', '4단계 · 시험 이미지로 모델 평가'],
+  ['flow', '5단계 · 검사 흐름 저장'],
+  ['evaluate', '5단계 · 저장한 흐름 평가'],
+  ['inspect', '6단계 · 시험 이미지 검사·기록'],
 ];
 
 /** The guide opens by itself on start until it is dismissed, while no project has data yet, never on a team server. */

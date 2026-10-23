@@ -275,3 +275,38 @@ def test_labelme_lookup_does_not_fall_back_to_another_dataset(tmp_path, monkeypa
     monkeypatch.setattr(industrial_adapters, "LABELME_FALLBACK_CANDIDATES", [other], raising=False)
 
     assert industrial_adapters.find_labelme_folder(requested) is None
+
+
+@pytest.mark.parametrize("task", ["detection", "segmentation"])
+def test_a_folder_of_images_with_no_label_yet_imports_for_detection_and_segmentation(tmp_path, monkeypatch, task):
+    """A first detection or segmentation project starts from raw images: the import reads them as a flat folder with no
+    labelled image yet (the app labels them in place), counts every image as source and unlabeled, and the split waits
+    for labels with a Korean reason. A classification project still asks for class folders."""
+    folder = tmp_path / "raw"
+    folder.mkdir()
+    for index in range(5):
+        Image.new("RGB", (16, 12)).save(folder / f"part_{index:02d}.png")
+    monkeypatch.setattr(routes_dataset, "SPLIT_MANIFEST_DIR", tmp_path / "manifests")
+    imported = routes_dataset.import_dataset(routes_dataset.DatasetImportRequest(folder_path=str(folder), task=task, validate_images=False))
+    assert imported["total_images"] == 0
+    assert imported["source_images"] == 5
+    assert imported["unlabeled_images"] == 5
+    assert imported["split_supported"] is True
+    with pytest.raises(HTTPException) as refused:
+        routes_dataset.split_dataset_endpoint(routes_dataset.DatasetSplitRequest(
+            folder_path=str(folder), task=task, train_ratio=0.8, val_ratio=0.1, test_ratio=0.1))
+    assert refused.value.status_code == 422 and "라벨이 있는 이미지가 아직 없어" in str(refused.value.detail)
+    assert not any(folder.glob("*.json")), "nothing is written into the source folder"
+
+
+def test_a_raw_image_folder_is_not_taken_for_classification_or_a_structured_layout(tmp_path):
+    folder = tmp_path / "raw"
+    folder.mkdir()
+    Image.new("RGB", (16, 12)).save(folder / "a.png")
+    assert routes_dataset._unlabeled_image_folder(folder)
+    assert not routes_dataset._flat_image_workspace(folder, "classification")
+    (folder / "train").mkdir()
+    assert not routes_dataset._unlabeled_image_folder(folder), "a split or class subfolder is a structured layout"
+    (folder / "train").rmdir()
+    (folder / "annotations_train.json").write_text("{}")
+    assert not routes_dataset._unlabeled_image_folder(folder), "an annotation file is a structured layout"

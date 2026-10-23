@@ -39,6 +39,7 @@ test('the parent picked by the quick retrain survives its own epoch change and g
   '../../stores/useDatasetStore':{useDatasetStore:store({folderPath:'/data',totalImages:10,split:{train:6,val:2,test:2},isLoading:false,isSplitting:false,importError:null,splitError:null,splitSupported:true,splitUnavailableReason:null,datasetKey:'/data\0detection',splitState:'saved',classes:{},classSplitCounts:null})},
   '../../stores/useTrainingStore':{useTrainingStore:store({jobId:'job_new',status:'completed',isTraining:false,isRecoveringTraining:false,preset:'fast',setPreset(){},lossHistory:[],hardware:{},
    startTraining:async(...args)=>{starts.push(args);},stopTraining:async()=>{},recoverActiveJob:async()=>{},refreshCurrentJob:async()=>{},reconnectCurrentJob:async()=>{},setNextSettings(){}})},
+  '../../stores/autoRunChannel':{registerAutoRun:()=>()=>{}},
   '../../stores/useComputeStore':{useComputeStore:store({profiles:[],selectedProfileId:'',transportRevision:0,isLoaded:true,isLoading:false,loadError:null,error:null,probeResults:{},probePendingId:null,probeProfile:async()=>{}})},
   '../../utils/datasetSplitCapability':{isSplitUnavailable:()=>false},'../../utils/trainingComputeReadiness':{trainingComputeReadiness:()=>({ready:true})},
   './useTaskHandoff':{useTaskHandoff:()=>null},'./taskHandoff':{clearTaskHandoff(){}},'../common/errorActions':{trainingPresetBatchSize:()=>8},'./trainingLog':{trainingLogLines:()=>[]},

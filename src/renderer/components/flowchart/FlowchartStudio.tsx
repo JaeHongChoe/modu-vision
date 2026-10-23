@@ -26,6 +26,7 @@ import {
   ZoomOut,
 } from 'lucide-react';
 import { flowSemanticKey, isCurrentSavedPipeline as isCurrentSavedFlowPipeline, isExecutionResultCurrent, isStaleBaseError, STALE_SAVE_MESSAGE, useFlowchartStore } from '../../stores/useFlowchartStore';
+import { subscribeFlowSaved } from '../../stores/autoRunChannel';
 import { useDatasetStore } from '../../stores/useDatasetStore';
 import { useEvaluationStore } from '../../stores/useEvaluationStore';
 import { useProjectStore } from '../../stores/useProjectStore';
@@ -320,6 +321,9 @@ export const FlowchartStudio: React.FC = () => {
     return () => observer.disconnect();
   }, [activeTab]);
 
+  // A flow 자동 진행 saved elsewhere: read the versions again so the new active version is the selected one.
+  const [externalSave, setExternalSave] = useState(0);
+  useEffect(() => subscribeFlowSaved(() => setExternalSave((value) => value + 1)), []);
   useEffect(() => {
     if (!folderPath || !hasSelectedFolder) { setModelCatalog([]); setSavedVersions([]); return; }
     let active = true;
@@ -342,7 +346,7 @@ export const FlowchartStudio: React.FC = () => {
       if (active) setEditorError(cause instanceof Error ? cause.message : String(cause));
     }).finally(() => { if (active) setModelCatalogLoading(false); });
     return () => { active = false; };
-  }, [folderPath, hasSelectedFolder, contextRevision, verificationRetry]);
+  }, [folderPath, hasSelectedFolder, contextRevision, verificationRetry, externalSave]);
 
   useEffect(() => {
     if (isProjectBusy) return;

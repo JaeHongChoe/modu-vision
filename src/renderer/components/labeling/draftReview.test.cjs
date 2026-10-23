@@ -37,6 +37,10 @@ test('images waiting count once however many drafts they have, and only recorded
     draft('d6', '/e.png', [0.7], {status: 'reverted', reviewed_at: '2026-10-22T01:30:00Z', reverted_at: '2026-10-22T03:00:00Z'}),
     draft('d7', '/f.png', [0.7], {status: 'rejected'})];
   assert.equal(pendingImageCount(drafts), 2);
+  // A draft that found nothing waits on no one: not counted, and listed among the empty ones to close together.
+  const empty = draft('e1', '/g.png', []);
+  assert.equal(pendingImageCount([...drafts, empty]), 2);
+  assert.deepEqual(helpers().emptyPendingDrafts([...drafts, empty]).map(row => row.id), ['e1']);
   assert.equal(canTakeBack(drafts[3]), true);
   assert.equal(canTakeBack(drafts[4]), false, 'an adoption without its saved shapes cannot be taken back on its own');
   assert.equal(canTakeBack(drafts[5]), false);
@@ -194,6 +198,19 @@ test('the adoption line says how a model fared and the threshold advice stays qu
   assert.match(thresholdAdvice({...row, advice: {reason: 'task_not_applicable', reviewed_candidates: 30}}), /후보가 한 개라/);
 });
 
+test('an older model\'s candidate whose class the project no longer has starts unchecked and says so', () => {
+  const {defaultChoice, unknownClassCandidate, UNKNOWN_CLASS_MARK} = helpers();
+  const draft = (state) => ({model_data_state: state, candidates: [
+    {id: 'a', confidence: 0.9, annotation: {type: 'bbox', label: 'scratch', bbox: [0, 0, 1, 1]}},
+    {id: 'b', confidence: 0.8, annotation: {type: 'bbox', label: 'old_name', bbox: [0, 0, 1, 1]}}]});
+  const known = new Set(['scratch', 'dent']);
+  assert.deepEqual([...defaultChoice(draft('changed'), known)], ['a'], 'the retired class is left for the person to pick');
+  assert.equal(unknownClassCandidate(draft('changed'), 'old_name', known), true);
+  assert.deepEqual([...defaultChoice(draft('current'), known)], ['a', 'b'], 'a current model names the classes it was trained with');
+  assert.deepEqual([...defaultChoice(draft('changed'), new Set())], ['a', 'b'], 'an empty project\'s first drafts name new classes on purpose');
+  assert.match(UNKNOWN_CLASS_MARK, /클래스 목록에 없는/);
+});
+
 test('grid pages hold one batch each, one draft per image, and a page adopts only once every tile has shown', () => {
   const {gridPages, pageAdoptionRefusal} = helpers();
   const b1 = (id, image, confidences = [0.8]) => draft(id, image, confidences, {batch_id: 'batch_1'});
@@ -286,10 +303,10 @@ const row = (id, image, extra = {}) => ({id, status: 'pending', image_path: imag
   job_id: 'job_b', batch_id: 'batch_1', candidates: [{id: `${id}_c0`, confidence: 0.8, annotation: {type: 'bbox', label: 'defect', bbox: [1, 1, 5, 5]}},
     {id: `${id}_c1`, confidence: 0.6, annotation: {type: 'bbox', label: 'defect', bbox: [6, 6, 9, 9]}}], accepted_candidate_ids: [], ...extra});
 
-function queueFixture({drafts, request = null, models = [], stats = async () => ({models: []}), list, reviewerName = 'kai'}) {
+function queueFixture({drafts, request = null, models = [], stats = async () => ({models: []}), list, reviewerName = 'kai', workflow = {}}) {
   const runtime = hookRuntime(), calls = {list: 0, stats: 0}, at = {scope: 'scope-B'};
   const annotation = {currentImage: null, isDirty: false, reviewerName, setReviewerName() {}};
-  const review = {publish() {}, openRequest: request, clearOpenRequest() { review.openRequest = null; }};
+  const review = {publish() {}, openRequest: request, clearOpenRequest() { review.openRequest = null; }, sidePanel: null, showSidePanel(panel) { review.sidePanel = panel; }};
   const api = {labelSuggestions: {
     list: async () => { calls.list++; return list ? list(at.scope) : {suggestions: drafts.map(draft => ({...draft}))}; },
     models: async () => ({models}),
@@ -298,7 +315,7 @@ function queueFixture({drafts, request = null, models = [], stats = async () => 
   const {DraftReviewQueue} = loadComponent('DraftReviewQueue.tsx', {
     react: runtime.react, 'lucide-react': icons,
     '../../services/api': {api, getProjectContext: () => null},
-    '../../services/datasetWorkflow': {datasetWorkflow: {}},
+    '../../services/datasetWorkflow': {datasetWorkflow: workflow},
     '../../services/teamDataApi': {teamDataApi: {}},
     '../../stores/useAnnotationStore': {useAnnotationStore: fakeStore(annotation)},
     '../../stores/useDatasetStore': {readDatasetAuthority: () => 'a', useDatasetStore: fakeStore({annotationsChanged: async () => {}})},
@@ -308,7 +325,7 @@ function queueFixture({drafts, request = null, models = [], stats = async () => 
     '../../stores/workflowEvidence': {bumpWorkflowEvidence() {}, subscribeWorkflowEvidence: () => () => {}},
     '../../stores/assistContext': {reportPanelError() {}},
     './BulkLabelAssist': {BulkLabelAssist: 'BulkLabelAssist'}, './SuggestionPreview': {SuggestionPreview: 'SuggestionPreview'}, './DraftGrid': {DraftGrid: 'DraftGrid'},
-    './teamDataWorkflow': {imageLeaseToken: () => undefined},
+    './teamDataWorkflow': {imageLeaseToken: () => undefined}, '../common/Explain': {Explain: 'Explain'},
     './draftReview': helpers(),
   }, 'var window = {innerHeight: 1000, addEventListener() {}, removeEventListener() {}};');
   return {calls, review, at, annotation, settle: cycles => runtime.settle(DraftReviewQueue, cycles)};
@@ -405,6 +422,37 @@ test('a page whose tiles have all shown says the reviewer name is what keeps it 
   assert.ok(!nodes(tree).some(node => text(node) === reason));
 });
 
+test('drafts that found nothing are not waiting work and close together as rejections, labels untouched', async () => {
+  const reviewed = [];
+  const empty = (id, image) => ({...row(id, image), candidates: []});
+  const queue = queueFixture({drafts: [row('d1', '/b/1.png'), empty('e1', '/b/2.png'), empty('e2', '/b/3.png')],
+    workflow: {review: async (id, decision, ids, reviewer) => { reviewed.push([id, decision, ids, reviewer]); return {id, status: 'rejected'}; }}});
+  let tree = await queue.settle();
+  buttonWith(tree, '초안 검토 패널').props.onClick(); tree = await queue.settle();
+  assert.match(text(tree), /검토 대기 1장/, 'only the draft with candidates waits');
+  assert.match(text(tree), /후보 없는 초안 2건/);
+  buttonWith(tree, '모두 닫기').props.onClick(); tree = await queue.settle();
+  assert.deepEqual(reviewed, [['e1', 'reject', [], 'kai'], ['e2', 'reject', [], 'kai']]);
+  assert.match(text(tree), /후보 없는 초안 2건을 닫았습니다. 라벨은 바뀌지 않았습니다/);
+});
+
+test('step 2\'s two right-side popovers open one at a time', async () => {
+  const {useDraftReviewStore} = load(path.join(__dirname, '..', '..', 'stores', 'useDraftReviewStore.ts'));
+  assert.equal(useDraftReviewStore.getState().sidePanel, null);
+  useDraftReviewStore.getState().showSidePanel('assist');
+  assert.equal(useDraftReviewStore.getState().sidePanel, 'assist');
+  const queue = queueFixture({drafts: [row('d1', '/b/1.png')]});
+  let tree = await queue.settle();
+  buttonWith(tree, '초안 검토 패널').props.onClick(); tree = await queue.settle();
+  assert.equal(queue.review.sidePanel, 'drafts', 'opening the queue names it, which closes 모델 보조');
+  queue.review.sidePanel = 'assist'; tree = await queue.settle();
+  assert.equal(byLabel(tree, '초안 검토 패널').props['aria-expanded'], false, '모델 보조 opening closes the queue');
+  for (const file of ['DraftReviewQueue.tsx', 'ModelAssistPanel.tsx']) {
+    const source = fs.readFileSync(path.join(__dirname, file), 'utf8');
+    assert.match(source, /if \(sidePanel && sidePanel !== '(drafts|assist)'\) setOpen\(false\)/, file);
+  }
+});
+
 test('the drafts load without waiting for the adoption numbers, a failed count shows nothing, and a changed-data model carries the full mark', async () => {
   const models = [{job_id: 'job_b', task: 'detection', data_state: 'changed'}];
   let queue = queueFixture({drafts: [row('d1', '/b/1.png')], models, stats: () => new Promise(() => {})});
@@ -438,13 +486,13 @@ test('모델 보조 hands over the candidates the person kept and marks a model 
     react: runtime.react, 'lucide-react': icons,
     '../../services/api': {api: {labelSuggestions: {models: async () => ({models: [{job_id: 'job_x', task: 'detection', data_state: 'changed'}]}), list: async () => ({suggestions: [proposal]})}}},
     '../../stores/useAnnotationStore': {useAnnotationStore: fakeStore({currentImage: {file_path: '/b/1.png', file_name: '1.png'}, isDirty: false, annotationLoadStatus: 'ready', reviewerName: 'kai', setReviewerName() {}})},
-    '../../stores/useDraftReviewStore': {draftReviewScope: input => `scope:${input.projectDir}`, useDraftReviewStore: fakeStore({requestOpen: (...args) => requests.push(args)})},
+    '../../stores/useDraftReviewStore': {draftReviewScope: input => `scope:${input.projectDir}`, useDraftReviewStore: fakeStore({requestOpen: (...args) => requests.push(args), sidePanel: null, showSidePanel() {}})},
     '../../stores/useDatasetStore': {useDatasetStore: fakeStore({images: [], hasSelectedFolder: true, annotationsChanged: async () => {}})},
     '../../stores/useProjectStore': {useProjectStore: fakeStore({projectDir: '/project-B', project: {active_labelset_id: 'default', task: 'detection', source_dataset_dir: '/source-B'}, task: 'detection'})},
     '../../stores/useModelAssistRunStore': {useModelAssistRunStore: fakeStore({begin() {}, end() {}})},
     './LabelAssistDeviceSizes': {LabelAssistDeviceSizes: 'LabelAssistDeviceSizes'}, './BulkLabelAssist': {BulkLabelAssist: 'BulkLabelAssist'},
     './KoreanConditionLabeler': {KoreanConditionLabeler: 'KoreanConditionLabeler'}, './CandidateProviderControls': {CandidateProviderControls: 'CandidateProviderControls'},
-    '../../services/datasetWorkflow': {datasetWorkflow: {}}, './SuggestionPreview': {SuggestionPreview: 'SuggestionPreview'},
+    '../../services/datasetWorkflow': {datasetWorkflow: {}}, './SuggestionPreview': {SuggestionPreview: 'SuggestionPreview'}, '../common/Explain': {Explain: 'Explain'},
     './draftReview': helpers(),
   });
   let tree = await runtime.settle(ModelAssistPanel);

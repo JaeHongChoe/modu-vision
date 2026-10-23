@@ -4,8 +4,8 @@ import { api, type ProjectLabelSet } from '../../services/api';
 import { useProjectStore } from '../../stores/useProjectStore';
 import { ClassRenameDialog, DIALOG_TITLE as CLASS_RENAME_TITLE } from './ClassRenameDialog';
 
-/** ``compact`` (focus editing): the label set in use and its switch only. ``collapsed`` (the simple view): one line
- * naming the label set in use that opens to the full bar; the first labels never need another set. */
+/** ``compact`` (focus editing): the label set in use, its switch and the class rename entry. ``collapsed`` (the simple
+ * view): one line naming the label set in use that opens to the bar; the first labels never need another set. */
 export const LabelSetBar: React.FC<{ compact?: boolean; collapsed?: boolean }> = ({ compact = false, collapsed = false }) => {
   const project = useProjectStore((state) => state.project);
   const busy = useProjectStore((state) => state.isProjectBusy);
@@ -65,7 +65,7 @@ export const LabelSetBar: React.FC<{ compact?: boolean; collapsed?: boolean }> =
   if (!project) return null;
   const active = sets.find((item) => item.id === project.active_labelset_id);
   if (collapsed) return <details className="border-b border-[#34465B] bg-[#101D2C] px-4 py-1 text-slate-200">
-    <summary className="cursor-pointer text-xs text-slate-300">라벨 세트: <span className="font-semibold text-slate-100">{active?.name || '기본 라벨'}</span> <span className="text-slate-500">(바꾸거나 새로 만들기)</span></summary>
+    <summary className="cursor-pointer text-xs text-slate-300">라벨 세트: <span className="font-semibold text-slate-100">{active?.name || '기본 라벨'}</span> <span className="text-slate-500">({project.task === 'classification' ? '바꾸거나 새로 만들기' : '바꾸거나 새로 만들기 · 클래스 이름 변경'})</span></summary>
     <LabelSetBar compact={compact} />
   </details>;
   return <div className={`border-b border-[#34465B] bg-[#101D2C] px-4 ${compact ? 'py-1' : 'py-2.5'} text-slate-200`}>
@@ -84,7 +84,7 @@ export const LabelSetBar: React.FC<{ compact?: boolean; collapsed?: boolean }> =
       </form>}
       {/* Rename or merge class names in this label set's edited labels (preview, backup, then apply); source files stay.
           Not offered for classification: its classes are folder names, which the rename never changes. */}
-      {!compact && project.task !== 'classification' && <button type="button" onClick={() => setRenameOpen(true)} disabled={busy} title="활성 라벨 세트의 편집 라벨에서 클래스 이름을 바꾸거나 합칩니다. 원본 라벨 파일은 바꾸지 않습니다." className="flex shrink-0 items-center gap-1.5 rounded-md border border-[#3D5368] px-2.5 py-1.5 text-xs font-medium text-slate-200 hover:bg-[#273D52] disabled:opacity-40"><Tags className="h-3.5 w-3.5" />{CLASS_RENAME_TITLE}</button>}
+      {project.task !== 'classification' && <button type="button" onClick={() => setRenameOpen(true)} disabled={busy} title="활성 라벨 세트의 편집 라벨에서 클래스 이름을 바꾸거나 합칩니다. 원본 라벨 파일은 바꾸지 않습니다." className="flex shrink-0 items-center gap-1.5 rounded-md border border-[#3D5368] px-2.5 py-1.5 text-xs font-medium text-slate-200 hover:bg-[#273D52] disabled:opacity-40"><Tags className="h-3.5 w-3.5" />{CLASS_RENAME_TITLE}</button>}
     </div>
     {!compact && <p className="mt-1.5 text-[10px] leading-4 text-slate-500">활성 레이블셋의 편집 라벨만 학습·평가에 사용합니다. 전환 전 편집 내용은 저장합니다.</p>}
     {(error || projectError) && <p role="alert" className="mt-1.5 text-[11px] text-red-300">{error || projectError}</p>}

@@ -194,6 +194,11 @@ def _model_catalog(project: Dict[str, Any]) -> List[Dict[str, Any]]:
         recorded_source = receipt.get("source_dataset_path")
         if not isinstance(recorded_source, str) or Path(recorded_source).expanduser().resolve() != source:
             continue
+        # A model trained under another label set of this project learned that set's classes and truth: it does not
+        # draft into the active one (2026-10-23 default; a receipt that names no label set predates the record).
+        trained_set = (receipt.get("training_provenance") or {}).get("labelset_id") if isinstance(receipt.get("training_provenance"), dict) else None
+        if isinstance(trained_set, str) and trained_set != project.get("active_labelset_id", "default"):
+            continue
         meta_path = directory / "model_meta.json"
         try:
             meta = json.loads(meta_path.read_text(encoding="utf-8"))
@@ -527,7 +532,7 @@ def _batch_images(project: Dict[str, Any], requested: Optional[List[str]]) -> Li
             path.stem for path in source.iterdir()
             if path.is_file() and path.suffix.lower() in SUPPORTED_IMAGE_EXTENSIONS
         }
-        flat_labelme = routes_dataset._has_flat_labelme_annotations(source)
+        flat_labelme = routes_dataset._flat_image_workspace(source, project["task"])
         structured = (
             project["task"] not in {"detection", "segmentation"}
             or not root_images or not flat_labelme

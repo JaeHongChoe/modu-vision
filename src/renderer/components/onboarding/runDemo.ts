@@ -30,12 +30,16 @@ export interface DemoDeps {
   /** Another project action (an open, a save, a data load) is still running. */
   projectBusy: () => boolean;
   importFolder: (folder: string) => Promise<{ error: string | null; folder: string | null }>;
+  /** What step 1 recognised from the folder: the task, how the images are split, and the class counts step 2 shows. */
+  recognised: () => { task: string | null; splitState: string | null; classes: Record<string, number> };
   markExample: () => Promise<unknown>;
   startTraining: (folder: string) => Promise<string | null>;
   trainingError: () => string | null;
   jobStatus: (jobId: string) => Promise<{ status: string; error?: unknown }>;
   /** The job ended: the training store reads it again, so it no longer counts as running (a project switch checks it). */
   trainingEnded: (jobId: string) => Promise<void>;
+  /** Step 4: evaluate the finished model on the held-out test images (the evidence step 5's readiness asks for). */
+  evaluateModel: (jobId: string) => Promise<{ samples: number; error: string | null }>;
   saveFlow: (jobId: string, folder: string) => Promise<{ version_id: string }>;
   /** Freeze the held-out test images and evaluate the saved flow on them (the evidence step 6's readiness asks for). */
   evaluateFlow: (versionId: string) => Promise<{ evaluation_id: string; known: number; escapes: number; overkills: number }>;
@@ -96,7 +100,16 @@ export async function runDemo(deps: DemoDeps, onUpdate: (state: DemoState) => vo
       if (imported.error || !imported.folder) throw new Error(imported.error || '예제 데이터를 가져오지 못했습니다.');
       await deps.markExample();
       return imported.folder;
+    }, () => {
+      const seen = deps.recognised();
+      return `${seen.task === 'classification' ? '분류' : seen.task || '작업 종류 미정'} · ${seen.splitState === 'source_folders' ? '폴더의 학습·검증·시험 분할' : '분할 확인 필요'}`;
     });
+    await step('labels', async () => {
+      const classes = deps.recognised().classes;
+      const names = Object.keys(classes).filter(name => classes[name] > 0);
+      if (names.length < 2) throw new Error(`예제 클래스가 ${names.length}개만 보입니다. 1단계 폴더 구조를 확인하세요.`);
+      return names.map(name => `${name} ${classes[name]}장`).join(' · ');
+    }, value => value);
     const jobId = await step('train', async () => {
       const started = await deps.startTraining(folder);
       if (!started) throw new Error(deps.trainingError() || '예제 학습을 시작하지 못했습니다.');
@@ -126,6 +139,11 @@ export async function runDemo(deps: DemoDeps, onUpdate: (state: DemoState) => vo
         await deps.sleep(1000);
       }
     }, value => `작업 ${value}`);
+    await step('evaluate_model', async () => {
+      const evaluated = await deps.evaluateModel(jobId);
+      if (evaluated.error) throw new Error(evaluated.error);
+      return evaluated.samples;
+    }, value => `시험 이미지 ${value}장`);
     const flow = await step('flow', () => deps.saveFlow(jobId, folder), value => `저장 버전 ${value.version_id.slice(0, 8)}`);
     const evaluation = await step('evaluate', () => deps.evaluateFlow(flow.version_id),
       // Folder labels become whole-flow truth only when a person confirms them in 5단계 일괄 평가, so the example never

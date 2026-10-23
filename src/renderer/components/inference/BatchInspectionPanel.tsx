@@ -5,6 +5,7 @@ import { inspectionCountKey, startInspectionCountRead, type InspectionCountState
 import type { DatasetStatistics } from '../../services/projectPreferences';
 import { flowExecutionOptions, type FlowExecutionChoice } from '../flowchart/flowExecution';
 import { useComputeStore } from '../../stores/useComputeStore';
+import { registerAutoRun } from '../../stores/autoRunChannel';
 import { useDatasetStore } from '../../stores/useDatasetStore';
 import { useFlowchartStore } from '../../stores/useFlowchartStore';
 import { useProjectStore } from '../../stores/useProjectStore';
@@ -90,6 +91,8 @@ export const BatchInspectionPanel: React.FC = () => {
   const [evidenceView,setEvidenceView]=useState<{scope:string;view:EvidenceView}|null>(null);
   const evidenceRequest=useRef(0);
   const stopReasonRef = useRef<BatchStopReason>(null);
+  // The last run's failure, read by 원클릭 자동 진행 right after the run it asked for (state would be one render late).
+  const lastRunError = useRef<string | null>(null);
   const exitGuardRef = useRef<ReturnType<typeof createInspectionRunExitGuard> | null>(null);
   const ownedOperationRef = useRef<number | null>(null);
   const historyRequestRef = useRef(0);
@@ -279,6 +282,7 @@ export const BatchInspectionPanel: React.FC = () => {
     setSelectedPath(null);
     setFilter('all');
     setError(null);
+    lastRunError.current = null;
     try {
       const { pipelines } = await api.flowchart.listPipelines(sourceFolder);
       const currentActive = activeSavedVersion(pipelines);
@@ -341,7 +345,8 @@ export const BatchInspectionPanel: React.FC = () => {
       }
     } catch (cause) {
       if (currentSource() && stopReasonRef.current !== 'user_stop') {
-        setError(cause instanceof Error ? cause.message : String(cause));
+        lastRunError.current = cause instanceof Error ? cause.message : String(cause);
+        setError(lastRunError.current);
       }
     } finally {
       if (createdRunId) runGuard?.release(createdRunId);
@@ -353,6 +358,14 @@ export const BatchInspectionPanel: React.FC = () => {
       }
     }
   };
+
+  // 원클릭 자동 진행 presses this panel's own '검사 시작' with the scope and run location shown here.
+  useEffect(() => registerAutoRun('inspect', async () => {
+    if (isRunning) return '검사가 이미 진행 중입니다. 끝난 뒤 다시 누르세요.';
+    if (!sourceReady || !savedFlow || savedFlowLoading || !executionReady || !project) return '6단계 검사를 시작할 수 없습니다. 저장한 검사 흐름과 실행 위치를 확인하세요.';
+    await handleStart();
+    return lastRunError.current;
+  }), [isRunning, sourceReady, savedFlow, savedFlowLoading, executionReady, project, scope, executionChoice, selectedProfileId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const rows = report?.rows ?? [];
   const summary = summarizeBatch(rows);

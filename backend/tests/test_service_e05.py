@@ -259,7 +259,7 @@ def test_a_gold_image_never_becomes_held_out_test_truth(workspace):
     aq.create_profile(project, task='segmentation', reference_labelset='default', candidate_labelset=CANDIDATE, gold_images=[str(source / 'defect.png')])
     cohort = flow_evaluation.freeze_cohort(project, version, model_provider=model_provider(checkpoint))
     assert 'defect.png' not in [row['relative_path'] for row in cohort['samples']], 'gold is not test truth'
-    with pytest.raises(ValueError, match='gold sample'):
+    with pytest.raises(ValueError, match='기준 샘플\\(gold sample\\)'):
         flow_evaluation.freeze_cohort(project, version, relative_paths=['defect.png'], model_provider=model_provider(checkpoint))
     aq.set_gold_policy(project, True)
     kept = flow_evaluation.freeze_cohort(project, version, model_provider=model_provider(checkpoint))

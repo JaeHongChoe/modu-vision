@@ -27,30 +27,30 @@ from backend.engine.heldout_splits import folder_split_assignments, folder_split
 
 def _root(project):
     root = Path(project['project_dir']) / 'flow_evaluations'
-    if root.is_symlink(): raise ValueError('Evaluation storage cannot be linked')
+    if root.is_symlink(): raise ValueError('평가 기록 폴더가 다른 위치로 연결되어 있습니다. 프로젝트 폴더의 링크를 실제 폴더로 바꾼 뒤 다시 평가하세요.')
     root.mkdir(parents=True, exist_ok=True)
     return root
 
 
 def _safe_record(root, identifier, prefix):
-    if not re.fullmatch(prefix + r'_[0-9a-f]{32}', identifier): raise ValueError('Invalid evidence identifier')
+    if not re.fullmatch(prefix + r'_[0-9a-f]{32}', identifier): raise ValueError('평가 기록 ID가 올바르지 않습니다. 목록에서 다시 고르세요.')
     path = root / identifier / 'record.json'
-    if path.is_symlink() or path.parent.is_symlink() or not path.is_file(): raise ValueError('Evidence record is unavailable')
+    if path.is_symlink() or path.parent.is_symlink() or not path.is_file(): raise ValueError('평가 기록을 찾지 못했습니다. 목록을 새로 고친 뒤 다시 고르세요.')
     record = json.loads(path.read_text(encoding='utf-8'))
     expected = record.get('record_sha256'); value = {key: row for key,row in record.items() if key != 'record_sha256'}
-    if digest(value) != expected: raise ValueError('Evidence record hash changed')
+    if digest(value) != expected: raise ValueError('평가 기록 파일이 저장 뒤 바뀌었습니다. 평가를 다시 실행하세요.')
     return record
 
 
 def saved_graph(project, version_id):
-    if not re.fullmatch(r'[0-9a-f]{32}', version_id): raise ValueError('Invalid saved flow version')
+    if not re.fullmatch(r'[0-9a-f]{32}', version_id): raise ValueError('저장된 흐름 버전 ID가 올바르지 않습니다. 목록에서 다시 고르세요.')
     file = Path(project['project_dir']) / 'flowcharts' / 'versions' / f'{version_id}.json'
-    if file.is_symlink() or not file.is_file(): raise ValueError('Saved flow version is unavailable')
+    if file.is_symlink() or not file.is_file(): raise ValueError('저장된 흐름 버전을 찾지 못했습니다. 5단계에서 버전 목록을 새로 고친 뒤 다시 고르세요.')
     record = json.loads(file.read_text(encoding='utf-8'))
     source = str(Path(project.get('source_dataset_dir') or '').resolve())
     if (record.get('version_id') != version_id or record.get('source_dataset_path') != source
             or record.get('labelset_id', project.get('active_labelset_id','default')) != project.get('active_labelset_id','default')):
-        raise ValueError('Saved flow belongs to another source or labelset')
+        raise ValueError('이 흐름 버전은 다른 데이터 원본이나 라벨 세트에서 저장한 것입니다. 현재 원본·라벨 세트에서 저장한 버전을 고르세요.')
     pipeline = FlowchartPipeline.model_validate(record['pipeline']); ordered_linear_nodes(pipeline)
     return pipeline, record
 
@@ -67,17 +67,17 @@ def verified_models(project, pipeline):
         task = flow_model_task(node)
         if task is None: continue
         job_id = node.data.model_job_id
-        if not job_id: raise ValueError(f'Model job is missing for {node.data.label}')
+        if not job_id: raise ValueError(f'"{node.data.label}" 노드에 모델이 연결되지 않았습니다. 편집에서 모델을 고른 뒤 저장하세요.')
         record = training_job_manager.get_job(job_id)
-        if record is not None and record.status != 'completed': raise ValueError(f'Model {job_id} is not completed')
+        if record is not None and record.status != 'completed': raise ValueError(f'모델 {job_id}의 학습이 끝나지 않았습니다. 3단계에서 학습이 끝난 뒤 평가하세요.')
         if task in SPECIALIZED_TASKS:
             checkpoint, metadata = resolve_specialized_checkpoint(project['models_dir'], job_id, task, project['source_dataset_dir'])
         else:
             checkpoint = trusted_checkpoint(job_id, project_models_dir=project['models_dir'])
             if checkpoint is None or not _matches_source_dataset(checkpoint.parent, project['source_dataset_dir'], task):
-                raise ValueError(f'Model {job_id} does not match the active source/task')
+                raise ValueError(f'모델 {job_id}은(는) 지금 데이터로 학습한 모델이 아닙니다(학습 뒤 데이터가 바뀌었거나 다른 원본·작업 종류). 현재 모델로 흐름을 다시 저장하거나 3단계에서 다시 학습하세요.')
             payload = torch.load(checkpoint, map_location='cpu', weights_only=True)
-            if payload.get('task') != task or 'model_state_dict' not in payload: raise ValueError(f'Model {job_id} has an incompatible checkpoint')
+            if payload.get('task') != task or 'model_state_dict' not in payload: raise ValueError(f'모델 {job_id}의 체크포인트 형식이 이 작업과 맞지 않습니다. 같은 작업 종류의 모델을 고르세요.')
             metadata_path = checkpoint.parent/'model_meta.json'
             metadata = json.loads(metadata_path.read_text(encoding='utf-8')) if metadata_path.is_file() else {}
             classes = catalog_class_vocabulary({**payload,'task':task}).get('class_names') or []
@@ -89,11 +89,11 @@ def verified_models(project, pipeline):
                     if record.get(key) is not None:
                         names = catalog_class_vocabulary({'task': task, key: record[key]}).get('class_names')
                         if names != classes:
-                            raise ValueError(f'Model {job_id} class vocabulary differs between checkpoint and metadata')
+                            raise ValueError(f'모델 {job_id}의 클래스 목록이 체크포인트와 기록에서 다릅니다. 3단계에서 모델을 다시 학습하세요.')
             metadata = {**payload, **metadata}
             if (class_semantics_record(classes,recorded_roles(payload,task=task,classes=classes),task=task)['roles']
                     != class_semantics_record(classes,recorded_roles(metadata,task=task,classes=classes),task=task)['roles']):
-                raise ValueError(f'Model {job_id} class roles differ between checkpoint and metadata')
+                raise ValueError(f'모델 {job_id}의 클래스 역할(정상·불량)이 체크포인트와 기록에서 다릅니다. 3단계에서 모델을 다시 학습하세요.')
             verify_downloaded_checkpoint(checkpoint.parent, job_id)
         result[(job_id, task)] = {'path':str(checkpoint.resolve()), 'metadata':metadata}
     return result
@@ -103,7 +103,7 @@ def _model_snapshot(models):
     rows = []
     for (job_id, task), model in sorted(models.items()):
         checkpoint = Path(model['path'])
-        if checkpoint.is_symlink() or not checkpoint.is_file(): raise ValueError('Model checkpoint unavailable')
+        if checkpoint.is_symlink() or not checkpoint.is_file(): raise ValueError('모델 체크포인트 파일을 찾지 못했습니다. 3단계에서 모델이 남아 있는지 확인하세요.')
         metadata = model.get('metadata', {})
         rows.append({'job_id':job_id,'task':task,'checkpoint_path':str(checkpoint.resolve()),'checkpoint_sha256':dm._hash(checkpoint),
                      'class_names':catalog_class_vocabulary({**metadata,'task':task}).get('class_names'),
@@ -123,13 +123,13 @@ def graph_truth_scope(project, pipeline, models):
         classes = node.data.params.get('class_names') or catalog_class_vocabulary({**metadata,'task':task}).get('class_names')
         if not classes and task == 'anomaly': classes = ['good','anomaly']
         if not classes and task == 'ocr': classes = ['text_match','text_mismatch']
-        if not classes: raise ValueError(f'Record class names for {node.data.label} before declaring flow truth')
+        if not classes: raise ValueError(f'"{node.data.label}" 노드의 클래스 이름이 기록되지 않아 정답을 정할 수 없습니다. 클래스 이름을 기록한 모델로 흐름을 다시 저장하세요.')
         model_roles = recorded_roles(metadata,task=task,classes=classes)
         resolved_roles=class_semantics_record(classes,model_roles,task=task)['roles']
         uses_recorded_roles = uses_recorded_roles or model_roles is not None
         for name in classes:
             role = resolved_roles[name]
-            if name in roles and roles[name] != role: raise ValueError('Flow models have conflicting class roles: '+name)
+            if name in roles and roles[name] != role: raise ValueError('흐름의 모델들이 같은 클래스를 다른 역할로 씁니다: '+name+'. 클래스 역할을 하나로 맞춘 뒤 흐름을 다시 저장하세요.')
             roles[name] = role
         names.extend(name for name in classes if name not in names)
     return truth_scope(project, next(iter(tasks)) if len(tasks)==1 else 'mixed', names,
@@ -155,10 +155,10 @@ def _split(project):
     if file.is_symlink() or not file.is_file():
         assignments = folder_split_assignments(source)
         if not any(part == 'test' for part in assignments.values()):
-            raise ValueError('Save an explicit test split, or keep the held-out images in a test/ folder of the source, before freezing a held-out cohort')
+            raise ValueError('시험 분할이 저장되지 않았습니다. 1단계에서 분할을 저장하거나 원본의 test/ 폴더에 시험 이미지를 둔 뒤 다시 고정하세요.')
         return None, assignments
     record = json.loads(file.read_text(encoding='utf-8'))
-    if record.get('folder_path') != str(source) or not isinstance(record.get('assignments'),dict): raise ValueError('Saved test split belongs to another source')
+    if record.get('folder_path') != str(source) or not isinstance(record.get('assignments'),dict): raise ValueError('저장된 시험 분할이 다른 데이터 원본의 것입니다. 1단계에서 현재 원본으로 분할을 다시 저장하세요.')
     return file, normalized_assignments(source, record['assignments'])
 
 
@@ -172,8 +172,8 @@ def freeze_cohort(project, version_id, *, relative_paths=None, name='Held-out te
     gold = gold_image_paths(project)
     selected = sorted(relative_paths if relative_paths is not None else
                       [name for name,part in assignments.items() if part=='test' and str((source/name).resolve()) not in gold])
-    if not selected or len(selected)>5000 or len(selected)!=len(set(selected)): raise ValueError('Choose 1–5000 unique held-out test images')
-    if not isinstance(name,str) or not name.strip() or len(name)>200: raise ValueError('Enter a cohort name under 200 characters')
+    if not selected or len(selected)>5000 or len(selected)!=len(set(selected)): raise ValueError('시험 이미지를 1~5000장, 중복 없이 고르세요.')
+    if not isinstance(name,str) or not name.strip() or len(name)>200: raise ValueError('시험 묶음 이름을 200자 이내로 입력하세요.')
     selected_hashes = set(); snapshots = []
     cohort_id = f'cohort_{uuid.uuid4().hex}'; root = _root(project)/'cohorts'; root.mkdir(exist_ok=True)
     staging = Path(tempfile.mkdtemp(prefix='.freezing-',dir=root))
@@ -182,10 +182,10 @@ def freeze_cohort(project, version_id, *, relative_paths=None, name='Held-out te
         for relative in selected:
             path = Path(relative)
             if (path.is_absolute() or '..' in path.parts or '\\' in relative or assignments.get(relative) != 'test'):
-                raise ValueError('Every cohort image must belong to the saved held-out test split')
+                raise ValueError('시험 묶음의 이미지는 모두 저장된 시험 분할에 있어야 합니다. 시험 분할의 이미지만 고르세요.')
             image = source/path
             if str(image.resolve()) in gold:
-                raise ValueError(f'{relative} is a gold sample of the label review; gold images are not test truth unless the dataset policy keeps them')
+                raise ValueError(f'{relative}은(는) 라벨 검수의 기준 샘플(gold sample)이라 시험 정답으로 쓰지 않습니다. 데이터 정책에서 기준 샘플을 시험에 포함하도록 바꾸거나 이 이미지를 빼고 고정하세요.')
             # Keep the resolver basis identical to the graph's recorded roles.
             roles = scope['class_semantics']['roles'] if any(b=='explicit' for b in scope['class_semantics']['basis'].values()) else None
             truth = read_truth(project,str(image),task=scope['task'],classes=scope['classes'],class_roles=roles,
@@ -194,7 +194,7 @@ def freeze_cohort(project, version_id, *, relative_paths=None, name='Held-out te
             frozen_name = f'{checksum}{image.suffix.lower()}'
             target = images/frozen_name
             if not target.exists(): shutil.copyfile(image,target)
-            if dm._hash(target) != checksum or dm._hash(image) != checksum: raise ValueError('Source image changed while freezing')
+            if dm._hash(target) != checksum or dm._hash(image) != checksum: raise ValueError('고정하는 동안 원본 이미지가 바뀌었습니다. 다시 고정하세요.')
             snapshots.append({'relative_path':relative,'image_path':str(image),'input_sha256':checksum,
                               'frozen_image':f'images/{frozen_name}', 'truth':truth})
         # File-content duplicates across train/val/test violate independence.
@@ -202,8 +202,8 @@ def freeze_cohort(project, version_id, *, relative_paths=None, name='Held-out te
             if partition == 'test': continue
             candidate = source/relative
             if candidate.is_file() and candidate.resolve().is_relative_to(source) and dm._hash(candidate) in selected_hashes:
-                raise ValueError(f'Duplicate image leakage between held-out test and {partition}: {relative}')
-        if split_file is not None and dm._hash(split_file) is None: raise ValueError('Saved split is unavailable')
+                raise ValueError(f'시험 이미지와 같은 내용의 이미지가 {partition} 분할에도 있습니다: {relative}. 1단계에서 중복 이미지를 한쪽에만 두고 분할을 다시 저장하세요.')
+        if split_file is not None and dm._hash(split_file) is None: raise ValueError('저장된 분할을 읽지 못했습니다. 1단계에서 분할을 다시 저장하세요.')
         split_kind = 'file' if split_file is not None else 'folders'
         split_sha256 = dm._hash(split_file) if split_file is not None else folder_split_fingerprint(assignments)
         record = {'schema_version':1,'cohort_id':cohort_id,'name':name.strip(),'created_at':dm._now(),'scope':scope,
@@ -221,7 +221,7 @@ def freeze_cohort(project, version_id, *, relative_paths=None, name='Held-out te
 
 def read_cohort(project, cohort_id):
     record = _safe_record(_root(project)/'cohorts',cohort_id,'cohort')
-    if record['scope']['project_id'] != project['id']: raise ValueError('Cohort belongs to another project')
+    if record['scope']['project_id'] != project['id']: raise ValueError('이 시험 묶음은 다른 프로젝트의 것입니다. 현재 프로젝트에서 고정한 묶음을 고르세요.')
     return record
 
 
@@ -259,9 +259,9 @@ def _cohort_changes(project, cohort):
 def evaluate_flow(project, version_id, cohort_id, *, engine=None, model_provider=None):
     graph,_ = saved_graph(project,version_id); models = (model_provider or verified_models)(project,graph)
     snapshots = _model_snapshot(models); cohort = read_cohort(project,cohort_id)
-    if graph_truth_scope(project,graph,models) != cohort['scope']: raise ValueError('Flow task/classes differ from the frozen truth scope')
+    if graph_truth_scope(project,graph,models) != cohort['scope']: raise ValueError('흐름의 작업 종류·클래스가 고정한 정답 범위와 다릅니다. 시험 묶음을 새로 고정한 뒤 평가하세요.')
     if cohort['scope']['task'] == 'mixed' and cohort.get('participating_tasks') != _participating_tasks(graph):
-        raise ValueError('Flow participating tasks differ from the frozen truth dependencies')
+        raise ValueError('흐름에 참여하는 모델 종류가 고정한 정답 범위와 다릅니다. 시험 묶음을 새로 고정한 뒤 평가하세요.')
     changed = _cohort_changes(project,cohort)
     if changed: raise ValueError('고정한 시험 묶음의 정답이나 원본이 바뀌었습니다. 묶음을 새로 고정한 뒤 평가하세요: '+', '.join(changed[:10]))
     graph_hash = pipeline_sha256(graph); engine = engine or FlowchartEngine(device='cpu')
@@ -329,7 +329,7 @@ def read_evaluation(project, evaluation_id):
 
 
 def list_evidence(project, kind):
-    if kind not in {'cohorts','runs'}: raise ValueError('Invalid evidence kind')
+    if kind not in {'cohorts','runs'}: raise ValueError('평가 기록 종류가 올바르지 않습니다. 목록에서 다시 고르세요.')
     root = _root(project)/kind
     result = []
     for file in root.glob('*/record.json') if root.exists() else []:
@@ -349,7 +349,7 @@ def list_evidence(project, kind):
 def create_review_queue(project, evaluation_id):
     from backend.engine import data_workbench as dw
     record = read_evaluation(project,evaluation_id)
-    if not record['validity']['valid']: raise ValueError('Whole-flow evaluation changed; evaluate again before creating a review queue')
+    if not record['validity']['valid']: raise ValueError('전체 흐름 평가가 바뀌었습니다. 다시 평가한 뒤 검토 목록을 만드세요.')
     rows = []
     for row in record['records']:
         rows.append({'file_path':row['image_path'],'image_sha256':row['input_sha256'],
@@ -375,7 +375,26 @@ def _label_verdict(label, roles):
     return ('OK', []) if wanted == 'normal' else ('NG', names)
 
 
-def confirm_truth_from_labels(project, cohort_id, version_id, *, reviewer, note='폴더 라벨을 검토해 정답으로 확정', model_provider=None):
+_SHAPE_TYPES = {'bbox', 'rotated_bbox', 'polygon', 'brush_mask'}
+
+
+def _shape_label_verdict(rows, roles):
+    """A detection image's truth from the labels a person made (drawn or adopted from a draft) on it, only when they say
+    something positive: a box of a defect-role class makes it NG with those classes; an explicit normal mark with no box
+    makes it OK; no label, or boxes of classes without a defect role, leave it unknown (an empty label is never OK)."""
+    if not isinstance(rows, list):
+        return None
+    defects = sorted({row.get('label') for row in rows if isinstance(row, dict) and row.get('type') in _SHAPE_TYPES
+                      and roles.get(row.get('label')) == 'defect'})
+    if defects:
+        return 'NG', defects
+    shapes = any(isinstance(row, dict) and row.get('type') in _SHAPE_TYPES for row in rows)
+    normal = any(isinstance(row, dict) and (row.get('is_normal') is True or (row.get('type') == 'tag' and roles.get(row.get('label')) == 'normal'))
+                 for row in rows)
+    return ('OK', []) if normal and not shapes else None
+
+
+def confirm_truth_from_labels(project, cohort_id, version_id, *, reviewer, note=None, model_provider=None, labels_for=None):
     """A reviewer confirms a frozen cohort's folder labels as its explicit truth in one step. Every image still gets
     its own dated declaration under the reviewer's name; an image whose folder names no class of the scope stays
     unknown, and a declaration that already says the same is kept."""
@@ -389,13 +408,22 @@ def confirm_truth_from_labels(project, cohort_id, version_id, *, reviewer, note=
     task, classes, roles = scope['task'], scope['classes'], scope['class_semantics']['roles']
     if task == 'mixed':
         raise ValueError('여러 종류의 모델이 섞인 흐름은 폴더 라벨로 정답을 정할 수 없습니다. 이미지별로 검토하세요.')
+    # Detection reads the boxes a person made on each image (labels_for is the app's own label reader); the other tasks
+    # read the image's folder name. Either way the reviewer's press is what declares the truth.
+    shapes = task == 'detection'
+    if shapes and labels_for is None:
+        raise ValueError('검출 흐름의 정답은 이미지의 라벨로 확정합니다. 라벨을 읽지 못해 확정하지 않았습니다. 다시 시도하세요.')
+    note = note or ('이미지의 라벨을 검토해 정답으로 확정' if shapes else '폴더 라벨을 검토해 정답으로 확정')
     declared = kept = 0; unknown = []
     from backend.engine.class_overrides import read_class_overrides, effective_class
     overrides = read_class_overrides(Path(project['source_dataset_dir'])) if task == 'classification' else {}
     for sample in cohort['samples']:
-        label, _ = folder_label_split(PurePath(sample['relative_path']), task)
-        label, _ = effective_class(Path(sample['image_path']), label, overrides)  # a class chosen in step 2 wins
-        decided = _label_verdict(label, roles) if label else None
+        if shapes:
+            decided = _shape_label_verdict(labels_for(sample['image_path']), roles)
+        else:
+            label, _ = folder_label_split(PurePath(sample['relative_path']), task)
+            label, _ = effective_class(Path(sample['image_path']), label, overrides)  # a class chosen in step 2 wins
+            decided = _label_verdict(label, roles) if label else None
         if decided is None:
             unknown.append(sample['relative_path']); continue
         verdict, defects = decided
