@@ -96,7 +96,7 @@ export const CandidateProviderControls:React.FC<Props>=({disabled,onCreated,onOp
   const [featureModels,setFeatureModels]=useState<FeatureModel[]>([]);const [modelId,setModelId]=useState('');const [featureJob,setFeatureJob]=useState<FeatureJob|null>(null);
   const [epochs,setEpochs]=useState(100);const [learningRate,setLearningRate]=useState(.05);
   const [checkpoint,setCheckpoint]=useState('');const [checkpointHash,setCheckpointHash]=useState('');
-  const [maskDir,setMaskDir]=useState('');const reasonId=useId();
+  const [maskDir,setMaskDir]=useState('');const [textDir,setTextDir]=useState('');const reasonId=useId();
   const [batches,setBatches]=useState<FoundationBatch[]>([]);const [batchId,setBatchId]=useState('');const [batchPaths,setBatchPaths]=useState<Set<string>>(new Set());
   const visibleBatches=currentScope?batches:[];const visibleModels=currentScope?featureModels:[];
   const activeBatch=visibleBatches.find(b=>labelingJobActive(b.status));const batch=visibleBatches.find(b=>b.id===batchId);
@@ -105,11 +105,13 @@ export const CandidateProviderControls:React.FC<Props>=({disabled,onCreated,onOp
   useEffect(()=>{bind(currentImage?.file_path||'');setExclusions({imagePath:'',regions:[]});setExcludeRoi('');},[bind,currentImage?.file_path]);
   useEffect(()=>{setExclusions({imagePath:'',regions:[]});setExcludeRoi('');},[scope]);
   useEffect(()=>{setLabel(activeCategory.name);},[activeCategory.name]);
+  // A pixel mask is a segmentation label (readiness refuses it for detection training): a detection project starts on boxes.
+  useEffect(()=>{setGeometry(project?.task==='detection'?'bbox':'mask');},[project?.task]);
   useEffect(()=>{
-    let active=true;setLoadedScope(scope);setBusy(false);setSetup(null);setBatches([]);setBatchId('');setFeatureJob(null);setFeatureModels([]);setPositive([]);setNegative([]);setModelId('');setBatchPaths(new Set());setExamplePath('');setExampleRoi('');setCheckpoint('');setCheckpointHash('');setMaskDir('');setError('');setNotice('');bindProject(scope);
+    let active=true;setLoadedScope(scope);setBusy(false);setSetup(null);setBatches([]);setBatchId('');setFeatureJob(null);setFeatureModels([]);setPositive([]);setNegative([]);setModelId('');setBatchPaths(new Set());setExamplePath('');setExampleRoi('');setCheckpoint('');setCheckpointHash('');setMaskDir('');setTextDir('');setError('');setNotice('');bindProject(scope);
     const remembered=localStorage.getItem(`foundation-feature-job:${scope}`);
     void Promise.all([provider.setup(),provider.featureModels(),provider.batches(),provider.featureJobs().then(result=>result.jobs.find(j=>j.id===remembered)||result.jobs[0]||null)])
-      .then(([s,m,b,j])=>{if(active&&sameProject()){setSetup(s);setFeatureModels(m.models);setBatches(b.batches);setBatchId(b.batches[0]?.id||'');setFeatureJob(j);setCheckpoint(s.configuration.feature_checkpoint||'');setCheckpointHash(s.configuration.feature_sha256||'');setMaskDir(s.configuration.mask_model_dir||'');}})
+      .then(([s,m,b,j])=>{if(active&&sameProject()){setSetup(s);setFeatureModels(m.models);setBatches(b.batches);setBatchId(b.batches[0]?.id||'');setFeatureJob(j);setCheckpoint(s.configuration.feature_checkpoint||'');setCheckpointHash(s.configuration.feature_sha256||'');setMaskDir(s.configuration.mask_model_dir||'');setTextDir(s.configuration.model_dir||'');}})
       .catch(e=>{if(active&&sameProject())setError(workflowError(e));});return()=>{active=false;};
   },[scope,bindProject]);
   useEffect(()=>{
@@ -143,13 +145,14 @@ export const CandidateProviderControls:React.FC<Props>=({disabled,onCreated,onOp
   };
   const generate=()=>run(async()=>{if(!currentImage||!setup)return;const imagePath=currentImage.file_path;
     useModelAssistRunStore.getState().begin();try{const current=await provider.setup();if(!sameProject())return;setSetup(current);const next=await provider.generate(buildFoundationRequest(imagePath,options(),current));if(sameProject()&&useAnnotationStore.getState().currentImage?.file_path===imagePath)onCreated(next);}finally{useModelAssistRunStore.getState().end();}});
-  const applySetup=(next:FoundationSetup)=>{setSetup(next);setMaskDir(next.configuration.mask_model_dir||'');};
+  const applySetup=(next:FoundationSetup)=>{setSetup(next);setMaskDir(next.configuration.mask_model_dir||'');setTextDir(next.configuration.model_dir||'');};
   const chooseModel=(field:'mask_model_dir'|'model_dir')=>run(async()=>{const path=await host.selectFolder({title:field==='mask_model_dir'?'로컬 SAM2 모델 폴더':'로컬 Grounding DINO 모델 폴더'});if(path&&sameProject()){const next=await provider.configure({[field]:path});if(sameProject())applySetup(next);}});
   // The typed path is the browser/shared-server way to point at a folder; the backend only checks that it is a directory.
-  const saveMaskDir=()=>run(async()=>{
-    try{const next=await provider.configure({mask_model_dir:maskDir.trim()});if(sameProject())applySetup(next);}
+  const saveFolder=(field:'mask_model_dir'|'model_dir',path:string)=>run(async()=>{
+    try{const next=await provider.configure({[field]:path.trim()});if(sameProject())applySetup(next);}
     catch(e){throw new Error(/existing local model directory/.test(workflowError(e))?'지정한 경로를 폴더로 찾지 못했습니다. 백엔드가 읽을 수 있는 폴더 경로를 입력하세요.':workflowError(e));}
   });
+  const saveMaskDir=()=>saveFolder('mask_model_dir',maskDir);
   // Verify re-reads readiness: file presence, sizes and the weight file's SHA256 (identification only; nothing is downloaded).
   const verify=()=>run(async()=>{const next=await provider.setup();if(sameProject())setSetup(next);});
   const addExample=(kind:'positive'|'negative',selected=false)=>{
@@ -208,13 +211,16 @@ export const CandidateProviderControls:React.FC<Props>=({disabled,onCreated,onOp
         <button type="button" disabled={busy||running||!maskDir.trim()} onClick={()=>void saveMaskDir()} className={cardButton(view.action==='folder'&&!canPick)}>경로 저장</button>
         {official?.url?<button type="button" onClick={()=>void host.openLink(official.url!)} className={cardButton(view.action==='official')}>공식 모델 페이지 열기</button>:<span className="text-[11px] text-slate-400">{official?.family||'SAM2'} · 공식 배포처의 모델 페이지에서 파일을 받으세요.</span>}
       </div>
-      {foundation?.model_sha256&&<p className="break-all text-[11px]" aria-label="SAM2 파일 식별 정보">model.safetensors · SHA256: {foundation.model_sha256}<span className="block text-slate-400">파일 내용의 식별값입니다. 제공처 진위·모델 구조·품질 승인을 뜻하지 않습니다.</span></p>}
+      {foundation?.model_sha256&&<p className="break-all text-[11px]" aria-label="SAM2 파일 식별 정보">model.safetensors · SHA256: {foundation.model_sha256}<span className="block text-slate-400">{foundation.official_match&&foundation.official_pinned?`공식 고정 판(${foundation.official_pinned.repo_id}@${foundation.official_pinned.revision.slice(0,7)}, ${foundation.official_pinned.license})의 파일과 같습니다. 품질 승인을 뜻하지 않습니다.`:'파일 내용의 식별값입니다. 제공처 진위·모델 구조·품질 승인을 뜻하지 않습니다.'}</span></p>}
       {view.warning&&<p className="text-xs text-amber-200">{view.warning}</p>}
       </div></details>
     </section>
     <details><summary className="cursor-pointer text-cyan-200">텍스트 모델·DINOv3 설정 · {setup?.providers.grounding_dino.ready?'텍스트 모델 준비됨':'텍스트 모델 미설정'}</summary>
-      <div className="mt-2 space-y-2"><button disabled={busy||running} onClick={()=>void chooseModel('model_dir')} className="rounded border border-indigo-600 px-2 py-1">텍스트 모델 폴더 선택</button>
-        <p className="break-all text-[10px] text-slate-400">Grounding DINO: {setup?.configuration.model_dir||'미설정'}</p>
+      <div className="mt-2 space-y-2">{canPick&&<button disabled={busy||running} onClick={()=>void chooseModel('model_dir')} className="rounded border border-indigo-600 px-2 py-1">텍스트 모델 폴더 선택</button>}
+        {/* The typed path is the browser/shared-server way, as for SAM2. */}
+        <label className="block text-[11px]">Grounding DINO 모델 폴더<input aria-label="Grounding DINO 모델 폴더 경로" value={textDir} onChange={e=>setTextDir(e.target.value)} placeholder="config.json, model.safetensors, tokenizer 파일이 있는 폴더" className={`mt-1 w-full ${inputClass}`}/></label>
+        <button type="button" disabled={busy||running||!textDir.trim()} onClick={()=>void saveFolder('model_dir',textDir)} className="rounded border border-indigo-600 px-2 py-1">텍스트 모델 경로 저장</button>
+        <p className="break-all text-[10px] text-slate-400">Grounding DINO: {setup?.configuration.model_dir||'미설정'}{setup?.providers.grounding_dino.official_match?' · 공식 고정 파일과 같음':''}</p>
         <p className="text-amber-200">{setup?.providers.grounding_dino.error}</p>
         <label className="block">DINOv3 checkpoint 경로 (선택)<input aria-label="DINOv3 checkpoint 경로" value={checkpoint} onChange={e=>setCheckpoint(e.target.value)} className={`mt-1 w-full ${inputClass}`}/></label>
         <label className="block">DINOv3 SHA256<input aria-label="DINOv3 checkpoint SHA256" value={checkpointHash} onChange={e=>setCheckpointHash(e.target.value)} className={`mt-1 w-full ${inputClass}`}/></label>

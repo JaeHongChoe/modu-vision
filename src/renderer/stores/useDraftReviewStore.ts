@@ -23,6 +23,11 @@ interface DraftReviewState {
    *  the other closes, so neither covers the other. */
   sidePanel: 'drafts' | 'assist' | null;
   showSidePanel: (panel: 'drafts' | 'assist') => void;
+  /** '모델 보조' asked for from elsewhere (an empty project's 'SAM2 클릭으로 그리기'): step 2 unfolds it for this visit
+   *  even in focus editing, and the panel opens itself and clears the request. */
+  assistRequest: number | null;
+  requestAssist: () => void;
+  clearAssistRequest: () => void;
 }
 
 let lastNonce = 0;
@@ -39,6 +44,9 @@ export const useDraftReviewStore = create<DraftReviewState>((set) => ({
   clearOpenRequest: () => set({ openRequest: null }),
   sidePanel: null,
   showSidePanel: (sidePanel) => set({ sidePanel }),
+  assistRequest: null,
+  requestAssist: () => set({ assistRequest: ++lastNonce }),
+  clearAssistRequest: () => set({ assistRequest: null }),
 }));
 
 export function draftReviewScope(input: {

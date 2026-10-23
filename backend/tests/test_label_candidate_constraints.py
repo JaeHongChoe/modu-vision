@@ -25,3 +25,28 @@ def test_semantic_provider_never_fabricates_without_local_model(tmp_path):
     assert ready['backend']=='grounding_dino'
     Image.new('RGB',(30,30)).save(tmp_path/'image.png')
     with pytest.raises(ValueError): grounded_candidates(tmp_path/'image.png',tmp_path/'missing','scratch',.2,.2)
+
+
+def test_grounding_phrases_are_the_models_dot_separated_english_queries():
+    """Grounding DINO reads "a. b."; the real model returned no box for "scratch, dent" or a phrase without its '.',
+    and its English tokenizer cannot read Korean. Phrases split on commas, periods, semicolons, slashes and lines."""
+    from backend.engine.label_candidate_providers import grounding_phrases
+    assert grounding_phrases('Scratch, dent\nDark  Square.; scratch') == [
+        {'text': 'Scratch', 'query': 'scratch'}, {'text': 'dent', 'query': 'dent'}, {'text': 'Dark Square', 'query': 'dark square'}]
+    assert grounding_phrases('긁힘 / 찍힘, 흠집') == [{'text': '긁힘', 'query': 'scratch'}, {'text': '찍힘', 'query': 'dent'}]
+    with pytest.raises(ValueError, match="'작은 긁힘'을\\(를\\) 영어로 적으세요"):
+        grounding_phrases('scratch, 작은 긁힘')
+    with pytest.raises(ValueError, match='nonempty'):
+        grounding_phrases(' , . ')
+
+
+def test_each_phrase_owns_only_its_own_tokens_in_the_merged_text():
+    from backend.engine.label_candidate_providers import _phrase_token_spans
+
+    class Tokenizer:  # word pieces with character offsets, like a fast BERT tokenizer, plus [CLS]/[SEP]
+        def __call__(self, text, return_offsets_mapping, add_special_tokens):
+            import re
+            return {'offset_mapping': [(0, 0)] + [m.span() for m in re.finditer(r'\w+|\.', text)] + [(0, 0)]}
+    phrases = [{'query': 'dark square'}, {'query': 'dent'}]
+    text = 'dark square. dent.'
+    assert _phrase_token_spans(Tokenizer(), text, phrases) == [[1, 2], [4]]

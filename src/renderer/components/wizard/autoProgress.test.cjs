@@ -221,3 +221,13 @@ test('a flow saved by the run is what step 5 shows: its versions and its model c
   assert.match(studio, /\}, \[folderPath, hasSelectedFolder, contextRevision, verificationRetry, externalSave\]\);/, 'the saved versions');
   assert.match(studio, /verificationRetry, task, isProjectBusy, externalSave\]\);/, 'the model check, so the old model\'s warning does not stay up');
 });
+
+test('an empty project stops at step 2 for its first labels instead of going to step 3 to be sent back', () => {
+  const {decide} = load();
+  const empty = decide(ctx(2, '직접 라벨 달기', 2, {target: 'labeling-canvas', progress: {confirmed: 0, drafts: 0, remaining: 24}}));
+  assert.equal(empty.kind, 'stop');
+  assert.equal(empty.step, 2); assert.equal(empty.target, 'draft-review-queue');
+  assert.match(empty.reason, /아직 라벨이 한 장도 없습니다/);
+  assert.deepEqual(decide(ctx(2, '직접 라벨 달기', 2, {target: 'labeling-canvas', progress: {confirmed: 20, drafts: 0, remaining: 4}})), {kind: 'advance', step: 3},
+    'with labels, the unlabeled rest stays out of training and the run goes on');
+});

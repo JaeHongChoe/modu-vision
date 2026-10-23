@@ -70,6 +70,7 @@ function fixture({viewMode = 'full', stored = null, resizeObserver = true, heigh
     '../../stores/useDatasetStore': {useDatasetStore: () => ({images})},
     '../../stores/useAnnotationStore': {useAnnotationStore: annotation},
     '../../stores/useProjectStore': {useProjectStore: () => ({task: 'classification', isProjectBusy: false, viewMode})},
+    '../../stores/useDraftReviewStore': {useDraftReviewStore: select => select({assistRequest: null})},
     './labelingLayout': layout,
     '../../stores/assistContext': {reportPanelError() {}},
     ...Object.fromEntries(childModules.map(name => [name, stubs])),

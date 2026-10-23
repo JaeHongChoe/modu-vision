@@ -1461,6 +1461,16 @@
       "retained_spec_commit": "0a13b5cd41f9c82771d5219e38547451b5424b49",
       "current_test_source_sha256": "057bde56afa14a1424df6f0cb86239e3940020bc6546ba6b980c69ad56dc6f7e",
       "reason": "Error-class overlay post-release B checks get their own 10 s frames; the old A reply is still released inside its hold frame (CI #411)"
+    },
+    {
+      "receipt": "2026-10-07-app-execution-9b46d692b40828c51716.json",
+      "receipt_sha256": "46df6e0467aaa7351e582e16b5ee6be775c55538635c04117650802673986de8",
+      "execution_source_sha": "0eadf8c9ee87e894597286fdc85bed625771e132",
+      "test": "scripts/e2e/foundation-actual-lifecycle.spec.ts::native authentic SAM2 grounding and DINO examples generate reject reopen and cancel",
+      "recorded_test_source_sha256": "2991c1d2ae7e8e70b3aa622372838f64dd9370c55bb36f98acc14e31c3538ca5",
+      "retained_spec_commit": "e30f2caf2150bb9105d7e3aa0bca53dbc4b10e54",
+      "current_test_source_sha256": "bf99ac666ff0e4fcc0cdd32f5ad39c8c2829b68b45e3dc04e851b97b8604fe18",
+      "reason": "Foundation labeling with the approved official SAM2/Grounding DINO models: phrases read as the model's dot-separated English queries, per-phrase classes, unlabeled-only phrase drafts for an empty project, SAM2 entry in focus mode, batch thread roots, cached model hashes, read-only suggestion listing kept"
     }
   ]
 }

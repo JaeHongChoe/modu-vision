@@ -58,6 +58,8 @@ export const ModelAssistPanel: React.FC = () => {
   const sidePanel = useDraftReviewStore((state) => state.sidePanel);
   useEffect(() => { if (open) useDraftReviewStore.getState().showSidePanel('assist'); }, [open]);
   useEffect(() => { if (sidePanel && sidePanel !== 'assist') setOpen(false); }, [sidePanel]);
+  const assistRequest = useDraftReviewStore((state) => state.assistRequest);
+  useEffect(() => { if (assistRequest) { setOpen(true); useDraftReviewStore.getState().clearAssistRequest(); } }, [assistRequest]);
   const [models, setModels] = useState<LabelSuggestionModel[]>([]);
   const [modelId, setModelId] = useState('');
   const [threshold, setThreshold] = useState(0.5);

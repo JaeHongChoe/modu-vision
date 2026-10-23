@@ -1,6 +1,7 @@
 """Text grounding and image-exemplar inference produce review-only proposals."""
 from __future__ import annotations
 import json
+import threading
 import time
 import uuid
 from pathlib import Path
@@ -19,6 +20,49 @@ from backend.api.routes_dataset_versions import _snapshot,_source_path,_VERSION_
 from backend.engine.annotation_storage import dataset_annotation_dir
 
 router=APIRouter(prefix='/api/label-candidates',tags=['label-candidates'])
+_CLASS_REGISTRY_LOCK=threading.Lock()
+_SAVED_CLASS_CACHE={}
+
+
+def _saved_classes(project,source,fingerprint):
+    """Class names and ids this project's saved labels already use (each Studio label file's shapes and mask classes),
+    read once per dataset state: {casefolded name: (name, id)}."""
+    studio=dataset_annotation_dir(source,Path(project['annotations_dir']),use_scope=False)
+    key=(str(studio),fingerprint)
+    classes=_SAVED_CLASS_CACHE.get(key)
+    if classes is None:
+        classes={}
+        for path in sorted(studio.glob('*.json')) if studio.is_dir() else []:
+            try: data=json.loads(path.read_text(encoding='utf-8'))
+            except (OSError,ValueError): continue
+            rows=[*(data.get('annotations') or []),*(data.get('mask_classes') or [])] if isinstance(data,dict) else []
+            for row in rows:
+                if not isinstance(row,dict): continue
+                name=row.get('label') if 'label' in row else row.get('name'); cid=row.get('category_id',row.get('id'))
+                if isinstance(name,str) and name.strip() and isinstance(cid,int) and 1<=cid<=255: classes.setdefault(name.casefold(),(name,cid))
+        if len(_SAVED_CLASS_CACHE)>=8: _SAVED_CLASS_CACHE.clear()
+        _SAVED_CLASS_CACHE[key]=classes
+    return classes
+
+
+def _new_class_ids(project,labelset_id,names,taken):
+    """Ids for classes a phrase draft names for the first time. They are kept per label set in the project, so every
+    image, batch and restart gives a name the same id, and a new one is the lowest id in 1..255 no class uses."""
+    path=suggestions._proposal_root(project)/'new_classes.json'
+    with _CLASS_REGISTRY_LOCK:
+        try: registry=json.loads(path.read_text(encoding='utf-8')) if path.is_file() else {}
+        except (OSError,ValueError): registry={}
+        table=registry.setdefault(labelset_id,{})
+        used=set(taken)|set(table.values()); result={}; changed=False
+        for name in names:
+            known=next((cid for key,cid in table.items() if key.casefold()==name.casefold()),None)
+            if known is None:
+                known=next((cid for cid in range(1,256) if cid not in used),None)
+                if known is None: raise HTTPException(422,detail='새 클래스 번호(1–255)가 남지 않았습니다. 이 문구를 쓸 기존 클래스를 고르세요.')
+                table[name]=known;used.add(known);changed=True
+            result[name]=known
+        if changed: _write_json(path,registry)
+    return result
 
 class SetupRequest(BaseModel):
     model_config=ConfigDict(extra="forbid")
@@ -138,6 +182,8 @@ def _generate_candidates(req,project,cancel=None,batch_id=None):
     if req.exclude_regions and req.backend != 'foundation':
         raise HTTPException(422,detail='Excluded regions require the foundation mask provider; other providers do not support pixel exclusions')
     if project['task'] not in {'detection','segmentation'}: raise HTTPException(422,detail='Text/exemplar region proposals require detection or segmentation labeling')
+    if not req.label and not (req.backend in ('grounding_dino','foundation') and req.prompt.strip()):
+        raise HTTPException(422,detail='후보 클래스가 비어 있습니다. 클래스 이름을 고르세요.')
     image=suggestions._image_path(project,req.image_path)
     source=_source_path(project)
     metadata=metadata_for_path(Path(project['project_dir']),source,image,Path(project['annotations_dir']))
@@ -214,6 +260,27 @@ def _generate_candidates(req,project,cancel=None,batch_id=None):
     if (suggestions._sha256(image)!=before['image_sha256'] or suggestions._sha256(studio)!=before['studio_sha256']
             or suggestions._sha256(image.with_suffix('.json'))!=before['labelme_sha256'] or suggestions._dataset_fingerprint(project)!=before['dataset_fingerprint']):
         raise HTTPException(409,detail='Image, labels or dataset changed during inference')
+    if req.backend in ('grounding_dino','foundation') and req.prompt.strip() and not req.suggestion_model_id:
+        # A phrase that names a class of this project ("Scratch" for "scratch", "긁힘" for a class 긁힘) labels its draft with
+        # that class, whether the renderer listed it (class_ids) or only saved labels use it. Any other phrase drafts under
+        # the class the person chose, or, when they chose none (label ''), under a new class named as they typed it: an
+        # empty project's first drafts name their classes on purpose. A few-label classifier's own class is never replaced.
+        from backend.engine.label_candidate_providers import grounding_phrases
+        listed={name.casefold():(name,cid) for name,cid in req.class_ids.items()}
+        saved=_saved_classes(project,source,before['dataset_fingerprint'])
+        known=lambda text:listed.get(text.casefold()) or saved.get(text.casefold())
+        unmatched=[] if req.label else [p['text'] for p in grounding_phrases(req.prompt) if not (known(p['text']) or known(p['query']))]
+        new_classes=_new_class_ids(project,labelset_id,unmatched,{cid for _,cid in listed.values()}|{cid for _,cid in saved.values()}) if unmatched else {}
+        for candidate in candidates:
+            grounding=candidate.get('grounding') or (candidate.get('provenance') or {}).get('grounding_phrase')
+            if not grounding: continue
+            match=known(grounding['phrase']) or known(grounding['query'])
+            if match: candidate['annotation'].update(label=match[0],category_id=match[1])
+            elif req.label: candidate['annotation']['label']=req.label
+            else:
+                candidate['annotation'].update(label=grounding['phrase'],category_id=new_classes[grounding['phrase']])
+                candidate.setdefault('provenance',{})['new_class']=True
+            candidate.setdefault('provenance',{})['grounding_phrase']=grounding
     suggestion_id=f'suggestion_{uuid.uuid4().hex[:24]}'
     for index,candidate in enumerate(candidates,1):
         candidate['id']=f'{suggestion_id}_c{index}'; candidate['annotation']['id']=candidate['id']
@@ -235,6 +302,12 @@ def _generate_candidates(req,project,cancel=None,batch_id=None):
 def start_candidate_batch(req:CandidateBatchRequest,request:Request):
     project=dict(get_current_project(request))
     paths=[str(suggestions._image_path(project,path)) for path in req.image_paths]
+    # Phrases the text model cannot read are refused before any image runs, in the words of the refusal itself.
+    phrases=[]
+    if req.backend in ('grounding_dino','foundation') and req.prompt.strip():
+        from backend.engine.label_candidate_providers import grounding_phrases
+        try: phrases=grounding_phrases(req.prompt)
+        except ValueError as exc: raise HTTPException(422,detail=str(exc)) from exc
     baseline=suggestions._dataset_fingerprint(project)
     def worker(job,cancel):
         for index,path in enumerate(paths):
@@ -246,9 +319,14 @@ def start_candidate_batch(req:CandidateBatchRequest,request:Request):
             try: proposal=_generate_candidates(single,project,cancel,job['id'])
             except HTTPException as exc:
                 check_cancel(cancel)
+                # One image the model cannot read (422, 404) does not cost the rest of the folder their drafts, as in the
+                # trained-model batch. A conflict (409: the project, label set, source or model changed) holds for every
+                # remaining image, so it stops the batch, and so does a batch where every image failed.
                 entry.update(status='failed',error=str(exc.detail));job['failed']+=1;job['processed']+=1
+                job.setdefault('error',f'실패한 이미지가 있습니다 · 첫 이유: {exc.detail}')
                 labeling_tasks.write(project,job)
-                raise ValueError(str(exc.detail)) from exc
+                if exc.status_code==409 or job['failed']==len(paths): raise ValueError(str(exc.detail)) from exc
+                continue
             entry.update(status='generated' if proposal['candidates'] else 'zero_candidates',proposal_id=proposal['id'],candidate_count=len(proposal['candidates']))
             job['proposals'].append(proposal['id']);job['generated']+=int(bool(proposal['candidates']))
             job['processed']+=1;job['zero_candidates']+=int(not proposal['candidates'])
@@ -256,7 +334,7 @@ def start_candidate_batch(req:CandidateBatchRequest,request:Request):
     try:
         return labeling_tasks.start(project,'candidate_batch',{'total':len(paths),'processed':0,'generated':0,
             'failed':0,'zero_candidates':0,'proposals':[],'entries':[{'image_path':path,'status':'queued'} for path in paths],
-            'request':req.model_dump(),'review_fingerprint':baseline},worker)
+            'request':req.model_dump(),'review_fingerprint':baseline,'phrases':phrases},worker)
     except ValueError as exc: raise HTTPException(409,detail=str(exc)) from exc
 
 @router.get('/batches')

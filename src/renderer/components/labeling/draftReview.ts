@@ -52,6 +52,11 @@ const STALE_DRAFT_TEXT: Record<string, string> = {
     '초안을 만든 뒤 이 이미지·라벨이나 모델 파일이 바뀌어 채택할 수 없습니다. 이 초안은 거절하고 초안을 새로 만드세요.',
   'Finish or stop active training before accepting labels.': '학습이 진행 중입니다. 학습이 끝나거나 멈춘 뒤 채택하세요.',
   'Select one or more proposal candidates to accept.': '채택할 후보가 없습니다. 후보 없는 초안은 거절하세요.',
+  // Making drafts from a phrase (the empty project's '문구로 초안 만들기') and the model folders it needs.
+  'Choose an existing local model directory': '지정한 경로를 폴더로 찾지 못했습니다. 백엔드가 읽을 수 있는 모델 폴더 경로를 입력하세요.',
+  'A labeling task is already running for this project': '이 프로젝트에서 다른 초안·학습 작업이 진행 중입니다. 끝나거나 멈춘 뒤 다시 시작하세요.',
+  'Enter nonempty object phrases': '찾을 대상을 한 낱말 이상 적으세요(예: scratch, dent).',
+  'Source dataset changed during labeling batch': '초안을 만드는 동안 데이터가 바뀌어 멈췄습니다. 남은 이미지는 다시 시작하면 이어서 만듭니다.',
   // External drafts (SAM2, Grounding DINO, template, VLM, remote) are refused by their own review path.
   'Source labels or dataset changed; generate candidates again': '초안을 만든 뒤 데이터가 바뀌어 이 초안은 채택할 수 없습니다. 이 초안은 거절하고 초안을 새로 만드세요.',
   'Finish or cancel the active labeling task before accepting labels': '라벨 작업이 진행 중입니다. 끝나거나 취소한 뒤 채택하세요.',
@@ -86,9 +91,11 @@ export const DRAFT_SOURCE_TEXT: Record<string, string> = {
   vlm: '이미지 VLM',
   remote: '원격 GPU',
 };
-export function draftSourceText(draft: Pick<LabelSuggestion, 'backend' | 'job_id'> & { model_data_state?: string }): string {
+export function draftSourceText(draft: Pick<LabelSuggestion, 'backend' | 'job_id'> & { model_data_state?: string; prompt?: string }): string {
   const backend = draft.backend || 'trained_model';
-  const name = DRAFT_SOURCE_TEXT[backend] ?? backend;
+  // A phrase draft names its phrase: the text model found the region, SAM2 (when it ran) drew its outline.
+  const phrase = (backend === 'foundation' || backend === 'grounding_dino') && draft.prompt?.trim() ? draft.prompt.trim() : '';
+  const name = phrase ? `${backend === 'foundation' ? '문구 + SAM2' : '문구 초안'} · "${phrase.length > 40 ? `${phrase.slice(0, 40)}…` : phrase}"` : DRAFT_SOURCE_TEXT[backend] ?? backend;
   return draft.model_data_state === 'changed' ? `${name} · ${CHANGED_MODEL_MARK}` : name;
 }
 
@@ -137,6 +144,12 @@ export function adoptable(draft: LabelSuggestion): boolean {
 }
 
 /** The server's refusal in words, plus the data version to restore when a take-back was refused. */
+/** A refusal or batch reason the server gave as plain text, in the panel's words (unknown texts pass through). */
+export function draftRefusalText(text: string): string {
+  const reason = /^(실패한 이미지가 있습니다 · 첫 이유: )(.*)$/s.exec(text);
+  return reason ? `${reason[1]}${STALE_DRAFT_TEXT[reason[2]] ?? reason[2]}` : STALE_DRAFT_TEXT[text] ?? text;
+}
+
 export function draftError(error: unknown): string {
   // The API client throws a structured refusal's detail itself (with its status); a wrapped `detail` is read too.
   const record = error && typeof error === 'object' ? error as { detail?: unknown; backup_version_id?: unknown } : undefined;

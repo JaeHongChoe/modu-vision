@@ -13,6 +13,7 @@ import React, { useEffect, useId, useRef, useState } from 'react';
 import { useDatasetStore } from '../../stores/useDatasetStore';
 import { useAnnotationStore } from '../../stores/useAnnotationStore';
 import { useProjectStore } from '../../stores/useProjectStore';
+import { useDraftReviewStore } from '../../stores/useDraftReviewStore';
 import { LabelingToolbar } from './LabelingToolbar';
 import { CategorySelector } from './CategorySelector';
 import { ClassificationClassPicker } from './ClassificationClassPicker';
@@ -59,6 +60,10 @@ export const LabelingStudio: React.FC = () => {
     '워크플로 영향': <WorkflowImpactPanel />, '모델 보조': <ModelAssistPanel />,
   };
   const folded = (...names: LabelingHelperPanel[]) => focus ? null : names.map(name => <React.Fragment key={name}>{helperPanels[name]}</React.Fragment>);
+  // An empty project's 'SAM2 클릭으로 그리기' unfolds 모델 보조 for this visit without changing the stored focus choice.
+  const assistRequest = useDraftReviewStore((state) => state.assistRequest);
+  const [assistUnfolded, setAssistUnfolded] = useState(false);
+  useEffect(() => { if (assistRequest) setAssistUnfolded(true); }, [assistRequest]);
   // 모두 보기's open helper panels can leave the work area a few pixels tall: the 집중 편집 row then says so and the switch
   // is highlighted, but nothing is folded for the viewer and the panels' layout is untouched. Only shortness matters, so
   // the height is kept clamped at the threshold and resizing a roomy window does not render the screen again.
@@ -141,7 +146,7 @@ export const LabelingStudio: React.FC = () => {
       <CategorySelector />
       {/* Draft review stays visible in focus mode: it is how drafts become labels, not an expert helper. */}
       <DraftReviewQueue />
-      {folded('모델 보조')}
+      {focus && assistUnfolded ? helperPanels['모델 보조'] : folded('모델 보조')}
 
       {/* Center Work Area: 3-Layer Canvas + Mask Controls + Annotation Sidebar */}
       <div ref={workAreaRef} id="labeling-canvas" className="flex-1 flex overflow-hidden relative" data-labeling-work-area>

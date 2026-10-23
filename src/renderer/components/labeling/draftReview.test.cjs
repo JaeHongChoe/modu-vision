@@ -170,6 +170,8 @@ test('every draft names its source, mixed sources get the note, and external ref
   const {draftSourceText, sourcesMixed, draftError, staleBatchRefusal} = helpers();
   assert.equal(draftSourceText({job_id: 'job_1'}), '학습 모델', 'older records without a backend are trained-model drafts');
   assert.equal(draftSourceText({backend: 'foundation', job_id: 'foundation'}), 'SAM2');
+  assert.equal(draftSourceText({backend: 'foundation', job_id: 'foundation', prompt: 'scratch, dent'}), '문구 + SAM2 · "scratch, dent"');
+  assert.equal(draftSourceText({backend: 'grounding_dino', job_id: 'grounding_dino', prompt: ' 긁힘 '}), '문구 초안 · "긁힘"');
   assert.equal(draftSourceText({backend: 'template_match', job_id: 'template_match'}), '예시 템플릿');
   assert.equal(draftSourceText({backend: 'trained_model', job_id: 'job_1', model_data_state: 'changed'}), '학습 모델 · 데이터가 바뀐 뒤 학습한 모델 · 평가 근거 아님',
     'the 2026-10-22 decision\'s full mark');
@@ -324,7 +326,7 @@ function queueFixture({drafts, request = null, models = [], stats = async () => 
     '../../stores/useDraftReviewStore': {draftReviewScope: () => at.scope, useDraftReviewStore: fakeStore(review)},
     '../../stores/workflowEvidence': {bumpWorkflowEvidence() {}, subscribeWorkflowEvidence: () => () => {}},
     '../../stores/assistContext': {reportPanelError() {}},
-    './BulkLabelAssist': {BulkLabelAssist: 'BulkLabelAssist'}, './SuggestionPreview': {SuggestionPreview: 'SuggestionPreview'}, './DraftGrid': {DraftGrid: 'DraftGrid'},
+    './BulkLabelAssist': {BulkLabelAssist: 'BulkLabelAssist'}, './PhraseDraftCreate': {PhraseDraftCreate: 'PhraseDraftCreate'}, './SuggestionPreview': {SuggestionPreview: 'SuggestionPreview'}, './DraftGrid': {DraftGrid: 'DraftGrid'},
     './teamDataWorkflow': {imageLeaseToken: () => undefined}, '../common/Explain': {Explain: 'Explain'},
     './draftReview': helpers(),
   }, 'var window = {innerHeight: 1000, addEventListener() {}, removeEventListener() {}};');

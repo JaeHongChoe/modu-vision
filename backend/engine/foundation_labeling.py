@@ -31,6 +31,13 @@ SAM2_OFFICIAL_REFERENCE = {'family': 'SAM 2.1 (Hugging Face transformers format)
                            'example_repo_id': 'facebook/sam2.1-hiera-tiny',
                            'url': 'https://huggingface.co/facebook/sam2.1-hiera-tiny',
                            'api_docs_url': 'https://huggingface.co/docs/transformers/v4.57.1/model_doc/sam2'}
+# One fixed revision whose facts were read from the hub and checked against downloaded bytes (2026-10-23): a pinned
+# revision cannot change, so its weight file's size, SHA256 and licence are stated for it alone. A folder whose
+# model.safetensors has this digest holds that exact official file; any other folder is only identified by its digest.
+SAM2_OFFICIAL_PINNED = {'repo_id': 'facebook/sam2.1-hiera-tiny', 'revision': 'de431c4043854a71d8101e17995dfe596bf101a5',
+                        'url': 'https://huggingface.co/facebook/sam2.1-hiera-tiny/tree/de431c4043854a71d8101e17995dfe596bf101a5',
+                        'license': 'apache-2.0', 'weights_bytes': 155908064,
+                        'weights_sha256': '48c14467e5cf9e51870511feb72c89688e82dd74523142c0538b663e193ac2a7', 'verified_on': '2026-10-23'}
 
 
 class LabelingCancelled(RuntimeError):
@@ -95,7 +102,8 @@ def cached_file_sha256(path):
     """SHA256 of one file, hashed again only after its size or modification time changes."""
     path = Path(path)
     stat = path.stat()
-    key = (str(path.resolve()), stat.st_size, stat.st_mtime_ns)
+    # ctime and inode change on any rewrite or replacement, even a copy that keeps the old modification time.
+    key = (str(path.resolve()), stat.st_size, stat.st_mtime_ns, stat.st_ctime_ns, stat.st_ino)
     # A local digest, not a second lookup: another request may clear the cache in between.
     digest = _SHA_CACHE.get(key)
     if digest is None:
@@ -198,6 +206,8 @@ def foundation_readiness(setup, device='cpu'):
             'dependency_available': dependency, 'mask_model_dir': directory, 'error': error,
             'state': state, 'expected_files': files, 'missing_files': missing, 'model_type': model_type,
             'weights_check': weights_check, 'model_sha256': sha256, 'official_reference': dict(SAM2_OFFICIAL_REFERENCE),
+            'official_pinned': dict(SAM2_OFFICIAL_PINNED),
+            'official_match': sha256 == SAM2_OFFICIAL_PINNED['weights_sha256'] if sha256 else None,
             'capabilities': ['point_mask', 'box_mask', 'polygon', 'mask', 'text_with_grounding_dino',
                              'positive_negative_with_dinov3', 'batch', 'cancellation', 'few_label_classifier'],
             'limits': 'SAM2 IoU predictions and DINO cosine scores are not calibrated class probabilities. Review every proposed label.'}
@@ -383,6 +393,7 @@ def foundation_candidates(image_path, setup, *, prompt='', label='defect', point
         model = _load_sam2(setup, device)
         grounding = []
         grounding_scores={}
+        grounding_phrases={}
         grounding_receipt={}
         if prompt.strip():
             from backend.engine.label_candidate_providers import grounded_candidates,semantic_readiness,model_directory_hash
@@ -398,7 +409,10 @@ def foundation_candidates(image_path, setup, *, prompt='', label='defect', point
                     box=[max(selected[0],grounded_box[0]),max(selected[1],grounded_box[1]),min(selected[2],grounded_box[2]),min(selected[3],grounded_box[3])]
                     if box[0]>=box[2] or box[1]>=box[3]:continue
                     if points and any(p['label']==1 and not(box[0]<=p['x']<=box[2] and box[1]<=p['y']<=box[3]) for p in points):continue
+                    # Boxes come strongest first; one clipped to the same manual box keeps its first phrase and score.
+                    if tuple(box) in grounding_scores: continue
                     box_prompts.append(box);grounding_scores[tuple(box)]=float(item['confidence'])
+                    if item.get('grounding'): grounding_phrases[tuple(box)]=item['grounding']
         # Image-example searches and trained classifiers use SAM2 grid prompts,
         # never a synthetic region generator. Every output is a model mask.
         prompts = [(points, box) for box in box_prompts] if box_prompts else [(points, None)] if points and not prompt.strip() else []
@@ -425,6 +439,7 @@ def foundation_candidates(image_path, setup, *, prompt='', label='defect', point
             candidate = mask_candidate(mask, score, label, output_geometry, provenance)
             if candidate is None: continue
             if prompt.strip(): candidate['provenance']['score_kind']='minimum_mask_iou_and_grounding_score'
+            if box is not None and tuple(box) in grounding_phrases: candidate['provenance']['grounding_phrase']=grounding_phrases[tuple(box)]
             x1, y1, x2, y2 = candidate['annotation']['bbox']; area = candidate['area']
             if area < min_area or max_area is not None and area > max_area: continue
             if x2-x1 < min_width or max_width is not None and x2-x1 > max_width: continue

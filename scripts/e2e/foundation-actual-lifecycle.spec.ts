@@ -45,7 +45,9 @@ test('native authentic SAM2 grounding and DINO examples generate reject reopen a
   await panel.getByLabel('예시 이미지 선택', {exact: true}).selectOption(fixture.files[2].path);
   await panel.getByLabel('예시 이미지 영역', {exact: true}).fill('0,0,40,30');
   await panel.getByRole('button', {name: 'negative 예시 추가', exact: true}).click();
-  const prompt = '표면의 검은 작은 결함을 찾되 정상 영역은 제외합니다. ' + 'white rectangle. black circle. '.repeat(12);
+  // The text model reads English phrases (a Korean sentence is refused with what to type, see grounding_phrases); the
+  // long original stays stored as typed.
+  const prompt = 'small black defect on the surface. ' + 'white rectangle. black circle. '.repeat(12);
   await panel.getByLabel('텍스트 검출 프롬프트', {exact: true}).fill(prompt);
   await panel.getByLabel('후보 점수', {exact: true}).fill('0');
   await panel.getByLabel('텍스트 점수', {exact: true}).fill('0.1');

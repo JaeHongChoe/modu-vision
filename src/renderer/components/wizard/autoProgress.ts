@@ -48,6 +48,10 @@ export function decide(ctx: Snapshot): AutoDecision {
   if (stage === 2) {
     if (next.target === 'draft-review-queue') return stop(`${ctx.blocker || '초안 검토 대기'} · 초안 채택은 사람이 합니다.`);
     if (status === 'blocked') return stop(`${ctx.blocker || '정답 라벨이 더 필요합니다'} · 정답 라벨은 사람이 그립니다.`);
+    // No image has a label yet: there is nothing to train on, so the run stops here instead of going to step 3 to be sent
+    // back. A person draws the first labels or makes drafts (a phrase, a SAM2 click) and adopts them.
+    if (ctx.progress && 'confirmed' in ctx.progress && ctx.progress.confirmed === 0)
+      return stop("아직 라벨이 한 장도 없습니다. 직접 그리거나 '초안 검토'에서 초안을 만들어 채택하세요(초안 채택은 사람이 합니다).", 2, 'draft-review-queue');
     // Images without a label are left out of training; labelling or drafting them stays the person's choice.
     return { kind: 'advance', step: 3 };
   }

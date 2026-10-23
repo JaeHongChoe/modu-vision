@@ -11,6 +11,7 @@ import { draftReviewScope, useDraftReviewStore } from '../../stores/useDraftRevi
 import { bumpWorkflowEvidence, subscribeWorkflowEvidence } from '../../stores/workflowEvidence';
 import { reportPanelError } from '../../stores/assistContext';
 import { BulkLabelAssist } from './BulkLabelAssist';
+import { PhraseDraftCreate } from './PhraseDraftCreate';
 import type { LabelAssistExecution } from './LabelAssistDeviceSizes';
 import { SuggestionPreview } from './SuggestionPreview';
 import { DraftGrid } from './DraftGrid';
@@ -153,6 +154,8 @@ export const DraftReviewQueue: React.FC = () => {
   const history = useMemo(() => adoptionHistory(drafts).slice(0, 20), [drafts]);
   const selected = drafts.find((draft) => draft.id === selectedId);
   const waiting = pendingImageCount(drafts);
+  // Images whose waiting draft found something; an empty draft does not hold its image back from the next phrase.
+  const pendingImagePaths = useMemo(() => new Set(drafts.filter((draft) => draft.status === 'pending' && draft.candidates.length > 0).map((draft) => draft.image_path)), [drafts]);
   const empty = useMemo(() => emptyPendingDrafts(drafts), [drafts]);
   const picked = pending.filter((draft) => picks.has(draft.id));
   const refusal = multiAdoptionRefusal(picked);
@@ -472,7 +475,11 @@ export const DraftReviewQueue: React.FC = () => {
 
             <section id="draft-create" tabIndex={-1} className="space-y-2 rounded-lg border border-slate-700 bg-[#101722] p-3" aria-label="초안 만들기">
               <h4 className="font-semibold text-slate-100">1. 초안 만들기</h4>
-              {models.length === 0 ? <p className="text-[11px] text-slate-400">이 데이터로 학습을 마친 모델이 없습니다. 몇 장을 직접 라벨한 뒤 3단계에서 학습하면, 남은 이미지의 초안을 만들 수 있습니다.</p> : <>
+              {models.length === 0 ? <>
+                {/* Design 3.3 ③: with no trained model, a phrase drafts the unlabeled images (detection and segmentation). */}
+                {(task === 'detection' || task === 'segmentation') && <PhraseDraftCreate key={scope} task={task} disabled={!!busy || isDirty} pendingImages={pendingImagePaths} onRunningChange={setBatchRunning} />}
+                <p className="text-[11px] text-slate-400">이 데이터로 학습을 마친 모델이 없습니다. 몇 장을 직접 라벨한 뒤 3단계에서 학습하면, 남은 이미지의 초안을 학습한 모델로도 만들 수 있습니다.</p>
+              </> : <>
                 <label className="block text-[11px] text-slate-400">초안을 만들 모델
                   <select aria-label="초안 모델" value={modelId} onChange={(event) => setModelId(event.target.value)} disabled={!!busy || batchRunning} className="mt-1 w-full rounded border border-slate-600 bg-[#1D2938] px-2 py-2 text-xs text-slate-100 disabled:opacity-50">
                     {models.map((model) => <option value={model.job_id} key={model.job_id}>{model.job_id} · {model.task}{model.data_state === 'changed' ? ` · ${CHANGED_MODEL_MARK}` : ''}</option>)}
