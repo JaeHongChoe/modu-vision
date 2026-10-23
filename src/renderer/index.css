@@ -138,6 +138,11 @@ main h1 { font-size: 1.25rem; line-height: 1.625rem; }
 main h2 { font-size: 1.0625rem; line-height: 1.375rem; }
 main h3 { font-size: 0.9375rem; line-height: 1.25rem; }
 
+/* Step 2: a panel opened in the settings strip (the derived image editor, the saved review queue, the simple view's
+   label set) takes the height it needs again and the work area yields, as before the strip; closing it gives the work
+   area its basis back (LabelingStudio, labelingLayout WORK_AREA_BASIS). */
+[data-labeling-panels]:has(details[open]) ~ [data-labeling-work-area] { flex-basis: 0; }
+
 /* Custom Industrial Dark Steel Scrollbar */
 ::-webkit-scrollbar {
   width: 6px;

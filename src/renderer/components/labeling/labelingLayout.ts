@@ -52,6 +52,15 @@ export function focusStatus(focus: boolean): string {
 // area leaves the image at most 176 px and about 145 px clear of both. 모두 보기 at 1440x900 in a classification project
 // left a few pixels.
 export const NARROW_CANVAS_HEIGHT = 240;
+
+// The work area's share before the settings strip (the label set, and in 모두 보기 the derived image, saved queue and
+// workflow impact panels and the specialist note) gets any height: the strip scrolls and gives way first. At 1440x900
+// the rows that stay put (tools, the 집중 편집 row, the team row with the shared editing lock, image review, classes,
+// drafts, model assist) and the filmstrip leave about 310 px, so the drawing area keeps about 248 px (just above
+// NARROW_CANVAS_HEIGHT) and the strip about 60 px, the label set in use. Taller windows give the strip its full height
+// first; the work area grows past this with the window. It is the literal flex-basis in LabelingStudio's work area
+// class (Tailwind needs the literal).
+export const WORK_AREA_BASIS = 248;
 export const NARROW_CANVAS_NOTICE = '그림 영역이 좁습니다 · 집중 편집으로 보조 패널을 접을 수 있습니다';
 
 /** The hint next to 집중 편집 while the open helper panels leave the work area short: '' when focus editing is on, the

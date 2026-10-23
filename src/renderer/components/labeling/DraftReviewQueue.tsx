@@ -17,6 +17,7 @@ import { SuggestionPreview } from './SuggestionPreview';
 import { DraftGrid } from './DraftGrid';
 import { imageLeaseToken } from './teamDataWorkflow';
 import { Explain } from '../common/Explain';
+import { usePopoverRoom } from './popoverRoom';
 import { CHANGED_MODEL_MARK, DRAFT_ORDER_TEXT, MIXED_SOURCE_NOTE, OPEN_REQUEST_MISSING_TEXT, adoptable, adoptionHistory, adoptionLine, adoptionSummary, adoptionTitle, canTakeBack,
   closedDraftText, draftError, draftSourceText, gridPages, modelStats, multiAdoptionRefusal, orderDrafts, pageAdoptionRefusal, pendingImageCount, sourcesMixed, staleBatchRefusal,
   supportLimitsText, thresholdAdvice, topConfidence, defaultChoice, emptyPendingDrafts, unknownClassCandidate, UNKNOWN_CLASS_MARK, type AdoptionResult, type DraftOrder, type ModelAdoptionStats } from './draftReview';
@@ -99,7 +100,6 @@ export const DraftReviewQueue: React.FC = () => {
   const [notice, setNotice] = useState<string | null>(null);
   const [batchRunning, setBatchRunning] = useState(false);
   const [reloads, setReloads] = useState(0);
-  const [room, setRoom] = useState<number>();
   const rowRef = useRef<HTMLDivElement>(null);
   const scope = draftReviewScope({ projectDir, project, task });
   const live = useRef(scope);
@@ -274,22 +274,7 @@ export const DraftReviewQueue: React.FC = () => {
 
   // The panel hangs below its row: keep it within what is still on screen above the step footer, wherever the row is
   // scrolled to, so the adopt and take-back buttons stay reachable.
-  useEffect(() => {
-    if (!open) return;
-    const fit = () => {
-      const row = rowRef.current;
-      if (!row) return;
-      let bottom = window.innerHeight;
-      for (let node = row.parentElement; node; node = node.parentElement) {
-        if (getComputedStyle(node).overflowY !== 'visible') bottom = Math.min(bottom, node.getBoundingClientRect().bottom);
-      }
-      setRoom(Math.max(240, Math.floor(bottom - row.getBoundingClientRect().bottom - 12)));
-    };
-    fit();
-    window.addEventListener('resize', fit);
-    window.addEventListener('scroll', fit, true);
-    return () => { window.removeEventListener('resize', fit); window.removeEventListener('scroll', fit, true); };
-  }, [open]);
+  const room = usePopoverRoom(open, rowRef);
 
   // Opening re-reads the drafts and models, so a model that finished training meanwhile is offered.
   const toggle = () => {

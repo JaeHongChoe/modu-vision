@@ -307,6 +307,8 @@ function loadComponent(file, mocks, prelude = '') {
   return m.exports;
 }
 const icons = new Proxy({}, {get: (_, key) => String(key)});
+// The step-2 popovers' room hook, loaded for real on the same hook runtime (with a `window` for its fit).
+const popoverRoom = runtime => loadComponent('popoverRoom.ts', {react: runtime.react}, 'var window = {innerHeight: 1000, addEventListener() {}, removeEventListener() {}};');
 const row = (id, image, extra = {}) => ({id, status: 'pending', image_path: image, image_id: id, image_width: 100, image_height: 50, created_at: '2026-10-23T00:00:00Z',
   job_id: 'job_b', batch_id: 'batch_1', candidates: [{id: `${id}_c0`, confidence: 0.8, annotation: {type: 'bbox', label: 'defect', bbox: [1, 1, 5, 5]}},
     {id: `${id}_c1`, confidence: 0.6, annotation: {type: 'bbox', label: 'defect', bbox: [6, 6, 9, 9]}}], accepted_candidate_ids: [], ...extra});
@@ -334,7 +336,7 @@ function queueFixture({drafts, request = null, models = [], stats = async () => 
     '../../stores/assistContext': {reportPanelError() {}},
     './BulkLabelAssist': {BulkLabelAssist: 'BulkLabelAssist'}, './PhraseDraftCreate': {PhraseDraftCreate: 'PhraseDraftCreate'}, './SuggestionPreview': {SuggestionPreview: 'SuggestionPreview'}, './DraftGrid': {DraftGrid: 'DraftGrid'},
     './teamDataWorkflow': {imageLeaseToken: () => undefined}, '../common/Explain': {Explain: 'Explain'},
-    './draftReview': helpers(),
+    './draftReview': helpers(), './popoverRoom': popoverRoom(runtime),
   }, 'var window = {innerHeight: 1000, addEventListener() {}, removeEventListener() {}};');
   return {calls, review, at, annotation, settle: cycles => runtime.settle(DraftReviewQueue, cycles)};
 }
@@ -503,7 +505,7 @@ test('모델 보조 hands over the candidates the person kept and marks a model 
     './LabelAssistDeviceSizes': {LabelAssistDeviceSizes: 'LabelAssistDeviceSizes'}, './BulkLabelAssist': {BulkLabelAssist: 'BulkLabelAssist'},
     './KoreanConditionLabeler': {KoreanConditionLabeler: 'KoreanConditionLabeler'}, './CandidateProviderControls': {CandidateProviderControls: 'CandidateProviderControls'},
     '../../services/datasetWorkflow': {datasetWorkflow: {}}, './SuggestionPreview': {SuggestionPreview: 'SuggestionPreview'}, '../common/Explain': {Explain: 'Explain'},
-    './draftReview': helpers(),
+    './draftReview': helpers(), './popoverRoom': popoverRoom(runtime),
   });
   let tree = await runtime.settle(ModelAssistPanel);
   buttonWith(tree, '모델 보조 라벨링 패널').props.onClick(); tree = await runtime.settle(ModelAssistPanel);

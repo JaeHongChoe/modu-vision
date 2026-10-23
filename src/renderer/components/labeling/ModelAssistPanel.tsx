@@ -15,6 +15,7 @@ import type { FoundationProposal } from '../../services/foundationLabelingApi';
 import { datasetWorkflow, type CandidateProposal } from '../../services/datasetWorkflow';
 import { SuggestionPreview } from './SuggestionPreview';
 import { CHANGED_MODEL_MARK, draftError } from './draftReview';
+import { usePopoverRoom } from './popoverRoom';
 import { Explain } from '../common/Explain';
 
 // The server's refusals in the draft queue's words (an older English refusal still reads in Korean).
@@ -48,6 +49,9 @@ export const ModelAssistPanel: React.FC = () => {
   const beginModelAssist = useModelAssistRunStore((state) => state.begin);
   const endModelAssist = useModelAssistRunStore((state) => state.end);
   const [open, setOpen] = useState(false);
+  // The review panel hangs below this row over the canvas: like the draft queue's, it keeps to the room left on screen.
+  const rowRef = useRef<HTMLDivElement>(null);
+  const room = usePopoverRoom(open, rowRef);
   // One right-side popover at a time (see useDraftReviewStore.sidePanel).
   const sidePanel = useDraftReviewStore((state) => state.sidePanel);
   useEffect(() => { if (open) useDraftReviewStore.getState().showSidePanel('assist'); }, [open]);
@@ -203,7 +207,7 @@ export const ModelAssistPanel: React.FC = () => {
   };
 
   return (
-    <div className="relative z-[70] flex h-10 shrink-0 items-center justify-between border-b border-[#2B3547] bg-[#101722] px-4 text-xs text-slate-300">
+    <div ref={rowRef} className="relative z-[70] flex h-10 shrink-0 items-center justify-between border-b border-[#2B3547] bg-[#101722] px-4 text-xs text-slate-300">
       <div className="flex min-w-0 items-center gap-2">
         <Sparkles className="h-4 w-4 text-cyan-400" />
         <span className="font-semibold text-slate-100">모델 보조 라벨링</span>
@@ -215,7 +219,7 @@ export const ModelAssistPanel: React.FC = () => {
       </button>
 
       {open && (
-        <aside className="absolute right-3 top-full z-50 mt-1 flex max-h-[calc(100vh-195px)] w-[520px] max-w-[calc(100vw-24px)] flex-col overflow-hidden rounded-xl border border-slate-600 bg-[#151D2A] shadow-2xl" aria-label="모델 보조 라벨링 검토">
+        <aside style={{ maxHeight: room }} className="absolute right-3 top-full z-50 mt-1 flex max-h-[calc(100vh-195px)] w-[520px] max-w-[calc(100vw-24px)] flex-col overflow-hidden rounded-xl border border-slate-600 bg-[#151D2A] shadow-2xl" aria-label="모델 보조 라벨링 검토">
           <div className="flex items-start justify-between border-b border-slate-700 px-4 py-3">
             <div>
               <h3 className="text-sm font-bold text-white">예측 라벨 검토</h3>

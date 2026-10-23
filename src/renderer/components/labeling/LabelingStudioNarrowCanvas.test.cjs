@@ -31,7 +31,7 @@ const childModules = ['./LabelingToolbar', './CategorySelector', './Classificati
   './SavedReviewQueuePanel', './DicomPanel', './TeamDataPanel', './AnnotationDraftRecovery', './EvidenceEditReturn',
   '../common/WorkflowImpactPanel', '../common/SpecialistFamilyNote'];
 
-function fixture({viewMode = 'full', stored = null, resizeObserver = true, height = 4} = {}) {
+function fixture({viewMode = 'full', stored = null, resizeObserver = true, height = 4, task = 'classification'} = {}) {
   const previous = Object.fromEntries(['localStorage', 'ResizeObserver'].map(name => [name, Object.getOwnPropertyDescriptor(globalThis, name)]));
   const slots = [], pendingEffects = [], writes = [], observers = [];
   let cursor = 0, dirty = false, renders = 0, tree = null;
@@ -69,7 +69,7 @@ function fixture({viewMode = 'full', stored = null, resizeObserver = true, heigh
     react, 'react/jsx-runtime': {jsx: element, jsxs: element, Fragment},
     '../../stores/useDatasetStore': {useDatasetStore: () => ({images})},
     '../../stores/useAnnotationStore': {useAnnotationStore: annotation},
-    '../../stores/useProjectStore': {useProjectStore: () => ({task: 'classification', isProjectBusy: false, viewMode})},
+    '../../stores/useProjectStore': {useProjectStore: () => ({task, isProjectBusy: false, viewMode})},
     '../../stores/useDraftReviewStore': {useDraftReviewStore: select => select({assistRequest: null})},
     './labelingLayout': layout,
     '../../stores/assistContext': {reportPanelError() {}},
@@ -124,6 +124,7 @@ function fixture({viewMode = 'full', stored = null, resizeObserver = true, heigh
     panels: () => find(node => /Panel$/.test(node.type?.displayName ?? '') && !['TeamDataPanel', 'DicomPanel'].includes(node.type.displayName))
       .map(node => node.type.displayName),
     text,
+    tree: () => tree,
     restore() {
       for (const [name, descriptor] of Object.entries(previous)) {
         if (descriptor) Object.defineProperty(globalThis, name, descriptor); else delete globalThis[name];
@@ -150,7 +151,8 @@ test('in 모두 보기 a short work area gets the notice beside 집중 편집 an
     assert.equal(f.observers.length, 1);
     assert.deepEqual(f.observers[0].targets, [f.workArea().props.ref.current]);
     assert.deepEqual(f.writes, []);
-    assert.deepEqual(f.panels(), ['ImageReviewPanel', 'DerivedImagePanel', 'SavedReviewQueuePanel', 'WorkflowImpactPanel', 'ModelAssistPanel']);
+    // The settings strip's panels come first, then the rows whose popovers open over the canvas.
+    assert.deepEqual(f.panels(), ['DerivedImagePanel', 'SavedReviewQueuePanel', 'WorkflowImpactPanel', 'ImageReviewPanel', 'ModelAssistPanel']);
   } finally { f.unmount(); f.restore(); }
 });
 
@@ -190,4 +192,101 @@ test('no notice while focus editing is on (pressed, or the simple view before an
       assert.deepEqual(f.writes, [], label);
     } finally { f.unmount(); f.restore(); }
   }
+});
+
+// 모두 보기 at 1440x900 left the drawing area 67 px under thirteen stacked rows. The settings rows (label set, derived
+// images, saved queue, workflow impact, the specialist note) now scroll in their own strip that gives way first, so the
+// work area keeps WORK_AREA_BASIS; every panel stays open in 모두 보기. The team row (the shared editing lock), the rows
+// whose popovers open over the canvas, the canvas itself and the sidebar sit outside any scroll box, so the lock stays
+// in sight, the popovers are not clipped and wheel zoom, keys and the sidebar's own scrolling behave as before.
+const structure = tree => {
+  const rows = [];
+  const visit = (node, parents) => {
+    if (Array.isArray(node)) { node.forEach(child => visit(child, parents)); return; }
+    if (!node || typeof node !== 'object') return;
+    rows.push({node, parents});
+    visit(node.props.children, [...parents, node]);
+  };
+  visit(tree, []);
+  const named = name => rows.filter(row => row.node.type?.displayName === name);
+  const scrolls = row => row.parents.filter(parent => /\boverflow-(y-)?(auto|scroll)\b/.test(parent.props.className ?? ''));
+  // The nearest host element around a row (the folded panels sit in a keyed Fragment).
+  const host = row => [...row.parents].reverse().find(parent => typeof parent.type === 'string');
+  return {rows, named, scrolls, host};
+};
+
+test('in 모두 보기 the settings rows scroll in a strip that gives way first, and the canvas keeps its basis', () => {
+  const f = fixture({height: 600});
+  try {
+    f.flush();
+    const {rows, named, scrolls, host} = structure(f.tree());
+    const [strip] = rows.filter(row => 'data-labeling-panels' in row.node.props);
+    assert.equal(strip.node.props.className, 'min-h-10 flex-[0_100_auto] overflow-y-auto overscroll-y-contain');
+    const inStrip = rows.filter(row => row.parents.includes(strip.node) && row.node.type?.displayName).map(row => row.node.type.displayName);
+    assert.deepEqual(inStrip, ['LabelSetBar', 'DerivedImagePanel', 'SavedReviewQueuePanel', 'WorkflowImpactPanel']);
+    for (const name of ['TeamDataPanel', 'ImageReviewPanel', 'DraftReviewQueue', 'ModelAssistPanel', 'CategorySelector', 'LabelingCanvas', 'AnnotationList', 'ImageFilmstrip']) {
+      const [row] = named(name);
+      assert.ok(row, name);
+      assert.deepEqual(scrolls(row), [], `${name} is outside any scroll box`);
+    }
+    for (const name of ['TeamDataPanel', 'ImageReviewPanel', 'DraftReviewQueue', 'ModelAssistPanel', 'CategorySelector']) {
+      assert.equal(host(named(name)[0]).props.className, 'shrink-0', `${name} sits in the group that never shrinks`);
+    }
+    assert.equal(host(named('ImageFilmstrip')[0]).props.className, 'shrink-0');
+    assert.equal(f.workArea().props.className, `flex-[1_1_${layout.WORK_AREA_BASIS}px] flex overflow-hidden relative`);
+    assert.ok(named('LabelingCanvas')[0].parents.includes(f.workArea()) && named('AnnotationList')[0].parents.includes(f.workArea()));
+    assert.ok(layout.WORK_AREA_BASIS > layout.NARROW_CANVAS_HEIGHT, 'the basis clears the narrow notice');
+    const spec = fs.readFileSync(path.resolve(directory, '../../../../scripts/e2e/service-labeling-focus.spec.ts'), 'utf8');
+    assert.match(spec, new RegExp(`const WORK_AREA_BASIS = ${layout.WORK_AREA_BASIS};`), 'the browser spec measures against the same basis');
+  } finally { f.unmount(); f.restore(); }
+});
+
+test('focus editing keeps the label set in the strip and the team row in sight, and folds the rest', () => {
+  const f = fixture({height: 600, stored: '1'});
+  try {
+    f.flush();
+    const {rows, named, scrolls} = structure(f.tree());
+    const [strip] = rows.filter(row => 'data-labeling-panels' in row.node.props);
+    const inStrip = rows.filter(row => row.parents.includes(strip.node) && row.node.type?.displayName).map(row => row.node.type.displayName);
+    assert.deepEqual(inStrip, ['LabelSetBar']);
+    assert.deepEqual(scrolls(named('TeamDataPanel')[0]), []);
+  } finally { f.unmount(); f.restore(); }
+});
+
+test('in a detection project the specialist note sits at the end of the strip', () => {
+  const f = fixture({height: 600, task: 'detection'});
+  try {
+    f.flush();
+    const {rows} = structure(f.tree());
+    const [strip] = rows.filter(row => 'data-labeling-panels' in row.node.props);
+    const inStrip = rows.filter(row => row.parents.includes(strip.node) && row.node.type?.displayName).map(row => row.node.type.displayName);
+    assert.deepEqual(inStrip, ['LabelSetBar', 'DerivedImagePanel', 'SavedReviewQueuePanel', 'WorkflowImpactPanel', 'SpecialistFamilyNote']);
+  } finally { f.unmount(); f.restore(); }
+});
+
+// An editor opened in the strip (a <details>: the derived image editor, the saved queue, the simple view's label set)
+// would otherwise be seen through the strip's few dozen pixels; while one is open the work area yields as before.
+test('a panel opened in the strip takes the height back from the work area', () => {
+  const css = fs.readFileSync(path.resolve(directory, '../../index.css'), 'utf8');
+  assert.match(css, /\[data-labeling-panels\]:has\(details\[open\]\) ~ \[data-labeling-work-area\] \{ flex-basis: 0; \}/);
+  const f = fixture({height: 600});
+  try {
+    f.flush();
+    const {rows} = structure(f.tree());
+    const [strip] = rows.filter(row => 'data-labeling-panels' in row.node.props);
+    const siblings = strip.parents.at(-1).props.children.flat().filter(child => child && typeof child === 'object');
+    assert.ok(siblings.indexOf(strip.node) < siblings.indexOf(f.workArea()), 'the strip comes before the work area under the same parent');
+  } finally { f.unmount(); f.restore(); }
+});
+
+test('Tailwind emits the strip and work area classes', async () => {
+  const postcss = require('postcss'), tailwind = require('tailwindcss');
+  const config = require(path.resolve(__dirname, '../../../../tailwind.config.js'));
+  const raw = `<div class="min-h-10 flex-[0_100_auto] overflow-y-auto overscroll-y-contain flex-[1_1_${layout.WORK_AREA_BASIS}px] shrink-0"></div>`;
+  const {css} = await postcss([tailwind({...config, content: [{raw, extension: 'html'}]})]).process('@tailwind utilities;', {from: undefined});
+  for (const selector of ['.min-h-10', '.flex-\\[0_100_auto\\]', '.overflow-y-auto', '.overscroll-y-contain', `.flex-\\[1_1_${layout.WORK_AREA_BASIS}px\\]`, '.shrink-0']) {
+    assert.ok(css.includes(selector + ' '), `${selector} is emitted`);
+  }
+  assert.match(css, /\.flex-\\\[0_100_auto\\\] \{\s*flex: 0 100 auto/);
+  assert.match(css, new RegExp(`\\.flex-\\\\\\[1_1_${layout.WORK_AREA_BASIS}px\\\\\\] \\{\\s*flex: 1 1 ${layout.WORK_AREA_BASIS}px`));
 });

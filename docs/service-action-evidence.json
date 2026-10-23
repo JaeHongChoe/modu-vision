@@ -29,7 +29,7 @@
     "src/renderer/components/common/EvidenceImageViewer.tsx": "99a32cf293009b767ea5e98922a44498c4a008580ea033a97aa7b25c179c8892",
     "src/renderer/components/labeling/EvidenceEditReturn.tsx": "485980f5f259f304f3b836c64c83fc2ae14f3ccb20a9273354cc738b52048ac9",
     "src/renderer/components/labeling/CandidateProviderControls.tsx": "7da675c75fe197f6c3d19f456385cf323ccc27977bfce821ca804a59a9dd0a3b",
-    "src/renderer/components/labeling/ModelAssistPanel.tsx": "37542a187f01e4829ce801f8a0612c1e6808b159540b24a4bf2f6683c46bcfb6",
+    "src/renderer/components/labeling/ModelAssistPanel.tsx": "b7889bc91b61057548481f4934f4d0a8fd696fa9e768f2be82b0623379647369",
     "src/renderer/components/inference/RuntimeOptimizationPanel.tsx": "d8713031d956f86361455fe2aff1e5442a7d93e3ca585acd7317126ede63d076",
     "src/renderer/components/inference/PackageLibraryPanel.tsx": "e6eaa53f27415cd1be5e10e5b620565762bd43bdd4f3265d4ea33d5fc000b3b8",
     "src/renderer/components/runtime/RuntimeServicePanel.tsx": "8e6f6defd490e4a055a09f143da98f3b2d1c8cd33c3e869ab08c49b8090d5144",
