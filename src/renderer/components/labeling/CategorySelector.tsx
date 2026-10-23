@@ -42,7 +42,7 @@ export const CategorySelector: React.FC = () => {
   };
 
   return (
-    <div className="bg-slate-950 border-b border-slate-800 px-4 py-2 flex items-center space-x-2 overflow-x-auto select-none">
+    <div data-surface="bar" className="bg-slate-950 border-b border-slate-800 px-4 py-2 flex items-center space-x-2 overflow-x-auto select-none">
       {classification && (
         <span className="mr-2 shrink-0 text-[11px] text-slate-500" title="이미지 분류의 정답은 위 '이 이미지의 클래스'에서 정합니다.">
           영역 라벨 (패치 분류·근거용)

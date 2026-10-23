@@ -193,7 +193,7 @@ def test_mutated_foundation_feature_weights_block_review(workspace,monkeypatch,t
     weights.write_bytes(b'changed feature bytes')
     reviewed=client.post('/api/label-suggestions/'+proposal['id']+'/review',json={
         'decision':'accept','candidate_ids':[proposal['candidates'][0]['id']]})
-    assert reviewed.status_code==409
+    assert reviewed.status_code==409 and reviewed.json()['detail']==routes._PROVENANCE_CHANGED_AT_REVIEW
 
 
 def test_setup_readiness_names_the_blocker_and_the_files_the_loader_expects(workspace,monkeypatch,tmp_path):

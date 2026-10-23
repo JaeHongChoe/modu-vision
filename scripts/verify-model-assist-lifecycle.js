@@ -40,7 +40,7 @@ function mount() {
     './LabelAssistDeviceSizes': { LabelAssistDeviceSizes: 'LabelAssistDeviceSizes' },
     './KoreanConditionLabeler': { KoreanConditionLabeler: 'KoreanConditionLabeler' },
     './SuggestionPreview': { SuggestionPreview: 'SuggestionPreview' },
-    './draftReview': { CHANGED_MODEL_MARK: '데이터가 바뀐 뒤 학습한 모델 · 평가 근거 아님' },
+    './draftReview': { CHANGED_MODEL_MARK: '데이터가 바뀐 뒤 학습한 모델 · 평가 근거 아님', draftError: (error) => error instanceof Error ? error.message : '요청을 처리하지 못했습니다.' },
     '../common/Explain': { Explain: 'Explain' },
   };
   const filename = path.resolve(__dirname, '../src/renderer/components/labeling/ModelAssistPanel.tsx');

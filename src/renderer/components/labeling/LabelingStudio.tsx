@@ -108,7 +108,7 @@ export const LabelingStudio: React.FC = () => {
       {/* Top Action Toolbar */}
       <LabelingToolbar classification={projectTask === 'classification'} />
       <EvidenceEditReturn />
-      <div className="flex items-center justify-end gap-2 border-b border-slate-800 px-3 py-0.5 text-[11px] text-slate-400">
+      <div data-surface="bar" className="flex items-center justify-end gap-2 border-b border-slate-800 px-3 py-0.5 text-[11px] text-slate-400">
         {focus && <span>{focusStatus(focus)}</span>}
         {/* One line that never adds height to the row (it would take it from the canvas). */}
         {narrowNotice && <span id={narrowNoticeId} role="status" title={narrowNotice} className="min-w-0 truncate text-amber-200">{narrowNotice}</span>}

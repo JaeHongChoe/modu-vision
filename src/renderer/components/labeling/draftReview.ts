@@ -44,10 +44,15 @@ export function adoptionHistory(drafts: LabelSuggestion[]): LabelSuggestion[] {
 }
 
 // The server's refusals of a draft that no longer matches the data, said with what to do next. The checks stay on the
-// server; only their words change here.
+// server; only their words change here. The server now answers in Korean; the English keys stay for drafts and batch
+// records saved before that.
+const DATA_CHANGED_TEXT = '초안을 만든 뒤 데이터가 바뀌어(직접 고쳐 저장한 라벨 등) 이 초안은 채택할 수 없습니다. 이 초안은 거절해 정리하고 남은 이미지의 초안을 새로 만드세요. 같은 모델로도 만들 수 있습니다(데이터가 바뀐 뒤 학습한 모델로 표시).';
 const STALE_DRAFT_TEXT: Record<string, string> = {
-  'Training dataset fingerprint changed after proposal generation. Generate again.':
-    '초안을 만든 뒤 데이터가 바뀌어(직접 고쳐 저장한 라벨 등) 이 초안은 채택할 수 없습니다. 이 초안은 거절해 정리하고 남은 이미지의 초안을 새로 만드세요. 같은 모델로도 만들 수 있습니다(데이터가 바뀐 뒤 학습한 모델로 표시).',
+  'Training dataset fingerprint changed after proposal generation. Generate again.': DATA_CHANGED_TEXT,
+  // The server's Korean ends at the action; the panel adds that the same model can draft again.
+  '초안을 만든 뒤 데이터가 바뀌어(직접 고쳐 저장한 라벨 등) 이 초안은 채택할 수 없습니다. 이 초안은 거절해 정리하고 남은 이미지의 초안을 새로 만드세요.': DATA_CHANGED_TEXT,
+  'The project identity, task, source, or checkpoint, or the labels or split, changed during this batch.':
+    '일괄 초안을 만드는 동안 프로젝트·작업 종류·데이터 폴더·모델 파일이나 라벨·분할이 바뀌어 멈췄습니다. 남은 이미지는 일괄 초안을 다시 시작해 만드세요.',
   'Image, labels, or checkpoint changed after proposal generation. Generate again.':
     '초안을 만든 뒤 이 이미지·라벨이나 모델 파일이 바뀌어 채택할 수 없습니다. 이 초안은 거절하고 초안을 새로 만드세요.',
   'Finish or stop active training before accepting labels.': '학습이 진행 중입니다. 학습이 끝나거나 멈춘 뒤 채택하세요.',
@@ -176,9 +181,10 @@ export function multiAdoptionRefusal(selected: LabelSuggestion[]): string | null
   return null;
 }
 
-/** The server refuses the rest of a batch with this once its data changed; the loop stops there. */
+/** The server refuses the rest of a batch with this once its data changed; the loop stops there. The English pair is
+ *  what the server said before its refusals moved to Korean; a changed image or model file does not stop the loop. */
 export function staleBatchRefusal(error: unknown): boolean {
-  return /fingerprint changed|labels or dataset changed/i.test(workflowError(error));
+  return /fingerprint changed|labels or dataset changed|^초안을 만든 뒤 데이터가 바뀌어/i.test(workflowError(error));
 }
 
 export interface AdoptionResult { draft: LabelSuggestion; adopted: number; error?: string }

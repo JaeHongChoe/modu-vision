@@ -64,11 +64,11 @@ export const LabelSetBar: React.FC<{ compact?: boolean; collapsed?: boolean }> =
 
   if (!project) return null;
   const active = sets.find((item) => item.id === project.active_labelset_id);
-  if (collapsed) return <details className="border-b border-[#34465B] bg-[#101D2C] px-4 py-1 text-slate-200">
+  if (collapsed) return <details data-surface="bar" className="border-b border-[#34465B] bg-[#101D2C] px-4 py-1 text-slate-200">
     <summary className="cursor-pointer text-xs text-slate-300">라벨 세트: <span className="font-semibold text-slate-100">{active?.name || '기본 라벨'}</span> <span className="text-slate-500">({project.task === 'classification' ? '바꾸거나 새로 만들기' : '바꾸거나 새로 만들기 · 클래스 이름 변경'})</span></summary>
     <LabelSetBar compact={compact} />
   </details>;
-  return <div className={`border-b border-[#34465B] bg-[#101D2C] px-4 ${compact ? 'py-1' : 'py-2.5'} text-slate-200`}>
+  return <div data-surface="bar" className={`border-b border-[#34465B] bg-[#101D2C] px-4 ${compact ? 'py-1' : 'py-2.5'} text-slate-200`}>
     <div className="flex flex-wrap items-center gap-2.5">
       <span className="flex items-center gap-1.5 text-[10px] font-semibold tracking-[0.12em] text-cyan-300"><Layers3 className="h-3.5 w-3.5" /> 라벨 세트</span>
       <label className="sr-only" htmlFor="active-labelset">활성 레이블셋</label>

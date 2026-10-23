@@ -343,8 +343,10 @@ export const DatasetStudio: React.FC = () => {
         </div>
       )}
       {/* Top Action Toolbar (Dark Steel Panel #131822) */}
-      <div className="p-3 bg-[#131822] border-b border-[#2B3547] flex items-center justify-between">
-        <div className="flex items-center space-x-3">
+      <div className="p-3 bg-[#131822] border-b border-[#2B3547] flex items-center justify-between gap-3">
+        {/* 모두 보기 at 1024px: the left group is wider than the window, so it scrolls sideways and the right group (집중 보기,
+            the split counts) stays on screen. Only there: the simple view's 더 보기 menu below would be clipped by it. */}
+        <div className={`flex items-center space-x-3${full ? ' min-w-0 overflow-x-auto whitespace-nowrap' : ''}`}>
           <button
             onClick={handleSelectFolder}
             disabled={isLoading}
@@ -432,14 +434,16 @@ export const DatasetStudio: React.FC = () => {
         </div>
 
         {/* The focus switch and the Partition Status Annunciator (the gallery tabs below show the same counts in the
-            simple view). One group on this row that never wraps: a new row would take its height from the body. */}
-        <div className="flex shrink-0 items-center gap-2">
-          {focus && <span title={foldStatus} className="min-w-0 max-w-sm truncate text-[11px] text-slate-400"><span className="xl:hidden">{FOLD_STATUS_SHORT}</span><span className="hidden xl:inline">{foldStatus}</span></span>}
-          {narrowNotice && <span id={NARROW_NOTICE_ID} role="status" title={narrowNotice} className="min-w-0 max-w-xs truncate text-[11px] text-amber-200"><span className="xl:hidden">{NARROW_BODY_NOTICE_SHORT}</span><span className="hidden xl:inline">{narrowNotice}</span></span>}
+            simple view). One group on this row that never wraps or shrinks: a new row would take its height from the body.
+            The fold/narrow hints start at width 0 and take only the row's leftover room (full text in the title, and the
+            switch turns amber), so on a short row the left group's buttons keep their room. */}
+        <div className="flex shrink-0 grow items-center justify-end gap-2">
+          {focus && <span title={foldStatus} className="w-0 min-w-0 max-w-sm grow truncate text-right text-[11px] text-slate-400"><span className="xl:hidden">{FOLD_STATUS_SHORT}</span><span className="hidden xl:inline">{foldStatus}</span></span>}
+          {narrowNotice && <span id={NARROW_NOTICE_ID} role="status" title={narrowNotice} className="w-0 min-w-0 max-w-xs grow truncate text-right text-[11px] text-amber-200"><span className="xl:hidden">{NARROW_BODY_NOTICE_SHORT}</span><span className="hidden xl:inline">{narrowNotice}</span></span>}
           <button type="button" aria-pressed={focus} onClick={toggleFocus} title={focus ? '위쪽 패널을 다시 보입니다' : '위쪽 패널을 접어 목록과 갤러리를 키웁니다'}
             aria-describedby={narrowNotice ? NARROW_NOTICE_ID : undefined}
             className={`shrink-0 rounded border px-2 py-0.5 text-[11px] hover:bg-slate-800 ${focus ? 'border-cyan-500 bg-cyan-950/40 text-cyan-100' : narrowNotice ? 'border-amber-400 bg-amber-950/50 text-amber-100' : 'border-slate-600 text-slate-200'}`}>{FOCUS_SWITCH_NAME}</button>
-          <div className={`${simpleView ? 'hidden' : 'flex'} items-center space-x-3 bg-[#0B0E14] px-3 py-1.5 rounded-[4px] border border-[#2B3547] text-xs font-mono tabular-nums`}>
+          <div className={`${simpleView ? 'hidden' : 'flex'} shrink-0 items-center space-x-3 bg-[#0B0E14] px-3 py-1.5 rounded-[4px] border border-[#2B3547] text-xs font-mono tabular-nums`}>
             <div className="flex items-center space-x-1.5">
               <span className="w-2 h-2 rounded-full bg-[#3B82F6]" />
               <span className="text-slate-400">{language === 'ko' ? '학습' : 'Train'}:</span>
@@ -466,7 +470,7 @@ export const DatasetStudio: React.FC = () => {
         {/* Left Stats, Split Calibrator & Class Distribution Panel. A fixed width that never shrinks: `w-84` is not on
             this Tailwind 3 scale, so the sidebar took its longest unwrapped line (a checklist warning is ~2000px) and
             left the gallery zero pixels wide, off screen, with only the first cards inside its lazy-read margin. */}
-        <aside className="w-[21rem] shrink-0 bg-[#131822] border-r border-[#2B3547] p-3 flex flex-col space-y-3 overflow-y-auto">
+        <aside data-surface="page" className="w-[21rem] shrink-0 bg-[#131822] border-r border-[#2B3547] p-3 flex flex-col space-y-3 overflow-y-auto">
           {/* Before-training checks from the import result: what will block training or step 4, and what is weak. */}
           {hasSelectedFolder && checklist.length > 0 && (
             <section aria-label="학습 전 점검" className="rounded-[4px] border border-[#2B3547] bg-[#1A212E] p-2.5 text-xs">

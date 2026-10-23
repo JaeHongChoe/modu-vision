@@ -53,7 +53,7 @@ export const ImageFilmstrip: React.FC<{ compact?: boolean }> = ({ compact = fals
   }, [advanceRequest]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
-    <div data-labeling-filmstrip className={`${compact ? 'h-8' : 'h-20'} bg-slate-950 border-t border-slate-800 px-3 flex items-center space-x-2 select-none`}>
+    <div data-labeling-filmstrip data-surface="bar" className={`${compact ? 'h-8' : 'h-20'} bg-slate-950 border-t border-slate-800 px-3 flex items-center space-x-2 select-none`}>
       <button
         onClick={goBack}
         disabled={!canGoBack}

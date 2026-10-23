@@ -114,7 +114,7 @@ class CandidateRequest(BaseModel):
     @classmethod
     def validate_class_ids(cls,value):
         if any(not name.strip() or not 1<=cid<=255 for name,cid in value.items()) or len(set(value.values()))!=len(value):
-            raise ValueError('Candidate class mapping requires unique IDs 1–255 and nonempty names')
+            raise ValueError('후보 클래스 번호는 1–255에서 서로 달라야 하고 클래스 이름은 비어 있으면 안 됩니다. 클래스 목록을 확인한 뒤 다시 만드세요.')
         return value
 
 class CandidateBatchRequest(CandidateRequest):
@@ -125,7 +125,7 @@ class CandidateBatchRequest(CandidateRequest):
 def _setup(project):
     path=Path(project['project_dir'])/'semantic_labeling.json'
     try: return json.loads(path.read_text(encoding='utf-8')) if path.is_file() else {}
-    except (OSError,ValueError): raise HTTPException(422,detail='Invalid semantic labeling configuration')
+    except (OSError,ValueError): raise HTTPException(422,detail='모델 보조 설정 파일을 읽을 수 없습니다. 프로젝트 폴더의 semantic_labeling.json을 고치거나 다른 곳으로 옮긴 뒤 설정을 다시 저장하세요.')
 
 def _can_configure_vlm(request):
     account=getattr(request.state,'account_user',None)
@@ -134,7 +134,13 @@ def _can_configure_vlm(request):
     # shared account store exists without an authenticated account context.
     return getattr(request.app.state,'accounts',None) is None
 
-def _verify_provider_provenance(proposal):
+_PROVENANCE_CHANGED_AT_REVIEW='초안을 만든 모델 파일이 바뀌어 채택할 수 없습니다. 거절하고 초안을 새로 만드세요.'
+_PROVENANCE_CHANGED_WHILE_DRAFTING='초안을 만드는 동안 모델 파일이 바뀌었거나 읽을 수 없게 되었습니다. 모델 폴더를 확인한 뒤 초안을 다시 만드세요.'
+
+
+def _verify_provider_provenance(proposal,refusal=_PROVENANCE_CHANGED_AT_REVIEW):
+    """Refuse (409) when a model file a draft's candidates name changed. The English reasons stay internal (the exception
+    chain); the person reads ``refusal``: the review's by default, the drafting one while candidates are being made."""
     try:
         for candidate in proposal['candidates']:
             provenance=candidate.get('provenance',{})
@@ -146,7 +152,7 @@ def _verify_provider_provenance(proposal):
             grounding=provenance.get('grounding',{})
             if grounding.get('model_dir') and model_directory_hash(grounding['model_dir'])!=grounding['model_sha256']:
                 raise ValueError('Text grounding model changed')
-    except (OSError,ValueError) as exc: raise HTTPException(409,detail=str(exc)) from exc
+    except (OSError,ValueError) as exc: raise HTTPException(409,detail=refusal) from exc
 
 @router.get('/setup')
 def get_setup(request:Request):
@@ -158,7 +164,7 @@ def get_setup(request:Request):
 
 @router.put('/setup')
 def save_setup(req:SetupRequest,request:Request):
-    if 'vlm' in req.model_fields_set and not _can_configure_vlm(request):raise HTTPException(403,detail='Server administrator permission required to configure VLM provider endpoint and credential reference')
+    if 'vlm' in req.model_fields_set and not _can_configure_vlm(request):raise HTTPException(403,detail='VLM 연결 주소와 인증 정보 참조는 서버 관리자만 설정할 수 있습니다. 서버 관리자에게 설정을 요청하세요.')
     project=get_current_project(request); config=_setup(project)
     for field in req.model_fields_set:
         value=getattr(req,field)
@@ -168,7 +174,7 @@ def save_setup(req:SetupRequest,request:Request):
             except ValueError as exc:raise HTTPException(422,detail=str(exc)) from exc
         if field.endswith('_dir') and value:
             directory=Path(value).expanduser().resolve()
-            if not directory.is_dir(): raise HTTPException(422,detail='Choose an existing local model directory')
+            if not directory.is_dir(): raise HTTPException(422,detail='지정한 경로를 폴더로 찾지 못했습니다. 백엔드가 읽을 수 있는 모델 폴더 경로를 입력하세요.')
             value=str(directory)
         config[field]=value
     _write_json(Path(project['project_dir'])/'semantic_labeling.json',config)
@@ -180,8 +186,8 @@ def generate_candidates(req:CandidateRequest,request:Request):
 
 def _generate_candidates(req,project,cancel=None,batch_id=None):
     if req.exclude_regions and req.backend != 'foundation':
-        raise HTTPException(422,detail='Excluded regions require the foundation mask provider; other providers do not support pixel exclusions')
-    if project['task'] not in {'detection','segmentation'}: raise HTTPException(422,detail='Text/exemplar region proposals require detection or segmentation labeling')
+        raise HTTPException(422,detail='제외 영역은 SAM2 마스크 초안에서만 쓸 수 있습니다. 제외 영역을 빼거나 SAM2로 초안을 만드세요.')
+    if project['task'] not in {'detection','segmentation'}: raise HTTPException(422,detail='영역 초안(문구·예시·SAM2·VLM)은 검출·분할 프로젝트에서만 만들 수 있습니다. 분류·이상 탐지는 직접 라벨을 달거나 학습한 모델로 초안을 만드세요.')
     if not req.label and not (req.backend in ('grounding_dino','foundation') and req.prompt.strip()):
         raise HTTPException(422,detail='후보 클래스가 비어 있습니다. 클래스 이름을 고르세요.')
     image=suggestions._image_path(project,req.image_path)
@@ -192,7 +198,7 @@ def _generate_candidates(req,project,cancel=None,batch_id=None):
             'studio_sha256':suggestions._sha256(studio),'dataset_fingerprint':suggestions._dataset_fingerprint(project)}
     labelset_id=project.get('active_labelset_id','default')
     if req.labelset_id is not None and req.labelset_id!=labelset_id or req.labelset_version is not None and req.labelset_version!=before['dataset_fingerprint']:
-        raise HTTPException(409,detail='Source label set or version changed; refresh before generating')
+        raise HTTPException(409,detail='화면에 보이는 라벨 세트·데이터가 최신이 아닙니다. 화면을 새로고침한 뒤 초안을 다시 만드세요.')
     details={}
     try:
         if req.backend=='grounding_dino':
@@ -200,13 +206,13 @@ def _generate_candidates(req,project,cancel=None,batch_id=None):
             if not readiness['ready']: raise HTTPException(422,detail=readiness['error'])
             signature=model_directory_hash(directory)
             candidates=grounded_candidates(image,directory,req.prompt,req.threshold,req.text_threshold,device=req.device,cancel=cancel)
-            if model_directory_hash(directory)!=signature: raise HTTPException(409,detail='Semantic model changed during inference')
+            if model_directory_hash(directory)!=signature: raise HTTPException(409,detail='초안을 만드는 동안 텍스트 검출 모델 파일이 바뀌었습니다. 변경이 끝난 뒤 초안을 다시 만드세요.')
             details={'model_dir':directory,'checkpoint_sha256':signature,'prompt':req.prompt,'text_threshold':req.text_threshold,
                      'support_limits':readiness['limits']}
         elif req.backend=='vlm':
             from backend.engine.korean_condition_vlm import candidates as vlm_candidates,LIMITS
             setup=_setup(project).get('vlm')
-            if req.output_geometry!='bbox':raise ValueError('Configured VLM supports bounding-box candidates; choose bbox output')
+            if req.output_geometry!='bbox':raise ValueError('VLM은 사각형(bbox) 후보만 만듭니다. 출력 형태를 bbox로 고르세요.')
             examples={kind:[{**e.model_dump(),'image_path':str(suggestions._image_path(project,e.image_path)),'sha256':suggestions._sha256(suggestions._image_path(project,e.image_path))} for e in getattr(req,kind)] for kind in ('positive_examples','negative_examples')}
             candidates=vlm_candidates(image,setup,prompt=req.prompt,label=req.label,threshold=req.threshold,max_candidates=req.max_candidates,cancel=cancel,**examples)
             details={'vlm_setup':setup,'prompt':req.prompt,'positive_examples':examples['positive_examples'],'negative_examples':examples['negative_examples'],'support_limits':LIMITS}
@@ -234,10 +240,10 @@ def _generate_candidates(req,project,cancel=None,batch_id=None):
                      'suggestion_checkpoint_sha256':suggestion_model['checkpoint_sha256'] if suggestion_model else None,
                      'support_limits':foundation_readiness(setup)['limits']}
         else:
-            if not req.exemplar_path: raise HTTPException(422,detail='Select an exemplar image from the current dataset')
+            if not req.exemplar_path: raise HTTPException(422,detail='예시 이미지가 없습니다. 현재 데이터에서 예시 이미지를 고르세요.')
             exemplar=suggestions._image_path(project,req.exemplar_path); exemplar_hash=suggestions._sha256(exemplar)
             candidates=template_candidates(image,exemplar,req.label,req.threshold,req.max_candidates,req.exemplar_roi)
-            if suggestions._sha256(exemplar)!=exemplar_hash: raise HTTPException(409,detail='Exemplar changed during inference')
+            if suggestions._sha256(exemplar)!=exemplar_hash: raise HTTPException(409,detail='초안을 만드는 동안 예시(템플릿) 이미지가 바뀌었습니다. 변경이 끝난 뒤 초안을 다시 만드세요.')
             details={'exemplar_path':str(exemplar),'exemplar_sha256':exemplar_hash,'exemplar_roi':req.exemplar_roi,
                      'support_limits':'OpenCV TM_CCOEFF_NORMED; exact scale and orientation only. No semantic classification; human review required.'}
     except (ValueError,OSError,RuntimeError,ImportError) as exc: raise HTTPException(422,detail=str(exc)) from exc
@@ -247,19 +253,19 @@ def _generate_candidates(req,project,cancel=None,batch_id=None):
     check_cancel(cancel)
     from backend.engine.project_labelsets import load_labelsets
     if not suggestions._project_binding_is_current(project) or load_labelsets(Path(project['project_dir']))['active_id']!=labelset_id:
-        raise HTTPException(409,detail='Project task, source or label set changed during inference')
+        raise HTTPException(409,detail='초안을 만드는 동안 작업 종류나 데이터 폴더, 라벨 세트가 바뀌었습니다. 지금 프로젝트를 확인한 뒤 초안을 다시 만드세요.')
     if req.backend=='vlm':
-        if _setup(project).get('vlm')!=details['vlm_setup']:raise HTTPException(409,detail='VLM configuration changed during inference')
+        if _setup(project).get('vlm')!=details['vlm_setup']:raise HTTPException(409,detail='초안을 만드는 동안 VLM 설정이 바뀌었습니다. 설정을 확인한 뒤 초안을 다시 만드세요.')
         for example in details['positive_examples']+details['negative_examples']:
-            if file_sha256(example['image_path'])!=example['sha256']:raise HTTPException(409,detail='VLM image example changed during inference')
+            if file_sha256(example['image_path'])!=example['sha256']:raise HTTPException(409,detail='초안을 만드는 동안 VLM 예시 이미지가 바뀌었습니다. 변경이 끝난 뒤 초안을 다시 만드세요.')
     if req.backend=='foundation':
-        if _setup(project)!=details['foundation_setup']:raise HTTPException(409,detail='Foundation setup changed during inference')
-        _verify_provider_provenance({'candidates':candidates})
+        if _setup(project)!=details['foundation_setup']:raise HTTPException(409,detail='초안을 만드는 동안 모델 보조 설정이 바뀌었습니다. 설정을 확인한 뒤 초안을 다시 만드세요.')
+        _verify_provider_provenance({'candidates':candidates},_PROVENANCE_CHANGED_WHILE_DRAFTING)
         for example in details['positive_examples']+details['negative_examples']:
-            if file_sha256(example['image_path'])!=example['sha256']:raise HTTPException(409,detail='Image example changed during inference')
+            if file_sha256(example['image_path'])!=example['sha256']:raise HTTPException(409,detail='초안을 만드는 동안 예시 이미지가 바뀌었습니다. 변경이 끝난 뒤 초안을 다시 만드세요.')
     if (suggestions._sha256(image)!=before['image_sha256'] or suggestions._sha256(studio)!=before['studio_sha256']
             or suggestions._sha256(image.with_suffix('.json'))!=before['labelme_sha256'] or suggestions._dataset_fingerprint(project)!=before['dataset_fingerprint']):
-        raise HTTPException(409,detail='Image, labels or dataset changed during inference')
+        raise HTTPException(409,detail='초안을 만드는 동안 이 이미지·라벨이나 데이터가 바뀌었습니다. 변경이 끝난 뒤 초안을 다시 만드세요.')
     if req.backend in ('grounding_dino','foundation') and req.prompt.strip() and not req.suggestion_model_id:
         # A phrase that names a class of this project ("Scratch" for "scratch", "긁힘" for a class 긁힘) labels its draft with
         # that class, whether the renderer listed it (class_ids) or only saved labels use it. Any other phrase drafts under
@@ -314,7 +320,7 @@ def start_candidate_batch(req:CandidateBatchRequest,request:Request):
             check_cancel(cancel)
             entry=job['entries'][index]
             entry['status']='running';labeling_tasks.write(project,job)
-            if suggestions._dataset_fingerprint(project)!=baseline: raise ValueError('Source dataset changed during labeling batch')
+            if suggestions._dataset_fingerprint(project)!=baseline: raise ValueError('초안을 만드는 동안 데이터가 바뀌어 멈췄습니다. 남은 이미지는 다시 시작하면 이어서 만듭니다.')
             single=CandidateRequest.model_validate({**req.model_dump(),'image_path':path})
             try: proposal=_generate_candidates(single,project,cancel,job['id'])
             except HTTPException as exc:
@@ -344,54 +350,54 @@ def list_candidate_batches(request:Request):
 @router.get('/batches/{batch_id}')
 def get_candidate_batch(batch_id:str,request:Request):
     try: return labeling_tasks.read(get_current_project(request),batch_id)
-    except FileNotFoundError as exc: raise HTTPException(404,detail='Labeling batch not found') from exc
+    except FileNotFoundError as exc: raise HTTPException(404,detail='그 일괄 초안 기록을 찾을 수 없습니다. 목록을 새로고침한 뒤 다시 고르세요.') from exc
     except ValueError as exc: raise HTTPException(422,detail=str(exc)) from exc
 
 @router.post('/batches/{batch_id}/cancel')
 def cancel_candidate_batch(batch_id:str,request:Request):
     try: return labeling_tasks.cancel(get_current_project(request),batch_id)
-    except FileNotFoundError as exc: raise HTTPException(404,detail='Labeling batch not found') from exc
+    except FileNotFoundError as exc: raise HTTPException(404,detail='그 일괄 초안 기록을 찾을 수 없습니다. 목록을 새로고침한 뒤 다시 고르세요.') from exc
     except ValueError as exc: raise HTTPException(422,detail=str(exc)) from exc
 
 
 def review_external_proposal(project,proposal,req):
     image=suggestions._image_path(project,proposal['image_path']); source=_source_path(project)
-    if proposal['task']!=project['task']: raise HTTPException(409,detail='Project task changed')
+    if proposal['task']!=project['task']: raise HTTPException(409,detail='작업 종류가 바뀌어 이 초안은 채택할 수 없습니다. 거절하세요.')
     studio=dataset_annotation_dir(image.parent,Path(project['annotations_dir']),use_scope=False)
     json_path=studio/f'{image.stem}.json';mask_path=studio/'masks'/f'{image.stem}.png'
     batch=labeling_tasks.read(project,proposal['batch_id']) if proposal.get('batch_id') else None
-    if labeling_tasks.active(project): raise HTTPException(409,detail='Finish or cancel the active labeling task before accepting labels')
+    if labeling_tasks.active(project): raise HTTPException(409,detail='라벨 작업이 진행 중입니다. 끝나거나 취소한 뒤 채택하세요.')
     if proposal.get('labelset_id',project.get('active_labelset_id','default'))!=project.get('active_labelset_id','default'):
-        raise HTTPException(409,detail='Source label set changed')
+        raise HTTPException(409,detail='라벨 세트가 바뀌어 이 초안은 채택할 수 없습니다. 거절하세요.')
     expected_fingerprint=batch['review_fingerprint'] if batch else proposal['dataset_fingerprint']
     if (suggestions._sha256(image)!=proposal['image_sha256'] or suggestions._sha256(json_path)!=proposal['studio_sha256']
             or suggestions._sha256(image.with_suffix('.json'))!=proposal['labelme_sha256'] or suggestions._dataset_fingerprint(project)!=expected_fingerprint):
-        raise HTTPException(409,detail='Source labels or dataset changed; generate candidates again')
+        raise HTTPException(409,detail='초안을 만든 뒤 데이터가 바뀌어 이 초안은 채택할 수 없습니다. 이 초안은 거절하고 초안을 새로 만드세요.')
     if proposal['backend']=='template_match':
-        if suggestions._sha256(suggestions._image_path(project,proposal['exemplar_path']))!=proposal['exemplar_sha256']: raise HTTPException(409,detail='Exemplar changed')
+        if suggestions._sha256(suggestions._image_path(project,proposal['exemplar_path']))!=proposal['exemplar_sha256']: raise HTTPException(409,detail='예시(템플릿) 이미지가 바뀌어 이 초안은 채택할 수 없습니다. 거절하고 초안을 새로 만드세요.')
     elif proposal['backend']=='vlm':
-        if _setup(project).get('vlm')!=proposal['vlm_setup']:raise HTTPException(409,detail='VLM configuration changed')
+        if _setup(project).get('vlm')!=proposal['vlm_setup']:raise HTTPException(409,detail='VLM 설정이 바뀌어 이 초안은 채택할 수 없습니다. 거절하고 초안을 새로 만드세요.')
         for example in proposal['positive_examples']+proposal['negative_examples']:
-            if suggestions._sha256(suggestions._image_path(project,example['image_path']))!=example['sha256']:raise HTTPException(409,detail='VLM image example changed')
+            if suggestions._sha256(suggestions._image_path(project,example['image_path']))!=example['sha256']:raise HTTPException(409,detail='VLM 예시 이미지가 바뀌어 이 초안은 채택할 수 없습니다. 거절하고 초안을 새로 만드세요.')
     elif proposal['backend']=='foundation':
-        if _setup(project)!=proposal['foundation_setup']: raise HTTPException(409,detail='Foundation provider setup changed')
+        if _setup(project)!=proposal['foundation_setup']: raise HTTPException(409,detail='모델 보조 설정이 바뀌어 이 초안은 채택할 수 없습니다. 거절하고 초안을 새로 만드세요.')
         for example in proposal['positive_examples']+proposal['negative_examples']:
-            if suggestions._sha256(suggestions._image_path(project,example['image_path']))!=example['sha256']: raise HTTPException(409,detail='Image example changed')
+            if suggestions._sha256(suggestions._image_path(project,example['image_path']))!=example['sha256']: raise HTTPException(409,detail='예시 이미지가 바뀌어 이 초안은 채택할 수 없습니다. 거절하고 초안을 새로 만드세요.')
         _verify_provider_provenance(proposal)
         if proposal.get('suggestion_model_id'):
             from backend.engine.feature_labeling_jobs import load_feature_model
             try:
                 if load_feature_model(project,proposal['suggestion_model_id'])['checkpoint_sha256']!=proposal['suggestion_checkpoint_sha256']:
                     raise ValueError('Trained feature model checkpoint changed')
-            except (OSError,ValueError) as exc:raise HTTPException(409,detail='Trained feature model became unavailable or changed') from exc
-    elif model_directory_hash(proposal['model_dir'])!=proposal['checkpoint_sha256']: raise HTTPException(409,detail='Semantic model changed')
+            except (OSError,ValueError) as exc:raise HTTPException(409,detail='특징 모델이 바뀌거나 없어져 이 초안은 채택할 수 없습니다. 거절하고 초안을 새로 만드세요.') from exc
+    elif model_directory_hash(proposal['model_dir'])!=proposal['checkpoint_sha256']: raise HTTPException(409,detail='초안을 만든 모델 파일이 바뀌어 채택할 수 없습니다. 거절하고 초안을 새로 만드세요.')
     selected=set(req.candidate_ids);available={c['id'] for c in proposal['candidates']}
-    if not selected or not selected<=available: raise HTTPException(422,detail='Select proposal candidates to adopt')
+    if not selected or not selected<=available: raise HTTPException(422,detail='채택할 후보가 없습니다. 후보 없는 초안은 거절하세요.')
     from backend.api.routes_training import training_job_manager
-    if training_job_manager.get_active_job() is not None: raise HTTPException(409,detail='Finish training before adopting labels')
+    if training_job_manager.get_active_job() is not None: raise HTTPException(409,detail='학습이 진행 중입니다. 학습이 끝나거나 멈춘 뒤 채택하세요.')
     existing=routes_annotation.get_annotations(image.stem,file_path=str(image)).get('annotations',[])
     current=metadata_for_path(Path(project['project_dir']),source,image,Path(project['annotations_dir']))
-    if suggestions._changed_since_draft(current,proposal): raise HTTPException(409,detail='Another reviewer changed this image; generate again')
+    if suggestions._changed_since_draft(current,proposal): raise HTTPException(409,detail='다른 검토자가 이 이미지를 바꿨습니다. 이 초안은 거절하고 초안을 새로 만드세요.')
     backup=_snapshot(project,source,f'후보 채택 전 · {image.name}',req.actor,'auto_backup')
     previous_json=json_path.read_bytes() if json_path.exists() else None; previous_mask=mask_path.read_bytes() if mask_path.exists() else None
     try:

@@ -5,6 +5,7 @@ import { AsyncAction } from '../common/AsyncAction';
 import { useWorkflowReadiness } from './useWorkflowReadiness';
 import { DataChangeNotice } from './DataChangeNotice';
 import { focusWorkflowTarget, progressLine, type WorkflowStep } from './workflowReadiness';
+import { openUnlabeledImage } from '../labeling/unlabeledImage';
 import { assistPanelErrors, subscribeAssistContext } from '../../stores/assistContext';
 import { AUTO_TITLE, AutoProgressDialog, useAutoProgressStore } from './AutoProgressDialog';
 import { useAssistantStore } from '../../stores/useAssistantStore';
@@ -34,7 +35,8 @@ export const WizardFooter = () => {
   const action=async()=>{
     if(readiness.nextAction.kind==='refresh'){refresh();return;}
     if(readiness.nextAction.kind==='details'){setExpanded(true);return;}
-    await setStep(readiness.nextAction.step);focusWorkflowTarget(readiness.nextAction.target);
+    // '직접 라벨 달기' on a labelled image goes to the first image still without a label (its edits are saved first).
+    await setStep(readiness.nextAction.step);if(readiness.nextAction.target==='labeling-canvas')await openUnlabeledImage();focusWorkflowTarget(readiness.nextAction.target);
   };
   const ko=language==='ko';
   const labels=ko?{ready:'입력 준비됨',blocked:'다음 할 일',checking:'확인 중',unknown:'확인 필요'}:{ready:'Inputs ready',blocked:'Next to do',checking:'Checking',unknown:'Needs a check'};

@@ -1,12 +1,17 @@
 import React, { useEffect, useState } from 'react';
 import { useAnnotationStore } from '../../stores/useAnnotationStore';
 import { useProjectStore } from '../../stores/useProjectStore';
+import { useDraftReviewStore } from '../../stores/useDraftReviewStore';
 import { datasetWorkflow, workflowError, type ReviewState } from '../../services/datasetWorkflow';
 const states: Record<ReviewState,string> = { unworked: '미작업', needs_review: '검토 필요', approved: '승인됨' };
 export const ImageReviewPanel: React.FC = () => {
   const { metadata, currentImage, isDirty, isSaving, reviewerName, setReviewerName, setMetadata, loadAnnotationsForCurrent, teamReviewEnabled } = useAnnotationStore();
   const projectDir = useProjectStore(s => s.projectDir);
   const [open,setOpen] = useState(false); const [busy,setBusy] = useState(false); const [error,setError] = useState('');
+  // Step 2's right-side popovers and this sheet open one at a time (useDraftReviewStore.sidePanel).
+  const sidePanel = useDraftReviewStore((state) => state.sidePanel);
+  useEffect(() => { if (open) useDraftReviewStore.getState().showSidePanel('review'); }, [open]);
+  useEffect(() => { if (sidePanel && sidePanel !== 'review') setOpen(false); }, [sidePanel]);
   const [product,setProduct] = useState(''); const [lot,setLot] = useState(''); const [group,setGroup] = useState(''); const [tags,setTags] = useState('');
   useEffect(() => { setProduct(metadata?.product || '');setLot(metadata?.lot || '');setGroup(metadata?.group || '');setTags(metadata?.tags.join(', ') || '');setError(''); },[metadata?.revision,currentImage?.file_path,projectDir]);
   const save = async (state?: ReviewState) => {

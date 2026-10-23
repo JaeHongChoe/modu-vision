@@ -7,7 +7,7 @@ export const SimpleViewFold: React.FC<{ label: string; hint?: string; children: 
   const full = useProjectStore((state) => state.viewMode) === 'full';
   if (full) return <>{children}</>;
   return (
-    <details className="border-b border-[#2B3547] bg-[#0E121A] px-4 py-1.5 text-xs text-slate-300">
+    <details data-surface="bar" className="border-b border-[#2B3547] bg-[#0E121A] px-4 py-1.5 text-xs text-slate-300">
       <summary className="cursor-pointer select-none">
         <span className="font-semibold text-slate-200">{label}</span>
         {hint && <span className="ml-2 text-slate-500">{hint}</span>}

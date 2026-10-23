@@ -1,4 +1,5 @@
 import {useEffect,useRef,useState} from 'react';
+import {useStepSheetStore} from '../../stores/useStepSheetStore';
 import {dataWorkbench} from '../../services/dataWorkbench';
 import type {CaptureVersion} from '../../services/captureIntake';
 import {workflowError} from '../../services/datasetWorkflow';
@@ -6,6 +7,10 @@ import {workflowError} from '../../services/datasetWorkflow';
 const button='rounded border border-cyan-800 px-3 py-2 text-cyan-200 disabled:opacity-40';
 export function DerivedDatasetPanel({sourceDatasetPath,contextKey,onUseSource}:{sourceDatasetPath:string;contextKey:string;onUseSource:(source:string)=>Promise<void>}) {
  const [open,setOpen]=useState(false),[versions,setVersions]=useState<CaptureVersion[]>([]),[busy,setBusy]=useState(false),[error,setError]=useState('');
+ // One step-1 sheet at a time (useStepSheetStore).
+ const shownSheet=useStepSheetStore(state=>state.open);
+ useEffect(()=>{if(open)useStepSheetStore.getState().show('derived');},[open]);
+ useEffect(()=>{if(open&&shownSheet&&shownSheet!=='derived')setOpen(false);},[shownSheet]);
  const generation=useRef(0);
  useEffect(()=>{generation.current++;setVersions([]);setError('');setBusy(false);},[contextKey,sourceDatasetPath]);
  const refresh=async()=>{const started=generation.current;try{const value=await dataWorkbench.derivedAdoptions();if(started===generation.current)setVersions(value.versions);}catch(cause){if(started===generation.current)setError(workflowError(cause));}};

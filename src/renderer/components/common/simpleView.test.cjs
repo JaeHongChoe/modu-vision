@@ -210,3 +210,23 @@ test('step 5 in the simple view: the shared buttons, one main action per tab, an
  assert.match(studio,/<FlowDraftControls simple=\{simpleView\}/);assert.match(draft,/className=\{simple\?'workspace-button':/);
  assert.match(studio,/<FlowEvaluationPanel embedded simple=\{simpleView\}/,'the evaluation panel folds its pickers and picks its one main action');
 });
+
+test('the simple view gives the bands above a work area one panel tone and the work surfaces one page tone, in both themes',()=>{
+ const css=read('src/renderer/index.css');
+ assert.match(css,/html\[data-view="simple"\] \[data-surface="bar"\] \{ background-color: var\(--color-panel\); \}/);
+ assert.match(css,/html\[data-view="simple"\] \[data-surface="page"\] \{ background-color: var\(--color-chassis\); \}/);
+ assert.ok(css.indexOf("@import './styles/theme-light.css'")<css.indexOf('[data-surface="bar"]'),'after theme-light, so they win at equal weight');
+ assert.match(read('src/renderer/styles/theme-light.css'),/--color-chassis: #F8FAFC; --color-panel: #FFFFFF;/);
+ const bars=['src/renderer/components/labeling/LabelingStudio.tsx','src/renderer/components/labeling/LabelSetBar.tsx','src/renderer/components/labeling/TeamDataPanel.tsx',
+  'src/renderer/components/labeling/ClassificationClassPicker.tsx','src/renderer/components/labeling/CategorySelector.tsx','src/renderer/components/labeling/DraftReviewQueue.tsx',
+  'src/renderer/components/labeling/ImageFilmstrip.tsx','src/renderer/components/common/SimpleViewFold.tsx','src/renderer/components/dataset/DatasetStatisticsPanel.tsx'];
+ for(const file of bars)assert.match(read(file),/data-surface="bar"/,file);
+ assert.equal((read('src/renderer/components/labeling/LabelSetBar.tsx').match(/data-surface="bar"/g)||[]).length,2,'folded and open label set rows');
+ for(const file of ['src/renderer/components/dataset/DatasetStudio.tsx','src/renderer/components/labeling/AnnotationList.tsx'])assert.match(read(file),/data-surface="page"/,file);
+});
+
+test('the specialist-family note reads as one line + 자세히 in the simple view and keeps its way to step 3',()=>{
+ const note=read('src/renderer/components/common/SpecialistFamilyNote.tsx');
+ assert.match(note,/if \(useProjectStore\(state => state\.viewMode\) === 'simple'\) return <div role="note"[^>]*>\s*<Explain text=\{TEXT\[step\]\}/);
+ assert.equal((note.match(/>3단계 작업대로<\/button>/g)||[]).length,2,'both views keep the way to step 3');
+});

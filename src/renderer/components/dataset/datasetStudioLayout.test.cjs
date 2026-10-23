@@ -5,7 +5,7 @@ const postcss=require('postcss'),tailwind=require('tailwindcss');
 // the sidebar grew to its longest unwrapped line and the gallery beside it was left zero pixels wide.
 test('the step-1 sidebar keeps a fixed width that Tailwind emits and never shrinks, so the gallery keeps its room',async()=>{
  const studio=fs.readFileSync(path.join(__dirname,'DatasetStudio.tsx'),'utf8');
- const aside=studio.match(/Main Studio Body[\s\S]*?<aside className="([^"]+)"/);assert.ok(aside,'the step-1 sidebar is found');
+ const aside=studio.match(/Main Studio Body[\s\S]*?<aside (?:data-surface="page" )?className="([^"]+)"/);assert.ok(aside,'the step-1 sidebar is found');
  const classes=aside[1].split(/\s+/).filter(Boolean);
  const config=require(path.resolve(__dirname,'../../../../tailwind.config.js'));
  const {css}=await postcss([tailwind({...config,content:[{raw:`<aside class="${aside[1]}"></aside>`,extension:'html'}]})]).process('@tailwind utilities;',{from:undefined});
@@ -36,4 +36,24 @@ test('only the simple view folds the step-1 panels by itself; the full view wait
  assert.match(studio,/const full = useProjectStore\(state => state\.viewMode\) === 'full';/);
  assert.match(studio,/const focus = focusChoice \?\? \(autoFolded && !full\);/);
  assert.match(studio,/const foldStatus = focusChoice === null && autoFolded && !full \? AUTO_FOLD_STATUS : focusStatus\(focus\);/);
+});
+
+// 5.4-3: in 모두 보기 at 1024px the step-1 toolbar's left group was wider than the window and pushed 집중 보기 and the split
+// counts past the edge. It now scrolls sideways there, its buttons keeping one line (squeezed, 합성 데이터 생성기 wrapped
+// to three lines and the row grew to 105 px). The fold/narrow hints start at width 0 and take only the leftover room
+// (at their text width they pushed 데이터 버전 out of view at 1440x900); 집중 보기 and the counts never shrink; the
+// simple view keeps its menu.
+test('the step-1 toolbar keeps its right group on screen in the full view by letting the left group scroll',async()=>{
+ const studio=fs.readFileSync(path.join(__dirname,'DatasetStudio.tsx'),'utf8');
+ const toolbar=studio.slice(studio.indexOf('Top Action Toolbar'));
+ assert.match(toolbar,/<div className="p-3 bg-\[#131822\] border-b border-\[#2B3547\] flex items-center justify-between gap-3">/);
+ assert.match(toolbar,/<div className=\{`flex items-center space-x-3\$\{full \? ' min-w-0 overflow-x-auto whitespace-nowrap' : ''\}`\}>/);
+ assert.match(toolbar,/<div className="flex shrink-0 grow items-center justify-end gap-2">\s*\{focus && <span title=\{foldStatus\}[^\n]*\n\s*\{narrowNotice && <span id=\{NARROW_NOTICE_ID\}[^\n]*\n\s*<button type="button" aria-pressed=\{focus\}/);
+ assert.match(toolbar,/<span title=\{foldStatus\} className="w-0 min-w-0 max-w-sm grow truncate text-right /);
+ assert.match(toolbar,/role="status" title=\{narrowNotice\} className="w-0 min-w-0 max-w-xs grow truncate text-right /);
+ assert.match(toolbar,/aria-pressed=\{focus\} onClick=\{toggleFocus\}[\s\S]{0,300}className=\{`shrink-0 rounded border/);
+ assert.match(toolbar,/\$\{simpleView \? 'hidden' : 'flex'\} shrink-0 items-center space-x-3/);
+ const config=require(path.resolve(__dirname,'../../../../tailwind.config.js'));
+ const {css}=await postcss([tailwind({...config,content:[{raw:'<div class="gap-3 min-w-0 overflow-x-auto whitespace-nowrap shrink-0 grow w-0 justify-end text-right"></div>',extension:'html'}]})]).process('@tailwind utilities;',{from:undefined});
+ for(const name of ['gap-3','min-w-0','overflow-x-auto','whitespace-nowrap','shrink-0','grow','w-0','justify-end','text-right'])assert.ok(css.includes('.'+name+' '),`${name} is emitted`);
 });

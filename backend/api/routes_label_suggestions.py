@@ -150,14 +150,14 @@ def list_feature_suggestion_models(request: Request):
 def get_feature_training(job_id: str, request: Request):
     from backend.engine import labeling_tasks
     try: return labeling_tasks.read(get_current_project(request),job_id)
-    except FileNotFoundError as exc: raise HTTPException(404,detail='Feature training job not found') from exc
+    except FileNotFoundError as exc: raise HTTPException(404,detail='특징 학습 작업을 찾을 수 없습니다. 작업 목록을 새로고침한 뒤 다시 고르세요.') from exc
     except ValueError as exc: raise HTTPException(422,detail=str(exc)) from exc
 
 @router.post('/feature-train/{job_id}/cancel')
 def cancel_feature_training(job_id: str, request: Request):
     from backend.engine import labeling_tasks
     try: return labeling_tasks.cancel(get_current_project(request),job_id)
-    except FileNotFoundError as exc: raise HTTPException(404,detail='Feature training job not found') from exc
+    except FileNotFoundError as exc: raise HTTPException(404,detail='특징 학습 작업을 찾을 수 없습니다. 작업 목록을 새로고침한 뒤 다시 고르세요.') from exc
     except ValueError as exc: raise HTTPException(422,detail=str(exc)) from exc
 
 
@@ -225,14 +225,14 @@ def _image_path(project: Dict[str, Any], requested: str) -> Path:
     source = _source_path(project)
     requested_path = Path(requested).expanduser()
     if not requested_path.is_absolute():
-        raise HTTPException(status_code=422, detail="Image path must be absolute.")
+        raise HTTPException(status_code=422, detail="이미지 경로가 전체 경로(절대 경로)가 아닙니다. 이미지 목록에서 이미지를 다시 고르세요.")
     # A symlinked image within the imported tree is allowed, while arbitrary
     # paths outside its visible dataset hierarchy are not.
     candidate = Path(os.path.abspath(requested_path))
     if not candidate.is_relative_to(source) or candidate.suffix.lower() not in SUPPORTED_IMAGE_EXTENSIONS:
-        raise HTTPException(status_code=422, detail="Image is outside the active dataset.")
+        raise HTTPException(status_code=422, detail="이미지가 현재 데이터 폴더 밖에 있거나 지원하지 않는 형식입니다. 현재 데이터의 이미지 목록에서 다시 고르세요.")
     if not candidate.is_file():
-        raise HTTPException(status_code=404, detail="Image is unavailable.")
+        raise HTTPException(status_code=404, detail="이미지 파일을 찾을 수 없습니다. 이미지 목록을 새로고침한 뒤 다시 고르세요.")
     return candidate
 
 
@@ -240,7 +240,7 @@ def _proposal_root(project: Dict[str, Any], *, create: bool = True) -> Path:
     """The project's suggestion folder; a read (create=False) never makes it, so listing leaves the project unchanged."""
     root = Path(project["project_dir"]) / "label_suggestions"
     if root.is_symlink():
-        raise HTTPException(status_code=422, detail="Suggestion directory cannot be a symbolic link.")
+        raise HTTPException(status_code=422, detail="초안 폴더가 바로가기(링크)로 되어 있어 쓸 수 없습니다. 프로젝트 폴더의 label_suggestions를 실제 폴더로 바꾸세요.")
     if create:
         root.mkdir(parents=True, exist_ok=True)
     return root
@@ -248,7 +248,7 @@ def _proposal_root(project: Dict[str, Any], *, create: bool = True) -> Path:
 
 def _proposal_path(project: Dict[str, Any], suggestion_id: str, *, create: bool = True) -> Path:
     if not _SUGGESTION_ID.fullmatch(suggestion_id):
-        raise HTTPException(status_code=422, detail="Invalid suggestion ID.")
+        raise HTTPException(status_code=422, detail="초안 ID 형식이 올바르지 않습니다. 초안 목록에서 다시 고르세요.")
     return _proposal_root(project, create=create) / f"{suggestion_id}.json"
 
 
@@ -257,12 +257,12 @@ def _read_proposal(project: Dict[str, Any], suggestion_id: str) -> Dict[str, Any
     try:
         value = json.loads(path.read_text(encoding="utf-8"))
         if not isinstance(value, dict) or value.get("id") != suggestion_id or value.get("project_id") != project["id"]:
-            raise ValueError("proposal identity mismatch")
+            raise ValueError('ID나 프로젝트가 맞지 않음')
         return value
     except FileNotFoundError as exc:
-        raise HTTPException(status_code=404, detail="Suggestion not found.") from exc
+        raise HTTPException(status_code=404, detail="초안을 찾을 수 없습니다. 초안 목록을 새로고침한 뒤 다시 고르세요.") from exc
     except (OSError, ValueError) as exc:
-        raise HTTPException(status_code=422, detail=f"Invalid suggestion: {exc}") from exc
+        raise HTTPException(status_code=422, detail=f'초안 기록을 읽을 수 없습니다 ({exc}). 이 초안 대신 초안을 새로 만드세요.') from exc
 
 
 def _candidate_annotations(task: str, predictions: Any, score: float, suggestion_id: str) -> List[Dict[str, Any]]:
@@ -328,7 +328,7 @@ def _verified_model(project: Dict[str, Any], job_id: str) -> Dict[str, Any]:
     review checks every draft against the data at adoption time. The row says which it is (data_state)."""
     model = next((item for item in _model_catalog(project) if item["job_id"] == job_id), None)
     if model is None:
-        raise HTTPException(status_code=404, detail="No completed model matches this project's task and dataset.")
+        raise HTTPException(status_code=404, detail="고른 모델은 이 프로젝트의 작업 종류와 데이터로 학습을 마친 모델이 아닙니다. 모델 목록을 새로고침한 뒤 다시 고르세요.")
     return {**model, "data_state": _model_data_state(project, model)}
 
 
@@ -371,18 +371,18 @@ def _generate_proposal(project: Dict[str, Any], image: Path, model: Dict[str, An
     before_studio = _sha256(studio_json)
     before_dataset = _dataset_fingerprint(project)
     if not before_image or not before_checkpoint:
-        raise HTTPException(status_code=409, detail="Image or checkpoint became unavailable.")
+        raise HTTPException(status_code=409, detail="이미지나 모델 파일을 읽을 수 없게 되었습니다. 파일이 제자리에 있는지 확인한 뒤 초안을 다시 만드세요.")
     with Image.open(image) as pil:
         width, height = pil.size
     result = infer(task=project["task"], model_path=checkpoint, image_input=image,
                    threshold=threshold, device=device)
     if (_sha256(image) != before_image or _sha256(checkpoint) != before_checkpoint
             or _sha256(labelme) != before_labelme or _sha256(studio_json) != before_studio):
-        raise HTTPException(status_code=409, detail="Image, labels, or checkpoint changed during inference.")
+        raise HTTPException(status_code=409, detail="초안을 만드는 동안 이 이미지·라벨이나 모델 파일이 바뀌었습니다. 변경이 끝난 뒤 초안을 다시 만드세요.")
     if not _project_binding_is_current(project):
-        raise HTTPException(status_code=409, detail="Project identity, task, or source changed during inference.")
+        raise HTTPException(status_code=409, detail="초안을 만드는 동안 프로젝트나 작업 종류, 데이터 폴더가 바뀌었습니다. 지금 프로젝트를 확인한 뒤 초안을 다시 만드세요.")
     if _dataset_fingerprint(project) != before_dataset:
-        raise HTTPException(status_code=409, detail="Training dataset fingerprint changed during inference.")
+        raise HTTPException(status_code=409, detail="초안을 만드는 동안 데이터(이미지·라벨·분할)가 바뀌었습니다. 변경이 끝난 뒤 초안을 다시 만드세요.")
     suggestion_id = f"suggestion_{uuid.uuid4().hex[:24]}"
     proposal = {
         "id": suggestion_id, "project_id": project["id"], "status": "pending",
@@ -469,7 +469,7 @@ def list_suggestions(request: Request, image_path: Optional[str] = None):
 def _batch_root(project: Dict[str, Any], *, create: bool = True) -> Path:
     root = _proposal_root(project, create=create) / "batches"
     if root.is_symlink():
-        raise HTTPException(status_code=422, detail="Batch directory cannot be a symbolic link.")
+        raise HTTPException(status_code=422, detail="일괄 초안 폴더가 바로가기(링크)로 되어 있어 쓸 수 없습니다. 프로젝트 폴더의 label_suggestions/batches를 실제 폴더로 바꾸세요.")
     if create:
         root.mkdir(parents=True, exist_ok=True)
     return root
@@ -477,7 +477,7 @@ def _batch_root(project: Dict[str, Any], *, create: bool = True) -> Path:
 
 def _batch_path(project: Dict[str, Any], batch_id: str, *, create: bool = True) -> Path:
     if not _BATCH_ID.fullmatch(batch_id):
-        raise HTTPException(status_code=422, detail="Invalid batch ID.")
+        raise HTTPException(status_code=422, detail="일괄 초안 ID 형식이 올바르지 않습니다. 일괄 초안 기록에서 다시 고르세요.")
     return _batch_root(project, create=create) / f"{batch_id}.json"
 
 
@@ -488,18 +488,18 @@ def _persist_batch(project: Dict[str, Any], batch: Dict[str, Any]) -> None:
 def _read_batch(project: Dict[str, Any], batch_id: str) -> Dict[str, Any]:
     path = _batch_path(project, batch_id, create=False)
     if path.is_symlink():
-        raise HTTPException(status_code=422, detail="Batch file cannot be a symbolic link.")
+        raise HTTPException(status_code=422, detail="일괄 초안 기록 파일이 바로가기(링크)로 되어 있어 읽지 않습니다. 실제 파일로 바꾼 뒤 다시 여세요.")
     try:
         batch = json.loads(path.read_text(encoding="utf-8"))
         if (not isinstance(batch, dict) or batch.get("id") != batch_id
                 or batch.get("project_id") != project["id"]
                 or batch.get("source_dataset_dir") != project.get("source_dataset_dir")):
-            raise ValueError("batch identity mismatch")
+            raise ValueError('ID·프로젝트·데이터 폴더가 맞지 않음')
         return batch
     except FileNotFoundError as exc:
-        raise HTTPException(status_code=404, detail="Batch not found in this project.") from exc
+        raise HTTPException(status_code=404, detail="이 프로젝트에서 그 일괄 초안 기록을 찾을 수 없습니다. 목록을 새로고침한 뒤 다시 고르세요.") from exc
     except (OSError, ValueError) as exc:
-        raise HTTPException(status_code=422, detail=f"Invalid batch: {exc}") from exc
+        raise HTTPException(status_code=422, detail=f'일괄 초안 기록을 읽을 수 없습니다 ({exc}). 일괄 초안을 새로 만드세요.') from exc
 
 
 def _project_batch_key(project: Dict[str, Any]) -> str:
@@ -547,7 +547,7 @@ def _batch_images(project: Dict[str, Any], requested: Optional[List[str]]) -> Li
         if structured:
             raise HTTPException(
                 status_code=422,
-                detail="Automatic unlabeled selection supports flat LabelMe datasets only. Select images explicitly for COCO, YOLO, or class-folder datasets.",
+                detail="미라벨 전체 선택은 평면 LabelMe 데이터에서만 됩니다. COCO·YOLO·폴더형 데이터는 이미지를 직접 선택하세요.",
             )
         result = []
         offset = 0
@@ -565,12 +565,12 @@ def _batch_images(project: Dict[str, Any], requested: Optional[List[str]]) -> Li
                     result.append(image)
                     seen.add(str(image))
                     if len(result) > 5000:
-                        raise HTTPException(status_code=413, detail="More than 5,000 unlabeled images. Select a smaller batch.")
+                        raise HTTPException(status_code=413, detail="미라벨 이미지가 5,000장을 넘어 한 번에 만들 수 없습니다. 이미지를 직접 선택해 5,000장 이하로 나눠 만드세요.")
             offset += len(page["items"])
             if offset >= page["total"] or not page["items"]:
                 break
     if not result:
-        raise HTTPException(status_code=422, detail="No images selected for model-assisted labeling.")
+        raise HTTPException(status_code=422, detail="초안을 만들 이미지가 없습니다. 이미지를 하나 이상 고르세요.")
     return result
 
 
@@ -591,7 +591,7 @@ def _run_batch(project: Dict[str, Any], model: Dict[str, Any], live: _LiveBatch)
             if (not _project_binding_is_current(project) or _sha256(checkpoint) != batch["checkpoint_sha256"]
                     or _dataset_fingerprint(project) != batch["review_fingerprint"]):
                 with _BATCH_LOCK:
-                    entry.update(status="failed", error="The project identity, task, source, or checkpoint, or the labels or split, changed during this batch.")
+                    entry.update(status="failed", error="일괄 초안을 만드는 동안 프로젝트·작업 종류·데이터 폴더·모델 파일이나 라벨·분할이 바뀌어 멈췄습니다. 남은 이미지는 일괄 초안을 다시 시작해 만드세요.")
                     batch["processed"] += 1
                     batch["failed"] += 1
                     batch["status"] = "failed"
@@ -645,7 +645,7 @@ def start_batch(req: BatchGenerateRequest, request: Request):
     images = _batch_images(project, req.image_paths)
     checkpoint_sha256 = _sha256(Path(model["checkpoint_path"]))
     if checkpoint_sha256 is None:
-        raise HTTPException(status_code=409, detail="Checkpoint became unavailable.")
+        raise HTTPException(status_code=409, detail="모델 파일을 읽을 수 없게 되었습니다. 모델 목록을 새로고침한 뒤 다시 고르세요.")
     batch_id = f"batch_{uuid.uuid4().hex[:24]}"
     batch = {
         "id": batch_id, "project_id": project["id"], "source_dataset_dir": str(_source_path(project)),
@@ -663,7 +663,7 @@ def start_batch(req: BatchGenerateRequest, request: Request):
     cancel = threading.Event()
     with _BATCH_LOCK:
         if project_key in _LIVE_BATCHES:
-            raise HTTPException(status_code=409, detail="A model-assisted labeling batch is already running for this project.")
+            raise HTTPException(status_code=409, detail="이 프로젝트에서 일괄 초안 만들기가 이미 진행 중입니다. 끝나거나 취소한 뒤 다시 시작하세요.")
         _persist_batch(project, batch)
         live = _LiveBatch(batch=batch, cancel=cancel, thread=threading.Thread(
             target=lambda: _run_batch(project, model, live), name=f"LabelBatch-{batch_id}", daemon=True,
@@ -675,7 +675,7 @@ def start_batch(req: BatchGenerateRequest, request: Request):
             del _LIVE_BATCHES[project_key]
             batch.update(status="failed", error=str(exc), finished_at=time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()))
             _persist_batch(project, batch)
-            raise HTTPException(status_code=500, detail="Could not start model-assisted labeling batch.") from exc
+            raise HTTPException(status_code=500, detail="일괄 초안 만들기를 시작하지 못했습니다. 잠시 뒤 다시 시작하세요.") from exc
     return batch
 
 
@@ -932,7 +932,7 @@ def review_suggestion(suggestion_id: str, req: ReviewRequest, request: Request):
     with _REVIEW_LOCK, _VERSION_LOCK, metadata_engine.metadata_transaction(Path(project["project_dir"]), _source_path(project), Path(project["annotations_dir"])):
         proposal = _read_proposal(project, suggestion_id)
         if proposal["status"] != "pending":
-            raise HTTPException(status_code=409, detail="Suggestion has already been reviewed.")
+            raise HTTPException(status_code=409, detail="이 초안은 이미 채택하거나 거절했습니다. 초안 목록을 새로고침하세요.")
         if req.decision == "reject":
             proposal.update(status="rejected", reviewer=req.actor, reviewed_at=time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()))
             _write_json(_proposal_path(project, suggestion_id), proposal)
@@ -941,17 +941,17 @@ def review_suggestion(suggestion_id: str, req: ReviewRequest, request: Request):
             from backend.api.routes_label_candidates import review_external_proposal
             return review_external_proposal(project, proposal, req)
         if proposal.get("task") != project["task"]:
-            raise HTTPException(status_code=409, detail="Project task changed after proposal generation.")
+            raise HTTPException(status_code=409, detail="작업 종류가 바뀌어 이 초안은 채택할 수 없습니다. 거절하세요.")
 
         with _BATCH_LOCK:
             if _project_batch_key(project) in _LIVE_BATCHES:
-                raise HTTPException(status_code=409, detail="Finish or cancel the active label batch before accepting candidates.")
+                raise HTTPException(status_code=409, detail="일괄 초안 만들기가 진행 중입니다. 끝나거나 취소한 뒤 채택하세요.")
 
         selected_ids = set(req.candidate_ids)
         candidates = proposal.get("candidates", [])
         available = {item["id"] for item in candidates}
         if not selected_ids or not selected_ids.issubset(available):
-            raise HTTPException(status_code=422, detail="Select one or more proposal candidates to accept.")
+            raise HTTPException(status_code=422, detail="채택할 후보가 없습니다. 후보 없는 초안은 거절하세요.")
         image = _image_path(project, proposal["image_path"])
         model = next((item for item in _model_catalog(project) if item["job_id"] == proposal["job_id"]), None)
         checkpoint = Path(model["checkpoint_path"]) if model else None
@@ -962,7 +962,7 @@ def review_suggestion(suggestion_id: str, req: ReviewRequest, request: Request):
                 or _sha256(image.with_suffix(".json")) != proposal["labelme_sha256"]
                 or _sha256(json_path) != proposal["studio_sha256"]
                 or checkpoint is None or _sha256(checkpoint) != proposal["checkpoint_sha256"]):
-            raise HTTPException(status_code=409, detail="Image, labels, or checkpoint changed after proposal generation. Generate again.")
+            raise HTTPException(status_code=409, detail="초안을 만든 뒤 이 이미지·라벨이나 모델 파일이 바뀌어 채택할 수 없습니다. 이 초안은 거절하고 초안을 새로 만드세요.")
         batch = _read_batch(project, proposal["batch_id"]) if proposal.get("batch_id") else None
         expected_fingerprint = (
             batch.get("review_fingerprint") if batch is not None else proposal.get("dataset_fingerprint")
@@ -974,18 +974,18 @@ def review_suggestion(suggestion_id: str, req: ReviewRequest, request: Request):
         else:
             matches_training = _dataset_fingerprint(project) == expected_fingerprint
         if not matches_training:
-            raise HTTPException(status_code=409, detail="Training dataset fingerprint changed after proposal generation. Generate again.")
+            raise HTTPException(status_code=409, detail="초안을 만든 뒤 데이터가 바뀌어(직접 고쳐 저장한 라벨 등) 이 초안은 채택할 수 없습니다. 이 초안은 거절해 정리하고 남은 이미지의 초안을 새로 만드세요.")
         from backend.api.routes_training import training_job_manager
         if training_job_manager.get_active_job() is not None:
-            raise HTTPException(status_code=409, detail="Finish or stop active training before accepting labels.")
+            raise HTTPException(status_code=409, detail="학습이 진행 중입니다. 학습이 끝나거나 멈춘 뒤 채택하세요.")
 
         metadata = metadata_engine.metadata_for_path(Path(project["project_dir"]), _source_path(project), image, Path(project["annotations_dir"]))
         if _changed_since_draft(metadata, proposal):
-            raise HTTPException(status_code=409, detail="Another reviewer changed this image; generate candidates again.")
+            raise HTTPException(status_code=409, detail="다른 검토자가 이 이미지를 바꿨습니다. 이 초안은 거절하고 초안을 새로 만드세요.")
         current = routes_annotation.get_annotations(image.stem, file_path=str(image))
         existing = current.get("annotations", [])
         if not isinstance(existing, list):
-            raise HTTPException(status_code=422, detail="Existing annotation file is invalid.")
+            raise HTTPException(status_code=422, detail="저장된 라벨 파일의 형식이 올바르지 않습니다. 이 이미지를 라벨링에서 열어 라벨을 다시 저장하세요.")
         accepted = [item["annotation"] for item in candidates if item["id"] in selected_ids]
         # Validate the merged labels before taking the backup; the saved request below adds each shape's origin.
         routes_annotation.AnnotationSaveRequest(
@@ -1050,7 +1050,7 @@ def undo_adoption(suggestion_id: str, req: UndoRequest, request: Request):
     with _REVIEW_LOCK, _VERSION_LOCK, metadata_engine.metadata_transaction(Path(project["project_dir"]), source, Path(project["annotations_dir"])):
         proposal = _read_proposal(project, suggestion_id)
         if proposal["status"] != "accepted":
-            raise HTTPException(status_code=409, detail="Only an adopted draft can be taken back.")
+            raise HTTPException(status_code=409, detail="이 초안은 채택된 상태가 아니라 되돌릴 수 없습니다. 초안 목록을 새로고침해 상태를 확인하세요.")
         adopted = proposal.get("adopted_annotations")
         if not adopted:
             raise HTTPException(status_code=409, detail={
@@ -1059,21 +1059,21 @@ def undo_adoption(suggestion_id: str, req: UndoRequest, request: Request):
         external = proposal.get("backend") in {"template_match", "grounding_dino", "foundation", "vlm"}
         from backend.api.routes_training import training_job_manager
         if training_job_manager.get_active_job() is not None:
-            raise HTTPException(status_code=409, detail="Finish or stop active training before changing labels.")
+            raise HTTPException(status_code=409, detail="학습이 진행 중입니다. 학습이 끝나거나 멈춘 뒤 되돌리세요.")
         if external:
             from backend.engine import labeling_tasks
             if labeling_tasks.active(project):
-                raise HTTPException(status_code=409, detail="Finish or cancel the active labeling task before changing labels.")
+                raise HTTPException(status_code=409, detail="라벨 작업이 진행 중입니다. 끝나거나 취소한 뒤 되돌리세요.")
             batch = labeling_tasks.read(project, proposal["batch_id"]) if proposal.get("batch_id") else None
         else:
             with _BATCH_LOCK:
                 if _project_batch_key(project) in _LIVE_BATCHES:
-                    raise HTTPException(status_code=409, detail="Finish or cancel the active label batch before changing labels.")
+                    raise HTTPException(status_code=409, detail="일괄 초안 만들기가 진행 중입니다. 끝나거나 취소한 뒤 되돌리세요.")
             batch = _read_batch(project, proposal["batch_id"]) if proposal.get("batch_id") else None
         image = _image_path(project, proposal["image_path"])
         current = routes_annotation.get_annotations(image.stem, file_path=str(image)).get("annotations", [])
         if not isinstance(current, list):
-            raise HTTPException(status_code=422, detail="Existing annotation file is invalid.")
+            raise HTTPException(status_code=422, detail="저장된 라벨 파일의 형식이 올바르지 않습니다. 이 이미지를 라벨링에서 열어 라벨을 다시 저장하세요.")
         changed = changed_adopted_ids(adopted, current)
         if changed:
             raise HTTPException(status_code=409, detail={

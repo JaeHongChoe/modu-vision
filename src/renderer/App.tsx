@@ -131,6 +131,9 @@ export default function App() {
 
   // The chosen theme (or the OS preference) is written on <html>, where the light stylesheet keys off it.
   const theme = useProjectStore(s => s.theme);
+  // The assistant drawer takes its own column while open: the page narrows instead of sliding under it, so the step
+  // bars and their popovers (z 65-95) never draw over it, and full-screen dialogs still cover both.
+  const assistantOpen = useAssistantStore(s => s.isOpen);
   useEffect(() => {
     const media = typeof window.matchMedia === 'function' ? window.matchMedia('(prefers-color-scheme: light)') : null;
     const apply = () => {
@@ -162,7 +165,7 @@ export default function App() {
   }, [onboarding, project, setFirstRunOpen]);
 
   return (
-    <div className="flex flex-col h-screen w-screen bg-[#0B0E14] text-slate-200 select-none overflow-hidden font-sans">
+    <div className={`flex flex-col h-screen w-screen bg-[#0B0E14] text-slate-200 select-none overflow-hidden font-sans${assistantOpen ? ' pr-[26rem]' : ''}`}>
       {/* Precision Industrial Header Frame */}
       {/* 간단히 보기: the first-run guide, the workspace switch, the task center and packages join the header's 더 보기 menu
           (the only menu). 모두 보기 keeps the workspace row below, as it was. */}

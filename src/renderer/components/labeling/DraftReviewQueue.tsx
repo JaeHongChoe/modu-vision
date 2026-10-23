@@ -444,7 +444,7 @@ export const DraftReviewQueue: React.FC = () => {
   if (!projectDir || !project?.source_dataset_dir) return null;
   return (
     // Open, the row sits above the rows below it so the panel's header and close button are not covered.
-    <div ref={rowRef} className={`relative ${open ? 'z-[75]' : 'z-[68]'} flex h-10 shrink-0 items-center justify-between border-b border-[#2B3547] bg-[#0F1A24] px-4 text-xs text-slate-300`}>
+    <div ref={rowRef} data-surface="bar" className={`relative ${open ? 'z-[75]' : 'z-[68]'} flex h-10 shrink-0 items-center justify-between border-b border-[#2B3547] bg-[#0F1A24] px-4 text-xs text-slate-300`}>
       <div className="flex min-w-0 items-center gap-2">
         <ClipboardCheck className="h-4 w-4 text-emerald-400" />
         <span className="font-semibold text-slate-100">초안 검토</span>

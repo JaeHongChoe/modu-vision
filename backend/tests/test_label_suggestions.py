@@ -194,7 +194,7 @@ def test_changed_other_image_label_blocks_accept_without_edit(suggestion_workspa
         "decision": "accept", "candidate_ids": [proposal["candidates"][0]["id"]],
     })
     assert rejected.status_code == 409, rejected.text
-    assert "fingerprint" in rejected.json()["detail"]
+    assert "초안을 만든 뒤 데이터가 바뀌어" in rejected.json()["detail"]
     assert labelme.read_bytes() == original_labelme
     assert not list(studio.glob("*.json"))  # Identity ledger can exist without editable labels.
     assert client.get(f"/api/label-suggestions/{proposal['id']}").json()["status"] == "pending"
@@ -490,7 +490,7 @@ def test_a_label_save_during_a_batch_stops_it_before_more_inference(suggestion_w
     release.set()
     batch = _wait_for_batch(client, started.json()["id"])
     assert batch["status"] == "failed"
-    assert "labels or split" in batch["error"]
+    assert "라벨·분할" in batch["error"]
     assert [entry["status"] for entry in batch["entries"]] == ["failed", "failed", "queued"]
     assert observed == [second], "no image is drafted after the save"
     assert client.get("/api/label-suggestions").json()["suggestions"] == []
@@ -570,7 +570,7 @@ def test_external_dataset_change_between_batch_reviews_blocks_next_accept(
         "decision": "accept", "candidate_ids": [second_proposal["candidates"][0]["id"]],
     })
     assert rejected.status_code == 409, rejected.text
-    assert "fingerprint" in rejected.json()["detail"]
+    assert "초안을 만든 뒤 데이터가 바뀌어" in rejected.json()["detail"]
     assert labelme.read_bytes() == original_labelme
     assert not (studio / "second.json").exists()
 
@@ -720,7 +720,7 @@ def test_default_batch_rejects_structured_labels_but_explicit_selection_remains_
 
     automatic = client.post("/api/label-suggestions/batches", json={"job_id": "job_12345_test"})
     assert automatic.status_code == 422, automatic.text
-    assert "flat LabelMe" in automatic.json()["detail"]
+    assert "평면 LabelMe" in automatic.json()["detail"]
     assert client.get("/api/label-suggestions/batches").json()["batches"] == []
 
     explicit = client.post("/api/label-suggestions/batches", json={

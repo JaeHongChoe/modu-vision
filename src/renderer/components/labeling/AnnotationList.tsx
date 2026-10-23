@@ -208,7 +208,7 @@ export const AnnotationList: React.FC = () => {
   return (
     // The sidebar scrolls itself and its list shrinks first: a short work area (more rows above it) never lets a focused
     // field scroll the work area, which would move the canvas under the bars above it.
-    <div className="w-80 bg-[#131822] border-l border-[#2B3547] flex flex-col h-full min-h-0 overflow-y-auto select-none text-slate-200">
+    <div data-surface="page" className="w-80 bg-[#131822] border-l border-[#2B3547] flex flex-col h-full min-h-0 overflow-y-auto select-none text-slate-200">
       {/* Header: Title & Optical Calibration Scale */}
       <div className="p-3 border-b border-[#2B3547] bg-[#0B0E14] flex items-center justify-between">
         <div className="flex items-center space-x-2">

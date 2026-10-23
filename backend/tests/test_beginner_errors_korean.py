@@ -1,7 +1,7 @@
-"""The routes a first-time user meets (projects, datasets and their versions, the first-run example, labeling,
-training and its preparation panel, evaluation, flows, inspections, model comparisons, model operations and
-team label review) answer refusals in Korean. The routes swept last answer as "reason. next action."
-(docs/product-direction-easy-labeling-agent.md §5.1 direction 5).
+"""The routes a first-time user meets (projects, datasets and their versions, the first-run example, labeling and its
+model drafts, training and its preparation panel, evaluation, flows, inspections, model comparisons, model operations
+and team label review) answer refusals in Korean. The routes swept last answer as "reason. next action."
+(docs/product-direction-easy-labeling-agent.md §5.1 direction 5, §5.4 item 2).
 A detail that only forwards an exception (``str(exc)``), a catalogued error or a shared constant is not a literal."""
 import re
 from pathlib import Path
@@ -12,7 +12,7 @@ API = Path(__file__).resolve().parents[1] / 'api'
 ROUTES = ['routes_project.py', 'routes_dataset.py', 'routes_onboarding.py', 'routes_training.py', 'routes_evaluation.py',
           'routes_flowchart.py', 'routes_inspections.py', 'routes_model_comparisons.py',
           'routes_annotation.py', 'routes_dataset_versions.py', 'routes_training_workspace.py',
-          'routes_model_operations.py', 'routes_team_data.py']
+          'routes_model_operations.py', 'routes_team_data.py', 'routes_label_suggestions.py', 'routes_label_candidates.py']
 # English refusals that other code compares verbatim; they move to Korean only together with their readers.
 # 'Import a dataset ...': scripts/e2e/dataset-source-empty-controls, portable-abort-recovery, portable-home-refusal,
 #   portable-pending-handoff, portable-status-recovery and runtime-pack-picker-cancel compare the response body.
@@ -21,7 +21,8 @@ PINNED = {'routes_dataset_versions.py': ['Import a dataset into this project bef
                                           "Dataset path does not match the active project's source."]}
 # Every Korean literal on these routes names the next action; the earlier eight were only moved to Korean.
 NEXT_ACTION_ROUTES = ['routes_annotation.py', 'routes_dataset_versions.py', 'routes_training_workspace.py',
-                      'routes_model_operations.py', 'routes_team_data.py']
+                      'routes_model_operations.py', 'routes_team_data.py', 'routes_label_suggestions.py',
+                      'routes_label_candidates.py']
 LITERAL = re.compile(r"""HTTPException\(\s*(?:status_code=)?\d+\s*,\s*(?:detail=)?\(?\s*f?(['"])(.+?)\1""", re.S)
 HANGUL = re.compile('[가-힣]')
 
@@ -69,3 +70,17 @@ def test_the_restore_refusal_dict_message_is_korean_with_a_next_action():
     assert message is not None
     assert HANGUL.search(message.group(1)) and message.group(1).endswith('세요.'), message.group(1)
     assert '"changed_files": verification["changed_files"]' in source
+
+
+def test_the_stale_data_review_refusals_keep_the_phrase_the_adoption_loop_stops_on():
+    # src/renderer/components/labeling/draftReview.ts staleBatchRefusal stops a multi-adoption on this opening phrase,
+    # and only the review refusal of a changed dataset may carry it (a changed image or model file does not stop the loop).
+    for name in ('routes_label_suggestions.py', 'routes_label_candidates.py'):
+        stale = [text for _, text in LITERAL.findall(_source(name)) if text.startswith('초안을 만든 뒤 데이터가 바뀌어')]
+        assert len(stale) == 1, (name, stale)
+
+
+def test_the_draft_batch_stop_reasons_are_korean():
+    # Not HTTP details, but the batch record shows them as the reason a batch stopped.
+    assert 'changed during this batch' not in _source('routes_label_suggestions.py')
+    assert 'Source dataset changed during labeling batch' not in _source('routes_label_candidates.py')

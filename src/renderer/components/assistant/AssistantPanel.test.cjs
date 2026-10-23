@@ -59,3 +59,14 @@ test('the key field sends straight to the main process and clears itself; no key
  assert.ok(!/keyDraft|apiKey|\bkey:\s*string/.test(store),'the store holds no key');
  for(const [name,source] of [...sources,['useAssistantStore.ts',store]])assert.ok(!/localStorage|sessionStorage/.test(source),name);
 });
+
+// Design 5.4-6 (f): on step 2 the draft queue bar (z-[68]) drew over the open drawer (z-40). While open the drawer now
+// has its own column: the app root reserves exactly the drawer's width, so the page narrows instead of sliding under it.
+test('the open drawer takes its own column instead of lying under the step bars',()=>{
+ const panel=read('AssistantPanel.tsx');
+ const width=/<aside aria-label="도우미" className="fixed right-0 top-0 z-40 flex h-full (w-\[[0-9.]+rem\]) max-w-full/.exec(panel);
+ assert.ok(width,'the drawer is fixed to the right edge with one width');
+ const app=fs.readFileSync(path.join(__dirname,'..','..','App.tsx'),'utf8');
+ assert.match(app,/const assistantOpen = useAssistantStore\(s => s\.isOpen\);/);
+ assert.ok(app.includes("font-sans${assistantOpen ? ' pr-["+width[1].slice(3,-1)+"]' : ''}"),'the root reserves the drawer width while it is open');
+});

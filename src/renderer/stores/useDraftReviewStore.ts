@@ -19,10 +19,10 @@ interface DraftReviewState {
   /** `scope` defaults to the one the queue last published. */
   requestOpen: (id: string, candidateIds?: string[], scope?: string) => void;
   clearOpenRequest: () => void;
-  /** Step 2's two right-side popovers (the draft queue and 모델 보조) open one at a time: opening one names it here and
-   *  the other closes, so neither covers the other. */
-  sidePanel: 'drafts' | 'assist' | null;
-  showSidePanel: (panel: 'drafts' | 'assist') => void;
+  /** Step 2's popovers (the draft queue, 모델 보조 and the image review sheet) open one at a time: opening one names it
+   *  here and the others close, so none covers another. */
+  sidePanel: 'drafts' | 'assist' | 'review' | null;
+  showSidePanel: (panel: 'drafts' | 'assist' | 'review') => void;
   /** '모델 보조' asked for from elsewhere (an empty project's 'SAM2 클릭으로 그리기'): step 2 unfolds it for this visit
    *  even in focus editing, and the panel opens itself and clears the request. */
   assistRequest: number | null;

@@ -64,6 +64,8 @@ test('a refused take-back names the data version to restore', () => {
   assert.doesNotMatch(stale, /3단계에서 다시 학습/);
   assert.match(stale, /같은 모델로도 만들 수 있습니다/);
   assert.doesNotMatch(stale, /fingerprint/);
+  // The server's own Korean (which ends at the action) reads the same as the English it replaced.
+  assert.equal(draftError(Object.assign(new Error('초안을 만든 뒤 데이터가 바뀌어(직접 고쳐 저장한 라벨 등) 이 초안은 채택할 수 없습니다. 이 초안은 거절해 정리하고 남은 이미지의 초안을 새로 만드세요.'), {status: 409})), stale);
 });
 
 test('step 2 puts waiting drafts first, with review-approved images, and leads to the draft review', () => {
@@ -154,6 +156,10 @@ test('several drafts adopt together only from one batch, one per image, and the 
   assert.match(multiAdoptionRefusal([a, draft('d5', '/a.png', [0.5], {batch_id: 'batch_1'})]), /같은 이미지/);
   assert.equal(staleBatchRefusal(new Error('Training dataset fingerprint changed after proposal generation. Generate again.')), true);
   assert.equal(staleBatchRefusal(new Error('Image, labels, or checkpoint changed after proposal generation. Generate again.')), false);
+  // The server's Korean refusals (both routes) stop the loop the same way; a changed image or model file still does not.
+  assert.equal(staleBatchRefusal(new Error('초안을 만든 뒤 데이터가 바뀌어(직접 고쳐 저장한 라벨 등) 이 초안은 채택할 수 없습니다. 이 초안은 거절해 정리하고 남은 이미지의 초안을 새로 만드세요.')), true);
+  assert.equal(staleBatchRefusal(new Error('초안을 만든 뒤 데이터가 바뀌어 이 초안은 채택할 수 없습니다. 이 초안은 거절하고 초안을 새로 만드세요.')), true);
+  assert.equal(staleBatchRefusal(new Error('초안을 만든 뒤 이 이미지·라벨이나 모델 파일이 바뀌어 채택할 수 없습니다. 이 초안은 거절하고 초안을 새로 만드세요.')), false);
   const summary = adoptionSummary([{draft: a, adopted: 2}, {draft: b, adopted: 0, error: '이 이미지가 바뀌었습니다'}], true);
   assert.match(summary, /1장의 초안에서 2개를 라벨로 채택/);
   assert.match(summary, /1장은 채택하지 못했습니다: b\.png · 이 이미지가 바뀌었습니다/);
@@ -449,10 +455,12 @@ test('step 2\'s two right-side popovers open one at a time', async () => {
   assert.equal(queue.review.sidePanel, 'drafts', 'opening the queue names it, which closes 모델 보조');
   queue.review.sidePanel = 'assist'; tree = await queue.settle();
   assert.equal(byLabel(tree, '초안 검토 패널').props['aria-expanded'], false, '모델 보조 opening closes the queue');
-  for (const file of ['DraftReviewQueue.tsx', 'ModelAssistPanel.tsx']) {
+  for (const file of ['DraftReviewQueue.tsx', 'ModelAssistPanel.tsx', 'ImageReviewPanel.tsx']) {
     const source = fs.readFileSync(path.join(__dirname, file), 'utf8');
-    assert.match(source, /if \(sidePanel && sidePanel !== '(drafts|assist)'\) setOpen\(false\)/, file);
+    assert.match(source, /if \(sidePanel && sidePanel !== '(drafts|assist|review)'\) setOpen\(false\)/, file);
   }
+  assert.match(fs.readFileSync(path.join(__dirname, 'ImageReviewPanel.tsx'), 'utf8'), /if \(open\) useDraftReviewStore\.getState\(\)\.showSidePanel\('review'\)/,
+    'the image review sheet joins them, so it never sits under the draft or 모델 보조 sheet');
 });
 
 test('the drafts load without waiting for the adoption numbers, a failed count shows nothing, and a changed-data model carries the full mark', async () => {
@@ -523,6 +531,6 @@ test('the labeling work area takes no focus, and a footer jump to it releases th
 // field scrolled the overflow-hidden work area, moving the canvas under the bars. The sidebar scrolls itself instead.
 test('the labeling sidebar is its own scroll container and its list shrinks first', () => {
   const list = fs.readFileSync(path.join(__dirname, 'AnnotationList.tsx'), 'utf8');
-  assert.match(list, /<div className="w-80 [^"]*flex flex-col h-full min-h-0 overflow-y-auto /);
+  assert.match(list, /<div (data-surface="page" )?className="w-80 [^"]*flex flex-col h-full min-h-0 overflow-y-auto /);
   assert.match(list, /<div className="flex-1 min-h-0 overflow-y-auto p-2 space-y-1\.5">/);
 });

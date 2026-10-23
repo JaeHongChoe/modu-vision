@@ -14,17 +14,11 @@ import { CandidateProviderControls } from './CandidateProviderControls';
 import type { FoundationProposal } from '../../services/foundationLabelingApi';
 import { datasetWorkflow, type CandidateProposal } from '../../services/datasetWorkflow';
 import { SuggestionPreview } from './SuggestionPreview';
-import { CHANGED_MODEL_MARK } from './draftReview';
+import { CHANGED_MODEL_MARK, draftError } from './draftReview';
 import { Explain } from '../common/Explain';
 
-function errorText(error: unknown): string {
-  if (error instanceof Error) return error.message;
-  if (error && typeof error === 'object') {
-    const detail = (error as Record<string, unknown>).detail;
-    if (typeof detail === 'string') return detail;
-  }
-  return '요청을 처리하지 못했습니다.';
-}
+// The server's refusals in the draft queue's words (an older English refusal still reads in Korean).
+const errorText = draftError;
 
 function candidateDetail(candidate: LabelSuggestionCandidate): string {
   const annotation = candidate.annotation;

@@ -123,6 +123,12 @@
 /* 간단히 보기 (App writes the view on <html>): body text is 13px at least, so the smaller classes rise to the text-xs
    size there; 모두 보기 keeps the 12px floor above until each screen replaces its own classes. */
 html[data-view="simple"] :is(.text-\[7px\], .text-\[8px\], .text-\[9px\], .text-\[10px\], .text-\[11px\]) { font-size: 0.8125rem; line-height: 1.25rem; }
+/* 간단히 보기 (design 5.4-6 e): one tone per kind of surface. The bands above a work area (label set, team, classes,
+   drafts, folded tools, data counts, filmstrip) take the panel tone, and the work surfaces beside the canvas or gallery
+   (step-1 sidebar, step-2 label list) the page tone, in either theme; 모두 보기 keeps each panel's own colour. These come
+   after theme-light (imported above) at the same weight, so they win there too. */
+html[data-view="simple"] [data-surface="bar"] { background-color: var(--color-panel); }
+html[data-view="simple"] [data-surface="page"] { background-color: var(--color-chassis); }
 .text-slate-500 { color: #8E9FB8; }
 .text-slate-600 { color: #7F90A8; }
 /* Line heights are whole pixels at the 16px root so the fixed header and footer rows have whole-pixel heights;

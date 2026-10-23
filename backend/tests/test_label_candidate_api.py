@@ -49,7 +49,9 @@ def test_missing_semantic_model_is_explicit_and_source_changed_blocks_template_r
     assert no_model.status_code==422
     proposal=client.post('/api/label-candidates/generate',json={'backend':'template_match','image_path':str(source/'target.png'),'exemplar_path':str(source/'exemplar.png'),'threshold':.99}).json()
     Image.new('RGB',(80,60),'white').save(source/'target.png')
-    assert client.post('/api/label-suggestions/'+proposal['id']+'/review',json={'decision':'accept','candidate_ids':[proposal['candidates'][0]['id']]}).status_code==409
+    refused=client.post('/api/label-suggestions/'+proposal['id']+'/review',json={'decision':'accept','candidate_ids':[proposal['candidates'][0]['id']]})
+    # The renderer's staleBatchRefusal stops a multi-adoption on this opening phrase.
+    assert refused.status_code==409 and refused.json()['detail'].startswith('초안을 만든 뒤 데이터가 바뀌어')
 
 
 def test_a_phrase_draft_is_labelled_with_the_class_it_names_else_the_chosen_class(workspace,monkeypatch,tmp_path):
@@ -190,7 +192,7 @@ def test_a_conflict_stops_the_batch_but_one_unreadable_image_does_not(workspace,
         name=Path(single.image_path).name
         if name==fail.get('name'): raise HTTPException(fail['status'],detail=fail['detail'])
         return {'id':'suggestion_'+name,'candidates':[{'id':'c'}]}
-    for status,detail,expected in [(422,'이미지를 읽지 못했습니다',('completed',3,1,2)),(409,'Project task, source or label set changed during inference',('failed',2,1,1))]:
+    for status,detail,expected in [(422,'이미지를 읽지 못했습니다',('completed',3,1,2)),(409,'초안을 만드는 동안 작업 종류나 데이터 폴더, 라벨 세트가 바뀌었습니다. 지금 프로젝트를 확인한 뒤 초안을 다시 만드세요.',('failed',2,1,1))]:
         monkeypatch.setattr(routes_label_candidates,'_generate_candidates',lambda single,project,cancel=None,batch_id=None:run(single,project,cancel,batch_id,{'name':'exemplar.png','status':status,'detail':detail}))
         started=client.post('/api/label-candidates/batches',json={'backend':'template_match','label':'Scratch','exemplar_path':str(source/'exemplar.png'),
             'image_paths':[str(source/'target.png'),str(source/'exemplar.png'),str(source/'third.png')]})

@@ -5,6 +5,7 @@ import {host} from '../../services/hostAdapter';
 import {useDatasetStore} from '../../stores/useDatasetStore';
 import {useProjectStore} from '../../stores/useProjectStore';
 import {useAnnotationStore} from '../../stores/useAnnotationStore';
+import {useStepSheetStore} from '../../stores/useStepSheetStore';
 import {ProjectPreferencePanel} from './ProjectPreferencePanel';
 import {ExternalMaskExchangePanel} from './ExternalMaskExchangePanel';
 import {projectPreferences} from '../../services/projectPreferences';
@@ -33,6 +34,10 @@ export const DatasetWorkflowPanel:React.FC=()=>{
   // when the scope arrived and reset the panel (the list then reloaded 0 -> all rows), so it never showed.
   const locked=busy||!readScope;
   const activeExport=useRef<AbortController|null>(null);const [exporting,setExporting]=useState<AbortController|null>(null);
+  // One step-1 sheet at a time (useStepSheetStore); a label export still running keeps this one open instead of cancelling it.
+  const shownSheet=useStepSheetStore(state=>state.open);
+  useEffect(()=>{if(open)useStepSheetStore.getState().show('workflow');},[open]);
+  useEffect(()=>{if(open&&shownSheet&&shownSheet!=='workflow'&&!activeExport.current)setOpen(false);},[shownSheet]);
   useEffect(()=>()=>{const controller=activeExport.current;activeExport.current=null;controller?.abort();},[]);
   useEffect(()=>{const controller=activeExport.current;if(controller){activeExport.current=null;controller.abort();setExporting(null);setBusy(false);}},[projectDir,folderPath,epoch,identity]);
   const cancelExport=(controller:AbortController|null)=>{

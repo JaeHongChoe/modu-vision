@@ -47,7 +47,7 @@ export const ClassificationClassPicker: React.FC = () => {
   };
 
   return (
-    <section id="image-class-picker" tabIndex={-1} aria-label="이미지 클래스" className="flex flex-wrap items-center gap-2 border-b border-slate-800 bg-slate-950 px-4 py-2 text-xs">
+    <section id="image-class-picker" tabIndex={-1} aria-label="이미지 클래스" data-surface="bar" className="flex flex-wrap items-center gap-2 border-b border-slate-800 bg-slate-950 px-4 py-2 text-xs">
       <span className="font-semibold text-slate-200">이 이미지의 클래스</span>
       <div role="group" aria-label="이미지 클래스 고르기" className="flex flex-wrap gap-1.5">
         {classes.map((name) => (

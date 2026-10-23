@@ -9,15 +9,10 @@ import { datasetWorkflow } from '../../services/datasetWorkflow';
 import {labelingScope} from './foundationRequest';
 import { reportPanelError } from '../../stores/assistContext';
 import { Explain } from '../common/Explain';
+import { draftError, draftRefusalText } from './draftReview';
 
-function errorText(error: unknown): string {
-  if (error instanceof Error) return error.message;
-  if (error && typeof error === 'object') {
-    const detail = (error as Record<string, unknown>).detail;
-    if (typeof detail === 'string') return detail;
-  }
-  return '일괄 제안을 처리하지 못했습니다.';
-}
+// The server's refusals and batch reasons in the draft queue's words (older English records still read in Korean).
+const errorText = draftError;
 
 function statusText(status: LabelSuggestionBatch['status']): string {
   return ({ running: '생성 중', cancelling: '취소 중', cancelled: '취소됨', completed: '완료',
@@ -232,7 +227,7 @@ export const BulkLabelAssist: React.FC<Props> = ({ projectDir, modelId, threshol
             <p className="text-slate-400">후보 있는 이미지 {selectedBatch.generated} · 후보 0개 {selectedBatch.zero_candidates} · 실패 {selectedBatch.failed}</p>
             {/* A finished batch that found nothing on any image: say why that happens and what helps, instead of a list of empty drafts. */}
             {selectedBatch.status === 'completed' && selectedBatch.processed > 0 && selectedBatch.generated === 0 && selectedBatch.zero_candidates > 0 && <p role="status" className="text-amber-200">{EMPTY_BATCH_TEXT}</p>}
-            {selectedBatch.error && <p className="text-red-300">{selectedBatch.error}</p>}
+            {selectedBatch.error && <p className="text-red-300">{draftRefusalText(selectedBatch.error)}</p>}
           </div>
           <div className="max-h-40 space-y-1 overflow-y-auto">
             {selectedBatch.entries.map((entry, index) => <div key={`${entry.image_path}-${index}`} className="flex items-center gap-2 rounded border border-slate-700 bg-[#17202D] px-2 py-1.5 text-[11px]">
