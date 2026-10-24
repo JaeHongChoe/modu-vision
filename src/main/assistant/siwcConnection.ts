@@ -57,6 +57,7 @@ function connectionError(error:unknown):AssistantError {
   if (['signed_out','reconnect_required','invalid_grant','invalid_refresh_token','token_expired','refresh_token_expired','refresh_token_invalidated','refresh_token_reused'].includes(code)) return assistantError('no_key',{reason:'ChatGPT에 다시 연결해야 합니다.',action:'설정에서 해당 계정으로 다시 연결하세요.'});
   if (code==='no_account') return assistantError('no_provider',{reason:'ChatGPT 계정이 선택되지 않았습니다.',action:'설정에서 계정을 연결하고 선택하세요.'});
   if (code==='model_required' || code==='model_not_listed') return assistantError('not_found',{reason:'사용할 ChatGPT 모델을 확인해야 합니다.',action:'모델 목록을 새로 읽고 사용할 모델을 직접 선택하세요.'});
+  if (code==='empty_response') return assistantError('bad_response',{reason:'ChatGPT가 요청을 끝냈지만 답변이나 도구 요청을 보내지 않았습니다.',action:'선택한 모델과 요청 내용을 확인한 뒤 필요하면 직접 다시 보내세요. 자동으로 재시도하지 않습니다.',status});
   if (['invalid_id_token','invalid_state','invalid_callback_uri','duplicate_callback_parameter','invalid_client_binding','identity_mismatch','invalid_discovery','invalid_jwks','authorization_failed','invalid_token_response'].includes(code)) return assistantError('bad_response',{reason:'ChatGPT 연결의 보안 확인을 완료하지 못했습니다.',action:'연결을 새로 시작하세요. 이전 연결 정보로 요청을 보내지 않습니다.'});
   if (status===401) return assistantError('forbidden',{reason:'ChatGPT 계정의 서명 또는 플랜 사용 권한이 받아들여지지 않았습니다.',action:'선택한 계정과 허용한 권한을 확인하세요. 철회나 갱신 실패가 확인되기 전에는 로그인 정보를 지우지 않습니다.',status});
   if (status===403) return assistantError('forbidden',{reason:'정책이나 권한 제한으로 ChatGPT 요청을 보낼 수 없습니다.',action:'선택한 계정·허용 지역·앱 연결 정책을 확인하세요.',status});
@@ -249,10 +250,12 @@ export class SiwcConnection {
         const response=await this.request(`${API}/responses`,{method:'POST',headers:{Accept:'text/event-stream','Content-Type':'application/json',Authorization:`Bearer ${token.accessToken}`},body:JSON.stringify(body)},signal);
         responseId=requestId(response);
         if(response.status!==200)throw this.httpError(response.status,await this.json(response,signal));
-        if(!response.headers.get('content-type')?.toLowerCase().startsWith('text/event-stream')||!response.body){try{await response.body?.cancel();}catch{}throw protocol('bad_stream');}
+        const contentType=response.headers.get('content-type')?.trim();
+        if((contentType&&contentType.split(';',1)[0].trim().toLowerCase()!=='text/event-stream')||!response.body){try{await response.body?.cancel();}catch{}throw protocol('bad_stream');}
         const stream=response.body;
         async function* source(){const reader=stream.getReader();try{while(true){const part=await reader.read();if(part.done)return;yield part.value;}}finally{try{void reader.cancel().catch(()=>undefined);}catch{}}}
         const result=await readSiwcResponse(source(),{tools:input.tools,signal,timeoutMs,httpStatus:response.status});if(signal.aborted||this.authority()!==binding)throw protocol('cancelled');
+        if(result.text===''&&result.toolCalls.length===0)throw new SiwcProtocolError('empty_response','fix_request',response.status);
         this.receipt(result.replay,binding);
         return {text:result.text,toolCalls:result.toolCalls,replay:result.replay,stop:result.toolCalls.length?'tool':'end'};
       },{signal:input.signal,timeoutMs});
