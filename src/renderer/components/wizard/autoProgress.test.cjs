@@ -268,3 +268,72 @@ test('the choice reaches the run, is kept for that run only, and the dialog offe
   assert.match(dialog, /\{run\.stop\.deferDrafts && <button type="button" className="workspace-button" onClick=\{\(\) => start\(\{ deferDrafts: true \}\)\}>남은 초안은 두고 확정한 라벨 \{run\.stop\.deferDrafts\}장으로 학습까지 이어 가기<\/button>\}/);
   assert.match(dialog, /void runAutoProgress\(appDeps\(\(\) => get\(\)\.cancelRequested\), \(run\) => set\(\{ run \}\), \{ choices \}\);/);
 });
+
+// 5.3-4: a model that missed test defects is looked at before step 5. The footer sends the person to the wrong images;
+// an automatic run stops there too and, like the draft stop, offers going on for this run only.
+test('a model that missed test defects stops the run with a one-press go-on for this run only', async () => {
+  const {decide, runAutoProgress, PERSON_STOPS} = load();
+  const missed = ctx(4, '틀린 이미지 보기', 4, {status: 'blocked', target: 'workflow-missed-defects', blocker: '모델이 시험 이미지의 불량을 놓쳤습니다', progress: {samples: 3, escapes: 3, overkills: 0, accuracy: 0, low: 0, high: 56}});
+  const stopped = decide(missed);
+  assert.deepEqual([stopped.kind, stopped.step, stopped.target, stopped.missed], ['stop', 4, 'workflow-missed-defects', {escapes: 3, samples: 3}]);
+  assert.equal(stopped.reason, '모델이 시험 이미지의 불량을 놓쳤습니다 · 놓친 이미지를 보고 고칠지, 이대로 갈지는 사람이 정합니다.');
+  assert.deepEqual(decide(missed, {acceptMissed: {escapes: 3, samples: 3}}), {kind: 'advance', step: 5});
+  // The go-on is for the result the person saw: more misses or other test images stop the run again with the new count.
+  const worse = ctx(4, '틀린 이미지 보기', 4, {status: 'blocked', target: 'workflow-missed-defects', progress: {samples: 3, escapes: 3, overkills: 0, accuracy: 0, low: 0, high: 56}});
+  assert.equal(decide(worse, {acceptMissed: {escapes: 2, samples: 3}}).kind, 'stop');
+  assert.deepEqual(decide(worse, {acceptMissed: {escapes: 3, samples: 5}}).missed, {escapes: 3, samples: 3});
+  assert.deepEqual(decide(worse, {acceptMissed: {escapes: 4, samples: 3}}), {kind: 'advance', step: 5}, 'fewer misses than accepted on the same images');
+  // Results recorded but not on the screen: wait for them (the run's bounded wait ends in a stop), never go on past them.
+  assert.deepEqual(decide(ctx(4, '새로고침 버튼으로 이동 (4단계)', 4, {status: 'unknown', target: 'evaluation-refresh'})), {kind: 'wait', refresh: true});
+  const failedRead = decide(ctx(4, '새로고침 버튼으로 이동 (4단계)', 4, {status: 'blocked', target: 'evaluation-refresh', blocker: '시험 이미지 평가 결과를 읽지 못했습니다: 연결이 끊겼습니다'}));
+  assert.deepEqual([failedRead.kind, failedRead.step, failedRead.target], ['stop', 4, 'evaluation-refresh'], 'a failed read stops at once for the person');
+  assert.ok(PERSON_STOPS.includes('불량을 놓친 모델 (틀린 이미지를 보고 그대로 이어 갈 수 있음)'), 'said before the run starts');
+  // From step 3: step 4's picture is first the loading one (its counts not read yet), then the missed one.
+  const {world, calls, deps} = app({stage: 3, split: true, model: true, evaluated: true});
+  let loading = 2;
+  const picture = deps.snapshot;
+  deps.snapshot = () => { const value = picture(); if (value.stage !== 4) return value; if (loading > 0) { loading--; return ctx(4, '준비도 다시 확인', 4, {status: 'checking'}); } return missed; };
+  let result = await runAutoProgress(deps, () => {}, {afterActMs: 0, pollMs: 10});
+  assert.equal(result.state, 'stopped'); assert.deepEqual(result.stop.missed, {escapes: 3, samples: 3}); assert.equal(result.stop.target, 'workflow-missed-defects');
+  assert.ok(!calls.includes('step 5'), 'never on to step 5 before the misses are known, nor by itself after');
+  world.stage = 4; calls.length = 0;
+  result = await runAutoProgress(deps, () => {}, {afterActMs: 0, pollMs: 10, choices: {acceptMissed: result.stop.missed}});
+  assert.equal(result.state, 'done'); assert.deepEqual(calls, ['step 5', 'saveFlow', 'evaluateFlow', 'step 6', 'inspect']);
+  Object.assign(world, {stage: 4, flow: false, flowEvaluated: false, inspected: false}); calls.length = 0;
+  result = await runAutoProgress(deps, () => {}, {afterActMs: 0, pollMs: 10});
+  assert.equal(result.state, 'stopped', 'a new run asks again');
+  const dialog = fs.readFileSync(path.join(__dirname, 'AutoProgressDialog.tsx'), 'utf8');
+  assert.match(dialog, /\{run\.stop\.missed && missedShown && <button type="button" className="workspace-button" onClick=\{\(\) => start\(\{ acceptMissed: run\.stop\?\.missed \}\)\}>놓친 불량 \{run\.stop\.missed\.escapes\}장을 그대로 두고 검사 흐름까지 이어 가기<\/button>\}/);
+});
+
+test('results recorded but never shown at step 4 end the run in a stop, not in step 5', async () => {
+  const {runAutoProgress} = load();
+  const {calls, deps} = app({stage: 4, split: true, model: true, evaluated: true});
+  const picture = deps.snapshot;
+  deps.snapshot = () => { const value = picture(); return value.stage === 4 ? ctx(4, '새로고침 버튼으로 이동 (4단계)', 4, {status: 'unknown', target: 'evaluation-refresh', blocker: '시험 이미지 평가 결과가 화면에 없습니다'}) : value; };
+  const result = await runAutoProgress(deps, () => {}, {afterActMs: 0, pollMs: 10, settleMs: 100});
+  assert.equal(result.state, 'failed'); assert.match(result.stop.reason, /4단계 확인이 끝나지 않았습니다: 시험 이미지 평가 결과가 화면에 없습니다/);
+  assert.equal(result.stop.target, 'evaluation-refresh', '4단계 그 화면으로 reaches the refresh button');
+  assert.ok(!calls.includes('step 5'));
+});
+
+// Found in re-review: going on was said of the model the person saw, and a stop's button is offered only while the
+// screen still shows that result.
+test('going on with missed defects ends when the run trains another model, and a stale stop offers no go-on', async () => {
+  const {runAutoProgress, missedStillShown} = load();
+  const {world, calls, deps} = app({stage: 4, split: true, model: true, evaluated: true});
+  const missed = (escapes) => ctx(4, '틀린 이미지 보기', 4, {status: 'blocked', target: 'workflow-missed-defects', blocker: '모델이 시험 이미지의 불량을 놓쳤습니다', progress: {samples: 3, escapes, overkills: 0, accuracy: 0, low: 0, high: 56}});
+  let trained = false;
+  const picture = deps.snapshot;
+  // Step 4 first shows the accepted result and sends the run back to train (as a data change would); the new model misses 2.
+  deps.snapshot = () => { const value = picture(); if (value.stage !== 4) return value; return !trained ? ctx(4, '바뀐 내용과 되돌리기', 4, {status: 'blocked'}) : missed(2); };
+  const act = deps.act; deps.act = async (action) => { if (action === 'train') trained = true; return act(action); };
+  world.model = false;
+  const result = await runAutoProgress(deps, () => {}, {afterActMs: 0, pollMs: 10, choices: {acceptMissed: {escapes: 3, samples: 3}}});
+  assert.equal(result.state, 'stopped', 'the retrained model is shown to the person'); assert.deepEqual(result.stop.missed, {escapes: 2, samples: 3});
+  assert.ok(calls.includes('train') && !calls.includes('step 5'));
+  assert.equal(missedStillShown({escapes: 2, samples: 3}, missed(2)), true);
+  assert.equal(missedStillShown({escapes: 3, samples: 3}, missed(2)), false, 'relabelled or retrained: another count');
+  assert.equal(missedStillShown({escapes: 2, samples: 3}, ctx(4, '검사 흐름 만들기 (5단계)', 5)), false, 'no misses any more');
+  assert.equal(missedStillShown({escapes: 2, samples: 3}, null), false);
+});

@@ -334,8 +334,15 @@ test('step 4 shows the loaded evaluation as an accuracy range, missed defects an
  const range=wilsonInterval(45,50),counts={samples:50,escapes:2,overkills:3,accuracy:90,low:Math.round(range.low*100),high:Math.round(range.high*100)};
  assert.deepEqual([counts.low,counts.high],[79,96]);assert.match(accuracyNote(45,50),/ 79~96%\)$/);
  const evaluated=getNextAction({...withModel,evaluation:counts});
- assert.equal(evaluated.status,'ready');assert.equal(evaluated.nextAction.label,'검사 흐름 만들기 (5단계)');
+ // 2 missed defects: the step is looked at before step 5 (5.3-4), the action opens the 미검 tab.
+ assert.equal(evaluated.status,'blocked');assert.equal(evaluated.nextAction.label,'틀린 이미지 보기');
+ assert.deepEqual([evaluated.nextAction.step,evaluated.nextAction.target],[4,'workflow-missed-defects']);
+ assert.equal(evaluated.missingInputs[0],'모델이 시험 이미지의 불량을 놓쳤습니다');assert.match(evaluated.missingInputs[1],/라벨 수정.*판정 기준 점수를 낮추거나.*→ 버튼/);assert.doesNotMatch(evaluated.missingInputs[1],/추천 점수 적용/,'a label shown in the simple view only');
  assert.deepEqual(evaluated.progress,counts);
+ // False alarms alone keep the ready path: the recommended score trades them for no misses, and the line still shows them.
+ const alarms=getNextAction({...withModel,evaluation:{...counts,escapes:0}});
+ assert.equal(alarms.status,'ready');assert.equal(alarms.nextAction.label,'검사 흐름 만들기 (5단계)');
+ assert.match(progressLine(4,alarms.progress,true),/잘못 잡은 정상 3장/);
  assert.equal(progressLine(4,evaluated.progress,true),' · 정확도 90% (79~96% 사이일 수 있음) · 놓친 불량 2장 · 잘못 잡은 정상 3장','the card\'s "could be" wording, not a certain range');
  assert.equal(progressLine(4,evaluated.progress,false),' · 90% right (could be 79~96%) · 2 missed defects · 3 false alarms');
  assert.equal(progressLine(4,{...counts,low:null},true),' · 정확도 90% · 놓친 불량 2장 · 잘못 잡은 정상 3장','no range without both ends');
@@ -451,7 +458,7 @@ test('the production hook feeds the training clock, the evaluation counts and th
   four.evaluation.jobId='m';four.evaluation.confidenceThreshold=0.5;
   four.evaluation.testPredictions=[{file_path:'a.png',verdict:'CORRECT_OK'},{file_path:'b.png',verdict:'CORRECT_NG'},{file_path:'c.png',verdict:'ESCAPE'},{file_path:'d.png',verdict:'OVERKILL'},{file_path:'e.png',verdict:'REVIEW'}];
   four.mount();resolveAll(four);const result=await four.settle();
-  assert.equal(result.readiness.status,'ready');
+  assert.equal(result.readiness.status,'blocked','one missed defect (c.png): looked at before step 5');assert.equal(result.readiness.nextAction.label,'틀린 이미지 보기');
   assert.deepEqual(result.readiness.progress,{samples:5,escapes:1,overkills:1,accuracy:40,low:12,high:77},'counted with the evaluation screen\'s verdict and range');
   assert.match(loadSampleConfidence().accuracyNote(2,5),/실제는 12~77% 사이/,'the range the step-4 card prints for 2 right of 5');
   four.evaluation.testPredictions=[{file_path:'a.png',verdict:'REVIEW'},{file_path:'b.png',verdict:'REVIEW'}];
@@ -646,4 +653,28 @@ test('the jump presses a closed dialog opener and leaves it the focus; other ope
  assert.equal(queue.clicks,1);assert.equal(queue.focused,true,'a popover opener is still focused');
  exports.focusWorkflowTarget('workflow-data');flush();
  assert.equal(data.clicks,0);assert.equal(data.focused,true);assert.equal(data.scrolled,true);
+ // Step 4's '틀린 이미지 보기' presses the 미검 tab once (the list then shows the missed images) and focuses it.
+ const missed=make('workflow-missed-defects',{role:'tab','aria-selected':'false'});doc.elements['workflow-missed-defects']=missed;
+ exports.focusWorkflowTarget('workflow-missed-defects');flush();
+ assert.equal(missed.clicks,1);assert.equal(missed.focused,true);
+ const shown=make('workflow-missed-defects',{role:'tab','aria-selected':'true'});doc.elements['workflow-missed-defects']=shown;
+ exports.focusWorkflowTarget('workflow-missed-defects');flush();
+ assert.equal(shown.clicks,0,'an already selected tab is not pressed again');assert.equal(shown.focused,true);
+});
+
+test('step 4 waits for the evaluation screen\'s read, is not done without its results, and a result with no image to score keeps the ready path',()=>{
+ const {getNextAction}=load();
+ const model={job_id:'m',task:'classification',checkpoint_state:'current',data_state:'current',scope_matches:true};
+ const withModel={...base,stage:4,modelJobId:'m',evidence:{...base.evidence,impact:{...base.evidence.impact,models:[model],model_evaluations:[{job_id:'m',state:'current',evaluation_id:'e1'}]}}};
+ const loading=getNextAction({...withModel,evaluationLoading:true});
+ assert.deepEqual([loading.status,loading.nextAction.label,loading.nextAction.step,loading.nextAction.kind],['checking','준비도 다시 확인',4,'refresh']);
+ // Recorded but not on the screen (a failed read, or a selection that cleared it): the misses are unknown, the step is not done.
+ const missing=getNextAction({...withModel,evaluationLoading:false});
+ assert.deepEqual([missing.status,missing.nextAction.label,missing.nextAction.step,missing.nextAction.target],['unknown','새로고침 버튼으로 이동 (4단계)',4,'evaluation-refresh']);
+ assert.equal(missing.missingInputs[0],'시험 이미지 평가 결과가 화면에 없습니다');
+ const failed=getNextAction({...withModel,evaluationError:'연결이 끊겼습니다'});
+ assert.deepEqual([failed.status,failed.missingInputs[0]],['blocked','시험 이미지 평가 결과를 읽지 못했습니다: 연결이 끊겼습니다'],'a failed read is for a person to look at');
+ const unscored=getNextAction({...withModel,evaluation:{samples:5,escapes:0,overkills:0,accuracy:null,low:null,high:null}});
+ assert.equal(unscored.status,'ready');assert.equal(unscored.nextAction.label,'검사 흐름 만들기 (5단계)');
+ assert.equal(getNextAction({...withModel,evaluationLoading:true,evaluation:{samples:3,escapes:3,overkills:0,accuracy:0,low:0,high:56}}).nextAction.label,'틀린 이미지 보기','counts already in: the misses decide');
 });

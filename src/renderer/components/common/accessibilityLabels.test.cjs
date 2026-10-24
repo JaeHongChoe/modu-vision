@@ -68,11 +68,13 @@ test('step banners name the steps in plain Korean and keep the English code behi
  assert.match(banner,/technicalDetails && <span/);
 });
 
-test('the simple view class bar leads with the project classes and folds unused example names',()=>{
+test('the class bar shows the project classes as chips and offers example names only as dashed additions',()=>{
  const categories=read('labeling/CategorySelector.tsx');
  assert.match(categories,/const simpleView = useProjectStore\(\(state\) => state\.viewMode\) === 'simple';/);
- assert.match(categories,/예시 이름 \$\{samples\.length\}개/);assert.match(categories,/onClick=\{\(\) => addCategory\(name\)\}/);
+ assert.match(categories,/예시 이름 \$\{samples\.length\}개/);assert.match(categories,/onClick=\{\(\) => addCategory\(d\.name, d\.color, d\.id\)\}/);
+ assert.match(categories,/\(!simpleView \|\| showSamples\) && samples\.map/,'folded in the simple view, inline in the full view');
  assert.match(categories,/cat\.id === activeCategory\.id/,'the drawing class stays visible');
+ assert.doesNotMatch(categories,/isUnusedSample|const missing/,'an example name is never a chip by itself and a project class is never only an add button');
 });
 
 test('a classification project says where each image\'s answer comes from instead of asking for drawn regions',()=>{

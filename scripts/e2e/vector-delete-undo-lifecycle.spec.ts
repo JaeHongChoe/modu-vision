@@ -43,7 +43,7 @@ export function assertInitialAnnotations(annotations:any[]){
  expect(annotations).toHaveLength(3);expect(new Set(annotations.map(item=>item.id)).size).toBe(3);
  for(const item of annotations){expect(typeof item.id).toBe('string');expect(item.id.length).toBeGreaterThan(0);}
  const [box,polygon,obb]=annotations;
- expect([box.type,box.label,box.category_id,box.bbox]).toEqual(['bbox','Solder Bridge',1,[20,20,70,60]]);
+ expect([box.type,box.label,box.category_id,box.bbox]).toEqual(['bbox','defect',1,[20,20,70,60]]);
  expect([polygon.type,polygon.label,polygon.category_id,polygon.polygon,polygon.points]).toEqual([
   'polygon','Scratch',2,[[120,30],[180,30],[150,80]],[[120,30],[180,30],[150,80]]]);
  expect([obb.type,obb.label,obb.category_id,obb.rotated_bbox,obb.direction_deg]).toEqual([

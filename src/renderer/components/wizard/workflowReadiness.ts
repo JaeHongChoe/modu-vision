@@ -31,11 +31,15 @@ export type ReadinessContext = { stage: WorkflowStep; projectReady: boolean; sou
   /** Step 2's label counts when the task has them (detection, segmentation): images in the source and those without a label. */ labels?: { total: number; unlabeled: number };
   /** Step 3's run from the training store: epoch counter, remaining seconds (null: unknown) and whether it belongs to the current data. */ training?: { epoch: number; totalEpochs: number; etaSeconds: number | null; current: boolean } | null;
   /** Step 4's loaded evaluation, already counted per image with the accuracy range in whole percents (null: none loaded; accuracy null: no image has an answer). */ evaluation?: { samples: number; escapes: number; overkills: number; accuracy: number | null; low: number | null; high: number | null } | null;
+  /** Step 4: the evaluation screen is still reading its results (no counts yet). */ evaluationLoading?: boolean;
+  /** Step 4: why the evaluation screen could not read its results (null: no failure). */ evaluationError?: string | null;
   /** Step 6's batch inspection of the current source (null: none shown). */ inspection?: StepSixProgress | null;
   /** The editor differs from the active saved version: unsaved edits, or an autosaved draft that is not that version.
    *  Step 5's line only; the advice keeps reading flowDirty. */ flowEditing?: boolean };
 
 const ACTIVE_TRAINING = ['queued', 'preparing', 'running', 'transferring', 'syncing', 'stopping'];
+// Step 4's second 'why' line when the model missed test defects: the ways to fix it, and that step 5 stays one press away.
+const MISSED_NEXT = '놓친 이미지를 하나씩 보고, 라벨이 틀렸으면 \'라벨 수정\'으로 고치세요. 라벨이 맞으면 판정 기준 점수를 낮추거나 라벨을 더 달아 다시 학습하세요. 이대로 5단계로 가려면 오른쪽 끝 → 버튼을 누르세요.';
 
 /** Navigation advice only. A recorded result is never authorization to run work. */
 export function getNextAction(input: ReadinessContext): ReadinessAction {
@@ -106,6 +110,19 @@ export function getNextAction(input: ReadinessContext): ReadinessAction {
     const evaluation=evidence.impact.model_evaluations.find(row=>row.job_id===model.job_id && row.state==='current' && row.evaluation_id);
     if(!evaluation){unconfirmed();return result('unknown',['이 모델로 시험 이미지를 평가하면 5단계로 갈 수 있습니다 (승인은 필요하지 않습니다)'],'시험 이미지로 평가하기 (4단계)',4);}
     completedInputs.push(`현재 평가 ${evaluation.evaluation_id}`);
+    // The step-4 screen reads the evaluation when it opens: until its counts are in, the step is not called done (an
+    // automatic run would otherwise go on before the misses are known).
+    if(!stageProgress&&input.evaluationLoading)return result('checking',['시험 이미지 평가 결과를 불러오는 중'],'준비도 다시 확인',4,undefined,'refresh');
+    // Recorded but not on the screen (its read failed, or a selection on the screen cleared it): the misses are unknown,
+    // so the step is not done. The action brings the screen's own 새로고침 button into view (it is not pressed); a failed
+    // read is blocked (a person looks), results not read yet are unknown (an automatic run waits for them).
+    if(!stageProgress)return input.evaluationError
+      ?result('blocked',[`시험 이미지 평가 결과를 읽지 못했습니다: ${input.evaluationError}`],'새로고침 버튼으로 이동 (4단계)',4,'evaluation-refresh')
+      :result('unknown',['시험 이미지 평가 결과가 화면에 없습니다'],'새로고침 버튼으로 이동 (4단계)',4,'evaluation-refresh');
+    // 5.3-4: a model that missed test defects is looked at before step 5. The action opens the 미검 tab; step 5 stays one
+    // press of the step arrow. False alarms alone keep the ready path: the recommended score trades them for no misses,
+    // and the number line and the cards still show them.
+    if(stageProgress&&'escapes' in stageProgress&&stageProgress.escapes>0)return result('blocked',['모델이 시험 이미지의 불량을 놓쳤습니다',MISSED_NEXT],'틀린 이미지 보기',4,'workflow-missed-defects');
     return result('ready',[],'검사 흐름 만들기 (5단계)',5);
   }
   if(!input.flowVersionId || input.flowDirty)return result('blocked',['현재 규칙의 저장된 플로우 버전 필요'],'검사 흐름 저장·평가 (5단계)',5,'flow-area-edit');

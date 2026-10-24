@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { api, subscribeProjectContext } from '../../services/api';
 import { flowEvaluation } from '../../services/flowEvaluation';
-import { currentAssistContext } from '../../stores/assistContext';
+import { currentAssistContext, subscribeAssistContext } from '../../stores/assistContext';
 import { announceFlowSaved, requestAutoRun } from '../../stores/autoRunChannel';
 import { useDatasetStore } from '../../stores/useDatasetStore';
 import { useEvaluationStore } from '../../stores/useEvaluationStore';
@@ -10,9 +10,9 @@ import { useProjectStore } from '../../stores/useProjectStore';
 import { useTrainingStore } from '../../stores/useTrainingStore';
 import { bumpWorkflowEvidence } from '../../stores/workflowEvidence';
 import { WorkspaceDialog } from '../common/WorkspaceDialog';
-import { ACTION_TEXT, PERSON_STOPS, runAutoProgress, type ActResult, type AutoAction, type AutoChoices, type AutoDeps, type AutoRunState, type TruthConfirm } from './autoProgress';
+import { ACTION_TEXT, PERSON_STOPS, missedStillShown, runAutoProgress, type ActResult, type AutoAction, type AutoChoices, type AutoDeps, type AutoRunState, type TruthConfirm } from './autoProgress';
 import { useAnnotationStore } from '../../stores/useAnnotationStore';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useSyncExternalStore } from 'react';
 import { focusWorkflowTarget, type WorkflowStep } from './workflowReadiness';
 import { useComputeStore } from '../../stores/useComputeStore';
 import { taskPreviewScope } from './TaskChangeImpactDialog';
@@ -146,6 +146,10 @@ export function AutoProgressDialog({ onClose }: { onClose: () => void }) {
   const start = useAutoProgressStore((state) => state.start);
   const cancel = useAutoProgressStore((state) => state.cancel);
   const cancelRequested = useAutoProgressStore((state) => state.cancelRequested);
+  // A stop's go-on is offered only while the screen still shows the result the person was asked about (a relabel or a
+  // retrain changes it). The snapshot is a boolean: the context object is rebuilt on every read.
+  const readMissedShown = () => Boolean(run?.stop?.missed && missedStillShown(run.stop.missed, currentAssistContext()));
+  const missedShown = useSyncExternalStore(subscribeAssistContext, readMissedShown, readMissedShown);
   const project = useProjectStore(), dataset = useDatasetStore(), training = useTrainingStore(), compute = useComputeStore();
   const { task } = project;
   const { trainRatio } = dataset;
@@ -207,6 +211,7 @@ export function AutoProgressDialog({ onClose }: { onClose: () => void }) {
         {run.stop.confirm && <TruthConfirmForm confirm={run.stop.confirm} task={task} onDone={() => start()} />}
         <div className="flex flex-wrap gap-2">
           {run.stop.deferDrafts && <button type="button" className="workspace-button" onClick={() => start({ deferDrafts: true })}>남은 초안은 두고 확정한 라벨 {run.stop.deferDrafts}장으로 학습까지 이어 가기</button>}
+          {run.stop.missed && missedShown && <button type="button" className="workspace-button" onClick={() => start({ acceptMissed: run.stop?.missed })}>놓친 불량 {run.stop.missed.escapes}장을 그대로 두고 검사 흐름까지 이어 가기</button>}
           <button type="button" className="workspace-button" onClick={() => void goToStop()}>{run.stop.step}단계 그 화면으로</button>
         </div>
       </div>}

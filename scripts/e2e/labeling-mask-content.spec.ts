@@ -37,28 +37,28 @@ async function exercise(page:Page,workspace:Workspace,evidence:Evidence,api:Owne
   const response=page.waitForResponse(r=>new URL(r.url()).pathname==='/api/annotations/save'&&r.request().method()==='POST');
   await page.getByRole('button',{name:'변경 저장',exact:true}).click();expect((await response).status()).toBe(200);return api(query);
  };
- await page.getByRole('button',{name:/^Solder Bridge(?: \d+)?$/}).click();await page.getByTitle('브러시 마스크 (Brush - 5)',{exact:true}).click();
- await stroke(0,-50,50);const first=await save();const firstMask=first.annotations.find((a:any)=>a.label==='Solder Bridge');expect(firstMask.type).toBe('brush_mask');
+ await page.getByRole('button',{name:/^defect(?: \d+)?$/}).click();await page.getByTitle('브러시 마스크 (Brush - 5)',{exact:true}).click();
+ await stroke(0,-50,50);const first=await save();const firstMask=first.annotations.find((a:any)=>a.label==='defect');expect(firstMask.type).toBe('brush_mask');
  const firstPixels=await pixels(page,firstMask.mask_rle);expect(firstPixels.painted).toBeGreaterThan(100);
  await page.getByRole('button',{name:/^Scratch(?: \d+)?$/}).click();await stroke(60,-50,50);const both=await save();
  const otherMask=both.annotations.find((a:any)=>a.label==='Scratch');expect(otherMask.type).toBe('brush_mask');const otherSha=hash(otherMask.mask_rle);
- expect(both.annotations.find((a:any)=>a.label==='Solder Bridge').mask_rle).toBe(firstMask.mask_rle);
+ expect(both.annotations.find((a:any)=>a.label==='defect').mask_rle).toBe(firstMask.mask_rle);
  const release=async()=>{const reply=page.waitForResponse(r=>new URL(r.url()).pathname.endsWith('/lease/release')&&r.request().method()==='POST');await page.getByRole('button',{name:'편집 종료',exact:true}).click();const response=await reply;expect(response.status()).toBe(200);expect((await response.json()).image.team.edit_lease).toBeNull();};
  await release();
  await page.reload();await expect(page.getByTitle('프로젝트 관리',{exact:true})).toContainText('Mask content fixture');
  await expect(page.getByRole('button',{name:'집중 편집',exact:true})).toHaveAttribute('aria-pressed','true');
  await page.getByRole('button',{name:'편집 시작',exact:true}).click();await expect(page.getByText('현재 이미지 편집 중',{exact:true})).toBeVisible();
- await page.getByRole('button',{name:/^Solder Bridge(?: \d+)?$/}).click();
+ await page.getByRole('button',{name:/^defect(?: \d+)?$/}).click();
  // Wait for the selected class raster to be decoded after the real reload.
  await expect(page.getByTitle('마스크 지우개 (Eraser - 6)',{exact:true})).toBeVisible();await page.getByTitle('마스크 지우개 (Eraser - 6)',{exact:true}).click();
- await stroke(0,-8,8);const erased=await save();const erasedMask=erased.annotations.find((a:any)=>a.label==='Solder Bridge');const erasedPixels=await pixels(page,erasedMask.mask_rle);
+ await stroke(0,-8,8);const erased=await save();const erasedMask=erased.annotations.find((a:any)=>a.label==='defect');const erasedPixels=await pixels(page,erasedMask.mask_rle);
  expect(erasedPixels.painted).toBeGreaterThan(0);expect(erasedPixels.painted).toBeLessThan(firstPixels.painted);
  expect(hash(erased.annotations.find((a:any)=>a.label==='Scratch').mask_rle)).toBe(otherSha);
- await page.getByTitle('실행 취소 (Ctrl+Z)',{exact:true}).click();const undone=await save();expect(undone.annotations.find((a:any)=>a.label==='Solder Bridge').mask_rle).toBe(firstMask.mask_rle);
- await page.getByTitle('다시 실행 (Ctrl+Y)',{exact:true}).click();const redone=await save();expect(redone.annotations.find((a:any)=>a.label==='Solder Bridge').mask_rle).toBe(erasedMask.mask_rle);
+ await page.getByTitle('실행 취소 (Ctrl+Z)',{exact:true}).click();const undone=await save();expect(undone.annotations.find((a:any)=>a.label==='defect').mask_rle).toBe(firstMask.mask_rle);
+ await page.getByTitle('다시 실행 (Ctrl+Y)',{exact:true}).click();const redone=await save();expect(redone.annotations.find((a:any)=>a.label==='defect').mask_rle).toBe(erasedMask.mask_rle);
  await release();
- await page.reload();await expect(page.getByRole('button',{name:/^Solder Bridge 1$/})).toBeVisible();await expect(page.getByRole('button',{name:/^Scratch 1$/})).toBeVisible();
- const reopened=await api(query);expect(reopened.annotations.find((a:any)=>a.label==='Solder Bridge').mask_rle).toBe(erasedMask.mask_rle);
+ await page.reload();await expect(page.getByRole('button',{name:/^defect 1$/})).toBeVisible();await expect(page.getByRole('button',{name:/^Scratch 1$/})).toBeVisible();
+ const reopened=await api(query);expect(reopened.annotations.find((a:any)=>a.label==='defect').mask_rle).toBe(erasedMask.mask_rle);
  expect(hash(reopened.annotations.find((a:any)=>a.label==='Scratch').mask_rle)).toBe(otherSha);expect(hash(fs.readFileSync(imagePath))).toBe(originalSha);
  await evidence.screenshot(page,native?'native-two-class-mask-reopened':'browser-two-class-mask-reopened');
  evidence.note('mask_content',{project_id:project.id,image_path:imagePath,image_sha256:originalSha,first_pixels:firstPixels,erased_pixels:erasedPixels,

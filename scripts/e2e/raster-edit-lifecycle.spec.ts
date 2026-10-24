@@ -87,7 +87,7 @@ export function assertSourceIdentity(actual:any,original:any){
 export function assertTwoClasses(annotations:any[]){
  expect(annotations).toHaveLength(2);expect(new Set(annotations.map(a=>a.id)).size).toBe(2);
  for(const a of annotations){expect(typeof a.id).toBe('string');expect(a.id.length).toBeGreaterThan(0);}
- expect(annotations.map(a=>[a.type,a.label,a.category_id])).toEqual([['brush_mask','Solder Bridge',1],['brush_mask','Scratch',2]]);
+ expect(annotations.map(a=>[a.type,a.label,a.category_id])).toEqual([['brush_mask','defect',1],['brush_mask','Scratch',2]]);
 }
 export function assertOnlySelectedRasterChanged(after:any[],before:any[]){
  assertTwoClasses(after);assertTwoClasses(before);expect(after[0].mask_rle).not.toBe(before[0].mask_rle);
@@ -177,7 +177,7 @@ with Image.open(source) as im:
  assert im.format=='PNG' and im.mode=='RGB' and im.size==(256,256)
  assert list(im.getdata())==[(x,y,80) for y in range(256) for x in range(256)]
 rows=record['annotations'];assert len(rows)==2 and len({a['id'] for a in rows})==2
-assert [(a['type'],a['label'],a['category_id']) for a in rows]==[('brush_mask','Solder Bridge',1),('brush_mask','Scratch',2)]
+assert [(a['type'],a['label'],a['category_id']) for a in rows]==[('brush_mask','defect',1),('brush_mask','Scratch',2)]
 composite=bytearray(256*256);layers=[]
 for row in rows:
  assert isinstance(row['id'],str) and row['id']
@@ -345,7 +345,7 @@ async function exercise(page:Page,workspace:Workspace,evidence:Evidence,api:Api,
  if(native)expect(preludeWrites.map(w=>JSON.parse(w.body!))).toEqual([
   {name:emptyProject.name,task:'segmentation'},{name:project.name,task:'segmentation'},{source_dataset_dir:source},{folder_path:source,task:'segmentation'}]);
  const bodyWriteStart=writes.length;
- const selectClass=async()=>{await page.getByRole('button',{name:/^Solder Bridge(?: \d+)?$/}).click();};
+ const selectClass=async()=>{await page.getByRole('button',{name:/^defect(?: \d+)?$/}).click();};
  const recenter=async()=>{await page.getByTitle('실제 크기 (1:1)',{exact:true}).click();await expect(page.getByTestId('canvas-hud')).toContainText('100%');};
  const point=async(x:number,y:number)=>{const b=await page.locator('[data-canvas-container]').boundingBox();expect(b).not.toBeNull();return{x:b!.x+(b!.width-256)/2+x,y:b!.y+(b!.height-256)/2+y};};
  const stroke=async(y:number,x1:number,x2:number,button:'left'|'right'='left')=>{
@@ -373,7 +373,7 @@ async function exercise(page:Page,workspace:Workspace,evidence:Evidence,api:Api,
   }
   const mutations=writes.slice(start);assertSaveCycle(mutations,status,source);saveCycles.push({label,result,importReply,imageReply,mutations});return result;
  };
- await page.getByRole('button',{name:/^Solder Bridge(?: \d+)?$/}).click();await page.getByTitle('브러시 마스크 (Brush - 5)',{exact:true}).click();await recenter();await stroke(80,50,170);
+ await page.getByRole('button',{name:/^defect(?: \d+)?$/}).click();await page.getByTitle('브러시 마스크 (Brush - 5)',{exact:true}).click();await recenter();await stroke(80,50,170);
  await page.getByRole('button',{name:/^Scratch(?: \d+)?$/}).click();await stroke(170,50,170);
  await save(200,'initial-two-class-controlled-setup');
  const identity=await value(metadataQuery);expect(identity.file_path).toBe(imagePath);expect(identity.content_hash).toBe(imageSha);expect(identity.image_uuid).toBeTruthy();

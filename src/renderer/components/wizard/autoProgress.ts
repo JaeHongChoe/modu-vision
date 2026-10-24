@@ -2,7 +2,8 @@
  * on the person's behalf for the actions a machine may take — save the default split, start training with the settings
  * step 3 shows, evaluate the model on the test images, save a one-model inspection flow and evaluate it, inspect the test
  * images — and stops where a person must decide: the project and folder, ground-truth labels, draft review, confirming
- * truth, class problems, approval and deployment.
+ * truth, class problems, approval and deployment — and, when the evaluated model missed test defects, at those images
+ * (the person may go on for this run).
  *
  * It keeps no progress of its own: every pass reads the readiness again, so a finished step is never run twice and
  * pressing again after a stop or a failure resumes where it stopped. Dependency-free, so the rules are tested alone. */
@@ -14,7 +15,7 @@ export type AutoDecision =
   | { kind: 'advance'; step: number }
   | { kind: 'act'; action: AutoAction }
   | { kind: 'wait'; refresh?: boolean; training?: boolean }
-  | { kind: 'stop'; reason: string; step: number; target?: string; deferDrafts?: number }
+  | { kind: 'stop'; reason: string; step: number; target?: string; deferDrafts?: number; missed?: MissedDefects }
   | { kind: 'done'; reason: string };
 
 /** What each automatic action does, in the words the dialog lists before the start and logs after it. */
@@ -27,17 +28,29 @@ export const ACTION_TEXT: Record<AutoAction, string> = {
   inspect: '시험 이미지 검사 (6단계)',
 };
 /** Where the run always stops, said before it starts. */
-export const PERSON_STOPS = ['프로젝트와 이미지 폴더 고르기', '정답 라벨 그리기', '초안 검토와 채택', '평가 정답 확인', '승인·패키지·배포'];
+export const PERSON_STOPS = ['프로젝트와 이미지 폴더 고르기', '정답 라벨 그리기', '초안 검토와 채택', '불량을 놓친 모델 (틀린 이미지를 보고 그대로 이어 갈 수 있음)', '평가 정답 확인', '승인·패키지·배포'];
 
 const START_TRAINING = new Set(['학습 시작 버튼으로 이동 (3단계)', '학습 결과 평가 (4단계)']);
 const SPLIT = new Set(['분할 다시 적용 (1단계)', '학습·시험 분할 확인 (1단계)']);
 const SAVE_FLOW = new Set(['검사 흐름 저장·평가 (5단계)', '보이는 검사 흐름 저장·평가 (5단계)']);
 const DATA_CHANGED = '바뀐 내용과 되돌리기';
+const MISSED_IMAGES = '틀린 이미지 보기';
+// Step 4 holds an evaluation record whose results are not on the screen: wait for them (bounded) while they are only not
+// read yet, stop for a person when the read failed, never go past them.
+const READ_RESULTS = '새로고침 버튼으로 이동 (4단계)';
 
 /** The next move for one readiness picture. Pure: the same picture always gives the same move. */
+/** The step-4 result a person saw at the missed-defects stop: test images and the defects missed among them. */
+export type MissedDefects = { escapes: number; samples: number };
+/** Whether the screen still shows that result (the dialog offers going on only then; a relabel or retrain changes it). */
+export function missedStillShown(missed: MissedDefects, ctx: Snapshot | null): boolean {
+  return Boolean(ctx && ctx.stage === 4 && ctx.nextAction.label === MISSED_IMAGES && ctx.progress && 'escapes' in ctx.progress
+    && ctx.progress.escapes === missed.escapes && ctx.progress.samples === missed.samples);
+}
 /** What the person chose at an earlier stop of this run: leave the waiting drafts for later and train on the labels
- *  already confirmed (drafts are not labels, so they stay out of training like images without one). */
-export type AutoChoices = { deferDrafts?: boolean };
+ *  already confirmed (drafts are not labels, so they stay out of training like images without one), or go on to step 5
+ *  with the result they saw: the same test images with no more defects missed. Another result stops the run again. */
+export type AutoChoices = { deferDrafts?: boolean; acceptMissed?: MissedDefects };
 
 export function decide(ctx: Snapshot, choices: AutoChoices = {}): AutoDecision {
   const { stage, status, nextAction: next } = ctx;
@@ -75,6 +88,15 @@ export function decide(ctx: Snapshot, choices: AutoChoices = {}): AutoDecision {
   }
   if (stage === 4) {
     if (label === '검사 흐름 만들기 (5단계)') return { kind: 'advance', step: 5 };
+    // The model missed test defects: fixing labels, lowering the score, retraining or going on as it is is the person's
+    // call. Like the draft stop, going on applies to this run only.
+    if (label === MISSED_IMAGES) {
+      const seen = ctx.progress && 'escapes' in ctx.progress ? { escapes: ctx.progress.escapes, samples: ctx.progress.samples } : null;
+      const accepted = choices.acceptMissed;
+      if (seen && accepted && seen.samples === accepted.samples && seen.escapes <= accepted.escapes) return { kind: 'advance', step: 5 };
+      return { ...stop(`${ctx.blocker || '모델이 시험 이미지의 불량을 놓쳤습니다'} · 놓친 이미지를 보고 고칠지, 이대로 갈지는 사람이 정합니다.`), ...(seen && seen.escapes > 0 ? { missed: seen } : {}) } as AutoDecision;
+    }
+    if (label === READ_RESULTS) return status === 'blocked' ? stop(`${ctx.blocker || label} · 4단계의 새로고침으로 다시 읽으세요.`) : { kind: 'wait', refresh: true };
     if (label === '시험 이미지로 평가하기 (4단계)') return { kind: 'act', action: 'evaluate' };
     // No current model (a data edit cleared it, or the data changed after training): step 3 trains one.
     if (label === '학습 모델 확인 (3단계)' || label === DATA_CHANGED) return { kind: 'advance', step: 3 };
@@ -99,7 +121,7 @@ export type AutoRunState = {
   state: 'idle' | 'running' | 'stopped' | 'done' | 'failed' | 'cancelled';
   log: AutoLogRow[];
   /** Where it stopped and the step/target that clears it (the footer's own action names the same place). */
-  stop: { reason: string; step: number; target?: string; confirm?: TruthConfirm; deferDrafts?: number } | null;
+  stop: { reason: string; step: number; target?: string; confirm?: TruthConfirm; deferDrafts?: number; missed?: MissedDefects } | null;
 };
 /** A stop the person can clear right in the dialog: confirm the frozen test images' labels as truth (their press). */
 export type TruthConfirm = { kind: 'truth'; cohortId: string; versionId: string; images: number };
@@ -140,6 +162,9 @@ export async function runAutoProgress(deps: AutoDeps, onUpdate: (state: AutoRunS
   let lastAct: { action: AutoAction; at: number } | null = null;
   // A step entered again and again means the readiness and the actions disagree: stop instead of circling.
   const visits = new Map<number, number>();
+  // The person's choices for this run. Going on with missed defects was said of the model they saw: a model this run
+  // trains afterwards is shown to them again.
+  let choices = options.choices;
   for (let pass = 0; pass < maxPasses; pass++) {
     if (deps.cancelled()) return finish({ state: 'cancelled', stop: null });
     const ctx = deps.snapshot();
@@ -150,11 +175,11 @@ export async function runAutoProgress(deps: AutoDeps, onUpdate: (state: AutoRunS
       await deps.sleep(pollMs);
       continue;
     }
-    const move = decide(ctx, options.choices);
+    const move = decide(ctx, choices);
     if (move.kind === 'wait') {
       if (waitingSince === null) waitingSince = deps.now();
       // Training waits as long as the run takes (the footer shows its epochs); anything else is bounded.
-      if (!move.training && deps.now() - waitingSince > settleMs) return finish({ state: 'failed', stop: { reason: `${ctx.stage}단계 확인이 끝나지 않았습니다: ${ctx.blocker || ctx.nextAction.label}`, step: ctx.stage } });
+      if (!move.training && deps.now() - waitingSince > settleMs) return finish({ state: 'failed', stop: { reason: `${ctx.stage}단계 확인이 끝나지 않았습니다: ${ctx.blocker || ctx.nextAction.label}`, step: ctx.stage, ...(ctx.nextAction.target ? { target: ctx.nextAction.target } : {}) } });
       if (move.refresh && refreshed++ < 3) deps.refresh();
       await deps.sleep(pollMs);
       continue;
@@ -170,7 +195,7 @@ export async function runAutoProgress(deps: AutoDeps, onUpdate: (state: AutoRunS
       await deps.setStep(move.step);
       continue;
     }
-    if (move.kind === 'stop') return finish({ state: 'stopped', stop: { reason: move.reason, step: move.step, ...(move.target ? { target: move.target } : {}), ...(move.deferDrafts ? { deferDrafts: move.deferDrafts } : {}) }, log: [...state.log, { at: deps.now(), text: move.reason, tone: 'stop' }] });
+    if (move.kind === 'stop') return finish({ state: 'stopped', stop: { reason: move.reason, step: move.step, ...(move.target ? { target: move.target } : {}), ...(move.deferDrafts ? { deferDrafts: move.deferDrafts } : {}), ...(move.missed ? { missed: move.missed } : {}) }, log: [...state.log, { at: deps.now(), text: move.reason, tone: 'stop' }] });
     if (move.kind === 'done') return finish({ state: 'done', stop: null, log: [...state.log, { at: deps.now(), text: move.reason, tone: 'done' }] });
     if (lastAct && lastAct.action === move.action && deps.now() - lastAct.at < afterActMs) {
       await deps.sleep(pollMs);
@@ -195,6 +220,7 @@ export async function runAutoProgress(deps: AutoDeps, onUpdate: (state: AutoRunS
     if (result && typeof result === 'object') return finish({ state: 'stopped', stop: { reason: result.person, step: result.step, ...(result.target ? { target: result.target } : {}), ...(result.confirm ? { confirm: result.confirm } : {}) }, log: [...state.log, { at: deps.now(), text: result.person, tone: 'stop' }] });
     if (typeof result === 'string') return finish({ state: 'failed', stop: { reason: `${ACTION_TEXT[move.action]}: ${result}`, step: ctx.stage }, log: [...state.log, { at: deps.now(), text: `${ACTION_TEXT[move.action]}: ${result}`, tone: 'error' }] });
     log(move.action === 'train' ? `${ACTION_TEXT.train} 시작됨 · 끝날 때까지 기다립니다` : `${ACTION_TEXT[move.action]} 끝`, 'done');
+    if (move.action === 'train' && choices?.acceptMissed) choices = { ...choices, acceptMissed: undefined };
     // The evidence the readiness reads changed: ask it to read again before the next pass.
     lastAct = { action: move.action, at: deps.now() };
     deps.refresh();

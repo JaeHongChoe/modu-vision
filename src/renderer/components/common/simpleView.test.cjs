@@ -143,10 +143,11 @@ test('the simple view gives every step a plain page header and moves each step\'
  const studio=read('src/renderer/components/dataset/DatasetStudio.tsx');assert.match(studio,/`폴더: \$\{folderPath/);
 });
 
-test('the simple view states the training target in one sentence and folds the review counts and team actions',()=>{
+test('the simple view states the team review result in one sentence, never as a training count, and folds the review counts and team actions',()=>{
  const readiness=read('src/renderer/components/training/TeamTrainingReadiness.tsx');
  const simple=readiness.slice(readiness.indexOf("if(project.viewMode==='simple')"),readiness.indexOf(' return <section aria-label="팀 검수 학습 준비"',readiness.indexOf("if(project.viewMode==='simple')")+1));
- assert.match(simple,/학습에 쓸 이미지/);assert.match(simple,/학습 대상 이미지 \$\{value\.counts\.eligible/);assert.match(simple,/:reviewTrainingMessage\(value\)/,'blockers still read as before');
+ assert.match(simple,/<strong>팀 검수<\/strong>/);assert.match(simple,/팀 검수 기준으로는 학습할 수 있습니다/);assert.match(simple,/:reviewTrainingMessage\(value\)/,'blockers still read as before');
+ assert.ok(!simple.includes('학습 대상'),'the training count is the saved split in item 1, not the review count');
  const folded=simple.slice(simple.indexOf('<summary'));
  for(const detail of ['reviewTrainingMessage(value)','라벨 기준','대상 다시 확인','팀 검수 열기'])assert.ok(folded.includes(detail),`${detail} sits behind 검수 세부`);
  assert.ok(!simple.includes('sha256'),'hashes stay in the full view');
