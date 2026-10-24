@@ -134,7 +134,12 @@ def _analyze(project):
         with closing(sqlite3.connect(f'file:{database}?mode=ro',uri=True)) as connection, connection:
             original_dataset_provenance_database(connection,database)
             connection.row_factory=sqlite3.Row
-            for row in connection.execute('SELECT revisions.* FROM active_revisions JOIN revisions ON revisions.revision_id=active_revisions.revision_id'):
+            # The deployment routes create this store on first use, so a read racing that first visit can find the file
+            # before its tables. A store without the active table and without any revision holds no approval yet; one
+            # with revisions but no active table is damaged and still refused below (no such table → 409).
+            tables={row[0] for row in connection.execute("SELECT name FROM sqlite_master WHERE type='table'")}
+            starting='active_revisions' not in tables and ('revisions' not in tables or connection.execute('SELECT 1 FROM revisions LIMIT 1').fetchone() is None)
+            for row in ([] if starting else connection.execute('SELECT revisions.* FROM active_revisions JOIN revisions ON revisions.revision_id=active_revisions.revision_id')):
                 scope_matches=row['source_dataset_path']==source
                 model=index.get(row['job_id']);state='changed' if model and model['checkpoint_sha256']!=row['checkpoint_sha256'] else 'revalidation_required' if model and model['data_state']=='changed' else 'unverified'
                 approvals.append({'revision_id':row['revision_id'],'job_id':row['job_id'],'state':state if scope_matches else 'different_source','reviewer':row['reviewer'],'scope_matches':scope_matches,'source_dataset_path':row['source_dataset_path']})
