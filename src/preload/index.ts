@@ -65,6 +65,16 @@ const api: ElectronAPI = {
     imageIntent: input => ipcRenderer.invoke('assistant:image-intent', input),
     beginRun: (runId, tool) => ipcRenderer.invoke('assistant:run-begin', runId, tool),
     endRun: runId => ipcRenderer.invoke('assistant:run-end', runId),
+    chatgpt: {
+      begin: input => ipcRenderer.invoke('assistant:chatgpt-begin', input),
+      acknowledgePlanUsage: id => ipcRenderer.invoke('assistant:chatgpt-acknowledge-plan', id),
+      resumeUsage: id => ipcRenderer.invoke('assistant:chatgpt-resume-usage', id),
+      recover: input => ipcRenderer.invoke('assistant:chatgpt-recover', input),
+      cancel: () => ipcRenderer.invoke('assistant:chatgpt-cancel'),
+      selectAccount: id => ipcRenderer.invoke('assistant:chatgpt-account', id),
+      selectModel: (id, model) => ipcRenderer.invoke('assistant:chatgpt-model', id, model),
+      signOut: id => ipcRenderer.invoke('assistant:chatgpt-signout', id),
+    },
   },
 };
 

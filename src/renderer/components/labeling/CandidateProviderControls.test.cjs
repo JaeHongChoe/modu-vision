@@ -19,7 +19,7 @@ const setupWith=(foundation,configuration={})=>({configuration,providers:{founda
 
 // The component rendered one level deep with controlled hooks (what scripts/verify-foundation-labeling-ui.cjs does): the tree
 // is inspected, buttons are clicked through their props, and every provider call is recorded.
-function mount({setup,canPick=true,currentImage={file_path:'/source-a/a.png'},disabled=false}){
+function mount({setup,canPick=true,currentImage={file_path:'/source-a/a.png'},disabled=false,task='segmentation',promptStore,annotations=[],selectedAnnotationId=null,setupRead}){
   const slots=[],effects=[];let cursor=0;
   const react={
     createElement:(type,props,...children)=>({type,props:{...(props||{}),children}}),
@@ -28,22 +28,25 @@ function mount({setup,canPick=true,currentImage={file_path:'/source-a/a.png'},di
     useEffect(fn,deps){const i=cursor++;const previous=slots[i];if(!previous||deps.some((value,n)=>value!==previous.deps[n])){previous?.cleanup?.();const entry={deps};slots[i]=entry;effects.push(()=>{entry.cleanup=fn();});}},
   };
   react.default=react;
-  const project={projectDir:'/project',task:'segmentation',project:{id:'own',task:'segmentation',active_labelset_id:'default',source_dataset_dir:'/source-a'}};
+  const project={projectDir:'/project',task,project:{id:'own',task,active_labelset_id:'default',source_dataset_dir:'/source-a'}};
   const store=state=>Object.assign(selector=>selector?selector(state):state,{getState:()=>state});
-  const calls={setup:0,configure:[],opened:[]};
+  const prompts=promptStore||compile(path.resolve(directory,'../../stores/useFoundationPromptStore.ts'),{},false).useFoundationPromptStore;
+  const promptHook=Object.assign(selector=>selector?selector(prompts.getState()):prompts.getState(),{getState:prompts.getState});
+  const calls={setup:0,configure:[],opened:[],generated:[]};
   let current=setup;
   const providers={
-    setup:async()=>{calls.setup+=1;return current;},
+    setup:async()=>{calls.setup+=1;return setupRead?setupRead():current;},
     configure:async body=>{calls.configure.push(body);if(/\/missing$/.test(String(body.mask_model_dir)))throw {detail:'Choose an existing local model directory'};current={...current,configuration:{...current.configuration,...body}};return current;},
     featureModels:async()=>({models:[]}),batches:async()=>({batches:[]}),featureJobs:async()=>({jobs:[]}),
+    generate:async body=>{calls.generated.push(body);return{id:'draft',candidates:[]};},
   };
   const mocks={
     react,
     '../../stores/useProjectStore':{useProjectStore:store(project)},
     '../../stores/useDatasetStore':{useDatasetStore:store({images:[],folderPath:'/source-a'})},
-    '../../stores/useAnnotationStore':{useAnnotationStore:store({currentImage,annotations:[],selectedAnnotationId:null,setActiveTool(){},activeCategory:{id:1,name:'scratch'},categories:[]})},
+    '../../stores/useAnnotationStore':{useAnnotationStore:store({currentImage,annotations,selectedAnnotationId,setActiveTool(){},activeCategory:{id:1,name:'scratch'},categories:[]})},
     '../../stores/useModelAssistRunStore':{useModelAssistRunStore:store({begin(){},end(){}})},
-    '../../stores/useFoundationPromptStore':{useFoundationPromptStore:store({points:[],boxes:[],pointLabel:1,setPointLabel(){},clear(){},bind(){},bindProject(){}})},
+    '../../stores/useFoundationPromptStore':{useFoundationPromptStore:promptHook},
     '../../services/hostAdapter':{host:{can:capability=>capability==='pickPaths'&&canPick,selectFolder:async()=>{throw new Error('No native dialog in this test');},openLink:async url=>{calls.opened.push(url);return true;}}},
     '../../services/api':{api:{dataset:{}}},
     '../../services/datasetWorkflow':{workflowError:error=>error instanceof Error?error.message:typeof error?.detail==='string'?error.detail:String(error)},
@@ -62,7 +65,8 @@ function mount({setup,canPick=true,currentImage={file_path:'/source-a/a.png'},di
   const button=name=>nodes().find(node=>node.type==='button'&&text(node)===name);
   const byLabel=label=>nodes().find(node=>node.props?.['aria-label']===label);
   const card=()=>byLabel('SAM2 모델 준비');
-  return {exports,calls,render,settle,text,nodes,button,byLabel,card,
+  return {exports,calls,prompts,providers,render,settle,text,nodes,button,byLabel,card,
+    unmount:()=>slots.forEach(slot=>slot?.cleanup?.()),
     cardText:()=>text(card()),
     status:()=>text(flatten(card()).find(node=>node.props?.role==='status')),
     details:()=>flatten(card()).find(node=>node.type==='details'),
@@ -73,6 +77,51 @@ function mount({setup,canPick=true,currentImage={file_path:'/source-a/a.png'},di
     async open(){render();await settle();render();},
   };
 }
+
+test('point generation is an explicit opt-in control and switching it never submits a request',async()=>{
+ const ui=mount({setup:setupWith(readiness('ready'))});await ui.open();
+ let toggle=ui.byLabel('점 입력 후 후보 만들기');assert.equal(toggle.props.checked,false);assert.equal(toggle.props.disabled,false);
+ toggle.props.onChange({target:{checked:true}});ui.render();assert.equal(ui.prompts.getState().quickPointEnabled,true);
+ assert.equal(ui.byLabel('점 입력 후 후보 만들기').props.checked,true);assert.deepEqual(ui.calls.generated,[]);
+ ui.byLabel('후보 점수').props.onChange({target:{value:'0.8'}});ui.render();assert.equal(ui.prompts.getState().quickOptions.options.threshold,.8);
+ ui.byLabel('점 입력 후 후보 만들기').props.onChange({target:{checked:false}});ui.render();assert.equal(ui.prompts.getState().quickPointEnabled,false);assert.deepEqual(ui.calls.generated,[]);
+ const blocked=mount({setup:setupWith(readiness('not_configured'))});await blocked.open();assert.equal(blocked.byLabel('점 입력 후 후보 만들기').props.disabled,true);
+});
+test('classification cannot enable point inference and is told which task supports it',async()=>{
+ const ui=mount({setup:setupWith(readiness('ready')),task:'classification'});await ui.open();
+ assert.equal(ui.byLabel('점 입력 후 후보 만들기').props.disabled,true);
+ assert.match(ui.text(ui.render()),/점 입력 후 후보 만들기는 검출·분할 프로젝트에서만/);
+});
+test('starting verification explicitly disarms opt-in even when controls close before it finishes',async()=>{
+ const current=setupWith(readiness('ready')),ui=mount({setup:current});await ui.open();let finish;
+ ui.byLabel('점 입력 후 후보 만들기').props.onChange({target:{checked:true}});ui.render();assert.equal(ui.prompts.getState().quickPointEnabled,true);
+ ui.providers.setup=()=>new Promise(resolve=>{finish=resolve;});const pending=ui.button('파일 확인').props.onClick();ui.render();
+ assert.equal(ui.prompts.getState().quickPointEnabled,false);assert.match(ui.text(ui.render()),/다른 작업을 시작해 점 입력 후 후보 만들기를 껐습니다/);
+ ui.unmount();finish(current);await pending;await ui.settle();assert.equal(ui.prompts.getState().quickPointEnabled,false,'finishing an unmounted action cannot leave ghost ON');
+});
+test('closing and remounting controls keeps opted-in custom settings and examples; another image gets no old exclusions',async()=>{
+ const ready=setupWith(readiness('ready'));ready.providers.grounding_dino={ready:true};
+ const ui=mount({setup:ready,annotations:[{id:'roi',bbox:[2,3,6,7]}],selectedAnnotationId:'roi'});await ui.open();
+ for(const [label,value] of [['텍스트 검출 프롬프트','scratch.'],['SAM2 후보 클래스','chip'],['라벨링 실행 장치','auto'],['SAM2 출력 형태','polygon'],['후보 점수','0.8'],['텍스트 점수','0.4'],['최대 후보','3'],['SAM2 최소 면적','12']])ui.byLabel(label).props.onChange({target:{value}});
+ ui.render();ui.button('선택 라벨 → positive').props.onClick();ui.button('선택 라벨 → negative').props.onClick();ui.byLabel('제외할 원본 영역').props.onChange({target:{value:'1,2,3,4'}});ui.render();ui.button('제외 영역 추가').props.onClick();ui.render();
+ ui.byLabel('점 입력 후 후보 만들기').props.onChange({target:{checked:true}});ui.render();
+ const before=structuredClone(ui.prompts.getState().quickOptions);assert.equal(before.options.threshold,.8);assert.equal(before.options.positive_examples.length,1);assert.equal(before.options.negative_examples.length,1);assert.deepEqual(before.options.exclude_regions,[[1,2,3,4]]);
+ ui.unmount();const reopened=mount({setup:ready,promptStore:ui.prompts});await reopened.open();
+ assert.deepEqual(reopened.prompts.getState().quickOptions,before,'remount must not silently replace opted-in settings');
+ assert.equal(reopened.byLabel('텍스트 검출 프롬프트').props.value,'scratch.');assert.equal(reopened.byLabel('SAM2 후보 클래스').props.value,'chip');assert.equal(reopened.byLabel('라벨링 실행 장치').props.value,'auto');assert.equal(reopened.byLabel('SAM2 출력 형태').props.value,'polygon');
+ reopened.unmount();const nextImage=mount({setup:ready,promptStore:ui.prompts,currentImage:{file_path:'/source-a/b.png'}});await nextImage.open();
+ assert.equal(nextImage.byLabel('점 입력 후 후보 만들기').props.checked,true);assert.deepEqual(nextImage.prompts.getState().quickOptions.options.exclude_regions,[]);assert.equal(nextImage.byLabel('후보 점수').props.value,.8);
+});
+test('closing a reopened panel before setup resolves cannot replace its valid remembered settings with checking state',async()=>{
+ const current=setupWith(readiness('ready')),ui=mount({setup:current});await ui.open();ui.byLabel('점 입력 후 후보 만들기').props.onChange({target:{checked:true}});ui.render();const before=structuredClone(ui.prompts.getState().quickOptions);ui.unmount();
+ let finish;const reopened=mount({setup:current,promptStore:ui.prompts,setupRead:()=>new Promise(resolve=>{finish=resolve;})});reopened.render();reopened.render();
+ assert.deepEqual(ui.prompts.getState().quickOptions,before);reopened.unmount();finish(current);await reopened.settle();assert.equal(ui.prompts.getState().quickPointEnabled,true);assert.deepEqual(ui.prompts.getState().quickOptions,before);
+});
+test('a definitive unavailable model on reopen disarms opt-in with an actionable notice',async()=>{
+ const ui=mount({setup:setupWith(readiness('ready'))});await ui.open();ui.byLabel('점 입력 후 후보 만들기').props.onChange({target:{checked:true}});ui.render();ui.unmount();
+ const reopened=mount({setup:setupWith(readiness('not_configured')),promptStore:ui.prompts});await reopened.open();
+ assert.equal(ui.prompts.getState().quickPointEnabled,false);assert.match(reopened.text(reopened.render()),/모델 준비 상태가 바뀌어 점 입력 후 후보 만들기를 껐습니다/);
+});
 
 test('the card names each readiness state in Korean with a cause and one next action, and the disabled generate button carries the reason',async()=>{
   const cases=[

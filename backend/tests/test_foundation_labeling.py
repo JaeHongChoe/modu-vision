@@ -10,6 +10,207 @@ from PIL import Image
 from backend.engine import label_candidate_providers as providers
 
 
+@pytest.fixture
+def sam2_counting_adapter(tmp_path, monkeypatch):
+    """Run the real adapter against a deterministic processor/encoder/decoder, without weights."""
+    import copy
+    import json
+    import sys
+    from types import SimpleNamespace
+    import torch
+    from backend.engine import foundation_labeling as foundation
+
+    class Batch(dict):
+        def to(self, device):
+            assert device == 'cpu'
+            return self
+
+    class Processor:
+        fail_postprocess = False
+
+        def __call__(self, *, images, return_tensors, **prompts):
+            assert return_tensors == 'pt'
+            pixels = np.asarray(images).copy()
+            if pixels.ndim == 2:
+                pixels = pixels[..., None]
+            pixels = torch.from_numpy(pixels).permute(2, 0, 1).unsqueeze(0).float()
+            return Batch(pixel_values=pixels, original_sizes=torch.tensor([[images.height, images.width]]),
+                         expected_pixels=pixels.clone(), **prompts)
+
+        def post_process_masks(self, masks, sizes):
+            if self.fail_postprocess:
+                self.fail_postprocess = False
+                raise RuntimeError('controlled postprocess failure')
+            assert tuple(masks.shape[-2:]) == tuple(sizes[0].tolist())
+            return [masks]
+
+    class Model:
+        def __init__(self):
+            self.encodes = 0
+            self.decodes = []
+            self.fail_encode = False
+            self.fail_decode = False
+            self.after_encode = lambda: None
+            self.after_decode = lambda: None
+
+        def to(self, device):
+            assert device == 'cpu'
+            return self
+
+        def eval(self):
+            return self
+
+        def get_image_embeddings(self, pixels):
+            self.encodes += 1
+            if self.fail_encode:
+                self.fail_encode = False
+                raise RuntimeError('controlled encode failure')
+            self.after_encode()
+            return pixels.clone()
+
+        def __call__(self, *, image_embeddings, expected_pixels, original_sizes, multimask_output, **prompts):
+            # The exact current request must decode against its own pixels, including after mutations/contenders.
+            assert torch.equal(image_embeddings, expected_pixels), 'Embedding belongs to different decoded pixels'
+            assert multimask_output is True
+            self.decodes.append(copy.deepcopy(prompts))
+            if self.fail_decode:
+                self.fail_decode = False
+                raise RuntimeError('controlled decode failure')
+            self.after_decode()
+            return SimpleNamespace(pred_masks=image_embeddings[:, :1] > 0, iou_scores=torch.tensor([[.91]]))
+
+    processor, model = Processor(), Model()
+    module = SimpleNamespace(
+        Sam2Processor=SimpleNamespace(from_pretrained=lambda *a, **k: processor),
+        Sam2Model=SimpleNamespace(from_pretrained=lambda *a, **k: (model, {'missing_keys': [], 'mismatched_keys': []})),
+        Sam2Config=SimpleNamespace(from_dict=lambda value: value),
+    )
+    monkeypatch.setitem(sys.modules, 'transformers', module)
+    monkeypatch.setattr(providers, 'model_directory_hash', lambda path: 'controlled-model-signature')
+    directory = tmp_path / 'controlled-model'
+    directory.mkdir()
+    (directory / 'config.json').write_text(json.dumps({'model_type': 'sam2'}))
+    adapter = foundation._Sam2Adapter(str(directory), 'cpu')
+    return adapter, model, processor
+
+
+def test_sam2_embedding_reuses_fresh_identical_images_but_decodes_every_prompt(sam2_counting_adapter):
+    adapter, model, _ = sam2_counting_adapter
+    first = [{'x': 2, 'y': 2, 'label': 1}]
+    second = [*first, {'x': 3, 'y': 3, 'label': 0}]
+    a = adapter.predict(Image.new('RGB', (8, 6), 'white'), first, None)
+    b = adapter.predict(Image.new('RGB', (8, 6), 'white'), second, [1, 1, 7, 5])
+    assert model.encodes == 1
+    assert len(model.decodes) == 2
+    assert model.decodes[0]['input_labels'] == [[[1]]]
+    assert model.decodes[1]['input_labels'] == [[[1, 0]]]
+    assert model.decodes[1]['input_boxes'] == [[[1, 1, 7, 5]]]
+    np.testing.assert_array_equal(a[0], b[0])
+    assert a[1] == b[1]
+
+
+def test_sam2_embedding_in_place_mutation_invalidates_same_object(sam2_counting_adapter):
+    adapter, model, _ = sam2_counting_adapter
+    image = Image.new('RGB', (8, 6), 'white')
+    adapter.predict(image, [], None)
+    image.putpixel((2, 2), (0, 0, 0))
+    mask, _ = adapter.predict(image, [], None)
+    assert model.encodes == 2
+    assert not mask[2, 2]
+
+
+def test_sam2_embedding_key_distinguishes_pixels_dimensions_and_mode_and_is_single_entry(sam2_counting_adapter):
+    adapter, model, _ = sam2_counting_adapter
+    # RGB 2x6 and RGB 3x4 have identical byte strings; mode RGB 2x2 and L 2x6 do too.
+    # L and P also have identical dimensions/bytes, isolating mode from the other key parts.
+    images = [Image.new('RGB', (2, 6), 0), Image.new('RGB', (3, 4), 0),
+              Image.new('RGB', (2, 2), 0), Image.new('L', (2, 6), 0),
+              Image.new('P', (2, 6), 0), Image.new('L', (2, 6), 1)]
+    assert images[3].size == images[4].size and images[3].tobytes() == images[4].tobytes()
+    for index, image in enumerate(images):
+        adapter.predict(image, [], None)
+        assert model.encodes == index + 1
+    adapter.predict(images[0].copy(), [], None)
+    assert model.encodes == len(images) + 1, 'Only the most recent image embedding is retained'
+
+
+@pytest.mark.parametrize('stage', ['encode', 'decode', 'postprocess'])
+def test_sam2_embedding_failure_keeps_previous_complete_entry(sam2_counting_adapter, stage):
+    adapter, model, processor = sam2_counting_adapter
+    adapter.predict(Image.new('RGB', (8, 6), 'white'), [], None)
+    if stage == 'postprocess':
+        processor.fail_postprocess = True
+    else:
+        setattr(model, 'fail_' + stage, True)
+    with pytest.raises(RuntimeError, match='controlled .* failure'):
+        adapter.predict(Image.new('RGB', (8, 6), 'black'), [], None)
+    assert model.encodes == 2
+    adapter.predict(Image.new('RGB', (8, 6), 'white'), [], None)
+    assert model.encodes == 2, 'A partial replacement must not evict the completed image'
+
+
+@pytest.mark.parametrize('stage', ['before', 'after_encode', 'after_decode'])
+def test_sam2_embedding_cancellation_keeps_previous_complete_entry(sam2_counting_adapter, stage):
+    from backend.engine import foundation_labeling as foundation
+    adapter, model, _ = sam2_counting_adapter
+    adapter.predict(Image.new('RGB', (8, 6), 'white'), [], None)
+    cancel = threading.Event()
+    if stage == 'before':
+        cancel.set()
+    else:
+        setattr(model, stage, cancel.set)
+    with pytest.raises(foundation.LabelingCancelled):
+        adapter.predict(Image.new('RGB', (8, 6), 'black'), [], None, cancel)
+    encodes_after_cancel = model.encodes
+    model.after_encode = lambda: None
+    model.after_decode = lambda: None
+    adapter.predict(Image.new('RGB', (8, 6), 'white'), [], None)
+    assert model.encodes == encodes_after_cancel
+
+
+def test_sam2_embedding_public_requests_are_serialized(sam2_counting_adapter, tmp_path, monkeypatch):
+    from concurrent.futures import ThreadPoolExecutor
+    from backend.engine import foundation_labeling as foundation
+    adapter, model, _ = sam2_counting_adapter
+    first = tmp_path / 'first.png'
+    second = tmp_path / 'second.png'
+    Image.new('RGB', (8, 6), 'white').save(first)
+    Image.new('RGB', (8, 6), 'gray').save(second)
+    monkeypatch.setattr(foundation, '_load_sam2', lambda setup, device: adapter)
+    entered, release, second_loaded = threading.Event(), threading.Event(), threading.Event()
+    read = foundation.read_rgb
+
+    def observed_read(path, *args):
+        image = read(path, *args)
+        if path == second:
+            second_loaded.set()
+        return image
+
+    monkeypatch.setattr(foundation, 'read_rgb', observed_read)
+
+    def hold_first_encode():
+        if model.encodes == 1:
+            entered.set()
+            assert release.wait(5), 'Controlled encode hold exceeded its deadline'
+
+    model.after_encode = hold_first_encode
+    def predict(path):
+        return foundation.foundation_candidates(path, {}, points=[{'x': 2, 'y': 2, 'label': 1}], output_geometry='mask')
+
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        a = pool.submit(predict, first)
+        try:
+            assert entered.wait(5)
+            b = pool.submit(predict, second)
+            assert second_loaded.wait(5), 'Second request must reach the original engine serialization boundary'
+            assert model.encodes == 1 and model.decodes == []
+        finally:
+            release.set()
+        assert len(a.result(timeout=5)) == 1
+        assert len(b.result(timeout=5)) == 1
+    assert model.encodes == 2 and len(model.decodes) == 2
+
+
 def test_foundation_requires_real_model_prerequisite(tmp_path):
     image = tmp_path / 'image.png'
     Image.new('RGB', (32, 24)).save(image)

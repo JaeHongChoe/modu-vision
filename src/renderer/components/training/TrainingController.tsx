@@ -6,7 +6,7 @@ import {parentCandidateLabel, parentCandidateNotice, type ParentCandidate} from 
  * factory line recipe presets, and a dark steel chassis theme.
  */
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   Play,
   Square,
@@ -17,10 +17,12 @@ import {
   Server,
 } from 'lucide-react';
 import { useProjectStore } from '../../stores/useProjectStore';
-import { useDatasetStore } from '../../stores/useDatasetStore';
+import { readDatasetAuthority, useDatasetStore } from '../../stores/useDatasetStore';
 import { useTrainingStore } from '../../stores/useTrainingStore';
 import { useComputeStore } from '../../stores/useComputeStore';
 import { registerAutoRun } from '../../stores/autoRunChannel';
+import { registerPanelError } from '../../stores/assistContext';
+import { useScopedError } from '../common/useScopedError';
 import { OperatorGuidanceBanner } from '../common/OperatorGuidanceBanner';
 import { GuardrailBanner } from '../common/GuardrailBanner';
 import { LedAnnunciator, LedState } from '../common/LedAnnunciator';
@@ -53,13 +55,13 @@ import {JobProgressView} from './JobProgressView';
 import {useSelectedCoreJob} from './useSelectedCoreJob';
 import {OperationsObservabilityPanel} from '../runtime/OperationsObservabilityPanel';
 import {classGaps, classStartBlocker, SPLIT_MISSES_LABELS_TEXT, splitMissesLabels} from '../dataset/importChecklist';
+import { describeTrainingSummary, publishTrainingSummary, trainingSummaryScope } from './trainingStartSummary';
 
 export const TrainingController: React.FC = () => {
-  const [actionError, setActionError] = useState<string | null>(null);
   const [scheduling, setScheduling] = useState({...defaultTrainingScheduling});
   const [warmParentId, setWarmParentId] = useState('');
-  const [warmParents, setWarmParents] = useState<ParentCandidate[]>([]);
-  const [warmParentsError, setWarmParentsError] = useState<string | null>(null);
+  // labelset_id: the label set the parent's receipt records (null when the receipt predates that record).
+  const [warmParents, setWarmParents] = useState<(ParentCandidate & { labelset_id?: string | null })[]>([]);
   const { task, language, setStep, projectDir, project, isProjectBusy, technicalDetails } = useProjectStore();
   const full = useProjectStore(state => state.viewMode) === 'full';
   const simpleView = useProjectStore(state => state.viewMode) === 'simple';
@@ -74,7 +76,6 @@ export const TrainingController: React.FC = () => {
   const [manualImageSize,setManualImageSize]=useState('');
   const [resumeState,setResumeState]=useState<{checkpoint_path:string;job_id?:string;recipe:Record<string,unknown>;device:string;next_epoch:number;global_step:number}|null>(null);
   const [resumeStates,setResumeStates]=useState<Array<NonNullable<typeof resumeState>>>([]);
-  const [resumeError,setResumeError]=useState('');
   const [resumeExcluded,setResumeExcluded]=useState<Array<{job_id:string;next_epoch:number;epochs:number;device:string;reason:string}>>([]);
   const [anomalyPurpose,setAnomalyPurpose] = useState<'image'|'region'>('image');
   const [syntheticOptions, setSyntheticOptions] = useState<DinoSyntheticTrainingOptions>({...dinoSyntheticDefaults});
@@ -95,7 +96,8 @@ export const TrainingController: React.FC = () => {
   // parent it picked, which a re-read would clear.
   const parentQueryKey = JSON.stringify(['backbone', 'model_name', 'anomaly_method', 'anomaly_backbone', 'patch_size', 'stride'].map(name => modelOptions[name] ?? null));
   const { folderPath, totalImages, split, isLoading, isSplitting, importError, splitError,
-    splitSupported, splitUnavailableReason, datasetKey, splitState, classes: datasetClasses, classSplitCounts } = useDatasetStore();
+    splitSupported, splitUnavailableReason, datasetKey, sourceAuthority, splitState, classes: datasetClasses, classSplitCounts } = useDatasetStore();
+  const modelResetScope = JSON.stringify([task, projectDir, project?.id, project?.active_labelset_id, folderPath]);
   // Classes with images: one class trains a model that can only answer that class (F-03), so the start waits.
   const populatedClasses = Object.values(datasetClasses || {}).filter(count => count > 0).length;
   // The per-class minimum and the saved split's per-class gaps (F-03): a class below the minimum or without training
@@ -165,8 +167,43 @@ export const TrainingController: React.FC = () => {
     (!selectedProfileId || (Boolean(selectedProfile) && selectedReadiness.ready));
   const warmStartSupported = true;
   const sourceReady = Boolean(projectDir && folderPath && project?.source_dataset_dir===folderPath && datasetKey === `${folderPath}\0${task}`);
+  const currentAuthority = readDatasetAuthority();
+  const errorScope = JSON.stringify([taskPreviewScope(), modelResetScope, datasetKey, transportRevision, currentAuthority]);
+  const [actionError, setActionError] = useScopedError(errorScope);
+  const [resumeError, setResumeError] = useScopedError(errorScope);
+  const [warmParentsError, setWarmParentsError] = useScopedError(errorScope);
+  const rawErrors = [splitError, startError, jobStatusError, stopError, selectedSavedJob.error,
+    computeLoadError, computeError];
+  const computeErrorScope = JSON.stringify([getApiPersistenceIdentity(), transportRevision, selectedProfileId]);
+  const errorScopes = [errorScope, errorScope, errorScope, errorScope, errorScope, computeErrorScope, computeErrorScope];
+  const errorOwner = useRef({scopes: errorScopes, values: rawErrors, retired: [] as (string | null | undefined)[]});
+  // A store reset may follow the project render. Unchanged messages still belong to the previous input until
+  // cleared/replaced; a fresh attempt is allowed to produce the same error after its normal clear. Compute
+  // failures belong to the selected connection, so changing source/labelset does not retire a current server alert.
+  const previousErrors = errorOwner.current;
+  errorOwner.current = {scopes: errorScopes, values: rawErrors, retired: rawErrors.map((text, index) => {
+    const previous = previousErrors.scopes[index] !== errorScopes[index] ? previousErrors.values[index] : previousErrors.retired[index];
+    return text === previous ? text : null;
+  })};
+  const [splitFailure, startFailure, statusFailure, stopFailure, savedJobFailure, computeLoadFailure, computeFailure] = rawErrors.map((text, index) => text === errorOwner.current.retired[index] ? null : text);
+  const sharedError = [...new Set([splitFailure && `데이터 분할 실패: ${splitFailure}`, actionError || startFailure || statusFailure,
+    stopFailure, savedJobFailure, (computeLoadFailure || computeFailure) && `서버 설정 확인 실패: ${computeLoadFailure || computeFailure}`,
+    modelOptionsError, resumeError, warmParentsError && `재학습 모델 목록: ${warmParentsError}`, schedulingError].filter(Boolean))].join(' · ');
+  useEffect(() => {
+    if (selectedFamily !== task || !sourceReady || project?.task !== task || sourceAuthority !== currentAuthority || isProjectBusy || isLoading || importError) return;
+    return registerPanelError('학습', sharedError);
+  }, [errorScope, selectedFamily, task, sourceReady, project?.task, sourceAuthority, currentAuthority, isProjectBusy, isLoading, importError, sharedError]);
+  const startSummaryScope = trainingSummaryScope(taskPreviewScope(), {
+    task, folderPath, datasetKey, preset, nextDevice, nextBatchSize, selectedProfileId, profile: selectedProfile,
+    transportRevision, computeLoaded: isComputeLoaded, computeLoading: isComputeLoading, computeLoadError,
+  });
   // A run that stops, fails or finishes writes its last epoch state as it ends, so the list is read again then (F-07).
   const finishedJobKey = jobId && ['completed','aborted','failed','cancelled','stopped'].includes(status) ? `${jobId}:${status}` : '';
+  // Source, warm-parent and resume effects reset their selections below. Publish only after those resets have
+  // rendered, so an old closure cannot announce an old parent/checkpoint under the new settings or worker scope.
+  const summaryResetScope = JSON.stringify([modelResetScope, sourceReady, preset, selectedProfileId, transportRevision,
+    completedJobId, finishedJobKey, selectedBackbone, parentQueryKey, modelOptionsError]);
+  const [summarySettingsScope, setSummarySettingsScope] = useState(summaryResetScope);
   useEffect(()=>{
     let current=true,timer:ReturnType<typeof setTimeout>|undefined;setResumeStates([]);setResumeExcluded([]);setResumeState(null);setResumeError('');
     const read=(again:boolean)=>request<{states:Array<NonNullable<typeof resumeState>>;excluded?:typeof resumeExcluded}>(`/api/training/resume-states?${new URLSearchParams({dataset_path:folderPath,task,preset,...(selectedProfileId?{compute_profile_id:selectedProfileId}:{})})}`)
@@ -176,7 +213,7 @@ export const TrainingController: React.FC = () => {
       .catch(cause=>{if(current)setResumeError(String(cause));});
     if(sourceReady&&task!=='anomaly'&&(!selectedProfileId||task==='classification'))void read(true);
     return()=>{current=false;if(timer)clearTimeout(timer);};
-  },[sourceReady,folderPath,task,preset,projectDir,selectedProfileId,completedJobId,finishedJobKey,transportRevision]);
+  },[errorScope,sourceReady,folderPath,task,preset,projectDir,selectedProfileId,completedJobId,finishedJobKey,transportRevision]);
 
   useEffect(() => {
     setTrainingBackbone(modelChoices[task][0].value);
@@ -210,7 +247,16 @@ export const TrainingController: React.FC = () => {
       if (valid) setWarmParentsError(error instanceof Error ? error.message : String(error));
     });
     return () => { valid = false; };
-  }, [sourceReady, folderPath, task, preset, selectedProfileId, warmStartSupported, projectDir, project?.active_labelset_id, selectedBackbone, completedJobId, parentQueryKey, modelOptionsError]);
+  }, [errorScope, sourceReady, folderPath, task, preset, selectedProfileId, warmStartSupported, projectDir, project?.active_labelset_id, selectedBackbone, completedJobId, parentQueryKey, modelOptionsError]);
+
+  const startSummary = describeTrainingSummary({task, model: selectedBackbone, checkpoint: pretrainedCheckpoint,
+    warmStartJobId: warmParentId, resume: resumeState, options: modelOptions});
+  const startSummaryKey = JSON.stringify(startSummary);
+  useEffect(() => { setSummarySettingsScope(summaryResetScope); }, [summaryResetScope]);
+  useEffect(() => {
+    if (!sourceReady || isProjectBusy || isLoading || importError || summarySettingsScope !== summaryResetScope) return;
+    return publishTrainingSummary(startSummaryScope, startSummary);
+  }, [startSummaryScope, startSummaryKey, sourceReady, isProjectBusy, isLoading, importError, summarySettingsScope, summaryResetScope]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     void recoverActiveJob(sourceReady && !isLoading && !importError && project && projectDir ? {
@@ -444,6 +490,8 @@ export const TrainingController: React.FC = () => {
               className="workspace-button">빠른 이어 학습</button>
             <span className="min-w-0 text-slate-400">직전 완료 모델에서 5회만 이어 학습합니다(초안을 채택한 뒤 모델을 빨리 맞출 때). 결과는 새 후보 모델로 저장됩니다.</span>
             {warmParentId && manualEpochs === '5' && <span className="text-cyan-200">시작 모델 …{warmParentId.slice(-8)} · 학습 횟수 5 · 아래 '학습 시작'을 누르세요.</span>}
+            {/* The list holds only this label set's parents, plus ones whose receipt predates the label-set record. */}
+            {warmParentId && manualEpochs === '5' && warmParents.find(p => p.job_id === warmParentId)?.labelset_id == null && <span className="text-amber-300">라벨 세트 기록 없음(이전 버전에서 학습한 모델) · 지금 라벨 세트의 정답으로 학습한 모델인지 확인한 뒤 시작하세요.</span>}
           </div>
         )}
 

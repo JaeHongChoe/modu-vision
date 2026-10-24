@@ -39,14 +39,14 @@ async function splitControlBody(response:import('@playwright/test').Response,dea
 // Original renderer/backend requests, state, source files and custody checks remain real.
 const harness=require('./fixtures/harness.cjs');
 const UI_SOURCE={
-  "src/renderer/components/dataset/DatasetWorkflowPanel.tsx": "7feda4f4c50fee1906b72224a307d7a4840cf914e034613f5c3227e3182db09a",
+  "src/renderer/components/dataset/DatasetWorkflowPanel.tsx": "0e41acdc75d43657ba707d09d88bd2cbaa2c834d693c558dfa63f72b510a78b5",
   "src/renderer/components/dataset/ExternalMaskExchangePanel.tsx": "6a5d0fd5e8b57d05ae7e91b47ba447eac694a5f7c37509da9d2fbe8d7924f7a4",
   "backend/api/routes_dataset.py": "61e6b74c95534a77fe1b7a423aca577e92765202bffd6cd17240cc69d6a1546e",
   "backend/api/routes_mask_exchange.py": "f66d4f4273692bf3c46f038c25b56a60ad4b4db5ba3dee9d31c3bac6dcd9a7c5",
   "backend/engine/annotation_formats.py": "dd046ef5e66187577217fe7de19ec6cf0376db5abf30d1b845c5b36a66e9a90c",
   "backend/engine/mask_exchange.py": "e12e6e0f10e9af2267e2f511cc7526ee98f088f0d778ce8959b7e9d6b72fafeb",
   "src/renderer/services/datasetWorkflow.ts": "3c11c8f624b5dc972b0ee9eefba2279893e01b45eed7342988fe87546d3cf2fc",
-  "backend/api/routes_dataset_metadata.py": "2e737167ef2b32417c1a7cf5e10e32a676819641574bedb4cedea28d669da442",
+  "backend/api/routes_dataset_metadata.py": "82c2c3da7b84604df14b65694cf7e4b418ede8a2483b61fa0576536b09de047d",
   "scripts/e2e/fixtures/desktop-host-shim.ts": "4f598862ec0e08189628c72bbb552f72bf8fd73f5a9a05b8da1d3ddf516dcfa6",
   "scripts/e2e/fixtures/harness.cjs": "6fe3bb6411a28bc83c6da36ba0b2480b12de6b86fd08daa61d8d0e76d7dac950",
   "scripts/e2e/fixtures/test.ts": "7a7effa184e71c02414773308e0ea88e16cf83dfbd72d77d47046f2cfc1b8d09",

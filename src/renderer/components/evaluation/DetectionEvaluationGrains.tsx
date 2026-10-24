@@ -34,10 +34,11 @@ export function summarizeDetectionGrains(input: {
 export const DetectionEvaluationGrains: React.FC<{
   summary: DetectionGrainSummary;
   language: string;
-}> = ({ summary, language }) => {
+  simple?: boolean;
+}> = ({ summary, language, simple = false }) => {
   const ko = language === 'ko';
-  return (
-    <div role="note" className="space-y-1.5 rounded border border-[#364357] bg-[#101722] p-2.5 text-[11px] text-slate-300">
+  const technicalMetrics = (
+    <>
       <div>
         <strong className="text-cyan-200">{ko ? '이미지 OK/NG' : 'Image OK/NG'} (τ={summary.threshold.toFixed(2)})</strong>
         <span className="ml-2 font-mono">TP {summary.imageTp} · FN {summary.imageFn} · FP {summary.imageFp} · TN {summary.imageTn}</span>
@@ -53,6 +54,19 @@ export const DetectionEvaluationGrains: React.FC<{
         <span className="ml-2 font-mono">mAP@IoU 0.5: {summary.map50 === null ? '—' : summary.map50.toFixed(4)}</span>
         <p className="text-slate-400">{ko ? '예측 박스와 정답 박스의 위치 일치를 평가합니다. 위의 클래스 일치율·이미지 판정과 별도입니다.' : 'Measures predicted box overlap with ground truth, separately from top-class match and image verdicts.'}</p>
       </div>
+    </>
+  );
+  return (
+    <div role="note" className="space-y-1.5 rounded border border-[#364357] bg-[#101722] p-2.5 text-[11px] text-slate-300">
+      {simple ? <>
+        <p className="text-[13px]">{ko
+          ? `맞힌 이미지 ${summary.imageTp + summary.imageTn}장 · 놓친 불량 ${summary.imageFn}장 · 잘못 잡은 정상 ${summary.imageFp}장`
+          : `Correct images: ${summary.imageTp + summary.imageTn} images · Missed defects: ${summary.imageFn} images · Normal images flagged: ${summary.imageFp} images`}</p>
+        <details>
+          <summary className="cursor-pointer text-slate-400">{ko ? '자세히 · 검출 품질 지표' : 'Details · detection quality metrics'}</summary>
+          <div className="mt-2 space-y-1.5">{technicalMetrics}</div>
+        </details>
+      </> : technicalMetrics}
     </div>
   );
 };

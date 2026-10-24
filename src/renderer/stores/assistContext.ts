@@ -32,6 +32,7 @@ export interface AssistSnapshot {
 const listeners = new Set<Listener>();
 let snapshot: Omit<AssistSnapshot, 'errors'> | null = null;
 const errors = new Map<string, string>();
+const ownedErrors = new Map<symbol, {source: string; text: string}>();
 
 const notify = () => { for (const listener of listeners) listener(); };
 
@@ -53,12 +54,22 @@ export function reportPanelError(source: string, text: string | null | undefined
   notify();
 }
 
+/** Cleanup belongs to this mounted panel, even if another panel uses the same display name. */
+export function registerPanelError(source: string, text: string | null | undefined): () => void {
+  const clean = text?.trim();
+  if (!clean) return () => {};
+  const owner = Symbol(source);
+  ownedErrors.set(owner, {source, text: clean});
+  notify();
+  return () => { if (ownedErrors.delete(owner)) notify(); };
+}
+
 export function currentAssistContext(): AssistSnapshot | null {
-  return snapshot ? { ...snapshot, errors: [...errors].map(([source, text]) => ({ source, text })) } : null;
+  return snapshot ? { ...snapshot, errors: assistPanelErrors() } : null;
 }
 
 export function assistPanelErrors(): { source: string; text: string }[] {
-  return [...errors].map(([source, text]) => ({ source, text }));
+  return [...errors].map(([source, text]) => ({ source, text })).concat([...ownedErrors.values()].map(error => ({...error})));
 }
 
 export function subscribeAssistContext(listener: Listener): () => void {

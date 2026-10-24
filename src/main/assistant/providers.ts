@@ -12,7 +12,7 @@
  * `function_call`/`function_call_output` items keyed by `call_id`; Chat Completions `tools[].function` with
  * `tool_calls` and `role:'tool'` results (the long-standing shape the compatible servers implement). */
 import type {
-  AssistantApiFormat, AssistantError, AssistantErrorCode, AssistantMessage, AssistantProviderId, AssistantToolCall,
+  AssistantApiFormat, AssistantError, AssistantErrorCode, AssistantMessage, AssistantApiKeyProviderId as AssistantProviderId, AssistantToolCall,
   AssistantToolSpec,
 } from '../../types/electron';
 

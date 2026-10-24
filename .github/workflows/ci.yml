@@ -59,6 +59,7 @@ jobs:
           npm run typecheck:e2e
           node scripts/verify-supervisor.js --owned-bootstrap-order
           npm run test:renderer
+          node --test scripts/tests/assistant-safe-storage-qa.test.cjs scripts/tests/chatgpt-account-acceptance.test.cjs
           npm run build
           npm run test:e2e:harness
           node --test scripts/acceptance/action_inventory.test.cjs
@@ -82,6 +83,7 @@ jobs:
           backend/tests/test_required_flow_current_source_cohort.py
           backend/tests/test_split_seed_order.py
           backend/tests/test_annotation_save_source_spelling.py
+          backend/tests/test_annotation_recovery.py
           backend/tests/test_service_release_eligibility.py
           backend/tests/test_fleet_emergency_rollback.py
           backend/tests/test_service_s0_06.py
@@ -189,6 +191,8 @@ jobs:
           backend/tests/test_project_activation_race.py
           backend/tests/test_managed_service_first_read.py
           backend/tests/test_beginner_errors_korean.py
+          backend/tests/test_beginner_metadata_export_errors.py
+          backend/tests/test_labeling_loop_composition.py
           backend/tests/test_workflow_impact.py
           backend/tests/test_audit_data_input.py
           backend/tests/test_audit_class_overrides.py
@@ -446,12 +450,15 @@ jobs:
           npm run typecheck:e2e
           node scripts/verify-supervisor.js --owned-bootstrap-order
           npm run test:renderer
+          node --test scripts/tests/assistant-safe-storage-qa.test.cjs scripts/tests/chatgpt-account-acceptance.test.cjs
           npm run build
           npm run test:e2e:harness
           node --test scripts/acceptance/action_inventory.test.cjs
           node --test scripts/tests/release-readiness.test.cjs scripts/tests/package-license-texts.test.cjs scripts/verify-release-recovery.cjs
       - name: Install test browser
         run: npx playwright install --with-deps chromium
+      - name: Short-window labeling geometry
+        run: node --test src/renderer/components/labeling/LabelingStudioSmallWindow.geometry.cjs
       - name: Browser transport and flow checks
         env:
           MV_E2E_ARTIFACT_DIR: ${{ runner.temp }}/modu-e2e

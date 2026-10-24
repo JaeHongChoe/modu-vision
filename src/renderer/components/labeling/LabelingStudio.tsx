@@ -130,9 +130,8 @@ export const LabelingStudio: React.FC = () => {
       <div className="shrink-0">
         {/* The team row stays in sight: it loads the team settings and the label book and holds the shared editing lock
             (편집 시작, its warnings and the lease alert). */}
-        <TeamDataPanel compact={focus} />
+        <div data-labeling-team className="shrink-0"><TeamDataPanel compact={focus} /></div>
         <AnnotationDraftRecovery />
-        {folded('이미지 검토')}
         <DicomPanel />
 
         {currentImage && annotationLoadStatus === 'error' && (
@@ -153,11 +152,13 @@ export const LabelingStudio: React.FC = () => {
 
         {/* Class Tag Bar */}
         {/* A classification image's class is chosen here; the class bar below names the regions drawn on it. */}
-        <ClassificationClassPicker />
-        <CategorySelector />
+        <div data-labeling-classes className="shrink-0"><ClassificationClassPicker /><CategorySelector /></div>
         {/* Draft review stays visible in focus mode: it is how drafts become labels, not an expert helper. */}
-        <DraftReviewQueue />
-        {focus && assistUnfolded ? helperPanels['모델 보조'] : folded('모델 보조')}
+        <div data-labeling-review-actions>
+          <div data-labeling-review="image" className="shrink-0">{folded('이미지 검토')}</div>
+          <div data-labeling-review="draft" className="shrink-0"><DraftReviewQueue /></div>
+          <div data-labeling-review="model" className="shrink-0">{focus && assistUnfolded ? helperPanels['모델 보조'] : folded('모델 보조')}</div>
+        </div>
       </div>
 
       {/* Center Work Area: 3-Layer Canvas + Mask Controls + Annotation Sidebar */}

@@ -19,17 +19,27 @@ export type SessionEvent =
   | { kind: 'error'; error: AssistantError }
   | { kind: 'notice'; text: string }
   | { kind: 'busy'; busy: boolean }
+  /** A confirmed write is executing: it cannot be stopped and its outcome is recorded before any reset. */
+  | { kind: 'writing'; writing: boolean }
   | { kind: 'confirm'; pending: PendingWrite | null };
 
-export interface PendingWrite { call: AssistantToolCall; preview: ToolPreview; runId: string }
+export interface PendingWrite { call: AssistantToolCall; preview: ToolPreview; runId: string; binding: string }
 
 export interface SessionDeps {
   bridge: Pick<AssistantBridge, 'send' | 'cancel' | 'beginRun' | 'endRun'>;
   tools: AssistantToolRegistry;
   context(): Record<string, unknown>;
+  /** Local authority only; never sent to the provider or run log. */
+  scope(): string;
+  /** The project part of scope() (no provider settings): the run log a write outcome belongs to. */
+  projectScope(): string;
+  writeBinding(): string;
   log(entry: RunEntry): Promise<unknown>;
   provider(): AssistantProviderId | null;
 }
+
+interface Turn { version: number; scope: string; project: string }
+class StaleTurn extends Error {}
 
 const MAX_PROVIDER_CALLS = 6;
 const MAX_TOOL_RESULT_CHARS = 4_000;
@@ -41,6 +51,7 @@ export class AssistantConversation {
   readonly messages: AssistantMessage[] = [];
   pending: PendingWrite | null = null;
   busy = false;
+  writing = false;
   private history: AssistantMessage[] = [];
   private current: AssistantMessage[] = [];
   private frozenContext: Record<string, unknown> = {};
@@ -50,35 +61,84 @@ export class AssistantConversation {
   private image: AssistantImageInput | undefined;
   private imageQuestion = false;
   private logWarned = false;
+  private version = 0;
+  private turn: Turn | null = null;
+  private historyScope: string | null = null;
 
   constructor(private readonly deps: SessionDeps, private readonly emit: (event: SessionEvent) => void) {}
 
   private setBusy(busy: boolean) { this.busy = busy; this.emit({ kind: 'busy', busy }); }
+  private setWriting(writing: boolean) { this.writing = writing; this.emit({ kind: 'writing', writing }); }
 
-  private async record(entry: Omit<RunEntry, 'provider'>): Promise<void> {
+  /** Cancels only this conversation's request. Late completions cannot change the next turn. */
+  invalidate(reason?: string, clearHistory = true): void {
+    const request = this.inFlight;
+    this.version++; this.turn = null; this.inFlight = null;
+    this.pending = null; this.queue = []; this.current = []; this.image = undefined; this.imageQuestion = false;
+    if (clearHistory) { this.messages.length = 0; this.history = []; this.historyScope = null; }
+    this.emit({ kind: 'confirm', pending: null }); this.setBusy(false);
+    if (reason) this.emit({ kind: 'notice', text: reason });
+    if (request) void this.deps.bridge.cancel(request).catch(() => {});
+  }
+
+  private isCurrent(turn: Turn, binding?: string): boolean {
+    return turn.version === this.version && this.deps.scope() === turn.scope
+      && (binding === undefined || binding === this.deps.writeBinding());
+  }
+  private check(turn: Turn, binding?: string): void {
+    if (this.isCurrent(turn, binding)) return;
+    if (turn.version === this.version) this.invalidate('프로젝트·이미지 또는 설정이 바뀌어 이전 요청을 멈췄습니다. 현재 화면에서 다시 요청하세요.');
+    throw new StaleTurn();
+  }
+
+  private logFailed(cause: unknown) {
+    if (this.logWarned) return;
+    this.logWarned = true;
+    this.emit({ kind: 'notice', text: `실행 기록을 남기지 못했습니다(${cause instanceof Error ? cause.message : String(cause)}). 프로젝트를 열었는지와 권한을 확인하세요.` });
+  }
+  private async record(turn: Turn, entry: Omit<RunEntry, 'provider'>): Promise<void> {
+    this.check(turn);
     const provider = this.deps.provider();
     try { await this.deps.log({ ...entry, ...(provider ? { provider } : {}) }); }
-    catch (cause) {
-      if (!this.logWarned) {
-        this.logWarned = true;
-        this.emit({ kind: 'notice', text: `실행 기록을 남기지 못했습니다(${cause instanceof Error ? cause.message : String(cause)}). 프로젝트를 열었는지와 권한을 확인하세요.` });
-      }
+    catch (cause) { this.check(turn); this.logFailed(cause); }
+  }
+
+  /** A confirmed write returned, so the backend may have changed: its outcome is shown and logged whenever the project is
+   *  unchanged, even if the turn or the provider settings changed meanwhile. Only another project withholds it (its log). */
+  private async recordWrite(turn: Turn, call: AssistantToolCall, runId: string, outcome: ToolOutcome, provider: AssistantProviderId | null, disarmed: boolean): Promise<void> {
+    const entry: RunEntry = { run_id: runId, tool: call.name, tier: 'write', summary: `${call.name}(${argumentSummary(call.arguments)})`.slice(0, 280),
+      args_sha256: await sha256Hex(canonicalJson(call.arguments)), confirmed: true, result: outcome.ok ? 'ok' : outcome.errorCode === 'tool_error' ? 'error' : 'refused',
+      ...(outcome.errorCode ? { error_code: outcome.errorCode } : {}), ...(outcome.link ? { link: outcome.link } : {}), ...(provider ? { provider } : {}) };
+    if (this.deps.projectScope() !== turn.project) {
+      const text = '실행하는 동안 프로젝트가 바뀌어 결과를 지금 프로젝트의 실행 기록에 남기지 않았습니다. 이전 프로젝트를 다시 열어 상태를 확인하세요.';
+      if (turn.version === this.version) this.invalidate(text); else this.emit({ kind: 'notice', text });
+      return;
     }
+    if (this.isCurrent(turn)) this.answer(call, outcome);
+    this.emit({ kind: 'tool', name: call.name, tier: 'write', summary: outcome.summary, ok: outcome.ok });
+    if (!disarmed) this.emit({kind: 'notice', text: '실행 결과는 아래 기록에 남깁니다. 실행 확인 연결을 정리하지 못했으니 같은 작업을 다시 누르기 전에 현재 상태를 확인하세요.'});
+    try { await this.deps.log(entry); }
+    catch (cause) { if (this.deps.projectScope() === turn.project) this.logFailed(cause); }
   }
 
   /** A new question. `image` is passed only after the person confirmed sending it; the call then carries no tools. */
   async ask(text: string, image?: AssistantImageInput): Promise<void> {
     const question = text.trim();
-    if (!question || this.busy || this.pending) return;
+    if (!question || this.busy || this.pending || this.writing) return;
+    const scope = this.deps.scope();
+    if (this.historyScope !== scope) this.messages.length = 0;
+    this.historyScope = scope;
+    const turn = { version: ++this.version, scope, project: this.deps.projectScope() }; this.turn = turn;
     this.history = trimConversation(this.messages);
     this.frozenContext = this.deps.context();
     this.current = [{ role: 'user', text: question }];
     this.calls = 0;this.queue = [];this.image = image;this.imageQuestion = Boolean(image);this.logWarned = false;
-    await this.loop();
+    await this.loop(turn);
   }
 
-  /** Stops a provider call in flight; the unfinished question is dropped and can be asked again. */
-  async stop(): Promise<void> { if (this.inFlight) await this.deps.bridge.cancel(this.inFlight); }
+  /** Stops a provider call in flight; the unfinished question is dropped and can be asked again. A confirmed write that is
+   *  executing is not stopped halfway (the panel offers no stop then): its outcome is recorded first. */
+  async stop(): Promise<void> { if (!this.writing) this.invalidate(undefined, false); }
 
   private commit() {
     const turn = this.current.map(message => message.role === 'user' && this.imageQuestion && message === this.current[0]
@@ -87,22 +147,26 @@ export class AssistantConversation {
     this.current = [];this.image = undefined;this.imageQuestion = false;
   }
 
-  private async loop(): Promise<void> {
+  private async loop(turn: Turn): Promise<void> {
+    this.check(turn);
     this.setBusy(true);
     try {
       while (this.calls < MAX_PROVIDER_CALLS) {
+        this.check(turn);
         this.calls++;
         const requestId = `req_${randomHex(12)}`;
         this.inFlight = requestId;
         const messages = [...this.history, ...this.current];
         const result = await this.deps.bridge.send({ requestId, context: this.frozenContext, messages,
           tools: this.imageQuestion ? [] : this.deps.tools.specs(), ...(this.image && this.calls === 1 ? { image: this.image } : {}) });
+        this.check(turn);
         this.inFlight = null;
         const lastUser = [...this.current].reverse().find(message => message.role === 'user') as { text: string } | undefined;
-        await this.record({ run_id: newRunId(), tool: 'conversation', tier: 'conversation',
+        await this.record(turn, { run_id: newRunId(), tool: 'conversation', tier: 'conversation',
           summary: this.calls === 1 ? `질문 ${lastUser?.text.length ?? 0}자${this.image ? ' · 이미지 1장' : ''}` : `도구 결과 뒤 ${this.calls}번째 요청`,
           args_sha256: await sha256Hex(canonicalJson({ requestId, count: messages.length })), confirmed: Boolean(this.image && this.calls === 1),
           result: result.ok ? 'ok' : result.error.code === 'cancelled' ? 'cancelled' : 'error', ...(result.ok ? {} : { error_code: result.error.code }) });
+        this.check(turn);
         if (!result.ok) {
           this.emit({ kind: 'error', error: result.error });
           // The unanswered question is not kept: the next one starts from the last finished turn.
@@ -110,17 +174,30 @@ export class AssistantConversation {
           return;
         }
         if (result.text) this.emit({ kind: 'assistant', text: result.text });
+        if (this.imageQuestion && result.toolCalls.length) {
+          // An unsolicited provider call cannot turn one image confirmation into a tool-enabled conversation.
+          this.current.push({role: 'assistant', text: result.text});
+          this.emit({kind: 'notice', text: '이미지 질문에서는 도구를 실행하지 않습니다. 필요한 작업은 별도 질문으로 요청하세요.'});
+          this.commit(); return;
+        }
         this.current.push({ role: 'assistant', text: result.text, ...(result.toolCalls.length ? { toolCalls: result.toolCalls } : {}),
           ...(result.replay !== undefined ? { replay: result.replay } : {}) });
         if (!result.toolCalls.length) { this.commit(); return; }
         this.queue = [...result.toolCalls];
-        if (await this.drain()) return;  // waiting for the person
+        if (await this.drain(turn)) return;  // waiting for the person
       }
       this.emit({ kind: 'notice', text: '도우미가 도구를 여러 번 불러 이번 질문을 멈췄습니다. 결과를 확인하고 다시 물어보세요.' });
       this.commit();
+    } catch (cause) {
+      if (!(cause instanceof StaleTurn) && this.isCurrent(turn)) {
+        this.emit({ kind: 'error', error: {code: 'network', reason: '도우미 연결을 완료하지 못했습니다.', action: '연결 상태를 확인한 뒤 다시 보내세요.'} });
+        this.current = []; this.queue = []; this.image = undefined; this.imageQuestion = false;
+      }
     } finally {
-      this.inFlight = null;
-      if (!this.pending) this.setBusy(false);
+      if (turn.version === this.version) {
+        this.inFlight = null;
+        if (!this.pending) this.setBusy(false);
+      }
     }
   }
 
@@ -129,12 +206,14 @@ export class AssistantConversation {
   }
 
   /** Runs the queued calls of one assistant turn; true when a write waits for the person. */
-  private async drain(): Promise<boolean> {
+  private async drain(turn: Turn): Promise<boolean> {
     while (this.queue.length) {
+      this.check(turn);
       const call = this.queue.shift()!;
       const tier = this.deps.tools.tier(call.name);
       const runId = newRunId();
       const args_sha256 = await sha256Hex(canonicalJson(call.arguments));
+      this.check(turn);
       const summary = `${call.name}(${argumentSummary(call.arguments)})`.slice(0, 280);
       let outcome: ToolOutcome;
       if (call.argumentsError || !tier) {
@@ -144,20 +223,26 @@ export class AssistantConversation {
         outcome = this.deps.tools.refusal(call.name);
       } else if (tier === 'write') {
         try {
-          const preview = await this.deps.tools.preview(call.name, call.arguments);
-          this.pending = { call, preview, runId };
+          const binding = this.deps.writeBinding();
+          const preview = await this.deps.tools.preview(call.name, call.arguments, () => this.isCurrent(turn, binding));
+          this.check(turn, binding);
+          this.pending = { call, preview, runId, binding };
           this.emit({ kind: 'confirm', pending: this.pending });
           return true;
         } catch (cause) {
           outcome = refused(cause);
         }
       } else {
-        try { outcome = await this.deps.tools.runAutomatic(call.name, call.arguments); }
-        catch (cause) { outcome = refused(cause); }
+        const binding = tier === 'read' ? this.deps.writeBinding() : undefined;
+        try {
+          outcome = await this.deps.tools.runAutomatic(call.name, call.arguments, () => this.isCurrent(turn, binding));
+          this.check(turn, binding);
+        } catch (cause) { if (cause instanceof StaleTurn) throw cause; outcome = refused(cause); }
       }
+      this.check(turn);
       this.answer(call, outcome);
       this.emit({ kind: 'tool', name: call.name, tier: tier ?? 'unknown', summary: outcome.summary, ok: outcome.ok });
-      await this.record({ run_id: runId, tool: call.name, tier: tier ?? 'read', summary, args_sha256, confirmed: false,
+      await this.record(turn, { run_id: runId, tool: call.name, tier: tier ?? 'read', summary, args_sha256, confirmed: false,
         result: outcome.ok ? 'ok' : tier === 'forbidden' || outcome.errorCode !== 'tool_error' ? 'refused' : 'error',
         ...(outcome.errorCode ? { error_code: outcome.errorCode } : {}), ...(outcome.link ? { link: outcome.link } : {}) });
     }
@@ -166,27 +251,58 @@ export class AssistantConversation {
 
   /** The person's answer to the write preview in the panel. Only `true` from this call runs the tool. */
   async decide(confirmed: boolean): Promise<void> {
-    const pending = this.pending;
-    if (!pending) return;
-    this.pending = null;
-    this.emit({ kind: 'confirm', pending: null });
-    const { call, runId } = pending;
-    let outcome: ToolOutcome;
-    if (!confirmed) {
-      outcome = { ok: false, errorCode: 'declined_by_person', content: '사람이 실행하지 않기로 했습니다. 다른 방법을 안내하거나 그대로 두세요.', summary: '실행하지 않았습니다.' };
-    } else {
-      await this.deps.bridge.beginRun(runId, call.name);
-      try { outcome = await this.deps.tools.execute(call.name, call.arguments, { confirmed: true, runId }); }
-      catch (cause) { outcome = refused(cause); }
-      finally { await this.deps.bridge.endRun(runId); }
-    }
-    this.answer(call, outcome);
-    this.emit({ kind: 'tool', name: call.name, tier: 'write', summary: outcome.summary, ok: outcome.ok });
-    await this.record({ run_id: runId, tool: call.name, tier: 'write', summary: `${call.name}(${argumentSummary(call.arguments)})`.slice(0, 280),
-      args_sha256: await sha256Hex(canonicalJson(call.arguments)), confirmed, result: outcome.ok ? 'ok' : confirmed && outcome.errorCode === 'tool_error' ? 'error' : 'refused',
-      ...(outcome.errorCode ? { error_code: outcome.errorCode } : {}), ...(outcome.link ? { link: outcome.link } : {}) });
-    if (await this.drain()) return;
-    await this.loop();
+    const pending = this.pending, turn = this.turn;
+    if (!pending || !turn) return;
+    try {
+      this.check(turn, pending.binding);
+      this.pending = null;
+      this.emit({ kind: 'confirm', pending: null });
+      const { call, runId } = pending;
+      if (!confirmed) {
+        const outcome: ToolOutcome = { ok: false, errorCode: 'declined_by_person', content: '사람이 실행하지 않기로 했습니다. 다른 방법을 안내하거나 그대로 두세요.', summary: '실행하지 않았습니다.' };
+        this.check(turn);
+        this.answer(call, outcome);
+        this.emit({ kind: 'tool', name: call.name, tier: 'write', summary: outcome.summary, ok: outcome.ok });
+        await this.record(turn, { run_id: runId, tool: call.name, tier: 'write', summary: `${call.name}(${argumentSummary(call.arguments)})`.slice(0, 280),
+          args_sha256: await sha256Hex(canonicalJson(call.arguments)), confirmed: false, result: 'refused', error_code: 'declined_by_person' });
+      } else {
+        let acquired = false;
+        try { acquired = await this.deps.bridge.beginRun(runId, call.name); }
+        catch {
+          // A rejected IPC response is not an execution grant; best-effort disarm this owned id.
+          try { await this.deps.bridge.endRun(runId); } catch { /* no write was attempted */ }
+          this.check(turn);
+          await this.record(turn, {run_id: runId, tool: call.name, tier: 'write', summary: call.name,
+            args_sha256: await sha256Hex(canonicalJson(call.arguments)), confirmed: true, result: 'refused', error_code: 'run_arm_failed'});
+          this.check(turn);
+          this.invalidate('실행 확인 연결에 실패해 실행하지 않았습니다. 현재 화면에서 다시 요청하세요.', false);
+          return;
+        }
+        if (!acquired) {
+          this.check(turn);
+          this.invalidate('실행 확인을 등록하지 못해 실행하지 않았습니다. 현재 화면에서 다시 요청하세요.', false);
+          return;
+        }
+        const provider = this.deps.provider();
+        let outcome: ToolOutcome, disarmed = true;
+        try {
+          this.check(turn, pending.binding);
+          this.setWriting(true);
+          // Preflight is the full binding; after the mutation only the project matters (provider settings do not change the write).
+          outcome = await this.deps.tools.execute(call.name, call.arguments, { confirmed: true, runId, preview: pending.preview,
+            isCurrent: Object.assign(() => this.isCurrent(turn, pending.binding), {afterMutation: () => this.deps.projectScope() === turn.project}) });
+        } catch (cause) { if (cause instanceof StaleTurn) throw cause; outcome = refused(cause); }
+        finally {
+          try { await this.deps.bridge.endRun(runId); } catch { disarmed = false; }
+          if (this.writing) this.setWriting(false);
+        }
+        await this.recordWrite(turn, call, runId, outcome, provider, disarmed);
+      }
+      this.check(turn);
+      if (await this.drain(turn)) return;
+      await this.loop(turn);
+    } catch (cause) { if (!(cause instanceof StaleTurn)) throw cause; }
+    finally { if (turn.version === this.version && !this.pending) this.setBusy(false); }
   }
 }
 

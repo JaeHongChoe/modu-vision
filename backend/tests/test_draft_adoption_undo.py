@@ -176,3 +176,30 @@ def test_team_editing_needs_the_reviewers_lease_to_adopt_and_to_take_back(sugges
     assert reverted.status_code == 200, reverted.text
     assert reverted.json()["status"] == "reverted"
     assert [row["id"] for row in _labels(studio) if row.get("origin")] == []
+
+
+def test_a_running_phrase_or_sam2_task_blocks_adopting_and_taking_back_a_trained_model_draft(suggestion_workspace, monkeypatch):
+    """The two kinds of draft work share the labels: a running phrase/SAM2 batch or feature training (labeling_tasks)
+    refuses a trained-model adoption and its take-back too, as class rename already does, and writes nothing."""
+    from backend.engine import labeling_tasks
+
+    client, project, _, image, _, studio, _ = suggestion_workspace
+    proposal = client.post("/api/label-suggestions/generate", json={"job_id": "job_12345_test", "image_path": str(image)}).json()
+    chosen = proposal["candidates"][0]["id"]
+    monkeypatch.setitem(labeling_tasks._LIVE, "batch_" + "0" * 24, (project["id"], None, None))
+    refused = client.post(f"/api/label-suggestions/{proposal['id']}/review", json={"decision": "accept", "candidate_ids": [chosen]})
+    assert refused.status_code == 409, refused.text
+    assert "진행 중" in refused.json()["detail"] and "채택하세요" in refused.json()["detail"]
+    assert not (studio / "first.json").is_file()
+    assert client.get(f"/api/label-suggestions/{proposal['id']}").json()["status"] == "pending"
+
+    labeling_tasks._LIVE.pop("batch_" + "0" * 24)
+    adopted = client.post(f"/api/label-suggestions/{proposal['id']}/review", json={"decision": "accept", "candidate_ids": [chosen]})
+    assert adopted.status_code == 200, adopted.text
+    before = _labels(studio)
+    monkeypatch.setitem(labeling_tasks._LIVE, "batch_" + "0" * 24, (project["id"], None, None))
+    refused_undo = client.post(f"/api/label-suggestions/{proposal['id']}/undo", json={"actor": "operator"})
+    assert refused_undo.status_code == 409, refused_undo.text
+    assert "진행 중" in refused_undo.json()["detail"] and "되돌리세요" in refused_undo.json()["detail"]
+    assert _labels(studio) == before
+    assert client.get(f"/api/label-suggestions/{proposal['id']}").json()["status"] == "accepted"

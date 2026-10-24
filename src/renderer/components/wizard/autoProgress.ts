@@ -14,7 +14,7 @@ export type AutoDecision =
   | { kind: 'advance'; step: number }
   | { kind: 'act'; action: AutoAction }
   | { kind: 'wait'; refresh?: boolean; training?: boolean }
-  | { kind: 'stop'; reason: string; step: number; target?: string }
+  | { kind: 'stop'; reason: string; step: number; target?: string; deferDrafts?: number }
   | { kind: 'done'; reason: string };
 
 /** What each automatic action does, in the words the dialog lists before the start and logs after it. */
@@ -35,7 +35,11 @@ const SAVE_FLOW = new Set(['검사 흐름 저장·평가 (5단계)', '보이는 
 const DATA_CHANGED = '바뀐 내용과 되돌리기';
 
 /** The next move for one readiness picture. Pure: the same picture always gives the same move. */
-export function decide(ctx: Snapshot): AutoDecision {
+/** What the person chose at an earlier stop of this run: leave the waiting drafts for later and train on the labels
+ *  already confirmed (drafts are not labels, so they stay out of training like images without one). */
+export type AutoChoices = { deferDrafts?: boolean };
+
+export function decide(ctx: Snapshot, choices: AutoChoices = {}): AutoDecision {
   const { stage, status, nextAction: next } = ctx;
   const label = next.label;
   const stop = (reason: string, step = next.step, target = next.target): AutoDecision => ({ kind: 'stop', reason, step, ...(target ? { target } : {}) });
@@ -46,7 +50,12 @@ export function decide(ctx: Snapshot): AutoDecision {
   if (status === 'checking' || label === '데이터 변경 상태 보기') return { kind: 'wait' };
   if (stage === 1) return label === '라벨 확인하기 (2단계)' ? { kind: 'advance', step: 2 } : stop(ctx.blocker || label);
   if (stage === 2) {
-    if (next.target === 'draft-review-queue') return stop(`${ctx.blocker || '초안 검토 대기'} · 초안 채택은 사람이 합니다.`);
+    if (next.target === 'draft-review-queue') {
+      const confirmed = ctx.progress && 'confirmed' in ctx.progress ? ctx.progress.confirmed : 0;
+      if (choices.deferDrafts && confirmed > 0 && status !== 'blocked') return { kind: 'advance', step: 3 };
+      // With labels already confirmed the stop offers that choice; with none there is nothing to train on yet.
+      return { ...stop(`${ctx.blocker || '초안 검토 대기'} · 초안 채택은 사람이 합니다.`), ...(confirmed > 0 && status !== 'blocked' ? { deferDrafts: confirmed } : {}) } as AutoDecision;
+    }
     if (status === 'blocked') return stop(`${ctx.blocker || '정답 라벨이 더 필요합니다'} · 정답 라벨은 사람이 그립니다.`);
     // No image has a label yet: there is nothing to train on, so the run stops here instead of going to step 3 to be sent
     // back. A person draws the first labels or makes drafts (a phrase, a SAM2 click) and adopts them.
@@ -90,7 +99,7 @@ export type AutoRunState = {
   state: 'idle' | 'running' | 'stopped' | 'done' | 'failed' | 'cancelled';
   log: AutoLogRow[];
   /** Where it stopped and the step/target that clears it (the footer's own action names the same place). */
-  stop: { reason: string; step: number; target?: string; confirm?: TruthConfirm } | null;
+  stop: { reason: string; step: number; target?: string; confirm?: TruthConfirm; deferDrafts?: number } | null;
 };
 /** A stop the person can clear right in the dialog: confirm the frozen test images' labels as truth (their press). */
 export type TruthConfirm = { kind: 'truth'; cohortId: string; versionId: string; images: number };
@@ -112,7 +121,7 @@ export interface AutoDeps {
 
 /** Run until a person is needed, the chain is done, an action fails, or the person stops it. */
 export async function runAutoProgress(deps: AutoDeps, onUpdate: (state: AutoRunState) => void,
-  options: { settleMs?: number; pollMs?: number; maxPasses?: number; afterActMs?: number } = {}): Promise<AutoRunState> {
+  options: { settleMs?: number; pollMs?: number; maxPasses?: number; afterActMs?: number; choices?: AutoChoices } = {}): Promise<AutoRunState> {
   const settleMs = options.settleMs ?? 90_000, pollMs = options.pollMs ?? 1000, maxPasses = options.maxPasses ?? 400;
   const afterActMs = options.afterActMs ?? 20_000;
   let state: AutoRunState = { state: 'running', log: [], stop: null };
@@ -141,7 +150,7 @@ export async function runAutoProgress(deps: AutoDeps, onUpdate: (state: AutoRunS
       await deps.sleep(pollMs);
       continue;
     }
-    const move = decide(ctx);
+    const move = decide(ctx, options.choices);
     if (move.kind === 'wait') {
       if (waitingSince === null) waitingSince = deps.now();
       // Training waits as long as the run takes (the footer shows its epochs); anything else is bounded.
@@ -161,7 +170,7 @@ export async function runAutoProgress(deps: AutoDeps, onUpdate: (state: AutoRunS
       await deps.setStep(move.step);
       continue;
     }
-    if (move.kind === 'stop') return finish({ state: 'stopped', stop: { reason: move.reason, step: move.step, ...(move.target ? { target: move.target } : {}) }, log: [...state.log, { at: deps.now(), text: move.reason, tone: 'stop' }] });
+    if (move.kind === 'stop') return finish({ state: 'stopped', stop: { reason: move.reason, step: move.step, ...(move.target ? { target: move.target } : {}), ...(move.deferDrafts ? { deferDrafts: move.deferDrafts } : {}) }, log: [...state.log, { at: deps.now(), text: move.reason, tone: 'stop' }] });
     if (move.kind === 'done') return finish({ state: 'done', stop: null, log: [...state.log, { at: deps.now(), text: move.reason, tone: 'done' }] });
     if (lastAct && lastAct.action === move.action && deps.now() - lastAct.at < afterActMs) {
       await deps.sleep(pollMs);

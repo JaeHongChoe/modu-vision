@@ -8,6 +8,8 @@ import {WholeFlowApprovalPanel} from './WholeFlowApprovalPanel';
 import {api} from '../../services/api';
 import {getFlowchartModelTask} from './flowchartStartup';
 import {Explain} from '../common/Explain';
+import {useScopedError} from '../common/useScopedError';
+import {registerPanelError} from '../../stores/assistContext';
 
 export interface FlowEvaluationPanelProps {
   sourceDatasetPath?:string;
@@ -41,8 +43,10 @@ async function readBack(evaluationId:string):Promise<FlowEvaluation|null> {
 }
 
 export function FlowEvaluationPanel({sourceDatasetPath='',savedVersionId,contextKey='',onOpenImage,onInspectImage,embedded=false,simple=false,visible=true,onEvidence}:FlowEvaluationPanelProps) {
-  const [open,setOpen]=useState(embedded&&visible), [busy,setBusy]=useState(false), [error,setError]=useState(''), [notice,setNotice]=useState('');
+  const [open,setOpen]=useState(embedded&&visible), [busy,setBusy]=useState(false), [notice,setNotice]=useState('');
   const [versions,setVersions]=useState<SavedEvaluationFlow[]>([]), [version,setVersion]=useState('');
+  const errorScope=JSON.stringify([sourceDatasetPath,contextKey,savedVersionId,version]);
+  const [error,setError]=useScopedError(errorScope);
   const [scope,setScope]=useState<TruthScope|null>(null), [cohorts,setCohorts]=useState<FlowEvaluationCohort[]>([]), [cohort,setCohort]=useState('');
   const [scopePrerequisite,setScopePrerequisite]=useState('');
   const [cohortName,setCohortName]=useState('시험 분할 전체'), [history,setHistory]=useState<FlowEvaluationHistory[]>([]);
@@ -53,6 +57,9 @@ export function FlowEvaluationPanel({sourceDatasetPath='',savedVersionId,context
   const generation=useRef(0);
   const selectedVersion=useRef('');
   selectedVersion.current=version;
+  useEffect(()=>{
+    if(open&&visible&&sourceDatasetPath)return registerPanelError('흐름 평가',error);
+  },[errorScope,error,open,visible,sourceDatasetPath]);
 
   useEffect(()=>{if(embedded&&visible)setOpen(true);},[embedded,visible]);
   useEffect(()=>{onEvidence?.(result&&result.version_id===version?result:null);},[result,version,onEvidence]);

@@ -231,3 +231,40 @@ test('an empty project stops at step 2 for its first labels instead of going to 
   assert.deepEqual(decide(ctx(2, '직접 라벨 달기', 2, {target: 'labeling-canvas', progress: {confirmed: 20, drafts: 0, remaining: 4}})), {kind: 'advance', step: 3},
     'with labels, the unlabeled rest stays out of training and the run goes on');
 });
+
+// Real-app QA (2026-10-24): 24 drafts adopted, 30 still waiting. The run stopped at the drafts with only '2단계 그 화면으로',
+// so a person who wanted to train on the 24 confirmed labels first had no way on. The stop now offers that choice; the
+// run continues only after the person presses it, and drafts stay out of training (they are not labels).
+test('waiting drafts stop the run but, with confirmed labels, offer to leave them and go on to training', () => {
+  const {decide} = load();
+  const progress = {confirmed: 24, drafts: 30, remaining: 0};
+  const waiting = ctx(2, '초안 검토', 2, {target: 'draft-review-queue', blocker: '초안 30장 검토 대기 · 확정 24장', progress});
+  const offered = decide(waiting);
+  assert.equal(offered.kind, 'stop'); assert.match(offered.reason, /초안 채택은 사람이/); assert.equal(offered.deferDrafts, 24);
+  assert.deepEqual(decide(waiting, {deferDrafts: true}), {kind: 'advance', step: 3}, 'pressed: on to step 3');
+  const none = ctx(2, '초안 검토', 2, {target: 'draft-review-queue', blocker: '초안 54장 검토 대기', progress: {confirmed: 0, drafts: 54, remaining: 0}});
+  assert.equal(decide(none).deferDrafts, undefined, 'nothing confirmed: nothing to train on');
+  assert.equal(decide(none, {deferDrafts: true}).kind, 'stop');
+  const blocked = {...waiting, status: 'blocked'};
+  assert.equal(decide(blocked).deferDrafts, undefined, 'a blocked review policy is not offered a way round');
+  assert.equal(decide(blocked, {deferDrafts: true}).kind, 'stop');
+});
+
+test('the choice reaches the run, is kept for that run only, and the dialog offers it at the stop', async () => {
+  const {runAutoProgress} = load();
+  const {world, calls, deps} = app({drafts: 30});
+  const picture = deps.snapshot;
+  deps.snapshot = () => { const value = picture(); return value.stage === 2 && world.drafts ? {...value, progress: {confirmed: 24, drafts: world.drafts, remaining: 0}} : value; };
+  let result = await runAutoProgress(deps, () => {}, {afterActMs: 0, pollMs: 10});
+  assert.equal(result.state, 'stopped'); assert.equal(result.stop.deferDrafts, 24); assert.deepEqual(calls, ['step 2']);
+  world.stage = 2; calls.length = 0;
+  result = await runAutoProgress(deps, () => {}, {afterActMs: 0, pollMs: 10, choices: {deferDrafts: true}});
+  assert.equal(result.state, 'done'); assert.equal(world.drafts, 30, 'the drafts are left as they were');
+  assert.deepEqual(calls.slice(0, 3), ['step 3', 'split', 'train']);
+  world.stage = 2; calls.length = 0;
+  result = await runAutoProgress(deps, () => {}, {afterActMs: 0, pollMs: 10});
+  assert.equal(result.state, 'stopped', 'a new run asks again');
+  const dialog = fs.readFileSync(path.join(__dirname, 'AutoProgressDialog.tsx'), 'utf8');
+  assert.match(dialog, /\{run\.stop\.deferDrafts && <button type="button" className="workspace-button" onClick=\{\(\) => start\(\{ deferDrafts: true \}\)\}>남은 초안은 두고 확정한 라벨 \{run\.stop\.deferDrafts\}장으로 학습까지 이어 가기<\/button>\}/);
+  assert.match(dialog, /void runAutoProgress\(appDeps\(\(\) => get\(\)\.cancelRequested\), \(run\) => set\(\{ run \}\), \{ choices \}\);/);
+});

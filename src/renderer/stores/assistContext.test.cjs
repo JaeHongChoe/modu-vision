@@ -48,6 +48,19 @@ test('panels report one error each, replace it, and clear it with null or blank 
   assert.equal(currentAssistContext(), null, 'no picture until the footer publishes one');
 });
 
+test('an error registration clears only its own panel instance', () => {
+  const context = load();
+  assert.equal(typeof context.registerPanelError, 'function', 'panels need an owned error registration');
+  const first = context.registerPanelError('흐름 평가', '첫 프로젝트 오류');
+  const second = context.registerPanelError('흐름 평가', '다른 프로젝트 오류');
+  first();
+  assert.deepEqual(context.assistPanelErrors(), [{source: '흐름 평가', text: '다른 프로젝트 오류'}]);
+  first();
+  assert.equal(context.assistPanelErrors().length, 1);
+  second();
+  assert.deepEqual(context.assistPanelErrors(), []);
+});
+
 test('steps 3 to 6 publish their own number line, and a changed number wakes listeners', () => {
   const {publishAssistContext, currentAssistContext, subscribeAssistContext} = load();
   let notified = 0;

@@ -25,6 +25,7 @@ from pydantic import BaseModel, ConfigDict, Discriminator, Field, Tag, field_val
 from backend.engine.dataset_loaders import BoundingBox, SUPPORTED_IMAGE_EXTENSIONS
 from backend.engine.annotation_storage import dataset_annotation_dir, scoped_annotation_root, request_project_root
 from backend.engine.annotation_transactions import AnnotationFileTransaction
+from backend.engine import annotation_recovery
 from backend.engine.source_text import read_source_text
 from backend.engine import dataset_metadata as metadata_engine
 from backend.engine.labeling_ai import (
@@ -657,23 +658,127 @@ def get_annotation_mask(
         raise HTTPException(status_code=500, detail=f"저장된 마스크를 읽을 수 없습니다 ({exc}). 마스크를 다시 그린 뒤 저장하세요.") from exc
 
 
-@router.delete("/{image_id}")
-def delete_annotations(image_id: str, dir_path: Optional[str] = Query(None)):
-    """Deletes stored annotations for the requested image_id."""
+class AnnotationRecoveryRequest(BaseModel):
+    image_path: Optional[str] = None
+    dir_path: Optional[str] = None
+    actor: str = Field('operator', min_length=1, max_length=100)
+    expected_revision: Optional[int] = Field(None, ge=1)
+    lease_token: Optional[str] = Field(None, min_length=1, max_length=200)
+
+
+def _recovery_context(image_id, image_path, dir_path):
     _validate_image_id(image_id)
-    target_dir = (_trusted_annotation_directory(str(dir_path))
-                  if dir_path and isinstance(dir_path, (str, Path)) else scoped_annotation_root(ANNOTATIONS_DIR))
-    json_path = target_dir / f"{image_id}.json"
-    mask_path = target_dir / "masks" / f"{image_id}.png"
+    if image_path and Path(image_path).stem != image_id:
+        raise HTTPException(422, detail='이미지 이름과 경로가 다릅니다. 같은 이미지를 다시 선택하세요.')
+    binding = _metadata_binding(image_path)
+    if image_path:
+        image = Path(image_path)
+        try:
+            peers = [p for p in image.parent.iterdir() if p.is_file() and p.stem == image_id
+                     and p.suffix.lower() in SUPPORTED_IMAGE_EXTENSIONS]
+        except OSError as exc:
+            raise HTTPException(422, detail='이미지 폴더를 읽을 수 없습니다. 원본 이미지 위치를 다시 연결하세요.') from exc
+        if len(peers) > 1:
+            raise HTTPException(422, detail='같은 폴더에 확장자만 다른 동일 이름 이미지가 있습니다. 이름을 구분한 뒤 라벨을 보관·복구하세요.')
+    if request_project_root() is not None and binding is None:
+        raise HTTPException(422, detail='프로젝트 라벨을 보관·복구할 원본 이미지가 지정되지 않았습니다. 같은 프로젝트의 원본 이미지를 다시 선택하세요.')
+    explicit = _trusted_annotation_directory(str(dir_path)) if isinstance(dir_path, (str, Path)) and dir_path else None
+    target = (dataset_annotation_dir(Path(image_path).parent, ANNOTATIONS_DIR) if image_path
+              else scoped_annotation_root(ANNOTATIONS_DIR))
+    if binding is not None and explicit is not None and explicit != target.resolve():
+        raise HTTPException(403, detail='선택한 라벨 폴더가 현재 이미지의 프로젝트 라벨 폴더와 다릅니다. 현재 이미지의 라벨 폴더를 다시 선택하세요.')
+    return binding, (explicit or target).absolute()
 
-    deleted = False
-    if json_path.exists():
-        json_path.unlink()
-        deleted = True
-    if mask_path.exists():
-        mask_path.unlink()
 
-    return {"status": "deleted" if deleted else "not_found", "image_id": image_id}
+def _recover_annotations(image_id, req, request, recovery_id=None):
+    from backend.api.shared_authorization import request_actor
+    from backend.engine.team_data import guard_annotation_write, annotation_written, public_image
+    actor = request_actor(request, req.actor).strip()
+    if not actor: raise HTTPException(422, detail='작업자 이름이 비어 있습니다. 라벨을 보관·복구할 작업자 이름을 입력하세요.')
+    binding, target = _recovery_context(image_id, req.image_path, req.dir_path)
+    archive_scope = scoped_annotation_root(ANNOTATIONS_DIR) if binding is not None else None
+    files = None
+    try:
+        annotation_recovery.paths(target, image_id, archive_scope)
+        if binding is None:
+            target.mkdir(parents=True, exist_ok=True)
+            name = hashlib.sha256(image_id.encode()).hexdigest()
+            lock = metadata_engine._file_lock(target / f'.annotation-save-{name}.lock')
+        else:
+            lock = metadata_engine.metadata_transaction(*binding)
+        with lock as ledger:
+            row = None
+            if binding is not None:
+                row = metadata_engine._ensure(ledger, *binding, req.image_path)
+                if req.expected_revision is None or row['revision'] != req.expected_revision:
+                    raise HTTPException(409, detail={'message': '최신 라벨의 수정 번호가 필요합니다. 다시 불러오세요.',
+                                                     'current': public_image(row)})
+            identity = {'image_uuid': row['image_uuid'], 'sha256': row['content_hash']} if row is not None else None
+            prepared = annotation_recovery.restoration(target, image_id, recovery_id,
+                archive_scope=archive_scope, identity=identity) if recovery_id else None
+            if row is not None:
+                annotations = []
+                if prepared and 'annotation' in prepared[3]:
+                    saved = json.loads(prepared[3]['annotation'])
+                    annotations = [AnnotationItem.model_validate(item) for item in saved['annotations']]
+                try:
+                    guard_annotation_write(ledger, row, actor, req.lease_token, annotations)
+                except ValueError as exc:
+                    raise HTTPException(409, detail={'message': str(exc), 'current': public_image(row)}) from exc
+            files = (metadata_engine.annotation_file_transaction(ledger) if binding is not None
+                     else AnnotationFileTransaction())
+            item = (annotation_recovery.restore(prepared, actor, files) if prepared
+                    else annotation_recovery.archive(target, image_id, actor, files,
+                        archive_scope=archive_scope, identity=identity))
+            result = {'status': 'restored' if prepared else 'deleted' if item else 'not_found', 'image_id': image_id}
+            if item:
+                result['recovery_id'] = item['recovery_id']
+                if row is not None:
+                    _, image = metadata_engine._visible_path(binding[1], req.image_path)
+                    row.update(workflow_state='needs_review', reviewer=None,
+                        annotation_hash=metadata_engine._annotation_hash(*binding, image),
+                        mask_hash=metadata_engine._mask_hash(*binding, image))
+                    annotation_written(row, actor)
+                    metadata_engine._event(row, actor, 'annotation_restored' if prepared else 'annotation_archived',
+                                           {'recovery_id': item['recovery_id'], 'workflow_state': 'needs_review'})
+                    result['metadata'] = public_image(row)
+            if binding is None: files.cleanup()
+        return result
+    except HTTPException:
+        if files is not None and binding is None: files.rollback()
+        raise
+    except Exception as exc:
+        if files is not None and binding is None: files.rollback()
+        status = (409 if isinstance(exc, annotation_recovery.RecoveryConflict) else
+                  404 if isinstance(exc, FileNotFoundError) else 422 if isinstance(exc, ValueError) else 500)
+        raise HTTPException(status, detail=f'라벨 보관·복구를 완료하지 못했습니다 ({exc}). 현재 라벨과 복구 사본을 확인하세요.') from exc
+
+
+@router.delete('/{image_id}')
+def delete_annotations(image_id: str, dir_path: Optional[str] = Query(None), image_path: Optional[str] = None,
+                       actor: Annotated[str, Query(min_length=1, max_length=100)] = 'operator',
+                       expected_revision: Annotated[Optional[int], Query(ge=1)] = None,
+                       lease_token: Annotated[Optional[str], Query(min_length=1, max_length=200)] = None,
+                       request: Request = None):
+    """Archive the overlay pair before removal; original images are never touched."""
+    req = AnnotationRecoveryRequest(dir_path=dir_path if isinstance(dir_path, (str, Path)) else None,
+        image_path=image_path, actor=actor, expected_revision=expected_revision, lease_token=lease_token)
+    return _recover_annotations(image_id, req, request)
+
+
+@router.get('/{image_id}/recovery')
+def annotation_recovery_history(image_id: str, dir_path: Optional[str] = None, image_path: Optional[str] = None):
+    binding, target = _recovery_context(image_id, image_path, dir_path)
+    try:
+        return {'image_id': image_id, 'items': annotation_recovery.history(target, image_id,
+            scoped_annotation_root(ANNOTATIONS_DIR) if binding is not None else None)}
+    except (OSError, ValueError) as exc:
+        raise HTTPException(422, detail=f'라벨 복구 기록을 읽을 수 없습니다 ({exc}). 원본 이미지와 복구 사본의 연결을 확인한 뒤 다시 불러오세요.') from exc
+
+
+@router.post('/{image_id}/restore/{recovery_id}')
+def restore_annotations(image_id: str, recovery_id: str, req: AnnotationRecoveryRequest, request: Request = None):
+    return _recover_annotations(image_id, req, request, recovery_id)
 
 
 def _resolve_image_path(image_path: Optional[str], image_id: Optional[str]) -> Path:

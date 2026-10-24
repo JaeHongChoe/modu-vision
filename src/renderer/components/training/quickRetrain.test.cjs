@@ -22,6 +22,7 @@ test('the parent picked by the quick retrain survives its own epoch change and g
  const slots=[],effects=[];let cursor=0;
  const changed=(old,deps)=>!old||!deps||deps.length!==old.deps.length||deps.some((dep,index)=>!Object.is(dep,old.deps[index]));
  const react={createElement:(type,props,...children)=>({type,props:{...props,children}}),Fragment:'Fragment',
+  useRef(initial){const index=cursor++;return slots[index]??(slots[index]={current:initial});},
   useState(initial){const index=cursor++;if(!(index in slots))slots[index]={value:typeof initial==='function'?initial():initial};const slot=slots[index];return[slot.value,value=>{slot.value=typeof value==='function'?value(slot.value):value;}];},
   useEffect(fn,deps){const index=cursor++,old=slots[index];if(changed(old,deps)){const entry={deps};slots[index]=entry;effects.push(()=>{old?.cleanup?.();entry.cleanup=fn();});}}};
  react.default=react;
@@ -34,9 +35,12 @@ test('the parent picked by the quick retrain survives its own epoch change and g
  const {TrainingController}=compile('TrainingController.tsx',{react,'lucide-react':new Proxy({},{get:(_,key)=>String(key)}),
   './parentCandidate':{parentCandidateLabel:parent=>parent.job_id,parentCandidateNotice:''},
   './modelTrainingOptions':compile('modelTrainingOptions.ts',{}),
+  './trainingStartSummary':compile('trainingStartSummary.ts',{'./modelTrainingOptions':compile('modelTrainingOptions.ts',{})}),
+  '../../stores/assistContext':compile('../../stores/assistContext.ts',{}),
+  '../common/useScopedError':compile('../common/useScopedError.ts',{react}),
   '../../services/api':{api:{training:{warmStartParents:async(...args)=>{parentReads.push(args[3]);return{parents,total:2};}}},request:async()=>({states:[],excluded:[]}),getApiPersistenceIdentity:()=>null},
-  '../../stores/useProjectStore':{useProjectStore:store({task:'detection',language:'ko',setStep(){},projectDir:'/p',project:{id:'p',source_dataset_dir:'/data',active_labelset_id:'default'},isProjectBusy:false,technicalDetails:false,viewMode:'simple'})},
-  '../../stores/useDatasetStore':{useDatasetStore:store({folderPath:'/data',totalImages:10,split:{train:6,val:2,test:2},isLoading:false,isSplitting:false,importError:null,splitError:null,splitSupported:true,splitUnavailableReason:null,datasetKey:'/data\0detection',splitState:'saved',classes:{},classSplitCounts:null})},
+  '../../stores/useProjectStore':{useProjectStore:store({task:'detection',language:'ko',setStep(){},projectDir:'/p',project:{id:'p',task:'detection',source_dataset_dir:'/data',active_labelset_id:'default'},isProjectBusy:false,technicalDetails:false,viewMode:'simple'})},
+  '../../stores/useDatasetStore':{readDatasetAuthority:()=> 'owned',useDatasetStore:store({folderPath:'/data',totalImages:10,split:{train:6,val:2,test:2},isLoading:false,isSplitting:false,importError:null,splitError:null,splitSupported:true,splitUnavailableReason:null,datasetKey:'/data\0detection',sourceAuthority:'owned',splitState:'saved',classes:{},classSplitCounts:null})},
   '../../stores/useTrainingStore':{useTrainingStore:store({jobId:'job_new',status:'completed',isTraining:false,isRecoveringTraining:false,preset:'fast',setPreset(){},lossHistory:[],hardware:{},
    startTraining:async(...args)=>{starts.push(args);},stopTraining:async()=>{},recoverActiveJob:async()=>{},refreshCurrentJob:async()=>{},reconnectCurrentJob:async()=>{},setNextSettings(){}})},
   '../../stores/autoRunChannel':{registerAutoRun:()=>()=>{}},
@@ -58,6 +62,8 @@ test('the parent picked by the quick retrain survives its own epoch change and g
  assert.equal(parentSelect(tree).props.value,'job_new','the parent just picked stays picked');
  assert.equal(parentReads.length,1,'five epochs do not change which parents fit');
  assert.match(text(tree),/시작 모델 …job_new · 학습 횟수 5/);
+ // The list only offers this label set's parents; one whose receipt predates the label-set record is offered and says so.
+ assert.match(text(tree),/라벨 세트 기록 없음/);
  await nodes(tree).find(node=>node.type==='button'&&text(node).includes('선택 설정으로 학습 시작')).props.onClick();
  assert.equal(starts.length,1);
  assert.equal(starts[0][2],'job_new','the start request carries the warm-start parent');
@@ -67,4 +73,12 @@ test('the parent picked by the quick retrain survives its own epoch change and g
  tree=await settle();
  assert.equal(parentReads.length,2);
  assert.equal(parentSelect(tree).props.value,'');
+ // A parent recorded under the active label set carries no such mark.
+ parents[1].labelset_id='default';
+ nodes(tree).find(node=>node.props?.['aria-label']==='학습 모델 구조').props.onChange({target:{value:'yolo26n'}});
+ tree=await settle();
+ nodes(tree).find(node=>node.type==='button'&&node.props['aria-label']==='빠른 이어 학습').props.onClick();
+ tree=await settle();
+ assert.match(text(tree),/시작 모델 …job_new · 학습 횟수 5/);
+ assert.doesNotMatch(text(tree),/라벨 세트 기록 없음/);
 });

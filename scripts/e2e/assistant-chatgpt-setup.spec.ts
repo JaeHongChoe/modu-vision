@@ -1,0 +1,61 @@
+import fs from 'node:fs';
+import path from 'node:path';
+import {test, expect} from './fixtures/test';
+import {installDesktopHostShim} from './fixtures/desktop-host-shim';
+import {png} from './qa/appFlow';
+import type {AssistantBridge, AssistantConfigState} from '../../src/types/electron';
+
+// Actual renderer/backend UI; scripted public main-process replies. No browser login, tokens or provider network.
+test('ChatGPT setup requires consent and explicit model selection; identity-only, image and usage states stay safe', async ({page, renderer, workspace, evidence}) => {
+  test.setTimeout(180_000);
+  const source=path.join(workspace.root,'chatgpt-ui-source');
+  for(const label of ['OK','NG']){fs.mkdirSync(path.join(source,label),{recursive:true});for(let i=0;i<10;i++)fs.writeFileSync(path.join(source,label,`${i}.png`),png(32,3,()=>[100,i*5,80]));}
+  const api=async(route:string,body:unknown,method='POST')=>{const res=await page.request.fetch(renderer.origin+route,{method,data:body});expect(res.ok(),await res.text()).toBe(true);return res.json();};
+  const project=await api('/api/project/create',{name:'ChatGPT public connection QA',task:'classification'});
+  await api('/api/project/update',{source_dataset_dir:source},'PUT');
+  await api('/api/dataset/import',{folder_path:source,task:'classification'});
+  const external:string[]=[];page.on('request',req=>{const u=new URL(req.url());if(/^https?:$/.test(u.protocol)&&u.origin!==renderer.origin)external.push(req.url());});
+  await page.route(/^https?:\/\//,route=>new URL(route.request().url()).origin===renderer.origin?route.fallback():route.abort('blockedbyclient'));
+  await installDesktopHostShim(page,renderer.port);await page.goto(renderer.url);
+  await expect(page.getByTitle('프로젝트 관리',{exact:true})).toContainText(project.name);
+  await expect(page.getByRole('button',{name:'3-Way 분할 적용',exact:true})).toBeEnabled();
+  await page.evaluate(()=>{
+    let version=0;
+    const calls:string[]=[];
+    const config:AssistantConfigState={active:null,providers:[],encryptionAvailable:true,chatgpt:{accounts:[],active:null,encryptionAvailable:true,status:'idle',authority:'0'}};
+    const state=()=>structuredClone(config);
+    const sync=()=>{const chat=config.chatgpt!;chat.authority=String(++version);const account=chat.accounts.find(a=>a.recordId===chat.active);config.active=account?'chatgpt':null;config.providers=account?[{provider:'chatgpt',baseUrl:'https://api.openai.com/v1',model:account.model,format:'responses',hasKey:false,supportsImages:false,label:`ChatGPT · ${account.label}`,ready:account.signedIn&&account.planUsageEnabled&&!!account.model,connectionAuthority:chat.authority}]:[];return state();};
+    const bridge:AssistantBridge={getState:async()=>state(),saveProvider:async()=>state(),removeKey:async()=>state(),removeProvider:async()=>state(),setActive:async()=>state(),listModels:async()=>{calls.push('models');return{ok:true,models:[{id:'qa-text-model',label:'QA text model'}]};},send:async()=>{calls.push('send');return{ok:false,error:{code:'rate_limited',reason:'모의 ChatGPT 한도',action:'사용량을 확인하세요.'}};},cancel:async()=>true,imageIntent:async()=>{calls.push('image');return{ok:false,error:{code:'image_refused',reason:'text only',action:'텍스트 질문'}};},beginRun:async()=>false,endRun:async()=>{},chatgpt:{acknowledgePlanUsage:async id=>{config.chatgpt!.accounts.find(a=>a.recordId===id)!.planUsageAcknowledged=true;return state();},resumeUsage:async id=>{config.chatgpt!.accounts.find(a=>a.recordId===id)!.usagePaused=false;return sync();},recover:async()=>{throw Error('recovery is not part of this public-state fixture');},begin:async input=>{if(input.termsAccepted!==true)throw Error('consent');calls.push('begin');config.chatgpt!.status='waiting';return state();},cancel:async()=>{calls.push('cancel');config.chatgpt!.status='idle';return sync();},selectAccount:async id=>{calls.push('account');config.chatgpt!.active=id;return sync();},selectModel:async(id,model)=>{calls.push('model');config.chatgpt!.accounts.find(a=>a.recordId===id)!.model=model;return sync();},signOut:async id=>{calls.push('signout');config.chatgpt!.accounts.find(a=>a.recordId===id)!.signedIn=false;config.chatgpt!.remoteRevocationConfirmed=false;return sync();}}};
+    if(!window.api)throw Error('host shim missing');window.api.assistant=bridge;
+    Object.assign(window,{__chatgptUI:{calls,completeIdentityOnly:()=>{config.chatgpt!.accounts=[{recordId:'qa-identity',label:'시험 계정 A',model:'',signedIn:true,planUsageEnabled:false},{recordId:'qa-plan',label:'시험 계정 B',model:'',signedIn:true,planUsageEnabled:true}];config.chatgpt!.active='qa-identity';config.chatgpt!.status='connected';sync();}}});
+  });
+  await page.getByRole('button',{name:'왜 그런가요?',exact:true}).click();
+  await page.getByRole('button',{name:'도우미에게 묻기',exact:true}).click();
+  const panel=page.getByRole('complementary',{name:'도우미',exact:true}),setup=panel.getByRole('region',{name:'ChatGPT 연결',exact:true});
+  await panel.getByText('ChatGPT 연결 (선택)',{exact:true}).click();
+  await expect(setup.getByRole('button',{name:'Continue with ChatGPT',exact:true})).toBeDisabled();
+  expect(await page.evaluate(()=>(window as any).__chatgptUI.calls)).toEqual([]);
+  await setup.getByRole('checkbox').check();
+  await setup.getByRole('button',{name:'Continue with ChatGPT',exact:true}).click();
+  await expect(setup.getByRole('button',{name:'연결 취소',exact:true})).toBeVisible();
+  await page.evaluate(()=>(window as any).__chatgptUI.completeIdentityOnly());
+  await expect(setup).toContainText('플랜 사용은 활성화되지 않았습니다');
+  await expect(panel.getByRole('textbox',{name:'도우미에게 묻기',exact:true})).toBeDisabled();
+  await evidence.screenshot(page,'chatgpt-identity-only-cannot-send');
+  await setup.getByRole('combobox',{name:'ChatGPT 계정',exact:true}).selectOption('qa-plan');
+  await page.getByRole('dialog',{name:'ChatGPT 플랜 사용 안내',exact:true}).getByRole('button',{name:'안내 확인',exact:true}).click();
+  await expect(panel.getByRole('textbox',{name:'도우미에게 묻기',exact:true})).toBeDisabled();
+  await setup.getByRole('button',{name:'모델 목록 불러오기',exact:true}).click();
+  await setup.getByRole('combobox',{name:'ChatGPT 모델',exact:true}).selectOption('qa-text-model');
+  await expect(panel.getByRole('textbox',{name:'도우미에게 묻기',exact:true})).toBeEnabled();
+  await expect(panel.getByRole('button',{name:'이미지와 함께 묻기',exact:true})).toBeDisabled();
+  await panel.getByRole('textbox',{name:'도우미에게 묻기',exact:true}).fill('왜 막혔나요?');
+  await panel.getByRole('button',{name:'보내기',exact:true}).click();
+  await expect(panel.getByRole('link',{name:'ChatGPT 사용량 관리',exact:true})).toBeVisible();
+  await evidence.screenshot(page,'chatgpt-explicit-model-text-only-usage-error');
+  await setup.getByRole('button',{name:'이 컴퓨터에서 연결 지우기',exact:true}).click();
+  await expect(setup).toContainText('서비스 쪽 연결 해제는 확인되지 않았습니다');
+  await expect(panel.getByRole('textbox',{name:'도우미에게 묻기',exact:true})).toBeDisabled();
+  const calls=await page.evaluate(()=>(window as any).__chatgptUI.calls);
+  expect(calls.filter((c:string)=>c==='begin')).toHaveLength(1);expect(calls.filter((c:string)=>c==='send')).toHaveLength(1);expect(calls).not.toContain('image');expect(external).toEqual([]);
+});

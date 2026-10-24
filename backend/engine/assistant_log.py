@@ -28,7 +28,7 @@ MAX_LOG_BYTES = 4 * 1024 * 1024
 MAX_LINE_BYTES = 4096
 TIERS = ('read', 'navigate', 'write', 'forbidden', 'conversation')
 RESULTS = ('ok', 'refused', 'error', 'cancelled')
-PROVIDERS = ('openai-compatible', 'anthropic')
+PROVIDERS = ('openai-compatible', 'anthropic', 'chatgpt')
 
 _RUN_ID = re.compile(r'run_[a-f0-9]{24}')
 _TOOL = re.compile(r'[a-z][a-z0-9_]{1,63}')

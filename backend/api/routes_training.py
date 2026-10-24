@@ -1538,6 +1538,11 @@ def list_resume_states(dataset_path: str, task: str, request: Request, preset: s
     return {'states': rows, 'excluded': excluded}
 
 
+def _recorded_labelset(job_dir: Path) -> Optional[str]:
+    from backend.engine.warm_start import recorded_labelset
+    return recorded_labelset(job_dir)
+
+
 @router.get("/warm-start-parents")
 def list_warm_start_parents(
     dataset_path: str, task: str, preset: str = "fast", request: Request = None,
@@ -1564,6 +1569,8 @@ def list_warm_start_parents(
         # retain the original source identity, as the patch train route does.
         source = Path(project['source_dataset_dir']).expanduser().resolve()
     models = _warm_start_scope(request, source)
+    from backend.api.routes_project import get_current_project
+    active_labelset = get_current_project(request).get('active_labelset_id', 'default')
     try:
         architecture = architecture_for(task, preset, {key: value for key, value in {
             'backbone': backbone, 'model_name': model_name, 'anomaly_method': anomaly_method,
@@ -1586,6 +1593,12 @@ def list_warm_start_parents(
                 continue
         except (OSError, ValueError):
             continue
+        # A parent trained under another label set of this project learned that set's truth, even under the same class
+        # names, so it is not offered (the draft model list keeps the same rule). A receipt that names no label set
+        # predates the record: still offered, with labelset_id None so the screen can say so.
+        trained_set = _recorded_labelset(job_dir)
+        if trained_set is not None and trained_set != active_labelset:
+            continue
         parents.append({
             "job_id": parent.job_id,
             "classes": list(parent.classes),
@@ -1594,6 +1607,7 @@ def list_warm_start_parents(
             "dataset_fingerprint": parent.dataset_fingerprint,
             'semantics': parent.semantics,
             'summary': parent_summary(parent.checkpoint_path.parent),
+            'labelset_id': trained_set,
         })
     return {"parents": parents, "total": len(parents)}
 
@@ -1950,9 +1964,12 @@ def _start_training(req: TrainingStartRequest, request: Optional[Request], reser
             warm_start = resolve_warm_start_parent(
                 req.warm_start_job_id, models, d_path, req.task, architecture,
             )
-            from backend.engine.warm_start import training_classes
+            from backend.engine.warm_start import OTHER_LABELSET_PARENT, other_labelset_parent, training_classes
             if warm_start.classes != training_classes(req.task, d_path):
                 raise ValueError('Warm-start parent classes differ from current training classes')
+            from backend.api.routes_project import get_current_project
+            if other_labelset_parent(models / req.warm_start_job_id, get_current_project(request).get('active_labelset_id')):
+                raise ValueError(OTHER_LABELSET_PARENT)
         except (OSError, ValueError) as exc:
             raise HTTPException(status_code=422, detail=str(exc)) from exc
     ledger = None

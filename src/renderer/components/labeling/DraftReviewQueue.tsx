@@ -17,8 +17,9 @@ import { SuggestionPreview } from './SuggestionPreview';
 import { DraftGrid } from './DraftGrid';
 import { imageLeaseToken } from './teamDataWorkflow';
 import { Explain } from '../common/Explain';
-import { usePopoverRoom } from './popoverRoom';
-import { CHANGED_MODEL_MARK, DRAFT_ORDER_TEXT, MIXED_SOURCE_NOTE, OPEN_REQUEST_MISSING_TEXT, adoptable, adoptionHistory, adoptionLine, adoptionSummary, adoptionTitle, canTakeBack,
+import { usePopoverHorizontalBounds, usePopoverRoom } from './popoverRoom';
+import {focusWorkflowTarget} from '../wizard/workflowReadiness';
+import { CANVAS_NOT_RELOADED_TEXT, CHANGED_MODEL_MARK, DRAFT_ORDER_TEXT, MIXED_SOURCE_NOTE, OPEN_REQUEST_MISSING_TEXT, adoptable, adoptionHistory, adoptionLine, adoptionSummary, adoptionTitle, canTakeBack,
   closedDraftText, draftError, draftSourceText, gridPages, modelStats, multiAdoptionRefusal, orderDrafts, pageAdoptionRefusal, pendingImageCount, sourcesMixed, staleBatchRefusal,
   supportLimitsText, thresholdAdvice, topConfidence, defaultChoice, emptyPendingDrafts, unknownClassCandidate, UNKNOWN_CLASS_MARK, type AdoptionResult, type DraftOrder, type ModelAdoptionStats } from './draftReview';
 
@@ -91,6 +92,8 @@ export const DraftReviewQueue: React.FC = () => {
   const [page, setPage] = useState(0);
   const [excluded, setExcluded] = useState<Set<string>>(new Set());
   const [loadedOnPage, setLoadedOnPage] = useState<Set<string>>(new Set());
+  // Tiles whose image could not be read: they never show, so the page refusal names them and the way out.
+  const [failedOnPage, setFailedOnPage] = useState<Set<string>>(new Set());
   const [wide, setWide] = useState(false);
   // The last list read that landed (its scope, and a count), and the open request already given its one extra read.
   const lastRead = useRef({ scope: '', count: 0 });
@@ -164,7 +167,7 @@ export const DraftReviewQueue: React.FC = () => {
   const modelRow = modelStats(stats, modelId);
   const grid = useMemo(() => gridPages(pending, pageSize), [pending, pageSize]);
   const pageDrafts = grid.pages[Math.min(page, Math.max(0, grid.pages.length - 1))] ?? [];
-  const pageRefusal = pageAdoptionRefusal(pageDrafts, excluded, loadedOnPage);
+  const pageRefusal = pageAdoptionRefusal(pageDrafts, excluded, loadedOnPage, failedOnPage);
   // What keeps '이 페이지 채택' off, said next to it: the page itself first, then the missing reviewer name.
   const pageBlock = pageRefusal ?? (reviewerName.trim() ? null : '검토자 이름을 입력하면 이 페이지를 채택할 수 있습니다.');
   const authority = readDatasetAuthority();
@@ -180,7 +183,7 @@ export const DraftReviewQueue: React.FC = () => {
   // Exclusions belong to the page, so a trip to the list (or a tile's '열기') keeps them; what has shown is read again
   // whenever the tiles come back.
   useEffect(() => setExcluded(new Set()), [page, pageSize, scope]);
-  useEffect(() => setLoadedOnPage(new Set()), [page, mode, pageSize, scope]);
+  useEffect(() => { setLoadedOnPage(new Set()); setFailedOnPage(new Set()); }, [page, mode, pageSize, scope]);
   useEffect(() => { if (page > 0 && page >= grid.pages.length) setPage(Math.max(0, grid.pages.length - 1)); }, [grid.pages.length, page]);
 
   // Another panel ('모델 보조') asked for one draft: open the popover on it, with only the candidates kept there. A
@@ -211,6 +214,7 @@ export const DraftReviewQueue: React.FC = () => {
     setOpen(true);
     setMode('list');
     if (draft.status !== 'pending') { setSelectedId(''); setError(null); setNotice(closedDraftText(draft)); return; }
+    if (openRequest.order === 'uncertain' || openRequest.order === 'confident') setOrder(openRequest.order);
     choose(draft);
     if (openRequest.candidateIds) {
       const kept = new Set(openRequest.candidateIds.filter((id) => draft.candidates.some((candidate) => candidate.id === id)));
@@ -257,24 +261,30 @@ export const DraftReviewQueue: React.FC = () => {
   };
 
   // After the server changed labels: re-read the open image when it is one that changed, then the counts and drafts
-  // (the evidence bump makes this panel read again).
-  const afterLabelChanges = async (changed: LabelSuggestion[], startedScope: string) => {
+  // (the evidence bump makes this panel read again). Returns what to tell the person when the open image was not re-read.
+  const afterLabelChanges = async (changed: LabelSuggestion[], startedScope: string): Promise<string | null> => {
     const annotation = useAnnotationStore.getState();
+    let kept: string | null = null;
     if (changed.some((draft) => annotation.currentImage?.file_path === draft.image_path)) {
-      await annotation.loadAnnotationsForCurrent();
-      // Undo must not bring back the labels as they were before this server change.
-      useAnnotationStore.setState({ history: [], future: [] });
+      const replaced = await annotation.loadAnnotationsForCurrent();
+      // Undo must not bring back the labels as they were before this server change. Edits made on the canvas meanwhile
+      // were not replaced (the re-read skips a dirty canvas), so they keep their undo and the person is told instead.
+      if (replaced || !useAnnotationStore.getState().isDirty) useAnnotationStore.setState({ history: [], future: [] });
+      else kept = CANVAS_NOT_RELOADED_TEXT;
     }
-    if (live.current !== startedScope) return;
+    if (live.current !== startedScope) return kept;
     await useDatasetStore.getState().annotationsChanged();
     bumpWorkflowEvidence();
+    return kept;
   };
+  const withKept = (text: string, kept: string | null) => kept ? `${text} ${kept}` : text;
 
   const sameImageDirty = (draft: LabelSuggestion) => isDirty && image?.file_path === draft.image_path;
 
   // The panel hangs below its row: keep it within what is still on screen above the step footer, wherever the row is
   // scrolled to, so the adopt and take-back buttons stay reachable.
   const room = usePopoverRoom(open, rowRef);
+  const horizontal = usePopoverHorizontalBounds(open, rowRef, wide ? 1200 : 540);
 
   // Opening re-reads the drafts and models, so a model that finished training meanwhile is offered.
   const toggle = () => {
@@ -303,8 +313,8 @@ export const DraftReviewQueue: React.FC = () => {
       setDrafts((previous) => previous.map((draft) => draft.id === updated.id ? updated : draft));
       setPicks((previous) => { const next = new Set(previous); next.delete(updated.id); return next; });
       if (decision === 'accept') {
-        await afterLabelChanges([updated], startedScope);
-        setNotice(`${updated.accepted_candidate_ids.length}개를 라벨로 채택했습니다(기존 라벨에 덧붙임). 캔버스에서 고친 뒤 저장할 수 있고(남은 초안을 먼저 검토하세요. 고쳐 저장하면 남은 초안은 다시 만들어야 합니다), 고치기 전이면 '이 채택 되돌리기'로 이 채택만 뺄 수 있습니다. 채택 전 데이터 버전 ${updated.backup_version_id}.`);
+        const kept = await afterLabelChanges([updated], startedScope);
+        setNotice(withKept(`${updated.accepted_candidate_ids.length}개를 라벨로 채택했습니다(기존 라벨에 덧붙임). 캔버스에서 고친 뒤 저장할 수 있고(남은 초안을 먼저 검토하세요. 고쳐 저장하면 남은 초안은 다시 만들어야 합니다), 고치기 전이면 '이 채택 되돌리기'로 이 채택만 뺄 수 있습니다. 채택 전 데이터 버전 ${updated.backup_version_id}.`, kept));
       } else {
         setReloads((value) => value + 1);
         setNotice('초안을 거절했습니다. 라벨은 바뀌지 않았습니다.');
@@ -385,9 +395,9 @@ export const DraftReviewQueue: React.FC = () => {
       if (live.current !== startedScope) return;
       setPicks((previous) => { const next = new Set(previous); for (const row of adopted) next.delete(row.id); return next; });
       if (adopted.some((row) => row.id === selectedId)) setSelectedId('');
-      if (adopted.length) await afterLabelChanges(adopted, startedScope);
+      const kept = adopted.length ? await afterLabelChanges(adopted, startedScope) : null;
       if (live.current !== startedScope) return;
-      setNotice(adoptionSummary(results, stopped));
+      setNotice(withKept(adoptionSummary(results, stopped), kept));
     } finally {
       endRun();
       if (live.current === startedScope) { setBusy(null); setProgress(null); }
@@ -408,8 +418,8 @@ export const DraftReviewQueue: React.FC = () => {
       try { updated = await datasetWorkflow.undoAdoption(draft.id, reviewerName, lease.token); } finally { await lease.release(); }
       if (live.current !== startedScope) return;
       setDrafts((previous) => previous.map((item) => item.id === updated.id ? updated : item));
-      await afterLabelChanges([updated], startedScope);
-      setNotice(`${fileName(draft.image_path)}에서 이 채택의 도형만 뺐습니다. 되돌리기 직전 데이터 버전 ${updated.revert_backup_version_id}.`);
+      const kept = await afterLabelChanges([updated], startedScope);
+      setNotice(withKept(`${fileName(draft.image_path)}에서 이 채택의 도형만 뺐습니다. 되돌리기 직전 데이터 버전 ${updated.revert_backup_version_id}.`, kept));
     } catch (cause) {
       if (live.current === startedScope) setError(draftError(cause));
     } finally {
@@ -420,11 +430,23 @@ export const DraftReviewQueue: React.FC = () => {
 
   const adoptPicked = () => adoptDrafts(picked);
   const adoptPage = () => adoptDrafts(pageDrafts.filter((draft) => !excluded.has(draft.id)));
+  const tileFailed = (id: string) => setFailedOnPage((previous) => previous.has(id) ? previous : new Set(previous).add(id));
   const tileLoaded = (id: string) => {
     setLoadedOnPage((previous) => previous.has(id) ? previous : new Set(previous).add(id));
     setViewed((previous) => previous.has(id) ? previous : new Set(previous).add(id));
   };
   const pickAllViewed = () => setPicks(new Set(pending.filter((draft) => viewed.has(draft.id) && adoptable(draft)).map((draft) => draft.id)));
+  const openExistingLabels = async () => {
+    const state = useProjectStore.getState(), startedScope = draftReviewScope(state), startedAuthority = readDatasetAuthority();
+    try {
+      // Normal navigation saves pending shapes first. A refused save keeps step 2, so no import panel opens.
+      await state.setStep(1);
+      const current = useProjectStore.getState();
+      if (current.activeStep !== 1 || useAnnotationStore.getState().isDirty
+        || draftReviewScope(current) !== startedScope || readDatasetAuthority() !== startedAuthority) return;
+      focusWorkflowTarget('workflow-label-exchange');
+    } catch (cause) { if (live.current === scope) setError(draftError(cause)); }
+  };
 
   if (!projectDir || !project?.source_dataset_dir) return null;
   return (
@@ -443,7 +465,7 @@ export const DraftReviewQueue: React.FC = () => {
       </button>
 
       {open && (
-        <aside style={{ maxHeight: room }} onKeyDown={(event) => event.stopPropagation()} className={`absolute right-3 top-full z-50 mt-1 flex max-h-[calc(100vh-195px)] ${wide ? 'w-[min(1200px,calc(100vw-24px))]' : 'w-[540px]'} max-w-[calc(100vw-24px)] flex-col overflow-hidden rounded-xl border border-slate-600 bg-[#151D2A] shadow-2xl`} aria-label="초안 검토">
+        <aside style={{ maxHeight: room, ...horizontal, right: horizontal ? 'auto' : undefined }} onKeyDown={(event) => event.stopPropagation()} className={`absolute right-3 top-full z-50 mt-1 flex max-h-[calc(100vh-195px)] ${wide ? 'w-[min(1200px,calc(100vw-24px))]' : 'w-[540px]'} max-w-[calc(100vw-24px)] flex-col overflow-hidden rounded-xl border border-slate-600 bg-[#151D2A] shadow-2xl`} aria-label="초안 검토">
           <div className="flex items-start justify-between border-b border-slate-700 px-4 py-3">
             <div>
               <h3 className="text-sm font-bold text-white">라벨 초안 검토</h3>
@@ -460,6 +482,7 @@ export const DraftReviewQueue: React.FC = () => {
 
             <section id="draft-create" tabIndex={-1} className="space-y-2 rounded-lg border border-slate-700 bg-[#101722] p-3" aria-label="초안 만들기">
               <h4 className="font-semibold text-slate-100">1. 초안 만들기</h4>
+              <div className="flex flex-wrap items-center gap-2 text-xs text-slate-400"><span>이전에 만든 라벨이 있나요?</span><button type="button" className="workspace-button" disabled={!!busy || batchRunning} onClick={openExistingLabels}>기존 라벨 가져오기 (1단계)</button></div>
               {models.length === 0 ? <>
                 {/* Design 3.3 ③: with no trained model, a phrase drafts the unlabeled images (detection and segmentation). */}
                 {(task === 'detection' || task === 'segmentation') && <PhraseDraftCreate key={scope} task={task} disabled={!!busy || isDirty} pendingImages={pendingImagePaths} onRunningChange={setBatchRunning} />}
@@ -481,7 +504,7 @@ export const DraftReviewQueue: React.FC = () => {
                 <BulkLabelAssist execution={EXECUTION} projectDir={projectDir} modelId={modelId} threshold={threshold} keywords={[]}
                   disabled={!!busy || isDirty} onOpenEntry={openBatchEntry}
                   onRunningChange={setBatchRunning} />
-                <Explain text={`초안을 채택하면 데이터가 바뀝니다. 그 뒤에도 이 모델로 초안을 만들 수 있고, '${CHANGED_MODEL_MARK}'으로 표시됩니다(3단계 '빠른 이어 학습'으로 모델을 맞추면 초안이 더 정확해집니다). 같은 묶음으로 만든 초안은 이어서 채택할 수 있으니 남은 이미지를 한 번에 만드세요. 라벨을 직접 고쳐 저장하면 남은 초안은 채택할 수 없게 되니, 남은 초안을 먼저 검토한 뒤 고치세요.`} />
+                <Explain text={`초안을 채택하면 데이터가 바뀝니다. 그 뒤에도 이 모델로 초안을 만들 수 있고, '${CHANGED_MODEL_MARK}'으로 표시됩니다. 3단계 '빠른 이어 학습'으로 새 라벨을 반영한 후보 모델을 만들 수 있습니다. 정확도는 검토와 평가로 확인하세요. 같은 묶음으로 만든 초안은 이어서 채택할 수 있으니 남은 이미지를 한 번에 만드세요. 라벨을 직접 고쳐 저장하면 남은 초안은 채택할 수 없게 되니, 남은 초안을 먼저 검토한 뒤 고치세요.`} />
               </>}
             </section>
 
@@ -519,9 +542,9 @@ export const DraftReviewQueue: React.FC = () => {
                     </span>
                   </div>
                   <Explain text="한 페이지는 한 묶음입니다. 타일을 눌러 이 페이지 채택에서 빼거나 넣고, 모든 타일이 보인 뒤 한 번에 채택합니다. '열기'는 캔버스에서 한 장씩 봅니다." />
-                  <DraftGrid drafts={pageDrafts} choices={new Map(pageDrafts.map((draft) => [draft.id, choiceFor(draft)]))} excluded={excluded} loaded={loadedOnPage} authority={authority} context={getProjectContext()} current={tileLive} disabled={busy === 'accept' || busy === 'reject' || busy === 'undo'}
+                  <DraftGrid drafts={pageDrafts} choices={new Map(pageDrafts.map((draft) => [draft.id, choiceFor(draft)]))} excluded={excluded} loaded={loadedOnPage} failed={failedOnPage} authority={authority} context={getProjectContext()} current={tileLive} disabled={busy === 'accept' || busy === 'reject' || busy === 'undo'}
                     onToggle={(id) => setExcluded((previous) => { const next = new Set(previous); if (next.has(id)) next.delete(id); else next.add(id); return next; })}
-                    onLoaded={tileLoaded} onOpen={(draft) => void openDraft(draft)} />
+                    onLoaded={tileLoaded} onFailed={tileFailed} onOpen={(draft) => void openDraft(draft)} />
                   {pageBlock && <p className="text-[11px] text-amber-300">{pageBlock}</p>}
                   {progress && <p role="status" className="text-[11px] text-cyan-200">채택 중 {progress.done} / {progress.total}</p>}
                   <label className="block text-[11px]">검토자<input aria-label="초안 검토자 이름" value={reviewerName} onChange={(event) => setReviewerName(event.target.value)} className="ml-2 rounded border border-slate-600 bg-slate-900 p-1.5" /></label>

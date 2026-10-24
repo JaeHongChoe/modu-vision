@@ -12,17 +12,20 @@ API = Path(__file__).resolve().parents[1] / 'api'
 ROUTES = ['routes_project.py', 'routes_dataset.py', 'routes_onboarding.py', 'routes_training.py', 'routes_evaluation.py',
           'routes_flowchart.py', 'routes_inspections.py', 'routes_model_comparisons.py',
           'routes_annotation.py', 'routes_dataset_versions.py', 'routes_training_workspace.py',
-          'routes_model_operations.py', 'routes_team_data.py', 'routes_label_suggestions.py', 'routes_label_candidates.py']
+          'routes_model_operations.py', 'routes_team_data.py', 'routes_label_suggestions.py', 'routes_label_candidates.py',
+          'routes_dataset_metadata.py', 'routes_export.py']
 # English refusals that other code compares verbatim; they move to Korean only together with their readers.
 # 'Import a dataset ...': scripts/e2e/dataset-source-empty-controls, portable-abort-recovery, portable-home-refusal,
 #   portable-pending-handoff, portable-status-recovery and runtime-pack-picker-cancel compare the response body.
 # "Dataset path does not match ...": src/renderer/components/dataset/datasetWorkflowMetadataScope.test.cjs.
 PINNED = {'routes_dataset_versions.py': ['Import a dataset into this project before creating a version.',
-                                          "Dataset path does not match the active project's source."]}
+                                          "Dataset path does not match the active project's source."],
+          # scripts/e2e/label-exchange-import-controls.spec.ts compares the complete stale-preview response.
+          'routes_dataset_metadata.py': ["Preview is outdated or missing: {row['file_name']}"]}
 # Every Korean literal on these routes names the next action; the earlier eight were only moved to Korean.
 NEXT_ACTION_ROUTES = ['routes_annotation.py', 'routes_dataset_versions.py', 'routes_training_workspace.py',
                       'routes_model_operations.py', 'routes_team_data.py', 'routes_label_suggestions.py',
-                      'routes_label_candidates.py']
+                      'routes_label_candidates.py', 'routes_dataset_metadata.py', 'routes_export.py']
 LITERAL = re.compile(r"""HTTPException\(\s*(?:status_code=)?\d+\s*,\s*(?:detail=)?\(?\s*f?(['"])(.+?)\1""", re.S)
 HANGUL = re.compile('[가-힣]')
 

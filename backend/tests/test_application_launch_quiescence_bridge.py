@@ -17,7 +17,7 @@ import pytest
 
 from backend.engine import application_launch_handshake as handshake
 from backend.tests.test_application_launch_execution import (
-    cpu_stack, start_cpu_stack, wait_receipt, stop_stack, controlled_canary_publication,
+    cpu_stack, start_cpu_stack, wait_receipt, stop_stack, controlled_canary_publication, _atomic_fixture_json,
 )
 from backend.tests.test_service_s6_04 import canonical, sha
 
@@ -397,6 +397,118 @@ def test_actual_node_dispatcher_refuses_identical_exit_ack_replay():
     assert receipt['application'] is False and receipt['cpu'] is False
 
 
+def test_replay_fixture_barrier_requires_both_observations_inside_the_original_deadline(tmp_path, monkeypatch):
+    """A refusal marker alone cannot stand for the ordinary stop flow or renew its budget."""
+    refusal=tmp_path/'refusal.json';ordinary=tmp_path/'ordinary.json';refusal.write_text('{}')
+    clock=[10.0];sleeps=[]
+    monkeypatch.setattr(time,'monotonic',lambda:clock[0])
+    def sleep(seconds):
+        assert 0<seconds<=.01;sleeps.append(seconds);clock[0]+=seconds
+    monkeypatch.setattr(time,'sleep',sleep)
+    with pytest.raises(AssertionError,match='original.*deadline'):
+        _fixture_wait_before_original_deadline([refusal,ordinary],absolute_deadline=10.025)
+    assert clock[0]==10.025 and sleeps and not ordinary.exists()
+    ordinary.write_text('{}');sleeps.clear()
+    with pytest.raises(AssertionError,match='original.*deadline'):
+        _fixture_wait_before_original_deadline([refusal,ordinary],absolute_deadline=10.025)
+    assert not sleeps
+    _fixture_wait_before_original_deadline([refusal,ordinary],absolute_deadline=10.026)
+    assert not sleeps and clock[0]==10.025
+
+
+def _fixture_wait_before_original_deadline(paths, *, absolute_deadline):
+    """Fixture scheduling only: require every marker without creating a budget."""
+    import math
+    import time
+    assert type(absolute_deadline) in (int,float) and math.isfinite(absolute_deadline)
+    while time.monotonic()<absolute_deadline:
+        if all(path.is_file() for path in paths):
+            assert time.monotonic()<absolute_deadline, 'Fixture barrier exceeded its original absolute deadline'
+            return
+        remaining=absolute_deadline-time.monotonic()
+        if remaining>0:time.sleep(min(.01,remaining))
+    raise AssertionError('Fixture barrier exceeded its original absolute deadline')
+
+
+def test_replay_fixture_profile_targets_only_the_original_draining_guard_and_preserves_its_error(tmp_path,monkeypatch):
+    """The fixture schedules before the original guard; it neither calls nor catches that guard."""
+    class OriginalGuard:
+        def fresh(self, deadline):
+            raise ValueError('unchanged original guard')
+    guard=OriginalGuard();states={guard:{'phase':'prepared'}}
+    (tmp_path/'managed-controller-refusal.json').write_text('{}')
+    (tmp_path/'ordinary-stop-requested.json').write_text('{}')
+    observed=[]
+    monkeypatch.setitem(globals(),'_fixture_validate_recovery_publication',lambda root,path,*,absolute_deadline:observed.append((root,path,absolute_deadline)))
+    callback=_fixture_original_draining_guard_barrier(tmp_path,OriginalGuard,states)
+    previous=sys.getprofile();deadline=time.monotonic()+1
+    try:
+        sys.setprofile(callback)
+        with pytest.raises(ValueError,match='unchanged original guard'):guard.fresh(deadline)
+        assert not (tmp_path/'managed-replay-proof-boundary.json').exists() and sys.getprofile() is callback
+        states[guard]['phase']='draining'
+        with pytest.raises(ValueError,match='unchanged original guard') as caught:guard.fresh(deadline)
+        assert sys.getprofile() is None
+        boundary=json.loads((tmp_path/'managed-replay-proof-boundary.json').read_bytes())
+        assert boundary=={'pid':os.getpid(),'original_deadline':deadline}
+        assert observed==[(tmp_path.parent,tmp_path/'managed-controller-refusal.json',deadline)]
+        frames=[];trace=caught.value.__traceback__
+        while trace is not None:frames.append(trace.tb_frame.f_code.co_name);trace=trace.tb_next
+        assert frames==['test_replay_fixture_profile_targets_only_the_original_draining_guard_and_preserves_its_error','fresh']
+    finally:sys.setprofile(previous)
+
+
+def test_replay_fixture_recovery_coherence_preserves_python_integral_float_and_refuses_changed_pointer(tmp_path,monkeypatch):
+    """The original Python hash, including created_at .0, validates the candidate."""
+    from backend.engine import application_launch_lease as lease,runtime_update as update
+    from backend.tests.test_application_launch_lease import installed,reserve,stop_fixture
+    identity=lease._identity
+    monkeypatch.setattr(lease,'_identity',lambda pid:{**identity(pid),'created_at':float(int(identity(pid)['created_at']))} if pid==os.getpid() else identity(pid))
+    root,value,_=installed(tmp_path,looping=True);owner=reserve(root,value)
+    try:
+        owner.start();owner.recovery('Controlled coherent fixture refusal')
+        row=lease._load(root);assert type(row['supervisor']['created_at']) is float and row['supervisor']['created_at'].is_integer()
+        target=tmp_path/'candidate.json';target.write_bytes((root/lease.LEASES/owner.nonce/'journal.json').read_bytes())
+        _fixture_validate_recovery_publication(root,target,absolute_deadline=time.monotonic()+1)
+        pointer=root/lease.ACTIVE_LEASE;original=pointer.read_bytes();changed=json.loads(original);changed['record_sha256']='0'*64
+        update._write(pointer,changed)
+        try:
+            with pytest.raises(lease.LaunchLeaseError,match='ownership publication interrupted or changed'):
+                _fixture_validate_recovery_publication(root,target,absolute_deadline=time.monotonic()+1)
+        finally:update._write(pointer,json.loads(original))
+    finally:stop_fixture(owner)
+
+
+def _fixture_validate_recovery_publication(root, observation, *, absolute_deadline):
+    """Use the original Python validator; fixture JSON is only an observation."""
+    import json
+    import time
+    from backend.engine.application_launch_lease import _load
+    from backend.engine.runtime_update import _canonical
+    assert time.monotonic()<absolute_deadline, 'Fixture coherence exceeded its original absolute deadline'
+    row=_load(root);candidate=json.loads(observation.read_bytes())
+    assert row is not None and row['state']=='recovery_required' and _canonical(row)==_canonical(candidate)
+    assert time.monotonic()<absolute_deadline, 'Fixture coherence exceeded its original absolute deadline'
+
+
+def _fixture_original_draining_guard_barrier(projects, original_class, retained_states):
+    """One test-only call boundary; original fresh runs after this returns."""
+    import os
+    import sys
+    import threading
+    original_code=original_class.fresh.__code__;original_thread=threading.get_ident()
+    def profile(frame,event,arg):
+        if event!='call' or frame.f_code is not original_code or threading.get_ident()!=original_thread:return
+        state=retained_states.get(frame.f_locals.get('self'))
+        if state is None or state['phase']!='draining':return
+        sys.setprofile(None)  # No wrapper is added to a genuine guard traceback.
+        deadline=frame.f_locals['deadline']
+        _atomic_fixture_json(projects/'managed-replay-proof-boundary.json',{'pid':os.getpid(),'original_deadline':deadline})
+        _fixture_wait_before_original_deadline([projects/'managed-controller-refusal.json',projects/'ordinary-stop-requested.json'],absolute_deadline=deadline)
+        _fixture_validate_recovery_publication(projects.parent,projects/'managed-controller-refusal.json',absolute_deadline=deadline)
+    return profile
+
+
 def managed_stack(tmp_path, monkeypatch, *, uncovered=False, damage=None):
     """Signed test-only layout: actual bridge/stop/CPU, controlled small ASGI app.
 
@@ -408,7 +520,8 @@ def managed_stack(tmp_path, monkeypatch, *, uncovered=False, damage=None):
     original_fixture = fixtures.fixture
     compiler = "const fs=require('fs'),ts=require('typescript');process.stdout.write(ts.transpileModule(fs.readFileSync(process.argv[1],'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022,esModuleInterop:true}}).outputText)"
     supervisor = subprocess.check_output(['node', '-e', compiler, str(repository/'src/main/supervisor.ts')])
-    backend = ('#!'+sys.executable+'\n'+fixtures._fixture_json_publisher_source()+f'''
+    scheduling_source=''.join(__import__('inspect').getsource(helper) for helper in (_fixture_wait_before_original_deadline,_fixture_validate_recovery_publication,_fixture_original_draining_guard_barrier))
+    backend = ('#!'+sys.executable+'\n'+fixtures._fixture_json_publisher_source()+scheduling_source+f'''
 import sys,os,time,json,threading,signal,socket
 from pathlib import Path
 sys.path.insert(0,{str(repository)!r})
@@ -471,6 +584,10 @@ with maintenance_guard(root):
     except ValueError as e:(projects/'late-producer-refusal.txt').write_text(str(e));return
    time.sleep(.01)
  threading.Thread(target=late_probe,daemon=True).start()
+ if {damage!r}=='identical_request_replay':
+  # Schedule only immediately before the original draining fresh call. The
+  # original guard, frame send and their exception stack remain unchanged.
+  sys.setprofile(_fixture_original_draining_guard_barrier(projects,h._BackendShutdown,h._BACKEND_SHUTDOWNS))
  backend_execution_service(stop)
  server.should_exit=True;server_thread.join(2);listener.close()
  assert not server_thread.is_alive()
@@ -484,14 +601,18 @@ const backend=spawn({json.dumps(sys.executable)},[executable,'--project-dir',lau
 await launch.bindBackend(backend,executable,null);
 const supervisor=new BackendSupervisor({{autoRestart:false,gracefulShutdownTimeoutMs:4000,ownedApplicationLaunch:launch}});supervisor.childProcess=backend;supervisor.state='HEALTHY';
 const damage={json.dumps(damage)},originalSend=launch.frames.send.bind(launch.frames);
-launch.frames.send=async(frame)=>{{if(frame.kind==='managed_drain_proof')fs.writeFileSync(path.join(launch.projects,'managed-forwarded-drain.json'),Buffer.from(frame.proof_b64,'base64'));
-if(!damage||frame.kind!=='main_drain_request')return originalSend(frame);
-if(damage==='changed_nonce')return originalSend({{...frame,nonce:'0'.repeat(32)}});
-await originalSend(frame);await originalSend(frame);}};
+launch.frames.send=async(frame,...originalArgs)=>{{if(frame.kind==='managed_drain_proof')fs.writeFileSync(path.join(launch.projects,'managed-forwarded-drain.json'),Buffer.from(frame.proof_b64,'base64'));
+if(!damage||frame.kind!=='main_drain_request')return originalSend(frame,...originalArgs);
+if(damage==='changed_nonce')return originalSend({{...frame,nonce:'0'.repeat(32)}},...originalArgs);
+await originalSend(frame,...originalArgs);
+const deadline=originalArgs[0];if(!Number.isFinite(deadline))throw new Error('Controlled replay lacks its original deadline');
+while(!fs.existsSync(path.join(launch.projects,'managed-replay-proof-boundary.json'))){{const remaining=deadline-performance.now();if(remaining<=0)throw new Error('Controlled replay boundary exceeded its original deadline');await new Promise(resolve=>setTimeout(resolve,Math.min(10,remaining)));}}
+if(performance.now()>=deadline)throw new Error('Controlled replay boundary exceeded its original deadline');
+await originalSend(frame,...originalArgs);}};
 const prepare=launch.prepareBackendDrain.bind(launch);launch.prepareBackendDrain=async(...args)=>{{const receipt=await prepare(...args);fs.writeFileSync(path.join(launch.projects,'managed-drain-received.json'),JSON.stringify(receipt));return receipt;}};
 fs.writeFileSync(path.join(launch.projects,'execution-stack-ready.json'),JSON.stringify({{main:process.pid,backend:backend.pid}}));
-const refusal=damage?setInterval(()=>{{try{{const row=JSON.parse(fs.readFileSync(path.join(launch.root,'.application-launches',launch.nonce,'journal.json')));
-if(row.state==='recovery_required'){{fs.writeFileSync(path.join(launch.projects,'managed-controller-refusal.json'),JSON.stringify(row));launch.refuse();clearInterval(refusal);}}}}catch(e){{}}}},10):null;
+const refusal=damage?setInterval(()=>{{try{{const raw=fs.readFileSync(path.join(launch.root,'.application-launches',launch.nonce,'journal.json')),row=JSON.parse(raw),pointer=JSON.parse(fs.readFileSync(path.join(launch.root,'application-launch-lease.json')));
+if(row.state==='recovery_required'&&pointer.nonce===row.nonce&&pointer.revision===row.revision){{fs.writeFileSync(path.join(launch.projects,'managed-controller-refusal.json'),raw);launch.refuse();clearInterval(refusal);}}}}catch(e){{}}}},10):null;
 let started=false;const timer=setInterval(async()=>{{if(started||!fs.existsSync(path.join(launch.projects,'drain.trigger')))return;started=true;let error=null;
 try{{await supervisor.stopBackend();}}catch(e){{error=String(e.stack);}}
 fs.writeFileSync(path.join(launch.projects,'managed-stop-result.json'),JSON.stringify({{main:process.pid,backend:backend.pid,error,direct_exit:backend.exitCode,signal:backend.signalCode}}));clearInterval(timer);process.exit(error?3:0);

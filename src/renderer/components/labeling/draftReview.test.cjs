@@ -284,6 +284,7 @@ function hookRuntime() {
       if (changed(old, deps)) { const entry = {deps}; slots[index] = entry; effects.push(() => { old?.cleanup?.(); entry.cleanup = fn(); }); }
     },
   };
+  react.useLayoutEffect = react.useEffect;
   react.default = react;
   return {react, async settle(component, cycles = 12) {
     let tree;
@@ -313,9 +314,13 @@ const row = (id, image, extra = {}) => ({id, status: 'pending', image_path: imag
   job_id: 'job_b', batch_id: 'batch_1', candidates: [{id: `${id}_c0`, confidence: 0.8, annotation: {type: 'bbox', label: 'defect', bbox: [1, 1, 5, 5]}},
     {id: `${id}_c1`, confidence: 0.6, annotation: {type: 'bbox', label: 'defect', bbox: [6, 6, 9, 9]}}], accepted_candidate_ids: [], ...extra});
 
-function queueFixture({drafts, request = null, models = [], stats = async () => ({models: []}), list, reviewerName = 'kai', workflow = {}}) {
-  const runtime = hookRuntime(), calls = {list: 0, stats: 0}, at = {scope: 'scope-B'};
+function queueFixture({drafts, request = null, models = [], stats = async () => ({models: []}), list, reviewerName = 'kai', workflow = {}, move} = {}) {
+  const runtime = hookRuntime(), calls = {list: 0, stats: 0}, at = {scope: 'scope-B', authority: 'local-A'};
   const annotation = {currentImage: null, isDirty: false, reviewerName, setReviewerName() {}};
+  const projectState = {activeStep: 2, projectDir: '/project-B', project: {source_dataset_dir: '/source-B'}, task: 'detection', openImageForLabeling: async () => true,
+    async setStep(step) {if (move) await move(projectState, annotation); else {projectState.activeStep = step; annotation.isDirty = false;}}};
+  const realScope = load(path.join(__dirname, '../../stores/useDraftReviewStore.ts')).draftReviewScope;
+  const originalScope = realScope(projectState);
   const review = {publish() {}, openRequest: request, clearOpenRequest() { review.openRequest = null; }, sidePanel: null, showSidePanel(panel) { review.sidePanel = panel; }};
   const api = {labelSuggestions: {
     list: async () => { calls.list++; return list ? list(at.scope) : {suggestions: drafts.map(draft => ({...draft}))}; },
@@ -328,18 +333,45 @@ function queueFixture({drafts, request = null, models = [], stats = async () => 
     '../../services/datasetWorkflow': {datasetWorkflow: workflow},
     '../../services/teamDataApi': {teamDataApi: {}},
     '../../stores/useAnnotationStore': {useAnnotationStore: fakeStore(annotation)},
-    '../../stores/useDatasetStore': {readDatasetAuthority: () => 'a', useDatasetStore: fakeStore({annotationsChanged: async () => {}})},
-    '../../stores/useProjectStore': {useProjectStore: fakeStore({projectDir: '/project-B', project: {source_dataset_dir: '/source-B'}, task: 'detection', openImageForLabeling: async () => true})},
+    '../../stores/useDatasetStore': {readDatasetAuthority: () => at.authority, useDatasetStore: fakeStore({annotationsChanged: async () => {}})},
+    '../../stores/useProjectStore': {useProjectStore: fakeStore(projectState)},
+    '../wizard/workflowReadiness': {focusWorkflowTarget(target) {calls.focus = target;}},
     '../../stores/useModelAssistRunStore': {useModelAssistRunStore: fakeStore({begin() {}, end() {}})},
-    '../../stores/useDraftReviewStore': {draftReviewScope: () => at.scope, useDraftReviewStore: fakeStore(review)},
+    '../../stores/useDraftReviewStore': {draftReviewScope: input => realScope(input) === originalScope ? at.scope : realScope(input), useDraftReviewStore: fakeStore(review)},
     '../../stores/workflowEvidence': {bumpWorkflowEvidence() {}, subscribeWorkflowEvidence: () => () => {}},
     '../../stores/assistContext': {reportPanelError() {}},
     './BulkLabelAssist': {BulkLabelAssist: 'BulkLabelAssist'}, './PhraseDraftCreate': {PhraseDraftCreate: 'PhraseDraftCreate'}, './SuggestionPreview': {SuggestionPreview: 'SuggestionPreview'}, './DraftGrid': {DraftGrid: 'DraftGrid'},
     './teamDataWorkflow': {imageLeaseToken: () => undefined}, '../common/Explain': {Explain: 'Explain'},
     './draftReview': helpers(), './popoverRoom': popoverRoom(runtime),
   }, 'var window = {innerHeight: 1000, addEventListener() {}, removeEventListener() {}};');
-  return {calls, review, at, annotation, settle: cycles => runtime.settle(DraftReviewQueue, cycles)};
+  return {calls, review, at, annotation, projectState, settle: cycles => runtime.settle(DraftReviewQueue, cycles)};
 }
+
+test('draft review links existing labels to their original step-1 exchange after guarded navigation', async () => {
+  const queue = queueFixture({drafts: []});
+  let tree = await queue.settle();byLabel(tree, '초안 검토 패널').props.onClick();tree = await queue.settle();
+  const link = buttonWith(tree, '기존 라벨 가져오기');assert.ok(link, 'existing annotations have a reuse entry beside draft creation');
+  queue.annotation.isDirty = true;
+  await link.props.onClick();
+  assert.equal(queue.projectState.activeStep, 1);assert.equal(queue.annotation.isDirty, false);
+  assert.equal(queue.calls.focus, 'workflow-label-exchange');
+});
+for (const reason of ['failed-save', 'changed-context']) test(`draft import does not open another stage after ${reason}`, async () => {
+  const queue = queueFixture({drafts: [], move: async (project, annotation) => {
+    if (reason === 'changed-context') {project.activeStep = 1; project.project = {source_dataset_dir: '/other'};}
+    else annotation.isDirty = true;
+  }});
+  let tree = await queue.settle();byLabel(tree, '초안 검토 패널').props.onClick();tree = await queue.settle();
+  const link = buttonWith(tree, '기존 라벨 가져오기');assert.ok(link);
+  await link.props.onClick();assert.equal(queue.calls.focus, undefined);
+});
+test('draft import retires a pending navigation after the transport authority changes', async () => {
+  let resume;
+  const queue = queueFixture({drafts: [], move: async project => {await new Promise(resolve => {resume=resolve;});project.activeStep=1;}});
+  let tree = await queue.settle();byLabel(tree, '초안 검토 패널').props.onClick();tree = await queue.settle();
+  const pending=buttonWith(tree,'기존 라벨 가져오기').props.onClick();
+  queue.at.authority='other-transport';resume();await pending;assert.equal(queue.calls.focus,undefined);
+});
 
 test('an external draft whose limits are one sentence opens in the queue and shows that sentence', async () => {
   // Every provider stores support_limits as a string; joining it like a list threw and unmounted the window.
@@ -389,6 +421,16 @@ test('a request from 모델 보조 opens with only the candidates kept there', a
     'the unchecked box stays out of 선택 후보 채택');
 });
 
+test('a scoped assistant request sets the visible queue order once and keeps adoption manual', async () => {
+  const queue = queueFixture({drafts: [row('d1', '/b/1.png')], request: {id: 'd1', nonce: 20, scope: 'scope-B', order: 'confident'}});
+  let tree = await queue.settle();
+  assert.equal(byLabel(tree, '초안 순서').props.value, 'confident');
+  assert.equal(queue.review.openRequest, null);
+  assert.ok(byLabel(tree, '선택한 초안'));
+  byLabel(tree, '초안 순서').props.onChange({target: {value: 'uncertain'}}); tree = await queue.settle();
+  assert.equal(byLabel(tree, '초안 순서').props.value, 'uncertain', 'the consumed request cannot replay over a human change');
+});
+
 test('the grid keeps a page\'s exclusions when a tile is opened or the list is visited', async () => {
   const drafts = [row('d1', '/b/1.png'), row('d2', '/b/2.png'), row('d3', '/b/3.png')];
   const queue = queueFixture({drafts});
@@ -430,6 +472,54 @@ test('a page whose tiles have all shown says the reviewer name is what keeps it 
   assert.equal(buttonWith(tree, '이 페이지 채택').props.disabled, false);
   assert.equal(buttonWith(tree, '이 페이지 채택').props.title, undefined);
   assert.ok(!nodes(tree).some(node => text(node) === reason));
+});
+
+test('edits made on the open image while an adoption saves keep their undo history, and the queue says it was not reloaded', async () => {
+  const adopted = id => ({...row(id, '/b/1.png'), status: 'accepted', accepted_candidate_ids: [`${id}_c0`], backup_version_id: 'v_1', revert_backup_version_id: 'v_2'});
+  for (const take of ['adopt', 'take back']) {
+    // The person drew on the canvas while the server was saving: the reload skips a dirty canvas (and says so by false).
+    let queue;
+    const drawMeanwhile = id => { Object.assign(queue.annotation, {isDirty: true, history: ['before', 'drawn meanwhile']}); return take === 'adopt' ? adopted(id) : {...adopted(id), status: 'reverted'}; };
+    queue = queueFixture({drafts: [take === 'adopt' ? row('d1', '/b/1.png') : {...adopted('d1'), reviewed_at: '2026-10-23T01:00:00Z', adopted_annotations: [{id: 'd1_c0'}]}],
+      request: take === 'adopt' ? {id: 'd1', nonce: 1, scope: 'scope-B'} : null, workflow: {review: async id => drawMeanwhile(id), undoAdoption: async id => drawMeanwhile(id)}});
+    Object.assign(queue.annotation, {currentImage: {file_path: '/b/1.png'}, history: ['before'], future: [], loadAnnotationsForCurrent: async () => false});
+    let tree = await queue.settle();
+    if (take === 'adopt') buttonWith(tree, '선택 후보 채택').props.onClick();
+    else { buttonWith(tree, '초안 검토 패널').props.onClick(); tree = await queue.settle(); byLabel(tree, '1.png 채택 되돌리기').props.onClick(); }
+    tree = await queue.settle();
+    assert.deepEqual(queue.annotation.history, ['before', 'drawn meanwhile'], `${take}: the edits keep their undo`);
+    assert.match(text(tree), /열린 이미지를 고쳐서 캔버스에는 바뀐 라벨을 다시 불러오지 않았습니다/, take);
+    assert.match(text(tree), /이미지를 다시 불러/, `${take}: the next step is named`);
+  }
+  // A reload that replaced the canvas still clears the history, so undo cannot bring back the labels before the change.
+  const queue = queueFixture({drafts: [row('d1', '/b/1.png')], request: {id: 'd1', nonce: 1, scope: 'scope-B'}, workflow: {review: async id => adopted(id)}});
+  Object.assign(queue.annotation, {currentImage: {file_path: '/b/1.png'}, history: ['before'], future: ['redo'], loadAnnotationsForCurrent: async () => true});
+  let tree = await queue.settle();
+  buttonWith(tree, '선택 후보 채택').props.onClick(); tree = await queue.settle();
+  assert.deepEqual([queue.annotation.history, queue.annotation.future], [[], []]);
+  assert.doesNotMatch(text(tree), /다시 불러오지 않았습니다/);
+});
+
+test('a tile whose image failed to load names the fix in the page refusal: leave it out, or open it on its own', async () => {
+  const {pageAdoptionRefusal} = helpers();
+  const page = [row('d1', '/b/1.png'), row('d2', '/b/2.png'), row('d3', '/b/3.png')];
+  const refusal = pageAdoptionRefusal(page, new Set(), new Set(['d1']), new Set(['d2']));
+  assert.match(refusal, /미리보기를 불러오지 못한 초안 1건\(2\.png\)/);
+  assert.match(refusal, /이 페이지 채택에서 빼/);
+  assert.match(refusal, /'열기'/);
+  assert.equal(pageAdoptionRefusal(page, new Set(['d2']), new Set(['d1', 'd3']), new Set(['d2'])), null, 'leaving it out lets the page go');
+  assert.equal(pageAdoptionRefusal(page, new Set(), new Set(['d1', 'd2', 'd3']), new Set(['d2'])), null, 'a later successful read wins');
+  // In the queue: the grid reports the failure and the refusal beside '이 페이지 채택' says what to do.
+  const queue = queueFixture({drafts: page});
+  let tree = await queue.settle();
+  buttonWith(tree, '초안 검토 패널').props.onClick(); tree = await queue.settle();
+  buttonWith(tree, '격자 (한눈 검토)').props.onClick(); tree = await queue.settle();
+  const grid = () => nodes(tree).find(node => node.type === 'DraftGrid');
+  grid().props.onLoaded('d1'); grid().props.onLoaded('d3'); grid().props.onFailed('d2'); tree = await queue.settle();
+  assert.deepEqual([...grid().props.failed], ['d2']);
+  assert.match(buttonWith(tree, '이 페이지 채택').props.title, /미리보기를 불러오지 못한 초안 1건\(2\.png\)/);
+  grid().props.onToggle('d2'); tree = await queue.settle();
+  assert.equal(buttonWith(tree, '이 페이지 채택').props.disabled, false);
 });
 
 test('drafts that found nothing are not waiting work and close together as rejections, labels untouched', async () => {
@@ -506,6 +596,9 @@ test('모델 보조 hands over the candidates the person kept and marks a model 
     './KoreanConditionLabeler': {KoreanConditionLabeler: 'KoreanConditionLabeler'}, './CandidateProviderControls': {CandidateProviderControls: 'CandidateProviderControls'},
     '../../services/datasetWorkflow': {datasetWorkflow: {}}, './SuggestionPreview': {SuggestionPreview: 'SuggestionPreview'}, '../common/Explain': {Explain: 'Explain'},
     './draftReview': helpers(), './popoverRoom': popoverRoom(runtime),
+    './foundationQuickPointController': {startFoundationQuickPointController:()=>()=>{}},
+    '../../stores/assistContext': loadComponent('../../stores/assistContext.ts', {}),
+    '../common/useScopedError': loadComponent('../common/useScopedError.ts', {react: runtime.react}),
   });
   let tree = await runtime.settle(ModelAssistPanel);
   buttonWith(tree, '모델 보조 라벨링 패널').props.onClick(); tree = await runtime.settle(ModelAssistPanel);

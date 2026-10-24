@@ -52,8 +52,11 @@ function fixture(config = {}) {
   };
   const service = {flowEvaluation, formatFlowMetric: () => 'unavailable', isCompatibleFlowCohort: () => Boolean(config.cohorts)};
   const jsx = (type, props) => ({type, props});
+  const modules = new Map();
   function load(file) {
+    if (modules.has(file)) return modules.get(file).exports;
     const m = new Module(file, module); m.filename = file; m.paths = Module._nodeModulePaths(path.dirname(file));
+    modules.set(file, m);
     const original = m.require.bind(m);
     m.require = key => key === 'react' ? react : key === 'react/jsx-runtime' ? {jsx, jsxs: jsx}
       : key.endsWith('/services/flowEvaluation') ? service
@@ -67,15 +70,36 @@ function fixture(config = {}) {
     }}).outputText, file);
     return m.exports;
   }
+  const shared = load(path.resolve(__dirname, '../../stores/assistContext.ts'));
   const {FlowEvaluationPanel} = load(path.join(__dirname, 'FlowEvaluationPanel.tsx'));
   const render = () => {cursor = 0; dirty = false; tree = FlowEvaluationPanel(props); effects.splice(0).forEach(fn => fn()); return tree;};
-  return {calls, props, scopes, render, tree: () => tree,
+  return {calls, props, scopes, render, shared, tree: () => tree,
+    visible(value) {props.visible = value; dirty = true;},
     async settle() {for (let i = 0; i < 25; i++) {if (dirty) render(); await tick(); if (!dirty && !effects.length) return tree;} throw Error('Panel did not settle');},
     change(id) {elements(tree).find(node => node.props?.['aria-label'] === '전체 흐름 평가 버전').props.onChange({target: {value: id}});},
     context(value) {props.contextKey = value; dirty = true;},
     close() {slots.forEach(slot => slot?.cleanup?.());},
   };
 }
+test('flow evaluation errors reach shared guidance only while this panel is shown and current', async () => {
+  const held = deferred(), nextContext = deferred(); let first = true;
+  const f = fixture({graph: pipeline({bound: true}), readScope: id => {
+    if (id === B) return held.promise;
+    if (!first) return nextContext.promise;
+    first = false; return Promise.reject(new Error('현재 흐름을 다시 확인하세요.'));
+  }});
+  try {
+    await f.settle();
+    assert.deepEqual(f.shared.assistPanelErrors(), [{source: '흐름 평가', text: '현재 흐름을 다시 확인하세요.'}]);
+    f.visible(false); await f.settle(); assert.deepEqual(f.shared.assistPanelErrors(), []);
+    f.visible(true); await f.settle(); assert.equal(f.shared.assistPanelErrors().length, 1);
+    f.change(B); await f.settle(); assert.deepEqual(f.shared.assistPanelErrors(), []);
+    held.reject(new Error('두 번째 흐름을 확인하세요.')); await f.settle();
+    assert.equal(f.shared.assistPanelErrors()[0]?.text, '두 번째 흐름을 확인하세요.');
+    f.context('project-new'); await f.settle(); assert.deepEqual(f.shared.assistPanelErrors(), []);
+  } finally {f.close();}
+  assert.deepEqual(f.shared.assistPanelErrors(), []);
+});
 for (const graph of [pipeline(), pipeline({type: 'detection_crop', task: 'detection'}),
   pipeline({type: 'preprocess', operation: 'enhancement'}), pipeline({type: 'preprocess', operation: 'learned_rotation'})]) {
   test(`saved unbound ${graph.nodes[1].data.node_type} ${graph.nodes[1].data.params?.operation || ''} shows the model prerequisite without requesting executable scope`, async () => {

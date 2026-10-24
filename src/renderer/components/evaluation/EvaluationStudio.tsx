@@ -47,6 +47,8 @@ import { accuracyNote, smallTestWarning } from './sampleConfidence';
 import { FieldReadinessPanel } from '../common/FieldReadinessPanel';
 import { scoreUnitLabel } from '../../utils/plainLabels';
 import { SpecialistFamilyNote } from '../common/SpecialistFamilyNote';
+import {useScopedError} from '../common/useScopedError';
+import {registerPanelError} from '../../stores/assistContext';
 
 const comparisonTasks = new Set<string>([
   'classification', 'detection', 'segmentation', 'anomaly', 'patch_classification',
@@ -124,15 +126,15 @@ export const EvaluationStudio: React.FC = () => {
   const [cohortModel,setCohortModel]=useState('');
   const modelSelectionRevision=useRef(0);
   const [evaluationDevice, setEvaluationDevice] = useState('cpu');
-  const [cohortError, setCohortError] = useState<string | null>(null);
   useEffect(()=>setEvaluationDevice('cpu'),[selectedProfileId]);
   const profileIdentity = JSON.stringify(profiles.find(profile=>profile.id===selectedProfileId) || null);
   const scope = JSON.stringify([profileIdentity, project?.id, projectDir, sourceFolder, task, project?.active_labelset_id, selectedProfileId, transportRevision, getApiPersistenceIdentity()]);
   const scopeRef = useRef(scope); scopeRef.current = scope;
+  const [cohortError, setCohortError] = useScopedError(scope);
   const [evalTab, setEvalTab] = useState<'matrix' | 'overkill'>('matrix');
   const [comparisonTask, setComparisonTask] = useState<FlowModelTask>(task);
   const [comparisonRefreshRevision, setComparisonRefreshRevision] = useState(0);
-  const [reportError, setReportError] = useState<string | null>(null);
+  const [reportError, setReportError] = useScopedError(scope);
   const [hoveredCell, setHoveredCell] = useState<{
     i: number;
     j: number;
@@ -189,6 +191,14 @@ export const EvaluationStudio: React.FC = () => {
   }, [scope, invalidateForDataChange]);
 
   useEffect(() => {
+    if (!evaluationReadScope) return;
+    // The scope-reset effect above clears store errors before this read. Local late callbacks stay scoped as well.
+    const current = useEvaluationStore.getState();
+    const text = [...new Set([cohortError, reportError, current.errorMessage, current.remoteOperationError].filter(Boolean))].join(' · ');
+    return registerPanelError('모델 평가', text);
+  }, [scope, evaluationReadScope, cohortError, reportError, errorMessage, remoteOperationError]);
+
+  useEffect(() => {
     if (!isLoading || !remoteRequest) return;
     let active=true, busy=false;
     const poll = async () => { if(!active || busy)return; busy=true; try {await refreshRemoteOperation();} finally {busy=false;} };
@@ -242,9 +252,11 @@ export const EvaluationStudio: React.FC = () => {
   }, [task, handoff?.kind, handoff?.comparisonTask, handoff?.selectionId]);
 
   const handleExportHtml = async () => {
+    const expected=scope, generation=getProjectContextGeneration();
     setReportError(null);
     try {
       const filePath = await exportReport('html');
+      if(scopeRef.current!==expected || getProjectContextGeneration()!==generation)return;
       // The desktop app opens the saved report; a browser cannot open a file on the backend's computer, so it says where it is.
       if (host.can('openPaths')) await host.openPath(filePath);
       else setReportError(`HTML 보고서를 저장했습니다: ${filePath}. 브라우저에서는 이 파일을 열 수 없습니다.`);
@@ -760,7 +772,7 @@ export const EvaluationStudio: React.FC = () => {
             </>}
           </div>
 
-          {detectionGrains && <DetectionEvaluationGrains summary={detectionGrains} language={language} />}
+          {detectionGrains && <DetectionEvaluationGrains summary={detectionGrains} language={language} simple={simpleView} />}
 
           {/* Sub-Tab Selector: Confusion Matrix vs Overkill / Underkill */}
           <div className="flex items-center space-x-1 bg-[#0B0E14] p-1 rounded-[4px] border border-[#2B3547]">

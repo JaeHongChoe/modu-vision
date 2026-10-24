@@ -42,6 +42,14 @@ export type AnnotationItem = {
   origin?: ModelDraftOrigin | AutoSelectorOrigin | null;
 };
 
+export type AnnotationRecoveryRequest = {
+  image_path?: string | null;
+  dir_path?: string | null;
+  actor?: string;
+  expected_revision?: number | null;
+  lease_token?: string | null;
+};
+
 export type AnnotationSaveRequest = {
   image_id: string;
   image_path?: string | null;
@@ -107,7 +115,7 @@ export type AssistantRunEntry = {
   confirmed: boolean;
   result: "ok" | "refused" | "error" | "cancelled";
   error_code?: string | null;
-  provider?: "openai-compatible" | "anthropic" | null;
+  provider?: "openai-compatible" | "anthropic" | "chatgpt" | null;
   link?: string | null;
 };
 
@@ -1954,6 +1962,7 @@ export interface ApiRequestBody {
   "POST /api/annotations/batch_save": AnnotationBatchSaveRequest;
   "POST /api/annotations/save": AnnotationSaveRequest;
   "POST /api/annotations/shape-converter": ShapeConverterRequest;
+  "POST /api/annotations/{image_id}/restore/{recovery_id}": AnnotationRecoveryRequest;
   "POST /api/artifacts/uploads": UploadRequest;
   "DELETE /api/artifacts/{artifact_id}": ArtifactRef;
   "POST /api/artifacts/{artifact_id}/pins": PinRequest;

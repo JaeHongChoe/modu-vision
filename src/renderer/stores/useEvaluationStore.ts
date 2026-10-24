@@ -132,6 +132,12 @@ function captureCalibrationSource(source: EvaluationSource): (() => boolean) | n
   return () => scope() === expected && getProjectContextGeneration() === epoch && getApiPersistenceIdentity() === transport
     && JSON.stringify(getProjectContext()) === context && selected.isCurrent?.() !== false;
 }
+/** Read the accepted evaluation carrier for explanation only; never load, calibrate or apply a threshold here. */
+export function currentEvaluationGuidanceSource(): {source: EvaluationSource; jobId: string} | null {
+  const binding = calibrationSource;
+  if (!binding || binding.generation !== evaluationGeneration || binding.jobId !== useEvaluationStore.getState().jobId || !binding.isCurrent()) return null;
+  return {source: {...binding.source}, jobId: binding.jobId};
+}
 interface EvaluationState {
   executionEvidence: RemoteEvaluationResult | null;
   remoteOperation: RemoteEvaluationOperation | null;
@@ -477,17 +483,21 @@ export const useEvaluationStore = create<EvaluationState>((set, get) => ({
   exportReport: async (format) => {
     if (get().executionEvidence?.common_cohort) throw new Error('선택 코호트 보고서 내보내기는 아직 지원되지 않습니다. 원래 학습 코호트 보고서로 대체하지 않습니다.');
     if (!get().jobId) throw new Error('평가를 완료한 모델이 있어야 보고서를 내보낼 수 있습니다.');
-    set({ isExportingReport: true });
+    const jobId = get().jobId, generation = evaluationGeneration;
+    const sameScope = captureCalibrationSource({folderPath: useDatasetStore.getState().folderPath, task: useProjectStore.getState().task});
+    if (!sameScope) throw new Error('현재 프로젝트의 원본과 평가 결과를 확인한 뒤 보고서를 다시 저장하세요.');
+    const current = () => generation === evaluationGeneration && sameScope() && get().jobId === jobId;
+    set({ isExportingReport: true, errorMessage: null });
     try {
       const res = await api.report.export({
-        job_id: get().jobId || undefined,
+        job_id: jobId || undefined,
         format,
         include_images: true,
       });
-      set({ isExportingReport: false, exportedReportPath: res.file_path });
+      if (current()) set({ isExportingReport: false, exportedReportPath: res.file_path });
       return res.file_path;
     } catch (e) {
-      set({ isExportingReport: false, errorMessage: e instanceof Error ? e.message : '보고서 내보내기 실패' });
+      if (current()) set({ isExportingReport: false, errorMessage: e instanceof Error ? e.message : '보고서 내보내기 실패' });
       throw e;
     }
   },

@@ -94,23 +94,23 @@ class ExportFlowRequest(BaseModel):
         from backend.engine.runtime_configuration import runtime_options
         runtime = runtime_options(self.runtime_config)
         if self.compute_profile_id is not None and self.parity_images is None:
-            raise ValueError('Selected remote package parity requires a frozen multi-image cohort')
+            raise ValueError('선택한 계산 서버에서 결과를 확인하려면 여러 확인 이미지가 필요합니다. parity_images에 확인할 이미지들을 지정하세요.')
         if self.deployment_profile in ('edge_cpu','edge_cuda'):
             target = normalize_target(self.target_os, self.target_arch)
             self.target_os, self.target_arch = target["os"], target["architecture"]
         elif self.target_os is not None or self.target_arch is not None:
-            raise ValueError("Target OS/architecture requires the edge_cpu deployment profile")
+            raise ValueError("대상 운영체제와 아키텍처는 독립 실행 패키지에서만 지정할 수 있습니다. edge_cpu 배포 형식을 선택하세요.")
         if self.parity_images is not None or self.parity_device is not None:
             if self.parity_images is None:
-                raise ValueError("parity_device requires a frozen parity_images cohort")
+                raise ValueError("확인 장치만 있고 확인할 이미지 목록이 없습니다. parity_images에 같은 결과인지 확인할 이미지들을 지정하세요.")
             if self.parity_device is None:
-                raise ValueError("A parity_images cohort requires an explicit parity_device")
+                raise ValueError("parity_images를 확인할 계산 장치가 지정되지 않았습니다. parity_device에 확인 장치를 지정하세요.")
             if self.verification_image_path is not None:
-                raise ValueError("Use either parity_images or the limited single verification_image_path, not both")
+                raise ValueError("여러 확인 이미지와 단일 확인 이미지를 함께 지정할 수 없습니다. parity_images와 verification_image_path 중 한 방식만 선택하세요.")
             if self.parity_device.startswith("openvino:"):
-                raise ValueError("OpenVINO packages are accepted through the measured optimization path")
+                raise ValueError("OpenVINO 패키지는 측정한 최적화 결과로 확인해야 합니다. 실행 환경 최적화 화면에서 변환하고 확인하세요.")
             if self.parity_device != runtime["device"]:
-                raise ValueError(f"parity_device {self.parity_device!r} must be the package runtime device {runtime['device']!r}")
+                raise ValueError(f"parity_device {self.parity_device!r}이(가) 패키지 실행 장치 {runtime['device']!r}와 다릅니다. 같은 장치를 선택하세요.")
         return self
 
 
@@ -131,7 +131,7 @@ def _resolve_flow_checkpoint(project: Dict[str, Any], source: Path, task: str, j
     payload = torch.load(checkpoint, map_location="cpu", weights_only=True)
     if (not isinstance(payload, dict) or str(payload.get("task", "")).lower() != task
             or "model_state_dict" not in payload):
-        raise ValueError("Checkpoint task or model weights do not match the flow")
+        raise ValueError("모델 파일의 작업 종류나 가중치가 검사 흐름과 맞지 않습니다. 해당 흐름의 작업 종류로 학습을 완료한 모델을 다시 연결하세요.")
     return checkpoint
 
 
@@ -140,24 +140,24 @@ def _saved_flow(project: Dict[str, Any], source: Path, recipe_task: str, version
     project_dir = Path(project["project_dir"]).resolve()
     if version_id:
         if not re.fullmatch(r"[0-9a-f]{32}", version_id):
-            raise HTTPException(status_code=422, detail="Invalid saved flow version ID")
+            raise HTTPException(status_code=422, detail="저장한 검사 흐름의 버전 식별자가 올바르지 않습니다. 흐름 목록에서 버전을 다시 선택하세요.")
         saved_path = _version_dir(project_dir) / f"{version_id}.json"
     else:
         saved_path = _recipe_file(recipe_task, str(source), project_dir)
     with _FLOW_SAVE_LOCK:
         if saved_path.is_symlink() or not saved_path.is_file():
-            raise HTTPException(status_code=409, detail="Save this flow for the selected dataset before exporting it")
+            raise HTTPException(status_code=409, detail="선택한 데이터의 검사 흐름이 아직 저장되지 않았습니다. 검사 흐름에서 저장한 뒤 다시 내보내세요.")
         try:
             saved = json.loads(saved_path.read_text(encoding="utf-8"))
             if version_id:
                 if (saved.get("version_id") != version_id or saved.get("recipe_task") != recipe_task
                         or saved.get("source_dataset_path") != str(source)):
-                    raise ValueError("Saved flow version belongs to a different source or recipe")
+                    raise ValueError("저장한 검사 흐름 버전이 다른 원본 데이터나 흐름 종류에 속합니다. 현재 데이터와 작업 종류에 맞는 흐름 버전을 선택하세요.")
                 saved = saved["pipeline"]
             pipeline = FlowchartPipeline.model_validate(saved)
             ordered_linear_nodes(pipeline)
         except (OSError, ValueError, KeyError) as exc:
-            raise HTTPException(status_code=409, detail=f"Saved flow is invalid: {exc}") from exc
+            raise HTTPException(status_code=409, detail=f"저장한 검사 흐름을 읽을 수 없습니다({exc}). 검사 흐름을 확인하고 다시 저장하세요.") from exc
     return pipeline
 
 
@@ -172,9 +172,9 @@ def _saved_flow_models(project: Dict[str, Any], source: Path, recipe_task: str, 
             continue
         job_id = node.data.model_job_id
         if not valid_flow_job(job_id, task) or task not in FLOW_TASKS:
-            raise HTTPException(status_code=409, detail=f"Flow model is missing or invalid at {node.id}")
+            raise HTTPException(status_code=409, detail=f"검사 흐름의 {node.id}에 연결한 모델이 없거나 올바르지 않습니다. 완료한 모델을 다시 연결하고 흐름을 저장하세요.")
         if job_id in job_tasks and job_tasks[job_id] != task:
-            raise HTTPException(status_code=409, detail=f"Flow model {job_id} has conflicting tasks")
+            raise HTTPException(status_code=409, detail=f"검사 흐름에서 모델 {job_id}의 작업 종류가 서로 다릅니다. 각 단계에 맞는 모델을 다시 연결하고 흐름을 저장하세요.")
         job_tasks[job_id] = task
         if job_id in checkpoints:
             continue
@@ -187,7 +187,7 @@ def _saved_flow_models(project: Dict[str, Any], source: Path, recipe_task: str, 
             raise HTTPException(
                 status_code=409,
                 detail=inner if inner.startswith(DATA_CHANGED_PREFIX)
-                else f"검사 흐름의 {task} 모델 {job_id}이(가) 선택한 데이터셋이나 저장한 흐름과 맞지 않습니다: {inner}",
+                else f"검사 흐름의 {task} 모델 {job_id}이(가) 선택한 데이터나 저장한 흐름과 맞지 않습니다({inner}). 현재 데이터로 학습한 모델을 다시 연결하고 흐름을 저장하세요.",
             ) from exc
         checkpoints[job_id] = checkpoint
     return pipeline, checkpoints, job_tasks
@@ -237,7 +237,7 @@ def _selected_release(project: Dict[str, Any], source: Path, task: str, job_id: 
 def _canonical_source(req_source: str) -> Path:
     source = Path(req_source).expanduser().resolve()
     if not source.is_dir():
-        raise HTTPException(status_code=422, detail="Select an existing source dataset folder")
+        raise HTTPException(status_code=422, detail="원본 데이터 폴더를 찾을 수 없습니다. 존재하는 이미지 폴더를 다시 선택하세요.")
     return source
 
 
@@ -246,7 +246,7 @@ def flow_approval_prerequisites(source_dataset_path: str, recipe_task: str, requ
                                 version_id: Optional[str] = None):
     """Read back the verified approvals each saved-flow model can be released with."""
     if recipe_task not in (*FLOW_TASKS, "mixed"):
-        raise HTTPException(status_code=422, detail="Unsupported flow recipe task")
+        raise HTTPException(status_code=422, detail="지원하지 않는 검사 흐름 종류입니다. 지원하는 작업 종류의 흐름을 선택하세요.")
     source = _canonical_source(source_dataset_path)
     project = get_current_project(request)
     pipeline, checkpoints, job_tasks = _saved_flow_models(project, source, recipe_task, version_id, **_retained_request_options(project, request))
@@ -324,7 +324,7 @@ def flow_preflight(req: FlowPreflightRequest, request: Request):
     there. Nothing is installed, downloaded or substituted."""
     from backend.engine import flow_preflight as preflight
     if req.recipe_task not in (*FLOW_TASKS, "mixed"):
-        raise HTTPException(status_code=422, detail="Unsupported flow recipe task")
+        raise HTTPException(status_code=422, detail="지원하지 않는 검사 흐름 종류입니다. 지원하는 작업 종류의 흐름을 선택하세요.")
     try:
         target = preflight.normalize_target(req.target)
     except ValueError as exc:
@@ -341,11 +341,11 @@ def flow_preflight(req: FlowPreflightRequest, request: Request):
         _,checkpoints,_=_saved_flow_models(project,source,req.recipe_task,req.version_id,**_retained_request_options(project,request))
         try:
             report=selected_flow_preflight(profile,project,pipeline,checkpoints,release,target['device'])
-            if get_profile_store().get(profile.id)!=profile:raise ValueError('Selected preflight profile changed during execution')
+            if get_profile_store().get(profile.id)!=profile:raise ValueError('사전 점검 중 선택한 계산 서버 설정이 바뀌었습니다. 계산 서버를 다시 선택하고 점검하세요.')
             _,current=_preflight_release(project,source,req.recipe_task,req.version_id)
-            if current!=release:raise ValueError('Selected preflight saved flow changed during execution')
+            if current!=release:raise ValueError('사전 점검 중 저장한 검사 흐름이 바뀌었습니다. 현재 흐름을 다시 선택하고 점검하세요.')
         except Exception as exc:
-            raise HTTPException(status_code=503,detail=f'Selected preflight failed; no local fallback: {exc}') from exc
+            raise HTTPException(status_code=503,detail=f'선택한 계산 서버의 사전 점검을 완료하지 못했습니다(no local fallback: {exc}). 서버 연결을 확인하고 같은 대상에서 다시 점검하세요.') from exc
         _preflight_store(project).save(report)
         return {**report,'stale':False,'stale_reasons':[]}
     here = target["kind"] == "this_computer"
@@ -373,7 +373,7 @@ def read_flow_preflight(report_id: str, request: Request, source_dataset_path: s
         report = _preflight_store(project).load(report_id)
         selected = preflight.normalize_target(json.loads(target)) if target else None
     except FileNotFoundError as exc:
-        raise HTTPException(status_code=404, detail="No such preflight report") from exc
+        raise HTTPException(status_code=404, detail="저장한 사전 점검 결과를 찾을 수 없습니다. 검사 흐름에서 사전 점검을 다시 실행하세요.") from exc
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     release = report["recipe_release"]
@@ -408,12 +408,12 @@ def _validated_cohort(req: ExportFlowRequest, source: Path) -> List[Dict[str, Op
         if req.compute_profile_id is None:
             resolve_runtime_device(req.parity_device)
     except ValueError as exc:
-        raise HTTPException(status_code=422, detail=f"Parity target device is unavailable: {exc}") from exc
+        raise HTTPException(status_code=422, detail=f"같은 결과인지 확인할 계산 장치를 사용할 수 없습니다({exc}). 사용 가능한 장치를 선택하세요.") from exc
     images = []
     for row in req.parity_images or []:
         image = Path(row.path).expanduser()
         if image.is_symlink() or not image.resolve().is_relative_to(source) or not image.resolve().is_file():
-            raise HTTPException(status_code=422, detail="Parity cohort images must be files inside the selected source")
+            raise HTTPException(status_code=422, detail="같은 결과인지 확인할 이미지가 선택한 원본 데이터 안에 없습니다. 선택한 데이터 안의 이미지 파일을 다시 선택하세요.")
         images.append({"path": str(image.resolve()), "image_id": row.image_id})
     return images
 
@@ -432,7 +432,7 @@ def _failed_parity(exc: Exception, *, scope: str, device: str, package: Path) ->
 def export_saved_flow(req: ExportFlowRequest, request: Request):
     """Export only a saved, source-matched graph and all its verified checkpoints."""
     if req.recipe_task not in (*FLOW_TASKS, "mixed"):
-        raise HTTPException(status_code=422, detail="Unsupported flow recipe task")
+        raise HTTPException(status_code=422, detail="지원하지 않는 검사 흐름 종류입니다. 지원하는 작업 종류의 흐름을 선택하세요.")
     source = _canonical_source(req.source_dataset_path)
     parity_profile = None
     if req.compute_profile_id is not None:
@@ -440,7 +440,7 @@ def export_saved_flow(req: ExportFlowRequest, request: Request):
         from backend.remote.package_parity import validate_parity_target
         parity_profile = get_profile_store().get(req.compute_profile_id)
         if parity_profile is None:
-            raise HTTPException(status_code=404, detail='Selected package parity compute profile is unavailable')
+            raise HTTPException(status_code=404, detail='같은 결과인지 확인할 계산 서버 설정을 찾을 수 없습니다. 계산 서버를 다시 선택하세요.')
         try:
             validate_parity_target(parity_profile, req.parity_device)
         except ValueError as exc:
@@ -448,13 +448,13 @@ def export_saved_flow(req: ExportFlowRequest, request: Request):
     if req.verification_image_path:
         image = Path(req.verification_image_path).expanduser().resolve()
         if not image.is_file():
-            raise HTTPException(status_code=422, detail="Select an existing parity verification image")
+            raise HTTPException(status_code=422, detail="같은 결과인지 확인할 이미지 파일을 찾을 수 없습니다. 존재하는 이미지를 다시 선택하세요.")
         try:
             preview = read_image_safely_rgb(image, max_dim=32)
             if preview.size == 0:
-                raise ValueError("Empty image")
+                raise ValueError("확인 이미지가 비어 있습니다. 열 수 있는 이미지 파일을 다시 선택하세요.")
         except (OSError, ValueError) as exc:
-            raise HTTPException(status_code=422, detail="Parity verification image is unreadable") from exc
+            raise HTTPException(status_code=422, detail="같은 결과인지 확인할 이미지를 읽을 수 없습니다. 열 수 있는 이미지 파일을 다시 선택하세요.") from exc
     cohort = _validated_cohort(req, source) if req.parity_images is not None else None
     project = get_current_project(request)
     project_dir = Path(project["project_dir"]).resolve()
@@ -463,14 +463,14 @@ def export_saved_flow(req: ExportFlowRequest, request: Request):
     approved_revisions = None
     if req.approval_revision_ids is not None:
         if set(req.approval_revision_ids) != set(checkpoints):
-            raise HTTPException(status_code=409, detail="Every flow model needs one selected approval revision")
+            raise HTTPException(status_code=409, detail="검사 흐름의 모든 모델에 승인 기록이 하나씩 필요합니다. 각 모델의 확인된 승인 기록을 선택하세요.")
         approved_revisions = {}
         for job_id, checkpoint in checkpoints.items():
             revision = _selected_release(project, source, job_tasks[job_id], job_id, checkpoint,
                                          req.approval_revision_ids[job_id])
             if revision is None:
                 raise HTTPException(status_code=409,
-                                    detail=f"Flow model {job_id} has no verified approval revision {req.approval_revision_ids[job_id]!r} for its checkpoint")
+                                    detail=f"검사 흐름 모델 {job_id}의 파일과 승인 기록 {req.approval_revision_ids[job_id]!r}이(가) 맞지 않습니다. 이 모델 파일에 맞는 확인된 승인 기록을 다시 선택하세요.")
             approved_revisions[job_id] = revision
     try:
         result = build_flow_package(
@@ -486,7 +486,7 @@ def export_saved_flow(req: ExportFlowRequest, request: Request):
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     except OSError as exc:
-        raise HTTPException(status_code=500, detail=f"Could not write flow package: {exc}") from exc
+        raise HTTPException(status_code=500, detail=f"검사 흐름 패키지 파일을 저장하지 못했습니다({exc}). 저장 위치의 권한과 남은 공간을 확인한 뒤 다시 내보내세요.") from exc
 
     from backend.engine.product_delivery import record_package
     package = Path(result["package_path"])
@@ -501,7 +501,7 @@ def export_saved_flow(req: ExportFlowRequest, request: Request):
             try:
                 authorize_release_action(package, project, action='export', source=source)
             except (ValueError, OSError) as exc:
-                raise HTTPException(status_code=409, detail=f"Export approval became stale: {exc}") from exc
+                raise HTTPException(status_code=409, detail=f"내보내기 전에 승인 근거가 바뀌었습니다({exc}). 현재 모델과 데이터의 승인 상태를 다시 확인하세요.") from exc
         record_package(project, package, version_id=req.version_id, recipe_task=req.recipe_task, parity=result["parity"])
         return result
     scope = "cohort" if cohort is not None else "single_image"
@@ -541,8 +541,8 @@ def export_saved_flow(req: ExportFlowRequest, request: Request):
         flow_package_engine.write_parity_receipt(package, report)
     if report["status"] != "passed":
         raise HTTPException(status_code=409, detail={
-            "message": ("Exported flow did not match the app engine on the frozen parity input" if report["status"] == "mismatch"
-                        else f"Exported flow parity verification failed: {report.get('error')}"),
+            "message": ("선택한 확인 이미지에서 내보낸 검사 흐름과 앱의 결과가 다릅니다. 결과 차이를 검토하고 흐름을 수정한 뒤 다시 내보내세요." if report["status"] == "mismatch"
+                        else f"내보낸 검사 흐름의 결과 일치 확인에 실패했습니다({report.get('error')}). 확인 결과의 원인을 해결한 뒤 같은 이미지로 다시 확인하세요."),
             "package_path": str(package), "parity": report,
         })
     result["parity"] = report
@@ -556,7 +556,7 @@ def export_saved_flow(req: ExportFlowRequest, request: Request):
                     result["release_policy"] = {**result["release_policy"], "device": report["device"],
                                                 "parity_receipt_sha256": hashlib.sha256(receipt.read_bytes()).hexdigest()}
         except (ValueError, OSError) as exc:
-            raise HTTPException(status_code=409, detail=f"Export approval became stale during verification: {exc}") from exc
+            raise HTTPException(status_code=409, detail=f"결과를 확인하는 동안 내보내기 승인 근거가 바뀌었습니다({exc}). 현재 모델과 데이터의 승인 상태를 다시 확인하세요.") from exc
     return result
 
 
@@ -587,15 +587,15 @@ def optimize_flow(req:OptimizeFlowRequest,request:Request):
     from backend.engine.specialized_training_jobs import require_training_source
     from backend.engine.runtime_optimization_jobs import start_job
     project=get_current_project(request)
-    if not project:raise HTTPException(409,'Open a project before optimizing a saved flow')
+    if not project:raise HTTPException(409,'열린 프로젝트가 없어 검사 흐름을 최적화할 수 없습니다. 사용할 프로젝트를 먼저 여세요.')
     try:
         source=require_training_source(project,req.source_dataset_path)
         package=Path(req.package_dir).expanduser()
         owned=Path(project['project_dir']).resolve()/'exports'/'flows'
-        if package.is_symlink() or not package.resolve().is_relative_to(owned):raise ValueError('Optimization package must belong to this project')
+        if package.is_symlink() or not package.resolve().is_relative_to(owned):raise ValueError('최적화할 패키지가 현재 프로젝트에 속하지 않습니다. 현재 프로젝트에서 내보낸 패키지를 선택하세요.')
         for value in [*req.calibration_images,*req.validation_images]:
             image=Path(value).expanduser()
-            if image.is_symlink() or not image.is_file() or not image.resolve().is_relative_to(source):raise ValueError('Calibration/validation images must belong to the active canonical source')
+            if image.is_symlink() or not image.is_file() or not image.resolve().is_relative_to(source):raise ValueError('최적화와 검증에 사용할 이미지가 현재 원본 데이터 안에 없습니다. 현재 데이터 안의 이미지 파일을 선택하세요.')
         from backend.engine.runtime_configuration import runtime_options
         runtime_options({'device':'openvino:'+req.device,'cpu_threads':req.cpu_threads})
         receipt=_optimization_input_receipt(project,source,req.calibration_images,req.validation_images)
@@ -607,7 +607,7 @@ def optimize_flow(req:OptimizeFlowRequest,request:Request):
 def optimization_job(job_id:str,request:Request):
     from backend.engine.runtime_optimization_jobs import read_job
     project=get_current_project(request)
-    if not project:raise HTTPException(409,'Open a project before reading runtime optimization')
+    if not project:raise HTTPException(409,'열린 프로젝트가 없어 최적화 결과를 읽을 수 없습니다. 사용할 프로젝트를 먼저 여세요.')
     try:return read_job(project['project_dir'],job_id)
     except (ValueError,OSError) as exc:raise HTTPException(404,str(exc)) from exc
 
@@ -616,7 +616,7 @@ def optimization_job(job_id:str,request:Request):
 def cancel_optimization(job_id:str,request:Request):
     from backend.engine.runtime_optimization_jobs import cancel_job
     project=get_current_project(request)
-    if not project:raise HTTPException(409,'Open a project before canceling runtime optimization')
+    if not project:raise HTTPException(409,'열린 프로젝트가 없어 최적화 작업을 취소할 수 없습니다. 해당 작업의 프로젝트를 먼저 여세요.')
     try:return cancel_job(project['project_dir'],job_id)
     except (ValueError,OSError) as exc:raise HTTPException(404,str(exc)) from exc
 
@@ -654,13 +654,13 @@ class PrecisionApprovalRequest(BaseModel):
     @field_validator('holdout_reviewed',mode='before')
     @classmethod
     def explicit_review(cls,value):
-        if value is not True:raise ValueError('Holdout review requires explicit true')
+        if value is not True:raise ValueError('따로 둔 검증 이미지의 결과를 검토했다는 확인이 없습니다. 결과를 직접 검토한 뒤 확인 항목을 선택하세요.')
         return value
 
     @field_validator('maximum_absolute_drift',mode='before')
     @classmethod
     def numeric_bound(cls,value):
-        if type(value) not in (int,float) or not math.isfinite(value):raise ValueError('Drift bound requires an explicit finite number')
+        if type(value) not in (int,float) or not math.isfinite(value):raise ValueError('허용할 결과 차이가 유효한 숫자로 지정되지 않았습니다. 허용 범위에 유한한 숫자를 입력하세요.')
         return value
 
 
@@ -669,22 +669,22 @@ def _optimization_approval_context(project,job_id):
     from backend.engine.flow_package_runtime import verify_flow_package,_sha256
     from backend.api.routes_model_deployments import _store,_active,verified_release_revision
     record=read_job(project['project_dir'],job_id)
-    if record['status']!='completed' or not record.get('result'):raise ValueError('Only a completed measured optimization candidate can be approved')
+    if record['status']!='completed' or not record.get('result'):raise ValueError('측정한 최적화 작업이 완료되지 않아 승인할 수 없습니다. 최적화를 완료하고 결과를 다시 검토하세요.')
     candidate=Path(record['result']['package_path']);_,checkpoints=verify_flow_package(candidate)
-    if record['result'].get('candidate_manifest_sha256')!=_sha256(candidate/'manifest.json'):raise ValueError('Completed measured optimization candidate has changed')
-    if not candidate.resolve().is_relative_to(Path(project['project_dir']).resolve()/'exports/flows'):raise ValueError('Optimization candidate leaves its owning project')
+    if record['result'].get('candidate_manifest_sha256')!=_sha256(candidate/'manifest.json'):raise ValueError('완료한 최적화 후보 파일이 바뀌었습니다. 최적화를 다시 실행하고 새 결과를 검토하세요.')
+    if not candidate.resolve().is_relative_to(Path(project['project_dir']).resolve()/'exports/flows'):raise ValueError('최적화 후보가 해당 프로젝트의 저장 범위를 벗어납니다. 현재 프로젝트에서 최적화를 다시 실행하세요.')
     info=json.loads((candidate/'openvino_models.json').read_text(encoding='utf-8'));receipt=info['input_receipt']
     source=Path(project['source_dataset_dir']).resolve()
-    if receipt['source_dataset_path']!=str(source):raise ValueError('Optimization source differs from this active project')
+    if receipt['source_dataset_path']!=str(source):raise ValueError('최적화에 사용한 원본이 현재 프로젝트의 데이터와 다릅니다. 해당 원본의 프로젝트를 열어 다시 검토하세요.')
     current=_optimization_input_receipt(project,source,[str(source/row['relative_path']) for row in receipt['calibration_images']],[str(source/row['relative_path']) for row in receipt['validation_images']])
-    if current!=receipt:raise ValueError('Optimization source, split, calibration or heldout hashes changed')
-    if any(row['split'] not in ('val','test') for row in receipt['validation_images']):raise ValueError('Validation must use saved heldout val/test images')
-    if any(row['precision']=='int8' for row in info['models']) and any(row['split']!='train' for row in receipt['calibration_images']):raise ValueError('INT8 calibration must use saved training images')
+    if current!=receipt:raise ValueError('최적화에 사용한 원본·분할·보정 이미지 또는 검증 이미지가 바뀌었습니다. 현재 데이터로 최적화를 다시 실행하세요.')
+    if any(row['split'] not in ('val','test') for row in receipt['validation_images']):raise ValueError('검증 이미지가 저장한 검증·시험 분할에 속하지 않습니다. 따로 둔 검증·시험 이미지를 선택하고 최적화를 다시 실행하세요.')
+    if any(row['precision']=='int8' for row in info['models']) and any(row['split']!='train' for row in receipt['calibration_images']):raise ValueError('INT8 보정 이미지가 저장한 학습 분할에 속하지 않습니다. 학습 이미지를 보정용으로 선택하고 최적화를 다시 실행하세요.')
     revisions={}
     for row in info['models']:
         with _store(project) as conn:active=_active(conn,source,row['task'])
         revision=verified_release_revision(project,active['revision_id'],source=source,task=row['task'],job_id=row['job_id'],checkpoint=checkpoints[row['job_id']]) if active else None
-        if revision is None:raise ValueError(f"Model {row['task']} needs its current active checkpoint approval before precision acceptance")
+        if revision is None:raise ValueError(f"{row['task']} 모델의 현재 파일에 확인된 활성 승인 기록이 없습니다. 모델 승인 상태를 확인하고 다시 검토하세요.")
         revisions[row['job_id']]=revision
     return candidate,info,revisions
 
@@ -692,7 +692,7 @@ def _optimization_approval_context(project,job_id):
 @router.get('/flow/optimization-jobs/{job_id}/approval-prerequisites')
 def precision_approval_prerequisites(job_id:str,request:Request):
     project=get_current_project(request)
-    if not project:raise HTTPException(409,'Open a project before reviewing runtime acceptance')
+    if not project:raise HTTPException(409,'열린 프로젝트가 없어 최적화 승인 조건을 확인할 수 없습니다. 해당 작업의 프로젝트를 먼저 여세요.')
     try:
         candidate,info,revisions=_optimization_approval_context(project,job_id)
         return {'status':'ready','approval_revision_ids':{job:row['revision_id'] for job,row in revisions.items()},'models':info['models'],'candidate_path':str(candidate)}
@@ -704,16 +704,16 @@ def precision_heldout_result(job_id:str,index:int,request:Request):
     from backend.engine.runtime_optimization_jobs import read_job
     from backend.engine.flow_package_runtime import verify_flow_package,_sha256
     project=get_current_project(request)
-    if not project:raise HTTPException(409,'Open a project before reviewing runtime evidence')
+    if not project:raise HTTPException(409,'열린 프로젝트가 없어 최적화 확인 결과를 읽을 수 없습니다. 해당 작업의 프로젝트를 먼저 여세요.')
     try:
         record=read_job(project['project_dir'],job_id)
-        if record['status']!='completed' or not record.get('result'):raise ValueError('Conversion has no completed heldout evidence')
+        if record['status']!='completed' or not record.get('result'):raise ValueError('변환이 완료되지 않아 따로 둔 검증 이미지의 결과가 없습니다. 최적화를 완료한 뒤 결과를 다시 여세요.')
         candidate=Path(record['result']['package_path']);verify_flow_package(candidate)
-        if not candidate.resolve().is_relative_to(Path(project['project_dir']).resolve()/'exports/flows') or _sha256(candidate/'manifest.json')!=record['result'].get('candidate_manifest_sha256'):raise ValueError('Completed optimization candidate has changed')
+        if not candidate.resolve().is_relative_to(Path(project['project_dir']).resolve()/'exports/flows') or _sha256(candidate/'manifest.json')!=record['result'].get('candidate_manifest_sha256'):raise ValueError('완료한 최적화 후보 파일이 바뀌었습니다. 최적화를 다시 실행하고 새 결과를 검토하세요.')
         rows=json.loads((candidate/'heldout_flow_results.json').read_text(encoding='utf-8'))
-        if index<0 or index>=len(rows):raise ValueError('Heldout image index is out of range')
+        if index<0 or index>=len(rows):raise ValueError('요청한 검증 이미지 번호가 결과 범위를 벗어납니다. 결과 목록에서 이미지를 다시 선택하세요.')
         relative=rows[index]['result_path'];path=candidate/relative
-        if relative!=f'heldout/heldout_{index:04d}.json' or _sha256(path)!=rows[index]['result_sha256']:raise ValueError('Heldout output hash or path changed')
+        if relative!=f'heldout/heldout_{index:04d}.json' or _sha256(path)!=rows[index]['result_sha256']:raise ValueError('검증 결과 파일의 내용이나 저장 위치가 바뀌었습니다. 최적화를 다시 실행하고 새 결과를 검토하세요.')
         return {'index':index,'total':len(rows),**json.loads(path.read_text(encoding='utf-8'))}
     except (ValueError,OSError,KeyError) as exc:raise HTTPException(409,str(exc)) from exc
 
@@ -722,10 +722,10 @@ def precision_heldout_result(job_id:str,index:int,request:Request):
 def approve_precision(job_id:str,req:PrecisionApprovalRequest,request:Request):
     from backend.engine.runtime_precision_approval import approve_precision_package
     project=get_current_project(request)
-    if not project:raise HTTPException(409,'Open a project before approving runtime acceptance')
+    if not project:raise HTTPException(409,'열린 프로젝트가 없어 최적화 결과를 승인할 수 없습니다. 해당 작업의 프로젝트를 먼저 여세요.')
     try:
         candidate,info,revisions=_optimization_approval_context(project,job_id)
-        if req.approval_revision_ids!={job:row['revision_id'] for job,row in revisions.items()}:raise ValueError('Active model approval changed since this review was opened')
+        if req.approval_revision_ids!={job:row['revision_id'] for job,row in revisions.items()}:raise ValueError('검토 화면을 연 뒤 활성 모델 승인 기록이 바뀌었습니다. 현재 승인 상태와 결과를 다시 검토하세요.')
         output=Path(project['project_dir'])/'exports/flows'/('approved_runtime_'+uuid.uuid4().hex)
         approved=approve_precision_package(candidate,output,revisions=revisions,reviewer=req.reviewer,reason=req.reason,
             maximum_absolute_drift=req.maximum_absolute_drift,holdout_reviewed=req.holdout_reviewed)
@@ -782,9 +782,9 @@ def export_runtime_package(req: ExportRuntimeRequest):
     except ValueError as e:
         raise HTTPException(status_code=422, detail=str(e)) from e
     except RemoteDisconnected as e:
-        raise HTTPException(status_code=503, detail=f"Remote export connection lost; retry the same run: {e}") from e
+        raise HTTPException(status_code=503, detail=f"원격 내보내기 연결이 끊겼습니다({e}). 연결을 확인하고 같은 작업의 내보내기를 다시 시도하세요.") from e
     except ArtifactValidationError as e:
-        raise HTTPException(status_code=502, detail=f"Remote export could not be verified: {e}") from e
+        raise HTTPException(status_code=502, detail=f"원격 내보내기 결과를 확인하지 못했습니다({e}). 원격 작업 기록과 파일을 확인한 뒤 같은 작업에서 다시 시도하세요.") from e
     except Exception as e:
         logger.exception("Export runtime package failed: %s", e)
         raise HTTPException(
