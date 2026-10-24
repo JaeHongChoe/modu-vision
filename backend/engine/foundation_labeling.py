@@ -229,12 +229,14 @@ class _Sam2Adapter:
         self.model=self.model.to(device).eval()
         self.device = device
         self.provenance = {'provider': 'sam2', 'model_dir': str(directory), 'model_sha256': model_directory_hash(directory), 'device': device}
-        self._image = None
-        self._embeddings = None
+        self._embedding_entry = None
 
     def predict(self, rgb, points, box, cancel=None):
         import torch
         check_cancel(cancel)
+        # Requests decode fresh PIL objects, and a caller can mutate one in place.
+        # Keep only the last successful embedding, identified by exact decoded pixels.
+        image_key = (rgb.mode, rgb.size, hashlib.sha256(rgb.tobytes()).digest())
         prompts = {}
         if points:
             prompts['input_points'] = [[[[p['x'], p['y']] for p in points]]]
@@ -243,18 +245,24 @@ class _Sam2Adapter:
             prompts['input_boxes'] = [[box]]
         inputs = self.processor(images=rgb, return_tensors='pt', **prompts).to(self.device)
         with torch.inference_mode():
-            if self._image is not rgb:
-                self._embeddings = self.model.get_image_embeddings(inputs['pixel_values'])
-                self._image = rgb
+            check_cancel(cancel)
+            entry = self._embedding_entry
+            embeddings = (entry[1] if entry is not None and entry[0] == image_key
+                          else self.model.get_image_embeddings(inputs['pixel_values']))
             check_cancel(cancel)
             inputs.pop('pixel_values')
-            outputs = self.model(**inputs, image_embeddings=self._embeddings, multimask_output=True)
+            outputs = self.model(**inputs, image_embeddings=embeddings, multimask_output=True)
             masks = self.processor.post_process_masks(outputs.pred_masks.cpu(), inputs['original_sizes'].cpu())[0]
         check_cancel(cancel)
         scores = outputs.iou_scores.detach().cpu().reshape(-1)
         index = int(scores.argmax())
         mask = masks.reshape(-1, rgb.height, rgb.width)[index].numpy() > 0
-        return mask, float(scores[index].clamp(0, 1))
+        score = float(scores[index].clamp(0, 1))
+        check_cancel(cancel)
+        # foundation_candidates holds _LOCK across loading, prediction and candidate construction.
+        # Publish the pair together only after this request completes; failures retain the old entry.
+        self._embedding_entry = (image_key, embeddings)
+        return mask, score
 
 
 def _load_sam2(setup, device):

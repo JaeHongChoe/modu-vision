@@ -59,7 +59,7 @@ jobs:
           npm run typecheck:e2e
           node scripts/verify-supervisor.js --owned-bootstrap-order
           npm run test:renderer
-          node --test scripts/tests/assistant-safe-storage-qa.test.cjs
+          node --test scripts/tests/assistant-safe-storage-qa.test.cjs scripts/tests/chatgpt-account-acceptance.test.cjs
           npm run build
           npm run test:e2e:harness
           node --test scripts/acceptance/action_inventory.test.cjs
@@ -450,7 +450,7 @@ jobs:
           npm run typecheck:e2e
           node scripts/verify-supervisor.js --owned-bootstrap-order
           npm run test:renderer
-          node --test scripts/tests/assistant-safe-storage-qa.test.cjs
+          node --test scripts/tests/assistant-safe-storage-qa.test.cjs scripts/tests/chatgpt-account-acceptance.test.cjs
           npm run build
           npm run test:e2e:harness
           node --test scripts/acceptance/action_inventory.test.cjs

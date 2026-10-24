@@ -32,3 +32,43 @@ The case verifies identity-only refusal, explicit plan reconsent/PKCE, the first
 The stale lease uses a genuinely exited fixture process PID after normal app shutdown; it tests crash-state recovery without killing a live app/backend. The encrypted original is archived before all saved ChatGPT credentials are cleared, while registration and selected model remain. Unknown/legacy/live-owner refusal is also covered by `siwcStore.test.cjs`.
 
 This is native software composition with controlled provider output. Actual account eligibility, subscription inference/limits/refresh/revocation, terms acceptance, real OS/package identity, human timing and field-model quality remain separate verification.
+
+# Prepare real-account acceptance
+
+```sh
+node scripts/qa/chatgpt-account-acceptance.cjs --out-dir /absolute/path/to/a/new-directory
+```
+
+The default only prepares and builds an isolated production main/preload/renderer app. It does not launch Electron, access Keychain, open login, consent, load remote models, send a question or revoke a connection. Existing directories, files and symlinks are refused. Each run has a UUID package name and separate user/session/log/crash directories. Build and launch children inherit only native OS session variables; API credentials, Node hooks, app paths and mock-keychain switches are excluded. An explicit `--python /absolute/path/to/python` selects the backend interpreter; the default is `python3` (`python` on Windows). No dependencies or models are downloaded.
+
+After reviewing the prepared files, open that same app from an interactive terminal:
+
+```sh
+node scripts/qa/chatgpt-account-acceptance.cjs --run-dir /absolute/path/to/the/prepared-directory --open
+```
+
+`--out-dir NEW --open` also prepares/builds and then opens. Electron is spawned directly, without Playwright's Electron loader or any debugger/inspector. A bootstrap sets isolated native directories before loading production main, and carries only fixed acceptance commands over owned stdin/stdout. It evaluates the projected probe in the normal production window through `webContents.executeJavaScript`; the production preload and IPC remain in use. Runtime `app.commandLine` checks refuse mock-keychain, password-store and debugging switches before main loads and before accepting commands. There is no provider fixture, browser replacement or generated credential. The user handles any OS prompt, reads the account terms and transmission notice, logs in using the app's system-browser button, enables plan usage if needed, acknowledges the notice, explicitly loads models and chooses one. The runner does not click those controls. This source build does not establish signed-package identity or cross-platform acceptance.
+
+Before every open/reopen, a sanitized subprocess checks the exact imports required by the production supervisor and resolves that Python's absolute executable path. Failure or timeout refuses the Electron launch, without another interpreter or an installer fallback. Choose a locally complete interpreter explicitly if needed; raw import diagnostics are not included in the receipt. Malformed receipt files refuse before launch, and persistence failures after launch still close the owned app.
+
+The build helper's exact `app/scripts` symlink is moved into this run's `build-support/scripts-source-link`, preserving it and the repository target. The QA runtime therefore has no `scripts/bootstrap_env.py`. Build, open, reopen and native startup all verify that omission, so even a later supervisor dependency-check failure cannot start its package-install fallback. The production supervisor and repository scripts are unchanged.
+
+The terminal accepts `status` for local projected readiness metadata (including only the backend health boolean from its existing bridge) and `quit` for normal app/backend shutdown. Backend PID, port and Python paths are not exported. It saves no raw state, authentication URLs, account labels, identities, tokens, prompt/answer bodies or screenshots. `run.json` contains operational paths and source hashes; `receipt.json` contains only projected observations. Prepared runs refuse source changes before reopening. All artifacts, including the isolated profile, remain in place; the runner does not sign out, delete credentials or remove OS storage entries automatically.
+
+An ordinary UI question advertises the app tools and may make up to six provider calls. To verify exactly one inference request, obtain explicit permission for that consumption, then type this exact terminal command:
+
+```text
+I CONSENT TO ONE CHATGPT TEXT REQUEST
+```
+
+The check calls the existing production preload/main bridge once with a fixed benign connection question, `context: {}`, `tools: []` and no image. It does not use the renderer conversation/tool loop or write a project execution log. A durable attempt marker is saved before the call; failed or uncertain attempts are never retried, including after reopening. Check `status` first: even a refused/not-ready attempt consumes this run's single check. This does not verify refresh expiry, usage-limit recovery, revocation or model quality, and it must never be run merely to provoke those states.
+
+Completion means the production SIWC parser accepted `response.completed`, with a nonempty final text and no tool call. The receipt records text length and a completion boolean rather than the answer. The current production connection does not forward successful provider request IDs; the helper does not infer one. Before opening, `actualAccountOrPlanInference` is false; after human controls become available it is unknown (`null`) until this check proves completion. Status alone is never account-inference acceptance.
+
+No-network boundary tests:
+
+```sh
+node --test scripts/tests/chatgpt-account-acceptance.test.cjs
+```
+
+These use controlled bridge/build/launch boundaries and do not launch Electron or call a real provider. Test scratch directories are preserved and printed for inspection.

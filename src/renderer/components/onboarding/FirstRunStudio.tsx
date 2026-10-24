@@ -12,6 +12,7 @@ import { DEMO_PROJECT_NAME, DEMO_TRAINING, runDemo, type DemoDeps } from './runD
 import { EXAMPLE_NOTICE, demoStepRows, demoSummary, nextExampleName } from './firstRun';
 import { useFirstRunStore } from './firstRunStore';
 import { focusWorkflowTarget } from '../wizard/workflowReadiness';
+import { FirstUseStudyPanel } from './FirstUseStudyPanel';
 
 const STATUS_MARK: Record<string, string> = { pending: '○', running: '…', done: '✓', failed: '⚠' };
 
@@ -143,6 +144,7 @@ export function FirstRunStudio({ onClose, onDismiss }: { onClose: () => void; on
       </ol>
       <p className="mt-2 text-slate-400">폴더를 연 뒤 하단의 '자동 진행'을 누르면 사람이 할 곳(정답 라벨, 초안 채택, 정답 확인, 승인)까지 이 순서로 이어서 진행합니다.</p>
     </section>
+    <FirstUseStudyPanel />
     <section aria-labelledby="first-run-example" className="rounded border border-slate-600 p-3">
       <h3 id="first-run-example" className="font-semibold text-slate-100">예제로 먼저 해보기</h3>
       <p className="mt-1 text-slate-300">이 컴퓨터에서 합성 표면 이미지 64장을 만들고, CPU로 짧게 학습해 검사 플로우를 저장한 뒤 테스트 이미지를 검사합니다. 네트워크·GPU·외부 계정이 필요 없습니다.</p>

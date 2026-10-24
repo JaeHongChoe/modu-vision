@@ -1,0 +1,33 @@
+# Remaining implementation and validation preparation
+
+This change continues the three approved priorities: novice use, assisted labeling, and a bounded account-based assistant. Automated checks do not substitute for a first-time person's trial, field truth, account eligibility, or operational approval.
+
+## Local first-use records
+
+The existing first-start guide now has a collapsed, optional time/action recorder. An explicit start counts setup before project creation or folder selection. One explicit binding ties the record to the accepted project, source, task, label set and API authority; later scope changes seal a partial record. Closing the guide leaves the global observer running. Ordinary annotation refresh preserves the binding.
+
+Only aggregate pointer/keyboard counts, fixed self-reported milestones and projected environment metadata enter the in-memory report. Recorder controls have separate counters. Native dialogs and external-browser actions stay unobserved unless the person reports a total. Waits, corrections and background time are included. A user can download JSON; the recorder writes no backend telemetry, labels or provider request. Terminal snapshots stay immutable. Build SHA is null because the renderer currently has no trustworthy hook for it.
+
+Both human-self-reported and automated modes remain `acceptance: unverified`, including the 30-minute/40-action target. Per-image manual/assisted observations cannot establish that the images, difficulty or reviewers are matched.
+
+Focused tests: 25/25 including the existing guide tests. Independent review of the three new test files passed 18/18 and found no concrete blocker. Root integration: renderer 2,036/2,036 and renderer/main type checks passed. The actual owned browser case covers setup, guide closure, source binding, immutable three-session export, partial termination on project change, and private-input exclusion. It blocks external requests and labeling/training/assistant writes, verifies the original image hashes, and checks large/small window layout. This is automated feature verification.
+
+## SAM2 repeated clicks
+
+The engine decoded a fresh PIL object on each request, while its embedding cache used object identity. It therefore re-encoded unchanged images; mutation of the same object could also keep an old embedding. The cache now keeps one successful embedding keyed by decoded mode, dimensions and SHA256 pixel bytes. Model signature/device identity and the existing public engine lock are preserved. Each request still processes its own prompts and decodes a fresh mask. Cancellation or failure cannot replace the previous complete entry.
+
+Focused cache/geometry controls: 12/12; related foundation/API/constraint tests: 35/35 (one existing multipart deprecation warning). Independent cache review found no blocker. A single offline CPU comparison used the already approved SAM2 tiny weights and one generated image. Three fresh-image prompts (positive; positive+negative; positive+negative+box) required one encode with caching and three with the same-code forced-miss control. All three masks and scores matched exactly.
+
+With two CPU threads, the warmed three-prompt totals were 1.108 seconds cached versus 3.076 seconds forced-miss. The two cache-hit refinements took about 0.042 seconds each, versus about 1.01 seconds each in the control. Model construction (4.002 seconds) and initial warmup (1.115 seconds) are separate. This is an adapter-level synthetic comparison, not old-code timing, end-to-end UI timing, training, or field accuracy. Input, model and source hashes stayed unchanged; network attempts were zero. The previously exposed real-image diagnostic cohort was not retuned.
+
+## Actual-account participation
+
+The separate QA helper prepares an isolated production app for explicit human account checks. Its default builds only. It uses ordinary Electron spawn, without Playwright's implicit mock-keychain or inspector switches. The exact Python dependency preflight runs before launch; the prepared package preserves its build-support scripts link outside the runtime so the supervisor cannot invoke the installer fallback. Receipt validation precedes launch and post-launch failures close the owned app.
+
+Root's actual default preparation built successfully with no app opened. A subsequent normal native startup reported effective storage/debug switches absent, `backendHealthy: true`, encryption available, signed in false, plan usage disabled, model unselected and status idle. Only the local status and normal quit commands were issued; the runner exited zero and all five observed owned Electron/backend PIDs were gone. The single-request attempt remained unused. This verifies a login-ready source build and storage availability, not an actual encrypted credential write or account inference. The helper plus existing safe-storage QA boundary tests passed 28/28; independent review covered the final code. Fake-provider native composition remains a distinct prior proof.
+
+Account login/terms, model choice and any real consumption must be verified with the person. See `scripts/qa/README.md` for preparation and the bounded single-text-request control. No real account login, token reuse, subscription request or image send has been performed by this change. Refresh, real usage-limit recovery, revocation, signed-package identity and cross-platform account acceptance remain unverified.
+
+## Integration boundaries
+
+The helper's no-network tests are included in the existing fast/full Node checks; the new browser specification is automatically discovered by the full lane and selected when changed in the fast lane. CI-structure tests passed 27/27 and action inventory tests 5/5. Source/action evidence gates passed with accepted feature/work-package counts unchanged at zero. Existing CI is retained. Exact final-head hosted fast/full qualification and conditional merge remain separate from these local results. The stopped recurring monitor remains stopped.

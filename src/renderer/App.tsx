@@ -35,6 +35,7 @@ import { needsBrowserHealthProbe, startBrowserHealthProbe } from './services/bro
 import { createCatchUp, createJobEventStream } from './services/jobEventFeed';
 import { AssistantPanel } from './components/assistant/AssistantPanel';
 import { useAssistantStore } from './stores/useAssistantStore';
+import { FirstUseStudyObserver } from './components/onboarding/FirstUseStudyPanel';
 
 // S1-10: after every (re)connection the app reads the job events it may have missed and re-reads its job if needed.
 const jobEventStream = createJobEventStream();
@@ -166,6 +167,7 @@ export default function App() {
 
   return (
     <div data-labeling-layout={workspace === 'studio' && activeStep === 2 ? '' : undefined} className={`flex flex-col h-screen w-screen bg-[#0B0E14] text-slate-200 select-none overflow-hidden font-sans${assistantOpen ? ' pr-[26rem]' : ''}`}>
+      <FirstUseStudyObserver />
       {/* Precision Industrial Header Frame */}
       {/* 간단히 보기: the first-run guide, the workspace switch, the task center and packages join the header's 더 보기 menu
           (the only menu). 모두 보기 keeps the workspace row below, as it was. */}
