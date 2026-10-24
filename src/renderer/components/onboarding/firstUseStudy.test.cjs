@@ -80,12 +80,19 @@ test('build_sha is the bundle commit from a clean build, never the caller value'
  for(const bad of ['B'.repeat(40),'b'.repeat(39),'',null]){const r=m.exports.createFirstUseStudy(()=>1000,bad);r.start({mode:'automated',task:'first_flow'});assert.equal(r.snapshot().build.build_sha,null,String(bad));}
  const unbuilt=m.exports.createFirstUseStudy(()=>1000);unbuilt.start({mode:'automated',task:'first_flow'});assert.equal(unbuilt.snapshot().build.build_sha,null,'no build constant outside a Vite build');
  const config=fs.readFileSync(path.resolve(__dirname,'../../../../vite.config.ts'),'utf8');
- assert.match(config,/define: \{\n    __MODU_BUILD_SHA__: JSON\.stringify\(cleanCommitSha\(\)\),\n  \}/);
- const start=config.indexOf('export function cleanCommitSha'),end=config.indexOf('\n}\n',start)+3;
+ assert.match(config,/export default defineConfig\(\(\{ command \}\) => \(\{/);
+ assert.match(config,/define: \{\n    __MODU_BUILD_SHA__: buildShaDefine\(command\),\n  \}/);
+ const start=config.indexOf('export function cleanCommitSha'),end=config.indexOf('\n}\n',config.indexOf('export function buildShaDefine'))+3;
  const js=ts.transpileModule(config.slice(start,end),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText;
- const exports={};new Function('exports','execFileSync','__dirname',js)(exports,()=>{throw new Error('git must not run in a test');},'/repo');const clean=exports.cleanCommitSha;
+ const exports={};new Function('exports','execFileSync','__dirname',js)(exports,()=>{throw new Error('git must not run in a test');},'/repo');const clean=exports.cleanCommitSha,define=exports.buildShaDefine;
  const sha='d'.repeat(40);const git=(head,status)=>args=>args[0]==='rev-parse'?head+'\n':status;
  assert.equal(clean(git(sha,'')),sha);
  assert.equal(clean(git(sha,' M src/a.ts\n')),null,'tracked change');assert.equal(clean(git(sha,'?? new.ts\n')),null,'untracked file');
  assert.equal(clean(git('not-a-sha','')),null);assert.equal(clean(()=>{throw new Error('no git');}),null);
+ // Only a production build writes a commit in; a dev server always says null, clean tree or not (HMR swaps the code).
+ assert.equal(define('build',git(sha,'')),JSON.stringify(sha));
+ assert.equal(define('build',git(sha,' M src/a.ts\n')),'null');assert.equal(define('build',()=>{throw new Error('no git');}),'null');
+ let asked=0;const counting=args=>{asked++;return git(sha,'')(args);};
+ assert.equal(define('serve',counting),'null');assert.equal(define('serve',git(sha,' M src/a.ts\n')),'null');
+ assert.equal(asked,0,'a dev server does not even read git');
 });

@@ -16,11 +16,17 @@ export function cleanCommitSha(run: (args: string[]) => string = (args) => execF
   }
 }
 
+/** The define value: a production build (`vite build`) only. A dev server keeps the first value while HMR swaps the code
+ *  it serves, so there the record says null rather than a commit the running code may no longer match. */
+export function buildShaDefine(command: 'build' | 'serve', run?: (args: string[]) => string): string {
+  return JSON.stringify(command === 'build' ? cleanCommitSha(run) : null);
+}
+
 // https://vitejs.dev/config/
-export default defineConfig({
+export default defineConfig(({ command }) => ({
   plugins: [react()],
   define: {
-    __MODU_BUILD_SHA__: JSON.stringify(cleanCommitSha()),
+    __MODU_BUILD_SHA__: buildShaDefine(command),
   },
   css: {
     postcss: {
@@ -61,4 +67,4 @@ export default defineConfig({
       ],
     },
   },
-});
+}));

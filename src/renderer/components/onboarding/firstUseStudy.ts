@@ -13,8 +13,9 @@ export interface StudyBuild {
   build_sha: string | null;
 }
 
-// Written in by the build (vite.config.ts cleanCommitSha) only when the working tree was clean, so it names exactly the
-// code that ran; null on a dev server, from a tree with changes, or without git.
+// Written in by a production build (vite.config.ts buildShaDefine) only when the working tree was clean, so it names
+// exactly the code that ran; null on a dev server (HMR changes the code under a fixed value), from a tree with changes,
+// or without git.
 declare const __MODU_BUILD_SHA__: string | null | undefined;
 const BUILD_SHA = typeof __MODU_BUILD_SHA__ === 'string' ? __MODU_BUILD_SHA__ : null;
 const commitSha = (value: unknown): string | null => typeof value === 'string' && /^[0-9a-f]{40}$/.test(value) ? value : null;
