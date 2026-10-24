@@ -39,6 +39,8 @@ interface DatasetState {
   activeClassFilter: string | null;
   activeLabelFilter: 'all' | 'labeled' | 'unlabeled';
   trainRatio: number;
+  splitPrefill: { id: number; datasetKey: string; authority: string; train: number; val: number; test: number } | null;
+  prefillSplit: (ratio: number) => void;
   isLoading: boolean;
   isGenerating: boolean;
   isSplitting: boolean;
@@ -76,6 +78,7 @@ interface DatasetState {
 let latestImageRequest = 0;
 let latestImportRequest = 0;
 let latestSplitRequest = 0;
+let splitPrefillSequence = 0;
 
 const importKey = (folder: string, task: VisionTask) => `${folder}\0${task}`;
 function datasetAuthorityParts() {
@@ -142,6 +145,7 @@ export const useDatasetStore = create<DatasetState>((set, get) => ({
   activeClassFilter: null,
   activeLabelFilter: 'all',
   trainRatio: 0.8,
+  splitPrefill: null,
   isLoading: false,
   isGenerating: false,
   isSplitting: false,
@@ -161,7 +165,7 @@ export const useDatasetStore = create<DatasetState>((set, get) => ({
     latestSplitRequest += 1;
     set({
       folderPath, hasSelectedFolder: Boolean(folderPath), datasetKey: null, sourceAuthority: null, importError: null, sourceSaveError: null, splitError: null,
-      splitSupported: null, splitUnavailableReason: null,
+      splitSupported: null, splitUnavailableReason: null, splitPrefill: null,
       totalImages: 0, sourceImages: 0, unlabeledImages: 0,
       classes: {}, classCountUnit: null, classSplitCounts: null, split: { train: 0, val: 0, test: 0 },
       images: [], totalImagesCount: 0, corruptedImages: [], excludedUndecodable: null, splitState: null, labelsMissing: false, expectedLayout: '', quickValidation: null,
@@ -182,6 +186,14 @@ export const useDatasetStore = create<DatasetState>((set, get) => ({
     get().loadImages(1);
   },
   setTrainRatio: (trainRatio) => set({ trainRatio }),
+  prefillSplit: (ratio) => {
+    const state = get(), authority = readAuthority();
+    if (!Number.isFinite(ratio) || ratio < 0.1 || ratio > 0.95) throw new Error('학습 비율을 확인할 수 없습니다. 10~95% 중에서 고르세요.');
+    if (!state.hasSelectedFolder || !state.datasetKey || state.sourceAuthority !== authority || state.isLoading || state.splitSupported === false)
+      throw new Error('현재 데이터의 분할을 준비할 수 없습니다. 1단계에서 원본과 분할 지원 여부를 확인하세요.');
+    const train = Math.round(ratio * 100), val = Math.round((100 - train) / 2);
+    set({ trainRatio: ratio, splitPrefill: { id: ++splitPrefillSequence, datasetKey: state.datasetKey, authority, train, val, test: 100 - train - val } });
+  },
 
   importFolder: async (folder, task, allowRecoveryOverride, restoreSaved = false, isCurrent) => {
     const authority = datasetAuthorityParts();

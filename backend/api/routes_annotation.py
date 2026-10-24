@@ -681,12 +681,12 @@ def _recovery_context(image_id, image_path, dir_path):
         if len(peers) > 1:
             raise HTTPException(422, detail='같은 폴더에 확장자만 다른 동일 이름 이미지가 있습니다. 이름을 구분한 뒤 라벨을 보관·복구하세요.')
     if request_project_root() is not None and binding is None:
-        raise HTTPException(422, detail='프로젝트 라벨을 보관·복구하려면 원본 이미지 경로가 필요합니다.')
+        raise HTTPException(422, detail='프로젝트 라벨을 보관·복구할 원본 이미지가 지정되지 않았습니다. 같은 프로젝트의 원본 이미지를 다시 선택하세요.')
     explicit = _trusted_annotation_directory(str(dir_path)) if isinstance(dir_path, (str, Path)) and dir_path else None
     target = (dataset_annotation_dir(Path(image_path).parent, ANNOTATIONS_DIR) if image_path
               else scoped_annotation_root(ANNOTATIONS_DIR))
     if binding is not None and explicit is not None and explicit != target.resolve():
-        raise HTTPException(403, detail='현재 이미지의 프로젝트 라벨 폴더만 보관·복구할 수 있습니다.')
+        raise HTTPException(403, detail='선택한 라벨 폴더가 현재 이미지의 프로젝트 라벨 폴더와 다릅니다. 현재 이미지의 라벨 폴더를 다시 선택하세요.')
     return binding, (explicit or target).absolute()
 
 
@@ -694,7 +694,7 @@ def _recover_annotations(image_id, req, request, recovery_id=None):
     from backend.api.shared_authorization import request_actor
     from backend.engine.team_data import guard_annotation_write, annotation_written, public_image
     actor = request_actor(request, req.actor).strip()
-    if not actor: raise HTTPException(422, detail='작업자 이름을 입력하세요.')
+    if not actor: raise HTTPException(422, detail='작업자 이름이 비어 있습니다. 라벨을 보관·복구할 작업자 이름을 입력하세요.')
     binding, target = _recovery_context(image_id, req.image_path, req.dir_path)
     archive_scope = scoped_annotation_root(ANNOTATIONS_DIR) if binding is not None else None
     files = None
@@ -773,7 +773,7 @@ def annotation_recovery_history(image_id: str, dir_path: Optional[str] = None, i
         return {'image_id': image_id, 'items': annotation_recovery.history(target, image_id,
             scoped_annotation_root(ANNOTATIONS_DIR) if binding is not None else None)}
     except (OSError, ValueError) as exc:
-        raise HTTPException(422, detail=f'라벨 복구 기록을 읽을 수 없습니다 ({exc}).') from exc
+        raise HTTPException(422, detail=f'라벨 복구 기록을 읽을 수 없습니다 ({exc}). 원본 이미지와 복구 사본의 연결을 확인한 뒤 다시 불러오세요.') from exc
 
 
 @router.post('/{image_id}/restore/{recovery_id}')

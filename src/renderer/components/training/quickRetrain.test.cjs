@@ -34,6 +34,7 @@ test('the parent picked by the quick retrain survives its own epoch change and g
  const {TrainingController}=compile('TrainingController.tsx',{react,'lucide-react':new Proxy({},{get:(_,key)=>String(key)}),
   './parentCandidate':{parentCandidateLabel:parent=>parent.job_id,parentCandidateNotice:''},
   './modelTrainingOptions':compile('modelTrainingOptions.ts',{}),
+  './trainingStartSummary':compile('trainingStartSummary.ts',{'./modelTrainingOptions':compile('modelTrainingOptions.ts',{})}),
   '../../services/api':{api:{training:{warmStartParents:async(...args)=>{parentReads.push(args[3]);return{parents,total:2};}}},request:async()=>({states:[],excluded:[]}),getApiPersistenceIdentity:()=>null},
   '../../stores/useProjectStore':{useProjectStore:store({task:'detection',language:'ko',setStep(){},projectDir:'/p',project:{id:'p',source_dataset_dir:'/data',active_labelset_id:'default'},isProjectBusy:false,technicalDetails:false,viewMode:'simple'})},
   '../../stores/useDatasetStore':{useDatasetStore:store({folderPath:'/data',totalImages:10,split:{train:6,val:2,test:2},isLoading:false,isSplitting:false,importError:null,splitError:null,splitSupported:true,splitUnavailableReason:null,datasetKey:'/data\0detection',splitState:'saved',classes:{},classSplitCounts:null})},

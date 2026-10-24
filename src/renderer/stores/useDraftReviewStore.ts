@@ -3,7 +3,7 @@ import { create } from 'zustand';
 /** Another panel's request to open one draft in the queue. `scope` is the project, source, label set and task it was
  *  asked in (the queue drops a request from another scope), `candidateIds` the candidates the person kept there, and
  *  the nonce, never reused, makes a repeated request for the same id count. */
-export interface DraftOpenRequest { id: string; nonce: number; scope: string; candidateIds?: string[] }
+export interface DraftOpenRequest { id: string; nonce: number; scope: string; candidateIds?: string[]; order?: 'uncertain' | 'confident' }
 
 /** How many images have machine drafts waiting for a person, and how many finished models fit the current data, as
  *  the draft review queue last read them. `scope` names the project, source, label set and task those numbers belong
@@ -17,7 +17,7 @@ interface DraftReviewState {
   openRequest: DraftOpenRequest | null;
   publish: (scope: string, pendingImages: number, models?: number) => void;
   /** `scope` defaults to the one the queue last published. */
-  requestOpen: (id: string, candidateIds?: string[], scope?: string) => void;
+  requestOpen: (id: string, candidateIds?: string[], scope?: string, order?: 'uncertain' | 'confident') => void;
   clearOpenRequest: () => void;
   /** Step 2's popovers (the draft queue, 모델 보조 and the image review sheet) open one at a time: opening one names it
    *  here and the others close, so none covers another. */
@@ -38,8 +38,8 @@ export const useDraftReviewStore = create<DraftReviewState>((set) => ({
   models: 0,
   openRequest: null,
   publish: (scope, pendingImages, models = 0) => set({ scope, pendingImages, models }),
-  requestOpen: (id, candidateIds, scope) => set((state) => ({
-    openRequest: { id, nonce: ++lastNonce, scope: scope ?? state.scope, ...(candidateIds ? { candidateIds: [...candidateIds] } : {}) },
+  requestOpen: (id, candidateIds, scope, order) => set((state) => ({
+    openRequest: { id, nonce: ++lastNonce, scope: scope ?? state.scope, ...(candidateIds ? { candidateIds: [...candidateIds] } : {}), ...(order ? {order} : {}) },
   })),
   clearOpenRequest: () => set({ openRequest: null }),
   sidePanel: null,

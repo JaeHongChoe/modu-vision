@@ -18,6 +18,7 @@ import { DraftGrid } from './DraftGrid';
 import { imageLeaseToken } from './teamDataWorkflow';
 import { Explain } from '../common/Explain';
 import { usePopoverHorizontalBounds, usePopoverRoom } from './popoverRoom';
+import {focusWorkflowTarget} from '../wizard/workflowReadiness';
 import { CHANGED_MODEL_MARK, DRAFT_ORDER_TEXT, MIXED_SOURCE_NOTE, OPEN_REQUEST_MISSING_TEXT, adoptable, adoptionHistory, adoptionLine, adoptionSummary, adoptionTitle, canTakeBack,
   closedDraftText, draftError, draftSourceText, gridPages, modelStats, multiAdoptionRefusal, orderDrafts, pageAdoptionRefusal, pendingImageCount, sourcesMixed, staleBatchRefusal,
   supportLimitsText, thresholdAdvice, topConfidence, defaultChoice, emptyPendingDrafts, unknownClassCandidate, UNKNOWN_CLASS_MARK, type AdoptionResult, type DraftOrder, type ModelAdoptionStats } from './draftReview';
@@ -211,6 +212,7 @@ export const DraftReviewQueue: React.FC = () => {
     setOpen(true);
     setMode('list');
     if (draft.status !== 'pending') { setSelectedId(''); setError(null); setNotice(closedDraftText(draft)); return; }
+    if (openRequest.order === 'uncertain' || openRequest.order === 'confident') setOrder(openRequest.order);
     choose(draft);
     if (openRequest.candidateIds) {
       const kept = new Set(openRequest.candidateIds.filter((id) => draft.candidates.some((candidate) => candidate.id === id)));
@@ -426,6 +428,17 @@ export const DraftReviewQueue: React.FC = () => {
     setViewed((previous) => previous.has(id) ? previous : new Set(previous).add(id));
   };
   const pickAllViewed = () => setPicks(new Set(pending.filter((draft) => viewed.has(draft.id) && adoptable(draft)).map((draft) => draft.id)));
+  const openExistingLabels = async () => {
+    const state = useProjectStore.getState(), startedScope = draftReviewScope(state), startedAuthority = readDatasetAuthority();
+    try {
+      // Normal navigation saves pending shapes first. A refused save keeps step 2, so no import panel opens.
+      await state.setStep(1);
+      const current = useProjectStore.getState();
+      if (current.activeStep !== 1 || useAnnotationStore.getState().isDirty
+        || draftReviewScope(current) !== startedScope || readDatasetAuthority() !== startedAuthority) return;
+      focusWorkflowTarget('workflow-label-exchange');
+    } catch (cause) { if (live.current === scope) setError(draftError(cause)); }
+  };
 
   if (!projectDir || !project?.source_dataset_dir) return null;
   return (
@@ -461,6 +474,7 @@ export const DraftReviewQueue: React.FC = () => {
 
             <section id="draft-create" tabIndex={-1} className="space-y-2 rounded-lg border border-slate-700 bg-[#101722] p-3" aria-label="초안 만들기">
               <h4 className="font-semibold text-slate-100">1. 초안 만들기</h4>
+              <div className="flex flex-wrap items-center gap-2 text-xs text-slate-400"><span>이전에 만든 라벨이 있나요?</span><button type="button" className="workspace-button" disabled={!!busy || batchRunning} onClick={openExistingLabels}>기존 라벨 가져오기 (1단계)</button></div>
               {models.length === 0 ? <>
                 {/* Design 3.3 ③: with no trained model, a phrase drafts the unlabeled images (detection and segmentation). */}
                 {(task === 'detection' || task === 'segmentation') && <PhraseDraftCreate key={scope} task={task} disabled={!!busy || isDirty} pendingImages={pendingImagePaths} onRunningChange={setBatchRunning} />}

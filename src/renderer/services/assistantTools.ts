@@ -29,6 +29,12 @@ export interface DraftModel { jobId: string; task: string; dataState: 'current' 
 export interface ImageChoice { path: string; name: string; currentClass: string | null; folderClass: string | null }
 export interface EvaluationFacts { samples: number; escapes: number; overkills: number; accuracy: number | null; threshold: number }
 export interface TrainingFacts { isTraining: boolean; status: string | null; preset: string; computeOnServer: boolean; folderReady: boolean }
+export type ToolCurrent = (() => boolean) & { afterMutation?: () => boolean };
+export type DraftQueueOrder = 'uncertain' | 'confident';
+export interface TrainingSettings {preset?: 'fast' | 'precision'; device?: 'auto' | 'cpu' | 'mps' | 'cuda'; batch_size?: number}
+export function requireToolCurrent(isCurrent?: ToolCurrent): void {
+  if (isCurrent && !isCurrent()) throw new ToolRefusal('context_changed', '프로젝트·원본·라벨 세트 또는 연결이 바뀌었습니다. 현재 화면에서 다시 요청하세요.');
+}
 
 export interface ToolDeps {
   snapshot(): AssistSnapshot | null;
@@ -37,16 +43,21 @@ export interface ToolDeps {
   focusTarget(target?: string): void;
   setTrainRatio(ratio: number): void;
   splitSupport(): { supported: boolean | null; reason: string | null };
-  applySplit(train: number, val: number, test: number): Promise<{ ok: boolean; error?: string | null }>;
+  applySplit(train: number, val: number, test: number, isCurrent?: ToolCurrent): Promise<{ ok: boolean; error?: string | null }>;
   findImage(name: string): ImageChoice[];
-  setImageClass(image: ImageChoice, className: string | null): Promise<{ className: string | null; changed: boolean }>;
+  setImageClass(image: ImageChoice, className: string | null, isCurrent?: ToolCurrent): Promise<{ className: string | null; changed: boolean }>;
   draftModels(): Promise<DraftModel[]>;
-  startDraftBatch(jobId: string, threshold: number): Promise<{ id: string; total: number }>;
+  startDraftBatch(jobId: string, threshold: number, isCurrent?: ToolCurrent): Promise<{ id: string; total: number }>;
   draftStats(): Promise<unknown>;
   impact(): Promise<unknown>;
   evaluation(): EvaluationFacts | null;
   training(): TrainingFacts;
-  startTraining(): Promise<{ jobId: string | null }>;
+  startTraining(isCurrent?: ToolCurrent): Promise<{ jobId: string | null }>;
+  trainingPreparation(isCurrent?: ToolCurrent): Promise<unknown>;
+  prefillTraining(settings: TrainingSettings, isCurrent?: ToolCurrent): Promise<unknown>;
+  pendingDrafts(order: DraftQueueOrder, limit: number, isCurrent?: ToolCurrent): Promise<unknown>;
+  openPendingDraft(id: string | undefined, order: DraftQueueOrder, isCurrent?: ToolCurrent): Promise<unknown>;
+  evaluationGuidance(): unknown;
 }
 
 interface ToolDefinition {
@@ -56,14 +67,15 @@ interface ToolDefinition {
   parameters: Record<string, unknown>;
   /** forbidden: where the person does it themselves */
   where?: string;
-  run?(args: Record<string, unknown>): Promise<ToolOutcome>;
-  preview?(args: Record<string, unknown>): Promise<ToolPreview>;
-  execute?(args: Record<string, unknown>): Promise<ToolOutcome>;
+  run?(args: Record<string, unknown>, isCurrent?: ToolCurrent): Promise<ToolOutcome>;
+  preview?(args: Record<string, unknown>, isCurrent?: ToolCurrent): Promise<ToolPreview>;
+  execute?(args: Record<string, unknown>, isCurrent?: ToolCurrent): Promise<ToolOutcome>;
 }
 
 const NO_ARGS = { type: 'object', properties: {}, additionalProperties: false };
 const json = (value: unknown) => JSON.stringify(value);
 const ok = (content: unknown, summary: string, link?: string): ToolOutcome => ({ ok: true, content: typeof content === 'string' ? content : json(content), summary, ...(link ? { link } : {}) });
+const currentArg = (current?: ToolCurrent): [ToolCurrent?] => current ? [current] : [];
 
 function integer(args: Record<string, unknown>, key: string, min: number, max: number, fallback?: number): number {
   const value = args[key] ?? fallback;
@@ -111,6 +123,16 @@ export function createAssistantTools(deps: ToolDeps): AssistantToolRegistry {
         const value = deps.evaluation();
         return ok(value ?? { loaded: false, hint: '4단계에서 평가를 실행하거나 불러오면 읽을 수 있습니다.' }, value ? '평가 요약을 읽었습니다.' : '불러온 평가가 없습니다.');
       } },
+    { name: 'read_evaluation_guidance', tier: 'read', parameters: NO_ARGS,
+      description: '현재 평가의 점수 의미·평가 분할·정답 범위와 이미 기록된 기준 점수 권고의 놓친 불량/잘못 잡은 정상 수를 읽습니다. 기준값 적용·추론·승인은 하지 않습니다.',
+      run: async () => ok(deps.evaluationGuidance(), '평가 조건과 기준 점수 근거를 읽었습니다.') },
+    { name: 'read_training_preparation', tier: 'read', parameters: NO_ARGS,
+      description: '도우미 학습 시작 경로의 실제 분할·검수·기본 모델 가중치·선택 장치 준비를 기존 백엔드 점검으로 읽습니다. 커스텀 모델 설정은 3단계에서 확인하며 학습·다운로드는 시작하지 않습니다.',
+      run: async (_args, current) => { const evidence = await deps.trainingPreparation(current); requireToolCurrent(current); return ok(evidence, '실제 학습 준비 근거를 읽었습니다. 학습은 시작하지 않았습니다.'); } },
+    { name: 'read_pending_drafts', tier: 'read',
+      description: '현재 초안 검토 큐의 후보가 있는 대기 초안을 신뢰도 순으로 읽습니다. uncertain은 덜 확신하는 것부터이며 채택하지 않습니다.',
+      parameters: {type: 'object', properties: {order: {type: 'string', enum: ['uncertain', 'confident']}, limit: {type: 'integer', minimum: 1, maximum: 24}}, additionalProperties: false},
+      run: async (args, current) => { const rows = await deps.pendingDrafts(queueOrder(args), integer(args, 'limit', 1, 24, 12), current); requireToolCurrent(current); return ok(rows, '검토할 초안을 순서대로 읽었습니다.'); } },
     { name: 'read_draft_stats', tier: 'read', parameters: NO_ARGS,
       description: '모델별 초안 채택률(채택·거절·채택 뒤 수정)과 기준 신뢰도 추천을 읽습니다.',
       run: async () => {
@@ -131,29 +153,49 @@ export function createAssistantTools(deps: ToolDeps): AssistantToolRegistry {
     { name: 'open_step', tier: 'navigate',
       description: '단계 화면을 엽니다(1~6). 버튼은 누르지 않습니다. target은 화면 안 위치 ID(선택).',
       parameters: { type: 'object', properties: { step: { type: 'integer', minimum: 1, maximum: 6 }, target: { type: 'string', pattern: '^[a-z][a-z0-9-]{1,63}$' } }, required: ['step'], additionalProperties: false },
-      run: async args => {
+      run: async (args, current) => {
         const step = integer(args, 'step', 1, 6);
         const target = typeof args.target === 'string' && /^[a-z][a-z0-9-]{1,63}$/.test(args.target) ? args.target : undefined;
-        await deps.setStep(step);deps.focusTarget(target);
+        requireToolCurrent(current);await deps.setStep(step);requireToolCurrent(current);deps.focusTarget(target);
         return ok(`${step}단계(${STEP_NAMES[step]}) 화면을 열었습니다. 다음 버튼은 사람이 직접 누릅니다.`, `${step}단계 화면을 열었습니다.`);
       } },
     { name: 'open_next_action', tier: 'navigate', parameters: NO_ARGS,
       description: '하단 안내의 다음 행동이 있는 화면과 위치를 엽니다. 버튼은 누르지 않습니다.',
-      run: async () => {
+      run: async (_args, current) => {
         const next = deps.snapshot()?.nextAction;
         if (!next) throw new ToolRefusal('no_next_action', '지금 다음 행동을 읽지 못했습니다. read_status로 상태를 먼저 확인하세요.');
-        await deps.setStep(next.step);deps.focusTarget(next.target);
+        requireToolCurrent(current);await deps.setStep(next.step);requireToolCurrent(current);deps.focusTarget(next.target);
         return ok(`"${next.label}" 위치(${next.step}단계)를 열었습니다. 사람이 직접 누릅니다.`, `"${next.label}" 위치를 열었습니다.`);
       } },
     { name: 'prefill_split', tier: 'navigate',
       description: '1단계 분할 화면을 열고 학습 비율을 채워 둡니다(저장하지 않음). 저장은 사람이 누릅니다.',
       parameters: { type: 'object', properties: { train_percent: { type: 'integer', minimum: 10, maximum: 95 } }, required: ['train_percent'], additionalProperties: false },
-      run: async args => {
+      run: async (args, current) => {
         const train = integer(args, 'train_percent', 10, 95);
-        const wasOpen = deps.snapshot()?.stage === 1;
-        deps.setTrainRatio(train / 100);await deps.setStep(1);deps.focusTarget('workflow-data');
-        return ok(wasOpen ? `학습 비율 ${train}%를 기억해 두었지만 이미 열린 분할 막대에는 바로 보이지 않을 수 있습니다. 화면에서 막대를 ${train}%로 맞추고 '분할 저장'을 누르세요.`
-          : `1단계를 열고 학습 비율 ${train}%를 채웠습니다. 확인한 뒤 사람이 '분할 저장'을 누릅니다.`, `학습 비율 ${train}%를 채웠습니다(저장 안 함).`);
+        requireToolCurrent(current);deps.setTrainRatio(train / 100);await deps.setStep(1);requireToolCurrent(current);deps.focusTarget('workflow-data');
+        return ok(`학습 비율 ${train}%를 채웠습니다. 1단계 분할 막대를 확인한 뒤 사람이 '분할 저장'을 누릅니다.`, `학습 비율 ${train}%를 채웠습니다(저장 안 함).`);
+      } },
+    { name: 'prefill_training', tier: 'navigate',
+      description: '3단계의 다음 학습 프리셋·배치 크기·로컬 장치 설정만 채웁니다. 서버 선택은 유지하며 학습·가중치 다운로드는 하지 않습니다. 이어서 read_training_preparation으로 근거를 확인하세요.',
+      parameters: {type: 'object', properties: {preset: {type: 'string', enum: ['fast', 'precision']}, device: {type: 'string', enum: ['auto', 'cpu', 'mps', 'cuda']}, batch_size: {type: 'integer', minimum: 1, maximum: 128}}, additionalProperties: false},
+      run: async (args, current) => {
+        if (!Object.keys(args).length || Object.keys(args).some(key => !['preset', 'device', 'batch_size'].includes(key))
+          || (args.preset !== undefined && !['fast', 'precision'].includes(String(args.preset)))
+          || (args.device !== undefined && !['auto', 'cpu', 'mps', 'cuda'].includes(String(args.device)))) throw new ToolRefusal('invalid_arguments', '프리셋 fast/precision, 장치 auto/cpu/mps/cuda, 배치 1~128 중 채울 값을 입력하세요.');
+        if (deps.training().isTraining) throw new ToolRefusal('already_training', '학습 중에는 다음 학습 설정을 바꾸지 않습니다. 작업이 끝난 뒤 다시 요청하세요.');
+        const settings: TrainingSettings = {...(args.preset !== undefined ? {preset: args.preset as TrainingSettings['preset']} : {}),
+          ...(args.device !== undefined ? {device: args.device as TrainingSettings['device']} : {}), ...(args.batch_size !== undefined ? {batch_size: integer(args, 'batch_size', 1, 128)} : {})};
+        requireToolCurrent(current);const configured = await deps.prefillTraining(settings, current);
+        requireToolCurrent(current);await deps.setStep(3);requireToolCurrent(current);deps.focusTarget('workflow-training');
+        return ok({settings: configured, training_started: false, weights_downloaded: false, next: 'read_training_preparation'}, '학습 설정만 채웠습니다. 준비 근거를 확인한 뒤 사람이 학습을 시작하세요.');
+      } },
+    { name: 'open_pending_draft', tier: 'navigate',
+      description: '현재 대기 초안을 기존 초안 검토 큐에서 엽니다. proposal_id가 없으면 요청한 신뢰도 순서의 첫 초안이며 현재 편집 저장이 실패하면 이동하지 않습니다. 채택·정답 확정은 하지 않습니다.',
+      parameters: {type: 'object', properties: {proposal_id: {type: 'string', minLength: 1, maxLength: 128}, order: {type: 'string', enum: ['uncertain', 'confident']}}, additionalProperties: false},
+      run: async (args, current) => {
+        if (args.proposal_id !== undefined && (typeof args.proposal_id !== 'string' || !args.proposal_id.trim() || args.proposal_id.length > 128)) throw new ToolRefusal('invalid_arguments', '현재 대기 목록의 proposal_id를 입력하세요.');
+        requireToolCurrent(current);const opened = await deps.openPendingDraft(args.proposal_id as string | undefined, queueOrder(args), current);
+        return ok(opened, '초안 검토 큐를 열었습니다. 미리보기를 확인하고 사람이 채택하세요.');
       } },
     // ---- write (preview + confirmation) ----
     { name: 'save_split', tier: 'write',
@@ -169,10 +211,10 @@ export function createAssistantTools(deps: ToolDeps): AssistantToolRegistry {
           `지금: 학습 ${value.split.train} · 검증 ${value.split.val} · 시험 ${value.split.test}장`, '원본 이미지 파일은 옮기지 않고 분할 목록만 저장합니다.'],
           undo: '같은 화면(1단계)에서 다시 나누거나 데이터 버전 복원으로 되돌립니다. 분할을 바꾸면 이전 학습·평가는 다시 확인해야 합니다.' };
       },
-      execute: async args => {
+      execute: async (args, current) => {
         const train = integer(args, 'train_percent', 10, 95), val = integer(args, 'val_percent', 5, 50), test = integer(args, 'test_percent', 0, 40, 0);
         if (train + val + test !== 100) throw new ToolRefusal('invalid_arguments', '학습·검증·시험 비율의 합은 100이어야 합니다.');
-        const result = await deps.applySplit(train / 100, val / 100, test / 100);
+        requireToolCurrent(current);const result = await deps.applySplit(train / 100, val / 100, test / 100, ...currentArg(current));requireToolCurrent(current?.afterMutation ?? current);
         if (!result.ok) throw new ToolRefusal('split_failed', result.error || '분할을 저장하지 못했습니다. 1단계 화면의 오류를 확인하세요.');
         const after = facts().split;
         return ok({ saved: true, split: after }, `분할을 저장했습니다(학습 ${after.train} · 검증 ${after.val} · 시험 ${after.test}장).`);
@@ -186,23 +228,25 @@ export function createAssistantTools(deps: ToolDeps): AssistantToolRegistry {
           '이미지 파일은 옮기지 않습니다. 학습·평가·1단계 수가 이 클래스를 씁니다.'],
           undo: `같은 이미지의 클래스를 다시 ${image.currentClass ?? '원래 값'}로 지정하면 됩니다(2단계 '이 이미지의 클래스'). 변경은 이미지 감사 기록(class_changed)에 남습니다.` };
       },
-      execute: async args => {
+      execute: async (args, current) => {
         const { image, className } = classChoice(deps, args);
-        const result = await deps.setImageClass(image, className);
+        requireToolCurrent(current);const result = await deps.setImageClass(image, className, ...currentArg(current));requireToolCurrent(current?.afterMutation ?? current);
         return ok({ image: image.name, class: result.className, changed: result.changed }, `${image.name}의 클래스를 ${result.className ?? '폴더 클래스'}로 지정했습니다.`, 'class_changed');
       } },
     { name: 'generate_label_drafts', tier: 'write',
       description: '완료 모델로 라벨 없는 이미지의 초안을 만듭니다(라벨 파일은 바뀌지 않음, 채택은 사람이 2단계 초안 검토에서). 사람이 확인해야 실행됩니다.',
       parameters: { type: 'object', properties: { model_job_id: { type: 'string', maxLength: 128 }, threshold: { type: 'number', minimum: 0.05, maximum: 0.95 } }, additionalProperties: false },
-      preview: async args => {
+      preview: async (args, current) => {
         const { model, threshold } = await draftChoice(deps, args), value = facts();
+        requireToolCurrent(current);
         return { title: '라벨 초안 만들기', lines: [`모델 ${model.jobId}${model.dataState === 'changed' ? ' · 데이터가 바뀐 뒤 학습한 모델 · 평가 근거 아님' : ''}`,
           `기준 신뢰도 ${threshold.toFixed(2)} · 라벨 없는 이미지 약 ${value.unlabeled}장`, '초안은 정답이 아니며 라벨 파일·학습 데이터를 바꾸지 않습니다.'],
           undo: '만들어진 초안은 2단계 초안 검토에서 거절하면 사라지고, 실행 중이면 같은 곳에서 취소할 수 있습니다.' };
       },
-      execute: async args => {
+      execute: async (args, current) => {
         const { model, threshold } = await draftChoice(deps, args);
-        const batch = await deps.startDraftBatch(model.jobId, threshold);
+        requireToolCurrent(current);
+        const batch = await deps.startDraftBatch(model.jobId, threshold, ...currentArg(current));requireToolCurrent(current?.afterMutation ?? current);
         return ok({ batch_id: batch.id, images: batch.total, threshold }, `초안 만들기를 시작했습니다(이미지 ${batch.total}장). 2단계 초안 검토에서 확인하세요.`, `batch:${batch.id}`);
       } },
     { name: 'start_training', tier: 'write', parameters: NO_ARGS,
@@ -213,9 +257,10 @@ export function createAssistantTools(deps: ToolDeps): AssistantToolRegistry {
           `프리셋 ${state.preset} · 계산 위치 ${state.computeOnServer ? '선택한 계산 서버' : '이 컴퓨터'}`],
           undo: '3단계에서 \'학습 중지\'를 누르면 멈춥니다. 기존 모델과 데이터는 바뀌지 않습니다.' };
       },
-      execute: async () => {
+      execute: async (_args, current) => {
         trainingReady(deps);
-        const started = await deps.startTraining();
+        requireToolCurrent(current);
+        const started = await deps.startTraining(...currentArg(current));requireToolCurrent(current?.afterMutation ?? current);
         return ok({ started: true, job_id: started.jobId }, '학습을 시작했습니다. 3단계에서 진행을 볼 수 있습니다.', started.jobId ? `job:${started.jobId}` : undefined);
       } },
     // ---- forbidden: the person does these themselves ----
@@ -256,6 +301,11 @@ async function draftChoice(deps: ToolDeps, args: Record<string, unknown>): Promi
   return { model: draftModelChoice(models, args.model_job_id), threshold: Math.round(threshold * 100) / 100 };
 }
 
+function queueOrder(args: Record<string, unknown>): DraftQueueOrder {
+  if (args.order !== undefined && args.order !== 'uncertain' && args.order !== 'confident') throw new ToolRefusal('invalid_arguments', 'order는 uncertain 또는 confident여야 합니다.');
+  return args.order === 'confident' ? 'confident' : 'uncertain';
+}
+
 function trainingReady(deps: ToolDeps): TrainingFacts {
   const snapshot = deps.snapshot(), state = deps.training();
   if (state.isTraining) throw new ToolRefusal('already_training', '이미 학습이 진행 중입니다. 3단계에서 진행을 확인하세요.');
@@ -277,10 +327,10 @@ export class AssistantToolRegistry {
   tier(name: string): ToolTier | null { return this.byName.get(name)?.tier ?? null; }
 
   /** read and navigate tools only; any other tier is refused here, whatever the caller asks. */
-  async runAutomatic(name: string, args: Record<string, unknown>): Promise<ToolOutcome> {
+  async runAutomatic(name: string, args: Record<string, unknown>, isCurrent?: ToolCurrent): Promise<ToolOutcome> {
     const tool = this.byName.get(name);
     if (!tool || (tool.tier !== 'read' && tool.tier !== 'navigate') || !tool.run) throw new ToolRefusal('not_automatic', '이 도구는 바로 실행할 수 없습니다.');
-    return tool.run(args);
+    requireToolCurrent(isCurrent);return tool.run(args, isCurrent);
   }
 
   /** The answer for a forbidden tool: it is never run. */
@@ -290,17 +340,17 @@ export class AssistantToolRegistry {
     return { ok: false, errorCode: 'forbidden', content: `직접 하세요. ${where}`, summary: `직접 하세요: ${where}` };
   }
 
-  async preview(name: string, args: Record<string, unknown>): Promise<ToolPreview> {
+  async preview(name: string, args: Record<string, unknown>, isCurrent?: ToolCurrent): Promise<ToolPreview> {
     const tool = this.byName.get(name);
     if (!tool || tool.tier !== 'write' || !tool.preview) throw new ToolRefusal('not_write', '이 도구는 미리보기 대상이 아닙니다.');
-    return tool.preview(args);
+    requireToolCurrent(isCurrent);const preview = await tool.preview(args, isCurrent);requireToolCurrent(isCurrent);return preview;
   }
 
   /** A write tool runs only with the person's confirmation from the panel and a run id for its backend write. */
-  async execute(name: string, args: Record<string, unknown>, confirmation: { confirmed: boolean; runId: string } | null | undefined): Promise<ToolOutcome> {
+  async execute(name: string, args: Record<string, unknown>, confirmation: { confirmed: boolean; runId: string; isCurrent?: ToolCurrent } | null | undefined): Promise<ToolOutcome> {
     const tool = this.byName.get(name);
     if (!tool || tool.tier !== 'write' || !tool.execute) throw new ToolRefusal('not_write', '쓰기 도구가 아닙니다.');
     if (confirmation?.confirmed !== true || !/^run_[a-f0-9]{24}$/.test(confirmation.runId)) throw new ToolRefusal('confirmation_required', '사람의 확인 없이 쓰기 도구를 실행하지 않습니다.');
-    return tool.execute(args);
+    requireToolCurrent(confirmation.isCurrent);return tool.execute(args, confirmation.isCurrent);
   }
 }

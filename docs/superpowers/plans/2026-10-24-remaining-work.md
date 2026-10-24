@@ -51,3 +51,35 @@ Progress at source freeze:
 - Step7 independent review and local final renderer/types/build/evidence gates
   passed. Meaningful commit/PR and exact-head hosted regression follow source
   freeze; old PR6 success does not qualify this work. Keep ux monitoring paused.
+
+Whole-design audit follow-up (user correction, 2026-10-24):
+- The first source bundle was not the complete design. Exact-head full source
+  regression39992275090 failed its Korean refusal check while browser passed;
+  merge worker safely held. Four newly added recovery strings were corrected,
+  with the unchanged refusal test and scoped recovery/security/transaction/team
+  tests99 passing.
+- Implement missing assistant scope/preview/image/receiver binding and async
+  response guards, including ABA epochs and failed IPC grants. Add actual-store
+  lifecycle tests and scoped mutation/read/navigation checks.
+- Implement existing design intents for training readiness/settings, ordered
+  pending draft opening, and evidence-bound evaluation threshold guidance.
+  Wire split prefill to the already-mounted calibrator without a split write.
+- Close evaluated UI omissions: shared evaluation/flow errors, folded technical
+  detection metrics, existing-label import entry, and concrete auto-start summary.
+- Prepare offline SIWC protocol contracts/fixtures only. Live registration,
+  browser login, terms acceptance, account/plans and application integration remain
+  distinct conditional work; never reuse another application's auth material.
+- Integrate focused/renderer/types/build/evidence and narrow actual browser QA,
+  review the final source, update PR10, and run one new exact-head full regression.
+  No new model/training, existing held QA or recurring monitor is started for this.
+
+Follow-up source freeze:
+- Missing easy-use/assistant paths and scoped consent guards implemented.
+- Offline SIWC module20 synthetic cases; deliberately no production import/live
+  transport/account/persistence. Full app connection remains conditional work.
+- Full renderer/main Node suite1878/1878; renderer/main/E2E types, build and
+  source/action evidence gates passed. Scoped backend99 and targeted real browser1
+  passed. Earlier integration failures and exact-head source failure are retained
+  in the follow-up QA record rather than counted as passes.
+- New source publication/exact-head hosted qualification follows. Existing
+ 15-minute ux monitoring remains paused.

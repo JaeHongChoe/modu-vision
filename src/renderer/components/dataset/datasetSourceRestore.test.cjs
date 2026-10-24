@@ -45,3 +45,20 @@ test('an older in-flight same-folder summary cannot replace the next project sou
 test('clearing a source does not dispatch a summary for the empty folder',()=>{
  const h=harness();h.render();h.store.getState().setFolderPath('');h.render();assert.deepEqual(h.reads,[]);assert.deepEqual(h.writes,[]);
 });
+
+function descendants(node,output=[]){if(!node||typeof node!=='object')return output;if(Array.isArray(node)){node.forEach(n=>descendants(n,output));return output;}output.push(node);descendants(node.props?.children,output);return output;}
+const slider=tree=>descendants(tree).find(n=>n.type==='input'&&n.props.type==='range');
+test('assistant split prefill updates an already mounted bar without saving or overwriting later manual input',()=>{
+ const h=harness();h.store.setState({splitSupported:true,split:{train:16,val:2,test:2},totalImages:20,splitState:'saved'});
+ let tree=h.render();assert.equal(slider(tree).props.value,80);
+ h.store.getState().prefillSplit(0.7);h.render();tree=h.render();assert.equal(slider(tree).props.value,70);
+ assert.deepEqual(h.store.getState().split,{train:16,val:2,test:2});assert.deepEqual(h.writes,[]);
+ slider(tree).props.onChange({target:{value:'85'}});tree=h.render();assert.equal(slider(tree).props.value,85);
+ h.render();tree=h.render();assert.equal(slider(tree).props.value,85,'a consumed request does not undo a manual edit');
+});
+test('a split prefill from another dataset or authority is not adopted',()=>{
+ const h=harness();h.store.setState({splitSupported:true,split:{train:16,val:2,test:2},totalImages:20,splitState:'saved'});h.render();
+ h.store.getState().prefillSplit(0.6);const old=h.store.getState().splitPrefill;
+ h.switchProject('B');h.store.setState({datasetKey:'/source\0anomaly',sourceAuthority:'other',splitPrefill:old,split:{train:16,val:2,test:2},totalImages:20,splitState:'saved'});
+ h.render();const tree=h.render();assert.equal(slider(tree).props.value,80);assert.deepEqual(h.writes,[]);
+});

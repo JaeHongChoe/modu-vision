@@ -314,9 +314,13 @@ const row = (id, image, extra = {}) => ({id, status: 'pending', image_path: imag
   job_id: 'job_b', batch_id: 'batch_1', candidates: [{id: `${id}_c0`, confidence: 0.8, annotation: {type: 'bbox', label: 'defect', bbox: [1, 1, 5, 5]}},
     {id: `${id}_c1`, confidence: 0.6, annotation: {type: 'bbox', label: 'defect', bbox: [6, 6, 9, 9]}}], accepted_candidate_ids: [], ...extra});
 
-function queueFixture({drafts, request = null, models = [], stats = async () => ({models: []}), list, reviewerName = 'kai', workflow = {}}) {
-  const runtime = hookRuntime(), calls = {list: 0, stats: 0}, at = {scope: 'scope-B'};
+function queueFixture({drafts, request = null, models = [], stats = async () => ({models: []}), list, reviewerName = 'kai', workflow = {}, move} = {}) {
+  const runtime = hookRuntime(), calls = {list: 0, stats: 0}, at = {scope: 'scope-B', authority: 'local-A'};
   const annotation = {currentImage: null, isDirty: false, reviewerName, setReviewerName() {}};
+  const projectState = {activeStep: 2, projectDir: '/project-B', project: {source_dataset_dir: '/source-B'}, task: 'detection', openImageForLabeling: async () => true,
+    async setStep(step) {if (move) await move(projectState, annotation); else {projectState.activeStep = step; annotation.isDirty = false;}}};
+  const realScope = load(path.join(__dirname, '../../stores/useDraftReviewStore.ts')).draftReviewScope;
+  const originalScope = realScope(projectState);
   const review = {publish() {}, openRequest: request, clearOpenRequest() { review.openRequest = null; }, sidePanel: null, showSidePanel(panel) { review.sidePanel = panel; }};
   const api = {labelSuggestions: {
     list: async () => { calls.list++; return list ? list(at.scope) : {suggestions: drafts.map(draft => ({...draft}))}; },
@@ -329,18 +333,45 @@ function queueFixture({drafts, request = null, models = [], stats = async () => 
     '../../services/datasetWorkflow': {datasetWorkflow: workflow},
     '../../services/teamDataApi': {teamDataApi: {}},
     '../../stores/useAnnotationStore': {useAnnotationStore: fakeStore(annotation)},
-    '../../stores/useDatasetStore': {readDatasetAuthority: () => 'a', useDatasetStore: fakeStore({annotationsChanged: async () => {}})},
-    '../../stores/useProjectStore': {useProjectStore: fakeStore({projectDir: '/project-B', project: {source_dataset_dir: '/source-B'}, task: 'detection', openImageForLabeling: async () => true})},
+    '../../stores/useDatasetStore': {readDatasetAuthority: () => at.authority, useDatasetStore: fakeStore({annotationsChanged: async () => {}})},
+    '../../stores/useProjectStore': {useProjectStore: fakeStore(projectState)},
+    '../wizard/workflowReadiness': {focusWorkflowTarget(target) {calls.focus = target;}},
     '../../stores/useModelAssistRunStore': {useModelAssistRunStore: fakeStore({begin() {}, end() {}})},
-    '../../stores/useDraftReviewStore': {draftReviewScope: () => at.scope, useDraftReviewStore: fakeStore(review)},
+    '../../stores/useDraftReviewStore': {draftReviewScope: input => realScope(input) === originalScope ? at.scope : realScope(input), useDraftReviewStore: fakeStore(review)},
     '../../stores/workflowEvidence': {bumpWorkflowEvidence() {}, subscribeWorkflowEvidence: () => () => {}},
     '../../stores/assistContext': {reportPanelError() {}},
     './BulkLabelAssist': {BulkLabelAssist: 'BulkLabelAssist'}, './PhraseDraftCreate': {PhraseDraftCreate: 'PhraseDraftCreate'}, './SuggestionPreview': {SuggestionPreview: 'SuggestionPreview'}, './DraftGrid': {DraftGrid: 'DraftGrid'},
     './teamDataWorkflow': {imageLeaseToken: () => undefined}, '../common/Explain': {Explain: 'Explain'},
     './draftReview': helpers(), './popoverRoom': popoverRoom(runtime),
   }, 'var window = {innerHeight: 1000, addEventListener() {}, removeEventListener() {}};');
-  return {calls, review, at, annotation, settle: cycles => runtime.settle(DraftReviewQueue, cycles)};
+  return {calls, review, at, annotation, projectState, settle: cycles => runtime.settle(DraftReviewQueue, cycles)};
 }
+
+test('draft review links existing labels to their original step-1 exchange after guarded navigation', async () => {
+  const queue = queueFixture({drafts: []});
+  let tree = await queue.settle();byLabel(tree, '초안 검토 패널').props.onClick();tree = await queue.settle();
+  const link = buttonWith(tree, '기존 라벨 가져오기');assert.ok(link, 'existing annotations have a reuse entry beside draft creation');
+  queue.annotation.isDirty = true;
+  await link.props.onClick();
+  assert.equal(queue.projectState.activeStep, 1);assert.equal(queue.annotation.isDirty, false);
+  assert.equal(queue.calls.focus, 'workflow-label-exchange');
+});
+for (const reason of ['failed-save', 'changed-context']) test(`draft import does not open another stage after ${reason}`, async () => {
+  const queue = queueFixture({drafts: [], move: async (project, annotation) => {
+    if (reason === 'changed-context') {project.activeStep = 1; project.project = {source_dataset_dir: '/other'};}
+    else annotation.isDirty = true;
+  }});
+  let tree = await queue.settle();byLabel(tree, '초안 검토 패널').props.onClick();tree = await queue.settle();
+  const link = buttonWith(tree, '기존 라벨 가져오기');assert.ok(link);
+  await link.props.onClick();assert.equal(queue.calls.focus, undefined);
+});
+test('draft import retires a pending navigation after the transport authority changes', async () => {
+  let resume;
+  const queue = queueFixture({drafts: [], move: async project => {await new Promise(resolve => {resume=resolve;});project.activeStep=1;}});
+  let tree = await queue.settle();byLabel(tree, '초안 검토 패널').props.onClick();tree = await queue.settle();
+  const pending=buttonWith(tree,'기존 라벨 가져오기').props.onClick();
+  queue.at.authority='other-transport';resume();await pending;assert.equal(queue.calls.focus,undefined);
+});
 
 test('an external draft whose limits are one sentence opens in the queue and shows that sentence', async () => {
   // Every provider stores support_limits as a string; joining it like a list threw and unmounted the window.
@@ -388,6 +419,16 @@ test('a request from 모델 보조 opens with only the candidates kept there', a
   assert.deepEqual([...nodes(block).find(node => node.type === 'SuggestionPreview').props.selectedIds], ['d1_c1']);
   assert.deepEqual(nodes(block).filter(node => node.type === 'input' && node.props.type === 'checkbox').map(node => node.props.checked), [false, true],
     'the unchecked box stays out of 선택 후보 채택');
+});
+
+test('a scoped assistant request sets the visible queue order once and keeps adoption manual', async () => {
+  const queue = queueFixture({drafts: [row('d1', '/b/1.png')], request: {id: 'd1', nonce: 20, scope: 'scope-B', order: 'confident'}});
+  let tree = await queue.settle();
+  assert.equal(byLabel(tree, '초안 순서').props.value, 'confident');
+  assert.equal(queue.review.openRequest, null);
+  assert.ok(byLabel(tree, '선택한 초안'));
+  byLabel(tree, '초안 순서').props.onChange({target: {value: 'uncertain'}}); tree = await queue.settle();
+  assert.equal(byLabel(tree, '초안 순서').props.value, 'uncertain', 'the consumed request cannot replay over a human change');
 });
 
 test('the grid keeps a page\'s exclusions when a tile is opened or the list is visited', async () => {

@@ -16,3 +16,10 @@ async function setup(){global.window={addEventListener(){},removeEventListener()
 test('retained split callback refuses changed project generation before submission',async()=>{const h=await setup();const action=h.nodes(h.render()).find(n=>n.type==='button'&&n.children.includes('분할 미리보기')).props.onClick;h.advance();await action();assert.equal(h.calls(),0);});
 test('late split preview from an earlier generation cannot repopulate current panel',async()=>{const h=await setup();const pending=h.nodes(h.render()).find(n=>n.type==='button'&&n.children.includes('분할 미리보기')).props.onClick();h.advance();h.render();h.resolve({assignments:{},split:{train:1,val:1,test:1},group_count:999,duplicates:[],applied:false,apply_supported:true});await pending;assert.ok(!h.nodes(h.render()).some(n=>n.children.some(c=>typeof c==='string'&&c.includes('독립 그룹 999'))));});
 test('split preview waits while a reload still restores the saved source, so the restored scope cannot wipe its result',async()=>{const h=await setup();const preview=()=>h.nodes(h.render()).find(n=>n.type==='button'&&n.children.includes('분할 미리보기'));h.dataset.isLoading=true;assert.equal(preview().props.disabled,true);await tick();assert.equal(preview().props.disabled,true);h.dataset.isLoading=false;h.render();await tick();assert.equal(preview().props.disabled,false);});
+test('workflow focus can open the existing label exchange without applying any labels',async()=>{
+ const h=await setup();const tree=h.render(),nodes=h.nodes(tree);
+ assert.ok(nodes.some(n=>n.type==='button'&&n.props['data-workflow-opens']==='workflow-label-exchange'));
+ const exchange=nodes.find(n=>n.props.id==='workflow-label-exchange');assert.ok(exchange);assert.equal(exchange.type,'summary');
+ assert.equal(exchange.props.tabIndex,0,'the disclosure stays in keyboard tab order');assert.ok(nodes.some(n=>n.children.includes('가져오기 미리보기')));
+ assert.equal(h.calls(),0,'opening the exchange does not save or import');
+});

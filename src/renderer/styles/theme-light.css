@@ -21,7 +21,7 @@ html[data-theme="light"] .workspace-badge[data-tone="danger"] { background: #FEE
 html[data-theme="light"] .workspace-badge[data-tone="info"] { background: #E0F2FE; }
 html[data-theme="light"] .workspace-field :is(input, select, textarea) { border-color: #94A3B8; }
 html[data-theme="light"] .flow-canvas-grid { --flow-grid-line: #E2E8F0; }
-html[data-theme="light"] .text-slate-400 { color: #475569; } /* 806 */
+html[data-theme="light"] .text-slate-400 { color: #475569; } /* 808 */
 html[data-theme="light"] .text-slate-300 { color: #334155; } /* 393 */
 html[data-theme="light"] .border-\[\#2B3547\] { border-color: #CBD5E1; } /* 337 */
 html[data-theme="light"] .border-slate-600 { border-color: #CBD5E1; } /* 307 */
@@ -38,7 +38,7 @@ html[data-theme="light"] .bg-slate-800 { background-color: #FFFFFF; } /* 108 */
 html[data-theme="light"] .bg-\[\#131822\] { background-color: #FFFFFF; } /* 104 */
 html[data-theme="light"] .text-cyan-200 { color: #0E7490; } /* 88 */
 html[data-theme="light"] .bg-slate-900 { background-color: #F1F5F9; } /* 75 */
-html[data-theme="light"] .text-red-300 { color: #B91C1C; } /* 65 */
+html[data-theme="light"] .text-red-300 { color: #B91C1C; } /* 66 */
 html[data-theme="light"] .text-emerald-300 { color: #047857; } /* 63 */
 html[data-theme="light"] .border-\[\#344255\] { border-color: #CBD5E1; } /* 57 */
 html[data-theme="light"] .bg-\[\#0E1722\] { background-color: #E6ECF5; } /* 49 */

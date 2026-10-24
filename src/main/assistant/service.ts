@@ -83,8 +83,10 @@ export interface AssistantServiceOptions {store:AssistantKeyStore;fetchImpl?:typ
 
 export class AssistantService {
   private readonly running = new Map<string, AbortController>();
-  private readonly grants = new Map<string, {provider:AssistantProviderId;model:string;expires:number}>();
+  private readonly grants = new Map<string, {receiver:string;imageIdentity:string;expires:number}>();
   constructor(private readonly options:AssistantServiceOptions) {}
+
+  private receiver(config:ProviderConfig):string {return JSON.stringify([config.provider,config.baseUrl,config.model,config.format,config.supportsImages]);}
 
   private now():number {return this.options.now ? this.options.now() : Date.now();}
 
@@ -97,10 +99,10 @@ export class AssistantService {
     }
   }
   state():AssistantConfigState {return this.settings(() => this.options.store.state());}
-  save(input:AssistantProviderInput):AssistantConfigState {return this.settings(() => this.options.store.save(input));}
-  removeKey(provider:AssistantProviderId):AssistantConfigState {return this.settings(() => this.options.store.removeKey(provider));}
-  removeProvider(provider:AssistantProviderId):AssistantConfigState {return this.settings(() => this.options.store.removeProvider(provider));}
-  setActive(provider:AssistantProviderId):AssistantConfigState {return this.settings(() => this.options.store.setActive(provider));}
+  save(input:AssistantProviderInput):AssistantConfigState {return this.settings(() => {const state=this.options.store.save(input);this.grants.clear();return state;});}
+  removeKey(provider:AssistantProviderId):AssistantConfigState {return this.settings(() => {const state=this.options.store.removeKey(provider);this.grants.clear();return state;});}
+  removeProvider(provider:AssistantProviderId):AssistantConfigState {return this.settings(() => {const state=this.options.store.removeProvider(provider);this.grants.clear();return state;});}
+  setActive(provider:AssistantProviderId):AssistantConfigState {return this.settings(() => {const state=this.options.store.setActive(provider);this.grants.clear();return state;});}
 
   /** The configuration and key for one call; a key is optional only for a server on this computer. */
   private credentials(provider?:AssistantProviderId|null):{config:ProviderConfig;key:string|null} {
@@ -120,16 +122,18 @@ export class AssistantService {
   }
 
   /** Step one of an image question: the panel shows `message` and sends the image only after the person confirms. */
-  imageIntent(input:{fileName?:unknown}):AssistantImageGrant {
+  imageIntent(input:{fileName?:unknown;imageIdentity?:unknown}):AssistantImageGrant {
     try {
       const config = this.options.store.config();
       if (!config) throw new ProviderError(assistantError('no_provider'));
       if (!config.supportsImages) throw new ProviderError(assistantError('image_refused', {detail: 'model_not_marked_for_images'}));
+      if (typeof input?.imageIdentity !== 'string' || !/^[a-f0-9]{64}$/.test(input.imageIdentity))
+        throw new ProviderError(assistantError('image_refused', {detail: 'image_identity_required'}));
       const now = this.now();
       for (const [id, grant] of this.grants) if (grant.expires <= now) this.grants.delete(id);
       const grantId = `img_${crypto.randomBytes(12).toString('hex')}`;
       const label = providerLabel(config);
-      this.grants.set(grantId, {provider: config.provider, model: config.model, expires: now + LIMITS.grantMs});
+      this.grants.set(grantId, {receiver: this.receiver(config), imageIdentity: input.imageIdentity, expires: now + LIMITS.grantMs});
       const name = typeof input?.fileName === 'string' ? redactOutgoingText(input.fileName).slice(0, 120) : '';
       return {ok: true, grantId, providerLabel: label, expiresAt: now + LIMITS.grantMs,
         message: `이 이미지 1장${name ? `(${name})` : ''}을 ${label}로 보냅니다. 보낸 이미지는 공급자의 정책에 따라 처리되며 사용량이 더 듭니다.`};
@@ -137,10 +141,10 @@ export class AssistantService {
   }
 
   private takeImage(image:unknown, config:ProviderConfig):ImagePart {
-    const value = image as {grantId?:unknown;mediaType?:unknown;base64?:unknown};
+    const value = image as {grantId?:unknown;imageIdentity?:unknown;mediaType?:unknown;base64?:unknown};
     const grant = typeof value?.grantId === 'string' ? this.grants.get(value.grantId) : undefined;
     if (typeof value?.grantId === 'string') this.grants.delete(value.grantId);  // one image per confirmation, used or not
-    if (!grant || grant.expires <= this.now() || grant.provider !== config.provider || grant.model !== config.model)
+    if (!grant || grant.expires <= this.now() || grant.receiver !== this.receiver(config) || grant.imageIdentity !== value.imageIdentity)
       throw new ProviderError(assistantError('image_refused', {detail: 'confirmation_missing_or_expired'}));
     if (!config.supportsImages) throw new ProviderError(assistantError('image_refused', {detail: 'model_not_marked_for_images'}));
     if (typeof value.mediaType !== 'string' || !IMAGE_TYPES.has(value.mediaType) || typeof value.base64 !== 'string'

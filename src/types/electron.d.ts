@@ -64,7 +64,7 @@ export type AssistantMessage =
   | {role:'assistant';text:string;toolCalls?:AssistantToolCall[];
      /** The provider's own blocks for this turn (Anthropic thinking/tool_use), sent back unchanged; opaque here. */ replay?:unknown}
   | {role:'tool';toolCallId:string;name:string;content:string;isError?:boolean};
-export interface AssistantImageInput {grantId:string;mediaType:'image/png'|'image/jpeg'|'image/webp';base64:string}
+export interface AssistantImageInput {grantId:string;imageIdentity:string;mediaType:'image/png'|'image/jpeg'|'image/webp';base64:string}
 export interface AssistantSendInput {requestId:string;context:Record<string,unknown>;messages:AssistantMessage[];tools:AssistantToolSpec[];image?:AssistantImageInput}
 export type AssistantErrorCode = 'no_provider'|'no_key'|'storage_unavailable'|'bad_key'|'forbidden'|'billing'|'not_found'|'bad_request'
   |'rate_limited'|'overloaded'|'server'|'network'|'timeout'|'cancelled'|'bad_response'|'invalid_input'|'image_refused';
@@ -84,7 +84,7 @@ export interface AssistantBridge {
   send:(input:AssistantSendInput)=>Promise<AssistantSendResult>;
   cancel:(requestId:string)=>Promise<boolean>;
   /** Step one of an image question: names the provider for the person's confirmation; no pixels move yet. */
-  imageIntent:(input:{fileName:string})=>Promise<AssistantImageGrant>;
+  imageIntent:(input:{fileName:string;imageIdentity:string})=>Promise<AssistantImageGrant>;
   /** Arms the run-id header on the one backend write a confirmed tool makes; endRun disarms it. */
   beginRun:(runId:string,tool:string)=>Promise<boolean>;
   endRun:(runId:string)=>Promise<void>;

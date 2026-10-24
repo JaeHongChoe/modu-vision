@@ -53,6 +53,7 @@ import {JobProgressView} from './JobProgressView';
 import {useSelectedCoreJob} from './useSelectedCoreJob';
 import {OperationsObservabilityPanel} from '../runtime/OperationsObservabilityPanel';
 import {classGaps, classStartBlocker, SPLIT_MISSES_LABELS_TEXT, splitMissesLabels} from '../dataset/importChecklist';
+import { describeTrainingSummary, publishTrainingSummary, trainingSummaryScope } from './trainingStartSummary';
 
 export const TrainingController: React.FC = () => {
   const [actionError, setActionError] = useState<string | null>(null);
@@ -96,6 +97,7 @@ export const TrainingController: React.FC = () => {
   const parentQueryKey = JSON.stringify(['backbone', 'model_name', 'anomaly_method', 'anomaly_backbone', 'patch_size', 'stride'].map(name => modelOptions[name] ?? null));
   const { folderPath, totalImages, split, isLoading, isSplitting, importError, splitError,
     splitSupported, splitUnavailableReason, datasetKey, splitState, classes: datasetClasses, classSplitCounts } = useDatasetStore();
+  const modelResetScope = JSON.stringify([task, projectDir, project?.id, project?.active_labelset_id, folderPath]);
   // Classes with images: one class trains a model that can only answer that class (F-03), so the start waits.
   const populatedClasses = Object.values(datasetClasses || {}).filter(count => count > 0).length;
   // The per-class minimum and the saved split's per-class gaps (F-03): a class below the minimum or without training
@@ -165,8 +167,17 @@ export const TrainingController: React.FC = () => {
     (!selectedProfileId || (Boolean(selectedProfile) && selectedReadiness.ready));
   const warmStartSupported = true;
   const sourceReady = Boolean(projectDir && folderPath && project?.source_dataset_dir===folderPath && datasetKey === `${folderPath}\0${task}`);
+  const startSummaryScope = trainingSummaryScope(taskPreviewScope(), {
+    task, folderPath, datasetKey, preset, nextDevice, nextBatchSize, selectedProfileId, profile: selectedProfile,
+    transportRevision, computeLoaded: isComputeLoaded, computeLoading: isComputeLoading, computeLoadError,
+  });
   // A run that stops, fails or finishes writes its last epoch state as it ends, so the list is read again then (F-07).
   const finishedJobKey = jobId && ['completed','aborted','failed','cancelled','stopped'].includes(status) ? `${jobId}:${status}` : '';
+  // Source, warm-parent and resume effects reset their selections below. Publish only after those resets have
+  // rendered, so an old closure cannot announce an old parent/checkpoint under the new settings or worker scope.
+  const summaryResetScope = JSON.stringify([modelResetScope, sourceReady, preset, selectedProfileId, transportRevision,
+    completedJobId, finishedJobKey, selectedBackbone, parentQueryKey, modelOptionsError]);
+  const [summarySettingsScope, setSummarySettingsScope] = useState(summaryResetScope);
   useEffect(()=>{
     let current=true,timer:ReturnType<typeof setTimeout>|undefined;setResumeStates([]);setResumeExcluded([]);setResumeState(null);setResumeError('');
     const read=(again:boolean)=>request<{states:Array<NonNullable<typeof resumeState>>;excluded?:typeof resumeExcluded}>(`/api/training/resume-states?${new URLSearchParams({dataset_path:folderPath,task,preset,...(selectedProfileId?{compute_profile_id:selectedProfileId}:{})})}`)
@@ -211,6 +222,15 @@ export const TrainingController: React.FC = () => {
     });
     return () => { valid = false; };
   }, [sourceReady, folderPath, task, preset, selectedProfileId, warmStartSupported, projectDir, project?.active_labelset_id, selectedBackbone, completedJobId, parentQueryKey, modelOptionsError]);
+
+  const startSummary = describeTrainingSummary({task, model: selectedBackbone, checkpoint: pretrainedCheckpoint,
+    warmStartJobId: warmParentId, resume: resumeState, options: modelOptions});
+  const startSummaryKey = JSON.stringify(startSummary);
+  useEffect(() => { setSummarySettingsScope(summaryResetScope); }, [summaryResetScope]);
+  useEffect(() => {
+    if (!sourceReady || isProjectBusy || isLoading || importError || summarySettingsScope !== summaryResetScope) return;
+    return publishTrainingSummary(startSummaryScope, startSummary);
+  }, [startSummaryScope, startSummaryKey, sourceReady, isProjectBusy, isLoading, importError, summarySettingsScope, summaryResetScope]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     void recoverActiveJob(sourceReady && !isLoading && !importError && project && projectDir ? {

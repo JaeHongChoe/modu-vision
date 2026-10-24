@@ -1,0 +1,134 @@
+// Offline protocol only: generated keys, synthetic tokens and injected transports. No listener, browser, files or fetch.
+const test=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path'),Module=require('node:module'),ts=require('typescript'),crypto=require('node:crypto');
+function load(file=path.join(__dirname,'siwcProtocol.ts'),cache=new Map()){
+ assert.ok(fs.existsSync(file),'offline SIWC protocol exists');if(cache.has(file))return cache.get(file).exports;
+ const m=new Module(file,module);m.filename=file;m.paths=Module._nodeModulePaths(path.dirname(file));cache.set(file,m);const original=m.require.bind(m);
+ m.require=name=>name.startsWith('.')?load(path.resolve(path.dirname(file),name)+'.ts',cache):original(name);
+ m._compile(ts.transpileModule(fs.readFileSync(file,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022,esModuleInterop:true}}).outputText,file);return m.exports;
+}
+const NOW=1792800000000,CLIENT='oaiapp_synthetic',HOST='urn:uuid:00000000-0000-4000-8000-000000000001';
+const keys=crypto.generateKeyPairSync('rsa',{modulusLength:2048}),publicKey={...keys.publicKey.export({format:'jwk'}),kid:'synthetic-key',alg:'RS256',use:'sig'};
+function jwt(change={}){const head=Buffer.from(JSON.stringify({alg:'RS256',kid:publicKey.kid})).toString('base64url'),body=Buffer.from(JSON.stringify({iss:'https://auth.openai.com',aud:CLIENT,sub:'synthetic-user',exp:NOW/1000+3600,iat:NOW/1000,nonce:'expected-nonce',...change})).toString('base64url');return head+'.'+body+'.'+crypto.sign('sha256',Buffer.from(head+'.'+body),keys.privateKey).toString('base64url');}
+const token=(change={})=>({access_token:'synthetic-access',refresh_token:'synthetic-refresh',id_token:jwt(),token_type:'Bearer',expires_in:3600,scope:'openid profile email offline_access resource.invoke chatgpt.tokens.use.direct',...change});
+function credentials(protocol){return protocol.acceptAuthorizationTokens(token(),{clientId:CLIENT,nonce:'expected-nonce',jwks:{keys:[publicKey]},nowMs:NOW});}
+const event=(type,extra={})=>'event: '+type+'\r\ndata: '+JSON.stringify({type,...extra})+'\r\n\r\n';
+const completed=(output=[])=>event('response.completed',{response:{id:'resp_synthetic',status:'completed',output}});
+async function* bytes(text,width=7){const b=Buffer.from(text);for(let i=0;i<b.length;i+=width)yield b.subarray(i,i+width);}
+const allow=[{name:'read_status',description:'상태',parameters:{type:'object',properties:{},additionalProperties:false}}];
+
+test('PKCE is S256 without padding; each authorization attempt uses fresh values and no network',()=>{
+ const p=load();assert.equal(p.pkceChallenge('dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk'),'E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM');
+ const options={hostId:HOST,appName:'Modu Vision',redirectUri:'http://127.0.0.1:54321/auth/callback',now:()=>NOW};
+ const a=p.createAuthorizationAttempt(options),b=p.createAuthorizationAttempt(options),url=new URL(a.authorizationUrl);
+ assert.equal(url.origin,'https://auth.openai.com');assert.equal(url.searchParams.get('client_id'),'dynamic_agent_client');assert.equal(url.searchParams.get('resource'),'https://api.openai.com/v1');assert.equal(url.searchParams.get('code_challenge_method'),'S256');assert.equal(url.searchParams.get('agent_name_hint'),'Modu Vision');assert.notEqual(url.searchParams.get('state'),new URL(b.authorizationUrl).searchParams.get('state'));assert.notEqual(a.nonce,b.nonce);assert.equal(url.searchParams.has('code_verifier'),false);
+ const callback=options.redirectUri+'?state='+url.searchParams.get('state')+'&code=synthetic-code&client_id='+CLIENT;
+ const grant=a.acceptCallback(callback);assert.equal(grant.form.get('redirect_uri'),options.redirectUri);assert.equal(p.pkceChallenge(grant.form.get('code_verifier')),url.searchParams.get('code_challenge'));assert.equal(grant.form.get('client_id'),CLIENT);assert.equal(grant.form.has('client_secret'),false);assert.throws(()=>a.acceptCallback(callback),e=>e.code==='attempt_used');
+});
+test('callback validates exact loopback URI, single state, issued client and expiry before exchange',()=>{
+ const p=load();let now=NOW;const options={hostId:HOST,appName:'Modu Vision',redirectUri:'http://127.0.0.1:43210/auth/callback',clientId:CLIENT,now:()=>now};
+ for(const redirectUri of ['http://localhost:43210/auth/callback','https://127.0.0.1:43210/auth/callback','http://127.0.0.1:43210/callback'])assert.throws(()=>p.createAuthorizationAttempt({...options,redirectUri}));
+ const attempt=p.createAuthorizationAttempt(options),url=new URL(attempt.authorizationUrl);assert.equal(url.searchParams.has('agent_name_hint'),false);
+ const good=options.redirectUri+'?state='+url.searchParams.get('state')+'&code=c';
+ for(const mutate of [s=>s.replace('43210','43211'),s=>s.replace('/auth/callback','/callback'),s=>s+'&state=duplicate',s=>s+'&client_id=oaiapp_other',s=>s.replace(/state=[^&]+/,'state=wrong'),s=>s+'#fragment']){
+  const separate=p.createAuthorizationAttempt(options),base=options.redirectUri+'?state='+new URL(separate.authorizationUrl).searchParams.get('state')+'&code=c';assert.throws(()=>separate.acceptCallback(mutate(base)));
+ }
+ assert.equal(attempt.acceptCallback(good).clientId,CLIENT);
+ const expired=p.createAuthorizationAttempt(options);now+=600001;assert.throws(()=>expired.acceptCallback(good),e=>e.code==='attempt_expired');
+});
+test('denial is state-bound and never produces a grant; callback scope cannot enable plan use',()=>{
+ const p=load(),a=p.createAuthorizationAttempt({hostId:HOST,appName:'Modu Vision',redirectUri:'http://127.0.0.1:54321/auth/callback',now:()=>NOW}),state=new URL(a.authorizationUrl).searchParams.get('state');
+ assert.throws(()=>a.acceptCallback('http://127.0.0.1:54321/auth/callback?error=access_denied&state='+state),e=>e.code==='access_denied');
+ const noPlan=p.acceptAuthorizationTokens(token({scope:'openid profile email'}),{clientId:CLIENT,nonce:'expected-nonce',jwks:{keys:[publicKey]},nowMs:NOW});assert.equal(noPlan.planUsageEnabled,false);
+});
+test('ID token requires a trusted signature, issuer, audience, expiry, nonce and selected subject',()=>{
+ const p=load(),expect={clientId:CLIENT,nonce:'expected-nonce',nowMs:NOW};assert.equal(p.verifySiwcIdToken(jwt(),{keys:[publicKey]},expect).subject,'synthetic-user');
+ for(const change of [{iss:'https://evil.invalid'},{aud:'oaiapp_other'},{exp:NOW/1000},{nonce:'other'},{sub:''}])assert.throws(()=>p.verifySiwcIdToken(jwt(change),{keys:[publicKey]},expect));
+ assert.throws(()=>p.verifySiwcIdToken(jwt(),{keys:[]},expect));assert.throws(()=>p.verifySiwcIdToken(jwt(),{keys:[publicKey]},{...expect,expectedSubject:'someone-else'}));
+ const segments=jwt().split('.');segments[1]=Buffer.from(JSON.stringify({sub:'forged'})).toString('base64url');assert.throws(()=>p.verifySiwcIdToken(segments.join('.'),{keys:[publicKey]},expect));
+});
+test('ES256 trusted P-256 keys verify JOSE signatures and reject altered signatures',()=>{
+ const p=load(),ec=crypto.generateKeyPairSync('ec',{namedCurve:'prime256v1'}),jwk={...ec.publicKey.export({format:'jwk'}),kid:'synthetic-ec',alg:'ES256'},head=Buffer.from(JSON.stringify({alg:'ES256',kid:jwk.kid})).toString('base64url'),payload=jwt().split('.')[1],signed=head+'.'+payload;
+ const signature=crypto.sign('sha256',Buffer.from(signed),{key:ec.privateKey,dsaEncoding:'ieee-p1363'}),expect={clientId:CLIENT,nonce:'expected-nonce',nowMs:NOW};
+ assert.equal(p.verifySiwcIdToken(signed+'.'+signature.toString('base64url'),{keys:[jwk]},expect).subject,'synthetic-user');signature[0]^=1;assert.throws(()=>p.verifySiwcIdToken(signed+'.'+signature.toString('base64url'),{keys:[jwk]},expect));
+});
+test('same-session refresh is single-flight and atomically rotates token/scope/expiry without interpreting earliest_refresh_at',async()=>{
+ const p=load(),calls=[];let release;const session=new p.SiwcTokenSession(credentials(p),{jwks:{keys:[publicKey]},now:()=>NOW,transport:request=>{calls.push(request);return new Promise(resolve=>{release=resolve;});}});
+ const a=session.refresh(),b=session.refresh();assert.equal(calls.length,1);assert.equal(calls[0].form.get('refresh_token'),'synthetic-refresh');assert.equal(calls[0].form.has('scope'),false);assert.equal(calls[0].form.get('resource'),'https://api.openai.com/v1');
+ release({status:200,body:token({access_token:'rotated-access',refresh_token:'rotated-refresh',scope:'openid',earliest_refresh_at:{unknown:'opaque'}})});
+ assert.equal((await a).refreshToken,'rotated-refresh');await b;assert.equal(session.credentials().accessToken,'rotated-access');assert.equal(session.credentials().planUsageEnabled,false);assert.equal(session.credentials().expiresAt,NOW+3600000);
+ const c=session.refresh();assert.equal(calls[1].form.get('refresh_token'),'rotated-refresh');release({status:200,body:token({refresh_token:'latest-refresh'})});await c;
+});
+test('transient refresh and invalid-client failures preserve credentials; unusable refresh clears only tokens',async()=>{
+ const p=load();for(const [status,code,cleared,recovery] of [[503,'subscription_sharing_user_unavailable',false,'retry_later'],[401,'subscription_sharing_invalid_user',false,'inspect_credentials'],[400,'invalid_client',false,'configure_client'],[400,'invalid_grant',true,'sign_in']]){
+  const session=new p.SiwcTokenSession(credentials(p),{jwks:{keys:[publicKey]},transport:async()=>({status,body:{error:code,error_description:'synthetic-refresh must never leak'}})});
+  await assert.rejects(session.refresh(),e=>e.recovery===recovery&&!e.message.includes('must never leak'));assert.equal(session.credentials()===null,cleared);assert.equal(session.state().clientId,CLIENT);
+ }
+});
+test('sign-out stops requests, posts discovery-provided revoke form, clears local tokens and retains registration',async()=>{
+ const p=load(),calls=[];const session=new p.SiwcTokenSession(credentials(p),{jwks:{keys:[publicKey]},stopRequests:()=>calls.push('stop'),transport:async request=>{calls.push(request);return{status:200,body:null};}});
+ const result=await session.signOut({revocation_endpoint:'https://auth.openai.com/oauth/revoke'});assert.equal(calls[0],'stop');assert.equal(calls[1].form.get('token_type_hint'),'refresh_token');assert.equal(calls[1].form.get('client_id'),CLIENT);assert.equal(result.remoteRevocationConfirmed,true);assert.equal(session.credentials(),null);assert.equal(session.state().clientId,CLIENT);await assert.rejects(session.refresh(),e=>e.code==='signed_out');
+ const unavailable=new p.SiwcTokenSession(credentials(p),{jwks:{keys:[publicKey]},transport:async()=>({status:503})});assert.equal((await unavailable.signOut({revocation_endpoint:'https://auth.openai.com/oauth/revoke'})).remoteRevocationConfirmed,false);assert.equal(unavailable.credentials(),null);
+});
+test('sign-out waits for a known rotating replacement and cannot be rehydrated by a late refresh',async()=>{
+ const p=load(),calls=[];let release;const s=new p.SiwcTokenSession(credentials(p),{jwks:{keys:[publicKey]},now:()=>NOW,transport:request=>{calls.push(request);return request.form.has('grant_type')?new Promise(resolve=>{release=resolve;}):Promise.resolve({status:200});}});
+ const refreshing=s.refresh();const rejected=assert.rejects(refreshing,e=>e.code==='signed_out');const signingOut=s.signOut({revocation_endpoint:'https://auth.openai.com/oauth/revoke'});
+ release({status:200,body:token({refresh_token:'rotated-for-revoke'})});assert.equal((await signingOut).remoteRevocationConfirmed,true);await rejected;assert.equal(calls[1].form.get('token'),'rotated-for-revoke');assert.equal(s.credentials(),null);
+});
+test('an unobserved refresh outcome remains uncertain after timeout and cannot claim remote sign-out confirmation',async()=>{
+ const p=load();let release;const s=new p.SiwcTokenSession(credentials(p),{jwks:{keys:[publicKey]},now:()=>NOW,transport:request=>request.form.has('grant_type')?new Promise(resolve=>{release=resolve;}):Promise.resolve({status:200})});
+ await assert.rejects(s.refresh({timeoutMs:10}),e=>e.code==='timeout');
+ assert.equal((await s.signOut({revocation_endpoint:'https://auth.openai.com/oauth/revoke'})).remoteRevocationConfirmed,false);
+ release({status:200,body:token({refresh_token:'late-unknown-rotation'})});await Promise.resolve();assert.equal(s.credentials(),null);
+});
+test('cancelling one refresh waiter keeps the shared rotation observable and cancellation never waits for a broken revoke',async()=>{
+ const p=load();let release;const s=new p.SiwcTokenSession(credentials(p),{jwks:{keys:[publicKey]},now:()=>NOW,transport:()=>new Promise(resolve=>{release=resolve;})});
+ const abort=new AbortController(),cancelled=s.refresh({signal:abort.signal}),other=s.refresh();abort.abort();await assert.rejects(cancelled,e=>e.code==='cancelled');release({status:200,body:token({refresh_token:'observed'})});assert.equal((await other).refreshToken,'observed');
+ const stopped=new AbortController(),out=s.signOut({revocation_endpoint:'https://auth.openai.com/oauth/revoke'},{signal:stopped.signal,timeoutMs:1000});stopped.abort();assert.equal((await out).remoteRevocationConfirmed,false);assert.equal(s.credentials(),null);
+});
+test('text request uses namespace functions and omits unsupported SIWC fields',()=>{
+ const p=load(),body=p.buildSiwcTextRequest({model:'synthetic-model',instructions:'instructions',input:[{role:'user',content:'상태를 읽어줘'}],tools:allow});
+ assert.equal(body.store,false);assert.equal(body.stream,true);assert.deepEqual(body.tools,[{type:'namespace',name:'modu_vision',description:'Modu Vision application tools',tools:allow.map(t=>({type:'function',...t}))}]);
+ for(const key of ['temperature','previous_response_id','max_output_tokens','background','metadata'])assert.equal(Object.hasOwn(body,key),false);
+ assert.throws(()=>p.buildSiwcTextRequest({model:'m',input:[{role:'system',content:'no'}],tools:allow}));
+});
+test('completed namespace calls and their call_id outputs can be replayed without server-side conversation state',async()=>{
+ const p=load(),output=[{type:'reasoning',id:'r',summary:[],encrypted_content:'synthetic-encrypted'},{type:'function_call',id:'f',namespace:'modu_vision',name:'read_status',call_id:'call_a',arguments:'{}'}];
+ const answer=await p.readSiwcResponse(bytes(completed(output)),{tools:allow});
+ const body=p.buildSiwcTextRequest({model:'synthetic-model',input:[{role:'user',content:'상태'},...answer.replay,{type:'function_call_output',call_id:'call_a',output:'{"stage":3}'}],tools:allow});
+ assert.deepEqual(body.input.slice(1,3),output);assert.equal(body.input[3].call_id,'call_a');assert.deepEqual(body.include,['reasoning.encrypted_content']);
+ assert.throws(()=>p.buildSiwcTextRequest({model:'m',input:[{type:'function_call_output',call_id:'unknown',output:'x'}],tools:allow}),e=>e.code==='invalid_input');
+});
+test('authorization token acceptance cannot skip the pending nonce and streaming temporary errors preserve retry recovery',async()=>{
+ const p=load();for(const nonce of [undefined,''])assert.throws(()=>p.acceptAuthorizationTokens(token(),{clientId:CLIENT,nonce,jwks:{keys:[publicKey]},nowMs:NOW}),e=>e.code==='invalid_nonce');
+ await assert.rejects(p.readSiwcResponse(bytes(event('response.failed',{response:{error:{code:'subscription_sharing_usage_unavailable'}}})),{tools:allow}),e=>e.recovery==='retry_later');
+});
+test('a matching callback route consumes the attempt even when state validation fails',()=>{
+ const p=load(),redirectUri='http://127.0.0.1:54321/auth/callback',a=p.createAuthorizationAttempt({hostId:HOST,appName:'Modu Vision',redirectUri,now:()=>NOW}),state=new URL(a.authorizationUrl).searchParams.get('state');
+ assert.throws(()=>a.acceptCallback(redirectUri+'?state=wrong&code=c&client_id='+CLIENT),e=>e.code==='invalid_state');
+ assert.throws(()=>a.acceptCallback(redirectUri+'?state='+state+'&code=c&client_id='+CLIENT),e=>e.code==='attempt_used');
+});
+test('SSE survives every UTF-8 byte and CRLF boundary; only completed output yields text and allowlisted namespace calls',async()=>{
+ const p=load(),output=[{type:'message',content:[{type:'output_text',text:'완료했습니다'}]},{type:'function_call',namespace:'modu_vision',name:'read_status',call_id:'call_a',arguments:'{}'}];
+ const stream=': keepalive\r\n\r\n'+event('response.output_text.delta',{delta:'partial'})+completed(output);
+ const result=await p.readSiwcResponse(bytes(stream,1),{tools:allow});assert.equal(result.text,'완료했습니다');assert.deepEqual(result.toolCalls,[{id:'call_a',namespace:'modu_vision',name:'read_status',arguments:{}}]);assert.deepEqual(result.replay,output);
+});
+test('partial, DONE, incomplete, failed and malformed streams cannot become a successful response',async()=>{
+ const p=load();for(const [stream,code] of [[event('response.output_text.delta',{delta:'partial'}),'stream_truncated'],['data: [DONE]\n\n','stream_truncated'],[event('response.incomplete',{response:{status:'incomplete'}}),'response_incomplete'],[event('response.failed',{response:{error:{code:'subscription_sharing_usage_limit_exceeded',message:'do not echo synthetic token'}}}),'subscription_sharing_usage_limit_exceeded'],['data: {broken}\n\n','bad_stream'],[event('error',{code:'server_error',message:'never echo'}),'server_error']])await assert.rejects(p.readSiwcResponse(bytes(stream),{tools:allow}),e=>e.code===code&&!e.message.includes('echo'));
+});
+test('foreign/missing namespace, dotted or unknown function, malformed arguments and duplicate call ids refuse all tool output',async()=>{
+ const p=load(),base={type:'function_call',namespace:'modu_vision',name:'read_status',call_id:'call_a',arguments:'{}'};
+ for(const change of [{namespace:'other'},{namespace:undefined},{name:'modu_vision.read_status'},{name:'delete_everything'},{arguments:'null'},{arguments:'{broken'}])await assert.rejects(p.readSiwcResponse(bytes(completed([{...base,...change}]),1024),{tools:allow}),e=>e.code==='invalid_tool_call');
+ await assert.rejects(p.readSiwcResponse(bytes(completed([base,base])),{tools:allow}),e=>e.code==='invalid_tool_call');
+});
+test('an in-flight request cannot gain a new function through a mutated caller allowlist',async()=>{
+ const p=load(),tools=structuredClone(allow);let release;const stream={[Symbol.asyncIterator](){return{next:()=>new Promise(resolve=>{release=resolve;}),return:async()=>({done:true})};}};
+ const pending=p.readSiwcResponse(stream,{tools});tools.push({name:'delete_everything',description:'not in original request',parameters:{type:'object'}});
+ release({done:false,value:Buffer.from(completed([{type:'function_call',namespace:'modu_vision',name:'delete_everything',call_id:'new',arguments:'{}'}]))});
+ await assert.rejects(pending,e=>e.code==='invalid_tool_call');
+});
+test('stream limits and cancellation are bounded even if the injected iterator ignores abort',async()=>{
+ const p=load();await assert.rejects(p.readSiwcResponse(bytes('data: '+ 'x'.repeat(100)),{tools:allow,maxBytes:20}),e=>e.code==='response_too_large');
+ let returned=false;const stalled={[Symbol.asyncIterator](){return{next:()=>new Promise(()=>{}),return:async()=>{returned=true;return{done:true};}};}};
+ const abort=new AbortController(),pending=p.readSiwcResponse(stalled,{tools:allow,signal:abort.signal,timeoutMs:1000});abort.abort();await assert.rejects(pending,e=>e.code==='cancelled');assert.equal(returned,true);
+ await assert.rejects(p.readSiwcResponse(stalled,{tools:allow,timeoutMs:10}),e=>e.code==='timeout');
+});

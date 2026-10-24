@@ -132,6 +132,8 @@ function renderStudio(storeState) {
   useEvaluationStore.getState = () => state;
   const m = load('../components/evaluation/EvaluationStudio.tsx', {
     'react': react, 'react/jsx-runtime': { jsx, jsxs: jsx }, 'lucide-react': {},
+    '../common/useScopedError': load('../components/common/useScopedError.ts', { react }),
+    '../../stores/assistContext': load('assistContext.ts'),
     '../training/useTaskHandoff': { useTaskHandoff: () => null },
     '../../stores/useProjectStore': { useProjectStore: Object.assign(sel => sel ? sel(project) : project, { getState: () => project }) },
     '../../stores/useDatasetStore': { useDatasetStore: sel => sel(dataset) },

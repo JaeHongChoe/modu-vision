@@ -40,6 +40,24 @@ function fixture(task = 'classification') {
   return {store, state: store.getState, source, calls, api, project, dataset, training, authority};
 }
 
+for (const outcome of ['success', 'failure']) test(`late report ${outcome} cannot restore another evaluation's message or saved path`, async () => {
+  const f=fixture(), held=deferred();f.api.report={export:()=>held.promise};
+  f.store.setState({jobId:'old_job'});
+  const pending=f.state().exportReport('json').then(value=>({value}),error=>({error}));
+  f.state().invalidateForDataChange();f.authority.epoch++;
+  f.store.setState({jobId:'current_job',errorMessage:'현재 오류',exportedReportPath:'/current.json',isExportingReport:true});
+  if(outcome==='success')held.resolve({file_path:'/old.json'});else held.reject(new Error('이전 보고서 오류'));
+  await pending;
+  assert.equal(f.state().errorMessage,'현재 오류');assert.equal(f.state().exportedReportPath,'/current.json');
+  assert.equal(f.state().isExportingReport,true,'the old completion cannot finish the current export');
+});
+test('a current report failure remains visible and retry can save its path', async () => {
+  const f=fixture();f.store.setState({jobId:'job_current'});f.api.report={export:async()=>{throw new Error('현재 보고서 오류');}};
+  await assert.rejects(f.state().exportReport('json'),/현재 보고서 오류/);assert.equal(f.state().errorMessage,'현재 보고서 오류');
+  f.api.report.export=async()=>({file_path:'/current.json'});await f.state().exportReport('json');
+  assert.equal(f.state().isExportingReport,false);assert.equal(f.state().exportedReportPath,'/current.json');
+});
+
 // Without optional discovery, opening an untrained source dispatches an
 // evaluation request that correctly fails404, including in Flowchart startup.
 for (const task of ['classification', 'segmentation', 'detection', 'anomaly', 'patch_classification']) {

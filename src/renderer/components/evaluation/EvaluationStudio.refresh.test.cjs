@@ -9,7 +9,7 @@ function fixture({commonCohort=false}={}){
  let index=0,dirty=true,tree,nextLoad=null;const slots=[],effects=[],calls=[];
  const hook=state=>Object.assign(selector=>selector?selector(state):state,{getState:()=>state});
  const react={
-  useState(value){const i=index++;if(!(i in slots))slots[i]=value;return[slots[i],value=>{slots[i]=typeof value==='function'?value(slots[i]):value;dirty=true;}];},
+  useState(value){const i=index++;if(!(i in slots))slots[i]=typeof value==='function'?value():value;return[slots[i],value=>{slots[i]=typeof value==='function'?value(slots[i]):value;dirty=true;}];},
   useRef(value){const i=index++;return slots[i]??(slots[i]={current:value});},
   useMemo(compute){index++;return compute();},
   useEffect(effect,deps){const i=index++;if(JSON.stringify(slots[i]?.deps)!==JSON.stringify(deps)){const previous=slots[i];slots[i]={deps};effects.push(()=>{previous?.cleanup?.();slots[i].cleanup=effect();});}},
@@ -45,6 +45,8 @@ function fixture({commonCohort=false}={}){
  const childNames=['OperatorGuidanceBanner','JargonTooltip','GuardrailBanner','ZeroEscapeTradeoffChart','SynchronizedDualViewport','DetectionEvaluationGrains','ModelDeploymentPanel','EvaluationHistoryPanel','EvaluationEvidencePanel','FieldReadinessPanel','SpecialistFamilyNote'];
  const children=Object.fromEntries(childNames.map(name=>[name,{[name]:()=>null}]));
  const file=path.join(__dirname,'EvaluationStudio.tsx'),m=new Module(file,module);m.filename=file;m.paths=Module._nodeModulePaths(__dirname);
+ function loadLocal(name){const filename=path.resolve(__dirname,name+'.ts'),local=new Module(filename,module);local.require=key=>key==='react'?react:require(key);local._compile(ts.transpileModule(fs.readFileSync(filename,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText,filename);return local.exports;}
+ const shared=loadLocal('../../stores/assistContext');
  m.require=name=>{
   if(name==='react')return react;
   if(name==='react/jsx-runtime')return{jsx:(type,props,key)=>({type,props,key}),jsxs:(type,props,key)=>({type,props,key}),Fragment:'fragment'};
@@ -55,6 +57,8 @@ function fixture({commonCohort=false}={}){
   if(name.endsWith('/useTrainingStore'))return{useTrainingStore:hook(training)};
   if(name.endsWith('/useEvaluationStore'))return{useEvaluationStore:hook(evaluation),computeSampleVerdict:()=> 'REVIEW',isDefectLabel:()=>false,isNormalLabel:()=>false};
   if(name.endsWith('/useTaskHandoff'))return{useTaskHandoff:()=>handoff};
+  if(name.endsWith('/assistContext'))return shared;
+  if(name.endsWith('/useScopedError'))return loadLocal('../common/useScopedError');
   if(name.endsWith('/services/api'))return{
    api:{datasetVersions:{list:async()=>({versions:[]})},evaluation:{comparisonModels:async()=>({models:[{job_id:'evaluation-model',task:'classification'}]})}},
    resolveApiUrl:value=>value,getApiPersistenceIdentity:()=> 'local',getProjectContextGeneration:()=>1,
@@ -72,7 +76,9 @@ function fixture({commonCohort=false}={}){
  async function settle(){for(let i=0;i<12;i++){if(dirty)render();await new Promise(setImmediate);if(!dirty)return;}assert.fail('Studio fixture did not settle');}
  function refreshButton(){const button=nodes(tree).find(node=>node.type==='button'&&textOf(node)==='새로고침');assert(button,'actual Studio header refresh');return button;}
  return{
-  calls,evaluation,settle,refreshButton,
+  calls,evaluation,settle,refreshButton,project,shared,
+  rerender(){dirty=true;},
+  close(){slots.forEach(slot=>slot?.cleanup?.());},
   refresh(){const button=refreshButton();assert.equal(button.props.disabled,false);return button.props.onClick();},
   defer(){assert.equal(nextLoad,null);const pending={};nextLoad=pending;return pending;},
   alerts:()=>nodes(tree).filter(node=>node.props?.role==='alert').map(textOf),
@@ -96,6 +102,23 @@ test('Studio header owns deferred rejected legacy refresh, retains the store ale
  const retry=f.defer(),retried=observe(f.refresh());await f.settle();assert.equal(f.comparisonRevision(),2);assert.equal(f.refreshButton().props.disabled,true);
  retry.resolve();assert.deepEqual(await retried,{status:'fulfilled'});await f.settle();
  assert.equal(f.calls.length,3);assert.deepEqual(f.calls[2],f.calls[1]);assert.deepEqual(f.alerts(),[]);assert.equal(f.refreshButton().props.disabled,false);
+});
+
+test('evaluation errors reach shared guidance and clear after recovery, source changes and unmount',async()=>{
+ const f=fixture();try{
+  await f.settle();
+  f.evaluation.errorMessage='평가를 완료하지 못했습니다. 시험 이미지를 확인하세요.';f.rerender();await f.settle();
+  assert.deepEqual(f.shared.assistPanelErrors(),[{source:'모델 평가',text:f.evaluation.errorMessage}]);
+  f.evaluation.errorMessage=null;f.rerender();await f.settle();assert.deepEqual(f.shared.assistPanelErrors(),[]);
+  f.evaluation.remoteOperationError='서버 연결을 확인하세요.';f.rerender();await f.settle();
+  assert.equal(f.shared.assistPanelErrors()[0]?.text,'서버 연결을 확인하세요.');
+  f.evaluation.remoteOperationError=null;f.project.projectDir='/other';f.rerender();await f.settle();
+  assert.deepEqual(f.shared.assistPanelErrors(),[]);
+  f.project.projectDir='/project';f.rerender();await f.settle();
+  f.evaluation.errorMessage='다시 평가하세요.';f.rerender();await f.settle();
+  assert.equal(f.shared.assistPanelErrors().length,1);
+ }finally{f.close();}
+ assert.deepEqual(f.shared.assistPanelErrors(),[]);
 });
 
 test('Studio header cohort refresh retains existing cohort and store error surfaces',async()=>{

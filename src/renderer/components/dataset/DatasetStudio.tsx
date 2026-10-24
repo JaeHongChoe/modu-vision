@@ -120,6 +120,7 @@ export const DatasetStudio: React.FC = () => {
     activeClassFilter,
     activeLabelFilter,
     trainRatio,
+    splitPrefill,
     isLoading,
     isSplitting,
     corruptedImages,
@@ -214,6 +215,14 @@ export const DatasetStudio: React.FC = () => {
     return { train, val, test: remaining - val };
   });
   const calibratorTouched = Boolean(datasetKey) && splitRatios.touchedFor === datasetKey;
+  const consumedPrefill = useRef(0);
+  useEffect(() => {
+    if (!splitPrefill || consumedPrefill.current === splitPrefill.id) return;
+    consumedPrefill.current = splitPrefill.id;
+    if (splitPrefill.datasetKey !== datasetKey || splitPrefill.authority !== currentAuthority
+        || sourceAuthority !== currentAuthority || splitUnavailableForTask) return;
+    setSplitRatios({ train: splitPrefill.train, val: splitPrefill.val, test: splitPrefill.test, touchedFor: datasetKey });
+  }, [splitPrefill, datasetKey, sourceAuthority, currentAuthority, splitUnavailableForTask]);
 
   const handleImageLoad = (filePath: string, naturalWidth: number, naturalHeight: number) => {
     setImgDimensions((prev) => {
