@@ -9,15 +9,18 @@ let arrow;const visit=node=>{if(ts.isVariableDeclaration(node)&&node.name.getTex
 const compiled=ts.transpileModule('const capture='+arrow+';capture;',{compilerOptions:{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.CommonJS}}).outputText;
 const origin='http://127.0.0.1:40001',route='/api/project/open',context={workspace_id:'workspace',project_id:'single',actor_id:'owner',mode:'local'};
 const target={id:'single',name:'Single',project_dir:'/owned/single'},expected={project_dir:target.project_dir};
-function fixture(t){
+function fixture(t,{method='POST',requestRoute=route,png=false}={}){
  const root=fs.mkdtempSync(path.join(os.tmpdir(),'dicom-capture-'));t.after(()=>fs.rmSync(root,{recursive:true,force:true}));
  const frame={},handlers=new Map(),waiters=[];
  const page={mainFrame:()=>frame,on:(name,fn)=>{if(!handlers.has(name))handlers.set(name,new Set());handlers.get(name).add(fn);},off:(name,fn)=>handlers.get(name)?.delete(fn),waitForResponse:predicate=>new Promise(resolve=>waiters.push({predicate,resolve}))};
  const emit=(name,value)=>{for(const fn of handlers.get(name)||[])fn(value);if(name==='response')for(const waiter of waiters.splice(0))if(waiter.predicate(value))waiter.resolve(value);else waiters.push(waiter);};
- const request=(body=expected)=>({frame:()=>frame,method:()=> 'POST',url:()=>origin+route,postDataJSON:()=>body,headers:()=>({'x-vision-project':'default','x-vision-context':JSON.stringify({...context,project_id:'default'})})});
- const response=(q,status=200,body=target)=>({request:()=>q,status:()=>status,body:async()=>Buffer.from(JSON.stringify(body)),finished:async()=>null,allHeaders:async()=>({'x-vision-context':JSON.stringify(context)})});
+ const requestContext=method==='GET'?context:{...context,project_id:'default'};
+ const request=(body=expected)=>({frame:()=>frame,method:()=>method,url:()=>origin+requestRoute,postDataJSON:()=>body,headers:()=>({'x-vision-project':requestContext.project_id,'x-vision-context':JSON.stringify(requestContext)})});
+ const pngBytes=Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+j3XcAAAAASUVORK5CYII=','base64');
+ const bodyReads=[];
+ const response=(q,status=200,body=target)=>({request:()=>q,status:()=>status,body:async()=>{bodyReads.push(q);return png?pngBytes:Buffer.from(JSON.stringify(body));},finished:async()=>null,allHeaders:async()=>({'x-vision-context':JSON.stringify(context)})});
  const captures=[],pending=new Set();const capture=vm.runInNewContext(compiled,{page,expect,within:async operation=>operation,performance,origin,w:{logs:root},e:{addFile(){},note(){}},captures,pending,fs,path,Buffer,hash:bytes=>crypto.createHash('sha256').update(bytes).digest('hex'),matches:(q,method,path)=>q.frame()===frame&&q.method()===method&&q.url()===origin+path});
- return {capture,emit,request,response,captures,handlers,scope:{project:target,context}};
+ return {capture,emit,request,response,captures,handlers,pngBytes,bodyReads,scope:{project:target,context}};
 }
 test('exact action Request and full original body are joined and observers are removed',async t=>{const f=fixture(t),q=f.request();const result=await f.capture('single','POST',route,expected,f.scope,async()=>{f.emit('request',q);f.emit('response',f.response(q));});assert.equal(result.body.id,'single');assert.equal(result.same_original_Request_response_identity,true);assert.equal(result.own_request_observed_after_action_started,true);assert.ok([...f.handlers.values()].every(set=>set.size===0));});
 test('a same-path unobserved success cannot stand in for the action Request',async t=>{const f=fixture(t),foreign=f.request(),own=f.request();await assert.rejects(f.capture('single','POST',route,expected,f.scope,async()=>{f.emit('response',f.response(foreign));f.emit('request',own);f.emit('response',f.response(own));}),/unobserved|original Request|identity/i);assert.equal(f.captures.length,0);});
@@ -30,4 +33,44 @@ test('malformed JSON is refused by the tracked observer without throwing out of 
   f.emit('request',own);f.emit('response',f.response(own));
  }),/malformed JSON request/);
  assert.equal(callbackError,undefined);assert.equal(f.captures.length,0);assert.ok([...f.handlers.values()].every(set=>set.size===0));
+});
+
+const pngRoute='/api/dataset/dicom/views/original-frame1';
+test('a PNG response from an earlier UI image cannot claim the explicit fetch before its own Request',async t=>{
+ const f=fixture(t,{method:'GET',requestRoute:pngRoute,png:true}),prior=f.request(),own=f.request();
+ f.emit('request',prior); // LabelingCanvas started this image before the new capture attached.
+ const result=await f.capture('frame1','GET',pngRoute,null,f.scope,async()=>{
+  f.emit('response',f.response(prior));f.emit('request',own);f.emit('response',f.response(own));
+ },true);
+ assert.equal(result.same_original_Request_response_identity,true);assert.equal(result.own_request_observed_after_action_started,true);
+ assert.equal(result.original_request_observations.length,1);assert.equal(result.PNG,true);
+ assert.equal(result.ignored_pre_action_PNG_responses.length,1);assert.equal(result.ignored_pre_action_PNG_responses[0].credited,false);
+ assert.deepEqual(f.bodyReads,[own]);
+ assert.deepEqual(fs.readFileSync(result.file),f.pngBytes);assert.ok([...f.handlers.values()].every(set=>set.size===0));
+});
+test('a late prior UI PNG response cannot replace the explicit fetch after its own Request was observed',async t=>{
+ const f=fixture(t,{method:'GET',requestRoute:pngRoute,png:true}),prior=f.request(),own=f.request();
+ f.emit('request',prior);
+ const result=await f.capture('frame1','GET',pngRoute,null,f.scope,async()=>{
+  f.emit('request',own);f.emit('response',f.response(prior));f.emit('response',f.response(own));
+ },true);
+ assert.equal(result.same_original_Request_response_identity,true);assert.equal(result.original_request_observations.length,1);
+ assert.equal(result.ignored_pre_action_PNG_responses.length,1);assert.equal(result.ignored_pre_action_PNG_responses[0].credited,false);
+ assert.deepEqual(f.bodyReads,[own]);
+ assert.deepEqual(fs.readFileSync(result.file),f.pngBytes);
+});
+test('a second same-URL PNG Request observed during the action still refuses the capture',async t=>{
+ const f=fixture(t,{method:'GET',requestRoute:pngRoute,png:true}),first=f.request(),duplicate=f.request();
+ await assert.rejects(f.capture('frame1','GET',pngRoute,null,f.scope,async()=>{
+  f.emit('request',first);f.emit('request',duplicate);f.emit('response',f.response(first));f.emit('response',f.response(duplicate));
+ },true));
+ assert.equal(f.captures.length,0);assert.ok([...f.handlers.values()].every(set=>set.size===0));
+});
+test('an earlier successful PNG cannot mask the owning fetch non-200 response',async t=>{
+ const f=fixture(t,{method:'GET',requestRoute:pngRoute,png:true}),prior=f.request(),own=f.request();
+ f.emit('request',prior);
+ await assert.rejects(f.capture('frame1','GET',pngRoute,null,f.scope,async()=>{
+  f.emit('response',f.response(prior));f.emit('request',own);f.emit('response',f.response(own,409));
+ },true));
+ assert.deepEqual(f.bodyReads,[]);assert.equal(f.captures.length,0);
 });
