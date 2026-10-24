@@ -105,6 +105,8 @@ test('closed and open panels keep custom point settings, show explicit previews,
   '../../services/api':{api:{labelSuggestions:{models:async()=>({models:[]}),list:async()=>({suggestions:[saved]})}}},'../../services/hostAdapter':{host:{can:()=>false}},
   '../../services/datasetWorkflow':{datasetWorkflow:{},workflowError:e=>String(e)},'../../services/foundationLabelingApi':{foundationLabelingApi:f.provider,labelingJobActive:()=>false},
   './popoverRoom':{usePopoverRoom:()=>500},'./draftReview':{draftError:e=>String(e),CHANGED_MODEL_MARK:'changed'},
+  '../../stores/assistContext':compile(path.resolve(__dirname,'../../stores/assistContext.ts')),
+  '../common/useScopedError':compile(path.resolve(__dirname,'../common/useScopedError.ts'),{react}),
  };
  for(const name of ['BulkLabelAssist','KoreanConditionLabeler','SuggestionPreview','LabelAssistDeviceSizes'])stubs['./'+name]={[name]:name};stubs['../common/Explain']={Explain:'Explain'};
  stubs['./CandidateProviderControls']=compile(path.join(__dirname,'CandidateProviderControls.tsx'),stubs);

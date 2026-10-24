@@ -549,6 +549,8 @@ test('모델 보조 hands over the candidates the person kept and marks a model 
     '../../services/datasetWorkflow': {datasetWorkflow: {}}, './SuggestionPreview': {SuggestionPreview: 'SuggestionPreview'}, '../common/Explain': {Explain: 'Explain'},
     './draftReview': helpers(), './popoverRoom': popoverRoom(runtime),
     './foundationQuickPointController': {startFoundationQuickPointController:()=>()=>{}},
+    '../../stores/assistContext': loadComponent('../../stores/assistContext.ts', {}),
+    '../common/useScopedError': loadComponent('../common/useScopedError.ts', {react: runtime.react}),
   });
   let tree = await runtime.settle(ModelAssistPanel);
   buttonWith(tree, '모델 보조 라벨링 패널').props.onClick(); tree = await runtime.settle(ModelAssistPanel);

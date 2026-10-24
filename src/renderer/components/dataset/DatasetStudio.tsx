@@ -17,6 +17,8 @@ import {
 } from 'lucide-react';
 import { useProjectStore } from '../../stores/useProjectStore';
 import { readDatasetAuthority, useDatasetStore } from '../../stores/useDatasetStore';
+import { registerPanelError } from '../../stores/assistContext';
+import { useScopedError } from '../common/useScopedError';
 import { useAnnotationStore } from '../../stores/useAnnotationStore';
 import { api, getApiPersistenceIdentity, getProjectContext, getProjectContextGeneration, type DatasetRevisionRow, type DatasetSourceStatus } from '../../services/api';
 import { host, hostErrorMessage } from '../../services/hostAdapter';
@@ -60,7 +62,7 @@ const SESSION_CHANGING_NOTICE = '공동 작업 서버 연결을 바꾸는 중입
 
 export const DatasetStudio: React.FC = () => {
   const {key:sourceContextKey}=useDeliveryScope();
-  const { task, language, projectDir, openImageForLabeling, project } = useProjectStore();
+  const { task, language, projectDir, openImageForLabeling, project, isProjectBusy } = useProjectStore();
   const full = useProjectStore(state => state.viewMode) === 'full';
   const simpleView = useProjectStore(state => state.viewMode) === 'simple';
   const sessionChanging = useProjectStore(state => state.sharedSessionChanging);
@@ -195,7 +197,26 @@ export const DatasetStudio: React.FC = () => {
     return () => { if (statusRead.current === read) statusRead.current += 1; };
   }, [activeRevisionId, isLoading, hasSelectedFolder, quickValidation]);
   const validation = validationStatus(quickValidation, activeRevision, project?.source_dataset_dir, task, sourceStatus);
-  const [imageOpenError, setImageOpenError] = useState<string | null>(null);
+  const errorScope = JSON.stringify([sourceContextKey, projectDir, project?.id, project?.active_labelset_id, project?.source_dataset_dir, task, folderPath, datasetKey, currentAuthority]);
+  const [imageOpenError, setImageOpenError] = useScopedError(errorScope);
+  const rawErrors = [sourceSaveError, splitError, importError];
+  const errorOwner = useRef({scope: errorScope, values: rawErrors, retired: [] as (string | null)[]});
+  // Import failures have no accepted sourceAuthority yet. Keep their attempted folder in scope while refusing
+  // unchanged errors carried over by a project/source reset before the dataset store has caught up.
+  if (errorOwner.current.scope !== errorScope) {
+    const previous = errorOwner.current.values;
+    errorOwner.current = {scope: errorScope, values: rawErrors, retired: rawErrors.map((text, index) => text === previous[index] ? text : null)};
+  } else {
+    errorOwner.current.retired = errorOwner.current.retired.map((text, index) => text === rawErrors[index] ? text : null);
+    errorOwner.current.values = rawErrors;
+  }
+  const currentErrors = rawErrors.filter((text, index) => text && text !== errorOwner.current.retired[index]);
+  const storeErrorsCurrent = datasetKey === `${folderPath}\0${task}` && (!sourceAuthority || sourceAuthority === currentAuthority);
+  const sharedError = [...new Set([...(storeErrorsCurrent ? currentErrors : []), imageOpenError].filter(Boolean))].join(' · ');
+  useEffect(() => {
+    if (!projectDir || !project || project.task !== task || sessionChanging || isProjectBusy) return;
+    return registerPanelError('데이터 준비', sharedError);
+  }, [errorScope, projectDir, project?.id, project?.task, task, sessionChanging, isProjectBusy, sharedError]);
   const folderSelection = useRef(0);
   useEffect(() => () => { folderSelection.current += 1; }, []);
   const splitUnavailableForTask = isSplitUnavailable(task, splitSupported);

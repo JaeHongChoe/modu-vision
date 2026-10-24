@@ -18,6 +18,8 @@ import { CHANGED_MODEL_MARK, draftError } from './draftReview';
 import { usePopoverRoom } from './popoverRoom';
 import { Explain } from '../common/Explain';
 import {startFoundationQuickPointController} from './foundationQuickPointController';
+import {registerPanelError} from '../../stores/assistContext';
+import {useScopedError} from '../common/useScopedError';
 
 // The server's refusals in the draft queue's words (an older English refusal still reads in Korean).
 const errorText = draftError;
@@ -36,7 +38,7 @@ function candidateDetail(candidate: LabelSuggestionCandidate): string {
 function currentAssistContext(): string {
   const state = useProjectStore.getState();
   return JSON.stringify([state.projectDir, useAnnotationStore.getState().currentImage?.file_path,
-    state.project?.active_labelset_id || 'default', state.project?.task, state.project?.source_dataset_dir]);
+    state.project?.active_labelset_id || 'default', state.project?.task, state.project?.source_dataset_dir, state.project?.id]);
 }
 
 export const ModelAssistPanel: React.FC = () => {
@@ -44,6 +46,7 @@ export const ModelAssistPanel: React.FC = () => {
   const isDirty = useAnnotationStore((state) => state.isDirty);
   const annotationLoadStatus = useAnnotationStore((state) => state.annotationLoadStatus);
   const projectDir = useProjectStore((state) => state.projectDir);
+  const projectId = useProjectStore((state) => state.project?.id);
   const labelsetId = useProjectStore((state) => state.project?.active_labelset_id || 'default');
   const task = useProjectStore((state) => state.project?.task);
   const sourceDatasetDir = useProjectStore((state) => state.project?.source_dataset_dir);
@@ -72,24 +75,27 @@ export const ModelAssistPanel: React.FC = () => {
   const [busyState, setBusy] = useState<'loading' | 'generate' | 'accept' | 'reject' | null>(null);
   const [quickRunning,setQuickRunning]=useState(false);
   const busy=busyState||(quickRunning?'generate':null);
-  const [error, setError] = useState<string | null>(null);
+  const errorScope = JSON.stringify([projectDir, image?.file_path, labelsetId, task, sourceDatasetDir, projectId]);
+  const [error, setError] = useScopedError(errorScope);
+  const currentError = useRef(setError);
+  currentError.current = setError;
   const [notice, setNotice] = useState<string | null>(null);
   const [batchRunning, setBatchRunning] = useState(false);
   const requestedProposalId = useRef('');
   const operationId = useRef(0);
-  const quickError=useRef<string|null>(null);
+  const quickError=useRef<{context:string;text:string}|null>(null);
   const quickNotice=useRef<{context:string;proposalId:string;text:string}|null>(null);
   const quickBlocked=useRef(false);
   quickBlocked.current=!!busyState||batchRunning;
   // Closing the popover unmounts its controls. The point runner belongs to this labeling visit instead.
   useEffect(()=>startFoundationQuickPointController({
     isBlocked:()=>quickBlocked.current,onRunning:setQuickRunning,
-    onError:cause=>{quickError.current=errorText(cause);quickNotice.current=null;setNotice(null);setError(quickError.current);setOpen(true);},
+    onError:cause=>{const text=errorText(cause);quickError.current={context:currentAssistContext(),text};quickNotice.current=null;setNotice(null);currentError.current(text);setOpen(true);},
     onCreated:next=>{requestedProposalId.current=next.id;setSuggestions(previous=>[next,...previous]);
       setSelectedProposalId(next.id);setSelectedCandidateIds(new Set(next.candidates.map(candidate=>candidate.id)));
       const text=`후보 ${next.candidates.length}개를 만들었습니다. 검토 후 선택하세요.`;
       quickNotice.current={context:currentAssistContext(),proposalId:next.id,text};
-      setError(null);setNotice(text);setOpen(true);},
+      currentError.current(null);setNotice(text);setOpen(true);},
   }),[]);
 
   const proposal = useMemo(() => suggestions.find((item) => item.id === selectedProposalId), [suggestions, selectedProposalId]);
@@ -102,7 +108,8 @@ export const ModelAssistPanel: React.FC = () => {
     setSuggestions([]);
     setSelectedProposalId('');
     setSelectedCandidateIds(new Set());
-    setError(quickError.current);quickError.current=null;
+    const pendingError=quickError.current;quickError.current=null;
+    setError(pendingError?.context===currentAssistContext()?pendingError.text:null);
     // Automatic opening refreshes persisted proposals. Carry its just-created notice through that one refresh,
     // only for the originating image/project/label set; closing or changing context consumes it.
     const pendingNotice=quickNotice.current;quickNotice.current=null;
@@ -126,7 +133,11 @@ export const ModelAssistPanel: React.FC = () => {
       .catch((cause) => { if (!cancelled && operationId.current === token) setError(errorText(cause)); })
       .finally(() => { if (!cancelled && operationId.current === token) setBusy(null); });
     return () => { cancelled = true; };
-  }, [open, image?.file_path, projectDir, labelsetId, task, sourceDatasetDir]);
+  }, [open, image?.file_path, projectDir, projectId, labelsetId, task, sourceDatasetDir]);
+
+  useEffect(() => {
+    if (open && projectDir) return registerPanelError('모델 보조', error);
+  }, [errorScope, open, projectDir, error]);
 
   const selectProposal = (item: LabelSuggestion) => {
     setSelectedProposalId(item.id);

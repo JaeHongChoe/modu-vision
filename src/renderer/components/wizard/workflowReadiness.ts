@@ -84,6 +84,7 @@ export function getNextAction(input: ReadinessContext): ReadinessAction {
     if(input.train<1 || input.val<1)return result('blocked',[`저장된 학습·검증 분할 부족 (Train ${input.train} / Val ${input.val})`],'학습·시험 분할 확인 (1단계)',1);
     completedInputs.push(`저장 분할 Train ${input.train} / Val ${input.val}`);
     if(ACTIVE_TRAINING.includes(input.trainingStatus||''))return result('checking',['작업 완료 응답 확인 중'],'학습 진행 상태 보기',3,'workflow-training');
+    if(input.trainingStatus==='failed')return result('blocked',['학습 작업이 실패했습니다. 패널 오류에서 원인과 다음 행동을 확인하세요.'],'학습 오류 확인',3,undefined,'details');
     if(input.trainingStatus==='completed')return result('ready',[],'학습 결과 평가 (4단계)',4);
     return result('ready',[],'학습 시작 버튼으로 이동 (3단계)',3,'workflow-training');
   }

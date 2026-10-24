@@ -10,6 +10,8 @@ import { useDraftReviewStore } from '../../stores/useDraftReviewStore';
 import { labelingScope } from './foundationRequest';
 import { Explain } from '../common/Explain';
 import { draftError, draftRefusalText } from './draftReview';
+import { registerPanelError } from '../../stores/assistContext';
+import { useScopedError } from '../common/useScopedError';
 
 /** Design 3.3 ③: in a project with no model yet, a phrase ("scratch, dent") makes the local text model draft every
  *  unlabeled image. Detection drafts are Grounding DINO boxes; segmentation drafts are SAM2 outlines inside those boxes.
@@ -68,9 +70,11 @@ export const PhraseDraftCreate: React.FC<Props> = ({ task, disabled, pendingImag
   const projectDir = useProjectStore((state) => state.projectDir);
   const folderPath = useDatasetStore((state) => state.folderPath);
   const categories = useAnnotationStore((state) => state.categories);
-  const scope = labelingScope({ projectDir, project });
-  const live = useRef(scope);
-  live.current = scope;
+  const scope = JSON.stringify([labelingScope({ projectDir, project }), folderPath, task]);
+  const live = useRef({ scope, revision: 0 });
+  if (live.current.scope !== scope) live.current = { scope, revision: live.current.revision + 1 };
+  const revision = live.current.revision;
+  const isCurrent = () => live.current.scope === scope && live.current.revision === revision;
   const [setup, setSetup] = useState<FoundationSetup | null>(null);
   const [prompt, setPrompt] = useState('');
   // '' = each phrase as typed (a class of the same name is used when the project has one): an empty project's first
@@ -82,7 +86,8 @@ export const PhraseDraftCreate: React.FC<Props> = ({ task, disabled, pendingImag
   const [textDir, setTextDir] = useState('');
   const [maskDir, setMaskDir] = useState('');
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState('');
+  const [error, setError] = useScopedError(scope);
+  const batchScope = useRef(scope);
   const [notice, setNotice] = useState('');
   const running = !!batch && labelingJobActive(batch.status);
 
@@ -96,53 +101,62 @@ export const PhraseDraftCreate: React.FC<Props> = ({ task, disabled, pendingImag
     if (!folderPath || !project) return () => { active = false; };
     void Promise.all([provider.setup(), provider.batches(), api.dataset.getImages({ folder_path: folderPath, task: project.task, label_status: 'unlabeled', limit: 1 })])
       .then(([next, listed, page]) => {
-        if (!active || live.current !== scope) return;
+        if (!active || !isCurrent()) return;
         setSetup(next); setTextDir(next.configuration.model_dir || ''); setMaskDir(next.configuration.mask_model_dir || '');
         setUnlabeled(page.total);
         setBatch(listed.batches.find((item) => labelingJobActive(item.status)) ?? null);
-      }).catch((cause) => { if (active && live.current === scope) setError(draftError(cause)); });
+      }).catch((cause) => { if (active && isCurrent()) setError(draftError(cause)); });
     return () => { active = false; };
   }, [scope, folderPath, project]);
+
+  useEffect(() => {
+    // The reset above queues setBatch(null); its old render must not publish that batch in the new scope.
+    const currentBatch = batchScope.current === scope;
+    batchScope.current = scope;
+    if (!projectDir || !folderPath) return;
+    const text = [...new Set([error, currentBatch && batch?.error ? draftRefusalText(batch.error) : null].filter(Boolean))].join(' · ');
+    return registerPanelError('문구 초안', text);
+  }, [scope, projectDir, folderPath, error, batch?.error]);
 
   useEffect(() => {
     if (!batch || !labelingJobActive(batch.status)) return;
     let active = true;
     const timer = window.setInterval(() => {
       void provider.batch(batch.id).then((next) => {
-        if (!active || live.current !== scope) return;
+        if (!active || !isCurrent()) return;
         setBatch(next);
         // New drafts, and fewer unlabeled images to say: the footer and the queue read them again.
         if (!labelingJobActive(next.status)) bumpWorkflowEvidence();
-      }).catch((cause) => { if (active && live.current === scope) setError(draftError(cause)); });
+      }).catch((cause) => { if (active && isCurrent()) setError(draftError(cause)); });
     }, 1000);
     return () => { active = false; window.clearInterval(timer); };
   }, [batch?.id, batch?.status, scope]);
 
   const run = async (action: () => Promise<void>) => {
     setBusy(true); setError(''); setNotice('');
-    try { await action(); } catch (cause) { if (live.current === scope) setError(draftError(cause)); } finally { if (live.current === scope) setBusy(false); }
+    try { await action(); } catch (cause) { if (isCurrent()) setError(draftError(cause)); } finally { if (isCurrent()) setBusy(false); }
   };
   const saveFolder = (field: 'model_dir' | 'mask_model_dir', path: string) => run(async () => {
     const next = await provider.configure({ [field]: path.trim() });
-    if (live.current === scope) { setSetup(next); setTextDir(next.configuration.model_dir || ''); setMaskDir(next.configuration.mask_model_dir || ''); }
+    if (isCurrent()) { setSetup(next); setTextDir(next.configuration.model_dir || ''); setMaskDir(next.configuration.mask_model_dir || ''); }
   });
   const pickFolder = (field: 'model_dir' | 'mask_model_dir') => run(async () => {
     const path = await host.selectFolder({ title: field === 'model_dir' ? '문구 모델(Grounding DINO) 폴더' : 'SAM2 모델 폴더' });
-    if (path && live.current === scope) { const next = await provider.configure({ [field]: path }); if (live.current === scope) { setSetup(next); setTextDir(next.configuration.model_dir || ''); setMaskDir(next.configuration.mask_model_dir || ''); } }
+    if (path && isCurrent()) { const next = await provider.configure({ [field]: path }); if (isCurrent()) { setSetup(next); setTextDir(next.configuration.model_dir || ''); setMaskDir(next.configuration.mask_model_dir || ''); } }
   });
   const start = () => run(async () => {
     if (!folderPath || !project) return;
     const current = await provider.setup();
-    if (live.current !== scope) return;
+    if (!isCurrent()) return;
     setSetup(current);
     const blocked = phraseDraftBlocked(current, task);
     if (blocked) throw new Error(blocked);
     const { paths, more } = await collectDraftPaths((offset) => api.dataset.getImages({ folder_path: folderPath, task: project.task, label_status: 'unlabeled', limit: 500, offset }), pendingImages);
-    if (live.current !== scope) return;
+    if (!isCurrent()) return;
     if (!paths.length) throw new Error(pendingImages.size ? '라벨 없는 이미지마다 검토할 초안이 이미 있습니다. 아래 검토 대기에서 먼저 보세요.' : '라벨 없는 이미지가 없습니다. 초안은 라벨 없는 이미지에만 만듭니다.');
     const classIds = Object.fromEntries(categories.filter((c) => c.id > 0 && c.id <= 255).map((c) => [c.name, c.id]));
     const next = await provider.startBatch(phraseDraftRequest({ task, prompt, label, classIds, imagePaths: paths, setup: current }));
-    if (live.current !== scope) return;
+    if (!isCurrent()) return;
     setBatch(next);
     setPhrases(next.phrases ?? []);
     if (more) setNotice(`이번에는 ${paths.length.toLocaleString()}장에 만듭니다(한 번에 최대 5,000장). 끝나면 다시 누르면 나머지에 이어서 만듭니다.`);
@@ -192,7 +206,7 @@ export const PhraseDraftCreate: React.FC<Props> = ({ task, disabled, pendingImag
       {/* One image at a time instead: SAM2 draws the region a click points at (모델 보조, a draft as well). */}
       <button type="button" className="workspace-button" onClick={() => useDraftReviewStore.getState().requestAssist()}>SAM2 클릭으로 그리기</button>
       {running && batch && <button type="button" className="workspace-button" disabled={busy || batch.status === 'cancelling'}
-        onClick={() => void run(async () => { const next = await provider.cancelBatch(batch.id); if (live.current === scope) setBatch(next); })}>멈추기</button>}
+        onClick={() => void run(async () => { const next = await provider.cancelBatch(batch.id); if (isCurrent()) setBatch(next); })}>멈추기</button>}
     </div>
     {phrases.length > 0 && <p className="text-[11px] text-slate-400">찾는 말: {phrases.map((p) => p.text === p.query ? p.text : `${p.text}→${p.query}`).join(', ')}</p>}
     {batch && <p role="status" className="text-[11px] text-slate-200">{phraseBatchLine(batch)}{!running && batch.generated > 0 ? ' · 아래 검토 대기에서 보고 채택하세요.' : ''}</p>}

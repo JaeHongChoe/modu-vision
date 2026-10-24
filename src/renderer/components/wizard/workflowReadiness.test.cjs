@@ -592,3 +592,13 @@ test('a new inspection result replaces the step-6 counts in place; only its own 
  assert.match(panel,/inspected: counts\.processed \+ counts\.errors, total: counts\.total, ng: counts\.ng, \.\.\.\(counts\.errors \? \{failed: counts\.errors\} : \{\}\)/);
  assert.match(panel,/const progress = summary\.total \? summary\.processed \+ summary\.errors : 0;/);
 });
+
+test('a failed training job guides the person to its error details instead of a ready start action',()=>{
+ const {getNextAction}=load();
+ const result=getNextAction({...base,stage:3,splitState:'saved',trainingStatus:'failed'});
+ assert.equal(result.status,'blocked');
+ assert.match(result.missingInputs.join(' '),/학습.*실패/);
+ assert.equal(result.nextAction.kind,'details');
+ assert.equal(result.nextAction.step,3);
+ assert.match(result.nextAction.label,/오류/);
+});

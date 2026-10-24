@@ -55,6 +55,7 @@ function ocrProjectSwitchHarness() {
   let active;
   const frame = () => ({slots: [], cursor: 0, pending: [], disposed: false});
   const react = {
+    useRef(initial) {const owner=active, i=owner.cursor++;return owner.slots[i]??(owner.slots[i]={current:initial});},
     useState(initial) {
       const owner = active, i = owner.cursor++;
       if (!(i in owner.slots)) {
@@ -112,7 +113,7 @@ function ocrProjectSwitchHarness() {
   const mocks = {
     react, 'react/jsx-runtime': {jsx, jsxs: jsx, Fragment: 'fragment'}, 'lucide-react': {},
     '../../stores/useProjectStore': {useProjectStore: store},
-    '../../stores/useDatasetStore': {useDatasetStore: Object.assign(() => dataset, {getState: () => dataset})},
+    '../../stores/useDatasetStore': {useDatasetStore: Object.assign(() => dataset, {getState: () => dataset}), readDatasetAuthority: () => 'owned'},
     '../../stores/useTrainingStore': {useTrainingStore: () => training},
     '../../stores/useComputeStore': {useComputeStore: Object.assign(() => compute, {getState: () => compute})},
     '../../services/api': {api: {ocr: {models: async () => ({models: []})}}, request, getApiPersistenceIdentity: () => 'local'},
@@ -134,7 +135,7 @@ function ocrProjectSwitchHarness() {
     '../wizard/TaskChangeImpactDialog': {taskPreviewScope: () => 'scope'},
     '../common/errorActions': {}, './trainingLog': {},
     './TrainingSchedulingSettings': {defaultTrainingScheduling: {}, trainingSchedulingOptions: () => ({})},
-    './useSelectedCoreJob': {useSelectedCoreJob: () => null},
+    './useSelectedCoreJob': {useSelectedCoreJob: () => ({job:null,error:null})},
   };
   for (const name of ['../common/OperatorGuidanceBanner', '../common/GuardrailBanner', '../common/LedAnnunciator',
     './OscilloscopeLossCurve', './HardwareTelemetryPanel', './RecipePresetSelector', './RotatedDetectionPanel',

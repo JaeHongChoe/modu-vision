@@ -22,6 +22,7 @@ test('the parent picked by the quick retrain survives its own epoch change and g
  const slots=[],effects=[];let cursor=0;
  const changed=(old,deps)=>!old||!deps||deps.length!==old.deps.length||deps.some((dep,index)=>!Object.is(dep,old.deps[index]));
  const react={createElement:(type,props,...children)=>({type,props:{...props,children}}),Fragment:'Fragment',
+  useRef(initial){const index=cursor++;return slots[index]??(slots[index]={current:initial});},
   useState(initial){const index=cursor++;if(!(index in slots))slots[index]={value:typeof initial==='function'?initial():initial};const slot=slots[index];return[slot.value,value=>{slot.value=typeof value==='function'?value(slot.value):value;}];},
   useEffect(fn,deps){const index=cursor++,old=slots[index];if(changed(old,deps)){const entry={deps};slots[index]=entry;effects.push(()=>{old?.cleanup?.();entry.cleanup=fn();});}}};
  react.default=react;
@@ -35,9 +36,11 @@ test('the parent picked by the quick retrain survives its own epoch change and g
   './parentCandidate':{parentCandidateLabel:parent=>parent.job_id,parentCandidateNotice:''},
   './modelTrainingOptions':compile('modelTrainingOptions.ts',{}),
   './trainingStartSummary':compile('trainingStartSummary.ts',{'./modelTrainingOptions':compile('modelTrainingOptions.ts',{})}),
+  '../../stores/assistContext':compile('../../stores/assistContext.ts',{}),
+  '../common/useScopedError':compile('../common/useScopedError.ts',{react}),
   '../../services/api':{api:{training:{warmStartParents:async(...args)=>{parentReads.push(args[3]);return{parents,total:2};}}},request:async()=>({states:[],excluded:[]}),getApiPersistenceIdentity:()=>null},
-  '../../stores/useProjectStore':{useProjectStore:store({task:'detection',language:'ko',setStep(){},projectDir:'/p',project:{id:'p',source_dataset_dir:'/data',active_labelset_id:'default'},isProjectBusy:false,technicalDetails:false,viewMode:'simple'})},
-  '../../stores/useDatasetStore':{useDatasetStore:store({folderPath:'/data',totalImages:10,split:{train:6,val:2,test:2},isLoading:false,isSplitting:false,importError:null,splitError:null,splitSupported:true,splitUnavailableReason:null,datasetKey:'/data\0detection',splitState:'saved',classes:{},classSplitCounts:null})},
+  '../../stores/useProjectStore':{useProjectStore:store({task:'detection',language:'ko',setStep(){},projectDir:'/p',project:{id:'p',task:'detection',source_dataset_dir:'/data',active_labelset_id:'default'},isProjectBusy:false,technicalDetails:false,viewMode:'simple'})},
+  '../../stores/useDatasetStore':{readDatasetAuthority:()=> 'owned',useDatasetStore:store({folderPath:'/data',totalImages:10,split:{train:6,val:2,test:2},isLoading:false,isSplitting:false,importError:null,splitError:null,splitSupported:true,splitUnavailableReason:null,datasetKey:'/data\0detection',sourceAuthority:'owned',splitState:'saved',classes:{},classSplitCounts:null})},
   '../../stores/useTrainingStore':{useTrainingStore:store({jobId:'job_new',status:'completed',isTraining:false,isRecoveringTraining:false,preset:'fast',setPreset(){},lossHistory:[],hardware:{},
    startTraining:async(...args)=>{starts.push(args);},stopTraining:async()=>{},recoverActiveJob:async()=>{},refreshCurrentJob:async()=>{},reconnectCurrentJob:async()=>{},setNextSettings(){}})},
   '../../stores/autoRunChannel':{registerAutoRun:()=>()=>{}},
