@@ -63,9 +63,10 @@ def resolve_training_parent(project,identifier,task,dataset,preset,options):
         config=dict(options)
         if task=='ocr' and isinstance(config.get('image_size'),int):config['image_size']=(config['image_size'],config.get('image_width',128))
         return resolve_family_parent(project['models_dir'],identifier,task,source,dataset,config)
-    from backend.engine.warm_start import resolve_warm_start_parent,architecture_for,training_classes
+    from backend.engine.warm_start import resolve_warm_start_parent,architecture_for,training_classes,other_labelset_parent,OTHER_LABELSET_PARENT
     parent=resolve_warm_start_parent(identifier,project['models_dir'],source,task,architecture_for(task,preset,options))
     if parent.classes!=training_classes(task,dataset):raise ValueError('Parent classes differ from the prepared input')
+    if other_labelset_parent(Path(project['models_dir'])/identifier,project.get('active_labelset_id')):raise ValueError(OTHER_LABELSET_PARENT)
     return parent
 
 

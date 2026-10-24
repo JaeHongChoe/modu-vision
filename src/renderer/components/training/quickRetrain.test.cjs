@@ -62,6 +62,8 @@ test('the parent picked by the quick retrain survives its own epoch change and g
  assert.equal(parentSelect(tree).props.value,'job_new','the parent just picked stays picked');
  assert.equal(parentReads.length,1,'five epochs do not change which parents fit');
  assert.match(text(tree),/시작 모델 …job_new · 학습 횟수 5/);
+ // The list only offers this label set's parents; one whose receipt predates the label-set record is offered and says so.
+ assert.match(text(tree),/라벨 세트 기록 없음/);
  await nodes(tree).find(node=>node.type==='button'&&text(node).includes('선택 설정으로 학습 시작')).props.onClick();
  assert.equal(starts.length,1);
  assert.equal(starts[0][2],'job_new','the start request carries the warm-start parent');
@@ -71,4 +73,12 @@ test('the parent picked by the quick retrain survives its own epoch change and g
  tree=await settle();
  assert.equal(parentReads.length,2);
  assert.equal(parentSelect(tree).props.value,'');
+ // A parent recorded under the active label set carries no such mark.
+ parents[1].labelset_id='default';
+ nodes(tree).find(node=>node.props?.['aria-label']==='학습 모델 구조').props.onChange({target:{value:'yolo26n'}});
+ tree=await settle();
+ nodes(tree).find(node=>node.type==='button'&&node.props['aria-label']==='빠른 이어 학습').props.onClick();
+ tree=await settle();
+ assert.match(text(tree),/시작 모델 …job_new · 학습 횟수 5/);
+ assert.doesNotMatch(text(tree),/라벨 세트 기록 없음/);
 });

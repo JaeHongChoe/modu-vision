@@ -4,10 +4,13 @@ import {useAnnotationStore} from '../../stores/useAnnotationStore';
 import {useFoundationPromptStore} from '../../stores/useFoundationPromptStore';
 import {useModelAssistRunStore} from '../../stores/useModelAssistRunStore';
 import {useProjectStore} from '../../stores/useProjectStore';
-import {buildFoundationRequest,foundationAllowed,labelingScope} from './foundationRequest';
+import {buildFoundationRequest,foundationAllowed,labelingScope,quickPointClassKey,quickPointClassKeyOf} from './foundationRequest';
 
 interface Callbacks {isBlocked:()=>boolean;onCreated:(proposal:FoundationProposal)=>void;onError:(error:unknown)=>void;onRunning:(running:boolean)=>void}
-const categoryContext=()=>{const state=useAnnotationStore.getState();return JSON.stringify([state.activeCategory,state.categories]);};
+// Only what the request uses: a label reload reorders and recolours the palette (after adopting a draft too) and must
+// not switch the mode off; another active class or name→id map does.
+const classKey=()=>{const state=useAnnotationStore.getState();return quickPointClassKey(state.activeCategory,state.categories);};
+const sameClasses=(context:string|undefined)=>quickPointClassKeyOf(context)===classKey();
 const annotationContext=()=>{const state=useAnnotationStore.getState();return JSON.stringify([
   state.currentImage?.file_path,state.isDirty,state.annotationLoadStatus,state.activeCategory,state.categories,
 ]);};
@@ -25,7 +28,7 @@ export function startFoundationQuickPointController(callbacks:Callbacks):()=>voi
   const unsubscribeAnnotation=useAnnotationStore.subscribe(()=>{
     const current=annotationContext();if(current!==lastAnnotation){lastAnnotation=current;annotationRevision++;}bindImage();
     const state=prompts.getState();
-    if(state.quickPointEnabled&&state.quickOptions?.categoryContext!==categoryContext()){
+    if(state.quickPointEnabled&&!sameClasses(state.quickOptions?.categoryContext)){
       state.setQuickPointEnabled(false);
       if(active)callbacks.onError(new Error('후보 클래스가 바뀌어 점 입력 후 후보 만들기를 껐습니다. 클래스를 확인하고 다시 켜세요.'));
     }
@@ -37,7 +40,7 @@ export function startFoundationQuickPointController(callbacks:Callbacks):()=>voi
     const settings=state.quickOptions,imagePath=state.imagePath,scope=state.projectScope;
     if(running||useModelAssistRunStore.getState().activeOperations>0||!readyToRun()||!settings?.ready||!settings.options.label.trim()||!imagePath)return;
     if(scope!==labelingScope(useProjectStore.getState())||imagePath!==useAnnotationStore.getState().currentImage?.file_path)return;
-    if(settings.categoryContext!==categoryContext()){state.setQuickPointEnabled(false);return;}
+    if(!sameClasses(settings.categoryContext)){state.setQuickPointEnabled(false);return;}
     const task=useProjectStore.getState().project?.task;if(task!=='detection'&&task!=='segmentation')return;
     const revision=annotationRevision,transport=getApiPersistenceIdentity(),generation=getProjectContextGeneration();
     const same=()=>active&&prompts.getState().quickPointEnabled&&prompts.getState().promptRevision===state.promptRevision

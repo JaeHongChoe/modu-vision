@@ -6,6 +6,7 @@ function load(file,cache=new Map()){if(cache.has(file))return cache.get(file).ex
  m._compile(ts.transpileModule(fs.readFileSync(file,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText,file);return m.exports;}
 const {createAssistantTools,ToolRefusal}=load(path.join(__dirname,'assistantTools.ts'));
 const RUN='run_'+'cd'.repeat(12);
+const DRAFT_PREVIEW={title:'라벨 초안 만들기',lines:[],undo:'거절',bound:{model_job_id:'job_new',data_state:'current',threshold:0.5}};
 
 function fakeDeps(overrides={}){
  const calls=[];const record=(name,value)=>(...args)=>{calls.push([name,...args]);return typeof value==='function'?value(...args):value;};
@@ -86,7 +87,7 @@ test('class, drafts and training previews check their preconditions and name the
  const changed=await tools.preview('generate_label_drafts',{model_job_id:'job_old',threshold:0.3});
  assert.match(changed.lines[0],/평가 근거 아님/);assert.match(changed.lines[1],/0\.30/);
  await assert.rejects(tools.preview('generate_label_drafts',{model_job_id:'job_unknown'}),error=>error.code==='unknown_model');
- const started=await tools.execute('generate_label_drafts',{threshold:0.4},{confirmed:true,runId:RUN});
+ const started=await tools.execute('generate_label_drafts',{threshold:0.4},{confirmed:true,runId:RUN,preview:await tools.preview('generate_label_drafts',{threshold:0.4})});
  assert.equal(started.link,'batch:batch_1');assert.deepEqual(calls.at(-1),['startDraftBatch','job_new',0.4]);
  assert.match((await tools.preview('start_training',{})).undo,/학습 중지/);
  const notReady=createAssistantTools(fakeDeps({snapshot:()=>({stage:2,status:'ready',blocker:null,nextAction:{label:'x',step:2},progress:null,errors:[]})}).deps);
@@ -135,7 +136,7 @@ test('evaluation guidance is read-only and carries the measured threshold tradeo
 
 test('a scope change while choosing a draft model refuses the write before batch mutation',async()=>{
  let current=true,release;const {deps,calls}=fakeDeps({draftModels:()=>new Promise(resolve=>{release=resolve;})});const tools=createAssistantTools(deps);
- const pending=tools.execute('generate_label_drafts',{}, {confirmed:true,runId:RUN,isCurrent:()=>current});
+ const pending=tools.execute('generate_label_drafts',{}, {confirmed:true,runId:RUN,preview:DRAFT_PREVIEW,isCurrent:()=>current});
  current=false;release([{jobId:'job_new',task:'classification',dataState:'current'}]);
  await assert.rejects(pending,error=>error.code==='context_changed');assert.deepEqual(calls,[]);
  await assert.rejects(tools.runAutomatic('open_step',{step:2},()=>false),error=>error.code==='context_changed');
@@ -150,9 +151,25 @@ test('completed write outcomes are refused after a scope change and mutation dep
  ]){
   let current=true,release,guard;const check=()=>current;
   const {deps}=fakeDeps({[dep]:(...values)=>{guard=values.at(-1);return new Promise(resolve=>{release=resolve;});}});
-  const pending=createAssistantTools(deps).execute(name,args,{confirmed:true,runId:RUN,isCurrent:check});
+  const pending=createAssistantTools(deps).execute(name,args,{confirmed:true,runId:RUN,preview:DRAFT_PREVIEW,isCurrent:check});
   // Draft model selection yields once before the write is dispatched.
   while(!release)await Promise.resolve();
   assert.equal(guard,check);current=false;release(result);await assert.rejects(pending,error=>error.code==='context_changed');
  }
+});
+// Defect: preview and execute each picked the default draft model, so the confirm card could run a model it never showed.
+test('the draft model and threshold shown in the preview are the ones executed, or the write is refused',async()=>{
+ let models=[{jobId:'job_a',task:'classification',dataState:'current',createdAt:null}];
+ const {deps,calls}=fakeDeps({draftModels:async()=>models});const tools=createAssistantTools(deps);
+ const preview=await tools.preview('generate_label_drafts',{threshold:0.42});assert.match(preview.lines[0],/job_a/);
+ models=[{jobId:'job_b',task:'classification',dataState:'current',createdAt:null},...models];
+ await tools.execute('generate_label_drafts',{threshold:0.42},{confirmed:true,runId:RUN,preview});
+ assert.deepEqual(calls.at(-1),['startDraftBatch','job_a',0.42],'a newer default does not replace the previewed model');
+ models=[{jobId:'job_b',task:'classification',dataState:'current',createdAt:null}];calls.length=0;
+ await assert.rejects(tools.execute('generate_label_drafts',{threshold:0.42},{confirmed:true,runId:RUN,preview}),
+  error=>error.code==='model_unavailable'&&/job_a/.test(error.message)&&/다시 요청/.test(error.message));
+ models=[{jobId:'job_a',task:'classification',dataState:'changed',createdAt:null}];
+ await assert.rejects(tools.execute('generate_label_drafts',{threshold:0.42},{confirmed:true,runId:RUN,preview}),error=>error.code==='model_unavailable');
+ await assert.rejects(tools.execute('generate_label_drafts',{threshold:0.42},{confirmed:true,runId:RUN}),error=>error.code==='preview_required');
+ assert.deepEqual(calls,[],'no other model is picked');
 });

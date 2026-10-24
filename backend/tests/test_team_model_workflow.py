@@ -67,7 +67,8 @@ def test_server_preflight_does_not_mark_missing_pretrained_bytes_ready(tmp_path,
     value=route.readiness(route.ReadinessRequest(task='classification',model='dinov3_vits16',compute_profile_id='worker'),None)
     assert not value['ready']
     assert value['weights']['state']=='missing'
-    assert any('weight' in action.lower() for action in value['next_actions'])
+    # The step-3 card's actions are Korean: the missing pretrained weights are named as such (it was an English sentence).
+    assert any('사전학습 가중치가 서버에 없습니다' in action for action in value['next_actions'])
 
 
 def test_prepared_input_preflight_rejects_other_project_without_versions(tmp_path):

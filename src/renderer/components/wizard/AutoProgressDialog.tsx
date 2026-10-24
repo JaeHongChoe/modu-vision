@@ -10,7 +10,7 @@ import { useProjectStore } from '../../stores/useProjectStore';
 import { useTrainingStore } from '../../stores/useTrainingStore';
 import { bumpWorkflowEvidence } from '../../stores/workflowEvidence';
 import { WorkspaceDialog } from '../common/WorkspaceDialog';
-import { ACTION_TEXT, PERSON_STOPS, runAutoProgress, type ActResult, type AutoAction, type AutoDeps, type AutoRunState, type TruthConfirm } from './autoProgress';
+import { ACTION_TEXT, PERSON_STOPS, runAutoProgress, type ActResult, type AutoAction, type AutoChoices, type AutoDeps, type AutoRunState, type TruthConfirm } from './autoProgress';
 import { useAnnotationStore } from '../../stores/useAnnotationStore';
 import { useEffect, useState } from 'react';
 import { focusWorkflowTarget, type WorkflowStep } from './workflowReadiness';
@@ -92,7 +92,8 @@ function appDeps(cancelled: () => boolean): AutoDeps {
 interface AutoProgressState {
   run: AutoRunState | null;
   cancelRequested: boolean;
-  start: () => void;
+  /** `choices` is what the person pressed at the last stop (only for this run; a new run asks again). */
+  start: (choices?: AutoChoices) => void;
   cancel: () => void;
 }
 
@@ -100,10 +101,10 @@ interface AutoProgressState {
 export const useAutoProgressStore = create<AutoProgressState>((set, get) => ({
   run: null,
   cancelRequested: false,
-  start: () => {
+  start: (choices) => {
     if (get().run?.state === 'running') return;
     set({ cancelRequested: false });
-    void runAutoProgress(appDeps(() => get().cancelRequested), (run) => set({ run }));
+    void runAutoProgress(appDeps(() => get().cancelRequested), (run) => set({ run }), { choices });
   },
   cancel: () => set({ cancelRequested: true }),
 }));
@@ -203,12 +204,15 @@ export function AutoProgressDialog({ onClose }: { onClose: () => void }) {
       {run?.state === 'done' && <p role="status" className="text-emerald-300">끝까지 진행했습니다.</p>}
       {run?.stop && !running && <div role={run.state === 'failed' ? 'alert' : 'status'} className="space-y-2 rounded border border-amber-600/70 bg-amber-950/30 p-2 text-amber-100">
         <p>{run.state === 'failed' ? '멈췄습니다: ' : '여기서 사람이 필요합니다: '}{run.stop.reason}</p>
-        {run.stop.confirm && <TruthConfirmForm confirm={run.stop.confirm} task={task} onDone={start} />}
-        <button type="button" className="workspace-button" onClick={() => void goToStop()}>{run.stop.step}단계 그 화면으로</button>
+        {run.stop.confirm && <TruthConfirmForm confirm={run.stop.confirm} task={task} onDone={() => start()} />}
+        <div className="flex flex-wrap gap-2">
+          {run.stop.deferDrafts && <button type="button" className="workspace-button" onClick={() => start({ deferDrafts: true })}>남은 초안은 두고 확정한 라벨 {run.stop.deferDrafts}장으로 학습까지 이어 가기</button>}
+          <button type="button" className="workspace-button" onClick={() => void goToStop()}>{run.stop.step}단계 그 화면으로</button>
+        </div>
       </div>}
       <div className="flex justify-end gap-2">
         {running && <button type="button" className="workspace-button" disabled={cancelRequested} onClick={cancel}>{cancelRequested ? '멈추는 중…' : '자동 진행 멈추기'}</button>}
-        <button type="button" className={run?.stop?.confirm && !running ? 'workspace-button' : 'workspace-button workspace-button--primary'} disabled={running} onClick={start}>
+        <button type="button" className={run?.stop?.confirm && !running ? 'workspace-button' : 'workspace-button workspace-button--primary'} disabled={running} onClick={() => start()}>
           {running ? '진행 중…' : resumable ? '멈춘 곳부터 이어 가기' : run?.state === 'done' ? '다시 확인하기' : '자동 진행 시작'}
         </button>
       </div>

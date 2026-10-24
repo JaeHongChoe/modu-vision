@@ -87,6 +87,7 @@ export class SiwcConnection {
   private sessions=new Map<string,Session>();
   private blocked=new Set<string>();
   private listed=new Map<string,Set<string>>();
+  private connected=new Set<(recordId:string)=>void>();
   /** Receipts bind exact validated provider output to this recipient authority. Renderer-supplied opaque data is never trusted. */
   private replayReceipts=new Map<string,string>();
   private discovered:Discovery|null=null;
@@ -102,6 +103,8 @@ export class SiwcConnection {
       return {...state,status:this.status==='idle'&&signed?'connected':this.status,...(this.error?{error:{...this.error}}:{}),...(this.revocation!==undefined?{remoteRevocationConfirmed:this.revocation}:{})};
     } catch(error) {let recovery:AssistantChatgptRecoveryState|undefined;try{recovery=this.store.recoveryStatus?.();}catch{}return {accounts:[],active:null,encryptionAvailable:false,status:'error',error:siwcConnectionError(error),...(recovery?{recovery}:{})};}
   }
+  /** The only signal that may make ChatGPT the chosen recipient: a login that was saved and activated (never a start or a failure). */
+  onConnected(listener:(recordId:string)=>void):()=>void {this.connected.add(listener);return ()=>{this.connected.delete(listener);};}
   /** Opaque recipient binding; no user identity, token or stable subject appears in this value. */
   authority():string {const state=this.state(),active=state.accounts.find(a=>a.recordId===state.active);return `${this.revision}:${state.active||''}:${active?.model||''}:${active?.signedIn===true}`;}
   private assertOpen() {if(this.disposed)throw protocol('cancelled');}
@@ -181,6 +184,7 @@ export class SiwcConnection {
           if(registration&&(tokens.issuer!==registration.issuer||tokens.subject!==registration.subject||tokens.clientId!==registration.clientId))throw protocol('identity_mismatch');
           const saved=this.store.save(tokens,{...(input.recordId?{recordId:input.recordId}:{}),...(label?{label}:{}),activate:true});this.sessions.delete(saved.recordId);this.blocked.delete(saved.recordId);this.listed.delete(saved.recordId);this.revision++;this.status='connected';this.error=undefined;
           res.statusCode=200;res.end('ChatGPT 연결을 확인했습니다. 이 창을 닫고 Modu Vision으로 돌아가세요.');this.closeAttempt();
+          for(const listener of this.connected){try{listener(saved.recordId);}catch{/* the saved login stands; the recipient choice is read again on the next state */}}
         }catch(error){if(generation===this.generation&&!this.disposed){this.failure(error);this.closeAttempt();}res.statusCode=400;res.end('ChatGPT 연결을 완료하지 못했습니다. 앱에서 연결 상태를 확인하세요.');}})();
       });
       const authUrl=new URL(auth.authorizationUrl),hint=input.recordId?this.store.credentials(input.recordId)?.idToken:null;if(hint)authUrl.searchParams.set('id_token_hint',hint);

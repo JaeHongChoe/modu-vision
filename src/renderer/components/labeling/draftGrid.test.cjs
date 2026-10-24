@@ -28,6 +28,19 @@ test('tiles are pressed buttons with a 256px lazy thumbnail; an unloaded tile sa
   assert.match(html, /학습 모델/);
 });
 
+test('a tile whose image failed to load says so and what to do instead of loading forever', () => {
+  const failures = [];
+  const {DraftGrid: Grid} = load('DraftGrid.tsx', {
+    '../common/ScopedDatasetThumbnail': {ScopedDatasetThumbnail: props => { props.onFailed?.(); return React.createElement('img', {alt: props.alt}); }},
+  });
+  const html = renderToStaticMarkup(React.createElement(Grid, {drafts: [draft('d1', '/x/a.png', [0.9]), draft('d2', '/x/b.png', [0.4])], choices: new Map(), excluded: new Set(),
+    loaded: new Set(['d1']), failed: new Set(['d2']), authority: 'a', context: null, current: () => true, disabled: false, onToggle() {}, onLoaded() {}, onFailed: id => failures.push(id), onOpen() {}}));
+  assert.deepEqual(failures, ['d1', 'd2'], 'each tile reports its own failed read');
+  assert.equal((html.match(/미리보기를 불러오지 못했습니다/g) || []).length, 1, 'only the failed tile');
+  assert.match(html, /눌러서 빼거나 &#x27;열기&#x27;로 확인/);
+  assert.doesNotMatch(html, /불러오는 중/, 'neither tile still says it is loading');
+});
+
 test('a loaded tile draws its chosen candidates with a screen-width stroke', () => {
   const html = render({drafts: [draft('d1', '/x/a.png', [0.9, 0.5])], loaded: new Set(['d1']), choices: new Map([['d1', new Set(['d1_c0'])]])});
   assert.equal((html.match(/<rect/g) || []).length, 1, 'only the chosen candidate');

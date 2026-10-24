@@ -16,7 +16,8 @@ import type { AssistantToolSpec } from '../../types/electron';
 import { STEP_NAMES, fileName, minimalAssistContext, reducePaths, type AssistantFacts } from './assistantContext';
 
 export type ToolTier = 'read' | 'navigate' | 'write' | 'forbidden';
-export interface ToolPreview { title: string; lines: string[]; undo: string }
+/** `bound` holds what the preview resolved (e.g. the default draft model) so the confirmed write runs exactly that. */
+export interface ToolPreview { title: string; lines: string[]; undo: string; bound?: Record<string, unknown> }
 /** `content` goes back to the model (JSON or one sentence); `summary` is the panel's line; `link` names the record the
  *  write produced (an audit action, a job or a batch) for the run log. */
 export interface ToolOutcome { ok: boolean; content: string; summary: string; link?: string; errorCode?: string }
@@ -69,7 +70,7 @@ interface ToolDefinition {
   where?: string;
   run?(args: Record<string, unknown>, isCurrent?: ToolCurrent): Promise<ToolOutcome>;
   preview?(args: Record<string, unknown>, isCurrent?: ToolCurrent): Promise<ToolPreview>;
-  execute?(args: Record<string, unknown>, isCurrent?: ToolCurrent): Promise<ToolOutcome>;
+  execute?(args: Record<string, unknown>, isCurrent?: ToolCurrent, bound?: Record<string, unknown>): Promise<ToolOutcome>;
 }
 
 const NO_ARGS = { type: 'object', properties: {}, additionalProperties: false };
@@ -241,10 +242,11 @@ export function createAssistantTools(deps: ToolDeps): AssistantToolRegistry {
         requireToolCurrent(current);
         return { title: '라벨 초안 만들기', lines: [`모델 ${model.jobId}${model.dataState === 'changed' ? ' · 데이터가 바뀐 뒤 학습한 모델 · 평가 근거 아님' : ''}`,
           `기준 신뢰도 ${threshold.toFixed(2)} · 라벨 없는 이미지 약 ${value.unlabeled}장`, '초안은 정답이 아니며 라벨 파일·학습 데이터를 바꾸지 않습니다.'],
-          undo: '만들어진 초안은 2단계 초안 검토에서 거절하면 사라지고, 실행 중이면 같은 곳에서 취소할 수 있습니다.' };
+          undo: '만들어진 초안은 2단계 초안 검토에서 거절하면 사라지고, 실행 중이면 같은 곳에서 취소할 수 있습니다.',
+          bound: { model_job_id: model.jobId, data_state: model.dataState, threshold } };
       },
-      execute: async (args, current) => {
-        const { model, threshold } = await draftChoice(deps, args);
+      execute: async (_args, current, bound) => {
+        const { model, threshold } = await previewedDraftChoice(deps, bound);
         requireToolCurrent(current);
         const batch = await deps.startDraftBatch(model.jobId, threshold, ...currentArg(current));requireToolCurrent(current?.afterMutation ?? current);
         return ok({ batch_id: batch.id, images: batch.total, threshold }, `초안 만들기를 시작했습니다(이미지 ${batch.total}장). 2단계 초안 검토에서 확인하세요.`, `batch:${batch.id}`);
@@ -301,6 +303,17 @@ async function draftChoice(deps: ToolDeps, args: Record<string, unknown>): Promi
   return { model: draftModelChoice(models, args.model_job_id), threshold: Math.round(threshold * 100) / 100 };
 }
 
+/** The model and threshold the person confirmed in the preview; never a fresh default pick. */
+async function previewedDraftChoice(deps: ToolDeps, bound?: Record<string, unknown>): Promise<{ model: DraftModel; threshold: number }> {
+  const jobId = bound?.model_job_id, threshold = bound?.threshold;
+  if (typeof jobId !== 'string' || !jobId || typeof threshold !== 'number' || !Number.isFinite(threshold) || threshold < 0.05 || threshold > 0.95)
+    throw new ToolRefusal('preview_required', '미리보기에서 확인한 초안 모델이 없어 실행하지 않았습니다. 다시 요청해 미리보기를 확인한 뒤 실행하세요.');
+  const model = (await deps.draftModels()).find(row => row.jobId === jobId);
+  if (!model || model.dataState !== bound!.data_state)
+    throw new ToolRefusal('model_unavailable', `미리보기에서 확인한 모델 ${jobId}이 지금 초안용 모델 목록에 없거나 상태가 바뀌어 다른 모델로 바꾸지 않고 멈췄습니다. 다시 요청해 새 미리보기를 확인하세요.`);
+  return { model, threshold };
+}
+
 function queueOrder(args: Record<string, unknown>): DraftQueueOrder {
   if (args.order !== undefined && args.order !== 'uncertain' && args.order !== 'confident') throw new ToolRefusal('invalid_arguments', 'order는 uncertain 또는 confident여야 합니다.');
   return args.order === 'confident' ? 'confident' : 'uncertain';
@@ -347,10 +360,10 @@ export class AssistantToolRegistry {
   }
 
   /** A write tool runs only with the person's confirmation from the panel and a run id for its backend write. */
-  async execute(name: string, args: Record<string, unknown>, confirmation: { confirmed: boolean; runId: string; isCurrent?: ToolCurrent } | null | undefined): Promise<ToolOutcome> {
+  async execute(name: string, args: Record<string, unknown>, confirmation: { confirmed: boolean; runId: string; isCurrent?: ToolCurrent; preview?: ToolPreview } | null | undefined): Promise<ToolOutcome> {
     const tool = this.byName.get(name);
     if (!tool || tool.tier !== 'write' || !tool.execute) throw new ToolRefusal('not_write', '쓰기 도구가 아닙니다.');
     if (confirmation?.confirmed !== true || !/^run_[a-f0-9]{24}$/.test(confirmation.runId)) throw new ToolRefusal('confirmation_required', '사람의 확인 없이 쓰기 도구를 실행하지 않습니다.');
-    requireToolCurrent(confirmation.isCurrent);return tool.execute(args, confirmation.isCurrent);
+    requireToolCurrent(confirmation.isCurrent);return tool.execute(args, confirmation.isCurrent, confirmation.preview?.bound);
   }
 }

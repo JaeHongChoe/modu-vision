@@ -8,11 +8,16 @@ import { useTrainingStore } from '../stores/useTrainingStore';
 import { getApiPersistenceIdentity, getProjectContextGeneration } from './api';
 import { workflowEvidenceRevision } from '../stores/workflowEvidence';
 
-export function assistantScope(config: AssistantConfigState | null): string {
+/** The project part of the scope: the run log (and a write's outcome) belongs to it whatever the provider settings are. */
+function projectAuthority(): unknown[] {
   const project = useProjectStore.getState(), compute = useComputeStore.getState();
+  return [getApiPersistenceIdentity(), getProjectContextGeneration(), compute.transportRevision,
+    project.projectDir, project.project?.id, project.project?.source_dataset_dir, project.project?.active_labelset_id, project.task];
+}
+export const assistantProjectScope = (): string => JSON.stringify(projectAuthority());
+export function assistantScope(config: AssistantConfigState | null): string {
   const provider = config?.providers.find(item => item.provider === config.active);
-  return JSON.stringify([getApiPersistenceIdentity(), getProjectContextGeneration(), compute.transportRevision,
-    project.projectDir, project.project?.id, project.project?.source_dataset_dir, project.project?.active_labelset_id, project.task,
+  return JSON.stringify([...projectAuthority(),
     config?.active, provider?.baseUrl, provider?.model, provider?.format, provider?.supportsImages,
     provider?.connectionAuthority, config?.chatgpt?.authority]);
 }

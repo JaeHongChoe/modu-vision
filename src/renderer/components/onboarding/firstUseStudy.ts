@@ -9,9 +9,15 @@ export interface StudyBuild {
   app_version: string | null;
   platform: 'darwin' | 'win32' | 'linux' | 'browser' | 'unknown';
   architecture: 'arm64' | 'x64' | 'ia32' | null;
-  /** No existing renderer build-SHA hook: an app version must never be substituted for it. */
-  build_sha: null;
+  /** The bundle's own source commit (BUILD_SHA below), never the caller's value; an app version never stands in for it. */
+  build_sha: string | null;
 }
+
+// Written in by the build (vite.config.ts cleanCommitSha) only when the working tree was clean, so it names exactly the
+// code that ran; null on a dev server, from a tree with changes, or without git.
+declare const __MODU_BUILD_SHA__: string | null | undefined;
+const BUILD_SHA = typeof __MODU_BUILD_SHA__ === 'string' ? __MODU_BUILD_SHA__ : null;
+const commitSha = (value: unknown): string | null => typeof value === 'string' && /^[0-9a-f]{40}$/.test(value) ? value : null;
 export interface StudySnapshot {
   schema_version: 1;
   mode: StudyMode;
@@ -34,17 +40,17 @@ export interface StudySnapshot {
   build: StudyBuild;
 }
 
-function projectBuild(input: unknown): StudyBuild {
+function projectBuild(input: unknown, buildSha: string | null): StudyBuild {
   const value = input && typeof input === 'object' ? input as Record<string, unknown> : {};
   // Only the app's version grammar and fixed environment enums may leave this module.
   const version = typeof value.app_version === 'string' && /^\d{1,4}\.\d{1,4}\.\d{1,4}(?:-(?:alpha|beta|rc)\.\d{1,4})?$/.test(value.app_version)
     ? value.app_version : null;
   const platform = typeof value.platform === 'string' && ['darwin', 'win32', 'linux', 'browser'].includes(value.platform) ? value.platform as StudyBuild['platform'] : 'unknown';
   const architecture = typeof value.architecture === 'string' && ['arm64', 'x64', 'ia32'].includes(value.architecture) ? value.architecture as StudyBuild['architecture'] : null;
-  return Object.freeze({ app_version: version, platform, architecture, build_sha: null });
+  return Object.freeze({ app_version: version, platform, architecture, build_sha: commitSha(buildSha) });
 }
 
-export function createFirstUseStudy(now: () => number = () => Date.now()) {
+export function createFirstUseStudy(now: () => number = () => Date.now(), buildSha: string | null = BUILD_SHA) {
   let current: StudySnapshot | null = null;
   let boundScope: string | null = null; // private, never spread into a snapshot or error
   let lastClock = 0;
@@ -96,7 +102,7 @@ export function createFirstUseStudy(now: () => number = () => Date.now()) {
         acceptance: 'unverified', target_assessment: 'unverified', started_at_ms: start, elapsed_ms: 0, binding: 'unbound',
         workflow_actions: { pointer: 0, keyboard: 0 }, recorder_actions: { pointer: 0, keyboard: 0 },
         external_actions: { source: 'unobserved', count: null }, images_completed_self_reported: 0, elapsed_ms_per_image: null,
-        milestones: [], milestones_truncated: false, clock_anomaly: start !== clock, build: projectBuild(input.build) };
+        milestones: [], milestones_truncated: false, clock_anomaly: start !== clock, build: projectBuild(input.build, buildSha) };
       return true;
     },
     bind(scope: string | null): boolean {

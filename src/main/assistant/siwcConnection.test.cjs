@@ -179,3 +179,12 @@ test('only a validated redacted provider replay is receipted; mutations and acco
  const changed=structuredClone(messages);changed[1].replay[0].encrypted_content+='tampered';await assert.rejects(f.c.complete({system:'안내',messages:changed,tools}));assert.equal(responseCalls,2);f.c.selectAccount(null);f.c.selectAccount('record-1');await assert.rejects(f.c.complete({system:'안내',messages,tools}));assert.equal(responseCalls,2);
 });
 test('malformed provider replay cannot be returned as success or become an outbound receipt',async t=>{const malicious=[{type:'reasoning',summary:[{type:'summary_text',text:'정상',image_url:'data:image/png;base64,c2VjcmV0'}],encrypted_content:'opaque'}],f=setup({store:store(credentials()),fetchOverride:async url=>url.endsWith('/responses')?providerOutput(malicious):null});t.after(()=>f.c.dispose());await assert.rejects(f.c.complete({system:'안내',messages:[{role:'user',text:'상태'}],tools:[]}));const count=f.calls.length;await assert.rejects(f.c.complete({system:'안내',messages:[{role:'user',text:'상태'},{role:'assistant',text:'',replay:malicious}],tools:[]}));assert.equal(f.calls.length,count);});
+test('only a saved and activated login tells the service that ChatGPT is now the chosen recipient',async t=>{
+ const f=setup();t.after(()=>f.c.dispose());const connected=[];f.c.onConnected(id=>connected.push(id));
+ await f.c.begin({termsAccepted:true});await f.callback({error:'access_denied'});assert.equal((await settled(f.c)).status,'error');
+ assert.deepEqual(connected,[],'a denied login is not a choice');
+ await f.c.begin({termsAccepted:true});await f.callback();const state=await settled(f.c);
+ assert.equal(state.status,'connected');assert.deepEqual(connected,[state.active]);
+ f.c.onConnected(()=>{throw Error('listener failure');});f.c.cancel();
+ await f.c.begin({termsAccepted:true,recordId:state.active});await f.callback();assert.equal((await settled(f.c)).status,'connected','a listener cannot fail the saved login');
+});

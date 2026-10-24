@@ -234,7 +234,10 @@ export function openFoldsAround(element: Element) {
 export function focusWorkflowTarget(target?: string) {
   if(!target || typeof document==='undefined')return;
   let attempts=0;
-  const focus=()=>{const label=target==='workflow-label-review'?'팀 작업 · 라벨 기준·검수':target==='workflow-data'?'데이터셋 폴더 열기':null;const element=document.getElementById(target)||(target==='workflow-project'?document.querySelector<HTMLElement>('[title="프로젝트 관리"]'):label?Array.from(document.querySelectorAll<HTMLButtonElement>('button')).find(button=>button.textContent?.trim()===label):null);if(element){openFoldsAround(element);if(element.getAttribute('role')==='tab'&&element.getAttribute('aria-selected')!=='true')element.click();if(element.hasAttribute('data-workflow-open-on-focus')&&element.getAttribute('aria-expanded')==='false')element.click();element.scrollIntoView({block:'center'});element.focus();
+  // Every target is an element id (the project button, the dataset folder button and the team row's button carry theirs),
+  // so the jump does not depend on the interface language. A closed opener of a dialog is pressed and the dialog keeps
+  // the focus it takes; any other target is brought into view and focused.
+  const focus=()=>{const element=document.getElementById(target);if(element){openFoldsAround(element);if(element.getAttribute('role')==='tab'&&element.getAttribute('aria-selected')!=='true')element.click();if(element.hasAttribute('data-workflow-open-on-focus')&&element.getAttribute('aria-expanded')==='false'){const dialog=element.getAttribute('aria-haspopup')==='dialog';element.click();if(dialog)return;}element.scrollIntoView({block:'center'});element.focus();
       // A target that takes no focus (the labeling work area has no tabIndex, so a canvas click keeps BODY/CANVAS as the
       // key target): the pressed button lets go of the keyboard, so Enter or Space does not press it again.
       if(document.activeElement!==element&&document.activeElement instanceof HTMLElement)document.activeElement.blur();}else{

@@ -289,7 +289,8 @@ export const WizardHeader: React.FC<{ simpleControls?: React.ReactNode; simpleMe
         <div className="flex flex-wrap items-center gap-2" style={noDrag}>
           {/* 간단히 보기 drops the wordmark below 1440px so the project, the steps and the two toggles fit one row. */}
           <span className={`text-sm font-bold tracking-wide text-slate-100${full ? '' : ' hidden min-[1440px]:inline'}`}>Vision AI Studio</span>
-          <button type="button" onClick={() => setShowProjectPanel(true)} title={ko ? '프로젝트 관리' : 'Manage projects'} className={`group flex max-w-xs items-center gap-1.5 ${QUIET}`}>
+          {/* The footer's '프로젝트 만들기·열기' and the first-run guide's '프로젝트 관리 열기' open this through focusWorkflowTarget. */}
+          <button type="button" id="workflow-project" aria-haspopup="dialog" aria-expanded={showProjectPanel} data-workflow-open-on-focus onClick={() => setShowProjectPanel(true)} title={ko ? '프로젝트 관리' : 'Manage projects'} className={`group flex max-w-xs items-center gap-1.5 ${QUIET}`}>
             <FolderKanban className="h-4 w-4 shrink-0 text-cyan-400" aria-hidden="true" />
             <span className="truncate font-semibold">{projectName}</span>
             <ChevronDown className="h-3.5 w-3.5 shrink-0 text-slate-400" aria-hidden="true" />

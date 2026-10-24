@@ -60,7 +60,8 @@ import { describeTrainingSummary, publishTrainingSummary, trainingSummaryScope }
 export const TrainingController: React.FC = () => {
   const [scheduling, setScheduling] = useState({...defaultTrainingScheduling});
   const [warmParentId, setWarmParentId] = useState('');
-  const [warmParents, setWarmParents] = useState<ParentCandidate[]>([]);
+  // labelset_id: the label set the parent's receipt records (null when the receipt predates that record).
+  const [warmParents, setWarmParents] = useState<(ParentCandidate & { labelset_id?: string | null })[]>([]);
   const { task, language, setStep, projectDir, project, isProjectBusy, technicalDetails } = useProjectStore();
   const full = useProjectStore(state => state.viewMode) === 'full';
   const simpleView = useProjectStore(state => state.viewMode) === 'simple';
@@ -489,6 +490,8 @@ export const TrainingController: React.FC = () => {
               className="workspace-button">빠른 이어 학습</button>
             <span className="min-w-0 text-slate-400">직전 완료 모델에서 5회만 이어 학습합니다(초안을 채택한 뒤 모델을 빨리 맞출 때). 결과는 새 후보 모델로 저장됩니다.</span>
             {warmParentId && manualEpochs === '5' && <span className="text-cyan-200">시작 모델 …{warmParentId.slice(-8)} · 학습 횟수 5 · 아래 '학습 시작'을 누르세요.</span>}
+            {/* The list holds only this label set's parents, plus ones whose receipt predates the label-set record. */}
+            {warmParentId && manualEpochs === '5' && warmParents.find(p => p.job_id === warmParentId)?.labelset_id == null && <span className="text-amber-300">라벨 세트 기록 없음(이전 버전에서 학습한 모델) · 지금 라벨 세트의 정답으로 학습한 모델인지 확인한 뒤 시작하세요.</span>}
           </div>
         )}
 

@@ -19,7 +19,7 @@ import { imageLeaseToken } from './teamDataWorkflow';
 import { Explain } from '../common/Explain';
 import { usePopoverHorizontalBounds, usePopoverRoom } from './popoverRoom';
 import {focusWorkflowTarget} from '../wizard/workflowReadiness';
-import { CHANGED_MODEL_MARK, DRAFT_ORDER_TEXT, MIXED_SOURCE_NOTE, OPEN_REQUEST_MISSING_TEXT, adoptable, adoptionHistory, adoptionLine, adoptionSummary, adoptionTitle, canTakeBack,
+import { CANVAS_NOT_RELOADED_TEXT, CHANGED_MODEL_MARK, DRAFT_ORDER_TEXT, MIXED_SOURCE_NOTE, OPEN_REQUEST_MISSING_TEXT, adoptable, adoptionHistory, adoptionLine, adoptionSummary, adoptionTitle, canTakeBack,
   closedDraftText, draftError, draftSourceText, gridPages, modelStats, multiAdoptionRefusal, orderDrafts, pageAdoptionRefusal, pendingImageCount, sourcesMixed, staleBatchRefusal,
   supportLimitsText, thresholdAdvice, topConfidence, defaultChoice, emptyPendingDrafts, unknownClassCandidate, UNKNOWN_CLASS_MARK, type AdoptionResult, type DraftOrder, type ModelAdoptionStats } from './draftReview';
 
@@ -92,6 +92,8 @@ export const DraftReviewQueue: React.FC = () => {
   const [page, setPage] = useState(0);
   const [excluded, setExcluded] = useState<Set<string>>(new Set());
   const [loadedOnPage, setLoadedOnPage] = useState<Set<string>>(new Set());
+  // Tiles whose image could not be read: they never show, so the page refusal names them and the way out.
+  const [failedOnPage, setFailedOnPage] = useState<Set<string>>(new Set());
   const [wide, setWide] = useState(false);
   // The last list read that landed (its scope, and a count), and the open request already given its one extra read.
   const lastRead = useRef({ scope: '', count: 0 });
@@ -165,7 +167,7 @@ export const DraftReviewQueue: React.FC = () => {
   const modelRow = modelStats(stats, modelId);
   const grid = useMemo(() => gridPages(pending, pageSize), [pending, pageSize]);
   const pageDrafts = grid.pages[Math.min(page, Math.max(0, grid.pages.length - 1))] ?? [];
-  const pageRefusal = pageAdoptionRefusal(pageDrafts, excluded, loadedOnPage);
+  const pageRefusal = pageAdoptionRefusal(pageDrafts, excluded, loadedOnPage, failedOnPage);
   // What keeps '이 페이지 채택' off, said next to it: the page itself first, then the missing reviewer name.
   const pageBlock = pageRefusal ?? (reviewerName.trim() ? null : '검토자 이름을 입력하면 이 페이지를 채택할 수 있습니다.');
   const authority = readDatasetAuthority();
@@ -181,7 +183,7 @@ export const DraftReviewQueue: React.FC = () => {
   // Exclusions belong to the page, so a trip to the list (or a tile's '열기') keeps them; what has shown is read again
   // whenever the tiles come back.
   useEffect(() => setExcluded(new Set()), [page, pageSize, scope]);
-  useEffect(() => setLoadedOnPage(new Set()), [page, mode, pageSize, scope]);
+  useEffect(() => { setLoadedOnPage(new Set()); setFailedOnPage(new Set()); }, [page, mode, pageSize, scope]);
   useEffect(() => { if (page > 0 && page >= grid.pages.length) setPage(Math.max(0, grid.pages.length - 1)); }, [grid.pages.length, page]);
 
   // Another panel ('모델 보조') asked for one draft: open the popover on it, with only the candidates kept there. A
@@ -259,18 +261,23 @@ export const DraftReviewQueue: React.FC = () => {
   };
 
   // After the server changed labels: re-read the open image when it is one that changed, then the counts and drafts
-  // (the evidence bump makes this panel read again).
-  const afterLabelChanges = async (changed: LabelSuggestion[], startedScope: string) => {
+  // (the evidence bump makes this panel read again). Returns what to tell the person when the open image was not re-read.
+  const afterLabelChanges = async (changed: LabelSuggestion[], startedScope: string): Promise<string | null> => {
     const annotation = useAnnotationStore.getState();
+    let kept: string | null = null;
     if (changed.some((draft) => annotation.currentImage?.file_path === draft.image_path)) {
-      await annotation.loadAnnotationsForCurrent();
-      // Undo must not bring back the labels as they were before this server change.
-      useAnnotationStore.setState({ history: [], future: [] });
+      const replaced = await annotation.loadAnnotationsForCurrent();
+      // Undo must not bring back the labels as they were before this server change. Edits made on the canvas meanwhile
+      // were not replaced (the re-read skips a dirty canvas), so they keep their undo and the person is told instead.
+      if (replaced || !useAnnotationStore.getState().isDirty) useAnnotationStore.setState({ history: [], future: [] });
+      else kept = CANVAS_NOT_RELOADED_TEXT;
     }
-    if (live.current !== startedScope) return;
+    if (live.current !== startedScope) return kept;
     await useDatasetStore.getState().annotationsChanged();
     bumpWorkflowEvidence();
+    return kept;
   };
+  const withKept = (text: string, kept: string | null) => kept ? `${text} ${kept}` : text;
 
   const sameImageDirty = (draft: LabelSuggestion) => isDirty && image?.file_path === draft.image_path;
 
@@ -306,8 +313,8 @@ export const DraftReviewQueue: React.FC = () => {
       setDrafts((previous) => previous.map((draft) => draft.id === updated.id ? updated : draft));
       setPicks((previous) => { const next = new Set(previous); next.delete(updated.id); return next; });
       if (decision === 'accept') {
-        await afterLabelChanges([updated], startedScope);
-        setNotice(`${updated.accepted_candidate_ids.length}개를 라벨로 채택했습니다(기존 라벨에 덧붙임). 캔버스에서 고친 뒤 저장할 수 있고(남은 초안을 먼저 검토하세요. 고쳐 저장하면 남은 초안은 다시 만들어야 합니다), 고치기 전이면 '이 채택 되돌리기'로 이 채택만 뺄 수 있습니다. 채택 전 데이터 버전 ${updated.backup_version_id}.`);
+        const kept = await afterLabelChanges([updated], startedScope);
+        setNotice(withKept(`${updated.accepted_candidate_ids.length}개를 라벨로 채택했습니다(기존 라벨에 덧붙임). 캔버스에서 고친 뒤 저장할 수 있고(남은 초안을 먼저 검토하세요. 고쳐 저장하면 남은 초안은 다시 만들어야 합니다), 고치기 전이면 '이 채택 되돌리기'로 이 채택만 뺄 수 있습니다. 채택 전 데이터 버전 ${updated.backup_version_id}.`, kept));
       } else {
         setReloads((value) => value + 1);
         setNotice('초안을 거절했습니다. 라벨은 바뀌지 않았습니다.');
@@ -388,9 +395,9 @@ export const DraftReviewQueue: React.FC = () => {
       if (live.current !== startedScope) return;
       setPicks((previous) => { const next = new Set(previous); for (const row of adopted) next.delete(row.id); return next; });
       if (adopted.some((row) => row.id === selectedId)) setSelectedId('');
-      if (adopted.length) await afterLabelChanges(adopted, startedScope);
+      const kept = adopted.length ? await afterLabelChanges(adopted, startedScope) : null;
       if (live.current !== startedScope) return;
-      setNotice(adoptionSummary(results, stopped));
+      setNotice(withKept(adoptionSummary(results, stopped), kept));
     } finally {
       endRun();
       if (live.current === startedScope) { setBusy(null); setProgress(null); }
@@ -411,8 +418,8 @@ export const DraftReviewQueue: React.FC = () => {
       try { updated = await datasetWorkflow.undoAdoption(draft.id, reviewerName, lease.token); } finally { await lease.release(); }
       if (live.current !== startedScope) return;
       setDrafts((previous) => previous.map((item) => item.id === updated.id ? updated : item));
-      await afterLabelChanges([updated], startedScope);
-      setNotice(`${fileName(draft.image_path)}에서 이 채택의 도형만 뺐습니다. 되돌리기 직전 데이터 버전 ${updated.revert_backup_version_id}.`);
+      const kept = await afterLabelChanges([updated], startedScope);
+      setNotice(withKept(`${fileName(draft.image_path)}에서 이 채택의 도형만 뺐습니다. 되돌리기 직전 데이터 버전 ${updated.revert_backup_version_id}.`, kept));
     } catch (cause) {
       if (live.current === startedScope) setError(draftError(cause));
     } finally {
@@ -423,6 +430,7 @@ export const DraftReviewQueue: React.FC = () => {
 
   const adoptPicked = () => adoptDrafts(picked);
   const adoptPage = () => adoptDrafts(pageDrafts.filter((draft) => !excluded.has(draft.id)));
+  const tileFailed = (id: string) => setFailedOnPage((previous) => previous.has(id) ? previous : new Set(previous).add(id));
   const tileLoaded = (id: string) => {
     setLoadedOnPage((previous) => previous.has(id) ? previous : new Set(previous).add(id));
     setViewed((previous) => previous.has(id) ? previous : new Set(previous).add(id));
@@ -534,9 +542,9 @@ export const DraftReviewQueue: React.FC = () => {
                     </span>
                   </div>
                   <Explain text="한 페이지는 한 묶음입니다. 타일을 눌러 이 페이지 채택에서 빼거나 넣고, 모든 타일이 보인 뒤 한 번에 채택합니다. '열기'는 캔버스에서 한 장씩 봅니다." />
-                  <DraftGrid drafts={pageDrafts} choices={new Map(pageDrafts.map((draft) => [draft.id, choiceFor(draft)]))} excluded={excluded} loaded={loadedOnPage} authority={authority} context={getProjectContext()} current={tileLive} disabled={busy === 'accept' || busy === 'reject' || busy === 'undo'}
+                  <DraftGrid drafts={pageDrafts} choices={new Map(pageDrafts.map((draft) => [draft.id, choiceFor(draft)]))} excluded={excluded} loaded={loadedOnPage} failed={failedOnPage} authority={authority} context={getProjectContext()} current={tileLive} disabled={busy === 'accept' || busy === 'reject' || busy === 'undo'}
                     onToggle={(id) => setExcluded((previous) => { const next = new Set(previous); if (next.has(id)) next.delete(id); else next.add(id); return next; })}
-                    onLoaded={tileLoaded} onOpen={(draft) => void openDraft(draft)} />
+                    onLoaded={tileLoaded} onFailed={tileFailed} onOpen={(draft) => void openDraft(draft)} />
                   {pageBlock && <p className="text-[11px] text-amber-300">{pageBlock}</p>}
                   {progress && <p role="status" className="text-[11px] text-cyan-200">채택 중 {progress.done} / {progress.total}</p>}
                   <label className="block text-[11px]">검토자<input aria-label="초안 검토자 이름" value={reviewerName} onChange={(event) => setReviewerName(event.target.value)} className="ml-2 rounded border border-slate-600 bg-slate-900 p-1.5" /></label>

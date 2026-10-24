@@ -20,7 +20,9 @@ def _core(models,source,monkeypatch):
     from backend.api import routes_training
     monkeypatch.setattr(routes_training,'_warm_start_scope',lambda request,source:models)
     monkeypatch.setattr('backend.engine.warm_start.training_classes',lambda task,source:('OK','NG'))
-    return routes_training.list_warm_start_parents(str(source),'classification',request=SimpleNamespace(),backbone='resnet18')['parents'][0]
+    # The parent list reads the open project's active label set (a parent of another set is not offered).
+    request=SimpleNamespace(state=SimpleNamespace(scoped_project={'id':'p','active_labelset_id':'default'}))
+    return routes_training.list_warm_start_parents(str(source),'classification',request=request,backbone='resnet18')['parents'][0]
 
 
 def test_core_parent_context_reads_saved_metrics_dates_without_changing_sources(tmp_path,monkeypatch):
@@ -105,3 +107,61 @@ def test_deeply_nested_display_record_is_ignored_without_recursion_error(tmp_pat
     levels = sys.getrecursionlimit()+100
     (tmp_path/'model_meta.json').write_text('['*levels+'0'+']'*levels)
     assert parent_summary(tmp_path)=={'model_recorded_at':None,'completed_at':None,'training_metrics':{}}
+
+
+def test_parent_list_keeps_only_the_active_label_set_and_marks_a_parent_that_predates_the_record(tmp_path: Path, monkeypatch):
+    """'빠른 이어 학습' falls back to the newest listed parent, so the list itself must not offer a model trained under
+    another label set of this project (it learned that set's truth, even under the same class names). A receipt that
+    names no label set predates the record: still offered, as for drafts, with labelset_id None so the screen can say so."""
+    import shutil
+    from types import SimpleNamespace
+    from backend.api import routes_training
+
+    from backend.tests.test_warm_start import _parent
+    models, source, _, _ = _parent(tmp_path)
+    for job_id, provenance in (("job_parent01", {"labelset_id": "set_a"}), ("job_parent02", {"labelset_id": "set_b"}), ("job_parent03", None)):
+        job_dir = models / job_id
+        if not job_dir.exists():
+            shutil.copytree(models / "job_parent01", job_dir)
+        receipt = json.loads((job_dir / "job_receipt.json").read_text())
+        receipt["job_id"] = job_id
+        receipt.pop("training_provenance", None)
+        if provenance is not None:
+            receipt["training_provenance"] = provenance
+        (job_dir / "job_receipt.json").write_text(json.dumps(receipt))
+    monkeypatch.setattr(routes_training, "_warm_start_scope", lambda request, source: models)
+    monkeypatch.setattr("backend.engine.warm_start.training_classes", lambda task, source: ("OK", "NG"))
+    request = SimpleNamespace(state=SimpleNamespace(scoped_project={"id": "p", "active_labelset_id": "set_b"}))
+    rows = routes_training.list_warm_start_parents(str(source), "classification", request=request, backbone="resnet18")["parents"]
+    assert [row["job_id"] for row in rows] == ["job_parent02", "job_parent03"], "the set_a parent is not offered"
+    assert [row["labelset_id"] for row in rows] == ["set_b", None]
+
+
+def test_a_start_or_readiness_check_that_names_another_label_sets_parent_is_refused(tmp_path: Path, monkeypatch):
+    """The parent list leaves another label set's model out; naming it directly (an API call, a stale screen) is refused
+    by the readiness check the same way, and by /start (checked in its source below). A legacy receipt stays allowed."""
+    from backend.engine import warm_start
+    from backend.engine.model_execution import resolve_training_parent
+    from backend.tests.test_warm_start import _parent
+    models, source, _, _ = _parent(tmp_path)
+    monkeypatch.setattr("backend.engine.warm_start.training_classes", lambda task, source: ("OK", "NG"))
+    receipt_path = models / "job_parent01" / "job_receipt.json"
+    receipt = json.loads(receipt_path.read_text())
+    project = {"source_dataset_dir": str(source), "models_dir": str(models), "active_labelset_id": "set_b"}
+
+    receipt["training_provenance"] = {"labelset_id": "set_a"}
+    receipt_path.write_text(json.dumps(receipt))
+    with pytest.raises(ValueError, match="다른 라벨 세트로 학습했습니다"):
+        resolve_training_parent(project, "job_parent01", "classification", source, "fast", {"backbone": "resnet18"})
+
+    receipt["training_provenance"] = {"labelset_id": "set_b"}
+    receipt_path.write_text(json.dumps(receipt))
+    assert resolve_training_parent(project, "job_parent01", "classification", source, "fast", {"backbone": "resnet18"}).job_id == "job_parent01"
+    receipt.pop("training_provenance")
+    receipt_path.write_text(json.dumps(receipt))
+    assert resolve_training_parent(project, "job_parent01", "classification", source, "fast", {"backbone": "resnet18"}).job_id == "job_parent01", "a legacy receipt stays allowed"
+    assert warm_start.other_labelset_parent(models / "job_parent01", None) is False
+
+    route = (Path(__file__).resolve().parents[1] / "api" / "routes_training.py").read_text(encoding="utf-8")
+    assert "if other_labelset_parent(models / req.warm_start_job_id, get_current_project(request).get('active_labelset_id')):" in route
+    assert "raise ValueError(OTHER_LABELSET_PARENT)" in route

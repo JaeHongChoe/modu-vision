@@ -81,6 +81,21 @@ test('changing the active class or class palette while the popover is absent dis
   const f=fixture(),stop=f.attach();f.enable();change(f);assert.equal(f.prompt.getState().quickPointEnabled,false);f.prompt.getState().addPoint({x:1,y:2,label:1});await settle();assert.equal(f.calls.length,0);assert.equal(f.errors.length,1,'the user is told to check the new class and opt in again');stop();
  }
 });
+test('a label reload that only reorders and recolours the class palette (as after adopting a draft) keeps point inference on',async()=>{
+ // The adoption reload rebuilds the palette with the production labelCategoryPalette: the adopted class moves first
+ // and takes the drawn colour. The request still sends the same active class and name→id map, so nothing changed.
+ const f=fixture();f.annotation.setState({activeCategory:{id:2,name:'scratch',color:'#f00'},categories:[{id:1,name:'defect',color:'#ef4444'},{id:2,name:'scratch',color:'#f00'}]});
+ const stop=f.attach();f.enable();
+ const reloaded=f.requests.labelCategoryPalette(f.annotation.getState().categories,[{id:'adopted',type:'bbox',label:'scratch',category_id:2,color:'#22d3ee',bbox:[1,2,5,6]}]);
+ assert.notDeepEqual(reloaded,f.annotation.getState().categories,'the fixture really reorders and recolours');
+ f.annotation.setState({categories:reloaded,activeCategory:reloaded.find(c=>c.name==='scratch')});
+ assert.equal(f.prompt.getState().quickPointEnabled,true,'the mode stays on');assert.equal(f.errors.length,0,'no "class changed" error opens 모델 보조');
+ f.prompt.getState().addPoint({x:1,y:2,label:1});await settle();
+ assert.equal(f.calls.length,1);assert.deepEqual(f.calls[0].class_ids,{scratch:2,defect:1});
+ // A real change of what the request sends still disarms: the same name under another id.
+ f.annotation.setState({categories:reloaded.map(c=>c.name==='defect'?{...c,id:7}:c)});
+ assert.equal(f.prompt.getState().quickPointEnabled,false);assert.equal(f.errors.length,1);stop();
+});
 test('errors release only the owned operation, show an error and never start retries',async()=>{
  const f=fixture(),stop=f.attach();f.provider.generate=async body=>{f.calls.push(body);throw Error('controlled inference failure');};f.enable();f.prompt.getState().addPoint({x:1,y:2,label:1});await settle();assert.equal(f.errors.length,1);assert.equal(f.calls.length,1);assert.equal(f.run.getState().activeOperations,0);stop();
 });
@@ -161,4 +176,10 @@ test('closed and open panels keep custom point settings, show explicit previews,
   }
  }finally{for(const entry of instances.values())cleanup(entry);if(previousStorage)Object.defineProperty(global,'localStorage',previousStorage);else delete global.localStorage;}
  assert.equal(f.prompt.getState().quickPointEnabled,false);assert.equal(f.run.getState().activeOperations,0);
+});
+
+test('the reopened popover restores the point settings by the same class key, not the raw palette',()=>{
+ const popover=fs.readFileSync(path.join(__dirname,'CandidateProviderControls.tsx'),'utf8');
+ assert.match(popover,/quickPointClassKeyOf\(rememberedOptions\?\.categoryContext\)===quickPointClassKey\(activeCategory,categories\)/);
+ assert.doesNotMatch(popover,/categoryContext===JSON\.stringify\(\[activeCategory,categories\]\)/);
 });

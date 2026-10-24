@@ -10,7 +10,7 @@ const {AssistantConversation}=load(path.join(__dirname,'assistantSession.ts'),ca
 const {createAssistantTools}=load(path.join(__dirname,'assistantTools.ts'),cache);
 
 function harness(replies,{contexts}={}){
- const sent=[],logged=[],events=[],runs=[],executed=[];let contextCount=0;const authority={scope:'project-a',write:'image-a:revision-1'};
+ const sent=[],logged=[],events=[],runs=[],executed=[];let contextCount=0;const authority={scope:'project-a',project:'project-a',write:'image-a:revision-1'};
  const deps={snapshot:()=>({stage:3,status:'ready',blocker:null,nextAction:{label:'학습 시작',step:3},progress:null,errors:[]}),
   facts:()=>({task:'classification',view:'simple',shared:false,images:20,unlabeled:0,classes:{OK:10,NG:10},split:{train:14,val:4,test:2},splitState:'saved',trainingStatus:'idle',currentImage:null}),
   setStep:async()=>{},focusTarget:()=>{},setTrainRatio:()=>{},splitSupport:()=>({supported:true,reason:null}),
@@ -20,7 +20,7 @@ function harness(replies,{contexts}={}){
  const bridge={send:async input=>{sent.push(JSON.parse(JSON.stringify(input)));const reply=replies.shift();return typeof reply==='function'?reply(input):(reply??answer('끝'));},
   cancel:async()=>true,beginRun:async(runId,tool)=>{runs.push(['begin',runId,tool]);return true;},endRun:async runId=>{runs.push(['end',runId]);}};
  const tools=createAssistantTools(deps);const conversation=new AssistantConversation({bridge,tools,context:()=>contexts?contexts[contextCount++]:{step:3},
-  scope:()=>authority.scope,writeBinding:()=>authority.write,log:async entry=>{logged.push(entry);},provider:()=>'anthropic'},event=>events.push(event));
+  scope:()=>authority.scope,projectScope:()=>authority.project,writeBinding:()=>authority.write,log:async entry=>{logged.push(entry);},provider:()=>'anthropic'},event=>events.push(event));
  return {conversation,sent,logged,events,runs,executed,authority,bridge,deps,tools};
 }
 const call=(id,name,args={})=>({id,name,arguments:args});
@@ -167,4 +167,36 @@ test('an image answer cannot invoke unsolicited tools or start a second provider
  assert.equal(h.sent.length,1);assert.deepEqual(h.executed,[]);assert.equal(h.conversation.pending,null);
  assert.ok(!h.events.some(e=>e.kind==='tool'));assert.equal(h.conversation.messages.at(-1).toolCalls,undefined);
  assert.ok(h.events.some(e=>e.kind==='notice'&&/이미지.*도구/.test(e.text)));
+});
+// Defect: stop or a provider/model change during a confirmed write let the backend write finish, then dropped its run-log
+// record and panel line. The outcome is recorded whenever the project is unchanged; only a project change withholds it.
+test('stop or a settings change while a confirmed write runs still records and shows the outcome',async()=>{
+ for(const change of ['stop','settings']){
+  const h=harness([answer('',[call('w1','start_training')]),answer('학습 시작됨')]),entered=deferred(),release=deferred();let writing;
+  h.deps.startTraining=async()=>{h.executed.push(['startTraining']);entered.resolve();await release.promise;return {jobId:'job_1'};};
+  await h.conversation.ask('학습');const deciding=h.conversation.decide(true);await entered.promise;writing=h.conversation.writing;
+  if(change==='stop')await h.conversation.stop();else {h.authority.scope='project-a:other-model';h.conversation.invalidate();}
+  release.resolve();await deciding;
+  const entry=h.logged.find(e=>e.tool==='start_training');
+  assert.deepEqual([entry?.result,entry?.confirmed,entry?.link,entry?.provider],['ok',true,'job:job_1','anthropic'],change);
+  assert.ok(h.events.some(e=>e.kind==='tool'&&e.name==='start_training'&&e.ok),change);
+  assert.deepEqual(h.executed,[['startTraining']],'the write ran exactly once');
+  assert.equal(writing,true,'the panel can tell a confirmed write is running');assert.equal(h.conversation.writing,false);
+  assert.equal(h.sent.length,change==='stop'?2:1,'stop is not offered mid-write; a settings change ends the turn after the record');
+  assert.equal(h.conversation.busy,false);
+ }
+});
+test('a project change while a confirmed write runs keeps the record out of the other project and says so',async()=>{
+ const h=harness([answer('',[call('w1','start_training')])]),entered=deferred(),release=deferred();
+ h.deps.startTraining=async()=>{entered.resolve();await release.promise;return {jobId:'job_1'};};
+ await h.conversation.ask('학습');const deciding=h.conversation.decide(true);await entered.promise;
+ h.authority.scope=h.authority.project='project-b';h.conversation.invalidate();release.resolve();await deciding;
+ assert.ok(!h.logged.some(e=>e.tool==='start_training'));assert.ok(h.events.some(e=>e.kind==='notice'&&/프로젝트/.test(e.text)&&/기록/.test(e.text)));
+});
+test('the confirmed draft write carries the model its preview showed',async()=>{
+ const h=harness([answer('',[call('w1','generate_label_drafts')]),answer('초안 시작')]),batches=[];let models=[{jobId:'job_a',task:'classification',dataState:'current',createdAt:null}];
+ h.deps.draftModels=async()=>models;h.deps.startDraftBatch=async(jobId,threshold)=>{batches.push([jobId,threshold]);return {id:'b1',total:3};};
+ await h.conversation.ask('초안 만들어 줘');assert.match(h.conversation.pending.preview.lines[0],/job_a/);
+ models=[{jobId:'job_b',task:'classification',dataState:'current',createdAt:null},...models];await h.conversation.decide(true);
+ assert.deepEqual(batches,[['job_a',0.5]]);assert.equal(h.logged.find(e=>e.tool==='generate_label_drafts').result,'ok');
 });

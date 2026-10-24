@@ -8,7 +8,7 @@ import {useDatasetStore} from '../../stores/useDatasetStore';
 import {useProjectStore} from '../../stores/useProjectStore';
 import {useModelAssistRunStore} from '../../stores/useModelAssistRunStore';
 import {useFoundationPromptStore} from '../../stores/useFoundationPromptStore';
-import {foundationAllowed,buildFoundationRequest,regionExample,labelingScope} from './foundationRequest';
+import {foundationAllowed,buildFoundationRequest,regionExample,labelingScope,quickPointClassKey,quickPointClassKeyOf} from './foundationRequest';
 interface Props{disabled:boolean;onCreated:(proposal:FoundationProposal)=>void;onOpenProposal:(path:string,id:string)=>Promise<void>}
 const inputClass='rounded border border-slate-600 bg-slate-900 p-1.5 text-slate-100';
 const statusNames:Record<string,string>={queued:'대기',running:'실행 중',cancelling:'취소 중',completed:'완료',stopped:'취소됨',failed:'실패',interrupted:'재시작으로 중단'};
@@ -85,7 +85,8 @@ export const CandidateProviderControls:React.FC<Props>=({disabled,onCreated,onOp
   const scope=labelingScope({projectDir,project});const [loadedScope,setLoadedScope]=useState(scope);const currentScope=loadedScope===scope;
   const {points,boxes,pointLabel,setPointLabel,clear,bind,bindProject,projectScope:promptScope,quickOptions:rememberedOptions,quickPointEnabled,setQuickPointEnabled,configureQuickPoint}=useFoundationPromptStore();
   // The popover unmounts when closed. Its opted-in settings survive only in this visit's scope/class-bound snapshot.
-  const restored=quickPointEnabled&&promptScope===scope&&rememberedOptions?.categoryContext===JSON.stringify([activeCategory,categories])?rememberedOptions:null;
+  // Compared like the point controller does (quickPointClassKey): a reload that only reorders/recolours keeps them.
+  const restored=quickPointEnabled&&promptScope===scope&&quickPointClassKeyOf(rememberedOptions?.categoryContext)===quickPointClassKey(activeCategory,categories)?rememberedOptions:null;
   const initial=restored?.options;
   const [setup,setSetup]=useState<FoundationSetup|null>(null);const [prompt,setPrompt]=useState(initial?.prompt??'');const [label,setLabel]=useState(initial?.label??'defect');
   const [positive,setPositive]=useState<RegionExample[]>(initial?.positive_examples??[]);const [negative,setNegative]=useState<RegionExample[]>(initial?.negative_examples??[]);

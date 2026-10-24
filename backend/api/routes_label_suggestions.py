@@ -506,6 +506,19 @@ def _project_batch_key(project: Dict[str, Any]) -> str:
     return str(Path(project["project_dir"]).resolve())
 
 
+def draft_work_refusal(project: Dict[str, Any], next_step: str) -> Optional[str]:
+    """Why an adoption or take-back must wait, or None. Both kinds of draft work write this project's drafts and read
+    its labels: the trained-model batch (here) and the phrase/SAM2 batch or feature training (labeling_tasks). Either
+    one running blocks adopting or taking back a draft of either kind, as class rename already does."""
+    with _BATCH_LOCK:
+        if _project_batch_key(project) in _LIVE_BATCHES:
+            return f"일괄 초안 만들기가 진행 중입니다. 끝나거나 취소한 뒤 {next_step}."
+    from backend.engine import labeling_tasks
+    if labeling_tasks.active(project):
+        return f"라벨 작업(후보 일괄 생성·특징 학습)이 진행 중입니다. 끝나거나 취소한 뒤 {next_step}."
+    return None
+
+
 def _batch_for_read(project: Dict[str, Any], batch_id: str) -> Dict[str, Any]:
     with _BATCH_LOCK:
         batch = _read_batch(project, batch_id)
@@ -943,9 +956,9 @@ def review_suggestion(suggestion_id: str, req: ReviewRequest, request: Request):
         if proposal.get("task") != project["task"]:
             raise HTTPException(status_code=409, detail="작업 종류가 바뀌어 이 초안은 채택할 수 없습니다. 거절하세요.")
 
-        with _BATCH_LOCK:
-            if _project_batch_key(project) in _LIVE_BATCHES:
-                raise HTTPException(status_code=409, detail="일괄 초안 만들기가 진행 중입니다. 끝나거나 취소한 뒤 채택하세요.")
+        refusal = draft_work_refusal(project, "채택하세요")
+        if refusal:
+            raise HTTPException(status_code=409, detail=refusal)
 
         selected_ids = set(req.candidate_ids)
         candidates = proposal.get("candidates", [])
@@ -1060,15 +1073,13 @@ def undo_adoption(suggestion_id: str, req: UndoRequest, request: Request):
         from backend.api.routes_training import training_job_manager
         if training_job_manager.get_active_job() is not None:
             raise HTTPException(status_code=409, detail="학습이 진행 중입니다. 학습이 끝나거나 멈춘 뒤 되돌리세요.")
+        refusal = draft_work_refusal(project, "되돌리세요")
+        if refusal:
+            raise HTTPException(status_code=409, detail=refusal)
         if external:
             from backend.engine import labeling_tasks
-            if labeling_tasks.active(project):
-                raise HTTPException(status_code=409, detail="라벨 작업이 진행 중입니다. 끝나거나 취소한 뒤 되돌리세요.")
             batch = labeling_tasks.read(project, proposal["batch_id"]) if proposal.get("batch_id") else None
         else:
-            with _BATCH_LOCK:
-                if _project_batch_key(project) in _LIVE_BATCHES:
-                    raise HTTPException(status_code=409, detail="일괄 초안 만들기가 진행 중입니다. 끝나거나 취소한 뒤 되돌리세요.")
             batch = _read_batch(project, proposal["batch_id"]) if proposal.get("batch_id") else None
         image = _image_path(project, proposal["image_path"])
         current = routes_annotation.get_annotations(image.stem, file_path=str(image)).get("annotations", [])

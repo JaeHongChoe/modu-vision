@@ -4,7 +4,7 @@ function harness(){
  const project=create(()=>({project:{id:'a',source_dataset_dir:'/a',active_labelset_id:'labels'},projectDir:'/a',task:'detection'}));
  const annotation=create(()=>({currentImage:{file_path:'/a/a.png',file_name:'a.png',image_id:'a'},metadata:{image_uuid:'a',content_hash:'abc',revision:1},annotationLoadStatus:'ready',isDirty:false,annotations:[]}));
  const compute=create(()=>({transportRevision:0,selectedProfileId:null})),dataset=create(()=>({folderPath:'/a',split:{train:7,val:2,test:1}})),training=create(()=>({preset:'fast'}));
- let generation=1,contextListeners=[],imageReads=0,delayedRead=null,delayedIntent=null;const sent=[],cancelled=[],executed=[];const tools={specs:()=>[],tier:name=>name==='write'?'write':null,preview:async()=>({title:'테스트 쓰기',lines:[],undo:'거절'}),execute:async()=>{executed.push('write');return {ok:true,summary:'쓰기',content:'쓰기'};}};
+ let generation=1,contextListeners=[],imageReads=0,delayedRead=null,delayedIntent=null;const sent=[],cancelled=[],executed=[],logged=[];const tools={specs:()=>[],tier:name=>name==='write'?'write':null,preview:async()=>({title:'테스트 쓰기',lines:[],undo:'거절'}),execute:async()=>{executed.push('write');return {ok:true,summary:'쓰기',content:'쓰기'};}};
  const config={active:'openai-compatible',providers:[{provider:'openai-compatible',baseUrl:'http://localhost:123/v1',model:'m',format:'chat',supportsImages:true}]};
  const bridge={getState:async()=>config,saveProvider:async input=>({...config,providers:[input]}),imageIntent:async input=>delayedIntent?delayedIntent(input):({ok:true,grantId:'g',message:'확인',providerLabel:'local'}),
   send:async input=>{sent.push(input);return {ok:true,text:'답',toolCalls:[]};},cancel:async id=>{cancelled.push(id);return true;},beginRun:async()=>true,endRun:async()=>{}};
@@ -12,12 +12,12 @@ function harness(){
   '../stores/useAnnotationStore':{useAnnotationStore:annotation},'../stores/useProjectStore':{useProjectStore:project},'../stores/useComputeStore':{useComputeStore:compute},'../stores/useDatasetStore':{useDatasetStore:dataset},'../stores/useTrainingStore':{useTrainingStore:training},
   '../services/api':{getApiPersistenceIdentity:()=> 'local',getProjectContextGeneration:()=>generation,subscribeProjectContext:fn=>{contextListeners.push(fn);return()=>{};}},
   './api':{getApiPersistenceIdentity:()=> 'local',getProjectContextGeneration:()=>generation,subscribeProjectContext:fn=>{contextListeners.push(fn);return()=>{};}},
-  '../services/hostAdapter':{host:{assistant:()=>bridge}},'../services/assistantLog':{assistantLog:{append:async()=>{},list:async()=>({runs:[]})}},
+  '../services/hostAdapter':{host:{assistant:()=>bridge}},'../services/assistantLog':{assistantLog:{append:async entry=>{logged.push(entry);},list:async()=>({runs:[]})}},
   '../services/assistantRuntime':{assistantContext:()=>({step:2}),createRuntimeTools:()=>tools,currentImageForQuestion:async()=>{imageReads++;if(delayedRead)return delayedRead();return {mediaType:'image/png',base64:'AAAA'};}},
   '../stores/workflowEvidence':{workflowEvidenceRevision:()=>0},'./workflowEvidence':{workflowEvidenceRevision:()=>0}};
  const cache=new Map();function load(file){if(cache.has(file))return cache.get(file).exports;const m=new Module(file,module);m.filename=file;m.paths=Module._nodeModulePaths(path.dirname(file));cache.set(file,m);const orig=m.require.bind(m);m.require=n=>{if(stubs[n])return stubs[n];if(n.startsWith('.')){const target=path.resolve(path.dirname(file),n)+'.ts';if(fs.existsSync(target))return load(target);}return orig(n);};m._compile(ts.transpileModule(fs.readFileSync(file,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText,file);return m.exports;}
  const store=load(path.join(__dirname,'useAssistantStore.ts')).useAssistantStore;
- return {store,project,annotation,compute,dataset,training,sent,cancelled,executed,bridge,reads:()=>imageReads,setRead:fn=>delayedRead=fn,setIntent:fn=>delayedIntent=fn,changeAuthority:()=>{generation++;contextListeners.forEach(fn=>fn());}};
+ return {store,project,annotation,compute,dataset,training,sent,cancelled,executed,logged,tools,config,bridge,reads:()=>imageReads,setRead:fn=>delayedRead=fn,setIntent:fn=>delayedIntent=fn,changeAuthority:()=>{generation++;contextListeners.forEach(fn=>fn());}};
 }
 const deferred=()=>{let resolve;return {promise:new Promise(r=>resolve=r),resolve:v=>resolve(v)};};
 test('changing the selected image invalidates the shown offer before any pixels are read',async()=>{
@@ -126,4 +126,32 @@ test('each ChatGPT mutation invalidates an existing reply before its IPC result 
   reply.resolve({ok:true,text:'폐기될 응답',toolCalls:[]});await asking;assert.ok(!h.store.getState().items.some(item=>item.text==='폐기될 응답'));
   change.resolve({active:null,providers:[],encryptionAvailable:true});assert.equal(await changing,true);
  }
+});
+// Defect: while a confirmed write ran, '멈추기' and the settings controls could invalidate the turn, so the finished write
+// left no run-log record and no panel line. Settings actions now wait, and a passive receiver change is applied after the write.
+test('a confirmed write cannot be stopped or invalidated by settings and its outcome is recorded and shown',async()=>{
+ const h=harness();await h.store.getState().loadConfig();const entered=deferred(),release=deferred();let saves=0;
+ h.bridge.send=async input=>input.messages.some(m=>m.role==='tool')?{ok:true,text:'끝',toolCalls:[]}:{ok:true,text:'',toolCalls:[{id:'w1',name:'write',arguments:{}}]};
+ h.bridge.saveProvider=async()=>{saves++;return h.config;};h.tools.execute=async()=>{entered.resolve();await release.promise;h.executed.push('write');return {ok:true,summary:'쓰기 완료',content:'쓰기'};};
+ await h.store.getState().ask('쓰기');const confirming=h.store.getState().decide(true);await entered.promise;
+ const writingSeen=h.store.getState().writing;await h.store.getState().stop();
+ assert.equal(await h.store.getState().saveProvider({provider:'openai-compatible',baseUrl:'http://localhost:456/v1',model:'m2',supportsImages:true}),false);
+ assert.equal(saves,0,'no settings IPC runs while the write executes');assert.match(h.store.getState().configError,/실행.*끝난 뒤/);
+ h.store.setState({config:{...h.config,providers:[{...h.config.providers[0],model:'m3'}]}});
+ assert.equal(h.store.getState().busy,true,'a passive receiver change waits for the write');
+ release.resolve();await confirming;
+ assert.deepEqual(h.executed,['write']);assert.ok(h.store.getState().items.some(i=>i.kind==='tool'&&i.text==='쓰기 완료'));
+ assert.deepEqual(h.logged.filter(e=>e.tool==='write').map(e=>[e.result,e.confirmed]),[['ok',true]]);
+ assert.equal(writingSeen,true);assert.equal(h.store.getState().writing,false);assert.equal(h.store.getState().busy,false);
+});
+// Defect: ask/offerImage/sendImage returned silently while a settings call ran (sendImage even dropped the shown offer).
+test('while settings load the store exposes configuring, keeps the shown image offer and explains instead of dropping',async()=>{
+ const h=harness();await h.store.getState().loadConfig();await h.store.getState().offerImage('이 이미지');const offer=h.store.getState().imageOffer;assert.ok(offer);
+ const loading=deferred();h.bridge.getState=()=>loading.promise;const reloading=h.store.getState().loadConfig();
+ const configuring=h.store.getState().configuring;
+ await h.store.getState().sendImage();assert.equal(h.sent.length,0);assert.equal(h.store.getState().imageOffer,offer,'the confirmed offer and its question are kept');
+ await h.store.getState().ask('질문');assert.equal(h.sent.length,0);
+ assert.equal(h.store.getState().items.filter(i=>i.kind==='notice'&&/설정을 확인하는 중.*다시/.test(i.text)).length,2,'each held request says why and what to do');
+ assert.equal(configuring,true);loading.resolve(h.config);await reloading;assert.equal(h.store.getState().configuring,false);
+ await h.store.getState().sendImage();assert.equal(h.sent.length,1);
 });

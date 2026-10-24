@@ -378,6 +378,7 @@ export const DatasetStudio: React.FC = () => {
             the split counts) stays on screen. Only there: the simple view's 더 보기 menu below would be clipped by it. */}
         <div className={`flex items-center space-x-3${full ? ' min-w-0 overflow-x-auto whitespace-nowrap' : ''}`}>
           <button
+            id="workflow-data"
             onClick={handleSelectFolder}
             disabled={isLoading}
             className="flex items-center space-x-2 px-3 py-1.5 bg-blue-600 hover:bg-blue-500 rounded-[4px] text-xs font-semibold text-white border border-blue-400 transition-tactile cursor-pointer"

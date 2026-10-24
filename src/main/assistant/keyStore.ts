@@ -36,7 +36,9 @@ const PROVIDERS:AssistantProviderId[] = ['openai-compatible', 'anthropic'];
 const FILE = 'providers.json';
 const MAX_FILE_BYTES = 64 * 1024;
 interface StoredEntry {provider:AssistantProviderId;baseUrl:string;model:string;format:AssistantApiFormat|null;supportsImages:boolean;key?:string;updatedAt:string}
-interface StoredFile {schema_version:1;active:AssistantProviderId|null;providers:Partial<Record<AssistantProviderId, StoredEntry>>}
+/** Which kind of receiver the person last chose explicitly. Not a secret: no account, label or key is stored with it. */
+export type AssistantRecipient = 'api' | 'chatgpt';
+interface StoredFile {schema_version:1;active:AssistantProviderId|null;providers:Partial<Record<AssistantProviderId, StoredEntry>>;recipient?:AssistantRecipient}
 
 const isProvider = (value:unknown):value is AssistantProviderId => PROVIDERS.includes(value as AssistantProviderId);
 
@@ -70,7 +72,8 @@ export class AssistantKeyStore {
       if (entry && typeof entry === 'object' && entry.provider === id) providers[id] = entry;
     }
     const active:unknown = value.active;
-    return {schema_version: 1, active: isProvider(active) && providers[active] ? active : null, providers};
+    return {schema_version: 1, active: isProvider(active) && providers[active] ? active : null, providers,
+      ...(value.recipient === 'api' || value.recipient === 'chatgpt' ? {recipient: value.recipient} : {})};
   }
 
   /** Temporary file created owner-only, flushed, then renamed over the old one: a crash leaves the old or the new file. */
@@ -147,6 +150,13 @@ export class AssistantKeyStore {
     if (!isProvider(provider) || !data.providers[provider]) throw new Error('먼저 이 공급자를 설정하세요.');
     data.active = provider;this.write(data);
     return this.state();
+  }
+
+  recipient():AssistantRecipient|null {return this.read().recipient ?? null;}
+
+  setRecipient(recipient:AssistantRecipient):void {
+    const data = this.read();
+    if (data.recipient !== recipient) {data.recipient = recipient;this.write(data);}
   }
 
   config(provider?:AssistantProviderId|null):ProviderConfig|null {

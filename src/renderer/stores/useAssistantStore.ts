@@ -12,7 +12,7 @@ import { AssistantConversation, type PendingWrite, type SessionEvent } from '../
 import { assistantLog, type RunRecord } from '../services/assistantLog';
 import { assistantContext, createRuntimeTools, currentImageForQuestion } from '../services/assistantRuntime';
 import { useAnnotationStore } from './useAnnotationStore';
-import { assistantScope, assistantImageBinding, assistantWriteBinding } from '../services/assistantAuthority';
+import { assistantScope, assistantProjectScope, assistantImageBinding, assistantWriteBinding } from '../services/assistantAuthority';
 import { sha256Hex } from '../services/assistantContext';
 import { useProjectStore } from './useProjectStore';
 import { useComputeStore } from './useComputeStore';
@@ -33,6 +33,10 @@ interface AssistantState {
   configError: string | null;
   items: AssistantChatItem[];
   busy: boolean;
+  /** A confirmed write is executing: no stop and no settings change until its outcome is recorded. */
+  writing: boolean;
+  /** A settings call is in flight: questions wait (the panel keeps the typed text) until it returns. */
+  configuring: boolean;
   pending: PendingWrite | null;
   imageOffer: AssistantImageOffer | null;
   runs: RunRecord[] | null;
@@ -71,11 +75,12 @@ let nextItem = 0;
 let conversation: AssistantConversation | null = null;
 let imageOfferVersion = 0;
 let configRequest = 0;
-let configuring = false;
+let invalidationDeferred = false;
 let imageRevision = 0;
 let writeRevision = 0;
 const readImageBinding = () => JSON.stringify([imageRevision, assistantImageBinding(assistantScope(useAssistantStore.getState().config))]);
 const readWriteBinding = () => JSON.stringify([writeRevision, assistantWriteBinding(assistantScope(useAssistantStore.getState().config))]);
+const HELD_FOR_SETTINGS = '도우미 설정을 확인하는 중이라 아직 보내지 않았습니다. 설정이 끝난 뒤 다시 보내세요.';
 
 export const useAssistantStore = create<AssistantState>((set, get) => {
   const add = (item: Omit<AssistantChatItem, 'id'>) => set(state => ({ items: [...state.items, { ...item, id: ++nextItem }].slice(-200) }));
@@ -89,6 +94,10 @@ export const useAssistantStore = create<AssistantState>((set, get) => {
       if (get().config?.active==='chatgpt'&&event.error.code==='rate_limited') void get().loadConfig();
     }
     else if (event.kind === 'busy') set({ busy: event.busy });
+    else if (event.kind === 'writing') {
+      set({ writing: event.writing });
+      if (!event.writing && invalidationDeferred) invalidateAssistant();
+    }
     else if (event.kind === 'confirm') set({ pending: event.pending });
   };
   const session = (): AssistantConversation | null => {
@@ -97,7 +106,7 @@ export const useAssistantStore = create<AssistantState>((set, get) => {
     if (!conversation) {
       conversation = new AssistantConversation({
         bridge, tools: createRuntimeTools(), context: assistantContext,
-        scope: () => assistantScope(get().config),
+        scope: () => assistantScope(get().config), projectScope: assistantProjectScope,
         writeBinding: readWriteBinding,
         log: entry => assistantLog.append(entry), provider: () => get().config?.active ?? null,
       }, onEvent);
@@ -107,12 +116,19 @@ export const useAssistantStore = create<AssistantState>((set, get) => {
   const configCall = async (run: (bridge: AssistantBridge) => Promise<AssistantConfigState>): Promise<boolean> => {
     const bridge = assistantBridge();
     if (!bridge) { set({ configError: '이 화면에서는 도우미를 쓸 수 없습니다. 데스크톱 앱에서 여세요.' }); return false; }
-    const request = ++configRequest; configuring = true;
+    const request = ++configRequest; set({ configuring: true });
     try { const config = await run(bridge); if (request !== configRequest) return false; set({ config, configError: null }); return true; }
     catch (cause) { if (request === configRequest) set({ configError: message(cause) }); return false; }
-    finally { if (request === configRequest) configuring = false; }
+    finally { if (request === configRequest) set({ configuring: false }); }
   };
-  const chatgptCall = (run: (connection: NonNullable<AssistantBridge['chatgpt']>) => Promise<AssistantConfigState>) => {
+  /** Receiver changes wait for an executing confirmed write, so its outcome reaches the run log first (the panel disables them). */
+  const writeRunning = (): boolean => {
+    if (!conversation?.writing) return false;
+    set({ configError: '확인한 작업을 실행하는 중이라 설정을 바꾸지 않았습니다. 실행이 끝난 뒤 다시 바꾸세요.' });
+    return true;
+  };
+  const chatgptCall = async (run: (connection: NonNullable<AssistantBridge['chatgpt']>) => Promise<AssistantConfigState>) => {
+    if (writeRunning()) return false;
     invalidateAssistant();
     return configCall(bridge => {
       if (!bridge.chatgpt) throw new Error('이 앱에서는 ChatGPT 연결을 지원하지 않습니다. 최신 데스크톱 앱에서 다시 여세요.');
@@ -128,15 +144,17 @@ export const useAssistantStore = create<AssistantState>((set, get) => {
     configError: null,
     items: [],
     busy: false,
+    writing: false,
+    configuring: false,
     pending: null,
     imageOffer: null,
     runs: null,
     runsError: null,
     loadConfig: async () => { await configCall(bridge => bridge.getState()); },
-    saveProvider: async input => { invalidateAssistant(); return configCall(bridge => bridge.saveProvider(input)); },
-    removeKey: async provider => { invalidateAssistant(); await configCall(bridge => bridge.removeKey(provider)); },
-    removeProvider: async provider => { invalidateAssistant(); await configCall(bridge => bridge.removeProvider(provider)); },
-    setActive: async provider => { invalidateAssistant(); await configCall(bridge => bridge.setActive(provider)); },
+    saveProvider: async input => { if (writeRunning()) return false; invalidateAssistant(); return configCall(bridge => bridge.saveProvider(input)); },
+    removeKey: async provider => { if (writeRunning()) return; invalidateAssistant(); await configCall(bridge => bridge.removeKey(provider)); },
+    removeProvider: async provider => { if (writeRunning()) return; invalidateAssistant(); await configCall(bridge => bridge.removeProvider(provider)); },
+    setActive: async provider => { if (writeRunning()) return; invalidateAssistant(); await configCall(bridge => bridge.setActive(provider)); },
     beginChatgpt: input => chatgptCall(connection => connection.begin(input)),
     acknowledgeChatgptPlanUsage: recordId => configCall(bridge => {if(!bridge.chatgpt)throw new Error('ChatGPT 연결 설정을 확인하세요.');return bridge.chatgpt.acknowledgePlanUsage(recordId);}),
     resumeChatgptUsage: recordId => chatgptCall(connection => connection.resumeUsage(recordId)),
@@ -153,7 +171,8 @@ export const useAssistantStore = create<AssistantState>((set, get) => {
     },
     ask: async text => {
       const active = session();
-      if (configuring || !active || !text.trim() || active.busy || active.pending) return;
+      if (!active || !text.trim() || active.busy || active.pending) return;
+      if (get().configuring) { add({ kind: 'notice', text: HELD_FOR_SETTINGS }); return; }
       add({ kind: 'person', text: text.trim() });
       await active.ask(text);
     },
@@ -161,7 +180,8 @@ export const useAssistantStore = create<AssistantState>((set, get) => {
     decide: async confirmed => { await conversation?.decide(confirmed); },
     offerImage: async question => {
       const bridge = assistantBridge();
-      if (configuring || !bridge || !question.trim()) return;
+      if (!bridge || !question.trim()) return;
+      if (get().configuring) { add({ kind: 'notice', text: HELD_FOR_SETTINGS }); return; }
       if (get().config?.active === 'chatgpt') {
         set({ imageOffer: null });
         add({ kind: 'notice', text: 'ChatGPT 연결은 현재 텍스트 질문만 지원합니다. 이미지 질문은 이미지 지원 API 키 공급자를 선택한 뒤 전송 대상을 확인하세요.' });
@@ -187,10 +207,12 @@ export const useAssistantStore = create<AssistantState>((set, get) => {
     sendImage: async () => {
       // Only this action, after the person read the offer and pressed send, reads the image and lets it leave.
       const offer = get().imageOffer;
+      // The shown offer (and its question) stays while settings load; a changed receiver drops it through its binding.
+      if (offer && get().configuring) { add({ kind: 'notice', text: HELD_FOR_SETTINGS }); return; }
       set({ imageOffer: null });
       const version = ++imageOfferVersion;
       const active = session();
-      if (configuring || !offer || !active || active.busy || active.pending) return;
+      if (!offer || !active || active.busy || active.pending) return;
       const current = () => version === imageOfferVersion && offer.binding === readImageBinding();
       if (!current()) { add({ kind: 'notice', text: '이미지 또는 수신 설정이 바뀌어 보내지 않았습니다. 다시 전송 대상을 확인하세요.' }); return; }
       try {
@@ -227,10 +249,13 @@ let observedScope = assistantScope(useAssistantStore.getState().config);
 let observedImage = assistantImageBinding(observedScope);
 let observedWrite = assistantWriteBinding(observedScope);
 function invalidateAssistant(): void {
+  // An executing confirmed write records and shows its outcome first; the reset follows when it returns.
+  if (conversation?.writing) { invalidationDeferred = true; return; }
+  invalidationDeferred = false;
   imageOfferVersion++;
   conversation?.invalidate();
   conversation = null;
-  useAssistantStore.setState({ pending: null, busy: false, imageOffer: null, items: [], runs: null, runsError: null });
+  useAssistantStore.setState({ pending: null, busy: false, writing: false, imageOffer: null, items: [], runs: null, runsError: null });
 }
 function observeAuthority(): void {
   const next = assistantScope(useAssistantStore.getState().config);

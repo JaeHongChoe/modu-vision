@@ -120,3 +120,37 @@ test('settings changes revoke existing image grants even when changed back',asyn
  assert.equal(result.error?.code,'image_refused');assert.equal(requests.length,0);
  assert.equal(service.imageIntent({fileName:'a.png'}).ok,false,'a filename alone does not identify the confirmed image');
 });
+
+// Defect: the explicit API recipient lived only in memory and chatgptBegin reset it, so a denied/failed/expired login or a
+// fresh launch without OS encryption switched the assistant to ChatGPT. Only a saved successful connection may switch it.
+function chatgptFake(){
+ let state={accounts:[],active:null,encryptionAvailable:true,status:'idle'};const listeners=[];
+ const connection={state:()=>structuredClone(state),authority:()=>'0',onConnected:listener=>{listeners.push(listener);},
+  begin:async()=>{state={...state,status:'waiting'};return connection.state();},cancel:()=>{state={...state,status:'idle'};},
+  selectAccount:id=>{state={...state,active:id};},selectModel:()=>{},acknowledgePlanUsage:()=>{},resumeUsage:()=>{},recover:()=>{},signOut:async()=>{},dispose:()=>{},
+  listModels:async()=>[],complete:async()=>({text:'ChatGPT 답변',toolCalls:[],stop:'end'}),set:change=>{state={...state,...change};},
+  connect:()=>{state={...state,accounts:[{recordId:'opaque-a',label:'계정',model:'m',signedIn:true,planUsageEnabled:true}],active:'opaque-a',status:'connected'};listeners.forEach(listener=>listener('opaque-a'));}};
+ return connection;
+}
+test('a failed ChatGPT login keeps the chosen API provider, also on a fresh launch without OS encryption',async t=>{
+ const {store,requests}=await setup(t,{key:null}),chatgpt=chatgptFake();let service=new AssistantService({store,chatgpt});
+ assert.equal(service.setActive('openai-compatible').active,'openai-compatible');
+ for(const failure of ['access_denied','attempt_expired']){
+  await service.chatgptBegin({termsAccepted:true});chatgpt.set({status:'error',error:{code:'forbidden',reason:failure,action:'다시 시도'}});
+  assert.equal(service.state().active,'openai-compatible',failure);
+ }
+ assert.equal((await send(service)).ok,true);assert.equal(requests.length,1,'the question went to the chosen API provider');
+ chatgpt.set({status:'idle',error:undefined,encryptionAvailable:false});
+ const noEncryption=new AssistantKeyStore(path.dirname(store.file),{...encryptor,isAvailable:()=>false});
+ service=new AssistantService({store:noEncryption,chatgpt});
+ assert.equal(service.state().active,'openai-compatible','a fresh launch keeps the persisted choice');
+ const persisted=fs.readFileSync(store.file,'utf8');assert.ok(!/opaque-a|계정|token/i.test(persisted),'only the recipient kind is stored');
+});
+test('only a saved successful ChatGPT connection replaces the API choice, and a persisted ChatGPT choice still fails closed',async t=>{
+ const {store}=await setup(t,{key:null}),chatgpt=chatgptFake();const service=new AssistantService({store,chatgpt});
+ service.setActive('openai-compatible');await service.chatgptBegin({termsAccepted:true});
+ assert.equal(service.state().active,'openai-compatible','a login in progress is not yet a choice');
+ chatgpt.connect();assert.equal(service.state().active,'chatgpt');
+ chatgpt.set({accounts:[],active:null,status:'error',encryptionAvailable:false});
+ assert.equal(new AssistantService({store,chatgpt}).state().active,'chatgpt','never silently from ChatGPT to the API provider');
+});

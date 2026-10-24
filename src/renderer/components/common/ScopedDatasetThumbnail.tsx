@@ -97,10 +97,14 @@ interface Props {
   alt: string;
   className?: string;
   onLoad?: React.ReactEventHandler<HTMLImageElement>;
+  /** The image could not be read or shown (a current read only): a caller waiting for onLoad can stop waiting. */
+  onFailed?: () => void;
 }
 
-export const ScopedDatasetThumbnail: React.FC<Props> = ({path, authority, context, current, alt, className, onLoad}) => {
+export const ScopedDatasetThumbnail: React.FC<Props> = ({path, authority, context, current, alt, className, onLoad, onFailed}) => {
   const image = useRef<HTMLImageElement>(null);
+  const failedCallback = useRef(onFailed);
+  failedCallback.current = onFailed;
   const [loaded, setLoaded] = useState<{key: string; url: string | null; failed: boolean} | null>(null);
   const captured = context ? {...context} : null;
   const contextKey = JSON.stringify(captured ? [captured.workspace_id, captured.project_id, captured.actor_id, captured.mode] : null);
@@ -112,7 +116,7 @@ export const ScopedDatasetThumbnail: React.FC<Props> = ({path, authority, contex
     if (!element || !current()) return;
     const read = createScopedThumbnailRead({path, context: captured, current,
       publish: url => setLoaded({key, url, failed: false}),
-      failed: () => setLoaded({key, url: null, failed: true})});
+      failed: () => { setLoaded({key, url: null, failed: true}); failedCallback.current?.(); }});
     read.observe(element);
     return () => { element.removeAttribute('src'); read.retire(); };
   }, [key, current]);
@@ -122,5 +126,5 @@ export const ScopedDatasetThumbnail: React.FC<Props> = ({path, authority, contex
     data-read-state={failed ? 'failed' : displayed ? 'ready' : 'pending'}
     data-thumbnail-path={path}
     onLoad={event => { if (displayed && current() && event.currentTarget.src === displayed) onLoad?.(event); }}
-    onError={() => { if (displayed && current()) setLoaded({key, url: null, failed: true}); }}/>
+    onError={() => { if (displayed && current()) { setLoaded({key, url: null, failed: true}); onFailed?.(); } }}/>
 };

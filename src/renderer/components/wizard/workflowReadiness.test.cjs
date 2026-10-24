@@ -602,3 +602,48 @@ test('a failed training job guides the person to its error details instead of a 
  assert.equal(result.nextAction.step,3);
  assert.match(result.nextAction.label,/오류/);
 });
+
+// The footer's jump and the first-run guide reach their target by id. Three targets used to be found by their Korean
+// button text or title: in English nothing was found, and '프로젝트 관리 열기' only focused the project button (the guide
+// closed and nothing opened). Each target now carries its id, and the project button opens its dialog.
+test('every footer target is an element id or a named opener in the renderer',()=>{
+ const readiness=fs.readFileSync(path.join(__dirname,'workflowReadiness.ts'),'utf8');
+ const targets=[...new Set([...readiness.matchAll(/'((?:workflow|flow-area|draft)-[a-z0-9-]+|labeling-canvas|image-class-picker)'/g)].map(m=>m[1]))];
+ for(const expected of ['workflow-project','workflow-data','workflow-label-review','workflow-training','labeling-canvas','flow-area-edit','flow-area-evaluate'])assert.ok(targets.includes(expected),expected);
+ const root=path.join(__dirname,'..','..');const sources=[];
+ const walk=dir=>{for(const entry of fs.readdirSync(dir,{withFileTypes:true})){const file=path.join(dir,entry.name);if(entry.isDirectory())walk(file);else if(/\.tsx$/.test(entry.name))sources.push(fs.readFileSync(file,'utf8'));}};
+ walk(root);const all=sources.join('\n');
+ const flowAreas=fs.readFileSync(path.join(root,'components','flowchart','FlowEditorWorkspace.tsx'),'utf8');
+ for(const target of targets){
+  const literal=all.includes(`id="${target}"`)||all.includes(`data-workflow-opens="${target}"`);
+  const flowArea=target.startsWith('flow-area-')&&flowAreas.includes('id={`flow-area-${key}`}')&&flowAreas.includes(`['${target.slice('flow-area-'.length)}',`);
+  assert.ok(literal||flowArea,`${target} has an element`);
+ }
+ assert.doesNotMatch(readiness,/textContent\?\.trim\(\)===label|\[title="프로젝트 관리"\]/,'no lookup by interface text');
+ assert.match(fs.readFileSync(path.join(root,'components','wizard','WizardHeader.tsx'),'utf8'),/<button type="button" id="workflow-project" aria-haspopup="dialog" aria-expanded=\{showProjectPanel\} data-workflow-open-on-focus onClick=\{\(\) => setShowProjectPanel\(true\)\}/);
+ assert.match(fs.readFileSync(path.join(root,'components','onboarding','FirstRunStudio.tsx'),'utf8'),/onClick=\{\(\) => \{ onClose\(\); focusWorkflowTarget\('workflow-project'\); \}\}>프로젝트 관리 열기<\/button>/);
+});
+
+test('the jump presses a closed dialog opener and leaves it the focus; other openers and targets are focused',()=>{
+ const source=fs.readFileSync(path.join(__dirname,'workflowReadiness.ts'),'utf8');
+ const start=source.indexOf('export function focusWorkflowTarget'),end=source.indexOf('\n}\n',start)+3;
+ const helpers=source.slice(source.indexOf('function openFoldsAround'),source.indexOf('\n}\n',source.indexOf('function openFoldsAround'))+3);
+ const js=ts.transpileModule(helpers+source.slice(start,end),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText;
+ const make=(id,attrs={})=>{const el={id,attrs:{...attrs},clicks:0,focused:false,scrolled:false,parentElement:null,closest:()=>null,
+  getAttribute(name){return name in this.attrs?String(this.attrs[name]):null;},hasAttribute(name){return name in this.attrs;},
+  click(){this.clicks++;if('aria-expanded' in this.attrs)this.attrs['aria-expanded']='true';},scrollIntoView(){this.scrolled=true;},focus(){this.focused=true;doc.activeElement=this;}};return el;};
+ const frames=[];const doc={activeElement:null,elements:{},getElementById(id){return this.elements[id]||null;},querySelector:()=>null};
+ const run=new Function('document','requestAnimationFrame','HTMLElement','exports',js+';exports.focusWorkflowTarget=focusWorkflowTarget;');
+ const exports={};run(doc,fn=>frames.push(fn),function(){},exports);
+ const flush=()=>{while(frames.length)frames.shift()();};
+ const project=make('workflow-project',{'aria-haspopup':'dialog','aria-expanded':'false','data-workflow-open-on-focus':''});
+ const queue=make('draft-review-queue',{'aria-expanded':'false','data-workflow-open-on-focus':''});
+ const data=make('workflow-data');
+ doc.elements={'workflow-project':project,'draft-review-queue':queue,'workflow-data':data};
+ exports.focusWorkflowTarget('workflow-project');flush();
+ assert.equal(project.clicks,1,'the project dialog is opened');assert.equal(project.focused,false,'the dialog keeps the focus it takes');
+ exports.focusWorkflowTarget('draft-review-queue');flush();
+ assert.equal(queue.clicks,1);assert.equal(queue.focused,true,'a popover opener is still focused');
+ exports.focusWorkflowTarget('workflow-data');flush();
+ assert.equal(data.clicks,0);assert.equal(data.focused,true);assert.equal(data.scrolled,true);
+});

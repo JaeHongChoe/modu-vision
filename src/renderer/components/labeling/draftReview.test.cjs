@@ -474,6 +474,54 @@ test('a page whose tiles have all shown says the reviewer name is what keeps it 
   assert.ok(!nodes(tree).some(node => text(node) === reason));
 });
 
+test('edits made on the open image while an adoption saves keep their undo history, and the queue says it was not reloaded', async () => {
+  const adopted = id => ({...row(id, '/b/1.png'), status: 'accepted', accepted_candidate_ids: [`${id}_c0`], backup_version_id: 'v_1', revert_backup_version_id: 'v_2'});
+  for (const take of ['adopt', 'take back']) {
+    // The person drew on the canvas while the server was saving: the reload skips a dirty canvas (and says so by false).
+    let queue;
+    const drawMeanwhile = id => { Object.assign(queue.annotation, {isDirty: true, history: ['before', 'drawn meanwhile']}); return take === 'adopt' ? adopted(id) : {...adopted(id), status: 'reverted'}; };
+    queue = queueFixture({drafts: [take === 'adopt' ? row('d1', '/b/1.png') : {...adopted('d1'), reviewed_at: '2026-10-23T01:00:00Z', adopted_annotations: [{id: 'd1_c0'}]}],
+      request: take === 'adopt' ? {id: 'd1', nonce: 1, scope: 'scope-B'} : null, workflow: {review: async id => drawMeanwhile(id), undoAdoption: async id => drawMeanwhile(id)}});
+    Object.assign(queue.annotation, {currentImage: {file_path: '/b/1.png'}, history: ['before'], future: [], loadAnnotationsForCurrent: async () => false});
+    let tree = await queue.settle();
+    if (take === 'adopt') buttonWith(tree, '선택 후보 채택').props.onClick();
+    else { buttonWith(tree, '초안 검토 패널').props.onClick(); tree = await queue.settle(); byLabel(tree, '1.png 채택 되돌리기').props.onClick(); }
+    tree = await queue.settle();
+    assert.deepEqual(queue.annotation.history, ['before', 'drawn meanwhile'], `${take}: the edits keep their undo`);
+    assert.match(text(tree), /열린 이미지를 고쳐서 캔버스에는 바뀐 라벨을 다시 불러오지 않았습니다/, take);
+    assert.match(text(tree), /이미지를 다시 불러/, `${take}: the next step is named`);
+  }
+  // A reload that replaced the canvas still clears the history, so undo cannot bring back the labels before the change.
+  const queue = queueFixture({drafts: [row('d1', '/b/1.png')], request: {id: 'd1', nonce: 1, scope: 'scope-B'}, workflow: {review: async id => adopted(id)}});
+  Object.assign(queue.annotation, {currentImage: {file_path: '/b/1.png'}, history: ['before'], future: ['redo'], loadAnnotationsForCurrent: async () => true});
+  let tree = await queue.settle();
+  buttonWith(tree, '선택 후보 채택').props.onClick(); tree = await queue.settle();
+  assert.deepEqual([queue.annotation.history, queue.annotation.future], [[], []]);
+  assert.doesNotMatch(text(tree), /다시 불러오지 않았습니다/);
+});
+
+test('a tile whose image failed to load names the fix in the page refusal: leave it out, or open it on its own', async () => {
+  const {pageAdoptionRefusal} = helpers();
+  const page = [row('d1', '/b/1.png'), row('d2', '/b/2.png'), row('d3', '/b/3.png')];
+  const refusal = pageAdoptionRefusal(page, new Set(), new Set(['d1']), new Set(['d2']));
+  assert.match(refusal, /미리보기를 불러오지 못한 초안 1건\(2\.png\)/);
+  assert.match(refusal, /이 페이지 채택에서 빼/);
+  assert.match(refusal, /'열기'/);
+  assert.equal(pageAdoptionRefusal(page, new Set(['d2']), new Set(['d1', 'd3']), new Set(['d2'])), null, 'leaving it out lets the page go');
+  assert.equal(pageAdoptionRefusal(page, new Set(), new Set(['d1', 'd2', 'd3']), new Set(['d2'])), null, 'a later successful read wins');
+  // In the queue: the grid reports the failure and the refusal beside '이 페이지 채택' says what to do.
+  const queue = queueFixture({drafts: page});
+  let tree = await queue.settle();
+  buttonWith(tree, '초안 검토 패널').props.onClick(); tree = await queue.settle();
+  buttonWith(tree, '격자 (한눈 검토)').props.onClick(); tree = await queue.settle();
+  const grid = () => nodes(tree).find(node => node.type === 'DraftGrid');
+  grid().props.onLoaded('d1'); grid().props.onLoaded('d3'); grid().props.onFailed('d2'); tree = await queue.settle();
+  assert.deepEqual([...grid().props.failed], ['d2']);
+  assert.match(buttonWith(tree, '이 페이지 채택').props.title, /미리보기를 불러오지 못한 초안 1건\(2\.png\)/);
+  grid().props.onToggle('d2'); tree = await queue.settle();
+  assert.equal(buttonWith(tree, '이 페이지 채택').props.disabled, false);
+});
+
 test('drafts that found nothing are not waiting work and close together as rejections, labels untouched', async () => {
   const reviewed = [];
   const empty = (id, image) => ({...row(id, image), candidates: []});
