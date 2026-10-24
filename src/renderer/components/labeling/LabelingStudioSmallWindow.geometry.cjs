@@ -46,7 +46,9 @@ function markup(focus = false, {reviewOpen = false, draftWide = false} = {}) {
   const allowed = new Set(['App', 'WizardHeader', 'WizardFooter', 'LabelingTool', 'LabelingStudio', 'LabelingToolbar', 'LabelSetBar',
     'TeamDataPanel', 'ImageReviewPanel', 'ClassificationClassPicker', 'CategorySelector', 'DraftReviewQueue', 'ModelAssistPanel',
     'ImageFilmstrip', 'DerivedImagePanel', 'SavedReviewQueuePanel', 'WorkflowImpactPanel', 'AsyncAction',
-    'labelingLayout', 'convertedAnnotation', 'coordinateMath', 'draftReview', 'popoverRoom', 'imageReadCustody']);
+    'labelingLayout', 'convertedAnnotation', 'coordinateMath', 'draftReview', 'popoverRoom', 'imageReadCustody',
+    // A state hook the panels render through (ModelAssistPanel's error line); an empty stub returned undefined there.
+    'useScopedError']);
   const empty = new Proxy({}, {get: (_, name) => name === '__esModule' ? true : noop});
   const cache = new Map();
   function compile(file) {
