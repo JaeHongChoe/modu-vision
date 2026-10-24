@@ -1,3 +1,4 @@
+import {execFileSync} from 'node:child_process';
 import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -7,6 +8,17 @@ import {createProject, pickDataset} from './qa/appFlow';
 
 // Automated feature verification only. Self-reported milestones never prove a
 // novice completed a workflow, produced correct labels or met a usability target.
+
+// The bundle records its own commit only when it was built from a clean tree (vite.config.ts cleanCommitSha; the rule is
+// unit-tested in firstUseStudy.test.cjs). The harness builds this checkout when the run starts: a tree clean now was clean
+// then, so the value is exactly HEAD; with changes now it is HEAD or null. Never a value the page or caller supplies.
+const repository = path.resolve(__dirname, '..', '..');
+const git = (args: string[]) => execFileSync('git', args, {cwd: repository, encoding: 'utf8'}).trim();
+const expectBuildSha = (value: unknown) => {
+  const head = git(['rev-parse', 'HEAD']);
+  if (git(['status', '--porcelain']) === '') expect(value).toBe(head);
+  else expect([null, head]).toContain(value);
+};
 test('local first-use study survives setup and guide closure, exports no private input and seals changed scope', async ({page, renderer, workspace, evidence}) => {
   await page.setViewportSize({width: 2560, height: 1440});
   const privateName = 'Study private project sentinel 7319';
@@ -66,7 +78,7 @@ test('local first-use study survives setup and guide closure, exports no private
   expect(first.elapsed_ms).toBeLessThanOrEqual(Date.now() - began + 1000);
   expect(first.workflow_actions.pointer).toBeGreaterThan(0);
   expect(first.recorder_actions.pointer).toBeGreaterThan(0);
-  expect(first.build.build_sha).toBeNull();
+  expectBuildSha(first.build.build_sha);
 
   // The same recording controls also support honest per-image comparisons.
   // These are automated self-reported markers, without drawing/adopting labels.
@@ -93,7 +105,7 @@ test('local first-use study survives setup and guide closure, exports no private
   for (const session of report.sessions) {
     expect(session.acceptance).toBe('unverified');
     expect(session.target_assessment).toBe('unverified');
-    expect(session.build.build_sha).toBeNull();
+    expectBuildSha(session.build.build_sha);
   }
   const raw = JSON.stringify(report);
   for (const value of [privateName, 'Study next private scope 9251', workspace.root, workspace.dataset, ...originals.map(row => row.file)]) expect(raw).not.toContain(value);
