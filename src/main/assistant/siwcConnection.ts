@@ -11,6 +11,7 @@ import {acceptAuthorizationTokens, buildSiwcTextRequest, createAuthorizationAtte
 
 const AUTH = 'https://auth.openai.com', API = 'https://api.openai.com/v1';
 const DISCOVERY = `${AUTH}/.well-known/openid-configuration`, TOKEN = `${AUTH}/api/accounts/oauth/token`;
+const MODEL_CATALOG_MAX_BYTES = 2 * 1024 * 1024;
 type Account = {recordId:string;label:string;model:string;signedIn:boolean;planUsageEnabled:boolean;planUsageAcknowledged?:boolean;usagePaused?:boolean};
 export interface SiwcConnectionStore {
   state():{accounts:Account[];active:string|null;encryptionAvailable:boolean};
@@ -228,7 +229,7 @@ export class SiwcConnection {
   async listModels():Promise<{id:string;label:string}[]> {
     let responseId:string|undefined;
     try {const account=this.account(),binding=this.authority();return await this.operation(async signal=>{const token=await this.access(account.recordId,signal,this.timeoutMs);
-        if(signal.aborted||this.authority()!==binding)throw protocol('cancelled');const response=await this.request(`${API}/models`,{method:'GET',headers:{Accept:'application/json',Authorization:`Bearer ${token.accessToken}`}},signal);responseId=requestId(response);const raw=await this.json(response,signal,524288);
+        if(signal.aborted||this.authority()!==binding)throw protocol('cancelled');const response=await this.request(`${API}/models`,{method:'GET',headers:{Accept:'application/json',Authorization:`Bearer ${token.accessToken}`}},signal);responseId=requestId(response);const raw=await this.json(response,signal,MODEL_CATALOG_MAX_BYTES);
         if(response.status!==200)throw this.httpError(response.status,raw);const list=obj(raw).models;if(!Array.isArray(list)||list.length>1000)throw protocol('bad_response');
         const names=new Set<string>(),models:{id:string;label:string}[]=[];
         for(const value of list){const row=obj(value);if(row.visibility!=='list')continue;if(!validModel(row.slug)||names.has(row.slug))throw protocol('bad_response');names.add(row.slug);

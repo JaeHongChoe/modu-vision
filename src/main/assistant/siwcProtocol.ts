@@ -9,6 +9,7 @@
  * https://developers.openai.com/siwc/token-sharing-open-source/models-and-inference
  * https://developers.openai.com/siwc/token-sharing-open-source/preview-limitations
  * https://developers.openai.com/api/docs/guides/tools-tool-search (namespace call shape only, no tool_search)
+ * https://developers.openai.com/api/reference/resources/responses/methods/create (phase and reasoning defaults)
  */
 import crypto, {type JsonWebKey} from 'node:crypto';
 import type {AssistantErrorDiagnostics, AssistantToolSpec} from '../../types/electron';
@@ -223,19 +224,21 @@ const textField = (value:unknown, max=100000):value is string => typeof value===
 function fields(row:Json, allowed:string[]) {
   if(Object.keys(row).some(key=>!allowed.includes(key)))fail('invalid_input');
   if(row.id!==undefined&&!nonempty(row.id,200)||row.status!==undefined&&row.status!=='completed')fail('invalid_input');
+  if(row.phase!==undefined&&row.phase!==null&&row.phase!=='commentary'&&row.phase!=='final_answer')fail('invalid_input');
 }
-/** Validate every nested field before retaining provider replay. Opaque reasoning is only a bounded string;
+/** Validate every nested field before retaining provider replay. Opaque reasoning is a bounded string or null;
  * its bytes stay unchanged because the provider must verify it on replay. Ordinary text is always redacted. */
 function replayItem(raw:unknown, names:Set<string>, ids:Set<string>):Json {
   const row=object(raw);
   if(row.type==='reasoning') {
-    fields(row,['type','id','summary','encrypted_content','status']);
-    if(!Array.isArray(row.summary)||row.summary.length>128||row.encrypted_content!==undefined&&!textField(row.encrypted_content))fail('invalid_input');
+    fields(row,['type','id','summary','encrypted_content','status','content']);
+    if(!Array.isArray(row.summary)||row.summary.length>128||row.encrypted_content!==undefined&&row.encrypted_content!==null&&!textField(row.encrypted_content))fail('invalid_input');
+    if(row.content!==undefined&&(!Array.isArray(row.content)||row.content.length))fail('invalid_input');
     const summary=row.summary.map((raw:unknown)=>{const part=object(raw);fields(part,['type','text']);if(part.type!=='summary_text'||!textField(part.text))fail('invalid_input');return {type:'summary_text',text:redactOutgoingText(part.text)};});
     return {...clone(row),summary};
   }
   if(row.type==='message') {
-    fields(row,['type','role','content','id','status']);if(row.role!=='assistant'||!Array.isArray(row.content)||row.content.length>128)fail('invalid_input');
+    fields(row,['type','role','content','id','status','phase']);if(row.role!=='assistant'||!Array.isArray(row.content)||row.content.length>128)fail('invalid_input');
     const content=row.content.map((raw:unknown)=>{const part=object(raw);
       if(part.type==='output_text'){fields(part,['type','text','annotations','logprobs']);if(!textField(part.text))fail('invalid_input');
         // This text-only client requests no hosted tools or log probabilities. An empty provider-default field is safe.
@@ -271,7 +274,7 @@ export function buildSiwcTextRequest(input: {model: string; instructions?: strin
       const text = typeof row.content === 'string' && nonempty(row.content, 100000);
       const replayText = row.role === 'assistant' && row.type === 'message' && Array.isArray(row.content);
       if (!['user', 'assistant', 'developer'].includes(row.role) || (!text && !replayText) || (row.type !== undefined && row.type !== 'message')) fail('invalid_input');
-      fields(row,['type','role','content','id','status']);sanitized.push(replayText?replayItem(row,names,ids):{...clone(row),content:redactOutgoingText(row.content)});
+      fields(row,['type','role','content','id','status',...(row.role==='assistant'?['phase']:[])]);sanitized.push(replayText?replayItem(row,names,ids):{...clone(row),content:redactOutgoingText(row.content)});
     }
   }
   if (outstanding.size) fail('invalid_input');

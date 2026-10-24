@@ -29,7 +29,7 @@ test('error diagnostics omit secret-like unknown codes and arbitrary params whil
  const safe=p.siwcResponseError(400,{error:{code:'subscription_sharing_unsupported_capability',param:'tools[0].type'}});assert.equal(safe.diagnostics.providerCode,'subscription_sharing_unsupported_capability');assert.equal(safe.diagnostics.param,'tools[0].type');
 });
 
-test('text-only replay rejects nested image payloads, arbitrary keys and non-string encrypted content',()=>{
+test('text-only replay rejects nested image payloads, arbitrary keys and invalid encrypted content',()=>{
  const p=load(),base={model:'synthetic-model',tools:allow};
  for(const item of [
   {type:'reasoning',summary:[{type:'input_image',image_url:'data:image/png;base64,c2VjcmV0'}],encrypted_content:'opaque'},
@@ -48,6 +48,48 @@ test('completed responses validate nested replay before returning success and re
  {type:'message',role:'assistant',content:[{type:'output_text',text:'완료 /Users/private/project/a.png',annotations:[]},{type:'refusal',refusal:'sk-secret-1234567890'}]},
  {type:'function_call',namespace:'modu_vision',name:'read_status',call_id:'call_a',arguments:JSON.stringify({file:'/Users/private/project/a.png',key:'sk-secret-1234567890'})}];
  const answer=await p.readSiwcResponse(bytes(completed(output)),{tools:allow});assert.equal(answer.replay[0].encrypted_content,opaque);assert.equal(answer.replay[0].summary[0].text,'검토 a.png [가림]');assert.equal(answer.text,'완료 a.png[가림]');assert.deepEqual(answer.toolCalls[0].arguments,{file:'a.png',key:'[가림]'});assert.deepEqual(JSON.parse(answer.replay[2].arguments),answer.toolCalls[0].arguments);
+});
+test('documented assistant phase survives completed output and the next typed or plain-text history request',async()=>{
+ const p=load();for(const phase of [undefined,null,'commentary','final_answer']){
+  const optional=phase===undefined?{}:{phase},message={type:'message',id:'msg_synthetic',role:'assistant',status:'completed',...optional,content:[{type:'output_text',text:'완료',annotations:[],logprobs:[]}]};
+  const answer=await p.readSiwcResponse(bytes(completed([message])),{tools:[]});assert.equal(answer.text,'완료');assert.deepEqual(answer.replay,[message]);
+  const next=p.buildSiwcTextRequest({model:'synthetic-model',input:[{role:'user',content:'상태'},...answer.replay,{role:'user',content:'다음'}],tools:[]});assert.deepEqual(next.input[1],message);
+  const plain={role:'assistant',content:'완료',...optional},history=p.buildSiwcTextRequest({model:'synthetic-model',input:[plain],tools:[]});assert.deepEqual(history.input,[plain]);
+ }
+});
+test('assistant phase rejects arbitrary values, non-assistant roles and unrelated message fields',async()=>{
+ const p=load();for(const phase of ['', 'analysis', 'final', 0, false, [], {}]){
+  assert.throws(()=>p.buildSiwcTextRequest({model:'m',input:[{role:'assistant',content:'안내',phase}],tools:[]}),e=>e.code==='invalid_input');
+  await assert.rejects(p.readSiwcResponse(bytes(completed([{type:'message',role:'assistant',phase,content:[{type:'output_text',text:'안내'}]}])),{tools:[]}),e=>e.code==='invalid_input');
+ }
+ for(const role of ['user','developer'])for(const phase of [null,'commentary','final_answer'])assert.throws(()=>p.buildSiwcTextRequest({model:'m',input:[{role,content:'안내',phase}],tools:[]}),e=>e.code==='invalid_input');
+ const extra={type:'message',role:'assistant',phase:'final_answer',content:[{type:'output_text',text:'안내'}],private:'forbidden'};
+ assert.throws(()=>p.buildSiwcTextRequest({model:'m',input:[extra],tools:[]}),e=>e.code==='invalid_input');await assert.rejects(p.readSiwcResponse(bytes(completed([extra])),{tools:[]}),e=>e.code==='invalid_input');
+});
+test('documented empty reasoning content survives completed output and replay',async()=>{
+ const p=load();for(const optional of [{content:[]},{content:[],encrypted_content:'synthetic-opaque'}]){
+  const output=[{type:'reasoning',id:'reason_synthetic',summary:[],...optional},{type:'message',role:'assistant',content:[{type:'output_text',text:'완료'}]}];
+  const answer=await p.readSiwcResponse(bytes(completed(output)),{tools:[]});assert.equal(answer.text,'완료');assert.deepEqual(answer.replay,output);
+  const next=p.buildSiwcTextRequest({model:'synthetic-model',input:[{role:'user',content:'상태'},...answer.replay,{role:'user',content:'다음'}],tools:[]});assert.deepEqual(next.input.slice(1,3),output);
+ }
+});
+test('documented nullable encrypted content survives completed output and replay',async()=>{
+ const p=load();for(const optional of [{encrypted_content:null},{content:[],encrypted_content:null}]){
+  const output=[{type:'reasoning',id:'reason_synthetic',summary:[],...optional},{type:'message',role:'assistant',content:[{type:'output_text',text:'완료'}]}];
+  const answer=await p.readSiwcResponse(bytes(completed(output)),{tools:[]});assert.equal(answer.text,'완료');assert.deepEqual(answer.replay,output);
+  const next=p.buildSiwcTextRequest({model:'synthetic-model',input:[{role:'user',content:'상태'},...answer.replay,{role:'user',content:'다음'}],tools:[]});assert.deepEqual(next.input.slice(1,3),output);
+ }
+});
+test('reasoning defaults keep nonempty or nonarray content, invalid encrypted data and unknown output rejected',async()=>{
+ const p=load(),base={type:'reasoning',summary:[]};for(const item of [
+  ...[null,'',{},[{type:'reasoning_text',text:'unsupported'}],[{type:'input_image',image_url:'data:image/png;base64,c2VjcmV0'}]].map(content=>({...base,content})),
+  ...[0,false,{},[], 'x'.repeat(100001)].map(encrypted_content=>({...base,encrypted_content})),
+  {...base,content:[],encrypted_content:null,private:'forbidden'},
+  {type:'unknown_output',content:[]},
+ ]){
+  assert.throws(()=>p.buildSiwcTextRequest({model:'m',input:[{role:'user',content:'상태'},item],tools:[]}),e=>e.code==='invalid_input');
+  await assert.rejects(p.readSiwcResponse(bytes(completed([item]),1024),{tools:[]}),e=>e.code==='invalid_input');
+ }
 });
 
 test('PKCE is S256 without padding; each authorization attempt uses fresh values and no network',()=>{
