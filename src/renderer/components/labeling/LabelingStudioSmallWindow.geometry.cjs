@@ -32,7 +32,7 @@ function markup(focus = false, {reviewOpen = false, draftWide = false} = {}) {
   const dataset = {images: [image], classes: {OK: 1, NG: 1}, page: 1, pageSize: 50, totalImagesCount: 1, hasSelectedFolder: true, totalImages: 1, sourceImages: 1, unlabeledImages: 1};
   const stateModules = {
     useProjectStore: {useProjectStore: store(project)},
-    useAnnotationStore: {useAnnotationStore: store(annotation), DEFAULT_CATEGORIES: categories},
+    useAnnotationStore: {useAnnotationStore: store(annotation), DEFAULT_CATEGORIES: categories, isStandInCategory: () => false},
     useComputeStore: {useComputeStore: store(compute)},
     useDatasetStore: {useDatasetStore: store(dataset), readDatasetAuthority: () => 'scope'},
     useTrainingStore: {useTrainingStore: store({})},
@@ -140,10 +140,16 @@ test('full view at 1024×768 reserves a practical canvas and keeps save, classes
     };
     // Crossing the 1920/2400 px breakpoints changes the root font size, and controls with transition-all (the class
     // chips) then animate their font size and padding for 150 ms. Measure the layout those transitions end in: a sample
-    // part way through them read 371–377 px at 2560 depending on runner speed.
+    // part way through them read 371–377 px at 2560 depending on runner speed. A transition the page cancels has ended
+    // (its finished promise rejects with AbortError); one still running after 2 s fails the check instead of measuring.
     const resize = async viewport => {
       await page.setViewportSize(viewport);
-      await page.evaluate(() => Promise.all(document.getAnimations().filter(a => a instanceof CSSTransition).map(a => a.finished.catch(() => {}))));
+      const settled = await page.evaluate(limit => Promise.race([
+        Promise.all(document.getAnimations().filter(a => a instanceof CSSTransition).map(a => a.finished.catch(error => {
+          if (error.name !== 'AbortError') throw error;
+        }))).then(() => true),
+        new Promise(resolve => setTimeout(() => resolve(false), limit))]), 2000);
+      assert.ok(settled, `resize transitions to ${viewport.width}×${viewport.height} end within 2 s`);
     };
     await show(html);
     const metrics = await page.evaluate(() => ({canvas: document.querySelector('[data-canvas-container]').getBoundingClientRect().height,
