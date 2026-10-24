@@ -15,6 +15,9 @@ const event=(type,extra={})=>'event: '+type+'\r\ndata: '+JSON.stringify({type,..
 const completed=(output=[])=>event('response.completed',{response:{id:'resp_synthetic',status:'completed',output}});
 async function* bytes(text,width=7){const b=Buffer.from(text);for(let i=0;i<b.length;i+=width)yield b.subarray(i,i+width);}
 const allow=[{name:'read_status',description:'상태',parameters:{type:'object',properties:{},additionalProperties:false}}];
+const doneItem=(output_index,item)=>event('response.output_item.done',{output_index,item});
+const addedItem=(output_index,item)=>event('response.output_item.added',{output_index,item});
+const doneMessage=(id,text='완료')=>({id,type:'message',role:'assistant',status:'completed',phase:'final_answer',content:[{type:'output_text',text,annotations:[],logprobs:[]}]});
 
 test('explicit plan enablement asks consent while ordinary returning sign-in does not',()=>{
  const p=load(),options={hostId:HOST,appName:'Modu Vision',redirectUri:'http://127.0.0.1:43210/auth/callback',clientId:CLIENT};
@@ -187,6 +190,73 @@ test('SSE survives every UTF-8 byte and CRLF boundary; only completed output yie
  const p=load(),output=[{type:'message',role:'assistant',content:[{type:'output_text',text:'완료했습니다'}]},{type:'function_call',namespace:'modu_vision',name:'read_status',call_id:'call_a',arguments:'{}'}];
  const stream=': keepalive\r\n\r\n'+event('response.output_text.delta',{delta:'partial'})+completed(output);
  const result=await p.readSiwcResponse(bytes(stream,1),{tools:allow});assert.equal(result.text,'완료했습니다');assert.deepEqual(result.toolCalls,[{id:'call_a',namespace:'modu_vision',name:'read_status',arguments:{}}]);assert.deepEqual(result.replay,output);
+});
+test('SIWC compatibility accepts validated done-only text at an empty completed output and preserves redacted replay',async()=>{
+ const p=load(),item=doneMessage('msg_done','완료 /Users/private/project/a.png sk-secret-1234567890');
+ const stream=event('response.created',{response:{id:'resp_synthetic'}})+event('response.output_text.delta',{delta:'discarded'})+doneItem(0,item)+completed([]);
+ const answer=await p.readSiwcResponse(bytes(stream,1),{tools:[]});assert.equal(answer.text,'완료 a.png [가림]');assert.equal(answer.replay[0].phase,'final_answer');assert.equal(JSON.stringify(answer).includes('/Users/private'),false);assert.equal(JSON.stringify(answer).includes('sk-secret-'),false);
+ const next=p.buildSiwcTextRequest({model:'m',input:[{role:'user',content:'상태'},...answer.replay,{role:'user',content:'다음'}],tools:[]});assert.deepEqual(next.input[1],answer.replay[0]);
+});
+test('SIWC compatibility orders fully done snapshots by contiguous index and binds added identity',async()=>{
+ const p=load(),a=doneMessage('msg_a','A'),b=doneMessage('msg_b','B');
+ const stream=addedItem(1,{id:'msg_b',type:'message',status:'in_progress'})+addedItem(0,{id:'msg_a',type:'message',status:'in_progress'})+doneItem(1,b)+doneItem(0,a)+completed([]);
+ const answer=await p.readSiwcResponse(bytes(stream),{tools:[]});assert.equal(answer.text,'AB');assert.deepEqual(answer.replay.map(row=>row.id),['msg_a','msg_b']);
+ const full=Array.from({length:128},(_,i)=>doneItem(i,doneMessage('msg_'+i))).reverse().join('');assert.equal((await p.readSiwcResponse(bytes(full+completed([]),1024),{tools:[]})).replay.length,128);
+});
+test('SIWC done tool snapshots validate once per candidate and replay only allowlisted calls',async()=>{
+ const p=load(),item={id:'fc_done',type:'function_call',status:'completed',namespace:'modu_vision',name:'read_status',call_id:'call_done',arguments:'{}'};
+ for(const output of [[],[item]]){const answer=await p.readSiwcResponse(bytes(doneItem(0,item)+completed(output)),{tools:allow});assert.equal(answer.text,'');assert.equal(answer.toolCalls.length,1);assert.equal(answer.toolCalls[0].name,'read_status');
+  const next=p.buildSiwcTextRequest({model:'m',input:[{role:'user',content:'상태'},...answer.replay,{type:'function_call_output',call_id:'call_done',output:'준비됨'}],tools:allow});assert.equal(next.input[2].call_id,'call_done');
+ }
+ await assert.rejects(p.readSiwcResponse(bytes(doneItem(0,item)+completed([])),{tools:[]}),e=>e.code==='invalid_tool_call');
+ await assert.rejects(p.readSiwcResponse(bytes(doneItem(0,item)+doneItem(1,{...item,id:'fc_other'})+completed([])),{tools:allow}),e=>e.code==='invalid_tool_call');
+});
+test('done snapshots require bounded integer indexes and bounded nonempty item ids',async()=>{
+ const p=load(),item=doneMessage('msg_done');
+ for(const index of [undefined,null,-1,0.5,'0',128,Number.MAX_SAFE_INTEGER,Number.MAX_SAFE_INTEGER+1])await assert.rejects(p.readSiwcResponse(bytes(doneItem(index,item)+completed([])),{tools:[]}),e=>e.code==='bad_stream');
+ for(const id of [undefined,null,'','x'.repeat(201)])await assert.rejects(p.readSiwcResponse(bytes(doneItem(0,{...item,id})+completed([])),{tools:[]}),e=>e.code==='bad_stream');
+ assert.equal((await p.readSiwcResponse(bytes(doneItem(0,doneMessage('x'.repeat(200)))+completed([])),{tools:[]})).text,'완료');
+});
+test('done snapshots reject duplicate conflicting sparse or unfinished item lifecycles even with a nonempty terminal',async()=>{
+ const p=load(),a=doneMessage('msg_a'),b=doneMessage('msg_b'),added={id:'msg_a',type:'message',status:'in_progress'};
+ const streams=[addedItem(0,added)+doneItem(0,b),addedItem(0,added)+doneItem(0,{id:'msg_a',type:'reasoning',summary:[]}),doneItem(0,a)+doneItem(0,a),doneItem(0,a)+doneItem(0,b),doneItem(0,a)+doneItem(1,a),addedItem(0,added)+addedItem(0,added),doneItem(0,a)+addedItem(0,added),doneItem(1,b),doneItem(0,a)+doneItem(2,b),addedItem(0,added),doneItem(0,a)+addedItem(1,{id:'msg_b',type:'message'})];
+ for(const stream of streams)for(const output of [[],[a,b]])await assert.rejects(p.readSiwcResponse(bytes(stream+completed(output)),{tools:[]}),e=>e.code==='bad_stream');
+});
+test('done snapshots keep strict nested fields phase namespace arguments and output type validation',async()=>{
+ const p=load(),message=doneMessage('msg_bad'),call={id:'fc_bad',type:'function_call',namespace:'modu_vision',name:'read_status',call_id:'call_bad',arguments:'{}'};
+ const bad=[{...message,role:'user'},{...message,status:'in_progress'},{...message,phase:'analysis'},{...message,private:'forbidden'},{...message,content:[{type:'input_image',image_url:'data:image/png;base64,c2VjcmV0'}]},{...message,content:[{type:'output_text',text:'안내',private:'forbidden'}]},{...call,namespace:'other'},{...call,name:'delete_everything'},{...call,arguments:'null'},{id:'reason_bad',type:'reasoning',summary:[],content:[{type:'reasoning_text',text:'unsupported'}]},{id:'unknown',type:'unknown_output'}];
+ for(const item of bad)await assert.rejects(p.readSiwcResponse(bytes(doneItem(0,item)+completed([])),{tools:allow}),e=>['bad_stream','invalid_input','invalid_tool_call'].includes(e.code));
+});
+test('terminal completed status and an output array remain mandatory before any done fallback',async()=>{
+ const p=load(),item=doneMessage('msg_done');
+ for(const response of [null,{status:'completed'},{status:'completed',output:null},{status:'completed',output:{}},{status:'in_progress',output:[]},{status:'incomplete',output:[]}])await assert.rejects(p.readSiwcResponse(bytes(doneItem(0,item)+event('response.completed',{response})),{tools:[]}),e=>e.code==='bad_stream');
+ await assert.rejects(p.readSiwcResponse(bytes(doneItem(0,item)+completed([{...item,private:'forbidden'}])),{tools:[]}),e=>e.code==='invalid_input');
+});
+test('nonempty terminal output is authoritative only when deeply equal to every observed raw done item',async()=>{
+ const p=load(),item=doneMessage('msg_done','완료'),reordered={content:[{logprobs:[],annotations:[],text:'완료',type:'output_text'}],phase:'final_answer',status:'completed',role:'assistant',type:'message',id:'msg_done'};
+ assert.equal((await p.readSiwcResponse(bytes(doneItem(0,item)+completed([reordered])),{tools:[]})).text,'완료');
+ assert.equal((await p.readSiwcResponse(bytes(doneItem(0,item)+completed([item,doneMessage('msg_extra','추가')])),{tools:[]})).text,'완료추가');
+ const conflicts=[[item,{...item,id:'msg_other'}],[item,{...item,phase:'commentary'}],[item,doneMessage('msg_done','다른 답변')],[doneMessage('msg_secret','/Users/alpha/a.png sk-secret-1234567890'),doneMessage('msg_secret','/Users/beta/a.png sk-secret-9999999999')],[{id:'reason',type:'reasoning',summary:[],encrypted_content:'opaque-a'},{id:'reason',type:'reasoning',summary:[],encrypted_content:'opaque-b'}],[{id:'fc',type:'function_call',namespace:'modu_vision',name:'read_status',call_id:'call_a',arguments:'{"stage":1}'},{id:'fc',type:'function_call',namespace:'modu_vision',name:'read_status',call_id:'call_a',arguments:'{"stage":2}'}]];
+ for(const [done,final] of conflicts)await assert.rejects(p.readSiwcResponse(bytes(doneItem(0,done)+completed([final])),{tools:allow}),e=>e.code==='bad_stream');
+ await assert.rejects(p.readSiwcResponse(bytes(doneItem(0,item)+doneItem(1,doneMessage('msg_second'))+completed([item])),{tools:[]}),e=>e.code==='bad_stream');
+});
+test('created and completed response ids agree when both exist without requiring legacy missing ids',async()=>{
+ const p=load(),item=doneMessage('msg_done'),created=id=>event('response.created',{response:{id}});
+ await assert.rejects(p.readSiwcResponse(bytes(created('other')+doneItem(0,item)+completed([])),{tools:[]}),e=>e.code==='bad_stream');
+ await assert.rejects(p.readSiwcResponse(bytes(created('resp_synthetic')+created('other')+doneItem(0,item)+completed([])),{tools:[]}),e=>e.code==='bad_stream');
+ for(const id of [null,'','x'.repeat(201)])await assert.rejects(p.readSiwcResponse(bytes(created(id)+doneItem(0,item)+completed([])),{tools:[]}),e=>e.code==='bad_stream');
+ for(const stream of [created('resp_synthetic')+doneItem(0,item)+event('response.completed',{response:{status:'completed',output:[]}}),created(undefined)+doneItem(0,item)+completed([]),event('response.completed',{response:{status:'completed',output:[item]}})])assert.equal((await p.readSiwcResponse(bytes(stream),{tools:[]})).text,'완료');
+});
+test('done snapshots never bypass failed incomplete malformed EOF cancellation timeout or byte limits',async()=>{
+ const p=load(),prefix=doneItem(0,doneMessage('msg_done'));
+ const tails=[['','stream_truncated'],['data: [DONE]\n\n','stream_truncated'],[event('response.failed',{response:{error:{code:'subscription_sharing_usage_limit_exceeded'}}})+completed([]),'subscription_sharing_usage_limit_exceeded'],[event('response.incomplete',{response:{status:'incomplete'}})+completed([]),'response_incomplete'],['event: response.completed\ndata: {broken}\n\n','bad_stream']];
+ for(const [tail,code] of tails)await assert.rejects(p.readSiwcResponse(bytes(prefix+tail),{tools:[]}),e=>e.code===code);
+ const long=event('response.output_text.delta',{delta:'x'.repeat(1000)});
+ await assert.rejects(p.readSiwcResponse((async function*(){yield Buffer.from(prefix);yield Buffer.from(long+completed([]));})(),{tools:[],maxBytes:Buffer.byteLength(prefix)+20}),e=>e.code==='response_too_large');
+ await assert.rejects(p.readSiwcResponse(bytes(prefix+long+completed([]),256),{tools:[],maxEventBytes:500}),e=>e.code==='response_too_large');
+ for(const cancel of [false,true]){let seen,reads=0,returned=false;const ready=new Promise(resolve=>{seen=resolve;}),source={[Symbol.asyncIterator](){return{next(){if(reads++===0)return Promise.resolve({done:false,value:Buffer.from(prefix)});seen();return new Promise(()=>{});},return:async()=>{returned=true;return{done:true};}};}};
+  const abort=new AbortController(),flight=p.readSiwcResponse(source,{tools:[],signal:abort.signal,timeoutMs:cancel?1000:10}),rejected=assert.rejects(flight,e=>e.code===(cancel?'cancelled':'timeout'));await ready;if(cancel)abort.abort();await rejected;assert.equal(returned,true);
+ }
 });
 test('partial, DONE, incomplete, failed and malformed streams cannot become a successful response',async()=>{
  const p=load();for(const [stream,code] of [[event('response.output_text.delta',{delta:'partial'}),'stream_truncated'],['data: [DONE]\n\n','stream_truncated'],[event('response.incomplete',{response:{status:'incomplete'}}),'response_incomplete'],[event('response.failed',{response:{error:{code:'subscription_sharing_usage_limit_exceeded',message:'do not echo synthetic token'}}}),'subscription_sharing_usage_limit_exceeded'],['data: {broken}\n\n','bad_stream'],[event('error',{code:'server_error',message:'never echo'}),'server_error']])await assert.rejects(p.readSiwcResponse(bytes(stream),{tools:allow}),e=>e.code===code&&!e.message.includes('echo'));

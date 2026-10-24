@@ -208,6 +208,7 @@ export class SiwcTokenSession {
 }
 
 const NAMESPACE = 'modu_vision';
+const STREAM_OUTPUT_LIMIT = 128;
 const nameOK = (value: unknown): value is string => typeof value === 'string' && /^[a-z][a-z0-9_]{1,63}$/.test(value);
 function toolNames(tools: AssistantToolSpec[]) {
   const names = new Set<string>();
@@ -297,14 +298,42 @@ function completedResponse(response: unknown, tools: AssistantToolSpec[]) {
   }
   return {text, toolCalls: calls, replay};
 }
+function outputItemDigest(item:Json):string {
+  const canonical=(value:unknown):unknown=>Array.isArray(value)?value.map(canonical):value&&typeof value==='object'
+    ?Object.fromEntries(Object.keys(value).sort().map(key=>[key,canonical((value as Json)[key])])):value;
+  return crypto.createHash('sha256').update(JSON.stringify(canonical(item))).digest('hex');
+}
 /** Consume injected byte chunks, require a complete terminal event, and never execute tool calls or expose deltas as success. */
 export async function readSiwcResponse(source: AsyncIterable<Uint8Array>, options: OperationOptions & {tools: AssistantToolSpec[]; maxBytes?: number; maxEventBytes?: number;httpStatus?:number}) {
   const maxBytes = options.maxBytes ?? 2 * 1024 * 1024, maxEventBytes = options.maxEventBytes ?? 256 * 1024;
   if (!Number.isInteger(maxBytes) || maxBytes < 1 || maxBytes > 2 * 1024 * 1024 || !Number.isInteger(maxEventBytes) || maxEventBytes < 1 || maxEventBytes > 256 * 1024) fail('invalid_limits');
-  const allowedTools = clone(options.tools);toolNames(allowedTools);const iterator = source[Symbol.asyncIterator]();
+  const allowedTools = clone(options.tools), names=toolNames(allowedTools);const iterator = source[Symbol.asyncIterator]();
   try {
     return await bounded(async signal => {
       const decoder = new TextDecoder('utf-8', {fatal: true});let bytes = 0, pending = '', data: string[] = [], eventName = '', frameBytes = 0;
+      // Explicit SIWC compatibility policy, not an official SDK output guarantee: only full validated done
+      // snapshots can fill an explicit empty completed output. Retain redacted items and raw-value hashes, never deltas.
+      const items=new Map<number,{id:string;type:string;done?:{item:Json;digest:string}}>(),itemIds=new Set<string>(),doneCallIds=new Set<string>();let createdId:string|undefined;
+      const observeItem=(value:Json)=>{
+        const index=value.output_index,item=object(value.item),prior=items.get(index);
+        if(!Number.isSafeInteger(index)||index<0||index>=STREAM_OUTPUT_LIMIT||!nonempty(item.id,200)||!['message','reasoning','function_call'].includes(item.type))fail('bad_stream');
+        if(value.type==='response.output_item.added'){
+          if(prior||itemIds.has(item.id)||items.size>=STREAM_OUTPUT_LIMIT)fail('bad_stream');
+          items.set(index,{id:item.id,type:item.type});itemIds.add(item.id);return;
+        }
+        if(prior?(prior.done||prior.id!==item.id||prior.type!==item.type):(itemIds.has(item.id)||items.size>=STREAM_OUTPUT_LIMIT))fail('bad_stream');
+        const safe=replayItem(item,names,doneCallIds);
+        items.set(index,{id:item.id,type:item.type,done:{item:safe,digest:outputItemDigest(item)}});itemIds.add(item.id);
+      };
+      const complete=(raw:unknown)=>{
+        const result=completedResponse(raw,allowedTools),response=object(raw),ordered:Json[]=[];
+        if(createdId!==undefined&&response.id!==undefined&&response.id!==createdId)fail('bad_stream');
+        for(let index=0;index<items.size;index++){
+          const done=items.get(index)?.done;if(!done)return fail('bad_stream');ordered.push(done.item);
+          if(response.output.length&&(index>=response.output.length||done.digest!==outputItemDigest(object(response.output[index]))))fail('bad_stream');
+        }
+        return !response.output.length&&ordered.length?completedResponse({...response,output:ordered},allowedTools):result;
+      };
       const dispatch = () => {
         const content = data.join('\n'), named = eventName;data = [];eventName = '';frameBytes = 0;
         if (!content || content === '[DONE]') return null;
@@ -313,7 +342,9 @@ export async function readSiwcResponse(source: AsyncIterable<Uint8Array>, option
         if (value.type === 'response.failed') throw siwcResponseError(options.httpStatus??200, {error: object(value.response).error},'response_error');
         if (value.type === 'error') throw siwcResponseError(options.httpStatus??200, {error: value},'stream_error');
         if (value.type === 'response.incomplete') fail('response_incomplete');
-        if (value.type === 'response.completed') return completedResponse(value.response, allowedTools);
+        if (value.type === 'response.created') {const id=object(value.response).id;if(id!==undefined){if(!nonempty(id,200)||createdId!==undefined&&id!==createdId)fail('bad_stream');createdId=id;}}
+        if (value.type === 'response.output_item.added' || value.type === 'response.output_item.done') observeItem(value);
+        if (value.type === 'response.completed') return complete(value.response);
         return null;
       };
       const lines = (final = false) => {

@@ -109,10 +109,19 @@ test('completed streams without text or tool calls return an empty-response erro
   await assert.rejects(f.c.complete({system:'안내',messages:[{role:'user',text:'상태'},{role:'assistant',text:'',replay:output}],tools:[]}),e=>e.detail?.code==='bad_response');assert.equal(f.calls.length,count);
  }
 });
-test('delta and output-item-done text never replace an empty terminal output',async t=>{
+test('delta and malformed output-item-done cannot bypass strict stream validation',async t=>{
  const prefix='event: response.output_text.delta\ndata: {"type":"response.output_text.delta","delta":"중간 답변"}\n\n'+'event: response.output_item.done\ndata: '+JSON.stringify({type:'response.output_item.done',item:{type:'message',role:'assistant',content:[{type:'output_text',text:'중간 답변'}]}})+'\n\n';
  const response=new Response(Buffer.from(prefix+await providerOutput([]).text())),f=setup({store:store(credentials()),fetchOverride:async url=>url.endsWith('/responses')?response:null});t.after(()=>f.c.dispose());
- await assert.rejects(f.c.complete({system:'안내',messages:[{role:'user',text:'상태'}],tools:[]}),e=>e.detail?.code==='bad_response'&&e.detail.reason==='ChatGPT가 요청을 끝냈지만 답변이나 도구 요청을 보내지 않았습니다.');assert.equal(f.calls.filter(c=>c.url.endsWith('/responses')).length,1);
+ await assert.rejects(f.c.complete({system:'안내',messages:[{role:'user',text:'상태'}],tools:[]}),e=>e.detail?.code==='bad_response');assert.equal(f.calls.filter(c=>c.url.endsWith('/responses')).length,1);
+});
+test('validated done snapshots with an empty terminal output receive text or tool replay receipts',async t=>{
+ const tool={name:'read_status',description:'상태',parameters:{type:'object',properties:{}}};
+ for(const toolOnly of [false,true]){const item=toolOnly?{id:'fc_snapshot',type:'function_call',status:'completed',namespace:'modu_vision',name:'read_status',call_id:'call_snapshot',arguments:'{}'}:{id:'msg_snapshot',type:'message',status:'completed',role:'assistant',phase:'final_answer',content:[{type:'output_text',text:'완료'}]},tools=toolOnly?[tool]:[];let calls=0;
+  const raw='event: response.output_item.done\ndata: '+JSON.stringify({type:'response.output_item.done',output_index:0,item})+'\n\n'+await providerOutput([]).text();
+  const f=setup({store:store(credentials()),fetchOverride:async url=>url.endsWith('/responses')?++calls===1?new Response(Buffer.from(raw)):completed():null});t.after(()=>f.c.dispose());
+  const answer=await f.c.complete({system:'안내',messages:[{role:'user',text:'상태'}],tools});assert.equal(answer.text,toolOnly?'':'완료');assert.equal(answer.stop,toolOnly?'tool':'end');assert.deepEqual(answer.replay,[item]);
+  const tail=toolOnly?{role:'tool',toolCallId:'call_snapshot',name:'read_status',content:'준비됨'}:{role:'user',text:'다음'},next=await f.c.complete({system:'안내',messages:[{role:'user',text:'상태'},{role:'assistant',text:'',replay:answer.replay},tail],tools});assert.equal(next.text,'완료');assert.equal(calls,2);
+ }
 });
 test('a valid tool-only completed response remains successful and receipted for the next tool result',async t=>{
  const tools=[{name:'read_status',description:'상태',parameters:{type:'object',properties:{}}}],output=[{type:'function_call',namespace:'modu_vision',name:'read_status',call_id:'call_tool_only',arguments:'{}'}];let count=0;
