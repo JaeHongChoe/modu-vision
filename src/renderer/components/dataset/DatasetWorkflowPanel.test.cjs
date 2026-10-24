@@ -1,15 +1,15 @@
 const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path'),Module=require('node:module'),test=require('node:test'),ts=require('typescript');
 function harness(){
  const file=path.join(__dirname,'DatasetWorkflowPanel.tsx'),source=process.env.MV_READINESS_BASE?require('node:child_process').execFileSync('git',['show','HEAD:src/renderer/components/dataset/DatasetWorkflowPanel.tsx'],{cwd:path.resolve(__dirname,'../../../..'),encoding:'utf8'}):fs.readFileSync(file,'utf8');
- let cursor=0,generation=0,calls=0,resolve;const slots=[],effects=[],listeners=[];
+ let cursor=0,generation=0,calls=0,resolve;const slots=[],effects=[],listeners=[],splitRequests=[];
  const project={project:{id:'p',project_dir:'p',task:'classification',source_dataset_dir:'s'},projectDir:'p',task:'classification',isProjectBusy:false,openImageForLabeling:async()=>true},dataset={folderPath:'s',hasSelectedFolder:true,annotationsChanged:async()=>{},loadImages:async()=>{}},annotation={reviewerName:'fixture',setReviewerName:()=>{}};
  const react={createElement:(type,props,...children)=>({type,props:props||{},children:children.flat()}),useState:initial=>{const i=cursor++;if(!(i in slots))slots[i]=typeof initial==='function'?initial():initial;return[slots[i],v=>{slots[i]=typeof v==='function'?v(slots[i]):v;}];},useRef:initial=>{const i=cursor++;if(!(i in slots))slots[i]={current:initial};return slots[i];},useEffect:(fn,deps)=>{const i=cursor++;if(!slots[i]||deps.some((d,j)=>d!==slots[i].deps[j])){slots[i]?.cleanup?.();slots[i]={deps};effects.push(()=>{slots[i].cleanup=fn();});}}};
  const store=state=>{const fn=()=>state;fn.getState=()=>state;return fn;};
- const api={list:async()=>({items:[],total:0}),duplicates:async()=>({duplicates:[]}),savedSplit:async()=>({availability:'unavailable'}),split:()=>{calls++;return new Promise(r=>{resolve=r;});}};
+ const api={list:async()=>({items:[],total:0}),duplicates:async()=>({duplicates:[]}),savedSplit:async()=>({availability:'unavailable'}),split:(...args)=>{calls++;splitRequests.push(args);return new Promise(r=>{resolve=r;});}};
  const m=new Module(file,module);m.filename=file;m.paths=Module._nodeModulePaths(__dirname);m.require=name=>name==='react'?react:name.endsWith('/stores/useStepSheetStore')?{useStepSheetStore:Object.assign(select=>select({open:null}),{getState:()=>({open:null,show(){}})})}:name.includes('services/api')?{resolveApiUrl:p=>p,getProjectContextGeneration:()=>generation,getApiPersistenceIdentity:()=> 'local',subscribeProjectContext:fn=>{listeners.push(fn);return()=>{};}}:name.includes('datasetWorkflow')?{datasetWorkflow:api,workflowError:e=>e.message}:name.includes('useDatasetStore')?{useDatasetStore:store(dataset)}:name.includes('useProjectStore')?{useProjectStore:store(project)}:name.includes('useAnnotationStore')?{useAnnotationStore:store(annotation)}:name.includes('projectPreferences')?{projectPreferences:{read:async()=>({tag_colors:{}})}}:name.includes('hostAdapter')?{host:{}}:name.includes('ProjectPreferencePanel')?{ProjectPreferencePanel:()=>null}:name.includes('ExternalMaskExchangePanel')?{ExternalMaskExchangePanel:()=>null}:Module.prototype.require.call(m,name);
  m._compile(ts.transpileModule(source,{compilerOptions:{jsx:ts.JsxEmit.React,module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022,esModuleInterop:true}}).outputText,file);
  const render=()=>{cursor=0;const tree=m.exports.DatasetWorkflowPanel();effects.splice(0).forEach(fn=>fn());return tree;};const nodes=tree=>{const found=[];const walk=n=>{if(n&&typeof n==='object'){found.push(n);n.children?.forEach(walk);}};walk(tree);return found;};
- return{render,nodes,dataset,calls:()=>calls,advance:()=>{generation++;listeners.forEach(fn=>fn());},resolve:v=>resolve(v)};
+ return{render,nodes,dataset,splitRequests,calls:()=>calls,advance:()=>{generation++;listeners.forEach(fn=>fn());},resolve:v=>resolve(v)};
 }
 const tick=()=>new Promise(setImmediate);
 async function setup(){global.window={addEventListener(){},removeEventListener(){}};const h=harness();let tree=h.render();h.nodes(tree).find(n=>n.type==='button'&&n.children.includes('이미지 검토·그룹 분할·라벨 교환')).props.onClick();h.render();await tick();return h;}
@@ -22,4 +22,45 @@ test('workflow focus can open the existing label exchange without applying any l
  const exchange=nodes.find(n=>n.props.id==='workflow-label-exchange');assert.ok(exchange);assert.equal(exchange.type,'summary');
  assert.equal(exchange.props.tabIndex,0,'the disclosure stays in keyboard tab order');assert.ok(nodes.some(n=>n.children.includes('가져오기 미리보기')));
  assert.equal(h.calls(),0,'opening the exchange does not save or import');
+});
+
+function setRatios(h,values){
+ for(const [index,label] of ['학습','검증','시험'].entries()){
+  const input=h.nodes(h.render()).find(n=>n.type==='input'&&n.props['aria-label']===label+' 그룹 분할 비율');
+  input.props.onChange({target:{value:String(values[index])}});
+ }
+}
+const button=(h,name)=>h.nodes(h.render()).find(n=>n.type==='button'&&n.children.includes(name));
+for(const [name,values,reason] of [
+ ['sum below 100',[60,20,10],/합계가 100%가 아닙니다/],
+ ['all zero',[0,0,0],/합계가 100%가 아닙니다/],
+ ['sum outside engine tolerance',[70.0002,20,10],/합계가 100%가 아닙니다/],
+ ['negative and over 100 despite a total of 100',[-1,101,0],/0~100% 범위/],
+ ['NaN',[NaN,20,10],/0~100% 범위/],
+ ['infinity',[Infinity,0,0],/0~100% 범위/],
+ ['negative infinity',[-Infinity,0,0],/0~100% 범위/],
+])test('invalid split percentages show Korean recovery and submit no preview or apply: '+name,async()=>{
+ const h=await setup();setRatios(h,values);
+ const alerts=h.nodes(h.render()).filter(n=>n.props.role==='alert');assert.equal(alerts.length,1);
+ const text=alerts[0].children.join('');assert.match(text,reason);assert.match(text,/확인하세요|맞추세요/);
+ for(const name of ['분할 미리보기','분할 적용']){
+  const action=button(h,name);assert.equal(action.props.disabled,true);
+  action.props.onClick();await tick();
+ }
+ assert.equal(h.calls(),0,'invalid ratios cannot reach either server action even through its handler');
+});
+
+for(const values of [[70,20,10],[50.5,49.5,0],[100,0,0],[0,100,0],[0,0,100],[70.00005,20,10]])
+test('valid decimal/zero split percentages retain original request semantics: '+values.join('/'),async()=>{
+ const h=await setup();setRatios(h,[60,20,10]);setRatios(h,values);
+ assert.equal(h.nodes(h.render()).filter(n=>n.props.role==='alert').length,0,'correcting ratios clears the derived refusal');
+ const preview=button(h,'분할 미리보기');assert.equal(preview.props.disabled,false);
+ const inputs=h.nodes(h.render()).filter(n=>n.type==='input'&&String(n.props['aria-label']).endsWith(' 그룹 분할 비율'));
+ assert.ok(inputs.every(input=>input.props.step==='any'),'fractional percentages remain supported');
+ preview.props.onClick();assert.equal(h.calls(),1);
+ assert.deepEqual(h.splitRequests[0],[['lot'],values.map(n=>n/100),false,'fixture',undefined]);
+ h.resolve({assignments:{},split:{train:1,val:1,test:0},group_count:2,duplicates:[],applied:false,apply_supported:true,qualification:{sha256:'a'.repeat(64),group_by:['lot'],seed:42}});await tick();
+ const apply=button(h,'분할 적용');assert.equal(apply.props.disabled,false);apply.props.onClick();
+ assert.deepEqual(h.splitRequests[1],[['lot'],values.map(n=>n/100),true,'fixture','a'.repeat(64)]);
+ h.resolve({assignments:{},split:{train:1,val:1,test:0},group_count:2,duplicates:[],applied:true,apply_supported:true});await tick();
 });

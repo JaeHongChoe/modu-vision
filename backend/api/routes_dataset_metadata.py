@@ -132,6 +132,25 @@ def duplicates(request:Request):
         assignments.setdefault(row['relative_path'],next((p for p in Path(row['relative_path']).parts[:-1] if p in {'train','val','test'}),'unassigned'))
     return {'duplicates':dm.duplicate_leakage(_rows(project,source),assignments)}
 
+
+def _group_split_message(exc:ValueError)->str:
+    message=str(exc)
+    known={
+        'No images to split':'분할할 학습 이미지가 없습니다. 원본 폴더와 정답 라벨을 확인한 뒤 분할 미리보기를 다시 확인하세요.',
+        'Select product, lot or group':'분할 기준이 선택되지 않았거나 지원하지 않는 기준입니다. 제품·로트·그룹 중에서 분할 기준을 선택하세요.',
+        'Split ratios must sum to one':'학습·검증·시험 분할 비율의 합계가 100%가 아닙니다. 세 비율의 합계를 100%로 맞춘 뒤 미리보기를 다시 확인하세요.',
+        'Not enough independent groups for nonempty splits':'학습·검증·시험에 나눌 독립 그룹이 부족합니다. 실제 독립 그룹을 더 준비하거나 사용하지 않을 분할 비율을 0%로 바꾼 뒤 다시 미리보기하세요.',
+        'No normal-only anomaly training group can satisfy the split':'이상 탐지 학습에 쓸 정상 이미지 그룹이 부족합니다. 정상 이미지만 포함된 독립 그룹을 준비하고 분할 비율을 다시 확인하세요.',
+    }
+    if message in known:return known[message]
+    for prefix,reason,action in [
+        ('Missing grouping metadata: ','분할 기준 정보가 없는 이미지가 있습니다','해당 이미지의 제품·로트·그룹 정보를 입력하고 분할 미리보기를 다시 확인하세요.'),
+        ('Missing content identity: ','원본 내용을 확인할 수 없는 이미지가 있습니다','원본 이미지를 확인하고 다시 불러온 뒤 분할 미리보기를 다시 확인하세요.'),
+    ]:
+        if message.startswith(prefix):return f'{reason}: {message[len(prefix):]}. {action}'
+    return message
+
+
 @router.post('/split')
 def grouped_split(req:SplitRequest,request:Request):
     project,source=_context(request)
@@ -143,7 +162,7 @@ def grouped_split(req:SplitRequest,request:Request):
     if req.expected_qualification_sha256 and qualification['sha256']!=req.expected_qualification_sha256:
         raise HTTPException(409,detail='분할할 원본이나 검토 정보가 바뀌었습니다. 현재 데이터로 분할 미리보기를 다시 확인하세요.')
     try: preview=dm.preview_split(rows,req.group_by,req.train_ratio,req.val_ratio,req.test_ratio,req.seed)
-    except ValueError as exc:raise HTTPException(422,detail={'message':str(exc),'availability':'unavailable'}) from exc
+    except ValueError as exc:raise HTTPException(422,detail={'message':_group_split_message(exc),'availability':'unavailable'}) from exc
     preview.update(applied=False,apply_supported=True,apply_unavailable_reason=None,qualification=qualification,availability='available')
     if req.apply:
         from backend.api.routes_training import training_job_manager

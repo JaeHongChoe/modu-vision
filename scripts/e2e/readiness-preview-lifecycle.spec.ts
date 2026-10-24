@@ -160,11 +160,23 @@ async function exercise(page: Page, workspace: Workspace, evidence: Evidence, ap
     await panel.getByLabel('분할 그룹 기준', {exact: true}).selectOption('lot');
     const setRatios = async (values: number[]) => {for (const [index, name] of ['학습', '검증', '시험'].entries()) await panel.getByLabel(name + ' 그룹 분할 비율', {exact: true}).fill(String(values[index]));};
     const preview = panel.getByRole('button', {name: '분할 미리보기', exact: true});
-    await setRatios([60, 30, 0]); const invalid = await requestFromButton(splitEndpoint, preview); expect(invalid.status()).toBe(422);
-    expect(await invalid.json()).toMatchObject({detail: {message: 'Split ratios must sum to one', availability: 'unavailable'}});
-    await expect(panel.getByRole('alert')).toContainText('Split ratios must sum to one'); await expect(preview).toBeEnabled();
-    await expect(panel.getByRole('button', {name: '분할 적용', exact: true})).toBeDisabled(); await protectedState(); await capture('actual-ratio-sum-refusal-422', panel.getByRole('alert'));
-    controls.push({action: 'U013.group-split-preview', dimension: 'invalid', ratios: [.6, .3, 0], actual_backend_status: 422, saved_split_unchanged: true, split_applied: false});
+    const splitPostsBeforeInvalid = requests.filter(row => row.endpoint === splitEndpoint).length;
+    await setRatios([60, 30, 0]);
+    await expect(panel.getByRole('alert')).toHaveText('학습·검증·시험 분할 비율의 합계가 100%가 아닙니다. 세 비율의 합계를 100%로 맞춘 뒤 미리보기를 다시 확인하세요.');
+    await expect(preview).toBeDisabled();
+    await expect(panel.getByRole('button', {name: '분할 적용', exact: true})).toBeDisabled(); await protectedState(); await capture('local-ratio-sum-refusal-no-request', panel.getByRole('alert'));
+    expect(requests.filter(row => row.endpoint === splitEndpoint)).toHaveLength(splitPostsBeforeInvalid);
+    controls.push({action: 'U013.group-split-preview', dimension: 'invalid', ratios: [.6, .3, 0], validation: 'local', extra_post: 0, saved_split_unchanged: true, split_applied: false});
+    // Restoring valid percentages clears the local refusal. This fixture has only two independent lot groups:
+    // three nonempty partitions still need the genuine backend's separate group-count refusal.
+    await setRatios([70, 20, 10]); await expect(panel.getByRole('alert')).toHaveCount(0); await expect(preview).toBeEnabled();
+    const insufficientGroups = await requestFromButton(splitEndpoint, preview); expect(insufficientGroups.status()).toBe(422);
+    const independentGroupsGuidance = '학습·검증·시험에 나눌 독립 그룹이 부족합니다. 실제 독립 그룹을 더 준비하거나 사용하지 않을 분할 비율을 0%로 바꾼 뒤 다시 미리보기하세요.';
+    expect(await insufficientGroups.json()).toMatchObject({detail: {message: independentGroupsGuidance, availability: 'unavailable'}});
+    await expect(panel.getByRole('alert')).toHaveText(independentGroupsGuidance);
+    await expect(preview).toBeEnabled(); await expect(panel.getByRole('button', {name: '분할 적용', exact: true})).toBeDisabled();
+    await protectedState(); await capture('actual-independent-groups-refusal-422', panel.getByRole('alert'));
+    controls.push({action: 'U013.group-split-preview', dimension: 'independent-groups', ratios: [.7, .2, .1], actual_backend_status: 422, saved_split_unchanged: true, split_applied: false});
     await setRatios([50, 50, 0]); let splitFailures = 0;
     const splitFailure = async (route: Route) => {
       if (route.request().method() !== 'POST') {await route.fallback(); return;}

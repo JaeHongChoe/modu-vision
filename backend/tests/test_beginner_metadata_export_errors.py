@@ -194,3 +194,100 @@ def test_annotation_import_keeps_the_two_existing_e2e_protocol_refusals(client_w
     stale = client.post('/api/dataset/formats/import', json={'format': 'labelme', 'payload': document, 'mode': 'apply'})
     assert stale.status_code == 409 and stale.json() == {'detail': 'Preview is outdated or missing: a.png'}
     assert not list(Path(project['annotations_dir']).rglob('a.json'))
+
+
+def _prepare_grouped_images(client):
+    assert client.put('/api/project/update', json={'task': 'classification'}).status_code == 200
+    rows = client.get('/api/dataset/metadata').json()['items']
+    for index, row in enumerate(rows):
+        result = client.patch('/api/dataset/metadata/' + row['image_uuid'], json={
+            'expected_revision': row['revision'], 'actor': 'Kim', 'changes': {'lot': 'L' + str(index)}})
+        assert result.status_code == 200, result.text
+    return client.get('/api/dataset/metadata').json()['items']
+
+
+def _workspace_bytes(project, source):
+    roots = [source, Path(project['project_dir'])]
+    return {str(path): hashlib.sha256(path.read_bytes()).hexdigest()
+            for root in roots for path in root.rglob('*') if path.is_file()}
+
+
+@pytest.mark.parametrize('apply', [False, True])
+def test_invalid_group_split_sum_is_korean_and_refuses_without_changing_the_workspace(client_workspace, apply):
+    client, project, source = client_workspace
+    _prepare_grouped_images(client)
+    before = _workspace_bytes(project, source)
+    response = client.post('/api/dataset/metadata/split', json={
+        'group_by': ['lot'], 'train_ratio': .6, 'val_ratio': .2, 'test_ratio': .1, 'apply': apply})
+    assert response.status_code == 422, response.text
+    assert response.json() == {'detail': {
+        'message': '학습·검증·시험 분할 비율의 합계가 100%가 아닙니다. 세 비율의 합계를 100%로 맞춘 뒤 미리보기를 다시 확인하세요.',
+        'availability': 'unavailable'}}
+    assert _workspace_bytes(project, source) == before
+
+
+@pytest.mark.parametrize('case,reason,action', [
+    ('empty', '학습 이미지가 없', '정답 라벨'),
+    ('missing_group', '분할 기준 정보가 없', '정보를 입력'),
+    ('missing_content', '원본 내용을 확인할 수 없', '다시 불러온'),
+    ('too_few_groups', '독립 그룹이 부족', '0%'),
+    ('anomaly_without_normal', '정상 이미지 그룹이 부족', '정상 이미지만'),
+])
+def test_known_group_split_refusals_keep_the_original_engine_guards_and_korean_recovery(
+        client_workspace, monkeypatch, case, reason, action):
+    from backend.api import routes_dataset_metadata as route
+    client, project, source = client_workspace
+    rows = _prepare_grouped_images(client)
+    body = {'group_by': ['lot'], 'train_ratio': .5, 'val_ratio': .5, 'test_ratio': 0}
+    if case == 'empty':
+        # An unlabelled flat detection workspace has no trainable rows.
+        assert client.put('/api/project/update', json={'task': 'detection'}).status_code == 200
+    elif case == 'missing_group':
+        row = rows[0]
+        assert client.patch('/api/dataset/metadata/' + row['image_uuid'], json={
+            'expected_revision': row['revision'], 'actor': 'Kim', 'changes': {'lot': ''}}).status_code == 200
+    elif case == 'too_few_groups':
+        body.update(train_ratio=.7, val_ratio=.2, test_ratio=.1)
+    else:
+        # Exercise the original engine on a corrupt identity or NG-only inventory;
+        # only the row source is controlled, never its validation/partitioning code.
+        field, value = ('content_hash', '') if case == 'missing_content' else ('train_eligible', False)
+        monkeypatch.setattr(route, '_split_rows', lambda *_: ([{**row, field: value} for row in rows], False))
+    before = _workspace_bytes(project, source)
+    response = client.post('/api/dataset/metadata/split', json=body)
+    assert response.status_code == 422, response.text
+    detail = response.json()['detail']
+    assert set(detail) == {'message', 'availability'} and detail['availability'] == 'unavailable'
+    assert reason in detail['message'] and action in detail['message'], detail
+    assert detail['message'].endswith('세요.'), detail
+    if case in {'missing_group', 'missing_content'}:
+        assert rows[0]['relative_path'] in detail['message'], 'keep the affected relative image identity'
+    assert _workspace_bytes(project, source) == before
+
+
+@pytest.mark.parametrize('ratios', [(.505, .495, 0), (.7000005, .2, .1)])
+def test_group_split_keeps_fractional_ratios_and_original_sum_tolerance(client_workspace, ratios):
+    client, _, _ = client_workspace
+    _prepare_grouped_images(client)
+    # The tolerance case needs three independent groups for three nonempty splits.
+    body = dict(zip(('train_ratio', 'val_ratio', 'test_ratio'), ratios))
+    response = client.post('/api/dataset/metadata/split', json={'group_by': ['lot'], **body})
+    if ratios[2] == 0:
+        assert response.status_code == 200, response.text
+        assert response.json()['applied'] is False and response.json()['split'] == {'train': 1, 'val': 1, 'test': 0}
+        assert response.json()['qualification']['ratios'] == list(ratios)
+    else:
+        assert response.status_code == 422
+        assert '독립 그룹이 부족' in response.json()['detail']['message'], 'sum tolerance must pass before the original group guard'
+
+
+def test_group_split_boundary_preserves_unknown_engine_refusals(client_workspace, monkeypatch):
+    from backend.api import routes_dataset_metadata as route
+    client, _, _ = client_workspace
+    _prepare_grouped_images(client)
+    def refuse(*_):
+        raise ValueError('Unknown future refusal: machine-token')
+    monkeypatch.setattr(route.dm, 'preview_split', refuse)
+    response = client.post('/api/dataset/metadata/split', json={'group_by': ['lot']})
+    assert response.status_code == 422
+    assert response.json() == {'detail': {'message': 'Unknown future refusal: machine-token', 'availability': 'unavailable'}}

@@ -25,6 +25,10 @@ export const DatasetWorkflowPanel:React.FC=()=>{
   const {reviewerName,setReviewerName}=useAnnotationStore();
   const [open,setOpen]=useState(false);const [rows,setRows]=useState<ImageReviewMetadata[]>([]);const [total,setTotal]=useState(0);const [state,setState]=useState('');const [product,setProduct]=useState('');const [lot,setLot]=useState('');const [group,setGroup]=useState('');const [tag,setTag]=useState('');
   const [groupBy,setGroupBy]=useState('lot');const [ratios,setRatios]=useState([70,20,10]);const [split,setSplit]=useState<GroupSplit|null>(null);const [duplicates,setDuplicates]=useState<DuplicateGroup[]>([]);
+  const splitRatioError=ratios.some(n=>!Number.isFinite(n)||n<0||n>100)
+    ?'분할 비율은 0~100% 범위의 숫자여야 합니다. 학습·검증·시험 비율을 확인하고 합계를 100%로 맞추세요.'
+    :Math.abs(ratios.reduce((sum,n)=>sum+n/100,0)-1)>1e-6
+      ?'학습·검증·시험 분할 비율의 합계가 100%가 아닙니다. 세 비율의 합계를 100%로 맞춘 뒤 미리보기를 다시 확인하세요.':'';
   const [page,setPage]=useState(1);const [selected,setSelected]=useState<Set<string>>(new Set());const [bulkProduct,setBulkProduct]=useState('');const [bulkLot,setBulkLot]=useState('');const [bulkGroup,setBulkGroup]=useState('');const [bulkTags,setBulkTags]=useState('');
   const pageSize=20;const visibleRows=rows.slice((page-1)*pageSize,page*pageSize);
   const [bulkUsage,setBulkUsage]=useState('');const [palette,setPalette]=useState<Record<string,string>>({});
@@ -72,6 +76,7 @@ export const DatasetWorkflowPanel:React.FC=()=>{
     setNotice(`${result.updated}개 이미지 정보 저장 · 라벨 승인은 이미지별로 진행하세요.`);setSelected(new Set());if(bulkUsage)await annotationsChanged();await refresh();setSplit(null);window.dispatchEvent(new Event('dataset-statistics-changed'));
   };
   const splitData=async(apply:boolean)=>{
+    if(splitRatioError)return;
     if(apply&&!reviewerName.trim())throw new Error('작업자 이름을 입력하세요.');
     if(!same())return;
     const result=await datasetWorkflow.split(groupBy.split(','),ratios.map(n=>n/100),apply,reviewerName||'operator',apply?split?.qualification?.sha256:undefined);if(!same())return;setSplit(result);
@@ -91,10 +96,10 @@ export const DatasetWorkflowPanel:React.FC=()=>{
       <div className="flex items-center justify-between text-slate-400"><span>{page} / {Math.max(1,Math.ceil(rows.length/pageSize))} 페이지 · 페이지당 {pageSize}개</span><div className="flex gap-2"><button disabled={page<=1||locked} onClick={()=>setPage(p=>p-1)} className="rounded border border-slate-600 px-3 py-1 disabled:opacity-40">이전</button><button disabled={page*pageSize>=rows.length||locked} onClick={()=>setPage(p=>p+1)} className="rounded border border-slate-600 px-3 py-1 disabled:opacity-40">다음</button></div></div>
       <details open><summary className="cursor-pointer font-semibold">그룹 분할과 중복 이미지</summary><div className="mt-2 flex flex-wrap items-center gap-2">
         <select value={groupBy} onChange={e=>{setGroupBy(e.target.value);setSplit(null);}} aria-label="분할 그룹 기준" className="rounded border border-slate-600 bg-slate-900 p-2"><option value="product">제품</option><option value="lot">로트</option><option value="group">그룹</option><option value="product,lot">제품 + 로트</option><option value="product,lot,group">제품 + 로트 + 그룹</option></select>
-        {['학습','검증','시험'].map((label,i)=><label key={label}>{label}<input aria-label={`${label} 그룹 분할 비율`} type="number" min={0} max={100} value={ratios[i]} onChange={e=>{setRatios(r=>r.map((v,j)=>j===i?Number(e.target.value):v));setSplit(null);}} className="ml-1 w-16 rounded border border-slate-600 bg-slate-900 p-2"/>%</label>)}
-        <button disabled={locked} onClick={()=>void run(()=>splitData(false))} className="rounded border border-cyan-700 px-3 py-2 disabled:opacity-40">분할 미리보기</button>
-        <button disabled={locked||!split||!split.apply_supported} onClick={()=>void run(()=>splitData(true))} className="rounded bg-cyan-700 px-3 py-2 disabled:opacity-40">분할 적용</button>
-      </div>{split&&<p className="mt-2 text-cyan-200">독립 그룹 {split.group_count}개 · 학습 {split.split.train} / 검증 {split.split.val} / 시험 {split.split.test}{!split.apply_supported&&<span className="block text-amber-200">{split.apply_unavailable_reason}</span>}</p>}
+        {['학습','검증','시험'].map((label,i)=><label key={label}>{label}<input aria-label={`${label} 그룹 분할 비율`} type="number" min={0} max={100} step="any" value={ratios[i]} onChange={e=>{setRatios(r=>r.map((v,j)=>j===i?Number(e.target.value):v));setSplit(null);}} className="ml-1 w-16 rounded border border-slate-600 bg-slate-900 p-2"/>%</label>)}
+        <button disabled={locked||Boolean(splitRatioError)} onClick={()=>void run(()=>splitData(false))} className="rounded border border-cyan-700 px-3 py-2 disabled:opacity-40">분할 미리보기</button>
+        <button disabled={locked||Boolean(splitRatioError)||!split||!split.apply_supported} onClick={()=>void run(()=>splitData(true))} className="rounded bg-cyan-700 px-3 py-2 disabled:opacity-40">분할 적용</button>
+      </div>{splitRatioError&&<p role="alert" className="mt-2 text-amber-200">{splitRatioError}</p>}{split&&<p className="mt-2 text-cyan-200">독립 그룹 {split.group_count}개 · 학습 {split.split.train} / 검증 {split.split.val} / 시험 {split.split.test}{!split.apply_supported&&<span className="block text-amber-200">{split.apply_unavailable_reason}</span>}</p>}
       {split?.qualification&&<p aria-label="저장된 분할 근거" className={split.stale?'text-amber-200':'text-slate-400'}>저장 기준 {split.qualification.group_by.join(' + ')} · seed {split.qualification.seed} · {split.stale?'원본·메타데이터 변경: 다시 미리보기 필요':'원본·메타데이터 근거 고정'}</p>}
       <p className="mt-2 text-slate-400">선택한 제품·로트 기준과 무관하게 같은 원본 그룹과 동일 내용은 같은 분할에 유지됩니다. crop·파생·synthetic 이미지는 원본과 같은 그룹을 지정하세요. 빈 그룹이나 시각 유사도만으로 원본 유래를 추정하지 않습니다.</p>
       {duplicates.length>0&&<ul className="mt-2 max-h-24 overflow-auto">{duplicates.map(d=><li key={d.content_hash} className={d.cross_split?'text-red-300':'text-amber-200'}>{d.cross_split?'분할 간 동일 이미지: ':'동일 내용: '}{d.images.join(', ')} · {d.splits.join(', ')}</li>)}</ul>}{!duplicates.length&&<p className="mt-2 text-emerald-300">현재 동일 내용 중복 없음</p>}</details>
