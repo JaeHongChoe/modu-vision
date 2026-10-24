@@ -10,7 +10,7 @@ const sha = (bytes: Buffer) => crypto.createHash('sha256').update(bytes).digest(
 
 // Real renderer/backend/stores and synthetic project files. Only provider IPC replies are scripted;
 // no provider network, model, training, annotation adoption or import application is exercised.
-test('assistant prefill updates an already open split bar without saving; draft import and image consent use the real UI', async ({page, renderer, workspace, evidence}) => {
+test('ChatGPT prefill updates an already open split bar without saving; draft import stays available without image sending', async ({page, renderer, workspace, evidence}) => {
   test.setTimeout(180_000);
   const source = path.join(workspace.root, 'easy-use-source');
   const originalFiles: Array<{path: string; sha256: string}> = [];
@@ -54,10 +54,10 @@ test('assistant prefill updates an already open split bar without saving; draft 
   await expect(page.getByText('학습 · 검증 · 시험 분할 (저장됨)', {exact: true})).toBeVisible();
 
   await page.evaluate(() => {
-    const config: AssistantConfigState = {active: 'openai-compatible', encryptionAvailable: true, providers: [{
-      provider: 'openai-compatible', label: '격리 QA 공급자', baseUrl: 'http://127.0.0.1:1/v1', model: 'scripted-no-network',
-      format: 'chat', hasKey: false, supportsImages: true,
-    }]};
+    const config: AssistantConfigState = {active: 'chatgpt', encryptionAvailable: true, providers: [{
+      provider: 'chatgpt', label: 'ChatGPT', baseUrl: 'https://api.openai.com/v1', model: 'scripted-no-network',
+      format: 'responses', hasKey: false, supportsImages: false, ready: true,
+    }],chatgpt:{accounts:[{recordId:'qa-chatgpt',label:'QA 계정',model:'scripted-no-network',signedIn:true,planUsageEnabled:true,planUsageAcknowledged:true}],active:'qa-chatgpt',encryptionAvailable:true,status:'connected',authority:'qa-authority'}};
     const sent: AssistantSendInput[] = [], intents: Array<{fileName: string; imageIdentity: string}> = [];
     const bridge: AssistantBridge = {
       getState: async () => config, saveProvider: async () => config, removeKey: async () => config,
@@ -113,8 +113,9 @@ test('assistant prefill updates an already open split bar without saving; draft 
   await expect(page.locator('[data-labeling-filmstrip]')).toContainText('1 / 20');
   await openAssistant();
   await assistant.getByRole('textbox', {name: '도우미에게 묻기', exact: true}).fill('지금 열린 이미지를 설명해 주세요.');
-  await assistant.getByRole('button', {name: '이미지와 함께 묻기', exact: true}).click();
-  await expect(assistant.getByRole('group', {name: '이미지 보내기 확인', exact: true})).toBeVisible();
+  await expect(assistant.getByRole('button', {name: '이미지와 함께 묻기', exact: true})).toHaveCount(0);
+  await expect(assistant.getByRole('group', {name: '이미지 보내기 확인', exact: true})).toHaveCount(0);
+  await expect(assistant).toContainText('현재 텍스트 질문만 지원합니다');
   const nextAnnotations=page.waitForResponse(response=>new URL(response.url()).pathname.startsWith('/api/annotations/')
     && new URL(response.url()).searchParams.get('file_path')?.endsWith('NG-01.png')===true && response.request().method()==='GET');
   await page.getByLabel('Next image or page', {exact: true}).click();
@@ -126,18 +127,18 @@ test('assistant prefill updates an already open split bar without saving; draft 
     const state = (window as unknown as {__assistantSupplemental: {sent: AssistantSendInput[]; intents: unknown[]}}).__assistantSupplemental;
     return {calls: state.sent.length, imageSends: state.sent.filter(call => call.image).length, intents: state.intents.length};
   });
-  expect(bridgeReadback).toEqual({calls: 2, imageSends: 0, intents: 1});
+  expect(bridgeReadback).toEqual({calls: 2, imageSends: 0, intents: 0});
   expect(pageErrors).toEqual([]);expect(externalRequests).toEqual([]);
   expect(writes.some(row => /\/api\/(training\/start|label-suggestions\/batches|labeling-jobs)/.test(row.path))).toBe(false);
   expect(sha(fs.readFileSync(splitFile))).toBe(savedSplitSha);
   for (const file of originalFiles) expect(sha(fs.readFileSync(file.path))).toBe(file.sha256);
-  await evidence.screenshot(page, 'actual-next-image-retires-confirmation-without-image-send');
+  await evidence.screenshot(page, 'chatgpt-text-only-after-actual-next-image');
   evidence.note('assistant_easy_use_supplemental', {
     actual_browser_renderer_backend_stores: true, native_electron_qa: false, fake_provider_bridge_only: true,
     project_id: project.id, synthetic_images: originalFiles, saved_split: saved.split, saved_split_file: splitFile,
     saved_split_sha256: savedSplitSha, visible_prefill_percent: 70, saved_assignments_unchanged: true,
     original_label_exchange_opened_from_draft_ui: true, import_applied: false,
-    image_confirmation_retired_after_actual_next_image: true, bridge: bridgeReadback,
+    chatgpt_text_only_after_actual_next_image: true, image_intents_created: 0, bridge: bridgeReadback,
     provider_network_requests: externalRequests.length, page_errors: pageErrors, renderer_writes: writes,
     training_or_model_execution: false, detection_metrics_ui: 'not_run_in_classification_fixture; covered by focused real React SSR tests',
   });

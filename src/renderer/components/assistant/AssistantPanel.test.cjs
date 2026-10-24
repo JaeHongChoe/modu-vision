@@ -21,9 +21,47 @@ function render(state,ui={}){
 const base={isOpen:true,busy:false,pending:null,imageOffer:null,items:[],bridge:{},config:{active:'anthropic',encryptionAvailable:true,providers:[{provider:'anthropic',baseUrl:'https://api.anthropic.com',model:'m',format:null,hasKey:true,supportsImages:true,label:'Anthropic'}]},
  close(){},ask(){},stop(){},decide(){},offerImage(){},sendImage(){},dropImage(){},newConversation(){}};
 
+test('the public panel only offers ChatGPT and never sends through a saved API provider',()=>{
+ const asked=[],sets=[],question='지금 상태를 알려줘';
+ const tree=render({...base,ask:value=>asked.push(value)},{draft:question,sets});
+ const composer=nodes(tree).find(node=>node.type==='textarea');
+ assert.equal(composer.props.disabled,true,'a saved API key cannot enable this ChatGPT-only composer');
+ assert.ok(!text(tree).includes('API 키 공급자 설정'));
+ assert.match(composer.props.placeholder,/ChatGPT.*연결/);
+ nodes(tree).find(node=>node.type==='button'&&/workspace-button--primary/.test(node.props.className)).props.onClick();
+ composer.props.onKeyDown({key:'Enter',shiftKey:false,nativeEvent:{isComposing:false},preventDefault(){}});
+ assert.deepEqual(asked,[],'neither a stale click nor Enter sends through the hidden provider');
+ assert.ok(!sets.includes(''),'an unsent question is kept');
+});
+
+const connectedConfig=()=>({active:'chatgpt',providers:[{provider:'chatgpt',baseUrl:'https://chatgpt.com',model:'chosen',hasKey:false,ready:true,label:'ChatGPT',supportsImages:false}],chatgpt:{accounts:[{recordId:'a',model:'chosen',signedIn:true,planUsageEnabled:true}],active:'a'}});
+const pendingWrite=()=>({call:{id:'c',name:'save_split',arguments:{}},runId:'run_x',preview:{title:'분할 저장',lines:['학습 70%'],undo:'다시 나누기'}});
+
+test('legacy pending writes and image offers have no execution controls in the ChatGPT-only panel',()=>{
+ for(const config of [base.config,{active:'openai-compatible',providers:[{provider:'openai-compatible',baseUrl:'http://127.0.0.1:12345/v1',model:'local',hasKey:false,supportsImages:true,label:'Local'}]}]){
+  const tree=render({...base,config,pending:pendingWrite(),imageOffer:{grantId:'g',message:'시험 이미지 전송',question:'이미지 확인'}});
+  assert.ok(!nodes(tree).some(node=>['쓰기 실행 확인','이미지 보내기 확인'].includes(node.props?.['aria-label'])));
+  assert.ok(!nodes(tree).some(node=>node.type==='button'&&/확인하고 실행|실행하지 않기|이미지/.test(text(node))));
+  assert.equal(nodes(tree).find(node=>node.type==='textarea').props.disabled,true);
+ }
+});
+
+test('retained ChatGPT send and confirmation handlers cannot call a newly selected legacy provider',()=>{
+ const asked=[],decided=[],sets=[],state={...base,config:connectedConfig(),ask:value=>asked.push(value),decide:value=>decided.push(value)};
+ const tree=render(state,{draft:'상태 확인',sets}),composer=nodes(tree).find(node=>node.type==='textarea');
+ const send=nodes(tree).find(node=>node.type==='button'&&text(node)==='보내기');
+ state.config=base.config;
+ send.props.onClick();composer.props.onKeyDown({key:'Enter',shiftKey:false,nativeEvent:{isComposing:false},preventDefault(){}});
+ assert.deepEqual(asked,[]);assert.ok(!sets.includes(''));
+ state.config=connectedConfig();state.pending=pendingWrite();
+ const confirming=nodes(render(state)),accept=confirming.find(node=>node.type==='button'&&text(node)==='확인하고 실행'),decline=confirming.find(node=>node.type==='button'&&text(node)==='실행하지 않기');
+ state.config=base.config;
+ accept.props.onClick();decline.props.onClick();
+ assert.deepEqual(decided,[],'neither acceptance nor refusal may resume a hidden provider conversation');
+});
+
 test('exactly one primary button in every state, labelled by what it does',()=>{
- const states=[[base,'보내기'],[{...base,pending:{call:{id:'c',name:'save_split',arguments:{}},runId:'run_x',preview:{title:'분할 저장',lines:['학습 70%'],undo:'다시 나누기'}}},'확인하고 실행'],
-  [{...base,imageOffer:{grantId:'g',message:'이 이미지 1장을 Anthropic로 보냅니다.',providerLabel:'Anthropic',question:'불량인가요?'}},'이미지 1장 보내기']];
+ const connected={...base,config:connectedConfig()},states=[[connected,'보내기'],[{...connected,pending:pendingWrite()},'확인하고 실행']];
  for(const [state,label] of states){
   const buttons=nodes(render(state)).filter(node=>node.type==='button');
   const primary=buttons.filter(button=>/workspace-button--primary/.test(button.props.className));
@@ -32,16 +70,19 @@ test('exactly one primary button in every state, labelled by what it does',()=>{
  }
  const confirm=nodes(render(states[1][0])).find(node=>node.props?.['aria-label']==='쓰기 실행 확인');
  assert.match(text(confirm),/분할 저장 · 확인이 필요합니다/);assert.match(text(confirm),/되돌리는 방법: 다시 나누기/);
- assert.match(text(nodes(render(states[2][0])).find(node=>node.props?.['aria-label']==='이미지 보내기 확인')),/이 이미지 1장을 Anthropic로 보냅니다/);
+ const decided=[],current={...connected,pending:pendingWrite(),decide:value=>decided.push(value)},buttons=nodes(render(current)).filter(node=>node.type==='button');
+ buttons.find(button=>text(button)==='확인하고 실행').props.onClick();
+ buttons.find(button=>text(button)==='실행하지 않기').props.onClick();
+ assert.deepEqual(decided,[true,false],'the current ChatGPT write still supports both explicit decisions');
 });
 test('a paused ChatGPT account disables the composer even if older public readiness is still true',()=>{
  const state={...base,config:{active:'chatgpt',providers:[{provider:'chatgpt',baseUrl:'https://api.openai.com/v1',model:'chosen',hasKey:false,ready:true,label:'ChatGPT',supportsImages:false}],chatgpt:{accounts:[{recordId:'a',model:'chosen',signedIn:true,planUsageEnabled:true,usagePaused:true}],active:'a'}}};const tree=render(state);
  assert.equal(nodes(tree).find(n=>n.type==='textarea').props.disabled,true);assert.equal(nodes(tree).filter(n=>n.type==='button'&&/workspace-button--primary/.test(n.props.className)).length,0,'usage management owns the primary action while sending is paused');
 });
-test('paused ChatGPT keeps API settings collapsed and directs the composer to usage confirmation',()=>{
+test('paused ChatGPT directs the composer to usage confirmation without an API fallback',()=>{
  const state={...base,config:{active:'chatgpt',providers:[{provider:'chatgpt',baseUrl:'https://api.openai.com/v1',model:'chosen',hasKey:false,ready:false,label:'ChatGPT',supportsImages:false}],chatgpt:{accounts:[{recordId:'a',model:'chosen',signedIn:true,planUsageEnabled:true,usagePaused:true}],active:'a'}}};const tree=render(state);
- assert.equal(nodes(tree).find(n=>n.type==='details').props.open,false);const composer=nodes(tree).find(n=>n.type==='textarea');assert.match(composer.props.placeholder,/사용량.*요청 재개/);assert.ok(!composer.props.placeholder.includes('공급자'));
- const missingApi=render({...base,config:{...base.config,providers:[{...base.config.providers[0],model:''}]}});assert.equal(nodes(missingApi).find(n=>n.type==='details').props.open,true,'missing API configuration still opens its own settings');
+ assert.ok(!text(tree).includes('API 키 공급자 설정'));const composer=nodes(tree).find(n=>n.type==='textarea');assert.match(composer.props.placeholder,/사용량.*요청 재개/);assert.ok(!composer.props.placeholder.includes('공급자'));
+ const missingApi=render({...base,config:{...base.config,providers:[{...base.config.providers[0],model:''}]}});assert.equal(nodes(missingApi).find(n=>n.type==='textarea').props.disabled,true,'an incomplete legacy provider never becomes the ChatGPT fallback');
 });
 
 test('the panel says every step works without it, renders nothing when closed and tells a browser it is desktop-only',()=>{
@@ -88,7 +129,7 @@ test('ChatGPT readiness comes from the selected account and plan, never a key fl
  const ready={...base,config:{active:'chatgpt',providers:[{...provider,hasKey:false}],encryptionAvailable:true,chatgpt:{accounts:[{recordId:'a',model:'chosen',signedIn:true,planUsageEnabled:true}],active:'a',status:'connected'}}};
  assert.equal(nodes(render(ready)).find(n=>n.type==='textarea').props.disabled,false);
  assert.match(text(render(ready)),/ChatGPT.*텍스트/);
- assert.ok(nodes(render(ready)).some(n=>n.type==='button'&&text(n)==='이미지와 함께 묻기'&&n.props.disabled));
+ assert.ok(!nodes(render(ready)).some(n=>n.type==='button'&&text(n)==='이미지와 함께 묻기'));
 });
 
 test('a ChatGPT send rate limit exposes usage management directly beside the conversation controls',()=>{
@@ -108,15 +149,15 @@ test('an executing confirmed write offers no stop and locks the settings until i
  assert.equal(nodes(asking).find(n=>n.type==='fieldset').props.disabled,false);
 });
 // Defect: while a settings call ran, send cleared the typed question and the store silently dropped it.
-test('a question typed while settings load is kept: send and image wait, and nothing is cleared without sending',()=>{
- const asked=[],offered=[],sets=[],question='왜 학습을 시작할 수 없나요?';
- const state={...base,configuring:true,ask:value=>asked.push(value),offerImage:value=>offered.push(value)};
+test('a question typed while settings load is kept and nothing is cleared without sending',()=>{
+ const asked=[],sets=[],question='왜 학습을 시작할 수 없나요?';
+ const state={...base,config:connectedConfig(),configuring:true,ask:value=>asked.push(value)};
  const tree=render(state,{draft:question,sets}),buttons=nodes(tree).filter(n=>n.type==='button');
- const primary=buttons.find(b=>/workspace-button--primary/.test(b.props.className)),image=buttons.find(b=>text(b)==='이미지와 함께 묻기');
- assert.equal(primary.props.disabled,true);assert.equal(image.props.disabled,true);
- primary.props.onClick();image.props.onClick();
+ const primary=buttons.find(b=>/workspace-button--primary/.test(b.props.className));
+ assert.equal(primary.props.disabled,true);
+ primary.props.onClick();
  nodes(tree).find(n=>n.type==='textarea').props.onKeyDown({key:'Enter',shiftKey:false,nativeEvent:{isComposing:false},preventDefault(){}});
- assert.deepEqual([asked,offered],[[],[]]);assert.ok(!sets.includes(''),'the typed question stays in the composer');
+ assert.deepEqual(asked,[]);assert.ok(!sets.includes(''),'the typed question stays in the composer');
  const after=[],ready=render({...state,configuring:false},{draft:question,sets:after});
  nodes(ready).find(b=>b.type==='button'&&/workspace-button--primary/.test(b.props.className)).props.onClick();
  assert.deepEqual(asked,[question]);assert.deepEqual(after,['']);

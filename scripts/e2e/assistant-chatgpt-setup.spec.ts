@@ -32,7 +32,8 @@ test('ChatGPT setup requires consent and explicit model selection; identity-only
   await page.getByRole('button',{name:'왜 그런가요?',exact:true}).click();
   await page.getByRole('button',{name:'도우미에게 묻기',exact:true}).click();
   const panel=page.getByRole('complementary',{name:'도우미',exact:true}),setup=panel.getByRole('region',{name:'ChatGPT 연결',exact:true});
-  await panel.getByText('ChatGPT 연결 (선택)',{exact:true}).click();
+  await expect(setup.getByRole('button',{name:'Continue with ChatGPT',exact:true})).toBeVisible();
+  await expect(panel.getByText(/API 키 공급자 설정/)).toHaveCount(0);
   await expect(setup.getByRole('button',{name:'Continue with ChatGPT',exact:true})).toBeDisabled();
   expect(await page.evaluate(()=>(window as any).__chatgptUI.calls)).toEqual([]);
   await setup.getByRole('checkbox').check();
@@ -48,7 +49,9 @@ test('ChatGPT setup requires consent and explicit model selection; identity-only
   await setup.getByRole('button',{name:'모델 목록 불러오기',exact:true}).click();
   await setup.getByRole('combobox',{name:'ChatGPT 모델',exact:true}).selectOption('qa-text-model');
   await expect(panel.getByRole('textbox',{name:'도우미에게 묻기',exact:true})).toBeEnabled();
-  await expect(panel.getByRole('button',{name:'이미지와 함께 묻기',exact:true})).toBeDisabled();
+  await expect(panel.getByRole('button',{name:'이미지와 함께 묻기',exact:true})).toHaveCount(0);
+  await setup.locator('summary').click();
+  await expect(setup.getByRole('button',{name:'이 컴퓨터에서 연결 지우기',exact:true})).toBeVisible();
   await panel.getByRole('textbox',{name:'도우미에게 묻기',exact:true}).fill('왜 막혔나요?');
   await panel.getByRole('button',{name:'보내기',exact:true}).click();
   await expect(panel.getByRole('link',{name:'ChatGPT 사용량 관리',exact:true})).toBeVisible();

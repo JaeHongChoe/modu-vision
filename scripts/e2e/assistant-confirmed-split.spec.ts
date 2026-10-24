@@ -49,9 +49,9 @@ test('a declined assistant split never writes; a confirmed split saves and logs 
   await expect(page.getByRole('button',{name:'3-Way 분할 적용',exact:true})).toBeEnabled();
   await expect(page.getByRole('button',{name:'전체 (20)',exact:true})).toBeVisible();
   await page.evaluate(()=>{
-    const config:AssistantConfigState={active:'openai-compatible',encryptionAvailable:true,providers:[{
-      provider:'openai-compatible',label:'격리 승인 QA',baseUrl:'http://127.0.0.1:1/v1',model:'scripted-no-network',format:'chat',hasKey:false,supportsImages:false,
-    }]};
+    const config:AssistantConfigState={active:'chatgpt',encryptionAvailable:true,providers:[{
+      provider:'chatgpt',label:'ChatGPT',baseUrl:'https://api.openai.com/v1',model:'scripted-no-network',format:'responses',hasKey:false,supportsImages:false,ready:true,
+    }],chatgpt:{accounts:[{recordId:'qa-chatgpt',label:'QA 계정',model:'scripted-no-network',signedIn:true,planUsageEnabled:true,planUsageAcknowledged:true}],active:'qa-chatgpt',encryptionAvailable:true,status:'connected',authority:'qa-authority'}};
     const sent:AssistantSendInput[]=[],armed:Array<{runId:string;tool:string}>=[],ended:string[]=[];
     const bridge:AssistantBridge={getState:async()=>config,saveProvider:async()=>config,removeKey:async()=>config,
       removeProvider:async()=>config,setActive:async()=>config,listModels:async()=>({ok:true,models:[]}),cancel:async()=>true,

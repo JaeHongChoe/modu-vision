@@ -75,7 +75,7 @@ async function main(out){
  try{
    stage('launch');await launch();const project=await api('/api/project/create',{name:'Native ChatGPT isolated QA',task:'classification'});await api('/api/project/update',{source_dataset_dir:source},'PUT');await api('/api/dataset/import',{folder_path:source,task:'classification'});await api('/api/dataset/split',{folder_path:source,task:'classification',train_ratio:.8,val_ratio:.1,test_ratio:.1});await page.reload();
    await expect(page.getByTitle('프로젝트 관리',{exact:true})).toContainText(project.name);await expect(page.getByRole('button',{name:'3-Way 분할 적용',exact:true})).toBeEnabled();
-   let panel=await openPanel(),setup=panel.getByRole('region',{name:'ChatGPT 연결',exact:true});await panel.getByText('ChatGPT 연결 (선택)',{exact:true}).click();
+   let panel=await openPanel(),setup=panel.getByRole('region',{name:'ChatGPT 연결',exact:true});await expect(setup.getByRole('button',{name:'Continue with ChatGPT',exact:true})).toBeVisible();
    stage('identity-only');const begin=setup.getByRole('button',{name:'Continue with ChatGPT',exact:true});await expect(begin).toBeDisabled();await setup.getByRole('checkbox').check();await begin.click();
    assert.equal(await app.evaluate(()=>globalThis.__nativeChatgptQA.completeLogin(false)),200);await expect(setup).toContainText('플랜 사용은 활성화되지 않았습니다');await expect(panel.getByRole('textbox',{name:'도우미에게 묻기',exact:true})).toBeDisabled();
    stage('reconsent');await setup.getByRole('button',{name:'ChatGPT 플랜 사용 켜기',exact:true}).click();assert.equal(await app.evaluate(()=>globalThis.__nativeChatgptQA.completeLogin(true)),200);

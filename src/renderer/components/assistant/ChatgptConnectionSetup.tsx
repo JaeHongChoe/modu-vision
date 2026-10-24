@@ -90,10 +90,10 @@ export const ChatgptConnectionSetup: React.FC = () => {
 
   return (
     <section aria-label="ChatGPT 연결" className="space-y-2 rounded border border-slate-700 p-2 text-xs">
-      <details open={Boolean(pending || account)}>
-        <summary className="cursor-pointer font-semibold text-slate-200">ChatGPT 연결 (선택)</summary>
+      <details open={!ready || Boolean(pending)}>
+        <summary className="cursor-pointer font-semibold text-slate-200">ChatGPT 연결</summary>
         <div className="mt-2 space-y-2">
-          <p>API 키 대신 본인의 ChatGPT 계정으로 연결할 수 있습니다. 기본 검사·학습 단계는 이 연결 없이 동작합니다.</p>
+          <p>본인의 ChatGPT 계정을 연결해 앱 상태를 묻고 작업을 준비할 수 있습니다. 기본 검사·학습 단계는 이 연결 없이 동작합니다.</p>
           <p>로그인 토큰은 이 컴퓨터의 보호 저장소에만 보관합니다. 질문과 필요한 최소 작업 상태만 선택한 계정 범위로 보냅니다. 프로젝트 파일·키·로컬 경로 전체는 보내지 않습니다. 현재는 텍스트 질문만 지원하며 이미지는 보내지 않습니다.</p>
           <p><a className="text-sky-300 underline" href={TERMS} target="_blank" rel="noopener noreferrer">Sign in with ChatGPT 약관</a>을 확인하세요. 로그인은 아래 버튼을 눌러 연 브라우저에서 직접 진행합니다.</p>
           <label className="flex items-start gap-2"><input type="checkbox" checked={accepted} onChange={event => setAccepted(event.target.checked)} />약관과 전송·보관 안내를 읽고 동의합니다.</label>

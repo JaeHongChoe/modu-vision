@@ -25,10 +25,16 @@ test('connection requires an explicit terms acknowledgement and the Continue cli
  nodes(tree).find(n=>n.type==='input'&&n.props.type==='checkbox').props.onChange({target:{checked:true}});tree=h.render();assert.equal(h.button(tree,'Continue with ChatGPT').props.disabled,false);
  await h.button(tree,'Continue with ChatGPT').props.onClick();assert.deepEqual(h.calls,[['begin',{termsAccepted:true}]]);
 });
-test('unavailable protected storage prevents login while API-key setup remains a separate option',()=>{
+test('unavailable protected storage prevents login without starting any request',()=>{
  const h=harness({accounts:[],active:null,encryptionAvailable:false,status:'idle'});let tree=h.render();nodes(tree).find(n=>n.type==='input'&&n.props.type==='checkbox').props.onChange({target:{checked:true}});tree=h.render();
  assert.equal(h.button(tree,'Continue with ChatGPT').props.disabled,true);assert.match(text(tree),/보호 저장소/);assert.equal(h.calls.length,0);
 });
+test('the only connection settings are expanded before the first ChatGPT login',()=>{
+ const h=harness(),tree=h.render();
+ assert.equal(nodes(tree).find(node=>node.type==='details').props.open,true);
+ assert.equal(h.calls.length,0,'showing connection settings never starts a login or provider request');
+});
+
 test('only waiting/exchanging polls and both closing and unmounting stop the local poll',async()=>{
  const h=harness();h.render();assert.equal(h.timers.size,0);
  h.setChat({...h.state.config.chatgpt,status:'waiting'});h.render();assert.equal(h.timers.size,1);await h.tick();assert.deepEqual(h.calls,[['poll']]);
