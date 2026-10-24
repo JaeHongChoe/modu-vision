@@ -138,16 +138,23 @@ test('full view at 1024×768 reserves a practical canvas and keeps save, classes
       await page.setContent(`<html lang="ko" data-view="full"><head><style>${imports}\n${styles}</style></head><body>${contents}</body></html>`);
       await page.evaluate(() => document.fonts.ready);
     };
+    // Crossing the 1920/2400 px breakpoints changes the root font size, and controls with transition-all (the class
+    // chips) then animate their font size and padding for 150 ms. Measure the layout those transitions end in: a sample
+    // part way through them read 371–377 px at 2560 depending on runner speed.
+    const resize = async viewport => {
+      await page.setViewportSize(viewport);
+      await page.evaluate(() => Promise.all(document.getAnimations().filter(a => a instanceof CSSTransition).map(a => a.finished.catch(() => {}))));
+    };
     await show(html);
     const metrics = await page.evaluate(() => ({canvas: document.querySelector('[data-canvas-container]').getBoundingClientRect().height,
       header: document.querySelector('header').getBoundingClientRect().height, toolbar: document.querySelector('[data-testid="annotation-save-button"]').parentElement.parentElement.getBoundingClientRect().height}));
     const desktops = [];
     for (const viewport of [{width: 1280, height: 800}, {width: 1440, height: 900}, {width: 2560, height: 1440}]) {
-      await page.setViewportSize(viewport);
+      await resize(viewport);
       desktops.push({...viewport, canvas: await page.locator('[data-canvas-container]').evaluate(node => node.getBoundingClientRect().height)});
     }
     t.diagnostic(JSON.stringify({small: metrics, desktops}));
-    await page.setViewportSize({width: 1024, height: 768});
+    await resize({width: 1024, height: 768});
     assert.ok(metrics.canvas >= 240, `full-view canvas must stay drawable: ${JSON.stringify(metrics)}`);
     for (const locator of [page.getByTestId('annotation-save-button'), page.getByRole('group', {name: '이미지 클래스 고르기'}),
       page.getByRole('button', {name: '초안 검토 패널'}), page.getByRole('button', {name: '모델 보조 라벨링 패널'}),
@@ -164,9 +171,10 @@ test('full view at 1024×768 reserves a practical canvas and keeps save, classes
     const sizes = await settings.evaluate(node => ({height: node.clientHeight, content: node.scrollHeight}));
     assert.ok(sizes.content > sizes.height, 'the settings strip gives up height before the canvas');
     for (const viewport of desktops) {
-      // The existing dirty-review warning fixture has 221 px at 1440×900 and 376.8 px at 2560×1440. These larger
-      // viewports must not lose height while fixing the short window.
-      const minimum = viewport.width === 1280 ? 240 : viewport.width === 1440 ? 220 : 376;
+      // The existing dirty-review warning fixture settles at 221 px at 1440×900 and 370 px at 2560×1440, the same
+      // before the short-window fix (11f21993) as after it (the 376.8 px once noted here was read mid-transition).
+      // These larger viewports must not lose height while fixing the short window.
+      const minimum = viewport.width === 1280 ? 240 : viewport.width === 1440 ? 220 : 369;
       assert.ok(viewport.canvas >= minimum, `full view retains a practical canvas at ${viewport.width}: ${viewport.canvas}`);
     }
     await show(focusedHtml);
