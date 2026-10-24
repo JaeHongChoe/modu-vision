@@ -21,7 +21,7 @@ import { useTrainingStore } from './useTrainingStore';
 import { subscribeProjectContext } from '../services/api';
 import { host } from '../services/hostAdapter';
 
-export interface AssistantChatItem { id: number; kind: 'person' | 'assistant' | 'tool' | 'notice' | 'error'; text: string; detail?: string; ok?: boolean }
+export interface AssistantChatItem { id: number; kind: 'person' | 'assistant' | 'tool' | 'notice' | 'error'; text: string; detail?: string; ok?: boolean; code?: AssistantError['code'] }
 export interface AssistantImageOffer { grantId: string; message: string; providerLabel: string; question: string; binding: string; imageIdentity: string }
 
 interface AssistantState {
@@ -43,6 +43,11 @@ interface AssistantState {
   removeProvider: (provider: AssistantProviderId) => Promise<void>;
   setActive: (provider: AssistantProviderId) => Promise<void>;
   listModels: (provider: AssistantProviderId) => Promise<{ id: string; label: string }[] | AssistantError>;
+  beginChatgpt: (input: { termsAccepted: true; recordId?: string; label?: string }) => Promise<boolean>;
+  cancelChatgpt: () => Promise<boolean>;
+  selectChatgptAccount: (recordId: string | null) => Promise<boolean>;
+  selectChatgptModel: (recordId: string, model: string) => Promise<boolean>;
+  signOutChatgpt: (recordId: string) => Promise<boolean>;
   ask: (text: string) => Promise<void>;
   stop: () => Promise<void>;
   decide: (confirmed: boolean) => Promise<void>;
@@ -75,7 +80,7 @@ export const useAssistantStore = create<AssistantState>((set, get) => {
     if (event.kind === 'assistant') add({ kind: 'assistant', text: event.text });
     else if (event.kind === 'tool') add({ kind: 'tool', text: event.summary, detail: event.name, ok: event.ok });
     else if (event.kind === 'notice') add({ kind: 'notice', text: event.text });
-    else if (event.kind === 'error') add({ kind: 'error', text: event.error.reason, detail: [event.error.action, event.error.requestId ? `요청 ID ${event.error.requestId}` : ''].filter(Boolean).join(' ') });
+    else if (event.kind === 'error') add({ kind: 'error', code: event.error.code, text: event.error.reason, detail: [event.error.action, event.error.requestId ? `요청 ID ${event.error.requestId}` : ''].filter(Boolean).join(' ') });
     else if (event.kind === 'busy') set({ busy: event.busy });
     else if (event.kind === 'confirm') set({ pending: event.pending });
   };
@@ -100,6 +105,13 @@ export const useAssistantStore = create<AssistantState>((set, get) => {
     catch (cause) { if (request === configRequest) set({ configError: message(cause) }); return false; }
     finally { if (request === configRequest) configuring = false; }
   };
+  const chatgptCall = (run: (connection: NonNullable<AssistantBridge['chatgpt']>) => Promise<AssistantConfigState>) => {
+    invalidateAssistant();
+    return configCall(bridge => {
+      if (!bridge.chatgpt) throw new Error('이 앱에서는 ChatGPT 연결을 지원하지 않습니다. 최신 데스크톱 앱에서 다시 여세요.');
+      return run(bridge.chatgpt);
+    });
+  };
   return {
     isOpen: false,
     open: () => { set({ isOpen: true }); if (!get().config) void get().loadConfig(); },
@@ -118,6 +130,11 @@ export const useAssistantStore = create<AssistantState>((set, get) => {
     removeKey: async provider => { invalidateAssistant(); await configCall(bridge => bridge.removeKey(provider)); },
     removeProvider: async provider => { invalidateAssistant(); await configCall(bridge => bridge.removeProvider(provider)); },
     setActive: async provider => { invalidateAssistant(); await configCall(bridge => bridge.setActive(provider)); },
+    beginChatgpt: input => chatgptCall(connection => connection.begin(input)),
+    cancelChatgpt: () => chatgptCall(connection => connection.cancel()),
+    selectChatgptAccount: recordId => chatgptCall(connection => connection.selectAccount(recordId)),
+    selectChatgptModel: (recordId, model) => chatgptCall(connection => connection.selectModel(recordId, model)),
+    signOutChatgpt: recordId => chatgptCall(connection => connection.signOut(recordId)),
     listModels: async provider => {
       const bridge = assistantBridge();
       if (!bridge) return { code: 'no_provider', reason: '이 화면에서는 도우미를 쓸 수 없습니다.', action: '데스크톱 앱에서 여세요.' };
@@ -135,6 +152,11 @@ export const useAssistantStore = create<AssistantState>((set, get) => {
     offerImage: async question => {
       const bridge = assistantBridge();
       if (configuring || !bridge || !question.trim()) return;
+      if (get().config?.active === 'chatgpt') {
+        set({ imageOffer: null });
+        add({ kind: 'notice', text: 'ChatGPT 연결은 현재 텍스트 질문만 지원합니다. 이미지 질문은 이미지 지원 API 키 공급자를 선택한 뒤 전송 대상을 확인하세요.' });
+        return;
+      }
       const version = ++imageOfferVersion;
       set({ imageOffer: null });
       const binding = readImageBinding();

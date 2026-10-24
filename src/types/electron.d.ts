@@ -50,12 +50,15 @@ export interface ElectronAPI {
 
 /** Built-in assistant contract (docs/product-direction-easy-labeling-agent.md §4). The renderer never receives a key:
  *  only whether one is stored. Provider calls run in the Electron main process. */
-export type AssistantProviderId = 'openai-compatible' | 'anthropic';
+export type AssistantApiKeyProviderId = 'openai-compatible' | 'anthropic';
+export type AssistantProviderId = AssistantApiKeyProviderId | 'chatgpt';
 /** OpenAI-compatible request format: Chat Completions or Responses. */
 export type AssistantApiFormat = 'chat' | 'responses';
-export interface AssistantProviderPublic {provider:AssistantProviderId;baseUrl:string;model:string;format:AssistantApiFormat|null;hasKey:boolean;supportsImages:boolean;label:string}
-export interface AssistantConfigState {providers:AssistantProviderPublic[];active:AssistantProviderId|null;encryptionAvailable:boolean}
-export interface AssistantProviderInput {provider:AssistantProviderId;baseUrl:string;model:string;format?:AssistantApiFormat;supportsImages:boolean;
+export interface AssistantProviderPublic {provider:AssistantProviderId;baseUrl:string;model:string;format:AssistantApiFormat|null;hasKey:boolean;supportsImages:boolean;label:string;ready?:boolean;connectionAuthority?:string}
+export interface AssistantChatgptAccount {recordId:string;label:string;model:string;signedIn:boolean;planUsageEnabled:boolean}
+export interface AssistantChatgptState {accounts:AssistantChatgptAccount[];active:string|null;encryptionAvailable:boolean;status:'idle'|'waiting'|'exchanging'|'connected'|'error';error?:AssistantError;remoteRevocationConfirmed?:boolean;authority?:string}
+export interface AssistantConfigState {providers:AssistantProviderPublic[];active:AssistantProviderId|null;encryptionAvailable:boolean;chatgpt?:AssistantChatgptState}
+export interface AssistantProviderInput {provider:AssistantApiKeyProviderId;baseUrl:string;model:string;format?:AssistantApiFormat;supportsImages:boolean;
   /** Sent once from the key field straight to the main process; never returned. */ key?:string;activate?:boolean}
 export interface AssistantToolSpec {name:string;description:string;parameters:Record<string,unknown>}
 export interface AssistantToolCall {id:string;name:string;arguments:Record<string,unknown>;argumentsError?:boolean}
@@ -88,6 +91,14 @@ export interface AssistantBridge {
   /** Arms the run-id header on the one backend write a confirmed tool makes; endRun disarms it. */
   beginRun:(runId:string,tool:string)=>Promise<boolean>;
   endRun:(runId:string)=>Promise<void>;
+  /** Optional in older desktop bridges. Tokens and authorization URLs never cross IPC. */
+  chatgpt?: {
+    begin:(input:{termsAccepted:true;recordId?:string;label?:string})=>Promise<AssistantConfigState>;
+    cancel:()=>Promise<AssistantConfigState>;
+    selectAccount:(recordId:string|null)=>Promise<AssistantConfigState>;
+    selectModel:(recordId:string,model:string)=>Promise<AssistantConfigState>;
+    signOut:(recordId:string)=>Promise<AssistantConfigState>;
+  };
 }
 
 export interface NativeSignature {status:'verified'|'unsigned'|'invalid'|'unavailable'|'development';reason:string;publisher?:string;platform:string;checked_at:string}

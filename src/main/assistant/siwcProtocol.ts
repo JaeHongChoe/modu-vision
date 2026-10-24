@@ -12,6 +12,7 @@
  */
 import crypto, {type JsonWebKey} from 'node:crypto';
 import type {AssistantToolSpec} from '../../types/electron';
+import {redactOutgoingText, redactOutgoingValue} from './redact';
 
 const ISSUER = 'https://auth.openai.com', RESOURCE = 'https://api.openai.com/v1';
 const TOKEN_ENDPOINT = `${ISSUER}/api/accounts/oauth/token`;
@@ -212,47 +213,80 @@ function toolCall(item: Json, names: Set<string>, ids: Set<string>) {
   if (!args || typeof args !== 'object' || Array.isArray(args)) fail('invalid_tool_call');
   ids.add(item.call_id);return {id: item.call_id as string, namespace: NAMESPACE, name: item.name as string, arguments: args as Record<string, unknown>};
 }
+const textField = (value:unknown, max=100000):value is string => typeof value==='string' && value.length<=max;
+function fields(row:Json, allowed:string[]) {
+  if(Object.keys(row).some(key=>!allowed.includes(key)))fail('invalid_input');
+  if(row.id!==undefined&&!nonempty(row.id,200)||row.status!==undefined&&row.status!=='completed')fail('invalid_input');
+}
+/** Validate every nested field before retaining provider replay. Opaque reasoning is only a bounded string;
+ * its bytes stay unchanged because the provider must verify it on replay. Ordinary text is always redacted. */
+function replayItem(raw:unknown, names:Set<string>, ids:Set<string>):Json {
+  const row=object(raw);
+  if(row.type==='reasoning') {
+    fields(row,['type','id','summary','encrypted_content','status']);
+    if(!Array.isArray(row.summary)||row.summary.length>128||row.encrypted_content!==undefined&&!textField(row.encrypted_content))fail('invalid_input');
+    const summary=row.summary.map((raw:unknown)=>{const part=object(raw);fields(part,['type','text']);if(part.type!=='summary_text'||!textField(part.text))fail('invalid_input');return {type:'summary_text',text:redactOutgoingText(part.text)};});
+    return {...clone(row),summary};
+  }
+  if(row.type==='message') {
+    fields(row,['type','role','content','id','status']);if(row.role!=='assistant'||!Array.isArray(row.content)||row.content.length>128)fail('invalid_input');
+    const content=row.content.map((raw:unknown)=>{const part=object(raw);
+      if(part.type==='output_text'){fields(part,['type','text','annotations','logprobs']);if(!textField(part.text))fail('invalid_input');
+        // This text-only client requests no hosted tools or log probabilities. An empty provider-default field is safe.
+        for(const field of ['annotations','logprobs'])if(part[field]!==undefined&&part[field]!==null&&(!Array.isArray(part[field])||part[field].length))fail('invalid_input');
+        return {...clone(part),text:redactOutgoingText(part.text)};
+      }
+      if(part.type==='refusal'){fields(part,['type','refusal']);if(!textField(part.refusal))fail('invalid_input');return {type:'refusal',refusal:redactOutgoingText(part.refusal)};}
+      return fail('invalid_input');
+    });return {...clone(row),content};
+  }
+  if(row.type==='function_call') {
+    fields(row,['type','id','namespace','name','call_id','arguments','status']);const call=toolCall(row,names,ids);
+    return {...clone(row),arguments:JSON.stringify(redactOutgoingValue(call.arguments))};
+  }
+  return fail('invalid_input');
+}
 /** Text/history subset only. No images, hosted tools, custom arbitrary fields or execution is enabled here. */
 export function buildSiwcTextRequest(input: {model: string; instructions?: string; input: unknown[]; tools: AssistantToolSpec[]}) {
   const names = toolNames(input.tools), ids = new Set<string>(), outstanding = new Set<string>();
   if (!nonempty(input.model, 200) || !Array.isArray(input.input) || !input.input.length) fail('invalid_request');
   if (input.instructions !== undefined && !nonempty(input.instructions, 100000)) fail('invalid_request');
+  const sanitized:unknown[]=[];
   for (const item of input.input) {
     const row = object(item);
     if (row.type === 'function_call') {
-      if (Object.keys(row).some(key => !['type', 'id', 'namespace', 'name', 'call_id', 'arguments', 'status'].includes(key))) fail('invalid_input');
-      outstanding.add(toolCall(row, names, ids).id);
+      const safe=replayItem(row,names,ids);outstanding.add(safe.call_id);sanitized.push(safe);
     } else if (row.type === 'function_call_output') {
       if (!outstanding.delete(row.call_id) || !nonempty(row.output, 100000) || Object.keys(row).some(key => !['type', 'call_id', 'output'].includes(key))) fail('invalid_input');
+      sanitized.push({...clone(row),output:redactOutgoingText(row.output)});
     } else if (row.type === 'reasoning') {
-      if (!Array.isArray(row.summary) || Object.keys(row).some(key => !['type', 'id', 'summary', 'encrypted_content', 'status'].includes(key))) fail('invalid_input');
+      sanitized.push(replayItem(row,names,ids));
     } else {
       const text = typeof row.content === 'string' && nonempty(row.content, 100000);
-      const replayText = row.role === 'assistant' && row.type === 'message' && Array.isArray(row.content) && row.content.every((part: unknown) => {
-        const value = object(part);return value.type === 'output_text' && typeof value.text === 'string' || value.type === 'refusal' && typeof value.refusal === 'string';
-      });
+      const replayText = row.role === 'assistant' && row.type === 'message' && Array.isArray(row.content);
       if (!['user', 'assistant', 'developer'].includes(row.role) || (!text && !replayText) || (row.type !== undefined && row.type !== 'message')) fail('invalid_input');
-      if (Object.keys(row).some(key => !['type', 'role', 'content', 'id', 'status'].includes(key))) fail('invalid_input');
+      fields(row,['type','role','content','id','status']);sanitized.push(replayText?replayItem(row,names,ids):{...clone(row),content:redactOutgoingText(row.content)});
     }
   }
   if (outstanding.size) fail('invalid_input');
-  return {model: input.model, ...(input.instructions ? {instructions: input.instructions} : {}), input: clone(input.input), store: false, stream: true, include: ['reasoning.encrypted_content'],
+  return {model: input.model, ...(input.instructions ? {instructions: redactOutgoingText(input.instructions)} : {}), input: sanitized, store: false, stream: true, include: ['reasoning.encrypted_content'],
     ...(input.tools.length ? {tools: [{type: 'namespace', name: NAMESPACE, description: 'Modu Vision application tools',
       tools: clone(input.tools).map(tool => ({type: 'function', name: tool.name, description: tool.description, parameters: tool.parameters}))}]} : {})};
 }
 function completedResponse(response: unknown, tools: AssistantToolSpec[]) {
   const value = object(response), names = toolNames(tools), calls: {id: string; namespace: string; name: string; arguments: Record<string, unknown>}[] = [], ids = new Set<string>();let text = '';
   if (value.status !== 'completed' || !Array.isArray(value.output)) fail('bad_stream');
+  const replay:Json[]=[];
   for (const raw of value.output) {
-    const item = object(raw);
+    const item = replayItem(raw,names,ids);replay.push(item);
     if (item.type === 'message') {
       if (!Array.isArray(item.content)) fail('bad_stream');
-      for (const rawPart of item.content) {const part = object(rawPart);if (part.type === 'output_text') {if (typeof part.text !== 'string') fail('bad_stream');text += part.text;}}
+      for (const rawPart of item.content) {const part = object(rawPart);if (part.type === 'output_text') text += part.text;else if(part.type==='refusal')text+=part.refusal;}
     } else if (item.type === 'function_call') {
-      calls.push(toolCall(item, names, ids));
+      calls.push({id:item.call_id,namespace:NAMESPACE,name:item.name,arguments:JSON.parse(item.arguments)});
     } else if (item.type !== 'reasoning') fail('unsupported_output');
   }
-  return {text, toolCalls: calls, replay: clone(value.output)};
+  return {text, toolCalls: calls, replay};
 }
 /** Consume injected byte chunks, require a complete terminal event, and never execute tool calls or expose deltas as success. */
 export async function readSiwcResponse(source: AsyncIterable<Uint8Array>, options: OperationOptions & {tools: AssistantToolSpec[]; maxBytes?: number; maxEventBytes?: number}) {

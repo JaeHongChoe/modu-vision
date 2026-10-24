@@ -13,7 +13,8 @@ export function assistantScope(config: AssistantConfigState | null): string {
   const provider = config?.providers.find(item => item.provider === config.active);
   return JSON.stringify([getApiPersistenceIdentity(), getProjectContextGeneration(), compute.transportRevision,
     project.projectDir, project.project?.id, project.project?.source_dataset_dir, project.project?.active_labelset_id, project.task,
-    config?.active, provider?.baseUrl, provider?.model, provider?.format, provider?.supportsImages]);
+    config?.active, provider?.baseUrl, provider?.model, provider?.format, provider?.supportsImages,
+    provider?.connectionAuthority, config?.chatgpt?.authority]);
 }
 export function assistantImageBinding(scope: string): string {
   const image = useAnnotationStore.getState();

@@ -115,7 +115,7 @@ export type AssistantRunEntry = {
   confirmed: boolean;
   result: "ok" | "refused" | "error" | "cancelled";
   error_code?: string | null;
-  provider?: "openai-compatible" | "anthropic" | null;
+  provider?: "openai-compatible" | "anthropic" | "chatgpt" | null;
   link?: string | null;
 };
 

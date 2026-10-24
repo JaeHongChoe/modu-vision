@@ -45,6 +45,9 @@ test('a declined assistant split never writes; a confirmed split saves and logs 
   await page.route(/^https?:\/\//,route=>new URL(route.request().url()).origin===renderer.origin?route.fallback():route.abort('blockedbyclient'));
   await installDesktopHostShim(page,renderer.port);await page.goto(renderer.url);
   await expect(page.getByTitle('프로젝트 관리',{exact:true})).toContainText(project.name);
+  // Project identity arrives before dataset hydration on a slow host. The real save entry guards current source and count.
+  await expect(page.getByRole('button',{name:'3-Way 분할 적용',exact:true})).toBeEnabled();
+  await expect(page.getByRole('button',{name:'전체 (20)',exact:true})).toBeVisible();
   await page.evaluate(()=>{
     const config:AssistantConfigState={active:'openai-compatible',encryptionAvailable:true,providers:[{
       provider:'openai-compatible',label:'격리 승인 QA',baseUrl:'http://127.0.0.1:1/v1',model:'scripted-no-network',format:'chat',hasKey:false,supportsImages:false,

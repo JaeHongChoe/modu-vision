@@ -90,3 +90,35 @@ test('failed image intent IPC leaves no offer and shows an action without readin
  await h.store.getState().offerImage('확인');assert.equal(h.store.getState().imageOffer,null);assert.equal(h.reads(),0);assert.equal(h.sent.length,0);
  assert.ok(h.store.getState().items.some(item=>item.kind==='error'&&/다시/.test(item.detail)));
 });
+
+test('same-model ChatGPT account authority changes cancel an old reply and clear image/write confirmation',async()=>{
+ const h=harness();const config=authority=>({active:'chatgpt',encryptionAvailable:true,providers:[{provider:'chatgpt',baseUrl:'https://chatgpt.com',model:'chosen',hasKey:false,supportsImages:false,ready:true,connectionAuthority:authority}],chatgpt:{active:'a',accounts:[{recordId:'a',label:'계정 1',model:'chosen',signedIn:true,planUsageEnabled:true}],status:'connected',authority}});
+ h.store.setState({config:config('first')});const reply=deferred();h.bridge.send=async input=>{h.sent.push(input);return reply.promise;};
+ const asking=h.store.getState().ask('이 계정으로 질문');h.store.setState({config:config('second')});
+ assert.equal(h.store.getState().busy,false);assert.equal(h.cancelled.length,1);reply.resolve({ok:true,text:'옛 계정 응답',toolCalls:[]});await asking;
+ assert.ok(!h.store.getState().items.some(i=>i.text==='옛 계정 응답'));
+});
+test('ChatGPT connection mutation invalidates the session before IPC and cannot send while configuring',async()=>{
+ const h=harness();await h.store.getState().loadConfig();const changed=deferred(),calls=[];h.bridge.chatgpt={begin:input=>{calls.push(input);return changed.promise;}};
+ assert.equal(typeof h.store.getState().beginChatgpt,'function');
+ const changing=h.store.getState().beginChatgpt({termsAccepted:true});await h.store.getState().ask('전환중 질문');assert.equal(h.sent.length,0);assert.deepEqual(calls,[{termsAccepted:true}]);
+ changed.resolve({active:'chatgpt',encryptionAvailable:true,providers:[],chatgpt:{accounts:[],active:null,encryptionAvailable:true,status:'waiting'}});await changing;assert.equal(h.store.getState().config.chatgpt.status,'waiting');
+});
+test('ChatGPT image requests cannot even obtain an intent or read local pixels',async()=>{
+ const h=harness();await h.store.getState().loadConfig();h.store.setState({config:{active:'chatgpt',providers:[],chatgpt:{active:null,accounts:[],status:'idle'}}});let intents=0;h.bridge.imageIntent=async()=>{intents++;return {ok:true};};
+ await h.store.getState().offerImage('이 이미지');assert.equal(intents,0);assert.equal(h.reads(),0);assert.equal(h.store.getState().imageOffer,null);assert.match(h.store.getState().items.at(-1).text,/텍스트/);
+});
+
+test('provider rate-limit errors retain a machine code for the visible usage-management action',async()=>{
+ const h=harness();await h.store.getState().loadConfig();h.bridge.send=async()=>({ok:false,error:{code:'rate_limited',reason:'한도에 도달했습니다.',action:'사용량을 확인하세요.'}});await h.store.getState().ask('질문');
+ assert.equal(h.store.getState().items.find(item=>item.kind==='error').code,'rate_limited');
+});
+test('each ChatGPT mutation invalidates an existing reply before its IPC result is accepted',async()=>{
+ for(const [method,bridgeMethod,args] of [['cancelChatgpt','cancel',[]],['selectChatgptAccount','selectAccount',['opaque-b']],['selectChatgptModel','selectModel',['opaque-b','visible-model']],['signOutChatgpt','signOut',['opaque-b']]]){
+  const h=harness();await h.store.getState().loadConfig();const reply=deferred(),change=deferred(),calls=[];h.bridge.send=()=>reply.promise;h.bridge.chatgpt={[bridgeMethod]:(...input)=>{calls.push(input);return change.promise;}};
+  const asking=h.store.getState().ask('기존 질문');assert.equal(h.store.getState().busy,true);
+  const changing=h.store.getState()[method](...args);assert.equal(h.store.getState().busy,false);assert.equal(h.cancelled.length,1);assert.deepEqual(calls,[args]);
+  reply.resolve({ok:true,text:'폐기될 응답',toolCalls:[]});await asking;assert.ok(!h.store.getState().items.some(item=>item.text==='폐기될 응답'));
+  change.resolve({active:null,providers:[],encryptionAvailable:true});assert.equal(await changing,true);
+ }
+});

@@ -12,7 +12,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
 import type {
-  AssistantApiFormat, AssistantConfigState, AssistantProviderId, AssistantProviderInput, AssistantProviderPublic,
+  AssistantApiFormat, AssistantConfigState, AssistantApiKeyProviderId as AssistantProviderId, AssistantProviderInput, AssistantProviderPublic,
 } from '../../types/electron';
 import {ProviderError, assistantError, providerLabel, validateBaseUrl, type ProviderConfig} from './providers';
 

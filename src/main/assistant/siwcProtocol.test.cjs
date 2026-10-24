@@ -16,6 +16,27 @@ const completed=(output=[])=>event('response.completed',{response:{id:'resp_synt
 async function* bytes(text,width=7){const b=Buffer.from(text);for(let i=0;i<b.length;i+=width)yield b.subarray(i,i+width);}
 const allow=[{name:'read_status',description:'상태',parameters:{type:'object',properties:{},additionalProperties:false}}];
 
+test('text-only replay rejects nested image payloads, arbitrary keys and non-string encrypted content',()=>{
+ const p=load(),base={model:'synthetic-model',tools:allow};
+ for(const item of [
+  {type:'reasoning',summary:[{type:'input_image',image_url:'data:image/png;base64,c2VjcmV0'}],encrypted_content:'opaque'},
+  {type:'reasoning',summary:[],encrypted_content:{path:'/Users/private/project/a.png',secret:'sk-secret-1234567890'}},
+  {type:'reasoning',summary:[{type:'summary_text',text:'안내',image_url:'data:image/png;base64,c2VjcmV0'}]},
+  {type:'message',role:'assistant',content:[{type:'output_text',text:'안내',image_url:'data:image/png;base64,c2VjcmV0'}]},
+  {type:'message',role:'assistant',content:[{type:'refusal',refusal:'거절',secret:{path:'/Users/private/project/a.png'}}]},
+ ])assert.throws(()=>p.buildSiwcTextRequest({...base,input:[{role:'user',content:'상태'},item]}),e=>e.code==='invalid_input');
+});
+test('completed responses validate nested replay before returning success and redact plaintext while preserving opaque reasoning',async()=>{
+ const p=load(),bad=[{type:'reasoning',summary:[{type:'input_image',image_url:'data:image/png;base64,c2VjcmV0'}],encrypted_content:'opaque'},
+ {type:'message',role:'assistant',content:[{type:'output_text',text:'안내',private:{path:'/Users/private/project/a.png'}}]},
+ {type:'message',content:[{type:'output_text',text:'missing assistant role'}]}];
+ for(const item of bad)await assert.rejects(p.readSiwcResponse(bytes(completed([item])),{tools:allow}),e=>e.code==='invalid_input'||e.code==='bad_stream');
+ const opaque='signed-provider-opaque-'+ 'A'.repeat(80),output=[{type:'reasoning',summary:[{type:'summary_text',text:'검토 /Users/private/project/a.png sk-secret-1234567890'}],encrypted_content:opaque},
+ {type:'message',role:'assistant',content:[{type:'output_text',text:'완료 /Users/private/project/a.png',annotations:[]},{type:'refusal',refusal:'sk-secret-1234567890'}]},
+ {type:'function_call',namespace:'modu_vision',name:'read_status',call_id:'call_a',arguments:JSON.stringify({file:'/Users/private/project/a.png',key:'sk-secret-1234567890'})}];
+ const answer=await p.readSiwcResponse(bytes(completed(output)),{tools:allow});assert.equal(answer.replay[0].encrypted_content,opaque);assert.equal(answer.replay[0].summary[0].text,'검토 a.png [가림]');assert.equal(answer.text,'완료 a.png[가림]');assert.deepEqual(answer.toolCalls[0].arguments,{file:'a.png',key:'[가림]'});assert.deepEqual(JSON.parse(answer.replay[2].arguments),answer.toolCalls[0].arguments);
+});
+
 test('PKCE is S256 without padding; each authorization attempt uses fresh values and no network',()=>{
  const p=load();assert.equal(p.pkceChallenge('dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk'),'E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM');
  const options={hostId:HOST,appName:'Modu Vision',redirectUri:'http://127.0.0.1:54321/auth/callback',now:()=>NOW};
@@ -108,7 +129,7 @@ test('a matching callback route consumes the attempt even when state validation 
  assert.throws(()=>a.acceptCallback(redirectUri+'?state='+state+'&code=c&client_id='+CLIENT),e=>e.code==='attempt_used');
 });
 test('SSE survives every UTF-8 byte and CRLF boundary; only completed output yields text and allowlisted namespace calls',async()=>{
- const p=load(),output=[{type:'message',content:[{type:'output_text',text:'완료했습니다'}]},{type:'function_call',namespace:'modu_vision',name:'read_status',call_id:'call_a',arguments:'{}'}];
+ const p=load(),output=[{type:'message',role:'assistant',content:[{type:'output_text',text:'완료했습니다'}]},{type:'function_call',namespace:'modu_vision',name:'read_status',call_id:'call_a',arguments:'{}'}];
  const stream=': keepalive\r\n\r\n'+event('response.output_text.delta',{delta:'partial'})+completed(output);
  const result=await p.readSiwcResponse(bytes(stream,1),{tools:allow});assert.equal(result.text,'완료했습니다');assert.deepEqual(result.toolCalls,[{id:'call_a',namespace:'modu_vision',name:'read_status',arguments:{}}]);assert.deepEqual(result.replay,output);
 });

@@ -28,7 +28,7 @@ class AssistantRunEntry(BaseModel):
     confirmed: StrictBool
     result: Literal['ok', 'refused', 'error', 'cancelled']
     error_code: Optional[str] = Field(default=None, pattern=r'^[a-z0-9_.-]{1,64}$')
-    provider: Optional[Literal['openai-compatible', 'anthropic']] = None
+    provider: Optional[Literal['openai-compatible', 'anthropic', 'chatgpt']] = None
     link: Optional[str] = Field(default=None, pattern=r'^[A-Za-z0-9_.:-]{1,120}$')
 
 

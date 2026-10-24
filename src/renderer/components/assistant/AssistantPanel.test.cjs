@@ -15,7 +15,7 @@ function render(state){
  const {AssistantPanel}=load(path.join(__dirname,'AssistantPanel.tsx'),{react:{__esModule:true,default:react,...react},
   '../../stores/useAssistantStore':{useAssistantStore:store,assistantBridge:()=>state.bridge},
   '../../stores/useAnnotationStore':{useAnnotationStore:selector=>selector({currentImage:{file_path:'/data/a.png'}})},
-  './AssistantProviderSetup':{AssistantProviderSetup:()=>null},'./AssistantRunLog':{AssistantRunLog:()=>null}});
+  './ChatgptConnectionSetup':{ChatgptConnectionSetup:()=>null},'./AssistantProviderSetup':{AssistantProviderSetup:()=>null},'./AssistantRunLog':{AssistantRunLog:()=>null}});
  return AssistantPanel({});
 }
 const base={isOpen:true,busy:false,pending:null,imageOffer:null,items:[],bridge:{},config:{active:'anthropic',encryptionAvailable:true,providers:[{provider:'anthropic',baseUrl:'https://api.anthropic.com',model:'m',format:null,hasKey:true,supportsImages:true,label:'Anthropic'}]},
@@ -69,4 +69,21 @@ test('the open drawer takes its own column instead of lying under the step bars'
  const app=fs.readFileSync(path.join(__dirname,'..','..','App.tsx'),'utf8');
  assert.match(app,/const assistantOpen = useAssistantStore\(s => s\.isOpen\);/);
  assert.ok(app.includes("font-sans${assistantOpen ? ' pr-["+width[1].slice(3,-1)+"]' : ''}"),'the root reserves the drawer width while it is open');
+});
+
+test('ChatGPT readiness comes from the selected account and plan, never a key flag',()=>{
+ const provider={provider:'chatgpt',baseUrl:'https://chatgpt.com',model:'chosen',format:null,hasKey:true,supportsImages:false,label:'ChatGPT',ready:true};
+ for(const account of [{recordId:'a',model:'chosen',signedIn:false,planUsageEnabled:true},{recordId:'a',model:'chosen',signedIn:true,planUsageEnabled:false},{recordId:'a',model:'',signedIn:true,planUsageEnabled:true}]){
+  const state={...base,config:{active:'chatgpt',providers:[provider],encryptionAvailable:true,chatgpt:{accounts:[account],active:'a',status:'connected'}}};
+  assert.equal(nodes(render(state)).find(n=>n.type==='textarea').props.disabled,true);
+ }
+ const ready={...base,config:{active:'chatgpt',providers:[{...provider,hasKey:false}],encryptionAvailable:true,chatgpt:{accounts:[{recordId:'a',model:'chosen',signedIn:true,planUsageEnabled:true}],active:'a',status:'connected'}}};
+ assert.equal(nodes(render(ready)).find(n=>n.type==='textarea').props.disabled,false);
+ assert.match(text(render(ready)),/ChatGPT.*텍스트/);
+ assert.ok(nodes(render(ready)).some(n=>n.type==='button'&&text(n)==='이미지와 함께 묻기'&&n.props.disabled));
+});
+
+test('a ChatGPT send rate limit exposes usage management directly beside the conversation controls',()=>{
+ const state={...base,items:[{id:7,kind:'error',code:'rate_limited',text:'한도에 도달했습니다.',detail:'사용량 확인'}],config:{active:'chatgpt',providers:[{provider:'chatgpt',baseUrl:'https://chatgpt.com',model:'chosen',hasKey:false,ready:true,label:'ChatGPT',supportsImages:false}],chatgpt:{accounts:[{recordId:'a',model:'chosen',signedIn:true,planUsageEnabled:true}],active:'a'}}};
+ assert.ok(nodes(render(state)).some(n=>n.type==='a'&&n.props.href==='https://chatgpt.com/settings/usage'&&/workspace-button/.test(n.props.className||'')));
 });
