@@ -18,3 +18,17 @@ The runner does not approve OS permission prompts. If a call blocks, its 20-seco
 The dummy provider key is removed from this run's `providers.json`. On macOS, the UUID service's OS encryption master may remain in Keychain; the harness deliberately does not enumerate, read via Keychain tools, or delete Keychain entries. Its exact QA service/account are in `run.json`.
 
 This verifies the source key-store integration in the installed Electron runtime on the current OS. It does not verify paid API access, image transmission consent, signed packaged application identity, other operating systems or human acceptance.
+
+# Native ChatGPT agent composition QA
+
+```sh
+node scripts/qa/chatgpt-native.cjs /absolute/path/to/a/new-directory
+```
+
+This separately builds and launches the production main/index, IPC, sandboxed preload, renderer and owned backend with a UUID app/profile. It uses generated RSA/JWKS, generated tokens, fake OpenAI HTTPS responses, captured browser opening and `--use-mock-keychain`. The production localhost OAuth callback remains real. It never opens actual login, reads another app's credentials, uses a subscription, trains a model or transfers images.
+
+The case verifies identity-only refusal, explicit plan reconsent/PKCE, the first-use dialog, model selection, namespace status/read/preparation tools, declined and confirmed real split writes, persisted welcome/limit state after restart, user-controlled resumption with zero automatic sends, and explicit encrypted stale-store recovery. Every phase owns a real backend and checks its PID exits and its port closes. Source hashes, process receipts and screenshots stay in the new folder. Generated credential logging or non-loopback provider network attempts fail the run.
+
+The stale lease uses a genuinely exited fixture process PID after normal app shutdown; it tests crash-state recovery without killing a live app/backend. The encrypted original is archived before all saved ChatGPT credentials are cleared, while registration and selected model remain. Unknown/legacy/live-owner refusal is also covered by `siwcStore.test.cjs`.
+
+This is native software composition with controlled provider output. Actual account eligibility, subscription inference/limits/refresh/revocation, terms acceptance, real OS/package identity, human timing and field-model quality remain separate verification.

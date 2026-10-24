@@ -43,7 +43,10 @@ interface AssistantState {
   removeProvider: (provider: AssistantProviderId) => Promise<void>;
   setActive: (provider: AssistantProviderId) => Promise<void>;
   listModels: (provider: AssistantProviderId) => Promise<{ id: string; label: string }[] | AssistantError>;
-  beginChatgpt: (input: { termsAccepted: true; recordId?: string; label?: string }) => Promise<boolean>;
+  beginChatgpt: (input: { termsAccepted: true; recordId?: string; label?: string; enablePlanUsage?: true }) => Promise<boolean>;
+  acknowledgeChatgptPlanUsage: (recordId:string) => Promise<boolean>;
+  resumeChatgptUsage: (recordId:string) => Promise<boolean>;
+  recoverChatgpt: (input:{ticket:string;confirmed:true}) => Promise<boolean>;
   cancelChatgpt: () => Promise<boolean>;
   selectChatgptAccount: (recordId: string | null) => Promise<boolean>;
   selectChatgptModel: (recordId: string, model: string) => Promise<boolean>;
@@ -80,7 +83,11 @@ export const useAssistantStore = create<AssistantState>((set, get) => {
     if (event.kind === 'assistant') add({ kind: 'assistant', text: event.text });
     else if (event.kind === 'tool') add({ kind: 'tool', text: event.summary, detail: event.name, ok: event.ok });
     else if (event.kind === 'notice') add({ kind: 'notice', text: event.text });
-    else if (event.kind === 'error') add({ kind: 'error', code: event.error.code, text: event.error.reason, detail: [event.error.action, event.error.requestId ? `요청 ID ${event.error.requestId}` : ''].filter(Boolean).join(' ') });
+    else if (event.kind === 'error') {
+      const diagnostic=event.error.diagnostics;
+      add({ kind: 'error', code: event.error.code, text: event.error.reason, detail: [event.error.action, event.error.status?`HTTP ${event.error.status}`:'',diagnostic?`응답 ${diagnostic.bodyShape}`:'',diagnostic?.providerCode,diagnostic?.param?`입력 ${diagnostic.param}`:'',event.error.requestId ? `요청 ID ${event.error.requestId}` : ''].filter(Boolean).join(' ') });
+      if (get().config?.active==='chatgpt'&&event.error.code==='rate_limited') void get().loadConfig();
+    }
     else if (event.kind === 'busy') set({ busy: event.busy });
     else if (event.kind === 'confirm') set({ pending: event.pending });
   };
@@ -131,6 +138,9 @@ export const useAssistantStore = create<AssistantState>((set, get) => {
     removeProvider: async provider => { invalidateAssistant(); await configCall(bridge => bridge.removeProvider(provider)); },
     setActive: async provider => { invalidateAssistant(); await configCall(bridge => bridge.setActive(provider)); },
     beginChatgpt: input => chatgptCall(connection => connection.begin(input)),
+    acknowledgeChatgptPlanUsage: recordId => configCall(bridge => {if(!bridge.chatgpt)throw new Error('ChatGPT 연결 설정을 확인하세요.');return bridge.chatgpt.acknowledgePlanUsage(recordId);}),
+    resumeChatgptUsage: recordId => chatgptCall(connection => connection.resumeUsage(recordId)),
+    recoverChatgpt: input => chatgptCall(connection => connection.recover(input)),
     cancelChatgpt: () => chatgptCall(connection => connection.cancel()),
     selectChatgptAccount: recordId => chatgptCall(connection => connection.selectAccount(recordId)),
     selectChatgptModel: (recordId, model) => chatgptCall(connection => connection.selectModel(recordId, model)),

@@ -82,8 +82,10 @@ export function sanitizedTools(tools:unknown):AssistantToolSpec[] {
 /** Separate main-only connection: no credential accessor is part of the service contract. */
 export interface AssistantChatgptConnection {
   state():AssistantChatgptState; authority():string;
-  begin(input:{termsAccepted:true;recordId?:string;label?:string}):Promise<AssistantChatgptState>;
+  begin(input:{termsAccepted:true;recordId?:string;label?:string;enablePlanUsage?:true}):Promise<AssistantChatgptState>;
   cancel():unknown; selectAccount(id:string|null):unknown; selectModel(id:string,model:string):unknown;
+  acknowledgePlanUsage(id:string):unknown;resumeUsage(id:string):unknown;
+  recover(input:{ticket:string;confirmed:true}):unknown;
   signOut(id:string):Promise<unknown>; dispose():unknown;
   listModels():Promise<{id:string;label:string}[]>;
   complete(input:{system:string;messages:AssistantMessage[];tools:AssistantToolSpec[];signal?:AbortSignal;timeoutMs?:number}):Promise<Completion>;
@@ -125,7 +127,7 @@ export class AssistantService {
         ...(account ? [
         {provider: 'chatgpt' as const, baseUrl: 'https://api.openai.com/v1', model: account.model, format: 'responses' as const,
           label: `ChatGPT · ${account.label}`, hasKey: false, supportsImages: false,
-          ready: account.signedIn && account.planUsageEnabled && Boolean(account.model) && chatgpt.status !== 'waiting' && chatgpt.status !== 'exchanging' && chatgpt.status !== 'error', connectionAuthority: chatgpt.authority}] : [])]} : {})};
+          ready: account.signedIn && account.planUsageEnabled && !account.usagePaused && Boolean(account.model) && chatgpt.status !== 'waiting' && chatgpt.status !== 'exchanging' && chatgpt.status !== 'error', connectionAuthority: chatgpt.authority}] : [])]} : {})};
     });
   }
   private retire():void {this.grants.clear();for (const controller of this.running.values()) controller.abort();}
@@ -140,7 +142,10 @@ export class AssistantService {
   removeProvider(provider:AssistantProviderId):AssistantConfigState {return this.settings(() => {this.retire();if (provider !== 'chatgpt') this.options.store.removeProvider(provider);return this.state();});}
   setActive(provider:AssistantProviderId):AssistantConfigState {return this.settings(() => {this.retire();if (provider !== 'chatgpt') {this.options.store.setActive(provider);this.chooseApiRecipient();}else {const connection=this.connection(),id=connection.state().active;if (!id) throw new Error('먼저 ChatGPT 계정을 직접 선택하세요.');connection.selectAccount(id);this.apiRecipientSelected=false;}return this.state();});}
   private connection():AssistantChatgptConnection {if (!this.options.chatgpt) throw new Error('이 앱 버전에서는 ChatGPT 연결을 쓸 수 없습니다.');return this.options.chatgpt;}
-  async chatgptBegin(input:{termsAccepted:true;recordId?:string;label?:string}):Promise<AssistantConfigState> {this.retire();await this.connection().begin(input);this.apiRecipientSelected=false;return this.state();}
+  async chatgptBegin(input:{termsAccepted:true;recordId?:string;label?:string;enablePlanUsage?:true}):Promise<AssistantConfigState> {this.retire();await this.connection().begin(input);this.apiRecipientSelected=false;return this.state();}
+  async chatgptAcknowledgePlanUsage(id:string):Promise<AssistantConfigState> {await this.connection().acknowledgePlanUsage(id);return this.state();}
+  async chatgptResumeUsage(id:string):Promise<AssistantConfigState> {this.retire();await this.connection().resumeUsage(id);return this.state();}
+  async chatgptRecover(input:{ticket:string;confirmed:true}):Promise<AssistantConfigState> {await this.connection().recover(input);this.retire();this.apiRecipientSelected=false;return this.state();}
   async chatgptCancel():Promise<AssistantConfigState> {this.retire();await this.connection().cancel();return this.state();}
   async chatgptSelectAccount(id:string|null):Promise<AssistantConfigState> {this.retire();await this.connection().selectAccount(id);this.apiRecipientSelected=id===null;return this.state();}
   async chatgptSelectModel(id:string,model:string):Promise<AssistantConfigState> {this.retire();await this.connection().selectModel(id,model);this.apiRecipientSelected=false;return this.state();}

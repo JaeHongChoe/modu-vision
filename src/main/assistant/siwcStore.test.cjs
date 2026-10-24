@@ -104,3 +104,57 @@ test('peekState reads existing protected registrations through the exclusive sto
  const {store,dir}=fixture(t);const a=store.save(tokens(),{label:'existing'});store.close();const reopened=new SiwcStore(dir,fakeEncryptor());t.after(()=>reopened.close());
  assert.equal(reopened.peekState().accounts[0].recordId,a.recordId);const competitor=new SiwcStore(dir,fakeEncryptor());assert.throws(()=>competitor.open(),isCode('store_locked'));competitor.close();
 });
+
+function crashedStore(t){
+ const {root,dir,store}=fixture(t);
+ const source=`const fs=require('node:fs'),Module=require('node:module'),path=require('node:path'),ts=require('typescript');const file=process.argv[1],m=new Module(file,module);m.filename=file;m.paths=Module._nodeModulePaths(path.dirname(file));m._compile(ts.transpileModule(fs.readFileSync(file,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022,esModuleInterop:true}}).outputText,file);const e={isAvailable:()=>true,encrypt:p=>Buffer.from('enc:'+Buffer.from(p).toString('hex')),decrypt:c=>Buffer.from(c.toString().slice(4),'hex').toString()};const s=new m.exports.SiwcStore(process.argv[2],e);const a=s.save(JSON.parse(process.argv[3]),{label:'retained account'});s.setModel(a.recordId,'retained-model');process.stdout.write(JSON.stringify({pid:process.pid,id:a.recordId,host:s.hostId()}));`;
+ const child=require('node:child_process').spawnSync(process.execPath,['-e',source,path.join(__dirname,'siwcStore.ts'),dir,JSON.stringify(tokens())],{encoding:'utf8',cwd:path.resolve(__dirname,'../../..'),timeout:10000});
+ assert.equal(child.status,0,child.stderr);return{root,dir,store,...JSON.parse(child.stdout)};
+}
+
+test('welcome acknowledgement and usage pause survive refresh, signout and restart without exposing identity',t=>{
+ const {dir,store}=fixture(t);const a=store.save(tokens());store.acknowledgePlanUsage(a.recordId);store.setUsagePaused(a.recordId,true);
+ store.save({...tokens(),accessToken:'replacement-access'},{recordId:a.recordId});store.clearCredentials(a.recordId);
+ assert.equal(store.state().accounts[0].planUsageAcknowledged,true);assert.equal(store.state().accounts[0].usagePaused,true);store.close();
+ const reopened=new SiwcStore(dir,fakeEncryptor());t.after(()=>reopened.close());assert.equal(reopened.state().accounts[0].planUsageAcknowledged,true);assert.equal(reopened.state().accounts[0].usagePaused,true);
+ reopened.setUsagePaused(a.recordId,false);assert.equal(reopened.state().accounts[0].usagePaused,false);
+ assert.throws(()=>reopened.setUsagePaused(a.recordId,'false'),isCode('invalid_record'));
+});
+
+test('a real crashed owner stays locked until explicit instance-owned recovery archives ciphertext and clears credentials',t=>{
+ const {dir,store,id,host,pid}=crashedStore(t);assert.notEqual(pid,process.pid);assert.throws(()=>process.kill(pid,0),e=>e.code==='ESRCH');
+ assert.throws(()=>store.open(),isCode('store_locked'));const raw=fs.readFileSync(store.file,'utf8'),lock=fs.readFileSync(store.lockFile,'utf8');
+ const denied=new SiwcStore(dir,fakeEncryptor());assert.equal(denied.recoveryStatus().available,false);denied.close();
+ const recovery=new SiwcStore(dir,fakeEncryptor(),{canRecover:()=>true});t.after(()=>recovery.close());
+ const preview=recovery.recoveryStatus();assert.equal(preview.available,true);assert.equal(preview.reason,'stale_owner');assert.match(preview.ticket,/^[a-f0-9]{64}$/);
+ assert.throws(()=>recovery.recover({ticket:preview.ticket,confirmed:false}),isCode('recovery_confirmation_required'));
+ assert.throws(()=>recovery.recover({ticket:'wrong',confirmed:true}),isCode('recovery_changed'));
+ assert.equal(fs.readFileSync(store.file,'utf8'),raw);assert.equal(fs.readFileSync(store.lockFile,'utf8'),lock);
+ recovery.recover({ticket:preview.ticket,confirmed:true});assert.equal(recovery.credentials(id),null);assert.equal(recovery.hostId(),host);
+ assert.equal(recovery.registration(id).clientId,tokens().clientId);assert.equal(recovery.state().accounts[0].model,'retained-model');assert.equal(recovery.state().accounts[0].signedIn,false);
+ const archives=fs.readdirSync(dir).filter(name=>name.startsWith('chatgpt-sessions.recovery-'));assert.equal(archives.length,1);
+ assert.equal(fs.readFileSync(path.join(dir,archives[0]),'utf8'),raw);if(process.platform!=='win32')assert.equal(fs.statSync(path.join(dir,archives[0])).mode&0o777,0o600);
+ for(const name of fs.readdirSync(dir)){const content=fs.readFileSync(path.join(dir,name),'utf8');assert.ok(!content.includes(tokens().accessToken));assert.ok(!content.includes(tokens().subject));}
+ assert.equal(recovery.save(tokens(),{recordId:id}).recordId,id);
+});
+
+test('recovery refuses live, legacy and unverifiable owners without touching their bytes',t=>{
+ const {dir,store}=fixture(t);store.save(tokens());const active=new SiwcStore(dir,fakeEncryptor(),{canRecover:()=>true});t.after(()=>active.close());
+ let raw=fs.readFileSync(store.lockFile,'utf8');assert.equal(active.recoveryStatus().reason,'active_owner');assert.throws(()=>active.recover({ticket:'x',confirmed:true}));assert.equal(fs.readFileSync(store.lockFile,'utf8'),raw);
+ store.close();fs.writeFileSync(store.lockFile,'old-nonce-only-lease',{mode:0o600});raw=fs.readFileSync(store.lockFile,'utf8');assert.equal(active.recoveryStatus().reason,'unverifiable_owner');assert.equal(fs.readFileSync(store.lockFile,'utf8'),raw);
+ fs.writeFileSync(store.lockFile,JSON.stringify({schema_version:2,pid:2147483647,nonce:'a'.repeat(64)}));const kill=process.kill;process.kill=()=>{throw Object.assign(new Error('denied'),{code:'EPERM'});};
+ try{assert.equal(active.recoveryStatus().reason,'unverifiable_owner');}finally{process.kill=kill;}
+});
+
+test('a recovery confirmation is bound to both the lease and encrypted store snapshot',t=>{
+ const {dir,store}=crashedStore(t);const recovery=new SiwcStore(dir,fakeEncryptor(),{canRecover:()=>true});t.after(()=>recovery.close());const preview=recovery.recoveryStatus();
+ const original=fs.readFileSync(store.file,'utf8');fs.writeFileSync(store.file,original+' ');const changed=fs.readFileSync(store.file,'utf8'),lock=fs.readFileSync(store.lockFile,'utf8');
+ assert.throws(()=>recovery.recover({ticket:preview.ticket,confirmed:true}),isCode('recovery_changed'));assert.equal(fs.readFileSync(store.file,'utf8'),changed);assert.equal(fs.readFileSync(store.lockFile,'utf8'),lock);
+ assert.equal(fs.readdirSync(dir).filter(name=>name.startsWith('chatgpt-sessions.recovery-')).length,0);
+});
+
+test('failed credential clearing retains the stale lease and old encrypted state for another explicit attempt',t=>{
+ const {dir,store}=crashedStore(t);const encryptor=fakeEncryptor(),recovery=new SiwcStore(dir,encryptor,{canRecover:()=>true});t.after(()=>recovery.close());const preview=recovery.recoveryStatus(),raw=fs.readFileSync(store.file,'utf8'),lock=fs.readFileSync(store.lockFile,'utf8');
+ encryptor.encrypt=()=>{throw new Error('sensitive failure');};assert.throws(()=>recovery.recover({ticket:preview.ticket,confirmed:true}),e=>!e.message.includes('sensitive'));
+ assert.equal(fs.readFileSync(store.file,'utf8'),raw);assert.equal(fs.readFileSync(store.lockFile,'utf8'),lock);assert.throws(()=>new SiwcStore(dir,fakeEncryptor()).open(),isCode('store_locked'));
+});

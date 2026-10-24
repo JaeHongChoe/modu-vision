@@ -101,8 +101,8 @@ def test_approval_api_refuses_changed_holdout_and_active_revision(measured_candi
             assert (await client.get(prefix+'/heldout-results/1')).status_code==200
             assert (await client.get(prefix+'/heldout-results/2')).status_code==409
             stale=await client.post(prefix+'/approve',json=body)
-            assert stale.status_code==409 and 'changed' in stale.text
+            assert stale.status_code==409 and '바뀌' in stale.text
             image.write_bytes(b'changed original')
             changed=await client.get(prefix+'/approval-prerequisites')
-            assert changed.status_code==409 and 'changed' in changed.text
+            assert changed.status_code==409 and '바뀌' in changed.text
     asyncio.run(exercise())

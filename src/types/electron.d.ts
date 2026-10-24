@@ -55,8 +55,9 @@ export type AssistantProviderId = AssistantApiKeyProviderId | 'chatgpt';
 /** OpenAI-compatible request format: Chat Completions or Responses. */
 export type AssistantApiFormat = 'chat' | 'responses';
 export interface AssistantProviderPublic {provider:AssistantProviderId;baseUrl:string;model:string;format:AssistantApiFormat|null;hasKey:boolean;supportsImages:boolean;label:string;ready?:boolean;connectionAuthority?:string}
-export interface AssistantChatgptAccount {recordId:string;label:string;model:string;signedIn:boolean;planUsageEnabled:boolean}
-export interface AssistantChatgptState {accounts:AssistantChatgptAccount[];active:string|null;encryptionAvailable:boolean;status:'idle'|'waiting'|'exchanging'|'connected'|'error';error?:AssistantError;remoteRevocationConfirmed?:boolean;authority?:string}
+export interface AssistantChatgptAccount {recordId:string;label:string;model:string;signedIn:boolean;planUsageEnabled:boolean;planUsageAcknowledged?:boolean;usagePaused?:boolean}
+export interface AssistantChatgptRecoveryState {available:boolean;reason:'none'|'active_owner'|'unverifiable_owner'|'unsafe_store'|'closed'|'encryption_unavailable'|'stale_owner'|'unavailable_authority';ticket?:string}
+export interface AssistantChatgptState {accounts:AssistantChatgptAccount[];active:string|null;encryptionAvailable:boolean;status:'idle'|'waiting'|'exchanging'|'connected'|'error';error?:AssistantError;remoteRevocationConfirmed?:boolean;authority?:string;recovery?:AssistantChatgptRecoveryState}
 export interface AssistantConfigState {providers:AssistantProviderPublic[];active:AssistantProviderId|null;encryptionAvailable:boolean;chatgpt?:AssistantChatgptState}
 export interface AssistantProviderInput {provider:AssistantApiKeyProviderId;baseUrl:string;model:string;format?:AssistantApiFormat;supportsImages:boolean;
   /** Sent once from the key field straight to the main process; never returned. */ key?:string;activate?:boolean}
@@ -71,7 +72,8 @@ export interface AssistantImageInput {grantId:string;imageIdentity:string;mediaT
 export interface AssistantSendInput {requestId:string;context:Record<string,unknown>;messages:AssistantMessage[];tools:AssistantToolSpec[];image?:AssistantImageInput}
 export type AssistantErrorCode = 'no_provider'|'no_key'|'storage_unavailable'|'bad_key'|'forbidden'|'billing'|'not_found'|'bad_request'
   |'rate_limited'|'overloaded'|'server'|'network'|'timeout'|'cancelled'|'bad_response'|'invalid_input'|'image_refused';
-export interface AssistantError {code:AssistantErrorCode;reason:string;action:string;status?:number;requestId?:string;detail?:string}
+export interface AssistantErrorDiagnostics {providerCode?:string;param?:string;bodyShape:'error_object'|'oauth_error'|'detail'|'other'|'response_error'|'stream_error'}
+export interface AssistantError {code:AssistantErrorCode;reason:string;action:string;status?:number;requestId?:string;detail?:string;diagnostics?:AssistantErrorDiagnostics}
 export type AssistantSendResult =
   | {ok:true;text:string;toolCalls:AssistantToolCall[];replay?:unknown;stop:'end'|'tool'|'length';requestId?:string}
   | {ok:false;error:AssistantError};
@@ -93,7 +95,10 @@ export interface AssistantBridge {
   endRun:(runId:string)=>Promise<void>;
   /** Optional in older desktop bridges. Tokens and authorization URLs never cross IPC. */
   chatgpt?: {
-    begin:(input:{termsAccepted:true;recordId?:string;label?:string})=>Promise<AssistantConfigState>;
+    begin:(input:{termsAccepted:true;recordId?:string;label?:string;enablePlanUsage?:true})=>Promise<AssistantConfigState>;
+    acknowledgePlanUsage:(recordId:string)=>Promise<AssistantConfigState>;
+    resumeUsage:(recordId:string)=>Promise<AssistantConfigState>;
+    recover:(input:{ticket:string;confirmed:true})=>Promise<AssistantConfigState>;
     cancel:()=>Promise<AssistantConfigState>;
     selectAccount:(recordId:string|null)=>Promise<AssistantConfigState>;
     selectModel:(recordId:string,model:string)=>Promise<AssistantConfigState>;

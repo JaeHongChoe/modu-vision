@@ -4,25 +4,27 @@
  */
 import http, {type Server} from 'node:http';
 import {createHash, type JsonWebKey} from 'node:crypto';
-import type {AssistantError, AssistantMessage, AssistantToolSpec} from '../../types/electron';
+import type {AssistantChatgptRecoveryState, AssistantError, AssistantMessage, AssistantToolSpec} from '../../types/electron';
 import {ProviderError, assistantError, type Completion} from './providers';
-import {acceptAuthorizationTokens, buildSiwcTextRequest, createAuthorizationAttempt, readSiwcResponse,
+import {acceptAuthorizationTokens, buildSiwcTextRequest, createAuthorizationAttempt, readSiwcResponse, siwcResponseError,
   SiwcProtocolError, SiwcTokenSession, type SiwcIdentity, type SiwcTokens} from './siwcProtocol';
 
 const AUTH = 'https://auth.openai.com', API = 'https://api.openai.com/v1';
 const DISCOVERY = `${AUTH}/.well-known/openid-configuration`, TOKEN = `${AUTH}/api/accounts/oauth/token`;
-type Account = {recordId:string;label:string;model:string;signedIn:boolean;planUsageEnabled:boolean};
+type Account = {recordId:string;label:string;model:string;signedIn:boolean;planUsageEnabled:boolean;planUsageAcknowledged?:boolean;usagePaused?:boolean};
 export interface SiwcConnectionStore {
   state():{accounts:Account[];active:string|null;encryptionAvailable:boolean};
   peekState?():{accounts:Account[];active:string|null;encryptionAvailable:boolean};
   hostId():string;registration(id:string):SiwcIdentity|null;credentials(id?:string):SiwcTokens|null;
   save(tokens:SiwcTokens, options?:{recordId?:string;label?:string;activate?:boolean}):Account;
   clearCredentials(id:string):void;setActive(id:string|null):void;setModel(id:string, model:string):void;
+  acknowledgePlanUsage(id:string):void;setUsagePaused(id:string,paused:boolean):void;
+  recoveryStatus?():AssistantChatgptRecoveryState;recover?(input:{ticket:string;confirmed:true}):void;
   close?():void;
 }
 export interface SiwcConnectionState {
   accounts:Account[];active:string|null;encryptionAvailable:boolean;
-  status:'idle'|'waiting'|'exchanging'|'connected'|'error';error?:AssistantError;remoteRevocationConfirmed?:boolean;
+  status:'idle'|'waiting'|'exchanging'|'connected'|'error';error?:AssistantError;remoteRevocationConfirmed?:boolean;recovery?:AssistantChatgptRecoveryState;
 }
 type Discovery = {issuer:string;jwks_uri:string;revocation_endpoint?:string};
 type Attempt = {server:Server;controller:AbortController;timer:ReturnType<typeof setTimeout>;generation:number};
@@ -34,26 +36,36 @@ const protocol = (code:string, recovery:'sign_in'|'retry_later'|'fix_request'='f
 const requestId = (response:Response):string|undefined => {const value=response.headers.get('x-request-id');return value&&/^[A-Za-z0-9_-]{1,200}$/.test(value)?value:undefined;};
 
 /** Errors contain application-owned Korean text only. No raw provider body, URL, code, token or claims. */
-export function siwcConnectionError(error:unknown):AssistantError {
+function connectionError(error:unknown):AssistantError {
   if (error instanceof ProviderError) return error.detail;
   const code = obj(error).code, status = typeof obj(error).status==='number' ? obj(error).status : undefined;
   if (code==='cancelled') return assistantError('cancelled');
   if (code==='timeout' || code==='attempt_expired') return assistantError('timeout',{reason:'ChatGPT 연결 또는 응답 시간이 초과되었습니다.',action:'다시 연결하거나 잠시 뒤 다시 보내세요.'});
-  if (code==='storage_unavailable' || code==='store_locked' || code==='store_corrupt' || code==='storage_failed') return assistantError('storage_unavailable',{reason:code==='store_locked'?'다른 앱 창이 ChatGPT 보호 저장소를 사용 중입니다.':'ChatGPT 계정을 보호 저장소에 저장하거나 읽지 못했습니다.',action:'다른 앱 실행을 닫거나 OS 보호 저장소를 확인한 뒤 다시 연결하세요.'});
+  if (code==='storage_unavailable' || code==='store_locked' || code==='store_corrupt' || code==='storage_failed') return assistantError('storage_unavailable',{reason:code==='store_locked'?'ChatGPT 보호 저장소가 잠겼습니다. 다른 앱 실행 중이거나 비정상 종료된 연결일 수 있습니다.':'ChatGPT 계정을 보호 저장소에 저장하거나 읽지 못했습니다.',action:'다른 앱 실행을 닫거나 OS 보호 저장소를 확인한 뒤 다시 연결하세요.'});
   if (code==='terms_required') return assistantError('invalid_input',{reason:'연결 전에 이용약관과 전송 안내를 확인하세요.',action:'설정의 안내를 확인한 뒤 직접 ChatGPT로 계속 버튼을 누르세요.'});
+  if (code==='recovery_changed') return assistantError('storage_unavailable',{reason:'복구를 준비한 뒤 연결 상태가 바뀌었습니다.',action:'연결 상태를 다시 확인하고 새 복구 안내를 확인하세요.'});
+  if (code==='recovery_unavailable'||code==='recovery_confirmation_required') return assistantError('storage_unavailable',{reason:'이 연결은 지금 안전하게 복구할 수 없습니다.',action:'다른 실행을 종료하고 연결 상태를 다시 확인하세요. 복구 안내를 읽고 직접 확인해야 합니다.'});
   if (code==='access_denied') return assistantError('forbidden',{reason:'ChatGPT 연결을 허용하지 않았습니다.',action:'필요할 때 설정에서 다시 연결하세요.'});
   if (code==='plan_scope_missing') return assistantError('forbidden',{reason:'계정 로그인은 확인됐지만 ChatGPT 요금제 사용 권한이 허용되지 않았습니다.',action:'연결 권한을 확인하거나 API 키 공급자를 사용하세요.'});
-  if (code==='subscription_sharing_usage_limit_exceeded') return assistantError('rate_limited',{reason:'ChatGPT 요금제 사용 한도에 도달했습니다.',action:'ChatGPT 사용량 화면을 확인하세요. 자동으로 재전송하지 않습니다.',status});
+  if (code==='subscription_sharing_usage_limit_exceeded' || code==='usage_paused') return assistantError('rate_limited',{reason:'ChatGPT 플랜 요청을 사용 한도 때문에 일시 중단했습니다.',action:'ChatGPT 사용량을 확인한 뒤 설정에서 직접 요청 재개를 허용하세요. 자동으로 재전송하지 않습니다.',status});
   if (code==='subscription_sharing_invalid_user') return assistantError('forbidden',{reason:'이 ChatGPT 계정의 요금제 사용을 확인할 수 없습니다.',action:'선택한 계정과 연결 권한을 확인하세요.',status});
+  if (code==='invalid_client') return assistantError('bad_request',{reason:'ChatGPT 앱 등록 설정을 확인해야 합니다.',action:'앱 등록 설정과 클라이언트 구성을 확인하세요. 같은 요청이나 로그인을 반복하지 마세요.',status});
+  if (code==='subscription_sharing_user_not_eligible') return assistantError('forbidden',{reason:'선택한 사용자·작업 공간의 정책에서 ChatGPT 플랜 사용을 허용하지 않습니다.',action:'지원 범위와 작업 공간 정책을 확인하세요. 같은 요청이나 로그인을 반복하지 마세요.',status});
+  if (['chatpass_v2_scope_not_authorized','chatpass_v2_invalid_authorization_context'].includes(code)) return assistantError('forbidden',{reason:'ChatGPT 연결의 플랜 사용 권한을 확인하지 못했습니다.',action:'선택한 계정·앱 등록·허용한 권한을 확인하세요. 다른 결제 방식으로 자동 전환하지 않습니다.',status});
+  if (code==='subscription_sharing_unsupported_capability' || code==='subscription_sharing_route_not_supported') return assistantError('bad_request',{reason:'이 ChatGPT 연결에서 지원하지 않는 요청입니다.',action:'기술 상세의 입력·도구·모델 또는 요청 경로를 확인하세요. 같은 요청을 그대로 재시도하지 마세요.',status});
   if (['signed_out','reconnect_required','invalid_grant','invalid_refresh_token','token_expired','refresh_token_expired','refresh_token_invalidated','refresh_token_reused'].includes(code)) return assistantError('no_key',{reason:'ChatGPT에 다시 연결해야 합니다.',action:'설정에서 해당 계정으로 다시 연결하세요.'});
   if (code==='no_account') return assistantError('no_provider',{reason:'ChatGPT 계정이 선택되지 않았습니다.',action:'설정에서 계정을 연결하고 선택하세요.'});
   if (code==='model_required' || code==='model_not_listed') return assistantError('not_found',{reason:'사용할 ChatGPT 모델을 확인해야 합니다.',action:'모델 목록을 새로 읽고 사용할 모델을 직접 선택하세요.'});
   if (['invalid_id_token','invalid_state','invalid_callback_uri','duplicate_callback_parameter','invalid_client_binding','identity_mismatch','invalid_discovery','invalid_jwks','authorization_failed','invalid_token_response'].includes(code)) return assistantError('bad_response',{reason:'ChatGPT 연결의 보안 확인을 완료하지 못했습니다.',action:'연결을 새로 시작하세요. 이전 연결 정보로 요청을 보내지 않습니다.'});
-  if (status===401) return assistantError('bad_key',{reason:'ChatGPT 연결이 만료되었거나 거절되었습니다.',action:'해당 계정으로 다시 연결하세요.',status});
-  if (status===403) return assistantError('forbidden',{reason:'선택한 ChatGPT 계정이나 모델로 요청을 보낼 수 없습니다.',action:'연결 권한을 확인하거나 다른 모델을 선택하세요.',status});
+  if (status===401) return assistantError('forbidden',{reason:'ChatGPT 계정의 서명 또는 플랜 사용 권한이 받아들여지지 않았습니다.',action:'선택한 계정과 허용한 권한을 확인하세요. 철회나 갱신 실패가 확인되기 전에는 로그인 정보를 지우지 않습니다.',status});
+  if (status===403) return assistantError('forbidden',{reason:'정책이나 권한 제한으로 ChatGPT 요청을 보낼 수 없습니다.',action:'선택한 계정·허용 지역·앱 연결 정책을 확인하세요.',status});
   if (status===429) return assistantError('rate_limited',{reason:'ChatGPT 사용 한도 또는 요청 빈도 제한에 걸렸습니다.',action:'ChatGPT 사용량을 확인한 뒤 직접 다시 보내세요.',status});
   if (status && status>=500 || ['transport_failed','subscription_sharing_usage_unavailable','subscription_sharing_user_unavailable'].includes(code)) return assistantError('network',{reason:'ChatGPT 연결을 완료하지 못했습니다.',action:'인터넷 연결을 확인하고 잠시 뒤 다시 시도하세요.',status});
   return assistantError('bad_response',{reason:'ChatGPT 응답을 안전하게 읽지 못했습니다.',action:'대화를 새로 시작하거나 설정의 연결 상태를 확인하세요.',status});
+}
+export function siwcConnectionError(error:unknown):AssistantError {
+  const result=connectionError(error);
+  return error instanceof SiwcProtocolError&&error.diagnostics?{...result,diagnostics:{...error.diagnostics}}:result;
 }
 
 export class SiwcConnection {
@@ -86,7 +98,7 @@ export class SiwcConnection {
     if(this.disposed)return {accounts:[],active:null,encryptionAvailable:false,status:'idle'};
     try {const raw=this.store.peekState?.()??this.store.state(),state={...raw,accounts:raw.accounts.map(a=>this.blocked.has(a.recordId)?{...a,signedIn:false,planUsageEnabled:false}:a)},signed=state.accounts.some(a=>a.recordId===state.active&&a.signedIn);
       return {...state,status:this.status==='idle'&&signed?'connected':this.status,...(this.error?{error:{...this.error}}:{}),...(this.revocation!==undefined?{remoteRevocationConfirmed:this.revocation}:{})};
-    } catch(error) {return {accounts:[],active:null,encryptionAvailable:false,status:'error',error:siwcConnectionError(error)};}
+    } catch(error) {let recovery:AssistantChatgptRecoveryState|undefined;try{recovery=this.store.recoveryStatus?.();}catch{}return {accounts:[],active:null,encryptionAvailable:false,status:'error',error:siwcConnectionError(error),...(recovery?{recovery}:{})};}
   }
   /** Opaque recipient binding; no user identity, token or stable subject appears in this value. */
   authority():string {const state=this.state(),active=state.accounts.find(a=>a.recordId===state.active);return `${this.revision}:${state.active||''}:${active?.model||''}:${active?.signedIn===true}`;}
@@ -123,10 +135,7 @@ export class SiwcConnection {
     catch(error) {if(error instanceof SiwcProtocolError)throw error;throw protocol('bad_response');}
     finally {try{await reader.cancel();}catch{}}
   }
-  private httpError(status:number, body:unknown) {const raw=obj(body),candidate=typeof raw.error==='string'?raw.error:obj(raw.error).code;
-    const known=new Set(['invalid_grant','invalid_refresh_token','token_expired','refresh_token_expired','refresh_token_invalidated','refresh_token_reused','invalid_client','subscription_sharing_usage_limit_exceeded','subscription_sharing_invalid_user','subscription_sharing_usage_unavailable','subscription_sharing_user_unavailable']);
-    return new SiwcProtocolError(known.has(candidate)?candidate:'http_error','fix_request',status);
-  }
+  private httpError(status:number, body:unknown) {return siwcResponseError(status,body);}
   private async discovery(signal:AbortSignal):Promise<Discovery> {
     if(this.discovered)return this.discovered;
     const response=await this.request(DISCOVERY,{method:'GET',headers:{Accept:'application/json'}},signal);const value=obj(await this.json(response,signal));
@@ -143,11 +152,12 @@ export class SiwcConnection {
     if(request.url!==TOKEN){try{await response.body?.cancel();}catch{}return {status:response.status};}
     return {status:response.status,body:await this.json(response,request.signal)};};
 
-  async begin(input:{termsAccepted:boolean;recordId?:string;label?:string}):Promise<SiwcConnectionState> {
+  async begin(input:{termsAccepted:boolean;recordId?:string;label?:string;enablePlanUsage?:true}):Promise<SiwcConnectionState> {
     this.assertOpen();if(input?.termsAccepted!==true)throw new ProviderError(siwcConnectionError(protocol('terms_required')));
     if(!this.store.state().encryptionAvailable)throw new ProviderError(siwcConnectionError(protocol('storage_unavailable')));
     if(input.recordId!==undefined&&!validRecord(input.recordId))throw new ProviderError(assistantError('invalid_input'));
     const registration=input.recordId?this.store.registration(input.recordId):null;if(input.recordId&&!registration)throw new ProviderError(assistantError('invalid_input'));
+    if(input.enablePlanUsage!==undefined&&(input.enablePlanUsage!==true||!input.recordId||this.store.state().accounts.find(a=>a.recordId===input.recordId)?.planUsageEnabled!==false))throw new ProviderError(assistantError('invalid_input'));
     const label=input.label?.trim();if(label!==undefined&&(!label||label.length>100))throw new ProviderError(assistantError('invalid_input'));
     this.invalidate();const generation=this.generation;this.status='waiting';
     let server:Server|undefined;
@@ -156,7 +166,7 @@ export class SiwcConnection {
       await new Promise<void>((resolve,reject)=>{const error=()=>reject(protocol('listener_failed'));server!.once('error',error);server!.listen(0,'127.0.0.1',()=>{server!.off('error',error);resolve();});});
       if(this.disposed||generation!==this.generation){server.close();throw protocol('cancelled');}
       const address=server.address();if(!address||typeof address==='string')throw protocol('listener_failed');const redirectUri=`http://127.0.0.1:${address.port}/auth/callback`;
-      const auth=createAuthorizationAttempt({hostId:this.store.hostId(),appName:'Modu Vision',redirectUri,clientId:registration?.clientId,now:this.now});
+      const auth=createAuthorizationAttempt({hostId:this.store.hostId(),appName:'Modu Vision',redirectUri,clientId:registration?.clientId,promptConsent:input.enablePlanUsage===true,now:this.now});
       const controller=new AbortController();const timer=setTimeout(()=>{if(this.attempt?.generation===generation){this.closeAttempt();this.failure(protocol('attempt_expired'));}},this.attemptTimeoutMs);timer.unref?.();
       this.attempt={server,controller,timer,generation};server.unref();
       server.on('request',(req,res)=>{res.setHeader('Content-Type','text/html; charset=utf-8');res.setHeader('Cache-Control','no-store');res.setHeader('Content-Security-Policy',"default-src 'none'; frame-ancestors 'none'");res.setHeader('Referrer-Policy','no-referrer');
@@ -178,9 +188,17 @@ export class SiwcConnection {
   cancel():SiwcConnectionState {this.invalidate();this.status='idle';return this.state();}
   selectAccount(id:string|null):SiwcConnectionState {this.assertOpen();if(id!==null&&(!validRecord(id)||!this.store.registration(id)))throw new ProviderError(assistantError('invalid_input'));this.invalidate();this.store.setActive(id);this.status='idle';return this.state();}
   selectModel(recordId:string,model:string):SiwcConnectionState {this.assertOpen();if(!validRecord(recordId)||!this.store.registration(recordId)||!validModel(model)||!this.listed.get(recordId)?.has(model))throw new ProviderError(siwcConnectionError(protocol('model_not_listed')));this.invalidate();this.store.setModel(recordId,model);this.status='idle';return this.state();}
+  acknowledgePlanUsage(recordId:string):SiwcConnectionState {const account=this.account();if(account.recordId!==recordId)throw new ProviderError(assistantError('invalid_input'));this.store.acknowledgePlanUsage(recordId);return this.state();}
+  resumeUsage(recordId:string):SiwcConnectionState {const account=this.account();if(account.recordId!==recordId||!account.usagePaused)throw new ProviderError(assistantError('invalid_input'));this.invalidate();this.store.setUsagePaused(recordId,false);this.status='idle';return this.state();}
+  recover(input:{ticket:string;confirmed:true}):SiwcConnectionState {
+    this.assertOpen();if(input?.confirmed!==true||typeof input.ticket!=='string'||!/^[a-f0-9]{64}$/.test(input.ticket)||!this.store.recover)throw new ProviderError(siwcConnectionError(protocol('recovery_confirmation_required')));
+    const recovery=this.store.recoveryStatus?.();if(!recovery?.available||recovery.ticket!==input.ticket)throw new ProviderError(siwcConnectionError(protocol('recovery_unavailable')));
+    this.invalidate();this.sessions.clear();this.listed.clear();this.blocked.clear();
+    try{this.store.recover(input);this.status='idle';return this.state();}catch(error){this.failure(error);throw new ProviderError(siwcConnectionError(error));}
+  }
   private account(requireModel=false):Account {this.assertOpen();const state=this.store.state(),account=state.accounts.find(a=>a.recordId===state.active);
     if(!account)throw protocol('no_account');if(!account.signedIn||this.blocked.has(account.recordId))throw protocol('reconnect_required','sign_in');
-    if(!account.planUsageEnabled)throw protocol('plan_scope_missing');if(requireModel&&!validModel(account.model))throw protocol('model_required');return account;}
+    if(!account.planUsageEnabled)throw protocol('plan_scope_missing');if(requireModel&&account.usagePaused)throw protocol('usage_paused');if(requireModel&&!validModel(account.model))throw protocol('model_required');return account;}
   private async access(recordId:string,signal:AbortSignal,timeoutMs:number):Promise<SiwcTokens> {
     if(this.blocked.has(recordId))throw protocol('reconnect_required','sign_in');const tokens=this.store.credentials(recordId);if(!tokens)throw protocol('signed_out','sign_in');
     if(!tokens.planUsageEnabled)throw protocol('plan_scope_missing');if(tokens.expiresAt>this.now()+30000)return tokens;
@@ -197,7 +215,10 @@ export class SiwcConnection {
         if(this.disposed||this.sessions.get(recordId)!==owned)throw protocol('cancelled');
         // Persist the replacement before any caller receives its access token. An inactive account stays inactive.
         this.store.save(next,{recordId,activate:false});if(!next.planUsageEnabled)this.revision++;return next;
-      }catch(error){if(this.sessions.get(recordId)===owned){this.blocked.add(recordId);this.revision++;this.listed.delete(recordId);
+      }catch(error){if(this.sessions.get(recordId)===owned){
+          const terminal=new Set(['invalid_grant','invalid_refresh_token','token_expired','refresh_token_expired','refresh_token_invalidated','refresh_token_reused']);
+          if(error instanceof SiwcProtocolError&&error.status!==undefined&&error.status!==200&&!terminal.has(error.code)){this.sessions.delete(recordId);throw error;}
+          this.blocked.add(recordId);this.revision++;this.listed.delete(recordId);
           // An uncertain network outcome may have rotated remotely. Never retry the retained refresh after restart.
           try{this.store.clearCredentials(recordId);}catch{throw protocol('storage_failed');}}
         throw error;
@@ -216,9 +237,9 @@ export class SiwcConnection {
       });}catch(error){throw new ProviderError({...siwcConnectionError(error),...(responseId?{requestId:responseId}:{})});}
   }
   async complete(input:{system:string;messages:AssistantMessage[];tools:AssistantToolSpec[];signal?:AbortSignal;timeoutMs?:number}):Promise<Completion> {
-    let responseId:string|undefined;
+    let responseId:string|undefined,accountId:string|undefined;
     try {if(obj(input).image!==undefined)throw new ProviderError(assistantError('image_refused'));const account=this.account(true),binding=this.authority(),timeoutMs=input.timeoutMs??this.timeoutMs;
-      const history:unknown[]=[];
+      accountId=account.recordId;const history:unknown[]=[];
       for(const message of input.messages){if(message.role==='user')history.push({role:'user',content:message.text});else if(message.role==='tool')history.push({type:'function_call_output',call_id:message.toolCallId,output:message.content});
         else if(message.replay!==undefined){if(this.replayReceipts.get(this.replayFingerprint(message.replay))!==binding)throw protocol('invalid_input');history.push(...structuredClone(message.replay as unknown[]));}
         else {if(message.text)history.push({role:'assistant',content:message.text});for(const call of message.toolCalls||[])history.push({type:'function_call',namespace:'modu_vision',name:call.name,call_id:call.id,arguments:JSON.stringify(call.arguments)});}}
@@ -230,11 +251,11 @@ export class SiwcConnection {
         if(!response.headers.get('content-type')?.toLowerCase().startsWith('text/event-stream')||!response.body){try{await response.body?.cancel();}catch{}throw protocol('bad_stream');}
         const stream=response.body;
         async function* source(){const reader=stream.getReader();try{while(true){const part=await reader.read();if(part.done)return;yield part.value;}}finally{try{void reader.cancel().catch(()=>undefined);}catch{}}}
-        const result=await readSiwcResponse(source(),{tools:input.tools,signal,timeoutMs});if(signal.aborted||this.authority()!==binding)throw protocol('cancelled');
+        const result=await readSiwcResponse(source(),{tools:input.tools,signal,timeoutMs,httpStatus:response.status});if(signal.aborted||this.authority()!==binding)throw protocol('cancelled');
         this.receipt(result.replay,binding);
         return {text:result.text,toolCalls:result.toolCalls,replay:result.replay,stop:result.toolCalls.length?'tool':'end'};
       },{signal:input.signal,timeoutMs});
-    }catch(error){throw new ProviderError({...siwcConnectionError(error),...(responseId?{requestId:responseId}:{})});}
+    }catch(error){if(accountId&&error instanceof SiwcProtocolError&&error.code==='subscription_sharing_usage_limit_exceeded'){this.store.setUsagePaused(accountId,true);this.stopRequests();}throw new ProviderError({...siwcConnectionError(error),...(responseId?{requestId:responseId}:{})});}
   }
   async signOut(recordId:string):Promise<SiwcConnectionState> {
     this.assertOpen();if(!validRecord(recordId)||!this.store.registration(recordId))throw new ProviderError(assistantError('invalid_input'));

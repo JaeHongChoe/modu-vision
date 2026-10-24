@@ -40,7 +40,7 @@ export const AssistantPanel: React.FC = () => {
   const chatgpt = active?.provider === 'chatgpt';
   const account = config?.chatgpt?.accounts.find(item => item.recordId === config.chatgpt?.active);
   const ready = Boolean(bridge && active && (chatgpt
-    ? active.ready && account?.signedIn && account.planUsageEnabled && account.model && account.model === active.model
+    ? active.ready && account?.signedIn && account.planUsageEnabled && !account.usagePaused && account.model && account.model === active.model
     : active.model && (active.hasKey || local)));
   const submit = () => { const text = draft.trim(); if (!text) return; setDraft(''); void ask(text); };
   const primary = pending ? { label: '확인하고 실행', run: () => void decide(true), disabled: false }
@@ -58,7 +58,7 @@ export const AssistantPanel: React.FC = () => {
         {!bridge && <p role="alert" className="text-amber-200">이 화면(브라우저)에서는 도우미를 쓸 수 없습니다. 데스크톱 앱에서 여세요.</p>}
         {bridge && <ChatgptConnectionSetup />}
         {bridge && (
-          <details open={!ready} className="rounded border border-slate-700 p-2">
+          <details open={!ready&&!(chatgpt&&account?.usagePaused)} className="rounded border border-slate-700 p-2">
             <summary className="cursor-pointer text-slate-200">API 키 공급자 설정 · {!chatgpt && ready ? `${active!.label} 사용 중` : '선택 설정'}</summary>
             <div className="mt-2"><AssistantProviderSetup /></div>
           </details>
@@ -89,15 +89,15 @@ export const AssistantPanel: React.FC = () => {
         {bridge && <AssistantRunLog />}
       </div>
       <footer className="space-y-2 border-t border-slate-700 px-4 py-3">
-        {chatgpt && items.some(item => item.kind === 'error' && item.code === 'rate_limited') && <p role="status" className="text-xs text-amber-200">ChatGPT 사용 한도를 확인하세요. <a href="https://chatgpt.com/settings/usage" target="_blank" rel="noopener noreferrer" className="workspace-button inline-block">ChatGPT 사용량 관리</a></p>}
+        {chatgpt && !account?.usagePaused && items.some(item => item.kind === 'error' && item.code === 'rate_limited') && <p role="status" className="text-xs text-amber-200">ChatGPT 사용 한도를 확인하세요. <a href="https://chatgpt.com/settings/usage" target="_blank" rel="noopener noreferrer" className="workspace-button inline-block">ChatGPT 사용량 관리</a></p>}
         <textarea aria-label="도우미에게 묻기" rows={3} value={draft} disabled={!ready || Boolean(pending) || Boolean(imageOffer)}
           onChange={event => setDraft(event.target.value)}
           onKeyDown={event => { if (event.key === 'Enter' && !event.shiftKey && !event.nativeEvent.isComposing) { event.preventDefault(); if (!busy) submit(); } }}
-          placeholder={ready ? '예: 왜 학습을 시작할 수 없나요?' : '공급자를 설정하면 물어볼 수 있습니다.'}
+          placeholder={chatgpt&&account?.usagePaused ? 'ChatGPT 사용량을 확인한 뒤 요청 재개를 허용하세요.' : ready ? '예: 왜 학습을 시작할 수 없나요?' : '공급자를 설정하면 물어볼 수 있습니다.'}
           className="w-full resize-none rounded border border-slate-600 bg-slate-900 px-2 py-1.5 text-slate-100" />
         {chatgpt && <p className="text-xs text-slate-300">ChatGPT 연결은 현재 텍스트 질문만 지원합니다. 이미지 전송은 지원하지 않습니다.</p>}
         <div className="flex flex-wrap items-center gap-2">
-          <button type="button" className="workspace-button workspace-button--primary" disabled={primary.disabled} onClick={primary.run}>{primary.label}</button>
+          <button type="button" className={`workspace-button${chatgpt&&account?.usagePaused?'':' workspace-button--primary'}`} disabled={primary.disabled} onClick={primary.run}>{primary.label}</button>
           {busy && !pending && <button type="button" className="workspace-button" onClick={() => void stop()}>멈추기</button>}
           {(active?.supportsImages || chatgpt) && (
             <button type="button" className="workspace-button" disabled={chatgpt || busy || !ready || !hasImage || !draft.trim() || Boolean(pending) || Boolean(imageOffer)}

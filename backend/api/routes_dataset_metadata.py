@@ -71,7 +71,7 @@ def _rows(project,source):
 
 def _errors(exc):
     if isinstance(exc,dm.RevisionConflict): return HTTPException(409,detail={'message':str(exc),'current':exc.current})
-    if isinstance(exc,KeyError): return HTTPException(404,detail='Image not found in current project')
+    if isinstance(exc,KeyError): return HTTPException(404,detail='현재 프로젝트에서 이미지를 찾을 수 없습니다. 이미지 목록을 새로고침하고 다시 선택하세요.')
     return HTTPException(422,detail=str(exc))
 
 @observe_original_UI_ancillary_handler(router.get('/statistics'))
@@ -108,8 +108,8 @@ def get_image_metadata(request:Request,image_path:str):
 def bulk_edit_metadata(req:BulkMetadataRequest,request:Request):
     project,source=_context(request)
     if not req.changes or set(req.changes)-{'tags','product','lot','group','usage_state'}:
-        raise HTTPException(422,detail='Bulk edits support tags, product, lot and group; approval is per image')
-    if len({item.image_uuid for item in req.items})!=len(req.items): raise HTTPException(422,detail='Duplicate selected image')
+        raise HTTPException(422,detail='일괄 수정은 태그·제품·로트·그룹·사용 여부만 지원하며 승인은 이미지별로 개별 처리합니다. 수정할 항목을 다시 선택하세요.')
+    if len({item.image_uuid for item in req.items})!=len(req.items): raise HTTPException(422,detail='같은 이미지가 중복 선택되었습니다. 이미지마다 한 번씩만 선택하세요.')
     try:
         with dm.metadata_transaction(Path(project['project_dir']),source,Path(project['annotations_dir'])):
             items=[dm.update_metadata(Path(project['project_dir']),source,item.image_uuid,item.expected_revision,req.actor,req.changes,Path(project['annotations_dir'])) for item in req.items]
@@ -141,18 +141,18 @@ def grouped_split(req:SplitRequest,request:Request):
     rows,flat=_split_rows(project,source)
     qualification=split_qualification(rows,req.group_by,req.seed,project,[req.train_ratio,req.val_ratio,req.test_ratio])
     if req.expected_qualification_sha256 and qualification['sha256']!=req.expected_qualification_sha256:
-        raise HTTPException(409,detail='Split source or metadata changed; preview the current cohort again')
+        raise HTTPException(409,detail='분할할 원본이나 검토 정보가 바뀌었습니다. 현재 데이터로 분할 미리보기를 다시 확인하세요.')
     try: preview=dm.preview_split(rows,req.group_by,req.train_ratio,req.val_ratio,req.test_ratio,req.seed)
     except ValueError as exc:raise HTTPException(422,detail={'message':str(exc),'availability':'unavailable'}) from exc
     preview.update(applied=False,apply_supported=True,apply_unavailable_reason=None,qualification=qualification,availability='available')
     if req.apply:
         from backend.api.routes_training import training_job_manager
-        if training_job_manager.get_active_job() is not None: raise HTTPException(409,detail='학습이 끝난 뒤 분할을 적용하세요.')
+        if training_job_manager.get_active_job() is not None: raise HTTPException(409,detail='학습 중에는 데이터 분할을 바꿀 수 없습니다. 학습이 끝난 뒤 분할을 적용하세요.')
         token=set_request_split_root(Path(project['dataset_dir'])/'splits')
         try:
             with _VERSION_LOCK:
                 current,_=_split_rows(project,source)
-                if split_staleness(qualification,current,project):raise HTTPException(409,detail='Split cohort changed before save')
+                if split_staleness(qualification,current,project):raise HTTPException(409,detail='저장 전에 분할할 데이터가 바뀌었습니다. 분할 미리보기를 다시 확인한 뒤 저장하세요.')
                 backup=_snapshot(project,source,'그룹 분할 전 자동 백업',f'{req.actor}: {req.group_by}','auto_backup')
                 path=routes_dataset._split_manifest_file(source)
                 previous=path.read_bytes() if path.is_file() else None
@@ -163,9 +163,9 @@ def grouped_split(req:SplitRequest,request:Request):
                         for partition,count in preview['split'].items():
                             if count:
                                 dataset=load_manifest_dataset(project['task'],source,partition)
-                                if dataset is None or len(dataset)!=count: raise ValueError('Saved split does not match actual task inputs')
+                                if dataset is None or len(dataset)!=count: raise ValueError('저장한 분할이 실제 학습 이미지와 맞지 않습니다. 이미지와 라벨을 확인하고 분할을 다시 저장하세요.')
                     current,_=_split_rows(project,source)
-                    if split_staleness(qualification,current,project):raise ValueError('Split cohort changed while saving')
+                    if split_staleness(qualification,current,project):raise ValueError('분할을 저장하는 동안 데이터가 바뀌었습니다. 분할 미리보기를 다시 확인하고 저장하세요.')
                 except Exception as exc:
                     if previous is None:path.unlink(missing_ok=True)
                     else:path.write_bytes(previous)
@@ -193,7 +193,7 @@ def saved_grouped_split(request:Request):
     path=Path(project['dataset_dir'])/'splits'/f'{hashlib.sha256(str(source).encode()).hexdigest()}.json'
     if not path.is_file():return {'availability':'unavailable','reason':'No saved grouped split'}
     try:
-        if path.is_symlink():raise ValueError('Split receipt cannot be a symbolic link')
+        if path.is_symlink():raise ValueError('저장한 분할 기록이 링크여서 읽을 수 없습니다. 프로젝트의 분할 기록을 확인하고 분할을 다시 저장하세요.')
         value=json.loads(path.read_text());qualification=value.get('qualification')
         if value.get('folder_path')!=str(source) or not qualification:return {'availability':'unavailable','reason':'Legacy split has no grouping qualification'}
         from backend.engine.dataset_readiness import split_staleness
@@ -204,13 +204,13 @@ def saved_grouped_split(request:Request):
 
 def _directory_payload(req,source,inventory):
     if req.payload is not None: return req.payload
-    if not req.import_dir: raise ValueError('Choose annotation folder or provide a format document')
+    if not req.import_dir: raise ValueError('가져올 라벨이 선택되지 않았습니다. 라벨 폴더를 선택하거나 라벨 문서를 지정하세요.')
     root=Path(req.import_dir).expanduser().resolve()
-    if not root.is_dir(): raise ValueError('Annotation folder does not exist')
+    if not root.is_dir(): raise ValueError('라벨 폴더를 찾을 수 없습니다. 존재하는 라벨 폴더를 다시 선택하세요.')
     paths=[p for p in root.rglob('*') if p.is_file()]
-    if len(paths)>10000: raise ValueError('Import folder exceeds 10000 files')
-    if any(p.is_symlink() or not p.resolve().is_relative_to(root) for p in paths): raise ValueError('Import folder contains unsafe links')
-    if sum(p.stat().st_size for p in paths)>128*1024*1024: raise ValueError('Import folder exceeds 128 MB')
+    if len(paths)>10000: raise ValueError('가져올 폴더의 파일이 10,000개를 넘습니다. 파일을 10,000개 이하의 폴더로 나누어 선택하세요.')
+    if any(p.is_symlink() or not p.resolve().is_relative_to(root) for p in paths): raise ValueError('라벨 폴더에 원본 범위를 벗어날 수 있는 링크가 있습니다. 링크를 실제 파일로 바꾸고 폴더를 다시 확인하세요.')
+    if sum(p.stat().st_size for p in paths)>128*1024*1024: raise ValueError('가져올 라벨 폴더가 128 MB를 넘습니다. 라벨 파일을 128 MB 이하의 폴더로 나누어 선택하세요.')
     if req.format=='labelme':
         documents=[]
         for path in paths:
@@ -233,10 +233,10 @@ def _directory_payload(req,source,inventory):
             if path.suffix=='.json':
                 doc=json.loads(read_source_text(path))
                 if isinstance(doc,dict) and {'images','categories','annotations'}<=set(doc): candidates.append(doc)
-        if len(candidates)!=1: raise ValueError('Select a folder containing exactly one COCO annotation document')
+        if len(candidates)!=1: raise ValueError('선택한 폴더에 COCO 라벨 문서가 정확히 한 개 있지 않습니다. COCO 문서 한 개가 있는 폴더를 선택하세요.')
         return candidates[0]
     classes_path=root/'classes.txt'
-    if not classes_path.exists(): raise ValueError('YOLO import requires classes.txt')
+    if not classes_path.exists(): raise ValueError('YOLO 라벨의 클래스 목록 classes.txt가 없습니다. classes.txt와 라벨 파일이 함께 있는 폴더를 선택하세요.')
     classes=read_source_text(classes_path).splitlines()
     manifest=root/'image_manifest.json'
     images=json.loads(read_source_text(manifest)) if manifest.exists() else [
@@ -266,13 +266,13 @@ def import_format(req:ExchangeRequest,request:Request):
     try:
         for row in imported:
             name=safe_name(row['file_name']); meta=inventory.get(name)
-            if meta is None: raise HTTPException(422,detail=f'Imported image is absent in selected source: {name}')
-            if (row['width'],row['height'])!=(meta['width'],meta['height']): raise HTTPException(422,detail=f'Image dimensions differ: {name}')
+            if meta is None: raise HTTPException(422,detail=f'가져올 이미지 {name}이(가) 선택한 원본에 없습니다. 같은 원본의 라벨을 선택하세요.')
+            if (row['width'],row['height'])!=(meta['width'],meta['height']): raise HTTPException(422,detail=f'이미지 {name}의 크기가 가져올 라벨과 다릅니다. 원본 이미지와 라벨의 크기를 확인하세요.')
             existing=routes_annotation.get_annotations(Path(name).stem,file_path=meta['file_path']).get('annotations',[])
             preview.append({'file_name':name,'image_uuid':meta['image_uuid'],'revision':meta['revision'],'existing_count':len(existing),
                             'incoming_count':len(row['annotations']),'conflict':bool(existing),'annotations':row['annotations']})
         if req.mode=='preview': return {'preview':preview,'applied':False,'format':req.format}
-        if req.conflict_policy=='reject' and any(r['conflict'] for r in preview): raise HTTPException(409,detail='Existing labels conflict. Preview and choose merge or replace.')
+        if req.conflict_policy=='reject' and any(r['conflict'] for r in preview): raise HTTPException(409,detail='이미 저장한 라벨과 가져올 라벨이 겹칩니다. 미리보기를 확인하고 덧붙이기 또는 바꾸기를 선택하세요.')
         # No import may replace an annotation read by another operator since preview.
         for row in preview:
             if req.expected_revisions.get(row['image_uuid'])!=row['revision']: raise HTTPException(409,detail=f"Preview is outdated or missing: {row['file_name']}")
@@ -280,7 +280,7 @@ def import_format(req:ExchangeRequest,request:Request):
             for row in preview:
                 meta=inventory[row['file_name']]
                 current=dm._ensure(ledger,Path(project['project_dir']),source,meta['file_path'],Path(project['annotations_dir']))
-                if current['revision']!=row['revision']: raise HTTPException(409,detail=f"Image changed while importing: {row['file_name']}")
+                if current['revision']!=row['revision']: raise HTTPException(409,detail=f"가져오는 중 이미지 {row['file_name']}이(가) 바뀌었습니다. 라벨 미리보기를 다시 확인한 뒤 적용하세요.")
                 if req.conflict_policy=='merge':
                     saved=routes_annotation.get_annotations(Path(row['file_name']).stem,file_path=meta['file_path'])
                     try:merge_class_mapping(saved.get('annotations',[]),row['annotations'],saved.get('mask_classes'))
@@ -328,7 +328,7 @@ def export_format(req:ExchangeRequest,request:Request):
 
 @format_router.get('/download/{export_id}')
 def download_format(export_id:str,request:Request):
-    if not export_id.startswith('annotations_') or len(export_id)!=44 or any(c not in '0123456789abcdef' for c in export_id[12:]): raise HTTPException(422,detail='Invalid export ID')
+    if not export_id.startswith('annotations_') or len(export_id)!=44 or any(c not in '0123456789abcdef' for c in export_id[12:]): raise HTTPException(422,detail='라벨 내보내기 식별자가 올바르지 않습니다. 라벨을 다시 내보내기한 뒤 다운로드하세요.')
     project=get_current_project(request); path=Path(project['project_dir'])/'exports'/f'{export_id}.zip'
-    if not path.is_file() or path.is_symlink(): raise HTTPException(404,detail='Export not found')
+    if not path.is_file() or path.is_symlink(): raise HTTPException(404,detail='내보낸 라벨 파일을 찾을 수 없습니다. 라벨을 다시 내보내기한 뒤 다운로드하세요.')
     return FileResponse(path,media_type='application/zip',filename=f'{export_id}.zip')

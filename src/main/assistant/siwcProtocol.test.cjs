@@ -16,6 +16,19 @@ const completed=(output=[])=>event('response.completed',{response:{id:'resp_synt
 async function* bytes(text,width=7){const b=Buffer.from(text);for(let i=0;i<b.length;i+=width)yield b.subarray(i,i+width);}
 const allow=[{name:'read_status',description:'상태',parameters:{type:'object',properties:{},additionalProperties:false}}];
 
+test('explicit plan enablement asks consent while ordinary returning sign-in does not',()=>{
+ const p=load(),options={hostId:HOST,appName:'Modu Vision',redirectUri:'http://127.0.0.1:43210/auth/callback',clientId:CLIENT};
+ const regular=new URL(p.createAuthorizationAttempt(options).authorizationUrl),enable=new URL(p.createAuthorizationAttempt({...options,promptConsent:true}).authorizationUrl);
+ assert.equal(regular.searchParams.has('prompt'),false);assert.equal(enable.searchParams.get('prompt'),'consent');assert.equal(enable.searchParams.has('force_reconsent'),false);assert.match(enable.searchParams.get('scope'),/chatgpt\.tokens\.use\.direct/);
+});
+test('streamed failures preserve transport status and safe structured diagnostics without provider messages',async()=>{
+ const p=load();await assert.rejects(p.readSiwcResponse(bytes(event('response.failed',{response:{error:{code:'subscription_sharing_unsupported_capability',param:'tools[0]',message:'private-token'}}})),{tools:[],httpStatus:200}),e=>e.status===200&&e.diagnostics?.providerCode==='subscription_sharing_unsupported_capability'&&e.diagnostics?.param==='tools[0]'&&e.diagnostics?.bodyShape==='response_error'&&!JSON.stringify(e).includes('private-token'));
+});
+test('error diagnostics omit secret-like unknown codes and arbitrary params while preserving documented structural fields',()=>{
+ const p=load(),unsafe=p.siwcResponseError(400,{error:{code:'private_access_token_123',param:'sk-live-secret',message:'private-message'}});assert.equal(unsafe.code,'http_error');assert.deepEqual(unsafe.diagnostics,{bodyShape:'error_object'});assert.ok(!JSON.stringify(unsafe).includes('private_access_token'));assert.ok(!JSON.stringify(unsafe).includes('sk-live-secret'));
+ const safe=p.siwcResponseError(400,{error:{code:'subscription_sharing_unsupported_capability',param:'tools[0].type'}});assert.equal(safe.diagnostics.providerCode,'subscription_sharing_unsupported_capability');assert.equal(safe.diagnostics.param,'tools[0].type');
+});
+
 test('text-only replay rejects nested image payloads, arbitrary keys and non-string encrypted content',()=>{
  const p=load(),base={model:'synthetic-model',tools:allow};
  for(const item of [

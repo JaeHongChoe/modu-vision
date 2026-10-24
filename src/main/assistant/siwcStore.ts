@@ -8,15 +8,17 @@ import type {KeyEncryptor} from './keyStore';
 import type {SiwcIdentity, SiwcTokens} from './siwcProtocol';
 
 type StoreCode = 'storage_unavailable' | 'store_locked' | 'store_corrupt' | 'unsafe_path' | 'unknown_account'
-  | 'invalid_record' | 'store_closed' | 'store_write_failed';
+  | 'invalid_record' | 'store_closed' | 'store_write_failed' | 'recovery_changed' | 'recovery_unavailable' | 'recovery_confirmation_required';
 export class SiwcStoreError extends Error {
   constructor(readonly code: StoreCode) {super(`ChatGPT protected store: ${code}`);this.name = 'SiwcStoreError';}
 }
-export interface SiwcAccountPublic {recordId: string; label: string; model: string; signedIn: boolean; planUsageEnabled: boolean}
+export interface SiwcAccountPublic {recordId: string; label: string; model: string; signedIn: boolean; planUsageEnabled: boolean; planUsageAcknowledged?: boolean; usagePaused?: boolean}
 export interface SiwcStoreState {accounts: SiwcAccountPublic[]; active: string | null; encryptionAvailable: boolean}
-interface Account {recordId: string; label: string; model: string; identity: SiwcIdentity; tokens?: SiwcTokens}
+interface Account {recordId: string; label: string; model: string; identity: SiwcIdentity; tokens?: SiwcTokens; planUsageAcknowledged?: boolean; usagePaused?: boolean}
 interface Payload {schema_version: 1; hostId: string; active: string | null; accounts: Account[]}
 interface Lease {descriptor: number; nonce: string; dev: number; ino: number}
+export interface SiwcRecoveryState {available: boolean; reason: 'none' | 'active_owner' | 'unverifiable_owner' | 'unsafe_store' | 'closed' | 'encryption_unavailable' | 'stale_owner' | 'unavailable_authority'; ticket?: string}
+interface RecoverySnapshot {lock: {raw: string; dev: number; ino: number}; file: {raw: string; dev: number; ino: number} | null; pid: number}
 const FILE = 'chatgpt-sessions.json', LOCK = 'chatgpt-sessions.lock';
 const MAX_FILE = 8 * 1024 * 1024, MAX_PAYLOAD = 2 * 1024 * 1024, MAX_ACCOUNTS = 20;
 const UUID = /^[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/i;
@@ -45,8 +47,9 @@ function validPayload(value: unknown): value is Payload {
     || !Array.isArray(value.accounts) || value.accounts.length > MAX_ACCOUNTS) return false;
   const ids = new Set<string>(), identities = new Set<string>();
   for (const item of value.accounts) {
-    if (!plainObject(item) || !keys(item, ['recordId', 'label', 'model', 'identity', 'tokens']) || typeof item.recordId !== 'string'
+    if (!plainObject(item) || !keys(item, ['recordId', 'label', 'model', 'identity', 'tokens', 'planUsageAcknowledged', 'usagePaused']) || typeof item.recordId !== 'string'
       || !UUID.test(item.recordId) || !text(item.label, 80) || item.label.trim() !== item.label || !model(item.model) || !identity(item.identity)
+      || (item.planUsageAcknowledged !== undefined && typeof item.planUsageAcknowledged !== 'boolean') || (item.usagePaused !== undefined && typeof item.usagePaused !== 'boolean')
       || (item.tokens !== undefined && (!validTokens(item.tokens) || !sameIdentity(item.identity, item.tokens)))) return false;
     const binding = JSON.stringify([item.identity.issuer, item.identity.subject, item.identity.clientId]);
     if (ids.has(item.recordId) || identities.has(binding)) return false;
@@ -59,8 +62,9 @@ export class SiwcStore {
   private lease: Lease | null = null;
   private closed = false;
   private opened = false;
+  private recovery: {ticket: string; snapshot: RecoverySnapshot; expires: number} | null = null;
   private readonly directory: string;
-  constructor(directory: string, private readonly encryptor: KeyEncryptor) {this.directory = path.resolve(directory);}
+  constructor(directory: string, private readonly encryptor: KeyEncryptor, private readonly options: {canRecover?: () => boolean} = {}) {this.directory = path.resolve(directory);}
   get file(): string {return path.join(this.directory, FILE);}
   get lockFile(): string {return path.join(this.directory, LOCK);}
 
@@ -96,7 +100,7 @@ export class SiwcStore {
     let descriptor: number | undefined;
     try {
       const stat = this.targetSafe(this.lockFile, false)!;
-      if (stat.dev !== lease.dev || stat.ino !== lease.ino || stat.size > 200) fail('store_locked');
+      if (stat.dev !== lease.dev || stat.ino !== lease.ino || stat.size > 512) fail('store_locked');
       descriptor = fs.openSync(this.lockFile, fs.constants.O_RDONLY | NOFOLLOW);
       const actual = fs.fstatSync(descriptor);
       if (actual.dev !== stat.dev || actual.ino !== stat.ino || fs.readFileSync(descriptor, 'utf8') !== lease.nonce) fail('store_locked');
@@ -113,7 +117,7 @@ export class SiwcStore {
     if (!this.encryptor.isAvailable()) fail('storage_unavailable');
     if (this.opened) {this.ownsLease();return;}
     this.directorySafe(true);
-    const nonce = crypto.randomBytes(32).toString('hex');
+    const nonce = JSON.stringify({schema_version: 2, pid: process.pid, nonce: crypto.randomBytes(32).toString('hex')});
     let descriptor: number;
     try {descriptor = fs.openSync(this.lockFile, fs.constants.O_RDWR | fs.constants.O_CREAT | fs.constants.O_EXCL | NOFOLLOW, 0o600);}
     catch {return fail('store_locked');}
@@ -125,7 +129,79 @@ export class SiwcStore {
       this.opened = true;
     } catch (error) {this.releaseLease();if (error instanceof SiwcStoreError) throw error;fail('store_write_failed');}
   }
-  close(): void {this.releaseLease();this.opened = false;this.closed = true;}
+  close(): void {this.releaseLease();this.opened = false;this.closed = true;this.recovery = null;}
+  /** Recovery is a user action available only to the main process holding Electron's app instance lock.
+   * PID liveness is conservative: only ESRCH is proof of death; old nonce-only leases remain unprovable.
+   * Ordinary open() never removes a retained lease. The instance lock serializes official recovery callers;
+   * competing ordinary store owners cannot enter until uncertain credentials have been cleared. */
+  recoveryStatus(): SiwcRecoveryState {
+    if (this.closed) return {available: false, reason: 'closed'};
+    if (!this.encryptor.isAvailable()) return {available: false, reason: 'encryption_unavailable'};
+    if (this.opened) return {available: false, reason: 'none'};
+    if (!this.options.canRecover?.()) return {available: false, reason: 'unavailable_authority'};
+    try {
+      this.directorySafe();const snapshot = this.recoverySnapshot();
+      if (!snapshot) return {available: false, reason: 'none'};
+      const owner = this.ownerState(snapshot.pid);
+      if (owner !== 'stale_owner') {this.recovery = null;return {available: false, reason: owner};}
+      if (!this.recovery || this.recovery.expires <= Date.now() || JSON.stringify(this.recovery.snapshot) !== JSON.stringify(snapshot))
+        this.recovery = {ticket: crypto.randomBytes(32).toString('hex'), snapshot, expires: Date.now() + 300000};
+      return {available: true, reason: 'stale_owner', ticket: this.recovery.ticket};
+    } catch (error) {this.recovery = null;return {available: false, reason: error instanceof SiwcStoreError && error.code === 'recovery_unavailable' ? 'unverifiable_owner' : 'unsafe_store'};}
+  }
+  private ownerState(pid: number): 'active_owner' | 'unverifiable_owner' | 'stale_owner' {
+    try {process.kill(pid, 0);return 'active_owner';} catch (error) {return (error as NodeJS.ErrnoException).code === 'ESRCH' ? 'stale_owner' : 'unverifiable_owner';}
+  }
+  private snapshotFile(file: string, max: number): {raw: string; dev: number; ino: number} | null {
+    const stat = this.targetSafe(file);if (!stat) return null;if (stat.size > max) fail('unsafe_path');
+    let descriptor: number | undefined;
+    try {descriptor = fs.openSync(file, fs.constants.O_RDONLY | NOFOLLOW);const actual = fs.fstatSync(descriptor);
+      if (actual.dev !== stat.dev || actual.ino !== stat.ino || actual.size > max) fail('unsafe_path');
+      const raw = fs.readFileSync(descriptor, 'utf8');if (Buffer.byteLength(raw) > max) fail('unsafe_path');return {raw, dev: actual.dev, ino: actual.ino};
+    } finally {if (descriptor !== undefined) fs.closeSync(descriptor);}
+  }
+  private recoverySnapshot(): RecoverySnapshot | null {
+    const lock = this.snapshotFile(this.lockFile, 512);if (!lock) return null;
+    let value: unknown;try {value = JSON.parse(lock.raw);} catch {return fail('recovery_unavailable');}
+    if (!plainObject(value) || !keys(value, ['schema_version', 'pid', 'nonce']) || value.schema_version !== 2
+      || !Number.isSafeInteger(value.pid) || Number(value.pid) < 1 || Number(value.pid) > 2147483647
+      || typeof value.nonce !== 'string' || !/^[a-f0-9]{64}$/.test(value.nonce)) return fail('recovery_unavailable');
+    return {lock, file: this.snapshotFile(this.file, MAX_FILE), pid: Number(value.pid)};
+  }
+  recover(input: {ticket: string; confirmed: boolean}): void {
+    if (input?.confirmed !== true) fail('recovery_confirmation_required');
+    if (this.closed || this.opened || !this.options.canRecover?.() || !this.encryptor.isAvailable()) fail('recovery_unavailable');
+    const preview = this.recovery;
+    if (!preview || preview.ticket !== input.ticket || preview.expires <= Date.now()) return fail('recovery_changed');
+    this.directorySafe();const snapshot = this.recoverySnapshot();
+    if (!snapshot || JSON.stringify(snapshot) !== JSON.stringify(preview.snapshot)) return fail('recovery_changed');
+    if (this.ownerState(snapshot.pid) !== 'stale_owner') fail('recovery_unavailable');
+    let descriptor: number | undefined;
+    try {
+      descriptor = fs.openSync(this.lockFile, fs.constants.O_RDWR | NOFOLLOW);const stat = fs.fstatSync(descriptor);
+      if (stat.dev !== snapshot.lock.dev || stat.ino !== snapshot.lock.ino || fs.readFileSync(descriptor, 'utf8') !== snapshot.lock.raw) fail('recovery_changed');
+      this.lease = {descriptor, nonce: snapshot.lock.raw, dev: stat.dev, ino: stat.ino};descriptor = undefined;
+      // Keep the stale lease throughout validation, archive and atomic credential clearing. A new owner
+      // must never see old refresh tokens after this recovery releases the retained lock.
+      if (snapshot.file) {
+        const data = this.read();this.ownsLease();
+        if (JSON.stringify(this.snapshotFile(this.file, MAX_FILE)) !== JSON.stringify(snapshot.file)) fail('recovery_changed');
+        const archive = path.join(this.directory, `chatgpt-sessions.recovery-${crypto.randomUUID()}.json`);
+        let archiveFd: number | undefined;
+        try {archiveFd = fs.openSync(archive, fs.constants.O_WRONLY | fs.constants.O_CREAT | fs.constants.O_EXCL | NOFOLLOW, 0o600);
+          fs.writeFileSync(archiveFd, snapshot.file.raw);fs.fsyncSync(archiveFd);
+        } finally {if (archiveFd !== undefined) fs.closeSync(archiveFd);}
+        for (const account of data.accounts) delete account.tokens;
+        if (!this.options.canRecover?.() || this.ownerState(snapshot.pid) !== 'stale_owner') fail('recovery_unavailable');
+        this.write(data);
+      }
+      this.recovery = null;this.releaseLease();this.open();
+    } catch (error) {
+      // Failure must retain the stale lease. Even close() must not remove it after an incomplete recovery.
+      if (this.lease) {try {fs.closeSync(this.lease.descriptor);} catch {}this.lease = null;}
+      if (error instanceof SiwcStoreError) throw error;fail('store_write_failed');
+    } finally {if (descriptor !== undefined) fs.closeSync(descriptor);}
+  }
   private ready(): void {this.open();this.ownsLease();if (!this.encryptor.isAvailable()) fail('storage_unavailable');}
   private read(): Payload {
     this.ownsLease();
@@ -171,7 +247,9 @@ export class SiwcStore {
   }
   private publicAccount(account: Account): SiwcAccountPublic {
     return {recordId: account.recordId, label: account.label, model: account.model, signedIn: !!account.tokens,
-      planUsageEnabled: account.tokens?.planUsageEnabled === true};
+      planUsageEnabled: account.tokens?.planUsageEnabled === true,
+      ...(account.planUsageAcknowledged !== undefined ? {planUsageAcknowledged: account.planUsageAcknowledged} : {}),
+      ...(account.usagePaused !== undefined ? {usagePaused: account.usagePaused} : {})};
   }
   /** Reading the general API-key settings must not create a ChatGPT host registration or acquire its lease. */
   peekState(): SiwcStoreState {
@@ -218,6 +296,10 @@ export class SiwcStore {
     if (!account) return fail('unknown_account');update(account);this.write(data);
   }
   clearCredentials(recordId: string): void {this.change(recordId, account => {delete account.tokens;});}
+  acknowledgePlanUsage(recordId: string): void {this.change(recordId, account => {account.planUsageAcknowledged = true;});}
+  setUsagePaused(recordId: string, paused: boolean): void {
+    if (typeof paused !== 'boolean') fail('invalid_record');this.change(recordId, account => {account.usagePaused = paused;});
+  }
   setActive(recordId: string | null): void {
     this.ready();const data = this.read();if (recordId !== null && !data.accounts.some(account => account.recordId === recordId)) fail('unknown_account');
     data.active = recordId;this.write(data);

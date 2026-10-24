@@ -260,6 +260,8 @@ def test_failed_parity_export_keeps_a_failure_receipt_instead_of_not_run(tmp_pat
                        parity_device="cpu")
     assert response.status_code == 409
     detail = response.json()["detail"]
+    assert set(detail) == {"message", "package_path", "parity"}
+    assert "결과가 다릅니다" in detail["message"] and "다시 내보내세요." in detail["message"]
     assert detail["parity"]["status"] == "mismatch"
     package_path = detail["package_path"]
     assert json.loads((Path(package_path) / "parity_receipt.json").read_text())["status"] == "mismatch"

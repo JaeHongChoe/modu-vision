@@ -496,7 +496,7 @@ export const DraftReviewQueue: React.FC = () => {
                 <BulkLabelAssist execution={EXECUTION} projectDir={projectDir} modelId={modelId} threshold={threshold} keywords={[]}
                   disabled={!!busy || isDirty} onOpenEntry={openBatchEntry}
                   onRunningChange={setBatchRunning} />
-                <Explain text={`초안을 채택하면 데이터가 바뀝니다. 그 뒤에도 이 모델로 초안을 만들 수 있고, '${CHANGED_MODEL_MARK}'으로 표시됩니다(3단계 '빠른 이어 학습'으로 모델을 맞추면 초안이 더 정확해집니다). 같은 묶음으로 만든 초안은 이어서 채택할 수 있으니 남은 이미지를 한 번에 만드세요. 라벨을 직접 고쳐 저장하면 남은 초안은 채택할 수 없게 되니, 남은 초안을 먼저 검토한 뒤 고치세요.`} />
+                <Explain text={`초안을 채택하면 데이터가 바뀝니다. 그 뒤에도 이 모델로 초안을 만들 수 있고, '${CHANGED_MODEL_MARK}'으로 표시됩니다. 3단계 '빠른 이어 학습'으로 새 라벨을 반영한 후보 모델을 만들 수 있습니다. 정확도는 검토와 평가로 확인하세요. 같은 묶음으로 만든 초안은 이어서 채택할 수 있으니 남은 이미지를 한 번에 만드세요. 라벨을 직접 고쳐 저장하면 남은 초안은 채택할 수 없게 되니, 남은 초안을 먼저 검토한 뒤 고치세요.`} />
               </>}
             </section>
 

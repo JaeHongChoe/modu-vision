@@ -11,7 +11,7 @@
  * https://developers.openai.com/api/docs/guides/tools-tool-search (namespace call shape only, no tool_search)
  */
 import crypto, {type JsonWebKey} from 'node:crypto';
-import type {AssistantToolSpec} from '../../types/electron';
+import type {AssistantErrorDiagnostics, AssistantToolSpec} from '../../types/electron';
 import {redactOutgoingText, redactOutgoingValue} from './redact';
 
 const ISSUER = 'https://auth.openai.com', RESOURCE = 'https://api.openai.com/v1';
@@ -19,7 +19,7 @@ const TOKEN_ENDPOINT = `${ISSUER}/api/accounts/oauth/token`;
 type Json = Record<string, any>;
 type Recovery = 'sign_in' | 'configure_client' | 'retry_later' | 'manage_usage' | 'fix_request' | 'inspect_credentials';
 export class SiwcProtocolError extends Error {
-  constructor(readonly code: string, readonly recovery: Recovery = 'fix_request', readonly status?: number) {
+  constructor(readonly code: string, readonly recovery: Recovery = 'fix_request', readonly status?: number, readonly diagnostics?:AssistantErrorDiagnostics) {
     super(`SIWC protocol: ${code}`);this.name = 'SiwcProtocolError';
   }
 }
@@ -35,7 +35,7 @@ export function pkceChallenge(verifier: string): string {
   return crypto.createHash('sha256').update(verifier).digest('base64url');
 }
 export interface SiwcCodeGrant {clientId: string; nonce: string; form: URLSearchParams}
-export function createAuthorizationAttempt(options: {hostId: string; appName: string; redirectUri: string; clientId?: string; now?: () => number}) {
+export function createAuthorizationAttempt(options: {hostId: string; appName: string; redirectUri: string; clientId?: string; promptConsent?:boolean; now?: () => number}) {
   const redirect = new URL(options.redirectUri);
   if (redirect.protocol !== 'http:' || redirect.hostname !== '127.0.0.1' || !redirect.port || redirect.pathname !== '/auth/callback'
     || redirect.username || redirect.password || redirect.search || redirect.hash) fail('invalid_callback_uri');
@@ -45,7 +45,7 @@ export function createAuthorizationAttempt(options: {hostId: string; appName: st
   const nonce = crypto.randomBytes(32).toString('base64url'), verifier = crypto.randomBytes(32).toString('base64url');
   const url = new URL(`${ISSUER}/api/accounts/authorize`);
   url.search = new URLSearchParams({client_id: options.clientId || 'dynamic_agent_client', ext_agent_host_id: options.hostId,
-    ...(!options.clientId ? {agent_name_hint: options.appName} : {}), response_type: 'code', redirect_uri: redirect.href,
+    ...(!options.clientId ? {agent_name_hint: options.appName} : {}), ...(options.promptConsent===true?{prompt:'consent'}:{}), response_type: 'code', redirect_uri: redirect.href,
     scope: 'openid profile email offline_access resource.invoke chatgpt.tokens.use.direct', resource: RESOURCE,
     state, nonce, code_challenge_method: 'S256', code_challenge: pkceChallenge(verifier)}).toString();
   let used = false;
@@ -121,13 +121,18 @@ export interface SiwcFormResponse {status: number; body?: unknown}
 export type SiwcFormTransport = (request: SiwcFormRequest) => Promise<SiwcFormResponse>;
 interface OperationOptions {signal?: AbortSignal; timeoutMs?: number}
 const TERMINAL_REFRESH = new Set(['invalid_grant', 'invalid_refresh_token', 'token_expired', 'refresh_token_expired', 'refresh_token_invalidated', 'refresh_token_reused']);
-function responseError(status: number, body: unknown): SiwcProtocolError {
+const PROVIDER_CODES=new Set([...TERMINAL_REFRESH,'invalid_client','access_denied','subscription_sharing_usage_limit_exceeded','subscription_sharing_invalid_user','subscription_sharing_usage_unavailable','subscription_sharing_user_unavailable','subscription_sharing_user_not_eligible','subscription_sharing_unsupported_capability','subscription_sharing_route_not_supported','chatpass_v2_scope_not_authorized','chatpass_v2_invalid_authorization_context','server_error','invalid_request_error','rate_limit_exceeded','insufficient_quota','model_not_found','permission_denied']);
+const PARAM_PATH=/^(?:model|tools|input|instructions|store|stream|include|previous_response_id|service_tier|reasoning|text|background|conversation|max_output_tokens|max_tool_calls|metadata|moderation|multi_agent|prompt|prompt_cache_retention|safety_identifier|temperature|top_logprobs|top_p|truncation|user)(?:\[\d{1,3}\]|\.(?:type|name|namespace|tools|function|parameters|properties|content|role|text|format|strict|effort|summary|encrypted_content|arguments|output|call_id)){0,8}$/;
+export function siwcResponseError(status: number, body: unknown, shape?:AssistantErrorDiagnostics['bodyShape']): SiwcProtocolError {
   const raw = object(body), value = typeof raw.error === 'string' ? raw.error : object(raw.error).code;
-  const code = typeof value === 'string' && /^[a-z0-9_]{1,100}$/.test(value) ? value : 'http_error';
+  const code = typeof value === 'string' && PROVIDER_CODES.has(value) ? value : 'http_error';
+  const param=object(raw.error).param;
+  const diagnostics:AssistantErrorDiagnostics={bodyShape:shape??(typeof raw.error==='string'?'oauth_error':raw.error&&typeof raw.error==='object'?'error_object':typeof raw.detail==='string'?'detail':'other'),
+    ...(code!=='http_error'?{providerCode:code}:{}),...(typeof param==='string'&&param.length<=200&&PARAM_PATH.test(param)?{param}:{})};
   const recovery: Recovery = TERMINAL_REFRESH.has(code) ? 'sign_in' : code === 'invalid_client' ? 'configure_client'
     : code === 'subscription_sharing_usage_limit_exceeded' ? 'manage_usage' : code === 'subscription_sharing_invalid_user' ? 'inspect_credentials'
       : ['subscription_sharing_usage_unavailable', 'subscription_sharing_user_unavailable'].includes(code) || status >= 500 || status === 429 ? 'retry_later' : 'fix_request';
-  return new SiwcProtocolError(code, recovery, status);
+  return new SiwcProtocolError(code, recovery, status, diagnostics);
 }
 /** Bound cancellation even when a faulty injected transport ignores its AbortSignal. No background retry. */
 function bounded<T>(run: (signal: AbortSignal) => Promise<T>, options: OperationOptions = {}): Promise<T> {
@@ -164,14 +169,15 @@ export class SiwcTokenSession {
       this.flight = bounded(signal => this.deps.transport({url: TOKEN_ENDPOINT, method: 'POST', signal,
         form: new URLSearchParams({grant_type: 'refresh_token', client_id: prior.clientId, refresh_token: prior.refreshToken, resource: RESOURCE})}), {timeoutMs: options.timeoutMs})
         .then(response => {
-          if (response.status !== 200) throw responseError(response.status, response.body);
+          if (response.status !== 200) throw siwcResponseError(response.status, response.body);
           const value = object(response.body), fields = tokenFields(value, this.deps.now?.() ?? Date.now());
           if (value.id_token !== undefined) verifySiwcIdToken(value.id_token, this.deps.jwks, {clientId: prior.clientId, expectedSubject: prior.subject, nowMs: this.deps.now?.() ?? Date.now()});
           const next = {...prior, ...fields, idToken: value.id_token ?? prior.idToken};
           if (!this.closed) this.tokens = next;return next;
         }).catch(error => {
           if (error instanceof SiwcProtocolError && TERMINAL_REFRESH.has(error.code)) {if (!this.closed) this.tokens = null;}
-          else this.rotationUncertain = true; // a timed-out transport can still have rotated remotely; retain this uncertainty
+          else if (!(error instanceof SiwcProtocolError) || error.status===undefined || error.status===200) this.rotationUncertain = true;
+          // A definitive HTTP error did not rotate tokens. A lost or unusable successful reply remains uncertain.
           throw error;
         })
         .finally(() => {this.flight = null;});
@@ -289,7 +295,7 @@ function completedResponse(response: unknown, tools: AssistantToolSpec[]) {
   return {text, toolCalls: calls, replay};
 }
 /** Consume injected byte chunks, require a complete terminal event, and never execute tool calls or expose deltas as success. */
-export async function readSiwcResponse(source: AsyncIterable<Uint8Array>, options: OperationOptions & {tools: AssistantToolSpec[]; maxBytes?: number; maxEventBytes?: number}) {
+export async function readSiwcResponse(source: AsyncIterable<Uint8Array>, options: OperationOptions & {tools: AssistantToolSpec[]; maxBytes?: number; maxEventBytes?: number;httpStatus?:number}) {
   const maxBytes = options.maxBytes ?? 2 * 1024 * 1024, maxEventBytes = options.maxEventBytes ?? 256 * 1024;
   if (!Number.isInteger(maxBytes) || maxBytes < 1 || maxBytes > 2 * 1024 * 1024 || !Number.isInteger(maxEventBytes) || maxEventBytes < 1 || maxEventBytes > 256 * 1024) fail('invalid_limits');
   const allowedTools = clone(options.tools);toolNames(allowedTools);const iterator = source[Symbol.asyncIterator]();
@@ -301,8 +307,8 @@ export async function readSiwcResponse(source: AsyncIterable<Uint8Array>, option
         if (!content || content === '[DONE]') return null;
         let value: Json;try {value = object(JSON.parse(content));} catch {return fail('bad_stream');}
         if (!nonempty(value.type, 200) || (named && value.type !== named)) fail('bad_stream');
-        if (value.type === 'response.failed') throw responseError(400, {error: object(value.response).error});
-        if (value.type === 'error') throw responseError(400, {error: value});
+        if (value.type === 'response.failed') throw siwcResponseError(options.httpStatus??200, {error: object(value.response).error},'response_error');
+        if (value.type === 'error') throw siwcResponseError(options.httpStatus??200, {error: value},'stream_error');
         if (value.type === 'response.incomplete') fail('response_incomplete');
         if (value.type === 'response.completed') return completedResponse(value.response, allowedTools);
         return null;

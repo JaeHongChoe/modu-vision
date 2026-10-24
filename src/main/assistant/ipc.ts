@@ -10,7 +10,7 @@ import {SiwcConnection} from './siwcConnection';
 
 export function registerAssistantHandlers(authorize:(event:IpcMainInvokeEvent)=>void):AssistantService {
   const directory = path.join(app.getPath('userData'), 'assistant'), encryptor = electronEncryptor(safeStorage);
-  const chatgpt = new SiwcConnection({store: new SiwcStore(path.join(directory, 'chatgpt'), encryptor),
+  const chatgpt = new SiwcConnection({store: new SiwcStore(path.join(directory, 'chatgpt'), encryptor,{canRecover:()=>app.hasSingleInstanceLock()}),
     openExternal: url => shell.openExternal(url)});
   const service = new AssistantService({store: new AssistantKeyStore(directory, encryptor), chatgpt});
   const handle = (channel:string, run:(...args:any[])=>unknown) => ipcMain.handle(channel, (event, ...args) => {authorize(event);return run(...args);});
@@ -26,6 +26,9 @@ export function registerAssistantHandlers(authorize:(event:IpcMainInvokeEvent)=>
   handle('assistant:run-begin', (runId, tool) => assistantRuns.arm(runId, tool));
   handle('assistant:run-end', runId => {assistantRuns.disarm(runId);});
   handle('assistant:chatgpt-begin', input => service.chatgptBegin(input));
+  handle('assistant:chatgpt-acknowledge-plan', id => service.chatgptAcknowledgePlanUsage(id));
+  handle('assistant:chatgpt-resume-usage', id => service.chatgptResumeUsage(id));
+  handle('assistant:chatgpt-recover', input => service.chatgptRecover(input));
   handle('assistant:chatgpt-cancel', () => service.chatgptCancel());
   handle('assistant:chatgpt-account', id => service.chatgptSelectAccount(id));
   handle('assistant:chatgpt-model', (id, model) => service.chatgptSelectModel(id, model));

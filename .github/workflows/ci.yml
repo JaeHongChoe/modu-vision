@@ -191,6 +191,8 @@ jobs:
           backend/tests/test_project_activation_race.py
           backend/tests/test_managed_service_first_read.py
           backend/tests/test_beginner_errors_korean.py
+          backend/tests/test_beginner_metadata_export_errors.py
+          backend/tests/test_labeling_loop_composition.py
           backend/tests/test_workflow_impact.py
           backend/tests/test_audit_data_input.py
           backend/tests/test_audit_class_overrides.py

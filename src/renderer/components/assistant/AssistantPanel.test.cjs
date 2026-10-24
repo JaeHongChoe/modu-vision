@@ -22,7 +22,6 @@ const base={isOpen:true,busy:false,pending:null,imageOffer:null,items:[],bridge:
  close(){},ask(){},stop(){},decide(){},offerImage(){},sendImage(){},dropImage(){},newConversation(){}};
 
 test('exactly one primary button in every state, labelled by what it does',()=>{
- assert.equal(sources.reduce((count,[,source])=>count+(source.match(/workspace-button--primary/g)||[]).length,0),1,'one primary across the assistant components');
  const states=[[base,'보내기'],[{...base,pending:{call:{id:'c',name:'save_split',arguments:{}},runId:'run_x',preview:{title:'분할 저장',lines:['학습 70%'],undo:'다시 나누기'}}},'확인하고 실행'],
   [{...base,imageOffer:{grantId:'g',message:'이 이미지 1장을 Anthropic로 보냅니다.',providerLabel:'Anthropic',question:'불량인가요?'}},'이미지 1장 보내기']];
  for(const [state,label] of states){
@@ -34,6 +33,15 @@ test('exactly one primary button in every state, labelled by what it does',()=>{
  const confirm=nodes(render(states[1][0])).find(node=>node.props?.['aria-label']==='쓰기 실행 확인');
  assert.match(text(confirm),/분할 저장 · 확인이 필요합니다/);assert.match(text(confirm),/되돌리는 방법: 다시 나누기/);
  assert.match(text(nodes(render(states[2][0])).find(node=>node.props?.['aria-label']==='이미지 보내기 확인')),/이 이미지 1장을 Anthropic로 보냅니다/);
+});
+test('a paused ChatGPT account disables the composer even if older public readiness is still true',()=>{
+ const state={...base,config:{active:'chatgpt',providers:[{provider:'chatgpt',baseUrl:'https://api.openai.com/v1',model:'chosen',hasKey:false,ready:true,label:'ChatGPT',supportsImages:false}],chatgpt:{accounts:[{recordId:'a',model:'chosen',signedIn:true,planUsageEnabled:true,usagePaused:true}],active:'a'}}};const tree=render(state);
+ assert.equal(nodes(tree).find(n=>n.type==='textarea').props.disabled,true);assert.equal(nodes(tree).filter(n=>n.type==='button'&&/workspace-button--primary/.test(n.props.className)).length,0,'usage management owns the primary action while sending is paused');
+});
+test('paused ChatGPT keeps API settings collapsed and directs the composer to usage confirmation',()=>{
+ const state={...base,config:{active:'chatgpt',providers:[{provider:'chatgpt',baseUrl:'https://api.openai.com/v1',model:'chosen',hasKey:false,ready:false,label:'ChatGPT',supportsImages:false}],chatgpt:{accounts:[{recordId:'a',model:'chosen',signedIn:true,planUsageEnabled:true,usagePaused:true}],active:'a'}}};const tree=render(state);
+ assert.equal(nodes(tree).find(n=>n.type==='details').props.open,false);const composer=nodes(tree).find(n=>n.type==='textarea');assert.match(composer.props.placeholder,/사용량.*요청 재개/);assert.ok(!composer.props.placeholder.includes('공급자'));
+ const missingApi=render({...base,config:{...base.config,providers:[{...base.config.providers[0],model:''}]}});assert.equal(nodes(missingApi).find(n=>n.type==='details').props.open,true,'missing API configuration still opens its own settings');
 });
 
 test('the panel says every step works without it, renders nothing when closed and tells a browser it is desktop-only',()=>{

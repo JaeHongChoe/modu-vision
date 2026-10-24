@@ -113,6 +113,11 @@ test('provider rate-limit errors retain a machine code for the visible usage-man
  const h=harness();await h.store.getState().loadConfig();h.bridge.send=async()=>({ok:false,error:{code:'rate_limited',reason:'한도에 도달했습니다.',action:'사용량을 확인하세요.'}});await h.store.getState().ask('질문');
  assert.equal(h.store.getState().items.find(item=>item.kind==='error').code,'rate_limited');
 });
+test('a ChatGPT usage error refreshes paused public state without retrying or losing the visible explanation',async()=>{
+ const h=harness(),config=paused=>({active:'chatgpt',encryptionAvailable:true,providers:[{provider:'chatgpt',baseUrl:'https://api.openai.com/v1',model:'chosen',format:'responses',hasKey:false,supportsImages:false,ready:!paused,connectionAuthority:'same'}],chatgpt:{active:'a',accounts:[{recordId:'a',label:'계정',model:'chosen',signedIn:true,planUsageEnabled:true,usagePaused:paused}],status:'connected',authority:'same'}});h.store.setState({config:config(false)});let sent=0;
+ h.bridge.getState=async()=>config(true);h.bridge.send=async()=>{sent++;return{ok:false,error:{code:'rate_limited',reason:'한도 확인 필요',action:'사용량을 확인하세요.',status:200,diagnostics:{bodyShape:'response_error',providerCode:'subscription_sharing_usage_limit_exceeded'}}};};await h.store.getState().ask('질문');await new Promise(r=>setImmediate(r));
+ assert.equal(h.store.getState().config.chatgpt.accounts[0].usagePaused,true);assert.equal(sent,1);assert.ok(h.store.getState().items.some(i=>i.kind==='error'&&i.text==='한도 확인 필요'&&/HTTP 200/.test(i.detail)));
+});
 test('each ChatGPT mutation invalidates an existing reply before its IPC result is accepted',async()=>{
  for(const [method,bridgeMethod,args] of [['cancelChatgpt','cancel',[]],['selectChatgptAccount','selectAccount',['opaque-b']],['selectChatgptModel','selectModel',['opaque-b','visible-model']],['signOutChatgpt','signOut',['opaque-b']]]){
   const h=harness();await h.store.getState().loadConfig();const reply=deferred(),change=deferred(),calls=[];h.bridge.send=()=>reply.promise;h.bridge.chatgpt={[bridgeMethod]:(...input)=>{calls.push(input);return change.promise;}};

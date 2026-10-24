@@ -661,7 +661,7 @@ def test_failed_save_cannot_activate_a_version_removed_by_rollback(monkeypatch, 
         assert [item["version_id"] for item in listing.result(timeout=5).json()["pipelines"]] == [first_id]
         exported = exporting.result(timeout=5)
         assert exported.status_code == 409
-        assert "Save this flow" in exported.json()["detail"]
+        assert "검사 흐름에서 저장한 뒤" in exported.json()["detail"]
 
     assert client.get("/api/flowchart/pipeline/active", params={"source_dataset_path": str(source)}).json()["name"] == "Committed"
     assert client.get(f"/api/flowchart/pipelines/{pending_id}").status_code == 404
