@@ -99,3 +99,18 @@ test('a split prefill from another dataset or authority is not adopted',()=>{
  h.switchProject('B');h.store.setState({datasetKey:'/source\0anomaly',sourceAuthority:'other',splitPrefill:old,split:{train:16,val:2,test:2},totalImages:20,splitState:'saved'});
  h.render();const tree=h.render();assert.equal(slider(tree).props.value,80);assert.deepEqual(h.writes,[]);
 });
+
+const visibleText=node=>typeof node==='string'||typeof node==='number'?String(node):Array.isArray(node)?node.map(visibleText).join(''):(node?.props?.children!==undefined?visibleText(node.props.children):'');
+for(const task of ['classification','patch_classification','detection','segmentation','anomaly'])
+test('rendered imbalance advice follows actual '+task+' training capability',()=>{
+ for(const language of ['ko','en']){
+  const h=harness();Object.assign(h.project,{task,language});h.project.project.task=task;
+  h.store.setState({datasetKey:'/source\0'+task,totalImages:103,classes:{OK:100,NG:3},splitState:'saved',split:{train:80,val:10,test:13}});
+  const tree=h.render(),text=visibleText(tree);
+  assert.match(text,/20:1/);
+  if(['classification','patch_classification'].includes(task))assert.match(text,language==='ko'?/클래스.*가중치/:/class.*weight/i);
+  else assert.match(text,language==='ko'?/적은 클래스.*이미지|데이터.*확인/:/minority.*images|review.*data/i);
+  assert.doesNotMatch(text,/Focal|Weighted loss rebalancing will be used/);
+  assert.equal(descendants(tree).some(n=>n.props?.termKey==='focal_loss'),false,'imbalance alone cannot imply this task uses Focal');h.unmount();
+ }
+});

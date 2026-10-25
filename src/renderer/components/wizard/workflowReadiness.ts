@@ -39,7 +39,7 @@ export type ReadinessContext = { stage: WorkflowStep; projectReady: boolean; sou
 
 const ACTIVE_TRAINING = ['queued', 'preparing', 'running', 'transferring', 'syncing', 'stopping'];
 // Step 4's second 'why' line when the model missed test defects: the ways to fix it, and that step 5 stays one press away.
-const MISSED_NEXT = '놓친 이미지를 하나씩 보고, 라벨이 틀렸으면 \'라벨 수정\'으로 고치세요. 라벨이 맞으면 판정 기준 점수를 낮추거나 라벨을 더 달아 다시 학습하세요. 이대로 5단계로 가려면 오른쪽 끝 → 버튼을 누르세요.';
+const MISSED_NEXT = '놓친 이미지를 하나씩 보고, 라벨이 틀렸으면 \'라벨 수정\'으로 고치세요. 라벨이 맞으면 필요한 학습 이미지를 더 모으고 다시 학습·평가하세요. 이대로 5단계로 가려면 오른쪽 끝 → 버튼을 누르세요.';
 
 /** Navigation advice only. A recorded result is never authorization to run work. */
 export function getNextAction(input: ReadinessContext): ReadinessAction {

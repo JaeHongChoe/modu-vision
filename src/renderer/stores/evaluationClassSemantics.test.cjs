@@ -121,10 +121,11 @@ test('threshold calibration requires a real normal role and respects explicit al
   } finally { global.fetch = previousFetch; f.state().invalidateForDataChange(); }
 });
 
-function renderStudio(storeState) {
+function renderStudio(storeState, options = {}) {
   const jsx = (type, props) => ({ type, props: props || {}, children: [props?.children].flat(Infinity).filter(v => v !== null && v !== undefined && v !== false) });
-  const react = { useEffect() {}, useRef: value => ({current:value}), useMemo: fn => fn(), useState: initial => [initial, () => {}] };
-  const project = { language: 'ko', task: 'classification', projectDir: '/project', setStep() {} };
+  let cursor = 0; const slots = [];
+  const react = { useEffect() {}, useRef: value => ({current:value}), useMemo: fn => fn(), useState: initial => {const i=cursor++;if(!(i in slots))slots[i]=initial;return [slots[i], value => {slots[i]=typeof value==='function'?value(slots[i]):value;}];} };
+  const project = { language: 'ko', task: 'classification', projectDir: '/project', setStep() {}, ...options };
   const dataset = { folderPath: '/source', datasetKey: '/source\0classification', isLoading: false, importError: null };
   const evaluation = fixture();
   const state = { ...evaluation.state(), ...storeState };
@@ -137,7 +138,7 @@ function renderStudio(storeState) {
     '../training/useTaskHandoff': { useTaskHandoff: () => null },
     '../../stores/useProjectStore': { useProjectStore: Object.assign(sel => sel ? sel(project) : project, { getState: () => project }) },
     '../../stores/useDatasetStore': { useDatasetStore: sel => sel(dataset) },
-    '../../stores/useTrainingStore': { useTrainingStore: sel => sel({ status: 'idle' }) },
+    '../../stores/useTrainingStore': { useTrainingStore: Object.assign(sel => sel({ status: 'idle' }), {getState:()=>({status:'idle'})}) },
     '../../stores/useComputeStore': {useComputeStore: Object.assign(() => ({profiles:[],selectedProfileId:null,transportRevision:0}), {getState:()=>({selectedProfileId:null})})},
     '../../stores/useEvaluationStore': { ...evaluation, useEvaluationStore },
     '../../services/api': { resolveApiUrl: value => value, getApiPersistenceIdentity:()=> 'local', getProjectContextGeneration:()=>0 },
@@ -147,12 +148,13 @@ function renderStudio(storeState) {
     './EvaluationHistoryPanel': {}, './EvaluationEvidencePanel': {},
     '../../utils/plainLabels': require('../utils/plainLabels.fixture.cjs'), './sampleConfidence': { accuracyNote: () => '', smallTestWarning: () => null }, '../common/FieldReadinessPanel': {}, '../common/SpecialistFamilyNote': {},
   });
-  const tree = m.EvaluationStudio();
+  const render = () => {cursor=0;return m.EvaluationStudio();};
+  const tree = render();
   const nodes = [];
   const walk = node => { if (node && typeof node === 'object') { nodes.push(node); node.children?.forEach(walk); } };
   walk(tree);
   const text = node => typeof node === 'string' || typeof node === 'number' ? String(node) : (node?.children || []).map(text).join('');
-  return { nodes, text };
+  return { nodes, text, rerender() {nodes.length=0;walk(render());return this;} };
 }
 
 test('rendered evaluation cells, badges, and calibration controls use the recorded class roles', () => {
@@ -348,4 +350,76 @@ test('replacement evaluation read revokes old heatmap pixels and ownership immed
   assert.equal(f.state().heatmapOverlayBase64,null);old.resolve({overlay_base64:'late-old-evaluation-pixels'});await oldRequest;assert.equal(f.state().heatmapOverlayBase64,null);
   read.resolve({...f.results,test_predictions:[]});await replacement;assert.equal(f.state().selectedPrediction,null);assert.equal(f.state().heatmapOverlayBase64,null);
  }finally{f.state().invalidateForDataChange();}
+});
+
+// Removing an eligibility branch or routing a canonical metric to the wrong help
+// must change the actual rendered controls; no source-string assertions.
+for (const row of [
+  {name:'pending results',state:{isLoading:true},reason:/불러오는 중|확인 중/,english:/loading|pending/i},
+  {name:'fixed common cohort',state:{executionEvidence:{common_cohort:{dataset_version_id:'v1'}}},reason:/코호트.*지원/,english:/cohort.*support/i},
+  {name:'heldout anomaly test',state:{metrics:{anomaly_mode:'classification',evaluated_split:'test'}},reason:/시험.*고정.*임계값/,english:/test.*fixed.*threshold/i},
+  {name:'distance scores',state:{metrics:{score_spec:{domain:'distance'}}},reason:/거리.*저장.*임계값/,english:/distance.*saved.*threshold/i},
+  {name:'missing model',state:{jobId:null},reason:/평가.*모델/,english:/evaluated model/i},
+  {name:'missing normal truth',state:{testPredictions:[samples[0]]},reason:/NG와 OK.*모두/,english:/both.*NG.*OK/i},
+]) test('rendered unavailable calibration explains '+row.name+' without mutating the saved or preview criterion',()=>{
+  for(const language of ['ko','en']){
+    let calls=0; const input={jobId:'job',persistedThreshold:.5,confidenceThreshold:.2,classSemantics:semantics,testPredictions:samples,
+      filteredPredictions:samples,overkillAnalysis:{optimal_threshold:.1},calibrateZeroEscape:()=>calls++,applyOptimalThreshold:()=>calls++,setConfidenceThreshold:()=>calls++,...row.state};
+    const view=renderStudio(input,{language});
+    view.nodes.find(n=>n.type==='button'&&/과검\/미검 최적화|Zero-Escape/.test(view.text(n))).props.onClick();view.rerender();
+    const text=view.text(view.nodes[0]);assert.match(text,language==='ko'?row.reason:row.english);
+    if(row.name!=='missing normal truth')assert.doesNotMatch(text,/NG와 OK 검증 예측이 모두 있어야 과검/,'a capability refusal cannot blame absent classes');
+    const apply=view.nodes.filter(n=>n.type==='button'&&/^(평가 임계값 적용|검증 임계값 적용|Evaluation Image Threshold Analysis|Apply)/.test(view.text(n)));
+    assert.ok(apply.length);assert.ok(apply.every(n=>n.props.disabled));
+    assert.doesNotMatch(text,/즉시 임계값 하향|유출 위험 0%|Zero Escape Risk/);
+    assert.equal(calls,0);assert.equal(input.persistedThreshold,.5);assert.equal(input.confidenceThreshold,.2);
+  }
+});
+
+test('rendered canonical detection and segmentation metrics preserve case and select distinct AP help',()=>{
+ const view=renderStudio({metrics:{mAP_50:.6,mAP_50_95:.3,miou:.4,mdice:.5,map50:.7,map50_95:.2}});
+ const labels=['mAP@0.5','mAP@0.5:0.95','평균 IoU','평균 Dice','mAP@0.5','mAP@0.5:0.95'];
+ const metricLabels=view.nodes.filter(n=>n.type==='span'&&labels.includes(view.text(n)));
+ assert.deepEqual(metricLabels.map(n=>view.text(n)),labels);assert.ok(metricLabels.every(n=>!n.props.className.split(/\s+/).includes('uppercase')));
+ const tooltips=view.nodes.filter(n=>n.props.termKey&&['map_50','map_50_95','iou','dice'].includes(n.props.termKey));
+ assert.deepEqual(tooltips.map(n=>n.props.termKey),['map_50','map_50_95','iou','dice','map_50','map_50_95']);
+ const eligible=renderStudio({jobId:'job',classSemantics:semantics,testPredictions:samples,overkillAnalysis:{optimal_threshold:.1}});
+ const apply=eligible.nodes.find(n=>n.type==='button'&&eligible.text(n)==='평가 임계값 적용');assert.equal(apply.props.disabled,false);
+});
+
+test('rendered zero-miss sample result does not claim zero operating escape risk',()=>{
+ const view=renderStudio({jobId:'job',testPredictions:[sample('good-ng','NG','NG')],filteredPredictions:[]});
+ view.nodes.find(n=>n.type==='button'&&/과검\/미검 최적화/.test(view.text(n))).props.onClick();view.rerender();
+ assert.doesNotMatch(view.text(view.nodes[0]),/유출 위험 0%|Zero Escape Risk/);assert.match(view.text(view.nodes[0]),/평가 표본|evaluation sample/i);
+});
+
+for(const row of [
+ {name:'no evaluation model',state:{jobId:null,testPredictions:[]},want:/평가 결과 없음/},
+ {name:'no predictions',state:{testPredictions:[]},want:/검증 예측 없음/},
+ {name:'no NG truth',state:{testPredictions:[sample('normal','normal','normal')]},want:/NG 정답 표본 없음/},
+ {name:'missing truth',state:{testPredictions:[sample('unknown',undefined,'scratch')],classSemantics:semantics},want:/정답 역할.*확인/},
+ {name:'replacement pending',state:{isLoading:true,testPredictions:[]},want:/불러오는 중/},
+])test('rendered miss summary preserves '+row.name+' as unavailable rather than measured zero',()=>{
+ const view=renderStudio({jobId:'job',filteredPredictions:[],...row.state});
+ view.nodes.find(n=>n.type==='button'&&/과검\/미검 최적화/.test(view.text(n))).props.onClick();view.rerender();
+ const card=view.nodes.find(n=>n.type==='div'&&String(n.props.className).startsWith('p-3 rounded-[4px] border'));
+ assert.ok(card);assert.match(view.text(card),row.want);assert.doesNotMatch(view.text(card),/평가 표본에서 미검 0건/);
+});
+
+for(const row of [{name:'missed NG',score:.1,want:/1건.*놓친 이미지/},{name:'detected NG',score:.9,want:/0건.*평가 표본에서 미검 0건/}])
+test('rendered miss summary honors per-image NG truth without a class label: '+row.name,()=>{
+ const view=renderStudio({jobId:'job',confidenceThreshold:.5,testPredictions:[{...sample('per-image',undefined,'normal'),is_defect:true,defect_score:row.score}],filteredPredictions:[]});
+ view.nodes.find(n=>n.type==='button'&&/과검\/미검 최적화/.test(view.text(n))).props.onClick();view.rerender();
+ const card=view.nodes.find(n=>n.type==='div'&&String(n.props.className).startsWith('p-3 rounded-[4px] border'));
+ assert.match(view.text(card),row.want);assert.doesNotMatch(view.text(card),/표본 없음|정답 역할.*확인/);
+ assert.equal(view.nodes.find(n=>n.type==='button'&&view.text(n)==='평가 임계값 적용').props.disabled,true,'existing class-label-based calibration guard is unchanged');
+});
+
+test('eligible calibration with no prior analysis offers calculation rather than blaming missing classes',()=>{
+ const view=renderStudio({jobId:'job',classSemantics:semantics,testPredictions:samples,overkillAnalysis:null});
+ assert.equal(view.nodes.find(n=>n.type==='button'&&view.text(n)==='평가 임계값 적용').props.disabled,false);
+ assert.match(view.text(view.nodes[0]),/아직 계산하지 않음/);
+ view.nodes.find(n=>n.type==='button'&&/과검\/미검 최적화/.test(view.text(n))).props.onClick();view.rerender();
+ assert.match(view.text(view.nodes[0]),/아직 임계값 분석 결과가 없습니다/);
+ assert.doesNotMatch(view.text(view.nodes[0]),/NG와 OK 검증 예측이 모두 있어야/);
 });

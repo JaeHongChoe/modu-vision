@@ -57,7 +57,7 @@ const classTrainText = (untrained: string[]) => `학습 분할에 이미지가 �
 
 /** A saved split that leaves out labeled images (newly labeled, or adopted from a draft): the import then counts none
  *  of its partitions until the split is applied again, so say that instead of "no training images". */
-export const SPLIT_MISSES_LABELS_TEXT = "저장된 분할에 없는 라벨 이미지가 있습니다(새로 라벨했거나 초안에서 채택한 이미지). 1단계에서 '3-Way 분할 적용'으로 분할을 다시 적용하세요.";
+export const SPLIT_MISSES_LABELS_TEXT = "저장된 분할에 없는 라벨 이미지가 있습니다(새로 라벨했거나 초안에서 채택한 이미지). 1단계에서 '이 비율로 나누기'으로 분할을 다시 적용하세요.";
 export function splitMissesLabels(input: { totalImages: number; split: { train: number; val: number; test?: number };
   splitState: ImportCheckInput['splitState'] | undefined }): boolean {
   return input.splitState === 'saved' && input.totalImages > 0 && input.split.train === 0 && input.split.val === 0 && !input.split.test;

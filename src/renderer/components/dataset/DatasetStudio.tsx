@@ -321,6 +321,7 @@ export const DatasetStudio: React.FC = () => {
   const classEntries = Object.entries(classes);
   const distribution = classDistributionStats(task, classes, classCountUnit === 'images' ? (totalImages || sourceImages) : totalImages, classCountUnit ?? undefined);
   const isImbalanced = severeClassImbalance(classes);
+  const usesClassWeights = ['classification', 'patch_classification'].includes(task);
   const maxClassCount = Math.max(...Object.values(classes), 1);
   const appliedTotal = split.train + split.val + split.test;
 
@@ -615,12 +616,15 @@ export const DatasetStudio: React.FC = () => {
                     {language === 'ko' ? '극심한 클래스 불균형 (ERR_003)' : 'Class Imbalance Warning'}
                   </span>
                 </div>
-                <JargonTooltip termKey="focal_loss" />
               </div>
               <p className="text-[11px] text-amber-300">
                 {language === 'ko'
-                  ? '다수 클래스와 소수 클래스 비율이 20:1을 초과합니다. 가중 손실함수(Focal Loss)가 적용됩니다.'
-                  : 'Class ratio exceeds 20:1. Weighted loss rebalancing will be used.'}
+                  ? (usesClassWeights
+                    ? '다수 클래스와 소수 클래스 비율이 20:1을 초과합니다. 분류 학습에는 클래스별 이미지 수에 따른 가중치가 적용됩니다. 적은 클래스의 이미지를 더 모으고 클래스별 평가 결과를 확인하세요.'
+                    : '다수 클래스와 소수 클래스 비율이 20:1을 초과합니다. 적은 클래스의 이미지와 라벨을 확인하고 클래스별 평가 결과를 검토하세요.')
+                  : (usesClassWeights
+                    ? 'Class ratio exceeds 20:1. Classification training uses weights from class image counts. Collect more minority-class images and review per-class evaluation results.'
+                    : 'Class ratio exceeds 20:1. Review minority-class images, labels and per-class evaluation results.')}
               </p>
             </div>
           )}
@@ -747,7 +751,7 @@ export const DatasetStudio: React.FC = () => {
                     ? '분할 연산 중...'
                     : 'Splitting...'
                   : language === 'ko'
-                  ? simpleView ? '이 비율로 나누기' : '3-Way 분할 적용'
+                  ? '이 비율로 나누기'
                   : 'Apply 3-Way Split'}
               </span>
             </button>

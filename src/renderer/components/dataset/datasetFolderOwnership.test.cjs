@@ -304,3 +304,13 @@ test('a shared session change holds the verified-version dialog, says why, and r
   shown.opener.props.onClick();
   assert.ok(view().dialog, 'the dialog opens once the change has ended');
 });
+
+const renderedText=node=>typeof node==='string'||typeof node==='number'?String(node):Array.isArray(node)?node.map(renderedText).join(''):renderedText(node?.props?.children||[]);
+function renderedNodes(node,output=[]){if(Array.isArray(node)){node.forEach(n=>renderedNodes(n,output));return output;}if(node&&typeof node==='object'){output.push(node);renderedNodes(node.props?.children,output);}return output;}
+for(const viewMode of ['simple','full'])test('Korean '+viewMode+' split guidance reaches the same actual split action',async()=>{
+ const h=harness();h.project.language='ko';h.project.viewMode=viewMode;
+ h.store.setState({sourceAuthority:null});const importing=h.store.getState().importFolder('/source/A', 'classification');await importing;
+ const split=renderedNodes(h.render()).find(n=>n.type==='button'&&renderedText(n)==='이 비율로 나누기');
+ assert.ok(split,'the checklist action name locates the real split button');assert.equal(split.props.disabled,false);
+ await split.props.onClick();assert.equal(h.calls.filter(c=>c.kind==='split').length,1);h.unmount();
+});
