@@ -30,7 +30,7 @@ def test_real_controller_enrolls_backend_before_actual_cpu_and_retains_blocking_
     """The existing source controller lacked a writer epoch despite real CPU success."""
     values = cpu_stack(tmp_path)
     root = values[0]
-    child, ack = _start_ready_cpu_stack(values, prefix=['-c', _source_cpu_settlement_fixture_prefix()])
+    child, ack = start_cpu_stack(values, prefix=['-c', _source_cpu_settlement_fixture_prefix()])
     try:
         _, cpu = _wait_receipt_and_cpu_settlement(root, ack['nonce'], child)
         assert cpu['semantic_output']['final_verdict'] == 'OK'
@@ -728,14 +728,12 @@ fs.writeFileSync(path.join(launch.projects,'managed-stop-result.json'),JSON.stri
             return sign(payload)
         value['sign']=changed_layout;return value
     monkeypatch.setattr(fixtures,'fixture',fixture)
-    values=fixtures.cpu_stack(tmp_path)
-    _atomic_fixture_json(values[0]/'projects'/completion_boundary.CONFIG,
-        {'token':__import__('uuid').uuid4().hex,'root':str(values[0])})
-    return values
+    return fixtures.cpu_stack(tmp_path)
 
 
 def _fixture_cpu_completion_profile(projects, original_profile):
     from backend.tests import _source_cpu_completion_boundary as boundary
+    if not (projects/boundary.CONFIG).exists():return original_profile
     from backend.tests.test_application_launch_quiescence_bridge import _cpu_contention_backend
     profile=boundary.backend_profile(projects, original_profile)
     if 'contention' in boundary.read(projects,boundary.CONFIG):
@@ -743,13 +741,18 @@ def _fixture_cpu_completion_profile(projects, original_profile):
     return profile
 
 
-def _start_ready_cpu_stack(values, **kwargs):
+def _configure_cpu_completion_boundary(root, *, schedule=None):
+    metadata={'token':__import__('uuid').uuid4().hex,'root':str(root),'deadline':time.monotonic()+50}
+    if schedule is not None:
+        assert type(schedule) is dict and set(schedule)=={'entry','mode'}
+        assert schedule['entry'] in {'verify','publish'} and schedule['mode'] in {'busy','released'}
+        metadata['contention']=schedule
+    completion_boundary.write(root/'projects',completion_boundary.CONFIG,metadata)
+
+
+def _start_ready_cpu_stack(values, *, completion_schedule=None, **kwargs):
     """Capture the original receipt budget once in the parent before startup."""
-    projects=values[0]/'projects'
-    if (projects/completion_boundary.CONFIG).exists():
-        metadata=completion_boundary.read(projects,completion_boundary.CONFIG)
-        assert 'deadline' not in metadata, 'Fixture startup cannot renew its deadline'
-        _atomic_fixture_json(projects/completion_boundary.CONFIG,{**metadata,'deadline':time.monotonic()+50})
+    _configure_cpu_completion_boundary(values[0],schedule=completion_schedule)
     return start_cpu_stack(values,**kwargs)
 
 
@@ -1456,7 +1459,7 @@ def _wait_returned_cpu_settlement(root, nonce, child, cpu, deadline):
 def _wait_receipt_and_cpu_settlement(root, nonce, child):
     deadline=time.monotonic()+50
     if (root/'projects'/completion_boundary.CONFIG).exists():
-        deadline=completion_boundary.read(root/'projects',completion_boundary.CONFIG)['deadline']
+        deadline=completion_boundary.configuration(root/'projects')['deadline']
     remaining=deadline-time.monotonic();assert remaining>0
     target,cpu=wait_receipt(root,nonce,child,timeout=remaining)
     assert time.monotonic()<deadline
@@ -1727,13 +1730,14 @@ def _cpu_contention_cleanup(root,child,primary):
 def test_source_cpu_completion_real_contention_and_readiness(tmp_path,monkeypatch,entry,mode):
     """Removing readiness breaks released success; weakening real flock breaks busy refusal."""
     import errno
-    original_stack=managed_stack;roots=[];child=None
+    original_stack=managed_stack;original_start=_start_ready_cpu_stack;roots=[];child=None
     def stack(*args,**kwargs):
         values=original_stack(*args,**kwargs);root=values[0];roots.append(root)
-        metadata=completion_boundary.read(root/'projects',completion_boundary.CONFIG)
-        _atomic_fixture_json(root/'projects'/completion_boundary.CONFIG,{**metadata,'contention':{'entry':entry,'mode':mode}})
         return values
+    def start(values,**kwargs):
+        return original_start(values,completion_schedule={'entry':entry,'mode':mode},**kwargs)
     monkeypatch.setattr(sys.modules[__name__],'managed_stack',stack)
+    monkeypatch.setattr(sys.modules[__name__],'_start_ready_cpu_stack',start)
     try:
         if mode=='released':
             test_actual_controller_refuses_changed_and_replayed_original_main_drain_frames(tmp_path,monkeypatch,'identical_request_replay')
@@ -1899,3 +1903,78 @@ def test_source_cpu_completion_gate_cleanup_attempts_stop_after_marker_failure(t
     with pytest.raises(OSError) as caught:_cpu_contention_cleanup(tmp_path,child,None)
     assert caught.value is first
     assert stopped==[(child,tmp_path)]
+
+
+def test_source_cpu_completion_compat_shared_stack_stays_unconfigured(tmp_path,monkeypatch):
+    values=managed_stack(tmp_path,monkeypatch)
+    assert not (values[0]/'projects'/completion_boundary.CONFIG).exists()
+
+
+@pytest.mark.parametrize('retained',[None,lambda *_:None])
+def test_source_cpu_completion_compat_absent_backend_profile_is_exact_original(tmp_path,retained):
+    assert _fixture_cpu_completion_profile(tmp_path,retained) is retained
+
+
+def test_source_cpu_completion_compat_explicit_start_captures_one_complete_budget(tmp_path,monkeypatch):
+    from types import SimpleNamespace
+    projects=tmp_path/'projects';projects.mkdir();observed=[]
+    monkeypatch.setitem(globals(),'time',SimpleNamespace(monotonic=lambda:10.))
+    def original(values,**kwargs):
+        observed.append((values,kwargs,completion_boundary.read(projects,completion_boundary.CONFIG)))
+        return 'original child','original acknowledgement'
+    monkeypatch.setitem(globals(),'start_cpu_stack',original)
+    assert _start_ready_cpu_stack((tmp_path,),prefix=['original'])==('original child','original acknowledgement')
+    metadata=observed[0][2]
+    assert metadata['root']==str(tmp_path) and metadata['deadline']==60.
+    assert len(metadata['token'])==32 and len(observed)==1 and observed[0][1]=={'prefix':['original']}
+    original_raw=(projects/completion_boundary.CONFIG).read_bytes()
+    with pytest.raises(FileExistsError):_start_ready_cpu_stack((tmp_path,))
+    assert len(observed)==1 and (projects/completion_boundary.CONFIG).read_bytes()==original_raw
+
+
+@pytest.mark.parametrize('configured',['partial','valid','expired','nonfinite','foreign_root','malformed'])
+def test_source_cpu_completion_compat_start_never_overwrites_preconfigured_state(tmp_path,monkeypatch,configured):
+    projects=tmp_path/'projects';projects.mkdir()
+    value={'root':str(tmp_path),'token':'synthetic','deadline':time.monotonic()+50}
+    if configured=='partial':value.pop('deadline')
+    elif configured=='expired':value['deadline']=time.monotonic()-1
+    elif configured=='nonfinite':value['deadline']=float('inf')
+    elif configured=='foreign_root':value['root']=str(tmp_path/'foreign')
+    raw=b'{' if configured=='malformed' else json.dumps(value).encode()
+    target=projects/completion_boundary.CONFIG;target.write_bytes(raw)
+    def forbidden(*args,**kwargs):pytest.fail('Configured fixture must not spawn again')
+    monkeypatch.setitem(globals(),'start_cpu_stack',forbidden)
+    with pytest.raises(FileExistsError):_start_ready_cpu_stack((tmp_path,))
+    assert target.read_bytes()==raw
+
+
+@pytest.mark.parametrize('configured',[False,True])
+def test_source_cpu_completion_compat_wait_keeps_legacy_or_explicit_absolute_budget(tmp_path,monkeypatch,configured):
+    from types import SimpleNamespace
+    projects=tmp_path/'projects';projects.mkdir();calls=[];cpu={'controlled':'observation'};child=object()
+    clock=SimpleNamespace(monotonic=lambda:10.)
+    monkeypatch.setitem(globals(),'time',clock);monkeypatch.setattr(completion_boundary,'time',clock)
+    if configured:completion_boundary.write(projects,completion_boundary.CONFIG,{'root':str(tmp_path),'token':'synthetic','deadline':40.})
+    def receipt(root,nonce,actual_child,*,timeout):
+        assert root==tmp_path and nonce=='original' and actual_child is child
+        calls.append(('receipt',timeout));return projects/'receipt.json',cpu
+    def settlement(root,nonce,actual_child,actual_cpu,deadline):
+        assert root==tmp_path and nonce=='original' and actual_child is child and actual_cpu is cpu
+        calls.append(('settlement',deadline))
+    monkeypatch.setitem(globals(),'wait_receipt',receipt);monkeypatch.setitem(globals(),'_wait_returned_cpu_settlement',settlement)
+    assert _wait_receipt_and_cpu_settlement(tmp_path,'original',child)==(projects/'receipt.json',cpu)
+    assert calls==[('receipt',30. if configured else 50.),('settlement',40. if configured else 60.)]
+
+
+@pytest.mark.parametrize('invalid',['partial','expired','nonfinite','foreign_root','malformed'])
+def test_source_cpu_completion_compat_configured_wait_never_defaults_invalid_deadline(tmp_path,monkeypatch,invalid):
+    projects=tmp_path/'projects';projects.mkdir()
+    value={'root':str(tmp_path),'token':'synthetic','deadline':time.monotonic()+50}
+    if invalid=='partial':value.pop('deadline')
+    elif invalid=='expired':value['deadline']=time.monotonic()-1
+    elif invalid=='nonfinite':value['deadline']=float('inf')
+    elif invalid=='foreign_root':value['root']=str(tmp_path/'foreign')
+    (projects/completion_boundary.CONFIG).write_text('{' if invalid=='malformed' else json.dumps(value))
+    def forbidden(*args,**kwargs):pytest.fail('Invalid configured state must not start receipt observation')
+    monkeypatch.setitem(globals(),'wait_receipt',forbidden)
+    with pytest.raises((AssertionError,KeyError,ValueError)):_wait_receipt_and_cpu_settlement(tmp_path,'original',object())

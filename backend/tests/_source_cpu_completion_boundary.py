@@ -28,6 +28,18 @@ def write(projects, name, value):
     _atomic_fixture_json(projects / name, value, exclusive=True, sort_keys=True)
 
 
+def configuration(projects):
+    """Configured means a complete original bound, never a legacy fallback."""
+    value = read(projects, CONFIG)
+    assert type(value) is dict and set(value) in ({'token', 'root', 'deadline'}, {'token', 'root', 'deadline', 'contention'})
+    assert type(value['token']) is str and value['token']
+    assert value['root'] == str(projects.parent)
+    deadline = value['deadline']
+    assert type(deadline) in (int, float) and math.isfinite(deadline)
+    assert time.monotonic() < deadline, 'SOURCE completion readiness exceeded its original deadline'
+    return value
+
+
 def request_hash(request):
     return hashlib.sha256(json.dumps(request, sort_keys=True, separators=(',', ':')).encode()).hexdigest()
 
@@ -61,7 +73,7 @@ def completion_post_line(service):
 
 def backend_profile(projects, original_profile):
     from backend.engine import application_launch_handshake as h, application_owned_cpu_child_relay as cpu
-    metadata = read(projects, CONFIG)
+    metadata = configuration(projects)
     thread = threading.get_ident(); cache = h._CACHE; queue = cache['source_cpu_queue']
     root = cache['root']; nonce = cache['proof']['nonce']; proof = cache['proof']
     assert Path(metadata['root']) == root
@@ -158,7 +170,7 @@ def controller_boundary(owner, original_code):
     if not (projects / CONFIG).exists():
         yield
         return
-    metadata = read(projects, CONFIG); thread = threading.get_ident(); previous = sys.getprofile()
+    metadata = configuration(projects); thread = threading.get_ident(); previous = sys.getprofile()
     done = False
     def profile(frame, event, arg):
         nonlocal done
