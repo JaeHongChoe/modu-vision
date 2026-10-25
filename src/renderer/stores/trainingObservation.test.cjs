@@ -1,10 +1,10 @@
 const test=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path'),Module=require('node:module'),ts=require('typescript');
-function store(reply){
+function store(reply, {dataset={}, start=async()=>({job_id:'new',status:'running'})}={}){
  const name=path.join(__dirname,'useTrainingStore.ts'),m=new Module(name,module);m.filename=name;m.paths=Module._nodeModulePaths(__dirname);
  const req=m.require.bind(m);const mock={
-  '../services/api':{api:{training:{getStatus:async()=>{if(reply instanceof Error)throw reply;return reply;}}}},
-  './useComputeStore':{useComputeStore:{getState:()=>({profiles:[]})}},
-  './useDatasetStore':{useDatasetStore:{getState:()=>({})}},
+  '../services/api':{api:{training:{start,getStatus:async()=>{if(reply instanceof Error)throw reply;return reply;}}}},
+  './useComputeStore':{useComputeStore:{getState:()=>({profiles:[],isLoaded:true,selectedProfileId:null})}},
+  './useDatasetStore':{useDatasetStore:{getState:()=>dataset}},
   '../utils/trainingComputeReadiness':{trainingComputeReadiness:()=>({ready:true})}
  };m.require=ref=>ref in mock?mock[ref]:req(ref);m._compile(ts.transpileModule(fs.readFileSync(name,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText,name);return m.exports.useTrainingStore;
 }
@@ -25,4 +25,16 @@ test('active job recovery retains observation from the same polled identity',asy
 test('the core preserves the actual error catalog detail instead of a generic failure',async()=>{
  const s=store({job_id:'owned',status:'failed',error:{error_code:'OUT_OF_MEMORY',details:'Controlled allocation failed'},observation:{cause:'out_of_memory',next_action:'배치를 줄이세요.'}});
  s.setState({jobId:'owned',isCurrentData:true});await s.getState().refreshCurrentJob();assert.equal(s.getState().startError,'Controlled allocation failed');
+});
+
+for(const dataset of [{isLoading:true},{importError:'summary unavailable'}])test(`training entry refuses ${dataset.isLoading?'pending metadata':'owned summary failure'} before API and training effects`,async()=>{
+ let calls=0;const s=store({}, {dataset,start:async()=>{calls++;return{job_id:'new',status:'running'};}});
+ s.setState({jobId:'previous',status:'completed',lossHistory:[{epoch:1,loss:.2}]});const before=s.getState();
+ await assert.rejects(s.getState().startTraining('/source','classification'),dataset.isLoading?/데이터.*확인/:/summary unavailable/);
+ assert.equal(calls,0);assert.equal(s.getState(),before);
+});
+test('training admitted before a synchronous subscriber starts metadata refresh still dispatches normally',async()=>{
+ let calls=0;const dataset={isLoading:false,importError:null};const s=store({}, {dataset,start:async()=>{calls++;return{job_id:'new',status:'running'};}});
+ s.subscribe(state=>{if(state.isTraining)dataset.isLoading=true;});
+ await s.getState().startTraining('/source','classification');assert.equal(calls,1);assert.equal(s.getState().jobId,'new');
 });
