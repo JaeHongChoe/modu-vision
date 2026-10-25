@@ -1089,8 +1089,8 @@
       "test": "scripts/e2e/comparison-task-center.spec.ts::native CPU comparison reopens the exact completed job from Task Center and after refresh",
       "recorded_test_source_sha256": "1a9a9e1f72fe9a78bca5683b025884f9b5651f341b4f1b5c1cb3b561aeb26f26",
       "retained_spec_commit": "bc9f02c52ed13247fd52d618cb3e7d829b4c91ba",
-      "current_test_source_sha256": "3c99a7edaeff263bb93016193d78419fa9d2f042b4061ecf2ef2e28e2f25b2f1",
-      "reason": "Refreshed on the beginner-UX branch: the spec now reads the Korean save and normal-mark labels of the labeling toolbar; the retained commit still holds the exact bytes the receipt executed, and no new GUI execution is claimed. comparison evidence edit draws a region (classification step 2 has no OK tag). Comparison keeps a job whose POST is unanswered when step 4's evaluated model lands; F064 drains check each settled row once (CI #406)"
+      "current_test_source_sha256": "6e4abb3f9906b9c33c6f4a342689d4745bf85636834c0135a4921c4beef32723",
+      "reason": "Refreshed on the beginner-UX branch: the spec now reads the Korean save and normal-mark labels of the labeling toolbar; the retained commit still holds the exact bytes the receipt executed, and no new GUI execution is claimed. comparison evidence edit draws a region (classification step 2 has no OK tag). Comparison keeps a job whose POST is unanswered when step 4's evaluated model lands; F064 drains check each settled row once (CI #406) Current comparison preparation now waits for the decoded synthetic raster and maps the box inside its image within the original shared 20-second readiness bound. Historical receipt bytes, execution source, retained spec anchor and recorded test hash remain unchanged; this declaration grants no new GUI execution or acceptance."
     },
     {
       "receipt": "2026-10-10-gui398-legacy-readiness-electron.json",
@@ -1229,8 +1229,8 @@
       "test": "scripts/e2e/comparison-task-center.spec.ts::CPU comparison reopens the exact completed job from Task Center and after refresh",
       "recorded_test_source_sha256": "1a9a9e1f72fe9a78bca5683b025884f9b5651f341b4f1b5c1cb3b561aeb26f26",
       "retained_spec_commit": "bc9f02c52ed13247fd52d618cb3e7d829b4c91ba",
-      "current_test_source_sha256": "3c99a7edaeff263bb93016193d78419fa9d2f042b4061ecf2ef2e28e2f25b2f1",
-      "reason": "Refreshed on the beginner-UX branch: the spec now reads the Korean save and normal-mark labels of the labeling toolbar; the retained commit still holds the exact bytes the receipt executed, and no new GUI execution is claimed. comparison evidence edit draws a region (classification step 2 has no OK tag). Comparison keeps a job whose POST is unanswered when step 4's evaluated model lands; F064 drains check each settled row once (CI #406)"
+      "current_test_source_sha256": "6e4abb3f9906b9c33c6f4a342689d4745bf85636834c0135a4921c4beef32723",
+      "reason": "Refreshed on the beginner-UX branch: the spec now reads the Korean save and normal-mark labels of the labeling toolbar; the retained commit still holds the exact bytes the receipt executed, and no new GUI execution is claimed. comparison evidence edit draws a region (classification step 2 has no OK tag). Comparison keeps a job whose POST is unanswered when step 4's evaluated model lands; F064 drains check each settled row once (CI #406) Current comparison preparation now waits for the decoded synthetic raster and maps the box inside its image within the original shared 20-second readiness bound. Historical receipt bytes, execution source, retained spec anchor and recorded test hash remain unchanged; this declaration grants no new GUI execution or acceptance."
     },
     {
       "receipt": "2026-10-18-mask-source-choice-empty-browser.json",

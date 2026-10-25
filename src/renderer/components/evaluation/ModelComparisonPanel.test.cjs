@@ -8,7 +8,7 @@ function fixture(config={}){
  const react={useState(value){const i=index++;if(!(i in slots))slots[i]=value;return[slots[i],v=>{slots[i]=typeof v==='function'?v(slots[i]):v;dirty=true;}];},useRef(value){const i=index++;return slots[i]??(slots[i]={current:value});},useEffect(fn,deps){const i=index++;if(JSON.stringify(slots[i]?.deps)!==JSON.stringify(deps)){const previous=slots[i];slots[i]={deps};effects.push(()=>{previous?.cleanup?.();slots[i].cleanup=fn();});}}};
  const file=path.join(__dirname,'ModelComparisonPanel.tsx'),m=new Module(file,module);m.filename=file;m.paths=Module._nodeModulePaths(__dirname);const req=m.require.bind(m);
  const models=[{job_id:'incumbent',task:'classification'},{job_id:'candidate',task:'classification'}];
- m.require=n=>n==='react'?react:n.endsWith('/utils/plainLabels')?require('../../utils/plainLabels.fixture.cjs'):n.endsWith('/services/datasetWorkflow')?{datasetWorkflow:{}}:n.endsWith('/services/teamDataApi')?{teamDataApi:{}}:n.endsWith('/useAnnotationStore')?{useAnnotationStore:hook({reviewerName:'kai'})}:n.endsWith('/evidenceLabeling')?{openEvidenceLabeling:async()=>{throw new Error('Unexpected edit action');},rememberEvidenceEdit(){}}:n.endsWith('/EvidenceImageViewer')?{EvidenceImageViewer:()=>null}:n.includes('useComputeStore')?{useComputeStore:hook(compute)}:n.includes('useProjectStore')?{useProjectStore:hook({projectDir:'/project',project:{id:'p',source_dataset_dir:'/source',active_labelset_id:'default'}})}:n.endsWith('/useTaskHandoff')?{useTaskHandoff:()=>config.handoff||null}:n.includes('productDataWorkflow')?{consumeReviewContext:(_storage,_scope,ids)=>{const value=config.origin;config.origin=null;return value&&ids.includes(value.comparison_id)?value:null;},evaluationOriginScope:()=>null}:n.endsWith('/services/api')?{getApiPersistenceIdentity:()=> 'local',api:{evaluation:{comparisonModels:async(source,task)=>{catalogReads.push({source,task});if(config.catalogError)throw config.catalogError;return{models:config.models||models};},listComparisons:async()=>({comparisons:config.reports||(config.report?[config.report]:[])}),getComparison:async id=>config.getReport?config.getReport(id):config.report}},request:async(url,options)=>{urls.push(url);if(options){calls.push(JSON.parse(options.body));if(config.createError)throw config.createError;if(pending)return new Promise(resolve=>{resolveCreate=resolve;});return config.created||{job_id:'controlled',status:'completed'};}if(url.includes('/export?'))return config.export?config.export():{report:config.report,saved_report_sha256:'a'.repeat(64)};if(url.includes('/jobs/'))return config.polled||config.created||{job_id:'controlled',status:'completed',completed_images:0,total_images:0,report_id:null,error:null};return{jobs:config.jobs||[]};}}:req(n);
+ m.require=n=>n==='react'?react:n.endsWith('/utils/plainLabels')?require('../../utils/plainLabels.fixture.cjs'):n.endsWith('/services/datasetWorkflow')?{datasetWorkflow:{}}:n.endsWith('/services/teamDataApi')?{teamDataApi:{}}:n.endsWith('/useAnnotationStore')?{useAnnotationStore:hook({reviewerName:'kai'})}:n.endsWith('/evidenceLabeling')?{openEvidenceLabeling:async()=>{throw new Error('Unexpected edit action');},rememberEvidenceEdit(){}}:n.endsWith('/EvidenceImageViewer')?{EvidenceImageViewer:()=>null}:n.includes('useComputeStore')?{useComputeStore:hook(compute)}:n.includes('useProjectStore')?{useProjectStore:hook({projectDir:'/project',project:{id:'p',source_dataset_dir:'/source',active_labelset_id:'default'}})}:n.endsWith('/useTaskHandoff')?{useTaskHandoff:()=>config.handoff||null}:n.includes('productDataWorkflow')?{consumeReviewContext:(_storage,_scope,ids)=>{const value=config.origin;config.origin=null;return value&&ids.includes(value.comparison_id)?value:null;},evaluationOriginScope:()=>null}:n.endsWith('/services/api')?{getApiPersistenceIdentity:()=> 'local',api:{evaluation:{comparisonModels:async(source,task)=>{catalogReads.push({source,task});if(config.catalogError)throw config.catalogError;return{models:config.models||models};},listComparisons:async()=>({comparisons:config.reports||(config.report?[config.report]:[])}),getComparison:async id=>config.getReport?config.getReport(id):config.report}},request:async(url,options)=>{urls.push(url);if(options){calls.push(JSON.parse(options.body));if(config.createError)throw config.createError;if(pending)return new Promise(resolve=>{resolveCreate=resolve;});return config.created||{job_id:'controlled',status:'completed'};}if(url.includes('/evidence-image?'))return config.evidenceRead?config.evidenceRead():config.evidence;if(url.includes('/export?'))return config.export?config.export():{report:config.report,saved_report_sha256:'a'.repeat(64)};if(url.includes('/jobs/'))return config.polled||config.created||{job_id:'controlled',status:'completed',completed_images:0,total_images:0,report_id:null,error:null};return{jobs:config.jobs||[]};}}:req(n);
  m._compile(ts.transpileModule(fs.readFileSync(file,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022,jsx:ts.JsxEmit.ReactJSX}}).outputText,file);
  function render(){index=0;dirty=false;tree=m.exports.ModelComparisonPanel({projectDir:'/project',sourceFolder:'/source',task:'classification',preferredJobId:'candidate',preferredParentJobId:'incumbent',language:'ko',...config.props});effects.splice(0).forEach(f=>f());}
  async function settle(){for(let i=0;i<8;i++){if(dirty)render();await new Promise(setImmediate);if(!dirty)return;}}
@@ -394,5 +394,77 @@ test('a new review-queue return supersedes a pending manual report',async()=>{
   assert.equal(f.all().find(n=>n.props?.['aria-label']==='저장된 모델 비교').props.value,returned.comparison_id);
   const remembered=[...storage.values.entries()].find(([key])=>key.endsWith(':choice'));
   assert.equal(JSON.parse(remembered[1]).id,returned.comparison_id);assert.equal(f.calls.length,0);
+ }finally{storage.restore();}
+});
+
+
+// A late recommendation is a read refresh, not a new operator report/filter choice.
+test('same-report product and lot choices survive a late model recommendation refresh',async()=>{
+ const storage=persistentSelection();try{
+  const report={...savedReport(),images:[{file_path:'/source/review.png',file_name:'review.png',image_sha256:'e'.repeat(64),ground_truth_verdict:'OK',incumbent:{verdict:'OK'},candidate:{verdict:'OK'}}]};
+  const config={report,props:{preferredJobId:null,preferredParentJobId:null}};
+  const f=fixture(config);await f.settle();await f.change('저장된 모델 비교',report.comparison_id);
+  await f.change('모델 비교 제품 필터','(미지정)');await f.change('모델 비교 Lot 필터','(미지정)');
+  config.props.preferredJobId='candidate';config.props.preferredParentJobId='incumbent';f.render();await f.settle();
+  assert.equal(f.all().find(n=>n.props?.['aria-label']==='저장된 모델 비교').props.value,report.comparison_id);
+  assert.equal(f.all().find(n=>n.props?.['aria-label']==='모델 비교 제품 필터').props.value,'(미지정)');
+  assert.equal(f.all().find(n=>n.props?.['aria-label']==='모델 비교 Lot 필터').props.value,'(미지정)');
+  assert.equal(f.calls.length,0,'a catalog read never launches a new comparison');
+  f.compute.profiles[0].gpu_selector='3';f.render();await f.settle();
+  assert.equal(f.all().find(n=>n.props?.['aria-label']==='모델 비교 제품 필터').props.value,'');
+  assert.equal(f.all().find(n=>n.props?.['aria-label']==='모델 비교 Lot 필터').props.value,'');
+ }finally{storage.restore();}
+});
+
+test('an explicit empty filter supersedes a consumed review return across recommendation refresh',async()=>{
+ const storage=persistentSelection();try{
+  const report={...savedReport(),images:[{file_path:'/source/review.png',file_name:'review.png',image_sha256:'e'.repeat(64),ground_truth_verdict:'OK',incumbent:{verdict:'OK'},candidate:{verdict:'OK'}}]};
+  const config={report,origin:{comparison_id:report.comparison_id,file_path:'/source/review.png',product_filter:'(미지정)',lot_filter:'(미지정)'},props:{preferredJobId:null,preferredParentJobId:null}};
+  const f=fixture(config);await f.settle();
+  assert.equal(f.all().find(n=>n.props?.['aria-label']==='모델 비교 제품 필터').props.value,'(미지정)');
+  await f.change('모델 비교 제품 필터','');await f.change('모델 비교 Lot 필터','');
+  config.props.preferredJobId='candidate';config.props.preferredParentJobId='incumbent';f.render();await f.settle();
+  assert.equal(f.all().find(n=>n.props?.['aria-label']==='모델 비교 제품 필터').props.value,'');
+  assert.equal(f.all().find(n=>n.props?.['aria-label']==='모델 비교 Lot 필터').props.value,'');
+  const focused=f.all().filter(n=>n.props?.['data-comparison-image']&&n.props.className?.includes('ring-cyan-400'));
+  assert.equal(focused.length,1);assert.equal(focused[0].props['data-comparison-image'],'/source/review.png');
+  assert.equal(f.calls.length,0);
+ }finally{storage.restore();}
+});
+
+
+test('same completed task-center job preserves explicit filters across recommendation refresh',async()=>{
+ const storage=persistentSelection();try{
+  const report={...savedReport(),images:[{file_path:'/source/review.png',file_name:'review.png',image_sha256:'e'.repeat(64),ground_truth_verdict:'OK',incumbent:{verdict:'OK'},candidate:{verdict:'OK'}}]};
+  const chosen=compareJob('compare-filter-owner','completed',report.comparison_id);
+  const config={report,jobs:[chosen],polled:chosen,handoff:{kind:'model_comparison',jobId:chosen.job_id,comparisonTask:'classification',selectionId:'same-filter-owner'},props:{preferredJobId:null,preferredParentJobId:null}};
+  const f=fixture(config);await f.settle();
+  await f.change('모델 비교 제품 필터','(미지정)');await f.change('모델 비교 Lot 필터','(미지정)');
+  config.props.preferredJobId='candidate';config.props.preferredParentJobId='incumbent';f.render();await f.settle();
+  assert.equal(f.all().find(n=>n.props?.['aria-label']==='저장된 모델 비교').props.value,report.comparison_id);
+  assert.equal(f.all().find(n=>n.props?.['aria-label']==='비교 작업 다시 열기').props.value,chosen.job_id);
+  assert.equal(f.all().find(n=>n.props?.['aria-label']==='모델 비교 제품 필터').props.value,'(미지정)');
+  assert.equal(f.all().find(n=>n.props?.['aria-label']==='모델 비교 Lot 필터').props.value,'(미지정)');
+  assert.equal(f.calls.length,0);
+ }finally{storage.restore();}
+});
+
+
+test('a late recommendation keeps the current original-evidence read and dialog until the exact response applies',async()=>{
+ const storage=persistentSelection();try{
+  const row={file_path:'/source/review.png',file_name:'review.png',image_sha256:'e'.repeat(64),ground_truth_verdict:'OK',incumbent:{verdict:'OK'},candidate:{verdict:'OK'}};
+  const report={...savedReport(),images:[row]};let resolveEvidence;
+  const config={report,props:{preferredJobId:null,preferredParentJobId:null},evidenceRead:()=>new Promise(resolve=>{resolveEvidence=resolve;})};
+  const f=fixture(config);await f.settle();await f.change('저장된 모델 비교',report.comparison_id);
+  const viewer=()=>f.all().find(n=>n.props?.returnLabel==='모델 비교로 돌아가기'&&n.props?.evidence);
+  f.all().find(n=>n.type==='button'&&textOf(n)==='원판정 근거 보기').props.onClick();await f.settle();
+  assert.equal(viewer().props.evidence.runId,report.comparison_id);
+  config.props.preferredJobId='candidate';config.props.preferredParentJobId='incumbent';f.render();await f.settle();
+  assert.equal(viewer()?.props.evidence.runId,report.comparison_id,'a same-report recommendation cannot dismiss the current evidence read');
+  resolveEvidence({comparison_id:report.comparison_id,image_path:row.file_path,image_sha256:row.image_sha256,original_size:[32,32],read_only:true,image:'data:image/png;base64,original'});await f.settle();
+  assert.equal(viewer().props.evidence.layers[0].id,'original');
+  assert.equal(f.urls.filter(url=>url.includes('/evidence-image?')).length,1);
+  f.compute.profiles[0].gpu_selector='3';f.render();await f.settle();assert.equal(viewer(),undefined,'a real authority change still closes the old evidence');
+  assert.equal(f.calls.length,0);
  }finally{storage.restore();}
 });

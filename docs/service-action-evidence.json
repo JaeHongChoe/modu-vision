@@ -52,7 +52,7 @@
     "src/renderer/components/evaluation/EvaluationEvidencePanel.tsx": "9ab0454b4433afdd10fc9c6cbcc12e0ac4c71e3f43e0ed0aa829cd687d38672e",
     "src/renderer/components/runtime/FleetPanel.tsx": "572144e60bbe38efc208ca2d2d19e87de58793da783269e5498970c1d97243ab",
     "src/renderer/components/runtime/PortableUpdatePanel.tsx": "4f747509c427ab35d41745d3da7f26e50a3c3f3a93acdca35beb5fee9145796b",
-    "src/renderer/components/evaluation/ModelComparisonPanel.tsx": "a27ce95b66a2f910402181af91d792e53c12d19798b25eff2b072fb221b3fe7f",
+    "src/renderer/components/evaluation/ModelComparisonPanel.tsx": "c30311e73388c1c6d6b8b14cb390ddfc5242a4cb7df9adb96b764f5642276daf",
     "src/renderer/components/dataset/CaptureIntakePanel.tsx": "b46bf30976ef479073158efa2779c223f939fb17ba53c4586516205cc4001501",
     "src/renderer/components/inference/BatchInspectionPanel.tsx": "5ccd9be834c4a35a8383178318f4ebd99d8c1c9a3a377d333994b0f94c4390d9",
     "src/renderer/components/flowchart/IntermediateCropDrawer.tsx": "9e05b534b05fd79b814f4cec0948c0d831ba768ec573c73ca13b4199cc6ea3db",
