@@ -95,6 +95,14 @@ function harness({ holdSave = false, holdImport = false, holdImages = false, hol
     ['./' + name, load(path.join(__dirname, name + '.ts'), {})]));
   const shared = load(path.resolve(__dirname, '../../stores/assistContext.ts'), {});
   helpers['../../stores/assistContext'] = shared;
+  const services = path.resolve(__dirname, '../../services');
+  const browserHost = load(path.join(services, 'hostAdapter.ts'), {
+    './browserSession': load(path.join(services, 'browserSession.ts'), {}),
+  });
+  const browserInput = load(path.join(__dirname, 'BrowserFolderPathInput.tsx'), {
+    '../../services/hostAdapter': browserHost,
+  }).BrowserFolderPathInput;
+  helpers['./BrowserFolderPathInput'] = { BrowserFolderPathInput: browserInput };
   helpers['../common/useScopedError'] = load(path.resolve(__dirname, '../common/useScopedError.ts'), {react});
   helpers['../../utils/datasetSplitCapability'] = load(path.resolve(__dirname, '../../utils/datasetSplitCapability.ts'), {});
   const scopedThumbnail = load(path.resolve(__dirname, '../common/ScopedDatasetThumbnail.tsx'), {'../../services/api': apiModule, '../../stores/thumbnailDiagnostics': {recordThumbnailRead: () => {}}});
@@ -136,6 +144,11 @@ function harness({ holdSave = false, holdImport = false, holdImages = false, hol
   };
   return { store, downstream, api, ready: () => store.setState({sourceAuthority: datasetModule.readDatasetAuthority(), totalImages: 100, classes: {OK: 99, NG: 1}, split: {train: 80, val: 10, test: 10}, splitState: 'saved', labelsMissing: true, classSplitCounts: {OK: {train: 80, val: 10, test: 9}, NG: {train: 0, val: 0, test: 1}}}), project, shared, render, select, pickers, saves, imports, imageReads, imageRequests, imageResult, summaries, splits, summary, calls, move, changeAuthority,
     acceptAuthority: () => {generation++; context = {workspace_id: `workspace-${backend}`, project_id: project.project.id, actor_id: 'actor', mode: backend === 'A' ? 'local' : 'team'};},
+    browserMarkup: () => {
+      const node = nodes(render()).find(node => node.type === browserInput);
+      assert.ok(node, 'DatasetStudio keeps the browser path entry in its toolbar');
+      return require('react-dom/server').renderToStaticMarkup(require('react').createElement(browserInput, node.props));
+    },
     // This source harness sees the real scoped component's input, not decoded DOM pixels.
     gallery: () => nodes(render()).filter(node => node.type === scopedThumbnail.ScopedDatasetThumbnail).map(node => node.props.path),
     unmount: () => slots.forEach(slot => slot?.cleanup?.()) };
@@ -463,3 +476,30 @@ for(const replacement of ['folder','source authority','read authority'])test(`a 
  const refresh=h.store.getState().annotationsChanged();h.imports[0].resolve(h.summary);await refresh;
  assert.equal(h.imageReads.length,0);
 });
+
+
+for (const boundary of ['project', 'bootstrap', 'labelset']) {
+  test(`browser path help survives ${boundary} changes while the old picker error retires`, async () => {
+    const previous = global.window; global.window = {};
+    const h = harness();
+    try {
+      const checkHelp = () => {
+        const html = h.browserMarkup();
+        assert.match(html, /aria-describedby="[^"]+"/);
+        assert.match(html, />브라우저[^<]*백엔드[^<]*읽을 수 있는[^<]*경로[^<]*<\/p>/);
+      };
+      checkHelp();
+      const pending = h.select();
+      h.pickers[0].reject(Error('이전 폴더 선택 오류')); await pending; h.render();
+      assert.deepEqual(h.shared.assistPanelErrors(), [{ source: '데이터 준비', text: '이전 폴더 선택 오류' }]);
+      checkHelp();
+      if (boundary === 'project') h.move({ id: 'B' });
+      else if (boundary === 'bootstrap') { h.changeAuthority({ transport: 'B' }); h.project.isProjectBusy = true; }
+      else h.project.project.active_labelset_id = 'next';
+      h.render(); checkHelp(); assert.deepEqual(h.shared.assistPanelErrors(), []);
+      if (boundary === 'bootstrap') { h.acceptAuthority(); h.project.isProjectBusy = false; h.render(); }
+      checkHelp(); assert.deepEqual(h.shared.assistPanelErrors(), [], 'capability help does not revive retired picker failures');
+      assert.deepEqual(h.calls, [], 'guidance alone never imports or saves a path');
+    } finally { h.unmount(); global.window = previous; }
+  });
+}
