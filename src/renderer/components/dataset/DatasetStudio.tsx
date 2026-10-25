@@ -174,20 +174,26 @@ export const DatasetStudio: React.FC = () => {
   }, []);
   const [showImports, setShowImports] = useState(false);
   // The active validated version of this project (full validation), so the step can say validation is done.
-  const [activeRevision, setActiveRevision] = useState<DatasetRevisionRow | null>(null);
+  const validationAuthority = JSON.stringify([sourceContextKey, currentAuthority]);
+  const validationOwner = useRef(validationAuthority);
+  validationOwner.current = validationAuthority;
+  const [activeRevisionResult, setActiveRevision] = useState<{ scope: string; row: DatasetRevisionRow | null } | null>(null);
+  const activeRevision = !isProjectBusy && !sessionChanging && activeRevisionResult?.scope === validationAuthority ? activeRevisionResult.row : null;
   // Only the latest read applies: an older read still in flight (from the mount) never replaces a later one.
   const revisionRead = useRef(0);
   const loadActiveRevision = useCallback(() => {
     const read = ++revisionRead.current;
+    if (!project?.id || isProjectBusy || sessionChanging) return () => { if (revisionRead.current === read) revisionRead.current += 1; };
     api.datasetImports.revisions().then(listed => {
-      if (revisionRead.current === read) setActiveRevision(listed.revisions.find(row => row.revision_id === listed.active_revision) || null);
-    }).catch(() => { if (revisionRead.current === read) setActiveRevision(null); });
+      if (revisionRead.current === read && validationOwner.current === validationAuthority) setActiveRevision({ scope: validationAuthority, row: listed.revisions.find(row => row.revision_id === listed.active_revision) || null });
+    }).catch(() => { if (revisionRead.current === read && validationOwner.current === validationAuthority) setActiveRevision(null); });
     return () => { if (revisionRead.current === read) revisionRead.current += 1; };
-  }, []);
+  }, [validationAuthority, project?.id, isProjectBusy, sessionChanging]);
   useEffect(() => loadActiveRevision(), [loadActiveRevision, project?.id, project?.source_dataset_dir, task]);
   // Whether the active version still matches the source, asked of the backend by the index's own inventory definition
   // (the quick import counts differently: nqa2 review P2-1); asked again after each import of the folder.
-  const [sourceStatus, setSourceStatus] = useState<DatasetSourceStatus | null>(null);
+  const [sourceStatusResult, setSourceStatus] = useState<{ scope: string; status: DatasetSourceStatus } | null>(null);
+  const sourceStatus = !isProjectBusy && !sessionChanging && sourceStatusResult?.scope === validationAuthority ? sourceStatusResult.status : null;
   const statusRead = useRef(0);
   const activeRevisionId = activeRevision?.revision_id ?? null;
   useEffect(() => {
@@ -195,12 +201,12 @@ export const DatasetStudio: React.FC = () => {
     setSourceStatus(null);
     if (activeRevisionId && !isLoading && hasSelectedFolder) {
       api.datasetImports.sourceStatus(activeRevisionId).then(status => {
-        if (statusRead.current === read) setSourceStatus(status);
-      }).catch(() => { if (statusRead.current === read) setSourceStatus(null); });
+        if (statusRead.current === read && validationOwner.current === validationAuthority) setSourceStatus({ scope: validationAuthority, status });
+      }).catch(() => { if (statusRead.current === read && validationOwner.current === validationAuthority) setSourceStatus(null); });
     }
     return () => { if (statusRead.current === read) statusRead.current += 1; };
-  }, [activeRevisionId, isLoading, hasSelectedFolder, quickValidation]);
-  const validation = validationStatus(quickValidation, activeRevision, project?.source_dataset_dir, task, sourceStatus);
+  }, [activeRevisionId, isLoading, hasSelectedFolder, quickValidation, validationAuthority]);
+  const validation = validationStatus(importError ? null : quickValidation, activeRevision, project?.source_dataset_dir, task, sourceStatus);
   const errorScope = JSON.stringify([sourceContextKey, projectDir, project?.id, project?.active_labelset_id, project?.source_dataset_dir, task, folderPath, datasetKey, currentAuthority]);
   const [imageOpenError, setImageOpenError] = useScopedError(errorScope);
   const rawErrors = [sourceSaveError, splitError, importError];
@@ -585,7 +591,7 @@ export const DatasetStudio: React.FC = () => {
               결함 주석만 확인되었습니다. 정상(OK) 이미지가 없으면 과검률과 양산 판정 품질을 검증할 수 없습니다.
             </div>
           )}
-          {metadataReady && validation && (
+          {!isLoading && !isProjectBusy && !sessionChanging && validation && (
             <div role="status" className={validation.tone === 'ok'
               ? 'p-2.5 bg-emerald-950/30 border border-emerald-500/40 rounded text-xs text-emerald-200'
               : 'p-2.5 bg-amber-950/30 border border-amber-500/40 rounded text-xs text-amber-200'}>

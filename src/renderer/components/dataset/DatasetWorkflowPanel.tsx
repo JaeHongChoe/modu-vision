@@ -11,15 +11,20 @@ import {ExternalMaskExchangePanel} from './ExternalMaskExchangePanel';
 import {projectPreferences} from '../../services/projectPreferences';
 // Project acceptance precedes dataset adoption during a workspace switch.
 // Read only while both stores describe the same saved source and task.
-function metadataReadScope(projectState:ReturnType<typeof useProjectStore.getState>,dataset:ReturnType<typeof useDatasetStore.getState>):string{
+function metadataSourceScope(projectState:ReturnType<typeof useProjectStore.getState>,dataset:ReturnType<typeof useDatasetStore.getState>):string{
   const project=projectState.project,source=dataset.folderPath;
-  if(!project?.id||projectState.isProjectBusy||dataset.isLoading||!dataset.hasSelectedFolder||!source
+  if(!project?.id||!dataset.hasSelectedFolder||!source
     ||projectState.projectDir!==project.project_dir||projectState.task!==project.task||source!==project.source_dataset_dir)return '';
   return JSON.stringify([project.id,project.project_dir,project.task,project.active_labelset_id||'default',source]);
 }
+function metadataReadScope(projectState:ReturnType<typeof useProjectStore.getState>,dataset:ReturnType<typeof useDatasetStore.getState>):string{
+  return projectState.isProjectBusy||dataset.isLoading?'':metadataSourceScope(projectState,dataset);
+}
 export const DatasetWorkflowPanel:React.FC=()=>{
   const dataset=useDatasetStore(),projectState=useProjectStore();const {folderPath,hasSelectedFolder,annotationsChanged,loadImages}=dataset;const {projectDir,openImageForLabeling}=projectState;
-  const [epoch,setEpoch]=useState(getProjectContextGeneration);const generation=getProjectContextGeneration(),identity=getApiPersistenceIdentity();const same=()=>getProjectContextGeneration()===generation&&getApiPersistenceIdentity()===identity&&useDatasetStore.getState().folderPath===folderPath&&useProjectStore.getState().projectDir===projectDir;
+  const [epoch,setEpoch]=useState(getProjectContextGeneration);const generation=getProjectContextGeneration(),identity=getApiPersistenceIdentity();
+  const sourceScope=metadataSourceScope(projectState,dataset);
+  const same=()=>getProjectContextGeneration()===generation&&getApiPersistenceIdentity()===identity&&useDatasetStore.getState().folderPath===folderPath&&useProjectStore.getState().projectDir===projectDir&&metadataSourceScope(useProjectStore.getState(),useDatasetStore.getState())===sourceScope;
   const readScope=metadataReadScope(projectState,dataset);const sameRead=()=>Boolean(readScope)&&same()&&metadataReadScope(useProjectStore.getState(),useDatasetStore.getState())===readScope;
   useEffect(()=>subscribeProjectContext(()=>setEpoch(getProjectContextGeneration())),[]);
   const {reviewerName,setReviewerName}=useAnnotationStore();
@@ -33,7 +38,7 @@ export const DatasetWorkflowPanel:React.FC=()=>{
   const pageSize=20;const visibleRows=rows.slice((page-1)*pageSize,page*pageSize);
   const [bulkUsage,setBulkUsage]=useState('');const [palette,setPalette]=useState<Record<string,string>>({});
   useEffect(()=>{let active=true;const load=()=>projectPreferences.read().then(p=>{if(active)setPalette(p.tag_colors);}).catch(()=>undefined);if(projectDir)void load();window.addEventListener('project-preferences-changed',load);return()=>{active=false;window.removeEventListener('project-preferences-changed',load);};},[projectDir]);
-  const [format,setFormat]=useState('labelme');const [importDir,setImportDir]=useState('');const [policy,setPolicy]=useState('reject');const [preview,setPreview]=useState<ImportPreview[]>([]);const [busy,setBusy]=useState(false);const [error,setError]=useState('');const [notice,setNotice]=useState('');
+  const [format,setFormat]=useState('labelme');const [importDir,setImportDir]=useState('');const [policy,setPolicy]=useState('reject');const [preview,setPreview]=useState<ImportPreview[]>([]);const [actionBusy,setBusy]=useState(false);const [metadataBusy,setMetadataBusy]=useState(false);const busy=actionBusy||metadataBusy;const [error,setError]=useState('');const [notice,setNotice]=useState('');
   // The actions wait for the read scope: while a reload still restores the saved source, a preview made here was wiped
   // when the scope arrived and reset the panel (the list then reloaded 0 -> all rows), so it never showed.
   const locked=busy||!readScope;
@@ -43,7 +48,7 @@ export const DatasetWorkflowPanel:React.FC=()=>{
   useEffect(()=>{if(open)useStepSheetStore.getState().show('workflow');},[open]);
   useEffect(()=>{if(open&&shownSheet&&shownSheet!=='workflow'&&!activeExport.current)setOpen(false);},[shownSheet]);
   useEffect(()=>()=>{const controller=activeExport.current;activeExport.current=null;controller?.abort();},[]);
-  useEffect(()=>{const controller=activeExport.current;if(controller){activeExport.current=null;controller.abort();setExporting(null);setBusy(false);}},[projectDir,folderPath,epoch,identity]);
+  useEffect(()=>{const controller=activeExport.current;if(controller){activeExport.current=null;controller.abort();setExporting(null);setBusy(false);}},[projectDir,folderPath,epoch,identity,sourceScope]);
   const cancelExport=(controller:AbortController|null)=>{
     if(!controller||activeExport.current!==controller||!same())return;
     activeExport.current=null;controller.abort();setExporting(null);setBusy(false);setError('');setNotice('내보내기 요청을 취소했습니다. 다운로드를 시작하지 않았습니다. 이미 생성된 파일은 유지됩니다.');
@@ -57,8 +62,8 @@ export const DatasetWorkflowPanel:React.FC=()=>{
     finally{if(current()){activeExport.current=null;setExporting(null);setBusy(false);}}
   };
   const refresh=async()=>{if(!sameRead())return;const result=await datasetWorkflow.list({folder_path:folderPath,state,product,lot,group,tag,limit:5000});if(sameRead()){setRows(result.items);setTotal(result.total);}};
-  useEffect(()=>{setRows([]);setPage(1);setSelected(new Set());setSplit(null);setPreview([]);setImportDir('');setError('');setNotice('');},[projectDir,folderPath,epoch,identity,readScope]);
-  useEffect(()=>{if(!open||!readScope){if(!activeExport.current)setBusy(false);return;}let current=true;setBusy(true);Promise.all([datasetWorkflow.list({folder_path:folderPath,state,product,lot,group,tag,limit:5000}),datasetWorkflow.duplicates(),datasetWorkflow.savedSplit()]).then(([r,d,s])=>{if(current&&sameRead()){setRows(r.items);setPage(1);setSelected(new Set());setTotal(r.total);setDuplicates(d.duplicates);if(s.availability==='available')setSplit(s);}}).catch(e=>{if(current&&sameRead())setError(workflowError(e));}).finally(()=>{if(current&&sameRead())setBusy(false);});return()=>{current=false;};},[open,projectDir,folderPath,state,product,lot,group,tag,hasSelectedFolder,generation,readScope]);
+  useEffect(()=>{setRows([]);setPage(1);setSelected(new Set());setSplit(null);setPreview([]);setImportDir('');setBusy(false);setError('');setNotice('');},[projectDir,folderPath,epoch,identity,sourceScope]);
+  useEffect(()=>{if(!open||!readScope){setMetadataBusy(false);return;}let current=true;setMetadataBusy(true);Promise.all([datasetWorkflow.list({folder_path:folderPath,state,product,lot,group,tag,limit:5000}),datasetWorkflow.duplicates(),datasetWorkflow.savedSplit()]).then(([r,d,s])=>{if(current&&sameRead()){setRows(r.items);setPage(1);setSelected(new Set());setTotal(r.total);setDuplicates(d.duplicates);if(s.availability==='available')setSplit(s);}}).catch(e=>{if(current&&sameRead())setError(workflowError(e));}).finally(()=>{if(current&&sameRead())setMetadataBusy(false);});return()=>{current=false;};},[open,projectDir,folderPath,state,product,lot,group,tag,hasSelectedFolder,generation,readScope]);
   const run=async(action:()=>Promise<void>)=>{if(!same())return;setBusy(true);setError('');setNotice('');try{await action();}catch(e){if(same())setError(workflowError(e));}finally{if(same())setBusy(false);}};
   const importLabels=async(apply:boolean)=>{
     if(apply&&!reviewerName.trim())throw new Error('작업자 이름을 입력하세요.');

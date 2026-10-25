@@ -31,6 +31,27 @@ function setRatios(h,values){
  }
 }
 const button=(h,name)=>h.nodes(h.render()).find(n=>n.type==='button'&&n.children.includes(name));
+// Regression: an admitted apply owns its completion through a same-source
+// annotation summary refresh. Loading is an entry fence, not a new source.
+async function appliedSplitWithHeldSummary(){
+ const h=await setup();let finishSummary,started=false;
+ h.dataset.annotationsChanged=async()=>{started=true;h.dataset.isLoading=true;h.render();await new Promise(resolve=>{finishSummary=resolve;});h.dataset.isLoading=false;h.render();};
+ button(h,'분할 미리보기').props.onClick();
+ h.resolve({assignments:{},split:{train:1,val:1,test:0},group_count:2,duplicates:[],applied:false,apply_supported:true,qualification:{sha256:'a'.repeat(64),group_by:['lot'],seed:42}});await tick();
+ button(h,'분할 적용').props.onClick();
+ h.resolve({assignments:{},split:{train:1,val:1,test:0},group_count:2,duplicates:[],applied:true,apply_supported:true,backup_version_id:'backup-owned-apply'});await tick();
+ assert.equal(started,true,'the actual component entered its post-apply annotation refresh');
+ return {h,finish:async()=>{finishSummary();await tick();await tick();}};
+}
+test('an admitted grouped apply stays busy while its same-source summary refresh is held',async()=>{
+ const {h,finish}=await appliedSplitWithHeldSummary();
+ try{assert.ok(h.nodes(h.render()).some(node=>node.props.role==='status'&&node.children.includes('처리 중…')),'a loading fence cannot mark the admitted apply complete');}
+ finally{await finish();}
+});
+test('a completed grouped apply retains its backup outcome after same-source summary refresh',async()=>{
+ const {h,finish}=await appliedSplitWithHeldSummary();await finish();
+ assert.ok(h.nodes(h.render()).some(node=>node.props.role==='status'&&node.children.join('').includes('backup-owned-apply')),'the current successful apply must retain its concrete backup receipt');
+});
 for(const [name,values,reason] of [
  ['sum below 100',[60,20,10],/합계가 100%가 아닙니다/],
  ['all zero',[0,0,0],/합계가 100%가 아닙니다/],
