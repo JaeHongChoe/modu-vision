@@ -23,6 +23,7 @@ export type SampleVerdict = 'ESCAPE' | 'OVERKILL' | 'CORRECT_NG' | 'CORRECT_OK' 
 export type SampleFilter =
   | 'all'
   | 'escape'
+  | 'saved_escape'
   | 'overkill'
   | 'normal'
   | 'defect'
@@ -239,8 +240,13 @@ export const useEvaluationStore = create<EvaluationState>((set, get) => ({
 
   sampleFilter: 'all',
   setSampleFilter: (sampleFilter) => {
-    set({ sampleFilter });
+    const previous = get();
+    if (sampleFilter === 'saved_escape' && (previous.isLoading || previous.persistedThreshold === null)) return;
+    set({ sampleFilter, ...(sampleFilter === 'saved_escape' ? {selectedCell: null} : {}) });
     get().computeFilteredList();
+    if ((sampleFilter === 'saved_escape') !== (previous.sampleFilter === 'saved_escape')
+        && get().selectedPrediction?.image_id === previous.selectedPrediction?.image_id
+        && !get().executionEvidence?.common_cohort) get().updateHeatmap();
   },
 
   overkillAnalysis: null,
@@ -257,7 +263,7 @@ export const useEvaluationStore = create<EvaluationState>((set, get) => ({
   isBenchmarking: false,
 
   computeFilteredList: () => {
-    const { testPredictions, selectedCell, confusionMatrix, sampleFilter, confidenceThreshold, overkillAnalysis, classSemantics } = get();
+    const { testPredictions, selectedCell, confusionMatrix, sampleFilter, confidenceThreshold, persistedThreshold, overkillAnalysis, classSemantics } = get();
 
     // 1. Confusion Matrix cell filter (Robust Dual-Key Matching)
     let list = testPredictions;
@@ -285,7 +291,10 @@ export const useEvaluationStore = create<EvaluationState>((set, get) => ({
     // 2. Verdict filter (4-Quadrant verification)
     if (sampleFilter !== 'all') {
       list = list.filter((item) => {
-        const v = computeSampleVerdict(item, confidenceThreshold, overkillAnalysis, classSemantics?.roles);
+        const savedReview = sampleFilter === 'saved_escape';
+        if (savedReview && persistedThreshold === null) return false;
+        const v = computeSampleVerdict(item, savedReview ? persistedThreshold! : confidenceThreshold, savedReview ? null : overkillAnalysis, classSemantics?.roles);
+        if (savedReview) return v === 'ESCAPE';
         if (sampleFilter === 'escape' || sampleFilter === 'fn_escape') return v === 'ESCAPE';
         if (sampleFilter === 'overkill' || sampleFilter === 'fp_overkill') return v === 'OVERKILL';
         if (sampleFilter === 'normal' || sampleFilter === 'tn_normal') return v === 'CORRECT_OK';
@@ -351,7 +360,7 @@ export const useEvaluationStore = create<EvaluationState>((set, get) => ({
         || (!requestedJob && (!get().allowLatestRecovery || !source?.folderPath)))) {
       evaluationGeneration += 1;
       currentHeatmapRequestId += 1;
-      set({ executionEvidence:null, remoteRequest:null, remoteOperation:null, remoteOperationError:null, isLoading: false, jobId: null, persistedThreshold: null, metrics: {}, classSemantics: null, confusionMatrix: null,
+      set({ executionEvidence:null, remoteRequest:null, remoteOperation:null, remoteOperationError:null, isLoading: false, jobId: null, persistedThreshold: null, sampleFilter: get().sampleFilter === 'saved_escape' ? 'all' : get().sampleFilter, metrics: {}, classSemantics: null, confusionMatrix: null,
         testPredictions: [], filteredPredictions: [], selectedPrediction: null, selectedCell: null,
         overkillAnalysis: null, heatmapOverlayBase64: null, heatmapLoading: false,
         errorMessage: '현재 데이터로 학습한 모델이 없습니다. 3단계에서 학습을 완료하세요.' });
@@ -360,7 +369,7 @@ export const useEvaluationStore = create<EvaluationState>((set, get) => ({
     const generation = ++evaluationGeneration;
     // The renderer store is transient. Let the backend resolve its latest
     // completed checkpoint when this window has lost the training job ID.
-    set({ isLoading: true, persistedThreshold: null, errorMessage: null, classSemantics: null, overkillAnalysis: null,
+    set({ isLoading: true, persistedThreshold: null, sampleFilter: get().sampleFilter === 'saved_escape' ? 'all' : get().sampleFilter, errorMessage: null, classSemantics: null, overkillAnalysis: null,
       executionEvidence:null, remoteOperation:null, remoteOperationError:null,
       remoteRequest: !source?.executionTarget && requestedJob && source?.evaluationDatasetVersionId && source.computeProfileId
         ? {jobId:requestedJob, source, generation} : null });
@@ -425,7 +434,7 @@ export const useEvaluationStore = create<EvaluationState>((set, get) => ({
       }
     } catch (e) {
       if (generation !== evaluationGeneration || source?.isCurrent?.() === false || (sourceCurrent && !sourceCurrent())) return;
-      set({ executionEvidence:null, remoteRequest:null, remoteOperation:null, isLoading: false, jobId: null, persistedThreshold: null, metrics: {}, classSemantics: null, confusionMatrix: null, testPredictions: [],
+      set({ executionEvidence:null, remoteRequest:null, remoteOperation:null, isLoading: false, jobId: null, persistedThreshold: null, sampleFilter: get().sampleFilter === 'saved_escape' ? 'all' : get().sampleFilter, metrics: {}, classSemantics: null, confusionMatrix: null, testPredictions: [],
         filteredPredictions: [], selectedPrediction: null, selectedCell: null, overkillAnalysis: null,
         errorMessage: e instanceof Error ? e.message : '평가 결과를 불러올 수 없습니다.' });
       throw e;
@@ -452,6 +461,7 @@ export const useEvaluationStore = create<EvaluationState>((set, get) => ({
   },
 
   selectCell: (trueClass, predClass) => {
+    if (get().sampleFilter === 'saved_escape') get().setSampleFilter('escape');
     set({ selectedCell: { trueClass, predClass } });
     get().computeFilteredList();
   },
@@ -468,7 +478,7 @@ export const useEvaluationStore = create<EvaluationState>((set, get) => ({
 
   setConfidenceThreshold: (confidenceThreshold) => {
     if(!Number.isFinite(confidenceThreshold)||confidenceThreshold<0||(get().metrics.score_spec?.domain!=='distance'&&confidenceThreshold>1))return;
-    set({ confidenceThreshold });
+    set({ confidenceThreshold, ...(get().sampleFilter === 'saved_escape' ? {sampleFilter: 'escape' as const} : {}) });
     get().computeFilteredList();
 
     if (heatmapDebounceTimer) {
@@ -481,7 +491,8 @@ export const useEvaluationStore = create<EvaluationState>((set, get) => ({
 
   updateHeatmap: async () => {
     if (get().executionEvidence?.common_cohort) { set({errorMessage:'선택 코호트의 추가 분석/보정/속도 측정은 아직 지원되지 않습니다. 반환된 고정 평가 결과를 확인하세요.'}); return; }
-    const { selectedPrediction, confidenceThreshold, jobId } = get();
+    const { selectedPrediction, confidenceThreshold, persistedThreshold, sampleFilter, jobId } = get();
+    const heatmapThreshold = sampleFilter === 'saved_escape' && persistedThreshold !== null ? persistedThreshold : confidenceThreshold;
     if (!selectedPrediction) return;
     const requestId = ++currentHeatmapRequestId;
     set({ heatmapLoading: true });
@@ -489,9 +500,9 @@ export const useEvaluationStore = create<EvaluationState>((set, get) => ({
       const res = await api.evaluation.getHeatmap(
         selectedPrediction.image_id,
         jobId || undefined,
-        confidenceThreshold,
+        heatmapThreshold,
         selectedPrediction.file_path,
-        get().metrics.score_spec ? {...get().metrics.score_spec,threshold:confidenceThreshold} : undefined
+        get().metrics.score_spec ? {...get().metrics.score_spec,threshold:heatmapThreshold} : undefined
       );
       if (requestId === currentHeatmapRequestId) {
         set({ heatmapOverlayBase64: res.overlay_base64, heatmapLoading: false });

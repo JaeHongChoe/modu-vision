@@ -442,8 +442,14 @@ export const EvaluationStudio: React.FC = () => {
     return `${baseBg} ${textColor} ${borderColor} hover:border-[#38BDF8]/70`;
   };
 
+  const savedReview = sampleFilter === 'saved_escape' && typeof persistedThreshold === 'number';
+  const imageThreshold = savedReview ? persistedThreshold : confidenceThreshold;
+  const imageAnalysis = savedReview ? null : overkillAnalysis;
+  const savedMisses = typeof persistedThreshold === 'number'
+    ? testPredictions.filter(item => computeSampleVerdict(item, persistedThreshold, null, classSemantics?.roles) === 'ESCAPE').length : 0;
+
   const selectedVerdict = selectedPrediction
-    ? computeSampleVerdict(selectedPrediction, confidenceThreshold, overkillAnalysis, classSemantics?.roles)
+    ? computeSampleVerdict(selectedPrediction, imageThreshold, imageAnalysis, classSemantics?.roles)
     : null;
 
   const metricGrid = (
@@ -1087,6 +1093,19 @@ export const EvaluationStudio: React.FC = () => {
               )}
             </div>
 
+            <button type="button" id="workflow-missed-defects" data-workflow-open-on-focus
+              aria-expanded={savedReview}
+              disabled={isLoading || typeof persistedThreshold !== 'number'}
+              onClick={() => setSampleFilter(savedReview ? 'escape' : 'saved_escape')} className="text-xs underline disabled:opacity-50">
+              {savedReview ? language === 'ko' ? '미리보기로 돌아가기' : 'Return to preview'
+                : language === 'ko' ? `저장된 미검 보기 (${savedMisses})` : `Review saved misses (${savedMisses})`}
+            </button>
+            {savedReview && <p role="status" className="text-[11px]">
+              {language === 'ko'
+                ? `저장된 평가 기준 ${imageThreshold.toFixed(2)} · 미검 ${savedMisses}장. 이미지 판정과 히트맵은 이 기준을 사용합니다. 기준값을 조절하거나 필터 탭을 누르면 미리보기로 돌아갑니다.`
+                : `Saved evaluation threshold ${imageThreshold.toFixed(2)} · ${savedMisses} missed images. Verdicts and heatmaps use this threshold. Adjust the threshold or select a filter tab to return to preview.`}
+            </p>}
+
             {/* Standard 4-Tab Industrial Sample Filtering (+ ALL): one filter is selected at a time, so they are tabs. The
                 selected one is the Tab stop; the arrow keys, Home and End move between them (as in the flow editor). */}
             <div role="tablist" aria-label="평가 이미지 필터" onKeyDown={(event) => {
@@ -1119,8 +1138,6 @@ export const EvaluationStudio: React.FC = () => {
                   aria-controls="evaluation-image-list"
                   aria-selected={sampleFilter === 'escape' || sampleFilter === 'fn_escape'}
                   tabIndex={sampleFilter === 'escape' || sampleFilter === 'fn_escape' ? 0 : -1}
-                  // The footer's '틀린 이미지 보기' (step 4, missed defects) reaches this tab by id and presses it.
-                  id="workflow-missed-defects"
                   onClick={() => setSampleFilter('escape')}
                   className={`py-1 px-1 rounded-[3px] transition-all cursor-pointer text-center truncate font-mono text-[10px] flex items-center justify-center space-x-1 ${
                     sampleFilter === 'escape' || sampleFilter === 'fn_escape'
@@ -1196,10 +1213,10 @@ export const EvaluationStudio: React.FC = () => {
               <div className="p-4 text-center text-xs text-slate-400 space-y-2 my-auto bg-[#0B0E14] rounded-[4px] border border-[#2B3547]">
                 {sampleCounts.all === 0 ? (
                   <div>검증 예측이 없습니다.</div>
-                ) : sampleFilter === 'escape' || sampleFilter === 'fn_escape' ? (
+                ) : sampleFilter === 'escape' || sampleFilter === 'fn_escape' || savedReview ? (
                   <>
                     <div className="text-xl">🛡️</div>
-                    <div className="font-bold text-slate-200">{selectedCell ? '선택한 혼동 행렬 칸에는 미검 이미지가 없습니다 · 위의 필터 초기화를 누르면 모든 미검 이미지가 보입니다' : hasDefectSamples ? '현재 검증 표본에서 미검 0건' : 'NG 검증 표본 없음'}</div>
+                    <div className="font-bold text-slate-200">{savedReview ? '저장된 평가 기준에서 미검 0건' : selectedCell ? '선택한 혼동 행렬 칸에는 미검 이미지가 없습니다 · 위의 필터 초기화를 누르면 모든 미검 이미지가 보입니다' : hasDefectSamples ? '현재 검증 표본에서 미검 0건' : 'NG 검증 표본 없음'}</div>
                     <p className="text-[11px] text-slate-400 leading-relaxed">
                       표본 밖의 결함 검출 성능이나 현장 유출률은 검증되지 않았습니다.
                     </p>
@@ -1222,7 +1239,7 @@ export const EvaluationStudio: React.FC = () => {
             {filteredPredictions.map((pred) => {
               const isSelected = selectedPrediction?.image_id === pred.image_id;
               const thumbUrl = resolveApiUrl(pred.thumbnail_url);
-              const verdict = computeSampleVerdict(pred, confidenceThreshold, overkillAnalysis, classSemantics?.roles);
+              const verdict = computeSampleVerdict(pred, imageThreshold, imageAnalysis, classSemantics?.roles);
               const isEscape = verdict === 'ESCAPE';
               const isOverkill = verdict === 'OVERKILL';
 
@@ -1291,7 +1308,7 @@ export const EvaluationStudio: React.FC = () => {
                 <div className="flex items-center space-x-2">
                   <AlertTriangle className="w-4 h-4 text-[#EF4444] shrink-0" />
                   <span>
-                    <strong>검증 샘플 미검</strong>: 현재 임계값({confidenceThreshold.toFixed(2)})에서 NG 샘플이 OK로 판정되었습니다.
+                    <strong>검증 샘플 미검</strong>: {savedReview ? '저장된 임계값' : '현재 임계값'}({imageThreshold.toFixed(2)})에서 NG 샘플이 OK로 판정되었습니다.
                   </span>
                 </div>
                 <button
@@ -1312,7 +1329,8 @@ export const EvaluationStudio: React.FC = () => {
               prediction={selectedPrediction}
               heatmapOverlayBase64={heatmapOverlayBase64}
               heatmapLoading={heatmapLoading}
-              confidenceThreshold={confidenceThreshold}
+              confidenceThreshold={imageThreshold}
+              savedReviewVerdict={savedReview ? selectedVerdict ?? 'REVIEW' : undefined}
               scoreSpec={metrics.score_spec}
               onThresholdChange={setConfidenceThreshold}
               defectScore={selectedPrediction?.defect_score}

@@ -235,3 +235,71 @@ test('rendered preview mismatch explains the saved readiness threshold while pre
 test('rendered unknown saved authority never formats a missing threshold as a number',()=>{
  for(const persistedThreshold of [undefined,null])assert.doesNotThrow(()=>renderStudio({jobId:'job',persistedThreshold,confidenceThreshold:.2}));
 });
+
+// Exercise the actual footer destination through the rendered Studio handler and real store.
+function focusSavedMisses(view){
+ const target=view.nodes.find(node=>node.props.id==='workflow-missed-defects');
+ assert.ok(target,'saved-miss destination is rendered');
+ const previous={document:global.document,requestAnimationFrame:global.requestAnimationFrame,HTMLElement:global.HTMLElement};
+ const element={parentElement:null,getAttribute:key=>target.props[key]===undefined?null:String(target.props[key]),hasAttribute:key=>Object.hasOwn(target.props,key),click:()=>target.props.onClick(),scrollIntoView(){},focus(){global.document.activeElement=element;}};
+ try{global.document={getElementById:id=>id==='workflow-missed-defects'?element:null,activeElement:null};global.requestAnimationFrame=fn=>fn();global.HTMLElement=class{};load('../components/wizard/workflowReadiness.ts').focusWorkflowTarget('workflow-missed-defects');}
+ finally{for(const [key,value] of Object.entries(previous)){if(value===undefined)delete global[key];else global[key]=value;}}
+}
+for(const alreadySelected of [false,true])test('footer saved-miss destination reveals accepted saved misses with preview escape '+(alreadySelected?'already selected':'unselected'),async()=>{
+ const f=fixture();f.results.metrics={active_threshold:.5};f.results.test_predictions=[{...sample('saved-miss','OK','OK'),defect_score:.3},{...sample('normal','scratch','scratch'),defect_score:.1}];
+ await f.state().loadEvaluation('job',{folderPath:'/source',task:'classification'});f.state().setConfidenceThreshold(.2);
+ f.useEvaluationStore.setState({overkillAnalysis:{optimal_threshold:.1,sample_details:[{image_id:'saved-miss',is_defect:false,defect_score:0}]}});
+ if(alreadySelected)f.state().setSampleFilter('escape');
+ const enteredHeatmaps=[];f.api.evaluation.getHeatmap=async(...args)=>{enteredHeatmaps.push(args);return{};};
+ focusSavedMisses(renderStudio(f.state()));
+ assert.equal(enteredHeatmaps.at(-1)[2],.5,'entering review refreshes heatmap even when selected image stays the same');
+ assert.equal(f.state().overkillAnalysis.optimal_threshold,.1,'review preserves GET recommendation data');
+ assert.deepEqual(f.state().filteredPredictions.map(row=>row.image_id),['saved-miss']);
+ assert.equal(f.state().confidenceThreshold,.2,'review does not replace preview threshold');
+ f.state().computeFilteredList();await f.state().loadOverkillUnderkill();f.state().computeFilteredList();
+ assert.deepEqual(f.state().filteredPredictions.map(row=>row.image_id),['saved-miss'],'recomputation and arriving analysis cannot erase saved review');
+ const saved=renderStudio(f.state());assert.match(saved.text(saved.nodes[0]),/저장된.*0\.50/);assert.doesNotMatch(saved.text(saved.nodes[0]),/현재 검증 표본에서 미검 0건/);
+ assert.equal(saved.nodes.find(node=>node.props.verdict).props.verdict,'ESCAPE');
+ focusSavedMisses(saved);assert.equal(f.state().sampleFilter,'saved_escape','repeated footer focus keeps expanded saved review');
+ const returnButton=saved.nodes.find(node=>node.props.id==='workflow-missed-defects');assert.equal(returnButton.type,'button');assert.equal(returnButton.props.type,'button','native button supports keyboard activation');assert.equal(saved.text(returnButton),'미리보기로 돌아가기');
+ returnButton.props.onClick();assert.equal(f.state().sampleFilter,'escape');assert.equal(f.state().confidenceThreshold,.2);focusSavedMisses(renderStudio(f.state()));
+
+ assert.equal(saved.nodes.find(node=>node.props.onThresholdChange).props.savedReviewVerdict,'ESCAPE');
+ assert.equal(saved.nodes.find(node=>node.props.onThresholdChange).props.confidenceThreshold,.5,'selected-image viewport uses saved review threshold');
+ const heatmaps=[];f.api.evaluation.getHeatmap=async(...args)=>{heatmaps.push(args);return{};};await f.state().updateHeatmap();assert.equal(heatmaps.at(-1)[2],.5);
+ f.state().setConfidenceThreshold(.1);assert.notEqual(f.state().sampleFilter,'saved_escape','intentional threshold adjustment returns to preview');
+ assert.equal(f.state().persistedThreshold,.5);focusSavedMisses(renderStudio(f.state()));
+ const previewTab=saved.nodes.find(node=>node.props.role==='tab'&&saved.text(node).startsWith('미검'));previewTab.props.onClick();
+ assert.deepEqual(f.state().filteredPredictions,[],'ordinary escape tab returns to interactive preview including live analysis');
+ f.state().invalidateForDataChange();
+});
+test('saved review clears its matrix restriction and resets on accepted-result replacement and invalidation',async()=>{
+ const f=fixture();f.results.metrics={active_threshold:.5};f.results.test_predictions=[{...samples[0],defect_score:.3}];
+ await f.state().loadEvaluation('job',{folderPath:'/source',task:'classification'});f.state().setConfidenceThreshold(.2);
+ f.useEvaluationStore.setState({selectedCell:{trueClass:'scratch',predClass:'scratch'},confusionMatrix:{classes:['OK','scratch'],matrix:[[0,1],[0,0]],cell_samples:{'scratch:scratch':['other']}}});
+ focusSavedMisses(renderStudio(f.state()));assert.equal(f.state().selectedCell,null);assert.equal(f.state().filteredPredictions.length,1);
+ f.state().selectCell('scratch','scratch');assert.notEqual(f.state().sampleFilter,'saved_escape','ordinary matrix selection returns to preview');
+ focusSavedMisses(renderStudio(f.state()));assert.equal(f.state().sampleFilter,'saved_escape');
+ let finish;f.api.evaluation.getResults=()=>new Promise(resolve=>{finish=resolve;});const pending=f.state().loadEvaluation('job',{folderPath:'/source',task:'classification'});
+ assert.notEqual(f.state().sampleFilter,'saved_escape');assert.equal(f.state().persistedThreshold,null);
+ finish({...f.results,metrics:{active_threshold:.8},test_predictions:[{...samples[1],defect_score:.1}]});await pending;
+ assert.equal(f.state().sampleFilter,'all');assert.deepEqual(f.state().filteredPredictions.map(row=>row.image_id),['overkill']);
+ f.state().setSampleFilter('normal');f.api.evaluation.getResults=async()=>({...f.results,metrics:{active_threshold:.8},test_predictions:[{...samples[1],defect_score:.1}]});await f.state().loadEvaluation('job',{folderPath:'/source',task:'classification'});assert.equal(f.state().sampleFilter,'normal','replacement preserves ordinary preview filter choices');
+ focusSavedMisses(renderStudio(f.state()));f.state().invalidateForDataChange();assert.equal(f.state().sampleFilter,'all');assert.equal(f.state().persistedThreshold,null);
+});
+
+test('unknown saved authority cannot enter review or retain a stale selected image',async()=>{
+ const f=fixture('anomaly');f.results.task='anomaly';await f.state().loadEvaluation('job',{folderPath:'/source',task:'anomaly'});
+ const view=renderStudio(f.state());const target=view.nodes.find(node=>node.props.id==='workflow-missed-defects');assert.equal(target.props.disabled,true);
+ f.state().setSampleFilter('saved_escape');assert.notEqual(f.state().sampleFilter,'saved_escape');
+ f.useEvaluationStore.setState({persistedThreshold:.5,testPredictions:[{...samples[0],defect_score:.9}],selectedPrediction:samples[1]});
+ f.state().setSampleFilter('saved_escape');assert.deepEqual(f.state().filteredPredictions,[]);assert.equal(f.state().selectedPrediction,null);f.state().invalidateForDataChange();
+});
+
+test('matrix exit from saved review refreshes the preview heatmap for the same selected image',async()=>{
+ const f=fixture();f.results.metrics={active_threshold:.5};f.results.test_predictions=[{...samples[0],defect_score:.3}];
+ await f.state().loadEvaluation('job',{folderPath:'/source',task:'classification'});f.state().setConfidenceThreshold(.8);f.state().setSampleFilter('saved_escape');
+ const heatmaps=[];f.api.evaluation.getHeatmap=async(...args)=>{heatmaps.push(args);return{};};
+ f.state().selectCell('OK','scratch');assert.equal(f.state().sampleFilter,'escape');assert.equal(f.state().selectedPrediction.image_id,'escape');
+ assert.equal(heatmaps.at(-1)?.[2],.8,'same-image mode exit must replace its saved-threshold heatmap with preview authority');f.state().invalidateForDataChange();
+});

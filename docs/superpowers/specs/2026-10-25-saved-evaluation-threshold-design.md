@@ -32,6 +32,12 @@ different top-level carrier.
   the saved threshold, excluding independently arriving recommendation analysis.
 - Keep preview cards/filtering/heatmaps interactive. Explain any preview/saved
   mismatch in the evaluation UI; keep manual navigation unchanged.
+- The footer's saved missed-defect action must reveal the same accepted saved
+  misses, including when the preview escape tab is already selected. Preserve
+  ordinary preview filtering and manual stage-arrow navigation. A saved-review
+  filter keeps accepted verdicts and heatmaps on saved authority until an explicit
+  preview interaction; the viewport receives that verdict from Studio, including
+  strict patch-score equality and unresolved REVIEW, without duplicating scoring.
 
 ## Verification and boundaries
 

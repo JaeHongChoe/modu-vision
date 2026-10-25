@@ -34,6 +34,9 @@ and saved authority; no parallel backend schema or new persistence is introduced
 - Modify if needed: `src/renderer/types/index.ts`
 - Modify: `src/renderer/components/wizard/useWorkflowReadiness.ts`
 - Modify: `src/renderer/components/evaluation/EvaluationStudio.tsx`
+- Modify: `src/renderer/components/evaluation/SynchronizedDualViewport.tsx`
+- Test: `src/renderer/components/evaluation/SynchronizedDualViewport.test.cjs`
+- Test: `src/renderer/components/evaluation/EvaluationStudio.wrongImages.test.cjs`
 - Test: `src/renderer/components/wizard/workflowReadiness.test.cjs`
 - Test: `src/renderer/stores/evaluationCalibrationSource.test.cjs`
 - Test: `src/renderer/stores/evaluationClassSemantics.test.cjs`
@@ -47,6 +50,8 @@ The hook consumes that authority and accepted rows; the view explains difference
 - [x] Run focused tests; expected new assertions fail against unmodified main.
 - [x] Add the minimal saved-threshold resolver/state lifecycle and hook usage.
 - [x] Add the mismatch explanation and a rendered behavior regression.
+- [x] Exercise the footer's real saved-miss destination, including an already
+  selected preview escape tab; show saved misses while keeping preview controls.
 - [x] Run focused suites; expected all pass with no authority guard weakened.
 - [x] Run full Node suite, type checks, build and evidence gates; report failures.
 - [ ] Review the whole diff independently, record verification, then commit only
