@@ -155,6 +155,7 @@ export const EvaluationStudio: React.FC = () => {
     filteredPredictions,
     selectedPrediction,
     confidenceThreshold,
+    persistedThreshold,
     heatmapOverlayBase64,
     heatmapLoading,
     isExportingReport,
@@ -715,6 +716,13 @@ export const EvaluationStudio: React.FC = () => {
               </button>
             </div>
 
+            {typeof persistedThreshold === 'number' && confidenceThreshold !== persistedThreshold && (
+              <p role="note" className="text-[11px]">
+                {language === 'ko'
+                  ? `미리보기 기준 ${confidenceThreshold.toFixed(2)} · 저장된 평가 기준 ${persistedThreshold.toFixed(2)}. 단계 진행과 도우미의 미검 판단은 저장된 기준을 따릅니다.`
+                  : `Preview threshold ${confidenceThreshold.toFixed(2)} · saved evaluation threshold ${persistedThreshold.toFixed(2)}. Step progress and assistant missed-defect checks use the saved threshold.`}
+              </p>
+            )}
             {smallTestWarning(sampleCounts.all) && (
               <p role="note" className="rounded-[3px] border border-amber-700/60 bg-amber-950/20 p-2 text-[11px] text-amber-100">{smallTestWarning(sampleCounts.all)}</p>
             )}

@@ -204,3 +204,34 @@ test('distance evaluation inherits calibrated threshold and sends a bound heatma
  assert.deepEqual(calls.at(-1)[4],{...spec,threshold:9});
  assert.equal(f.computeSampleVerdict(f.results.test_predictions[0],9,null,semantics.roles),'CORRECT_OK');
 });
+
+for(const row of [
+ {name:'legacy probability baseline',metrics:{},want:.5},
+ {name:'probability zero',metrics:{active_threshold:0},want:0},
+ {name:'distance above one',metrics:{active_threshold:8,score_spec:{domain:'distance'}},want:8},
+ {name:'missing anomaly authority',task:'anomaly',metrics:{},want:null},
+ {name:'missing distance authority',metrics:{score_spec:{domain:'distance'}},want:null},
+ ...[null,-1,1.1,NaN,Infinity,'0.2'].map(value=>({name:'invalid active '+value,metrics:{active_threshold:value},want:null})),
+ {name:'recommendation metric is not saved authority',task:'anomaly',metrics:{optimal_threshold:.2},want:null},
+ {name:'legacy saved calibration',metrics:{active_threshold:.5},saved:{zero_underkill_calibrated:true,optimal_threshold:.2},want:.2},
+ {name:'saved evidence agrees',metrics:{active_threshold:.5},saved:{zero_underkill_calibrated:true,optimal_threshold:0,calibration_evidence:{threshold:0}},want:0},
+ {name:'saved evidence conflicts',metrics:{active_threshold:.5},saved:{zero_underkill_calibrated:true,optimal_threshold:.2,calibration_evidence:{threshold:.3}},want:null},
+ {name:'saved evidence is malformed',metrics:{active_threshold:.5},saved:{zero_underkill_calibrated:true,optimal_threshold:.2,calibration_evidence:{}},want:null},
+ {name:'saved calibration threshold invalid',metrics:{active_threshold:.5},saved:{zero_underkill_calibrated:true,optimal_threshold:2},want:null},
+])test('accepted evaluation resolves '+row.name,async()=>{
+ const f=fixture(row.task);Object.assign(f.results,{task:row.task||'classification',metrics:row.metrics,...row.saved});
+ await f.state().loadEvaluation('job');assert.equal(f.state().persistedThreshold,row.want);
+ if(row.want!==null)assert.equal(f.state().confidenceThreshold,row.want);
+ f.state().invalidateForDataChange();assert.equal(f.state().persistedThreshold,null);
+});
+
+test('rendered preview mismatch explains the saved readiness threshold while preview badges remain interactive',()=>{
+ const view=renderStudio({jobId:'job',persistedThreshold:.5,confidenceThreshold:.2,classSemantics:semantics,testPredictions:[{...samples[0],defect_score:.3}],filteredPredictions:[{...samples[0],defect_score:.3}]});
+ assert.match(view.text(view.nodes[0]),/미리보기.*0\.20.*저장.*0\.50/);
+ assert.equal(view.nodes.find(n=>n.props.verdict).props.verdict,'CORRECT_NG');
+ const aligned=renderStudio({jobId:'job',persistedThreshold:.2,confidenceThreshold:.2});assert.doesNotMatch(aligned.text(aligned.nodes[0]),/미리보기.*저장/);
+});
+
+test('rendered unknown saved authority never formats a missing threshold as a number',()=>{
+ for(const persistedThreshold of [undefined,null])assert.doesNotThrow(()=>renderStudio({jobId:'job',persistedThreshold,confidenceThreshold:.2}));
+});

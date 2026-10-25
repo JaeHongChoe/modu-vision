@@ -99,6 +99,25 @@ export function computeSampleVerdict(
   }
 }
 
+/** Saved decision authority, distinct from interactive and recommendation thresholds. */
+function validThreshold(value: unknown, metrics: Record<string, any>): value is number {
+  return typeof value === 'number' && Number.isFinite(value) && value >= 0
+    && (metrics.score_spec?.domain === 'distance' || value <= 1);
+}
+function calibrationThreshold(data: { optimal_threshold?: unknown; calibration_evidence?: { threshold?: unknown } | null }, metrics: Record<string, any>): number | null {
+  const threshold = data.optimal_threshold;
+  if (!validThreshold(threshold, metrics)) return null;
+  if (data.calibration_evidence !== undefined && data.calibration_evidence?.threshold !== threshold) return null;
+  return threshold;
+}
+function savedEvaluationThreshold(result: EvaluationResults, task?: VisionTask): number | null {
+  const metrics = result.metrics || {};
+  if (result.zero_underkill_calibrated === true) return calibrationThreshold(result, metrics);
+  if (Object.hasOwn(metrics, 'active_threshold')) return validThreshold(metrics.active_threshold, metrics) ? metrics.active_threshold : null;
+  // Older probability classification/detection evaluations used the fixed .50 baseline.
+  return result.task === 'anomaly' || task === 'anomaly' || metrics.anomaly_mode || metrics.score_spec?.domain === 'distance' ? null : .5;
+}
+
 export interface EvaluationSource {
   folderPath: string; task: VisionTask; labelsetId?: string;
   evaluationDatasetVersionId?: string; computeProfileId?: string; device?: string;
@@ -156,6 +175,7 @@ interface EvaluationState {
   filteredPredictions: TestPredictionItem[];
   selectedPrediction: TestPredictionItem | null;
   confidenceThreshold: number;
+  persistedThreshold: number | null;
   heatmapOverlayBase64: string | null;
   heatmapLoading: boolean;
   isExportingReport: boolean;
@@ -210,6 +230,7 @@ export const useEvaluationStore = create<EvaluationState>((set, get) => ({
   filteredPredictions: [],
   selectedPrediction: null,
   confidenceThreshold: 0.5,
+  persistedThreshold: null,
   heatmapOverlayBase64: null,
   heatmapLoading: false,
   isExportingReport: false,
@@ -330,7 +351,7 @@ export const useEvaluationStore = create<EvaluationState>((set, get) => ({
         || (!requestedJob && (!get().allowLatestRecovery || !source?.folderPath)))) {
       evaluationGeneration += 1;
       currentHeatmapRequestId += 1;
-      set({ executionEvidence:null, remoteRequest:null, remoteOperation:null, remoteOperationError:null, isLoading: false, jobId: null, metrics: {}, classSemantics: null, confusionMatrix: null,
+      set({ executionEvidence:null, remoteRequest:null, remoteOperation:null, remoteOperationError:null, isLoading: false, jobId: null, persistedThreshold: null, metrics: {}, classSemantics: null, confusionMatrix: null,
         testPredictions: [], filteredPredictions: [], selectedPrediction: null, selectedCell: null,
         overkillAnalysis: null, heatmapOverlayBase64: null, heatmapLoading: false,
         errorMessage: '현재 데이터로 학습한 모델이 없습니다. 3단계에서 학습을 완료하세요.' });
@@ -339,7 +360,7 @@ export const useEvaluationStore = create<EvaluationState>((set, get) => ({
     const generation = ++evaluationGeneration;
     // The renderer store is transient. Let the backend resolve its latest
     // completed checkpoint when this window has lost the training job ID.
-    set({ isLoading: true, errorMessage: null, classSemantics: null, overkillAnalysis: null,
+    set({ isLoading: true, persistedThreshold: null, errorMessage: null, classSemantics: null, overkillAnalysis: null,
       executionEvidence:null, remoteOperation:null, remoteOperationError:null,
       remoteRequest: !source?.executionTarget && requestedJob && source?.evaluationDatasetVersionId && source.computeProfileId
         ? {jobId:requestedJob, source, generation} : null });
@@ -356,7 +377,7 @@ export const useEvaluationStore = create<EvaluationState>((set, get) => ({
         if (!catalog.models.some(model => model.task === source!.task)) {
           currentHeatmapRequestId += 1;
           set({executionEvidence:null, remoteRequest:null, remoteOperation:null, remoteOperationError:null,
-            isLoading:false, jobId:null, metrics:{}, classSemantics:null, confusionMatrix:null,
+            isLoading:false, jobId:null, persistedThreshold:null, metrics:{}, classSemantics:null, confusionMatrix:null,
             testPredictions:[], filteredPredictions:[], selectedPrediction:null, selectedCell:null,
             overkillAnalysis:null, heatmapOverlayBase64:null, heatmapLoading:false,
             errorMessage:'현재 데이터로 학습한 모델이 없습니다. 3단계에서 학습을 완료하세요.'});
@@ -377,11 +398,13 @@ export const useEvaluationStore = create<EvaluationState>((set, get) => ({
         || (res.execution?.compute_profile_id||null)!==(source!.computeProfileId||null) || res.execution?.device!==source!.device
         || !res.execution?.receipt_id || !/^[0-9a-f]{64}$/.test(res.execution.evidence_sha256)))throw new Error('저장된 평가 실행 기록의 대상이 요청과 다릅니다.');
       if(jobId&&res.job_id!==jobId)throw new Error('요청한 평가 작업과 반환된 작업 ID가 다릅니다. 작업 센터에서 다시 확인하세요.');
+      const persistedThreshold = savedEvaluationThreshold(res, source?.task);
       set({
         executionEvidence:res, remoteRequest:null, remoteOperation:null,
         jobId: res.job_id,
         metrics: res.metrics || {},
-        confidenceThreshold: Number.isFinite(res.metrics?.active_threshold) ? res.metrics.active_threshold : .5,
+        persistedThreshold,
+        confidenceThreshold: persistedThreshold ?? .5,
         classSemantics: res.class_semantics || null,
         confusionMatrix: res.confusion_matrix || null,
         testPredictions: res.test_predictions || [],
@@ -402,7 +425,7 @@ export const useEvaluationStore = create<EvaluationState>((set, get) => ({
       }
     } catch (e) {
       if (generation !== evaluationGeneration || source?.isCurrent?.() === false || (sourceCurrent && !sourceCurrent())) return;
-      set({ executionEvidence:null, remoteRequest:null, remoteOperation:null, isLoading: false, jobId: null, metrics: {}, classSemantics: null, confusionMatrix: null, testPredictions: [],
+      set({ executionEvidence:null, remoteRequest:null, remoteOperation:null, isLoading: false, jobId: null, persistedThreshold: null, metrics: {}, classSemantics: null, confusionMatrix: null, testPredictions: [],
         filteredPredictions: [], selectedPrediction: null, selectedCell: null, overkillAnalysis: null,
         errorMessage: e instanceof Error ? e.message : '평가 결과를 불러올 수 없습니다.' });
       throw e;
@@ -417,7 +440,7 @@ export const useEvaluationStore = create<EvaluationState>((set, get) => ({
     if (heatmapDebounceTimer) clearTimeout(heatmapDebounceTimer);
     heatmapDebounceTimer = null;
     set({
-      jobId: null, allowLatestRecovery: allowSourceRecovery, isLoading: false,
+      jobId: null, persistedThreshold: null, allowLatestRecovery: allowSourceRecovery, isLoading: false,
       metrics: {}, classSemantics: null, confusionMatrix: null, selectedCell: null,
       testPredictions: [], filteredPredictions: [], selectedPrediction: null,
       heatmapOverlayBase64: null, heatmapLoading: false,
@@ -585,11 +608,15 @@ export const useEvaluationStore = create<EvaluationState>((set, get) => ({
         apply_to_eval_results: true,
       });
       if (!current()) return;
-      const optimalTh = data.optimal_threshold ?? 0.50;
+      // A successful POST has already persisted apply_to_eval_results; malformed
+      // numeric/evidence carriers must still leave the prior authority untouched.
+      const optimalTh = calibrationThreshold(data, get().metrics);
+      if (optimalTh === null) throw new Error('저장된 보정 임계값을 확인할 수 없습니다. 평가 결과를 새로고침하세요.');
 
       set({
         overkillAnalysis: data,
         confidenceThreshold: optimalTh,
+        persistedThreshold: optimalTh,
         isCalibrating: false,
         calibrationSuccess: true,
         calibrationMessage: (data as any).message || `미검 제로화 완료: 최적 임계값 τ* = ${optimalTh.toFixed(4)}`,

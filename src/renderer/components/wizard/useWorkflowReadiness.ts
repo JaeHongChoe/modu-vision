@@ -27,14 +27,14 @@ export function useWorkflowReadiness() {
   const evaluatedSamples=useEvaluationStore(s=>s.testPredictions?.length ?? 0);
   // Step 4 waits for the evaluation screen's own read before calling the step done (see getNextAction).
   const evaluationLoading=useEvaluationStore(s=>s.isLoading),evaluationError=useEvaluationStore(s=>s.errorMessage);
-  // Step 4's number line counts the loaded evaluation the way the evaluation screen does (same verdict, same inputs).
-  const testPredictions=useEvaluationStore(s=>s.testPredictions),confidenceThreshold=useEvaluationStore(s=>s.confidenceThreshold);
-  const overkillAnalysis=useEvaluationStore(s=>s.overkillAnalysis),classRoles=useEvaluationStore(s=>s.classSemantics?.roles);
+  // Readiness uses saved authority and accepted rows; preview and live recommendations stay interactive in the screen.
+  const testPredictions=useEvaluationStore(s=>s.testPredictions),persistedThreshold=useEvaluationStore(s=>s.persistedThreshold);
+  const classRoles=useEvaluationStore(s=>s.classSemantics?.roles);
   const evaluation=useMemo(()=>{
-    if(!Array.isArray(testPredictions)||testPredictions.length===0)return null;
+    if(!Array.isArray(testPredictions)||testPredictions.length===0||typeof persistedThreshold!=='number'||!Number.isFinite(persistedThreshold))return null;
     let escapes=0,overkills=0,right=0;
     for(const item of testPredictions){
-      const verdict=computeSampleVerdict(item,confidenceThreshold,overkillAnalysis,classRoles);
+      const verdict=computeSampleVerdict(item,persistedThreshold,null,classRoles);
       if(verdict==='ESCAPE')escapes++;else if(verdict==='OVERKILL')overkills++;else if(verdict==='CORRECT_OK'||verdict==='CORRECT_NG')right++;
     }
     const samples=testPredictions.length;
@@ -43,7 +43,7 @@ export function useWorkflowReadiness() {
     // The same 95% range the step-4 card prints beside its accuracy (accuracyNote: right images of all test images).
     const range=wilsonInterval(right,samples);
     return {samples,escapes,overkills,accuracy:Math.round(right/samples*100),low:range?Math.round(range.low*100):null,high:range?Math.round(range.high*100):null};
-  },[testPredictions,confidenceThreshold,overkillAnalysis,classRoles]);
+  },[testPredictions,persistedThreshold,classRoles]);
   // Step 3's line reads the training store the footer already follows; the clock is rounded to 10 s so the published
   // picture does not change on every telemetry tick. The training screen shows the same clock (total, else epoch).
   const etaSource=training.totalEtaSeconds||training.epochEtaSeconds;
