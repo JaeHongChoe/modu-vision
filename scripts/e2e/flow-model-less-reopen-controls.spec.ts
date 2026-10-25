@@ -63,7 +63,8 @@ const F064_POINTERS=[
 ] as const;
 const FLOW_DRAFT_SERVICE={
  'src/renderer/services/flowDraft.ts':'f8cd76aab7d1045c3af1fa41f68ae09daa757c0db05772f4085e2e093348b800',
- 'backend/engine/flowchart_engine.py':'83bb9b25c7d66f91796cdbe6a83d6c13a3728991d76dd9cf7d3f73a27938f976',
+ 'backend/engine/flowchart_engine.py':'aa2b99d4e8fd2d76e6123f98f89e8fc670b8107139f9ad7571187de85e9e833a',
+ 'backend/engine/flowchart_schema.py':'37f10afcb3637ce1222597a695a074724484ea88571d3885914a0155d31e707c',
 } as const;
 const UI_SOURCE={
  "scripts/e2e/fixtures/flow_navigation_control.py": "b5752088a03ff1640510208e15a17b3f1389295c62dadabaf2ff6511a929ee73",
@@ -147,7 +148,7 @@ async function flowModelLessReopenExercise(page:Page,w:Workspace,e:Evidence,api:
  const sourceState=()=>Object.fromEntries(Object.entries({...UI_SOURCE,...FLOW_DRAFT_SERVICE}).map(([relative,expected])=>{
   const file=path.join(harness.REPO_ROOT,relative),pin=splitControlFile(file,custody);expect(pin.sha256,relative).toBe(expected);return[relative,{path:file,raw9:pin.raw,sha256:pin.sha256}];
  }));
- // Exact defaults and omitted-null capture_group serialization from authenticated FlowNodeData/FlowNode/FlowEdge/FlowchartPipeline (engine103–162).
+ // Exact defaults and omitted-null capture_group serialization from authenticated FlowNodeData/FlowNode/FlowEdge/FlowchartPipeline (shared flowchart_schema.py).
  const normalizeSavedPipeline=(pipeline:any)=>{
   expect(Object.keys(pipeline).every(key=>['id','name','description','nodes','edges','execution_config','capture_group_policy'].includes(key))).toBe(true);
   const nodes=pipeline.nodes.map((node:any)=>{
@@ -252,11 +253,13 @@ async function flowModelLessReopenExercise(page:Page,w:Workspace,e:Evidence,api:
    if(u.pathname.startsWith('/api/dataset/thumbnail/')){
     const full=await ocrOwnedThumbnail(page,response!,request,row.deadline,origin,scopes,contexts,custody);row.status=full.status;row.sha256=full.sha256;row.body=full.body;row.size=(full.body as any).byte_length;
    }else{
-     const bootstrapUnscoped=row.document_bootstrap!==undefined&&row.request_context===null&&(RELOAD_BOOTSTRAP_PATHS as readonly string[]).includes(u.pathname);
+     const bootstrapRead=row.document_bootstrap!==undefined&&(RELOAD_BOOTSTRAP_PATHS as readonly string[]).includes(u.pathname);
+     const bootstrapUnscoped=bootstrapRead&&row.request_context===null;
      if(bootstrapUnscoped){expect(u.search).toBe('');expect(rh['x-vision-project']).toBeUndefined();expect(rh['x-vision-context']).toBeUndefined();expect(row.started).toBeGreaterThanOrEqual(row.document_bootstrap!.started);expect(owner.project.id).toBe(row.document_bootstrap!.project_id);expect(row.response_context).toEqual(owner.transport);row.bootstrap_unscoped=true;}
+     else if(bootstrapRead){expect(row.request_context).toEqual(owner.transport);expect(rh['x-vision-project']).toBe(owner.project.id);expect(owner.project.id).toBe(row.document_bootstrap!.project_id);expect(row.started).toBeGreaterThanOrEqual(row.document_bootstrap!.started);}
      else if(row.post_baseline){if(u.pathname==='/api/project/current'&&row.request_context===null){expect(u.search).toBe('');expect(rh['x-vision-project']).toBeUndefined();expect(row.response_context).toEqual(owner.transport);}else{expect(row.request_context).toEqual(owner.transport);expect(rh['x-vision-project']).toBe(owner.project.id);}}
     expect(await splitControlWithin(response!.finished(),row.deadline,'original F064 API completion')).toBeNull();(row as any).network_finished=performance.now();const bytes=await splitControlWithin(response!.body(),row.deadline+BODY_RETRIEVAL_ALLOWANCE_MS,'whole original F064 API body');row.status=response!.status();row.body=JSON.parse(bytes.toString('utf8'));row.sha256=hash(bytes);row.size=bytes.length;
-     if(bootstrapUnscoped){expect(row.status).toBe(200);expect(sh['content-type']).toMatch(/^application\/json(?:\s*;|$)/);if(u.pathname==='/api/dataset/revisions')expect(row.body).toEqual({active_revision:null,revisions:[]});else if(u.pathname==='/api/compute/profiles')expect(row.body).toEqual({profiles:[]});else if(u.pathname==='/api/compute/selection')expect(row.body).toEqual({compute_profile_id:null});else expect(row.body).toEqual(owner.project);}
+     if(bootstrapRead){expect(row.status).toBe(200);expect(u.search).toBe('');expect(sh['content-type']).toMatch(/^application\/json(?:\s*;|$)/);if(u.pathname==='/api/dataset/revisions')expect(row.body).toEqual({active_revision:null,revisions:[]});else if(u.pathname==='/api/compute/profiles')expect(row.body).toEqual({profiles:[]});else if(u.pathname==='/api/compute/selection')expect(row.body).toEqual({compute_profile_id:null});else expect(row.body).toEqual(owner.project);}
     if(row.status!==200){
      expect(row.request_context).toEqual(owner.transport);
      if(u.pathname==='/api/dataset/library/images'){expect(u.search).toBe('?state=valid&limit=120');expect(row.status).toBe(409);expect(row.body).toEqual({detail:'No validated dataset revision is active; validate the source and accept a revision first'});}
@@ -303,12 +306,27 @@ async function flowModelLessReopenExercise(page:Page,w:Workspace,e:Evidence,api:
  };
   const documentReload=async(initial:boolean)=>{
    expect(documentBootstrap).toBeUndefined();await settle();await settleWrites();const readStart=reads.length,phase={epoch:++documentBootstrapEpoch,project_id:A.project.id,started:performance.now()};documentBootstrap=phase;
-   try{if(initial&&url)await page.goto(url);else await page.reload();await enter(A);}finally{documentBootstrap=undefined;}
+   try{
+    if(initial&&url)await page.goto(url);else await page.reload();
+    await expect(page.getByTitle('프로젝트 관리',{exact:true})).toContainText(A.project.name);
+    const stages=page.getByRole('navigation',{name:'Workflow Stages'}).getByRole('button');
+    if(!initial)await expect(stages.nth(4)).toHaveAttribute('aria-current','step');
+    await enter(A); // Preserve the direct restored graph/status proof before any detour.
+    // A restored Step 5 does not mount Step 1's revisions reader. Exercise that
+    // ordinary read explicitly before returning to the unchanged draft checks.
+    await stages.nth(0).click();await expect(stages.nth(0)).toHaveAttribute('aria-current','step');
+    await expect(page.getByRole('button',{name:'데이터셋 폴더 열기',exact:true})).toBeVisible();await galleryReadsSettled(page);
+    await expect.poll(()=>reads.slice(readStart).some(row=>row.document_bootstrap?.epoch===phase.epoch&&new URL(row.request.url()).pathname==='/api/dataset/revisions'),{timeout:10_000}).toBe(true);
+    await enter(A);
+   }finally{documentBootstrap=undefined;}
    // Close phase admission first; finish the exact admitted rows under each original event-start deadline.
-   await settle();await settleWrites();const admitted=reads.slice(readStart).filter(row=>row.document_bootstrap?.epoch===phase.epoch),unscoped=admitted.filter(row=>row.bootstrap_unscoped===true);
-   expect([...new Set(unscoped.map(row=>new URL(row.request.url()).pathname))].sort()).toEqual([...RELOAD_BOOTSTRAP_PATHS].sort());
-   for(const row of unscoped){expect(row.complete&&!row.failed).toBe(true);expect(row.status).toBe(200);expect(row.request_context).toBeNull();expect(row.response_context).toEqual(A.transport);expectWithinFrame(row);}
-   documentBootstrapProofs.push({phase,initial,ordinary_document_navigation:true,allowlist:[...RELOAD_BOOTSTRAP_PATHS],phase_admission_closed:true,all_event_start_10s_reads_complete:true,reads:unscoped.map(({request,pending,failure,...row})=>({...row,url:request.url(),method:request.method(),failure:row.failed?String(failure):null}))});
+   await settle();await settleWrites();const admitted=reads.slice(readStart).filter(row=>row.document_bootstrap?.epoch===phase.epoch),bootstrapReads=admitted.filter(row=>(RELOAD_BOOTSTRAP_PATHS as readonly string[]).includes(new URL(row.request.url()).pathname));
+   // Discovery may finish before a panel starts its read. Every bootstrap route
+   // must still complete with the same owner/body; only discovery-time reads
+   // may omit request context under the unchanged finite allowlist above.
+   expect([...new Set(bootstrapReads.map(row=>new URL(row.request.url()).pathname))].sort()).toEqual([...RELOAD_BOOTSTRAP_PATHS].sort());
+   for(const row of bootstrapReads){expect(row.complete&&!row.failed).toBe(true);expect(row.status).toBe(200);if(row.request_context===null)expect(row.bootstrap_unscoped).toBe(true);else expect(row.request_context).toEqual(A.transport);expect(row.response_context).toEqual(A.transport);expectWithinFrame(row);}
+   documentBootstrapProofs.push({phase,initial,ordinary_document_navigation:true,direct_flow_reopen_checked_before_dataset_review:true,ordinary_dataset_review_navigation:[1,5],allowlist:[...RELOAD_BOOTSTRAP_PATHS],phase_admission_closed:true,all_event_start_10s_reads_complete:true,reads:bootstrapReads.map(({request,pending,failure,...row})=>({...row,url:request.url(),method:request.method(),failure:row.failed?String(failure):null}))});
   };
  const switchProject=async(scope:Scope)=>{
   await settle();await settleWrites();const deadline=performance.now()+10_000;
