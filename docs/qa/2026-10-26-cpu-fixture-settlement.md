@@ -38,6 +38,11 @@ fixture의 허용된 실제 예외와 관찰 순서가 경합했습니다.
 실패하면 새 요청/연장 없이 기존 status·진행·worker log·관찰 스택을 제한된 크기로
 추가합니다. 정리 중 오류가 최초 실패를 덮지 않습니다.
 
+최종 검토에서 helper 단위 시험의 짧은 실제 시계가 정상 I/O 지연을 실패로
+만들 수 있음을 확인했습니다. 단위 경계는 논리 시계로 순서를 제어하도록 고쳤고
+실제 callback/I/O와 통합20초/60초 한도는 유지했습니다. 결정적 RED2건 뒤
+helper15개 및 실제 cutover/재연결2개가 통과했으며, 좁은 재검토도 승인됐습니다.
+
 - `python -m pytest -q backend/tests/test_live_control_migration.py backend/tests/test_local_training_process.py --durations=10` → **51 passed**.
 - `python -m pytest -q backend/tests/test_global_migration.py backend/tests/test_live_control_migration.py -k 'not actual_cpu' --durations=5` → **68 passed, 1 deselected**.
 - 최종 실제 cutover 호출10.36초, trainer 기록2.572초. 동일 worker가 epoch1/step1에서
