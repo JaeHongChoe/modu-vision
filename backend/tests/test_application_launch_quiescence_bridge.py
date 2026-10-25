@@ -1828,10 +1828,14 @@ def _cpu_contention_execute(original,owner,capability):
         # Readiness is consumed: reject unrelated code before schedule work,
         # forwarding only to a genuinely retained upstream callback.
         if event!='call' or frame.f_code is not target:
-            if readiness.upstream is not None:readiness.forward(frame,event,arg)
+            if readiness.upstream is not None:
+                readiness.forward(frame,event,arg)
+                if sys.getprofile() is not publish_profile:active=False
             return
         readiness.forward(frame,event,arg)
-        if sys.getprofile() is not publish_profile:return
+        if sys.getprofile() is not publish_profile:
+            active=False
+            return
         if (threading.get_ident()!=thread or frame.f_back is None
                 or frame.f_back.f_code is not original.__code__ or frame.f_locals.get('self') is not owner):return
         target_entry(frame)
@@ -1849,10 +1853,16 @@ def _cpu_contention_execute(original,owner,capability):
         # Busy controls deliberately skip readiness, but still retain upstream.
         if schedule['mode']=='busy':
             readiness.forward(frame,event,arg)
+            if readiness.released:
+                active=False
+                return
             if exact and frame.f_code is target:
                 readiness.release();active=False
             return
         readiness(frame,event,arg)
+        if readiness.released and not readiness.ready:
+            active=False
+            return
         if exact and readiness.ready:
             if frame.f_code is target:
                 completion_boundary.write(projects,'cpu-gate-enter.json',{'time':time.monotonic(),'function':frame.f_code.co_name})
@@ -2539,4 +2549,98 @@ def test_observer_lifecycle_genuine_target_error_keeps_instance_and_traceback(tm
         assert codes[-1] is observed[0][1]
         assert (execution.verify_completion.__code__ if target=='verify' else lease.LaunchSupervisor._publish_cpu_execution.__code__) in codes
         assert completion_boundary.read(projects,'cpu-gate-enter.json')['function']==('verify_completion' if target=='verify' else '_publish_cpu_execution')
+    finally:sys.setprofile(saved)
+
+
+@pytest.mark.parametrize('stage',['before_verify','before_publish'])
+@pytest.mark.parametrize('forwarded',['unrelated','target'])
+@pytest.mark.parametrize('later',['disable','raise'])
+def test_observer_lifecycle_replacement_direct_ownership_survives_cleanup(tmp_path,stage,forwarded,later):
+    """Cleanup loses authority when upstream yields to a directly installed replacement."""
+    from types import SimpleNamespace
+    from backend.engine import application_launch_execution as execution,application_launch_lease as lease
+    projects=tmp_path/'projects';projects.mkdir();deadline=time.monotonic()+1
+    owner=SimpleNamespace(root=tmp_path,nonce='original');request={'nonce':'original'}
+    completion_boundary.write(projects,completion_boundary.CONFIG,{'root':str(tmp_path),'token':'unit',
+        'deadline':deadline,'contention':{'entry':'publish','mode':'released'}})
+    pending={'root':str(tmp_path),'token':'unit','nonce':'original','request_sha256':completion_boundary.request_hash(request),'deadline':deadline}
+    completion_boundary.write(projects,completion_boundary.PENDING,pending)
+    completion_boundary.write(projects,completion_boundary.READY,{**pending,'normal_return':True,'time':time.monotonic()})
+    armed=[False];direct_events=[];primary=RuntimeError('direct replacement failure')
+    def unrelated():return 1
+    def direct():return 2
+    selected_code=execution.verify_completion.__code__ if stage=='before_verify' else lease.LaunchSupervisor._publish_cpu_execution.__code__
+    def replacement(frame,event,arg):
+        if frame.f_code is direct.__code__ and event=='call':
+            assert sys.getprofile() is replacement
+            direct_events.append(event)
+            if later=='raise':raise primary
+            sys.setprofile(None)
+    def upstream(frame,event,arg):
+        if armed[0] and event=='call' and frame.f_code is (unrelated.__code__ if forwarded=='unrelated' else selected_code):
+            sys.setprofile(replacement)
+    def original(actual_owner,capability):
+        assert actual_owner is owner
+        caller=SimpleNamespace(f_code=original.__code__)
+        verify=SimpleNamespace(f_code=execution.verify_completion.__code__,f_back=caller,
+            f_locals={'owner':owner,'intent':{'request':request},'proof':{'request':request},'absolute_deadline':None})
+        if stage=='before_publish':sys.getprofile()(verify,'call',None)
+        armed[0]=True
+        if forwarded=='unrelated':unrelated()
+        else:
+            target=verify if stage=='before_verify' else SimpleNamespace(f_code=selected_code,f_back=caller,f_locals={'self':owner})
+            sys.getprofile()(target,'call',None)
+        assert sys.getprofile() is replacement
+        try:direct()
+        finally:assert sys.getprofile() is None
+        return 'original result'
+    saved=sys.getprofile()
+    try:
+        sys.setprofile(upstream)
+        try:
+            with completion_boundary.controller_boundary(owner,original.__code__):
+                result=_cpu_contention_execute(original,owner,None)
+        except RuntimeError as caught:
+            assert later=='raise' and caught is primary
+            tail=caught.__traceback__
+            while tail.tb_next is not None:tail=tail.tb_next
+            assert tail.tb_frame.f_code is replacement.__code__
+        else:assert later=='disable' and result=='original result'
+        assert direct_events==['call']
+        assert sys.getprofile() is None, 'Fixture cleanup resurrected a directly owned replacement'
+        assert not (projects/'cpu-gate-enter.json').exists()
+    finally:sys.setprofile(saved)
+
+
+def test_observer_lifecycle_default_verify_handoff_keeps_required_publish_dispatch(tmp_path):
+    """Intentional readiness release to None must still arm the next target."""
+    from types import SimpleNamespace
+    from backend.engine import application_launch_execution as execution,application_launch_lease as lease
+    projects=tmp_path/'projects';projects.mkdir();deadline=time.monotonic()+1
+    owner=SimpleNamespace(root=tmp_path,nonce='original');request={'nonce':'original'}
+    completion_boundary.write(projects,completion_boundary.CONFIG,{'root':str(tmp_path),'token':'unit',
+        'deadline':deadline,'contention':{'entry':'publish','mode':'released'}})
+    pending={'root':str(tmp_path),'token':'unit','nonce':'original','request_sha256':completion_boundary.request_hash(request),'deadline':deadline}
+    completion_boundary.write(projects,completion_boundary.PENDING,pending)
+    completion_boundary.write(projects,completion_boundary.READY,{**pending,'normal_return':True,'time':time.monotonic()})
+    def original(actual_owner,capability):
+        assert actual_owner is owner
+        caller=SimpleNamespace(f_code=original.__code__)
+        verify=SimpleNamespace(f_code=execution.verify_completion.__code__,f_back=caller,
+            f_locals={'owner':owner,'intent':{'request':request},'proof':{'request':request},'absolute_deadline':None})
+        sys.getprofile()(verify,'call',None)
+        assert readiness.ready is True and readiness.upstream is None
+        assert sys.getprofile() is readiness.installed and sys.getprofile() is not None
+        publish=SimpleNamespace(f_code=lease.LaunchSupervisor._publish_cpu_execution.__code__,f_back=caller,f_locals={'self':owner})
+        sys.getprofile()(publish,'call',None)
+        assert sys.getprofile() is None
+        return 'original result'
+    saved=sys.getprofile()
+    try:
+        sys.setprofile(None)
+        with completion_boundary.controller_boundary(owner,original.__code__):
+            readiness=sys.getprofile()
+            assert _cpu_contention_execute(original,owner,None)=='original result'
+        assert sys.getprofile() is None
+        assert completion_boundary.read(projects,'cpu-gate-enter.json')['function']=='_publish_cpu_execution'
     finally:sys.setprofile(saved)
