@@ -16,7 +16,7 @@ export const BrowserFolderPathInput: React.FC<{ disabled?: boolean; onImport: (f
     try { await onImport(folder); } finally { setBusy(false); }
   };
   return (
-    <form onSubmit={submit} className="flex min-w-0 max-w-md flex-col items-start gap-1 whitespace-normal text-xs">
+    <form onSubmit={submit} className="flex w-80 min-w-0 max-w-md shrink-0 flex-col items-start gap-1 whitespace-normal text-xs">
       <div className="flex w-full flex-wrap items-center gap-2">
         <label className="flex min-w-0 flex-1 flex-wrap items-center gap-2 text-slate-300">
           <span className="whitespace-nowrap">이미지 폴더 경로</span>
