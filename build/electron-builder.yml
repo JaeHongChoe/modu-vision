@@ -81,6 +81,17 @@ mac:
   icon: build/icon.icns
   hardenedRuntime: true
   gatekeeperAssess: false
+  # Ad-hoc sign the bundle: Gatekeeper reports an unsigned download as damaged, while an ad-hoc signed one can be opened
+  # from Privacy & Security ("Open Anyway"). electron-builder 26 first matches "-" against keychain identity names and
+  # signs with a match, so check that `codesign -dv` on the built app shows Signature=adhoc. While identity is set here,
+  # CSC_NAME is ignored and CSC_IDENTITY_AUTO_DISCOVERY=false does not turn signing off (-c.mac.identity=null does).
+  # A Developer ID build (-c.mac.identity="<Team Name> (<TEAMID>)") signs only the shell: the frozen backend must be
+  # signed with the same identity before scripts/build_backend_binary.py records its inventory.
+  identity: "-"
+  # Leave the frozen backend exactly as accepted: the supervisor compares its executable's sha256 with
+  # backend-release.json at launch, and re-signing would change it. PyInstaller has already ad-hoc signed these files.
+  signIgnore:
+    - /Contents/Resources/backend_bin/
   entitlements: build/entitlements.mac.plist
   entitlementsInherit: build/entitlements.mac.plist
   darkModeSupport: true
