@@ -86,6 +86,7 @@ export class SiwcConnection {
   private operations=new Set<AbortController>();
   private sessions=new Map<string,Session>();
   private blocked=new Set<string>();
+  private unsafeCredentials=new Set<string>();
   private listed=new Map<string,Set<string>>();
   private connected=new Set<(recordId:string)=>void>();
   /** Receipts bind exact validated provider output to this recipient authority. Renderer-supplied opaque data is never trusted. */
@@ -182,7 +183,7 @@ export class SiwcConnection {
             return acceptAuthorizationTokens(reply.body,{clientId:grant.clientId,nonce:grant.nonce,jwks,nowMs:this.now(),...(registration?{expectedSubject:registration.subject}:{})});},{signal:controller.signal});
           if(this.disposed||this.attempt?.generation!==generation||controller.signal.aborted)throw protocol('cancelled');
           if(registration&&(tokens.issuer!==registration.issuer||tokens.subject!==registration.subject||tokens.clientId!==registration.clientId))throw protocol('identity_mismatch');
-          const saved=this.store.save(tokens,{...(input.recordId?{recordId:input.recordId}:{}),...(label?{label}:{}),activate:true});this.sessions.delete(saved.recordId);this.blocked.delete(saved.recordId);this.listed.delete(saved.recordId);this.revision++;this.status='connected';this.error=undefined;
+          const saved=this.store.save(tokens,{...(input.recordId?{recordId:input.recordId}:{}),...(label?{label}:{}),activate:true});this.sessions.delete(saved.recordId);this.blocked.delete(saved.recordId);this.unsafeCredentials.delete(saved.recordId);this.listed.delete(saved.recordId);this.revision++;this.status='connected';this.error=undefined;
           res.statusCode=200;res.end('ChatGPT 연결을 확인했습니다. 이 창을 닫고 Modu Vision으로 돌아가세요.');this.closeAttempt();
           for(const listener of this.connected){try{listener(saved.recordId);}catch{/* the saved login stands; the recipient choice is read again on the next state */}}
         }catch(error){if(generation===this.generation&&!this.disposed){this.failure(error);this.closeAttempt();}res.statusCode=400;res.end('ChatGPT 연결을 완료하지 못했습니다. 앱에서 연결 상태를 확인하세요.');}})();
@@ -200,7 +201,7 @@ export class SiwcConnection {
     this.assertOpen();if(input?.confirmed!==true||typeof input.ticket!=='string'||!/^[a-f0-9]{64}$/.test(input.ticket)||!this.store.recover)throw new ProviderError(siwcConnectionError(protocol('recovery_confirmation_required')));
     const recovery=this.store.recoveryStatus?.();if(!recovery?.available||recovery.ticket!==input.ticket)throw new ProviderError(siwcConnectionError(protocol('recovery_unavailable')));
     this.invalidate();this.sessions.clear();this.listed.clear();this.blocked.clear();
-    try{this.store.recover(input);this.status='idle';return this.state();}catch(error){this.failure(error);throw new ProviderError(siwcConnectionError(error));}
+    try{this.store.recover(input);this.unsafeCredentials.clear();this.status='idle';return this.state();}catch(error){this.failure(error);throw new ProviderError(siwcConnectionError(error));}
   }
   private account(requireModel=false):Account {this.assertOpen();const state=this.store.state(),account=state.accounts.find(a=>a.recordId===state.active);
     if(!account)throw protocol('no_account');if(!account.signedIn||this.blocked.has(account.recordId))throw protocol('reconnect_required','sign_in');
@@ -226,7 +227,8 @@ export class SiwcConnection {
           if(error instanceof SiwcProtocolError&&error.status!==undefined&&error.status!==200&&!terminal.has(error.code)){this.sessions.delete(recordId);throw error;}
           this.blocked.add(recordId);this.revision++;this.listed.delete(recordId);
           // An uncertain network outcome may have rotated remotely. Never retry the retained refresh after restart.
-          try{this.store.clearCredentials(recordId);}catch{throw protocol('storage_failed');}}
+          this.unsafeCredentials.add(recordId);
+          try{this.store.clearCredentials(recordId);this.unsafeCredentials.delete(recordId);}catch{throw protocol('storage_failed');}}
         throw error;
       }finally{owned.refresh=null;}})();}
     const next=await owned.refresh;if(signal.aborted)throw protocol('cancelled');if(!next.planUsageEnabled)throw protocol('plan_scope_missing');return next;
@@ -268,9 +270,9 @@ export class SiwcConnection {
   async signOut(recordId:string):Promise<SiwcConnectionState> {
     this.assertOpen();if(!validRecord(recordId)||!this.store.registration(recordId))throw new ProviderError(assistantError('invalid_input'));
     this.invalidate();const generation=this.generation;this.status='idle';this.blocked.add(recordId);this.listed.delete(recordId);
-    const saved=this.store.credentials(recordId),existing=this.sessions.get(recordId);this.sessions.delete(recordId);
+    const saved=this.store.credentials(recordId),existing=this.sessions.get(recordId);this.unsafeCredentials.add(recordId);this.sessions.delete(recordId);
     // Clear disk first; neither a late callback nor a rotating token can rehydrate this record.
-    try{this.store.clearCredentials(recordId);}catch(error){this.failure(error);throw new ProviderError(siwcConnectionError(error));}
+    try{this.store.clearCredentials(recordId);this.unsafeCredentials.delete(recordId);}catch(error){this.failure(error);throw new ProviderError(siwcConnectionError(error));}
     let confirmed=false;
     try {if(saved||existing){const result=await this.operation(async signal=>{const discovery=await this.discovery(signal);if(signal.aborted)throw protocol('cancelled');
           const session=existing?.value||new SiwcTokenSession(saved!,{transport:this.form,jwks:{keys:[]},now:this.now});return session.signOut(discovery,{signal,timeoutMs:this.timeoutMs});});confirmed=result.remoteRevocationConfirmed;}}
@@ -283,8 +285,11 @@ export class SiwcConnection {
     try {
       this.invalidate();
       // A rotating refresh can finish remotely after shutdown. Never leave its old token reusable on disk.
-      for(const [id,session] of this.sessions) if(session.refresh) {
-        try {this.store.clearCredentials(id);} catch {safeToRelease=false;}
+      // Completed failures also keep their fence after the single-flight promise has settled.
+      const toClear=new Set(this.unsafeCredentials);
+      for(const [id,session] of this.sessions) if(session.refresh) toClear.add(id);
+      for(const id of toClear) {
+        try {this.store.clearCredentials(id);this.unsafeCredentials.delete(id);} catch {safeToRelease=false;}
       }
     } finally {
       this.disposed=true;this.sessions.clear();this.listed.clear();
