@@ -205,6 +205,8 @@ npm.cmd run package:win
 
 출력은 `release/`에 생성됩니다. macOS는 DMG·ZIP, Windows는 NSIS 설정을 사용하며 Linux x64의 AppImage·deb 빌드 경로도 있습니다. 설치본의 백엔드 Python 런타임은 번들에 포함됩니다. 플랫폼별 서명, 설치·제거·복구, 오프라인 준비 절차는 [배포 지원 표](docs/release-platform-matrix.md)를 따릅니다.
 
+macOS 설치본은 앱을 ad-hoc 서명합니다. 내려받은 서명 없는 앱은 Gatekeeper가 손상된 앱으로 막지만, ad-hoc 서명한 앱은 처음 열 때 시스템 설정 › 개인정보 보호 및 보안(macOS 13 이상)의 '그래도 열기'로 열 수 있습니다. 키체인에 이름에 '-'가 든 서명 인증서가 있으면 electron-builder가 그 인증서로 서명하므로, 빌드 뒤 `codesign -dv`로 `Signature=adhoc`인지 확인합니다. `backend_bin`은 검증 기록(`backend-release.json`)의 해시와 맞아야 하므로 다시 서명하지 않습니다. Developer ID로 서명하려면 `npm run package:mac -- -c.mac.identity="<팀 이름> (<팀 ID>)"`로 데스크톱 셸을 서명하고, 백엔드는 인벤토리를 만들기 전에 같은 인증서로 따로 서명해야 합니다.
+
 ## 라벨링 단축키
 
 캔버스에 포커스가 있을 때 사용합니다. 자동 선택과 100% 배율은 도구 모음에서 선택합니다.
