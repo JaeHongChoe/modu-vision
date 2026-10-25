@@ -356,7 +356,28 @@ def _step_failure_details(output, record):
 
 
 @pytest.fixture
-def step_boundary_case(tmp_path):
+def step_boundary_clock(monkeypatch):
+    from types import SimpleNamespace
+    from backend.tests import _live_step_boundary
+    clock = SimpleNamespace(now=100.0, sleeps=[], on_sleep=None)
+
+    def sleep(seconds):
+        clock.sleeps.append(seconds)
+        if clock.on_sleep is not None:
+            clock.on_sleep(seconds)
+        else:
+            clock.now += seconds
+
+    # Replace only the observer module's time reference. The original callback
+    # and status writer keep genuine I/O; their duration cannot expire a unit
+    # control before it has arranged its intended publication/release ordering.
+    monkeypatch.setattr(_live_step_boundary, 'time', SimpleNamespace(
+        monotonic=lambda: clock.now, sleep=sleep))
+    return clock
+
+
+@pytest.fixture
+def step_boundary_case(tmp_path, step_boundary_clock):
     import hashlib
     from backend.remote.worker import _StatusWriter, _TrainingStatusCallback
     from backend.tests._live_step_boundary import step_boundary
@@ -368,7 +389,7 @@ def step_boundary_case(tmp_path):
     writer = _StatusWriter(output, 'job_boundary', spec_sha256=digest)
     writer.update(status='running')
     config = {'output': str(output), 'spec_path': str(spec), 'job_id': 'job_boundary',
-              'token': 'fixture-token', 'deadline': time.monotonic() + .15}
+              'token': 'fixture-token', 'deadline': step_boundary_clock.now + .15}
     return output, config, writer, _TrainingStatusCallback(writer), step_boundary
 
 
@@ -389,7 +410,7 @@ def _release_step(output, token='fixture-token'):
     temporary.replace(path)
 
 
-def test_step_boundary_holds_successful_original_publication_once(step_boundary_case):
+def test_step_boundary_holds_successful_original_publication_once(step_boundary_case, step_boundary_clock):
     import os
     import psutil
     output, config, writer, callback, factory = step_boundary_case
@@ -406,6 +427,7 @@ def test_step_boundary_holds_successful_original_publication_once(step_boundary_
     marker.unlink()
     _run_step_observed(observer, lambda: callback.on_step_end(0, 2, .4, 0))
     assert not marker.exists() and raw
+    assert step_boundary_clock.now == 100.0 and step_boundary_clock.sleeps == []
 
 
 @pytest.mark.parametrize('damage', ['code', 'thread', 'job', 'spec', 'writer_path', 'status', 'unpublished', 'step', 'epoch'])
@@ -449,42 +471,60 @@ def test_step_boundary_publication_then_exception_preserves_original_traceback(s
 
 
 @pytest.mark.parametrize('expired', [False, True])
-def test_step_boundary_foreign_release_cannot_renew_original_deadline(step_boundary_case, expired):
+def test_step_boundary_foreign_release_cannot_renew_original_deadline(step_boundary_case, step_boundary_clock, expired):
     output, config, writer, callback, factory = step_boundary_case
-    config['deadline'] = time.monotonic() + (-.01 if expired else .06)
+    clock = step_boundary_clock
+    config['deadline'] = clock.now + (-.01 if expired else .06)
+    original_deadline = config['deadline']
     _release_step(output, 'foreign-token')
-    started = time.monotonic()
+    observed = []
+
+    def expire_after_publication(seconds):
+        held = json.loads((output / 'fixture-step-held.json').read_text())
+        observed.append(held)
+        assert held['deadline'] == original_deadline
+        assert json.loads(writer.path.read_text())['current_step'] == 1
+        # Only advance once the genuine publication and foreign-token refusal
+        # have both happened. Never start a second deadline after publication.
+        clock.now = original_deadline
+
+    clock.on_sleep = expire_after_publication
     with pytest.raises(TimeoutError, match='original readiness deadline'):
         _run_step_observed(factory(config), lambda: callback.on_step_end(0, 2, .5, 0))
-    assert time.monotonic() - started < .3
+    assert config['deadline'] == original_deadline
+    assert json.loads(writer.path.read_text())['current_step'] == 1
     if expired:
         assert not (output / 'fixture-step-held.json').exists()
+        assert clock.now == 100.0 and clock.sleeps == [] and observed == []
     else:
-        assert json.loads((output / 'fixture-step-held.json').read_text())['deadline'] == config['deadline']
+        assert clock.now == original_deadline and clock.sleeps == [.01]
+        assert len(observed) == 1 and observed[0]['token'] == 'fixture-token'
 
 
-def test_step_boundary_waits_for_matching_release_while_original_status_is_held(step_boundary_case):
+def test_step_boundary_waits_for_matching_release_while_original_status_is_held(step_boundary_case, step_boundary_clock):
     output, config, writer, callback, factory = step_boundary_case
-    config['deadline'] = time.monotonic() + 1
+    clock = step_boundary_clock
+    original_deadline = config['deadline']
     observed = []
-    def release_after_observation():
-        held = output / 'fixture-step-held.json'
-        while not held.exists() and time.monotonic() < config['deadline']:
-            time.sleep(.005)
-        if held.exists():
-            observed.append(json.loads(writer.path.read_text()))
-            _release_step(output, 'foreign-token')
-            time.sleep(.03)
-            observed.append(json.loads(writer.path.read_text()))
+    _release_step(output, 'foreign-token')
+
+    def release_after_observation(seconds):
+        held = json.loads((output / 'fixture-step-held.json').read_text())
+        assert held['deadline'] == original_deadline
+        observed.append(json.loads(writer.path.read_text()))
+        # Two explicit observer waits prove the foreign release cannot unblock
+        # the callback; publish the matching token only on the second wait.
+        if len(observed) == 2:
             _release_step(output)
-    thread = threading.Thread(target=release_after_observation)
-    thread.start()
-    try:
-        _run_step_observed(factory(config), lambda: callback.on_step_end(0, 2, .5, 0))
-    finally:
-        thread.join(1)
-    assert not thread.is_alive() and len(observed) == 2
+        else:
+            assert len(observed) == 1
+        clock.now += seconds
+
+    clock.on_sleep = release_after_observation
+    _run_step_observed(factory(config), lambda: callback.on_step_end(0, 2, .5, 0))
+    assert clock.sleeps == [.01, .01] and len(observed) == 2
     assert observed[0] == observed[1] and observed[0]['current_step'] == 1
+    assert clock.now < original_deadline and config['deadline'] == original_deadline
 
 
 def test_step_boundary_failure_details_are_bounded_and_need_no_live_process(tmp_path):
