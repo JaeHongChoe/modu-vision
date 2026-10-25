@@ -26,6 +26,68 @@ from backend.engine.flowchart_engine import (
 from backend.engine.segmentation.model import build_segmentation_model
 
 
+def test_graph_provenance_validates_in_a_fresh_process_without_model_runtime():
+    """A receipt graph hash must not load the inference engine into its controller."""
+    import subprocess
+    import sys
+    from pathlib import Path
+
+    program = '''
+import importlib.abc,sys
+class NoModelRuntime(importlib.abc.MetaPathFinder):
+    def find_spec(self,fullname,path=None,target=None):
+        if fullname.split('.')[0] in {'torch','cv2'} or fullname=='backend.engine.flowchart_engine':
+            raise AssertionError('Graph provenance loaded model runtime: '+fullname)
+sys.meta_path.insert(0,NoModelRuntime())
+from backend.engine.flow_provenance import canonical_pipeline_json,pipeline_sha256
+graph={'id':'lightweight','name':'검사','nodes':[],'edges':[]}
+expected='{"description":"Stage 1: Detect IC Chips -> Stage 2: Solder Void & Anomaly -> Stage 3: OK/NG","edges":[],"execution_config":{"device_slots":1,"max_workers":1},"id":"lightweight","name":"검사","nodes":[]}'
+assert canonical_pipeline_json(graph)==expected
+import hashlib
+assert pipeline_sha256(graph)==hashlib.sha256(expected.encode('utf-8')).hexdigest()
+assert not any(name in sys.modules for name in ('torch','cv2','backend.engine.flowchart_engine'))
+'''
+    child = subprocess.run([sys.executable, '-c', program],
+        cwd=Path(__file__).resolve().parents[2], capture_output=True, text=True, timeout=20)
+    assert child.returncode == 0, child.stderr
+
+
+def test_graph_schema_reexports_keep_original_engine_type_identity():
+    """The lightweight contract and existing engine imports accept the same instances."""
+    from backend.engine import flowchart_schema
+    from backend.engine.flow_provenance import canonical_pipeline_json
+
+    for name in ('FlowNodeData', 'FlowNode', 'FlowEdge', 'FlowExecutionConfig', 'FlowchartPipeline'):
+        assert getattr(engine_module, name) is getattr(flowchart_schema, name)
+    pipeline = flowchart_schema.FlowchartPipeline(id='shared', nodes=[
+        flowchart_schema.FlowNode(id='image', position={'x': 1.0},
+            data=flowchart_schema.FlowNodeData(label='Image', node_type='input'))])
+    assert FlowchartPipeline.model_validate(pipeline) is pipeline
+    import json
+    graph = json.loads(canonical_pipeline_json(pipeline))
+    assert graph['nodes'][0]['position'] == {'x': 1}
+    assert graph['nodes'][0]['data']['threshold'] == 0.5
+    assert graph['execution_config'] == {'max_workers': 1, 'device_slots': 1}
+    assert 'capture_group_policy' not in graph
+
+
+@pytest.mark.parametrize('changes', [
+    {'execution_config': {'max_workers': True}},
+    {'execution_config': {'device_slots': 0}},
+    {'execution_config': {'unknown': 1}},
+    {'nodes': [{'id': 'image', 'position': {}, 'data': {'node_type': 'input'}}]},
+    {'nodes': [{'id': 'image', 'position': {}, 'data': {'label': 'Image', 'node_type': 'foreign'}}]},
+    {'capture_group_policy': {'revision': 0, 'policy': {}}},
+])
+def test_graph_provenance_retains_schema_refusals(changes):
+    """Moving graph identity must keep strict execution and policy validation."""
+    from pydantic import ValidationError
+    from backend.engine.flow_provenance import canonical_pipeline_json
+
+    with pytest.raises(ValidationError):
+        canonical_pipeline_json({'nodes': [], 'edges': [], **changes})
+
+
 def _single_segmentation_pipeline() -> FlowchartPipeline:
     nodes = [
         FlowNode(id="image", position={"x": 0, "y": 0}, data=FlowNodeData(label="Image", node_type="input")),
