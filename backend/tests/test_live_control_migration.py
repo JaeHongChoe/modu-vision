@@ -239,17 +239,53 @@ def test_actual_cpu_worker_finishes_once_across_live_cutover(tmp_path,monkeypatc
     for split in ('train','val'):
         for label in ('OK','NG'):
             folder=source/split/label;folder.mkdir(parents=True)
-            for i in range(12):Image.new('RGB',(64,64),'red' if label=='NG' else 'blue').save(folder/(str(i)+'.png'))
+            for i in range(2):Image.new('RGB',(32,32),'red' if label=='NG' else 'blue').save(folder/(str(i)+'.png'))
     source_hashes={p.relative_to(source).as_posix():hashlib.sha256(p.read_bytes()).hexdigest() for p in source.rglob('*.png')}
     manager=TrainingJobManager()
-    record=manager.start_job('job_live','classification',str(source),str(output),device='cpu',ledger=link,
-        config_overrides={'pretrained':False,'backbone':'resnet18','epochs':12,'image_size':64,'batch_size':8,'num_workers':0,'early_stopping_patience':30})
+    # Preserve the genuine -m CLI/launch handshake. The child imports production
+    # normally; sitecustomize only observes the original first-step return.
+    import uuid
+    from backend.tests import _live_step_boundary
+    injection=tmp_path/'step-observer';injection.mkdir()
+    (injection/'sitecustomize.py').write_bytes(Path(_live_step_boundary.__file__).read_bytes())
+    config={'output':str(output),'spec_path':str(output/'local_spec.json'),'job_id':'job_live',
+            'token':uuid.uuid4().hex,'deadline':time.monotonic()+20}
+    config_path=injection/'config.json';config_path.write_text(json.dumps(config))
+    repo=Path(__file__).resolve().parents[2]
+    monkeypatch.setenv('PYTHONPATH',os.pathsep.join((str(injection),str(repo))))
+    monkeypatch.setenv('MODU_TEST_STEP_BOUNDARY_CONFIG',str(config_path))
+    record=None
     try:
-        deadline=time.monotonic()+20
-        while not (output/'local_control_ready.json').is_file() and time.monotonic()<deadline:time.sleep(.02)
+        record=manager.start_job('job_live','classification',str(source),str(output),device='cpu',ledger=link,
+            config_overrides={'pretrained':False,'backbone':'resnet18','epochs':3,'image_size':32,'batch_size':2,'num_workers':0,'early_stopping_patience':30})
+        held_path=output/'fixture-step-held.json'
+        while not held_path.is_file() and record.thread.is_alive() and time.monotonic()<config['deadline']:
+            time.sleep(.02)
+        assert held_path.is_file(), 'original first-step boundary was not reached'
+        held=json.loads(held_path.read_bytes())
         journal=json.loads((output/'local_job.json').read_bytes())
+        ready=json.loads((output/'local_control_ready.json').read_bytes())
+        spec_path=output/'local_spec.json'
+        digest=hashlib.sha256(spec_path.read_bytes()).hexdigest()
         pid,created=journal['owner_pid'],journal['owner_created_at']
         assert pid!=os.getpid() and record.process.poll() is None
+        assert held['pid']==record.process.pid==pid and held['created_at']==psutil.Process(pid).create_time()==created
+        assert all(held[key]==value for key,value in config.items())
+        assert held['owner_token']==journal['owner_token']
+        assert held['spec_sha256']==ready['spec_sha256']==journal['spec_sha256']==digest
+        assert held['job_id']==ready['job_id']==journal['job_id']=='job_live'
+        assert ready['owner_pid']==pid and ready['owner_created_at']==created
+        assert ready['owner_command_sha256']==journal['owner_command_sha256']
+        assert journal['spec_path']==held['spec_path']==str(spec_path)
+        command=psutil.Process(pid).cmdline()
+        assert command[1:]==['-m','backend.training_cli','basic-execute','--spec',str(spec_path),'--launch-handshake']
+        from backend.engine.local_training_worker import command_sha256
+        assert command_sha256(command)==journal['owner_command_sha256']
+        status=json.loads((output/'status.json').read_bytes())
+        assert status['status']=='running' and status['current_epoch']==status['current_step']==1
+        assert status['job_id']=='job_live' and status['spec_sha256']==digest
+        assert not (output/'fixture-step-release.json').exists()
+        assert time.monotonic()<config['deadline']
         # An uncertain reservation is not converted into a new execution grant.
         manager._leases.mark_uncertain(record.job_id)
         plan=preview_live(root);assert plan['can_apply'],plan['blockers']
@@ -261,6 +297,9 @@ def test_actual_cpu_worker_finishes_once_across_live_cutover(tmp_path,monkeypatc
         assert len(carried)==1 and carried[0]['fence']==fence and carried[0]['uncertain']==1
         assert ResourceLeases(root/scopes['leases'],owner='another').acquire('job_duplicate','local-compute','all') is False
         old_controls={p.relative_to(root).as_posix():p.read_bytes() for p in (root/scopes['ledger'],root/scopes['leases'],root/scopes['local_journals']/'job_live.json')}
+        assert json.loads((output/'status.json').read_bytes())==status
+        assert time.monotonic()<config['deadline']
+        _release_step(output,config['token'])
         record.thread.join(60)
         assert not record.thread.is_alive() and record.status=='completed',record.error
         fresh=JobStore(root/scopes['ledger']);assert fresh.get('job_live').state=='completed'
@@ -273,6 +312,186 @@ def test_actual_cpu_worker_finishes_once_across_live_cutover(tmp_path,monkeypatc
         assert recover(root,result['migration_id'],action='finish')['current_writes_preserved']
         with pytest.raises(ValueError,match='restored|replayed|forward'):recover(root,result['migration_id'],action='restore')
         with pytest.raises(ValueError,match='restart|generation'):original_store.get('job_live')
+    except Exception as exc:
+        # Read existing evidence only: no second request, renewed wait or signal.
+        exc.add_note(_step_failure_details(output,record))
+        raise
     finally:
-        if record.thread.is_alive():
-            manager.abort_job(record.job_id);record.thread.join(20)
+        import sys
+        failure=sys.exception()
+        try:
+            if output.is_dir():
+                _release_step(output,config['token'])
+        except Exception as cleanup_error:
+            if failure is None: raise
+            failure.add_note('Fixture release failed: '+repr(cleanup_error))
+        finally:
+            try:
+                if record is not None and record.thread.is_alive():
+                    manager.abort_job(record.job_id);record.thread.join(20)
+            except Exception as cleanup_error:
+                if failure is None: raise
+                failure.add_note('Owned cancellation failed: '+repr(cleanup_error))
+
+
+def _step_failure_details(output, record):
+    evidence = {'worker_exit': record.process.poll() if record and record.process else None,
+                'observer_alive': record.thread.is_alive() if record else None,
+                'record_status': record.status if record else None,
+                'record_error': record.error if record else None}
+    for name in ('status.json', 'fixture-step-held.json', 'local_worker.log'):
+        try:
+            with (output / name).open('rb') as stream:
+                stream.seek(0, 2)
+                stream.seek(max(0, stream.tell() - 8192))
+                evidence[name] = stream.read(8192).decode('utf-8', errors='replace')
+        except OSError as error:
+            evidence[name] = str(error)
+    if record and record.thread.ident:
+        import sys
+        import traceback
+        frame = sys._current_frames().get(record.thread.ident)
+        evidence['parent_observer_stack'] = traceback.format_stack(frame)[-12:] if frame else []
+    return 'Bounded live-cutover evidence: ' + json.dumps(evidence, default=str)
+
+
+@pytest.fixture
+def step_boundary_case(tmp_path):
+    import hashlib
+    from backend.remote.worker import _StatusWriter, _TrainingStatusCallback
+    from backend.tests._live_step_boundary import step_boundary
+    output = tmp_path / 'output'
+    output.mkdir()
+    spec = output / 'local_spec.json'
+    spec.write_text(json.dumps({'job_id': 'job_boundary', 'output_dir': str(output)}))
+    digest = hashlib.sha256(spec.read_bytes()).hexdigest()
+    writer = _StatusWriter(output, 'job_boundary', spec_sha256=digest)
+    writer.update(status='running')
+    config = {'output': str(output), 'spec_path': str(spec), 'job_id': 'job_boundary',
+              'token': 'fixture-token', 'deadline': time.monotonic() + .15}
+    return output, config, writer, _TrainingStatusCallback(writer), step_boundary
+
+
+def _run_step_observed(observer, callback):
+    import sys
+    previous = sys.getprofile()
+    sys.setprofile(observer)
+    try:
+        callback()
+    finally:
+        sys.setprofile(previous)
+
+
+def _release_step(output, token='fixture-token'):
+    path = output / 'fixture-step-release.json'
+    temporary = path.with_suffix('.tmp')
+    temporary.write_text(json.dumps({'token': token}))
+    temporary.replace(path)
+
+
+def test_step_boundary_holds_successful_original_publication_once(step_boundary_case):
+    import os
+    import psutil
+    output, config, writer, callback, factory = step_boundary_case
+    _release_step(output)
+    observer = factory(config)
+    _run_step_observed(observer, lambda: callback.on_step_end(0, 2, .5, 0))
+    marker = output / 'fixture-step-held.json'
+    held = json.loads(marker.read_text())
+    assert held['pid'] == os.getpid() and held['created_at'] == psutil.Process().create_time()
+    assert held['job_id'] == 'job_boundary' and held['token'] == 'fixture-token'
+    assert held['spec_path'] == config['spec_path'] and held['deadline'] == config['deadline']
+    assert held['current_step'] == held['current_epoch'] == 1 and held['stack']
+    raw = marker.read_bytes()
+    marker.unlink()
+    _run_step_observed(observer, lambda: callback.on_step_end(0, 2, .4, 0))
+    assert not marker.exists() and raw
+
+
+@pytest.mark.parametrize('damage', ['code', 'thread', 'job', 'spec', 'writer_path', 'status', 'unpublished', 'step', 'epoch'])
+def test_step_boundary_ignores_foreign_boundary(step_boundary_case, damage):
+    output, config, writer, callback, factory = step_boundary_case
+    _release_step(output)
+    if damage == 'job': writer.update(job_id='other')
+    if damage == 'spec': (output / 'local_spec.json').write_text('{}')
+    if damage == 'writer_path': writer.path = output / 'foreign-status.json'
+    if damage == 'status': writer.update(status='preparing')
+    if damage == 'unpublished': writer.update = lambda **changes: None
+    observer = factory(config)
+    call = lambda: callback.on_step_end(1 if damage == 'step' else 0, 2, .5, 1 if damage == 'epoch' else 0)
+    if damage == 'code':
+        def foreign(self, step, total_steps, current_loss, epoch):
+            self.writer.update(current_epoch=epoch + 1, current_step=step + 1)
+        call = lambda: foreign(callback, 0, 2, .5, 0)
+    if damage == 'thread':
+        thread = threading.Thread(target=lambda: _run_step_observed(observer, call))
+        thread.start(); thread.join(1)
+        assert not thread.is_alive()
+    else:
+        _run_step_observed(observer, call)
+    assert not (output / 'fixture-step-held.json').exists()
+
+
+def test_step_boundary_publication_then_exception_preserves_original_traceback(step_boundary_case):
+    import traceback
+    output, config, writer, callback, factory = step_boundary_case
+    original_update = writer.update
+    def publish_then_raise(**changes):
+        original_update(**changes)
+        raise RuntimeError('original writer failure after publication')
+    writer.update = publish_then_raise
+    _release_step(output)
+    with pytest.raises(RuntimeError, match='original writer failure') as error:
+        _run_step_observed(factory(config), lambda: callback.on_step_end(0, 2, .5, 0))
+    assert json.loads(writer.path.read_text())['current_step'] == 1
+    assert 'publish_then_raise' in [row.name for row in traceback.extract_tb(error.value.__traceback__)]
+    assert not (output / 'fixture-step-held.json').exists()
+
+
+@pytest.mark.parametrize('expired', [False, True])
+def test_step_boundary_foreign_release_cannot_renew_original_deadline(step_boundary_case, expired):
+    output, config, writer, callback, factory = step_boundary_case
+    config['deadline'] = time.monotonic() + (-.01 if expired else .06)
+    _release_step(output, 'foreign-token')
+    started = time.monotonic()
+    with pytest.raises(TimeoutError, match='original readiness deadline'):
+        _run_step_observed(factory(config), lambda: callback.on_step_end(0, 2, .5, 0))
+    assert time.monotonic() - started < .3
+    if expired:
+        assert not (output / 'fixture-step-held.json').exists()
+    else:
+        assert json.loads((output / 'fixture-step-held.json').read_text())['deadline'] == config['deadline']
+
+
+def test_step_boundary_waits_for_matching_release_while_original_status_is_held(step_boundary_case):
+    output, config, writer, callback, factory = step_boundary_case
+    config['deadline'] = time.monotonic() + 1
+    observed = []
+    def release_after_observation():
+        held = output / 'fixture-step-held.json'
+        while not held.exists() and time.monotonic() < config['deadline']:
+            time.sleep(.005)
+        if held.exists():
+            observed.append(json.loads(writer.path.read_text()))
+            _release_step(output, 'foreign-token')
+            time.sleep(.03)
+            observed.append(json.loads(writer.path.read_text()))
+            _release_step(output)
+    thread = threading.Thread(target=release_after_observation)
+    thread.start()
+    try:
+        _run_step_observed(factory(config), lambda: callback.on_step_end(0, 2, .5, 0))
+    finally:
+        thread.join(1)
+    assert not thread.is_alive() and len(observed) == 2
+    assert observed[0] == observed[1] and observed[0]['current_step'] == 1
+
+
+def test_step_boundary_failure_details_are_bounded_and_need_no_live_process(tmp_path):
+    output = tmp_path
+    (output / 'status.json').write_text(json.dumps({'status': 'running', 'current_epoch': 2, 'current_step': 3}))
+    (output / 'local_worker.log').write_text('x' * 20000 + 'last-worker-line')
+    details = _step_failure_details(output, None)
+    assert 'last-worker-line' in details and len(details) < 10000
+    assert '"current_epoch": 2' in json.loads(details.split(': ', 1)[1])['status.json']
+    assert json.loads(details.split(': ', 1)[1])['worker_exit'] is None
