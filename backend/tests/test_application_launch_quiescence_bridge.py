@@ -791,16 +791,54 @@ def _fixture_readonly_managed_launch(root):
     return None
 
 
-def wait_ordinary_stop(projects, child, *, seconds):
+def wait_ordinary_stop(projects, child, *, seconds, boundary_name=None):
     """The backend fixture writes this when the main asks it to stop. When it never comes, say how the controller and
     the main ended (exit code, bounded stop diagnostic) instead of only that the file is missing."""
-    try:return wait_file(projects/'ordinary-stop-requested.json',seconds=seconds)
+    # Either backend thread may publish first. Optional boundary observation
+    # shares the ordinary marker's original budget instead of starting another.
+    deadline=time.monotonic()+seconds if boundary_name is not None else None
+    try:ordinary=wait_file(projects/'ordinary-stop-requested.json',seconds=seconds,absolute_deadline=deadline)
     except pytest.fail.Exception:
         stop=projects/'managed-stop-result.json'
         try:result=json.loads(stop.read_bytes()) if stop.is_file() else None
         except ValueError:result={'error':'stop result not complete JSON'}
         pytest.fail(f'No ordinary stop request reached the backend fixture within {seconds}s; controller exit code '
                     f'{child.poll()!r}; main stop result '+(_managed_stop_diagnostic(projects,result) if result else 'absent'))
+    if boundary_name is not None:wait_file(projects/boundary_name,seconds=seconds,absolute_deadline=deadline)
+    return ordinary
+
+
+def test_ordinary_stop_boundary_can_publish_after_the_ordinary_marker(tmp_path,monkeypatch):
+    """The ordinary observer can win the race with the original service thread."""
+    ordinary=tmp_path/'ordinary-stop-requested.json';ordinary.write_text('{"pid":123}')
+    boundary=tmp_path/'managed-nonce-proof-boundary.json'
+    clock=[10.0];sleeps=[]
+    monkeypatch.setattr(time,'monotonic',lambda:clock[0])
+    def sleep(seconds):
+        assert 0<seconds<=.01 and ordinary.is_file() and not boundary.exists()
+        sleeps.append(seconds);clock[0]+=seconds
+        boundary.write_text('{"pid":123,"original_deadline":14.0}')
+    monkeypatch.setattr(time,'sleep',sleep)
+    observed=json.loads(wait_ordinary_stop(tmp_path,None,seconds=3,boundary_name=boundary.name))
+    proof=json.loads(boundary.read_bytes())
+    assert observed=={'pid':123} and proof=={'pid':123,'original_deadline':14.0}
+    assert len(sleeps)==1 and 10.0<clock[0]<13.0
+
+
+def test_ordinary_stop_boundary_cannot_renew_the_shared_observation_deadline(tmp_path,monkeypatch):
+    """A late ordinary marker leaves only the remainder of its original 3s."""
+    ordinary=tmp_path/'ordinary-stop-requested.json'
+    boundary=tmp_path/'managed-nonce-proof-boundary.json'
+    clock=[10.0];sleeps=[]
+    monkeypatch.setattr(time,'monotonic',lambda:clock[0])
+    def sleep(seconds):
+        assert 0<seconds<=.01;sleeps.append(seconds);clock[0]+=seconds
+        if clock[0]>=12.98 and not ordinary.exists():ordinary.write_text('{"pid":123}')
+        if clock[0]>=13.005 and not boundary.exists():boundary.write_text('{"pid":123,"original_deadline":14.0}')
+    monkeypatch.setattr(time,'sleep',sleep)
+    with pytest.raises(pytest.fail.Exception,match='Missing controlled original fixture output: .*managed-nonce-proof-boundary.json'):
+        wait_ordinary_stop(tmp_path,None,seconds=3,boundary_name=boundary.name)
+    assert clock[0]==13.0 and sleeps and ordinary.is_file() and not boundary.exists()
 
 
 def finish_managed(child, root):
@@ -1519,9 +1557,9 @@ def test_actual_controller_refuses_changed_and_replayed_original_main_drain_fram
         assert refusal['writer_drain']['receipt'] is None and refusal['writer_drain']['backend_exit'] is None
         assert refusal['writer_drain']['phase']==('enrolled' if damage=='changed_nonce' else 'closing')
         assert not (projects/'managed-drain-received.json').exists()
-        ordinary=json.loads(wait_ordinary_stop(projects,child,seconds=3))
-        assert ordinary['pid']==cpu['backend_process']['pid']
         boundary_name='managed-nonce-proof-boundary.json' if damage=='changed_nonce' else 'managed-replay-proof-boundary.json'
+        ordinary=json.loads(wait_ordinary_stop(projects,child,seconds=3,boundary_name=boundary_name))
+        assert ordinary['pid']==cpu['backend_process']['pid']
         boundary=json.loads((projects/boundary_name).read_bytes())
         assert boundary['pid']==cpu['backend_process']['pid']
         assert type(boundary['original_deadline']) in (int,float) and math.isfinite(boundary['original_deadline'])
