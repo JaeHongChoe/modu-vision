@@ -36,6 +36,21 @@ let heatmapDebounceTimer: ReturnType<typeof setTimeout> | null = null;
 let currentHeatmapRequestId = 0;
 let evaluationGeneration = 0;
 
+function sameHeatmapImage(a: TestPredictionItem | null, b: TestPredictionItem | null): boolean {
+  return a?.image_id === b?.image_id && a?.file_path === b?.file_path;
+}
+function effectiveHeatmapThreshold(state: EvaluationState): number {
+  return state.sampleFilter === 'saved_escape' && state.persistedThreshold !== null ? state.persistedThreshold : state.confidenceThreshold;
+}
+/** Revoke pixels and request ownership before changing their image/decision authority. */
+function invalidateHeatmap() {
+  currentHeatmapRequestId += 1;
+  if (heatmapDebounceTimer) clearTimeout(heatmapDebounceTimer);
+  heatmapDebounceTimer = null;
+  useEvaluationStore.setState({heatmapOverlayBase64: null, heatmapLoading: false, heatmapError: null});
+}
+
+
 /** Shared class meaning; pass roles recorded by the backend when the response has them. */
 export function isDefectLabel(label?: string | number, roles?: ClassRoles | null): boolean {
   if (label === undefined || label === null) return false;
@@ -179,6 +194,7 @@ interface EvaluationState {
   persistedThreshold: number | null;
   heatmapOverlayBase64: string | null;
   heatmapLoading: boolean;
+  heatmapError: string | null;
   isExportingReport: boolean;
   exportedReportPath: string | null;
   errorMessage: string | null;
@@ -234,6 +250,7 @@ export const useEvaluationStore = create<EvaluationState>((set, get) => ({
   persistedThreshold: null,
   heatmapOverlayBase64: null,
   heatmapLoading: false,
+  heatmapError: null,
   isExportingReport: false,
   exportedReportPath: null,
   errorMessage: null,
@@ -242,6 +259,7 @@ export const useEvaluationStore = create<EvaluationState>((set, get) => ({
   setSampleFilter: (sampleFilter) => {
     const previous = get();
     if (sampleFilter === 'saved_escape' && (previous.isLoading || previous.persistedThreshold === null)) return;
+    if ((sampleFilter === 'saved_escape') !== (previous.sampleFilter === 'saved_escape')) invalidateHeatmap();
     set({ sampleFilter, ...(sampleFilter === 'saved_escape' ? {selectedCell: null} : {}) });
     get().computeFilteredList();
     if ((sampleFilter === 'saved_escape') !== (previous.sampleFilter === 'saved_escape')
@@ -307,12 +325,13 @@ export const useEvaluationStore = create<EvaluationState>((set, get) => ({
     const stillSelected = currentSelected && list.some((it) => it.image_id === currentSelected.image_id);
     const newSelected = stillSelected ? currentSelected : list[0] || null;
 
+    if (!sameHeatmapImage(newSelected, currentSelected)) invalidateHeatmap();
     set({
       filteredPredictions: list,
       selectedPrediction: newSelected,
     });
 
-    if (newSelected && (!currentSelected || newSelected.image_id !== currentSelected.image_id)) {
+    if (newSelected && !sameHeatmapImage(newSelected, currentSelected)) {
       get().updateHeatmap();
     }
   },
@@ -362,11 +381,12 @@ export const useEvaluationStore = create<EvaluationState>((set, get) => ({
       currentHeatmapRequestId += 1;
       set({ executionEvidence:null, remoteRequest:null, remoteOperation:null, remoteOperationError:null, isLoading: false, jobId: null, persistedThreshold: null, sampleFilter: get().sampleFilter === 'saved_escape' ? 'all' : get().sampleFilter, metrics: {}, classSemantics: null, confusionMatrix: null,
         testPredictions: [], filteredPredictions: [], selectedPrediction: null, selectedCell: null,
-        overkillAnalysis: null, heatmapOverlayBase64: null, heatmapLoading: false,
+        overkillAnalysis: null, heatmapOverlayBase64: null, heatmapLoading: false, heatmapError: null,
         errorMessage: '현재 데이터로 학습한 모델이 없습니다. 3단계에서 학습을 완료하세요.' });
       return;
     }
     const generation = ++evaluationGeneration;
+    invalidateHeatmap();
     // The renderer store is transient. Let the backend resolve its latest
     // completed checkpoint when this window has lost the training job ID.
     set({ isLoading: true, persistedThreshold: null, sampleFilter: get().sampleFilter === 'saved_escape' ? 'all' : get().sampleFilter, errorMessage: null, classSemantics: null, overkillAnalysis: null,
@@ -388,7 +408,7 @@ export const useEvaluationStore = create<EvaluationState>((set, get) => ({
           set({executionEvidence:null, remoteRequest:null, remoteOperation:null, remoteOperationError:null,
             isLoading:false, jobId:null, persistedThreshold:null, metrics:{}, classSemantics:null, confusionMatrix:null,
             testPredictions:[], filteredPredictions:[], selectedPrediction:null, selectedCell:null,
-            overkillAnalysis:null, heatmapOverlayBase64:null, heatmapLoading:false,
+            overkillAnalysis:null, heatmapOverlayBase64:null, heatmapLoading:false, heatmapError:null,
             errorMessage:'현재 데이터로 학습한 모델이 없습니다. 3단계에서 학습을 완료하세요.'});
           return;
         }
@@ -452,7 +472,7 @@ export const useEvaluationStore = create<EvaluationState>((set, get) => ({
       jobId: null, persistedThreshold: null, allowLatestRecovery: allowSourceRecovery, isLoading: false,
       metrics: {}, classSemantics: null, confusionMatrix: null, selectedCell: null,
       testPredictions: [], filteredPredictions: [], selectedPrediction: null,
-      heatmapOverlayBase64: null, heatmapLoading: false,
+      heatmapOverlayBase64: null, heatmapLoading: false, heatmapError: null,
       isExportingReport: false, exportedReportPath: null, errorMessage: null,
       sampleFilter: 'all', overkillAnalysis: null, isAnalyzingTradeoff: false,
       isCalibrating: false, calibrationMessage: null, calibrationSuccess: false,
@@ -472,12 +492,14 @@ export const useEvaluationStore = create<EvaluationState>((set, get) => ({
   },
 
   selectPrediction: async (selectedPrediction) => {
+    if (!sameHeatmapImage(selectedPrediction, get().selectedPrediction)) invalidateHeatmap();
     set({ selectedPrediction });
     await get().updateHeatmap();
   },
 
   setConfidenceThreshold: (confidenceThreshold) => {
     if(!Number.isFinite(confidenceThreshold)||confidenceThreshold<0||(get().metrics.score_spec?.domain!=='distance'&&confidenceThreshold>1))return;
+    if (confidenceThreshold !== get().confidenceThreshold || get().sampleFilter === 'saved_escape') invalidateHeatmap();
     set({ confidenceThreshold, ...(get().sampleFilter === 'saved_escape' ? {sampleFilter: 'escape' as const} : {}) });
     get().computeFilteredList();
 
@@ -490,11 +512,22 @@ export const useEvaluationStore = create<EvaluationState>((set, get) => ({
   },
 
   updateHeatmap: async () => {
+    invalidateHeatmap();
     if (get().executionEvidence?.common_cohort) { set({errorMessage:'선택 코호트의 추가 분석/보정/속도 측정은 아직 지원되지 않습니다. 반환된 고정 평가 결과를 확인하세요.'}); return; }
-    const { selectedPrediction, confidenceThreshold, persistedThreshold, sampleFilter, jobId } = get();
-    const heatmapThreshold = sampleFilter === 'saved_escape' && persistedThreshold !== null ? persistedThreshold : confidenceThreshold;
+    const state = get(), { selectedPrediction, jobId } = state;
+    const heatmapThreshold = effectiveHeatmapThreshold(state);
     if (!selectedPrediction) return;
-    const requestId = ++currentHeatmapRequestId;
+    const requestId = currentHeatmapRequestId, generation = evaluationGeneration;
+    const epoch = getProjectContextGeneration(), transport = getApiPersistenceIdentity(), binding = calibrationSource;
+    const savedReview = state.sampleFilter === 'saved_escape';
+    const current = () => {
+      const latest = get();
+      return requestId === currentHeatmapRequestId && generation === evaluationGeneration
+        && epoch === getProjectContextGeneration() && transport === getApiPersistenceIdentity()
+        && (!binding || binding === calibrationSource && binding.isCurrent())
+        && jobId === latest.jobId && sameHeatmapImage(selectedPrediction, latest.selectedPrediction)
+        && savedReview === (latest.sampleFilter === 'saved_escape') && heatmapThreshold === effectiveHeatmapThreshold(latest);
+    };
     set({ heatmapLoading: true });
     try {
       const res = await api.evaluation.getHeatmap(
@@ -502,14 +535,14 @@ export const useEvaluationStore = create<EvaluationState>((set, get) => ({
         jobId || undefined,
         heatmapThreshold,
         selectedPrediction.file_path,
-        get().metrics.score_spec ? {...get().metrics.score_spec,threshold:heatmapThreshold} : undefined
+        state.metrics.score_spec ? {...state.metrics.score_spec,threshold:heatmapThreshold} : undefined
       );
-      if (requestId === currentHeatmapRequestId) {
-        set({ heatmapOverlayBase64: res.overlay_base64, heatmapLoading: false });
+      if (current()) {
+        set({ heatmapOverlayBase64: res.overlay_base64 || null, heatmapLoading: false, heatmapError: null });
       }
     } catch {
-      if (requestId === currentHeatmapRequestId) {
-        set({ heatmapLoading: false });
+      if (current()) {
+        set({ heatmapOverlayBase64: null, heatmapLoading: false, heatmapError: '현재 기준의 열지도를 불러오지 못했습니다.' });
       }
     }
   },
@@ -624,6 +657,7 @@ export const useEvaluationStore = create<EvaluationState>((set, get) => ({
       const optimalTh = calibrationThreshold(data, get().metrics);
       if (optimalTh === null) throw new Error('저장된 보정 임계값을 확인할 수 없습니다. 평가 결과를 새로고침하세요.');
 
+      invalidateHeatmap();
       set({
         overkillAnalysis: data,
         confidenceThreshold: optimalTh,

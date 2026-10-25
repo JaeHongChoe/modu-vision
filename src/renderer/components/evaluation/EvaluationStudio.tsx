@@ -158,6 +158,7 @@ export const EvaluationStudio: React.FC = () => {
     persistedThreshold,
     heatmapOverlayBase64,
     heatmapLoading,
+    heatmapError,
     isExportingReport,
     exportedReportPath,
     errorMessage,
@@ -1329,6 +1330,7 @@ export const EvaluationStudio: React.FC = () => {
               prediction={selectedPrediction}
               heatmapOverlayBase64={heatmapOverlayBase64}
               heatmapLoading={heatmapLoading}
+              heatmapError={savedReview ? heatmapError : null}
               confidenceThreshold={imageThreshold}
               savedReviewVerdict={savedReview ? selectedVerdict ?? 'REVIEW' : undefined}
               scoreSpec={metrics.score_spec}

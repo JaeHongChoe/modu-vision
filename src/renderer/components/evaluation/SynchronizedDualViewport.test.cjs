@@ -82,3 +82,10 @@ test('saved review renders the real strict patch equality verdict and keeps REVI
  assert.ok(readout({savedReviewVerdict:'REVIEW'}).includes('—'),'unresolved evidence remains unknown');
  assert.ok(readout({}).includes('불량 (NG)'),'ordinary preview keeps its existing score-based behavior');
 });
+
+test('failed saved heatmap is explicitly unavailable and cannot display prior overlay pixels',()=>{
+ const h=harness(),view=h.render({heatmapOverlayBase64:null,heatmapLoading:false,heatmapError:'현재 기준의 열지도를 불러오지 못했습니다.'});
+ const text=node=>typeof node==='string'?node:(node?.children||[]).map(text).join('');
+ assert.match(text(view),/현재 기준의 열지도를 불러오지 못했습니다/);
+ assert.equal(h.nodes(view).filter(node=>node.type==='img'&&node.props.alt==='Heatmap').length,0);
+});

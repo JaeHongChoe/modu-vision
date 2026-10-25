@@ -303,3 +303,49 @@ test('matrix exit from saved review refreshes the preview heatmap for the same s
  f.state().selectCell('OK','scratch');assert.equal(f.state().sampleFilter,'escape');assert.equal(f.state().selectedPrediction.image_id,'escape');
  assert.equal(heatmaps.at(-1)?.[2],.8,'same-image mode exit must replace its saved-threshold heatmap with preview authority');f.state().invalidateForDataChange();
 });
+
+const pendingHeatmap=()=>{let resolve,reject;const promise=new Promise((a,b)=>{resolve=a;reject=b;});return{promise,resolve,reject};};
+for(const differentImage of [false,true])test('saved review clears '+(differentImage?'different-image':'same-image')+' preview pixels while pending and after rejected replacement',async()=>{
+ const f=fixture(),miss={...sample('saved-miss','OK','OK'),defect_score:.3},other={...sample('other','OK','OK'),defect_score:.9};
+ f.results.metrics={active_threshold:.5};f.results.test_predictions=differentImage?[other,miss]:[miss,other];
+ try{
+  await f.state().loadEvaluation('job',{folderPath:'/source',task:'classification'});f.state().setConfidenceThreshold(.2);
+  f.api.evaluation.getHeatmap=async()=>({overlay_base64:'preview-pixels'});await f.state().updateHeatmap();assert.equal(f.state().heatmapOverlayBase64,'preview-pixels');
+  const replacement=pendingHeatmap();f.api.evaluation.getHeatmap=()=>replacement.promise;focusSavedMisses(renderStudio(f.state()));
+  assert.equal(f.state().selectedPrediction.image_id,'saved-miss');assert.equal(f.state().heatmapOverlayBase64,null,'preview pixels disappear before saved replacement settles');assert.equal(f.state().heatmapLoading,true);
+  replacement.reject(Error('controlled saved refresh failure'));await new Promise(setImmediate);
+  assert.equal(f.state().heatmapOverlayBase64,null);assert.equal(f.state().heatmapLoading,false);assert.match(f.state().heatmapError,/불러오지 못/);
+  const saved=renderStudio(f.state());assert.match(saved.nodes.find(node=>node.props.onThresholdChange).props.heatmapError,/불러오지 못/);
+  f.state().setSampleFilter('all');const preview=renderStudio(f.state());assert.equal(preview.nodes.find(node=>node.props.onThresholdChange).props.heatmapError,null,'ordinary preview error presentation is unchanged');
+ }finally{f.state().invalidateForDataChange();}
+});
+test('in-flight preview response cannot replace pending or successful saved-review pixels',async()=>{
+ const f=fixture();f.results.metrics={active_threshold:.5};f.results.test_predictions=[{...samples[0],defect_score:.3}];
+ try{
+  await f.state().loadEvaluation('job',{folderPath:'/source',task:'classification'});f.state().setConfidenceThreshold(.2);
+  const old=pendingHeatmap();f.api.evaluation.getHeatmap=()=>old.promise;const oldRequest=f.state().updateHeatmap();
+  const saved=pendingHeatmap();f.api.evaluation.getHeatmap=()=>saved.promise;focusSavedMisses(renderStudio(f.state()));assert.equal(f.state().heatmapOverlayBase64,null);
+  saved.resolve({overlay_base64:'saved-pixels'});await new Promise(setImmediate);assert.equal(f.state().heatmapOverlayBase64,'saved-pixels');
+  old.resolve({overlay_base64:'late-preview-pixels'});await oldRequest;assert.equal(f.state().heatmapOverlayBase64,'saved-pixels');assert.equal(f.state().heatmapError,null);
+ }finally{f.state().invalidateForDataChange();}
+});
+test('preview threshold transition invalidates saved overlay and in-flight response before debounce requests again',async()=>{
+ const f=fixture();f.results.metrics={active_threshold:.5};f.results.test_predictions=[{...samples[0],defect_score:.3}];
+ try{
+  await f.state().loadEvaluation('job',{folderPath:'/source',task:'classification'});f.state().setSampleFilter('saved_escape');
+  f.api.evaluation.getHeatmap=async()=>({overlay_base64:'saved-pixels'});await f.state().updateHeatmap();
+  const old=pendingHeatmap();f.api.evaluation.getHeatmap=()=>old.promise;const oldRequest=f.state().updateHeatmap();
+  f.state().setConfidenceThreshold(.8);assert.equal(f.state().heatmapOverlayBase64,null,'threshold change synchronously removes old authority');
+  old.resolve({overlay_base64:'late-saved-pixels'});await oldRequest;assert.equal(f.state().heatmapOverlayBase64,null,'old authority is revoked during debounce');assert.equal(f.state().heatmapError,null);
+ }finally{f.state().invalidateForDataChange();}
+});
+test('replacement evaluation read revokes old heatmap pixels and ownership immediately',async()=>{
+ const f=fixture();f.results.metrics={active_threshold:.5};f.results.test_predictions=[{...samples[0],defect_score:.3}];
+ try{
+  await f.state().loadEvaluation('job',{folderPath:'/source',task:'classification'});f.useEvaluationStore.setState({heatmapOverlayBase64:'old-evaluation-pixels'});
+  const old=pendingHeatmap();f.api.evaluation.getHeatmap=()=>old.promise;const oldRequest=f.state().updateHeatmap();
+  const read=pendingHeatmap();f.api.evaluation.getResults=()=>read.promise;const replacement=f.state().loadEvaluation('job',{folderPath:'/source',task:'classification'});
+  assert.equal(f.state().heatmapOverlayBase64,null);old.resolve({overlay_base64:'late-old-evaluation-pixels'});await oldRequest;assert.equal(f.state().heatmapOverlayBase64,null);
+  read.resolve({...f.results,test_predictions:[]});await replacement;assert.equal(f.state().selectedPrediction,null);assert.equal(f.state().heatmapOverlayBase64,null);
+ }finally{f.state().invalidateForDataChange();}
+});

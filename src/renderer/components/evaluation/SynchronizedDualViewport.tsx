@@ -26,6 +26,7 @@ export interface SynchronizedDualViewportProps {
   prediction: TestPredictionItem | null;
   heatmapOverlayBase64: string | null;
   heatmapLoading: boolean;
+  heatmapError?: string | null;
   confidenceThreshold: number;
   scoreSpec?: ScoreSpec | null;
   /** Accepted saved-review verdict supplied by the parent; absent during ordinary preview. */
@@ -43,6 +44,7 @@ export const SynchronizedDualViewport: React.FC<SynchronizedDualViewportProps> =
   prediction,
   heatmapOverlayBase64,
   heatmapLoading,
+  heatmapError,
   confidenceThreshold,
   scoreSpec,
   savedReviewVerdict,
@@ -282,6 +284,7 @@ export const SynchronizedDualViewport: React.FC<SynchronizedDualViewportProps> =
           <div className="absolute top-2 left-2 z-10 px-2 py-0.5 bg-[#0B0E14]/90 border border-[#2B3547] rounded-[3px] text-[10px] font-mono text-slate-300 flex items-center space-x-1.5">
             <span className="w-2 h-2 rounded-full bg-[#EF4444] animate-pulse" />
             <span className="font-bold text-[#EF4444]">{task === 'detection' ? 'DETECTION BOX OVERLAY' : '결함 열지도'}</span>
+            {heatmapError && <span role="status">{heatmapError}</span>}
             {heatmapLoading && <span className="text-[#3B82F6] text-[9px] animate-pulse ml-1">[UPDATING...]</span>}
           </div>
 
