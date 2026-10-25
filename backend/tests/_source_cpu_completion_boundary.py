@@ -108,7 +108,8 @@ def backend_profile(projects, original_profile):
     def profile(frame, event, arg):
         nonlocal done
         if original_profile is not None: original_profile(frame, event, arg)
-        if done: return
+        # The retained drain guard may deliberately clear profiling itself.
+        if sys.getprofile() is not profile.installed or done: return
         if event == 'call' and frame.f_code is code:
             picked = context(frame)
             if picked is not None:
@@ -133,8 +134,11 @@ def backend_profile(projects, original_profile):
                     'nonce': state['frame']['nonce'], 'request_sha256': request_hash(state['frame']),
                     'deadline': min(deadline, metadata['deadline']), 'normal_return': True,
                     'time': time.monotonic()})
+                # The outer contention hook shares this one-shot ownership.
+                if sys.getprofile() is profile.installed: sys.setprofile(original_profile)
             profile.action = None
     profile.action = None
+    profile.installed = profile
     return profile
 
 
@@ -171,11 +175,28 @@ def controller_boundary(owner, original_code):
         yield
         return
     metadata = configuration(projects); thread = threading.get_ident(); previous = sys.getprofile()
-    done = False
+    def forward(frame, event, arg):
+        if profile.upstream is not None:
+            installed = sys.getprofile()
+            try: profile.upstream(frame, event, arg)
+            except BaseException:
+                # Match CPython: a throwing upstream profile becomes disabled.
+                profile.upstream = None
+                profile.released = True
+                raise
+            else:
+                if sys.getprofile() is not installed:
+                    # A retained callback owns its explicit disable/replacement.
+                    profile.upstream = sys.getprofile()
+                    profile.released = True
+
+    def release():
+        if sys.getprofile() is profile.installed: sys.setprofile(profile.upstream)
+        profile.released = True
+
     def profile(frame, event, arg):
-        nonlocal done
-        if previous is not None: previous(frame, event, arg)
-        if done or event != 'call' or frame.f_code is not execution.verify_completion.__code__: return
+        forward(frame, event, arg)
+        if profile.released or event != 'call' or frame.f_code is not execution.verify_completion.__code__: return
         if threading.get_ident() != thread or frame.f_locals.get('owner') is not owner: return
         assert frame.f_back.f_code is original_code
         intent = frame.f_locals['intent']; proof = frame.f_locals['proof']; request = intent['request']
@@ -183,11 +204,19 @@ def controller_boundary(owner, original_code):
         assert owner.root == Path(metadata['root']) and read(projects, CONFIG) == metadata
         assert frame.f_locals.get('absolute_deadline') is None
         wait_ready(projects, metadata, request)
-        done = True
-        sys.setprofile(previous)
+        profile.ready = True
+        release()
+    # Explicit handoff to the test-owned contention hook; no target is wrapped.
+    profile.upstream = previous
+    profile.installed = profile
+    profile.ready = profile.released = False
+    profile.forward = forward
+    profile.release = release
     sys.setprofile(profile)
     try:
         yield
     finally:
-        # Restore the retained profile even when CPython disabled ours on error.
-        if sys.getprofile() is profile or sys.getprofile() is None: sys.setprofile(previous)
+        # CPython clears a throwing profile; preserve its retained upstream,
+        # but never revive an upstream callback after an intentional handoff.
+        if not profile.released and (sys.getprofile() is profile.installed or sys.getprofile() is None):
+            sys.setprofile(profile.upstream)
