@@ -753,7 +753,15 @@ def _configure_cpu_completion_boundary(root, *, schedule=None):
 def _start_ready_cpu_stack(values, *, completion_schedule=None, **kwargs):
     """Capture the original receipt budget once in the parent before startup."""
     _configure_cpu_completion_boundary(values[0],schedule=completion_schedule)
-    return start_cpu_stack(values,**kwargs)
+    started=time.monotonic()
+    try:child,ack=start_cpu_stack(values,**kwargs)
+    except BaseException as error:
+        try:_note_cpu_fixture_failure(error,values[0],None,None,{'phase':'startup'})
+        except BaseException:pass
+        raise
+    try:child._original_cpu_fixture_times={'startup_enter':started,'ack_returned':time.monotonic()}
+    except BaseException:pass
+    return child,ack
 
 
 def wait_file(path, *, seconds=5, absolute_deadline=None):
@@ -1352,12 +1360,20 @@ def _source_cpu_settlement_fixture_prefix():
 from backend.tests import test_application_launch_quiescence_bridge as fixture
 original_execute_cpu=controller.execute_cpu
 def execute_cpu(owner, capability):
-    receipt=fixture._execute_ready_source_cpu(original_execute_cpu, owner, capability)
-    fixture._record_returned_cpu_settlement(owner, receipt)
-    return receipt
+    return fixture._execute_and_record_source_cpu(original_execute_cpu, owner, capability)
 controller.execute_cpu=execute_cpu
 raise SystemExit(controller.main())
 '''
+
+
+def _execute_and_record_source_cpu(original,owner,capability):
+    receipt=_execute_ready_source_cpu(original,owner,capability)
+    try:_record_returned_cpu_settlement(owner,receipt)
+    except BaseException as error:
+        try:_record_cpu_fixture_failure(owner.root/'projects',error,phase='controller_returned_recording')
+        except BaseException:pass
+        raise
+    return receipt
 
 
 def _execute_ready_source_cpu(original,owner,capability):
@@ -1368,51 +1384,148 @@ def _execute_ready_source_cpu(original,owner,capability):
                 return _cpu_contention_execute(original,owner,capability)
             return original(owner,capability)
     except BaseException as error:
-        _record_cpu_fixture_failure(owner.root/'projects',error)
+        try:_record_cpu_fixture_failure(owner.root/'projects',error)
+        except BaseException:pass
         raise
 
 
-def _record_cpu_fixture_failure(projects,error):
+def _cpu_fixture_file(path,limit):
+    """One bounded no-follow snapshot; never inspect/admit or read file contents into output."""
+    import stat
+    try:named=path.lstat()
+    except FileNotFoundError:return {'exists':False},None
+    except OSError:return {'status':'read_error'},None
+    result={'exists':True,'size':named.st_size}
+    if not stat.S_ISREG(named.st_mode) or named.st_nlink!=1:
+        return dict(result,status='nonregular'),None
+    if named.st_size>limit:return dict(result,status='oversize'),None
+    descriptor=None
+    try:
+        descriptor=os.open(path,os.O_RDONLY|os.O_NOFOLLOW|os.O_NONBLOCK)
+        def identity(info):return (info.st_dev,info.st_ino,info.st_mode,info.st_nlink,info.st_size,info.st_mtime_ns,info.st_ctime_ns)
+        held=os.fstat(descriptor)
+        if identity(held)!=identity(named):return dict(result,status='changed'),None
+        raw=os.read(descriptor,limit+1)
+        if (identity(os.fstat(descriptor))!=identity(held) or identity(path.lstat())!=identity(held)
+                or len(raw)!=held.st_size):return dict(result,status='changed'),None
+        return dict(result,status='regular',sha256=sha(raw)),raw
+    except OSError:return dict(result,status='read_error'),None
+    finally:
+        if descriptor is not None:os.close(descriptor)
+
+
+_CPU_PHASE_FILES=(completion_boundary.CONFIG,completion_boundary.PENDING,completion_boundary.READY,
+    'cpu-gate-held.json','cpu-gate-verify.json','cpu-gate-target.json','cpu-gate-enter.json',
+    'cpu-gate-busy.json','source-cpu-fixture-error.json','source-cpu-controller-returned.json',
+    'source-cpu-controller-returned.json.complete')
+
+
+def _record_cpu_fixture_failure(projects,error,*,phase='completion_before_controller_return'):
     """Bounded code/phase/type and hashes only; never exception text or locals."""
     try:
         frames=[];tb=error.__traceback__
         while tb is not None and len(frames)<12:
             frames.append({'function':tb.tb_frame.f_code.co_name[:80],'line':tb.tb_lineno});tb=tb.tb_next
-        markers={}
-        for name in (completion_boundary.CONFIG,completion_boundary.PENDING,completion_boundary.READY,'cpu-gate-held.json','cpu-gate-enter.json'):
-            path=projects/name
-            markers[name]={'exists':path.is_file()}
-            if path.is_file():
-                with path.open('rb') as stream:raw=stream.read(4097)
-                if len(raw)<=4096:markers[name]['sha256']=sha(raw)
-        completion_boundary.write(projects,'source-cpu-fixture-error.json',{'phase':'completion_before_controller_return',
+        markers={name:_cpu_fixture_file(projects/name,4096)[0] for name in _CPU_PHASE_FILES[:8]}
+        completion_boundary.write(projects,'source-cpu-fixture-error.json',{'phase':phase,
             'exception':type(error).__name__[:80],'frames':frames,'markers':markers})
     except BaseException:pass  # Diagnostics cannot replace the original failure.
 
 
+def _note_cpu_fixture_failure(error,root,child,deadline,progress):
+    """Failure-only, nonauthoritative observations; no locks, new wait, or renewed budget."""
+    try:
+        projects=root/'projects';files={};values={}
+        for name in _CPU_PHASE_FILES:
+            limit=65536 if name=='source-cpu-controller-returned.json' else 4096
+            files[name],raw=_cpu_fixture_file(projects/name,limit)
+            if raw is not None and name not in {'source-cpu-controller-returned.json','source-cpu-controller-returned.json.complete'}:
+                try:
+                    value=json.loads(raw)
+                    if type(value) is dict:values[name]=value
+                except (ValueError,UnicodeError):pass
+        def finite(value):return type(value) in (int,float) and math.isfinite(value)
+        if not finite(deadline):deadline=values.get(completion_boundary.CONFIG,{}).get('deadline')
+        origin=deadline-50 if finite(deadline) else None;now=time.monotonic()
+        def relative(value):return value-origin if finite(value) and finite(origin) else None
+        exit_code=child.poll() if child is not None else 'unknown'
+        note={'phase':progress.get('phase','unknown'),'files':files,'child_failure':{'phase':'unknown'},
+            'child_exit':exit_code if exit_code is None or type(exit_code) is int else 'unknown',
+            'elapsed_seconds':relative(now),'remaining_seconds':deadline-now if finite(deadline) else None,
+            'loop_count':progress.get('loop_count',0),'busy_count':progress.get('busy_count',0),
+            'first_busy_seconds':relative(progress.get('first_busy')),'last_busy_seconds':relative(progress.get('last_busy'))}
+        times=getattr(child,'_original_cpu_fixture_times',{})
+        note['parent_times']={name:relative(times.get(name)) for name in ('startup_enter','ack_returned','receipt_returned')}
+        for name,value in values.items():
+            if name in {completion_boundary.PENDING,completion_boundary.READY,'cpu-gate-held.json',
+                    'cpu-gate-verify.json','cpu-gate-target.json','cpu-gate-enter.json','cpu-gate-busy.json'}:
+                if finite(value.get('time')):files[name]['time_seconds']=relative(value['time'])
+                if finite(value.get('deadline')):files[name]['deadline_seconds']=relative(value['deadline'])
+        failure=values.get('source-cpu-fixture-error.json',{})
+        if type(failure.get('phase')) is str and failure['phase'] in {'completion_before_controller_return','controller_returned_recording'}:
+            note['child_failure']={'phase':failure['phase']}
+            kind=failure.get('exception')
+            if type(kind) is str and len(kind)<=80 and kind.isidentifier():note['child_failure']['exception']=kind
+            frames=failure.get('frames')
+            if type(frames) is list:
+                note['child_failure']['frames']=[{'function':row['function'],'line':row['line']} for row in frames[:12]
+                    if type(row) is dict and type(row.get('function')) is str and len(row['function'])<=80
+                    and row['function'].isidentifier() and type(row.get('line')) is int]
+        # Raw journal data is a diagnostic snapshot only, never parsed as authority.
+        journal_path=root/'.application-launches'/getattr(child,'_original_cpu_fixture_nonce','')/'journal.json'
+        note['journal'],raw=_cpu_fixture_file(journal_path,65536)
+        if raw is not None:
+            try:
+                value=json.loads(raw)
+                if type(value) is dict:
+                    if value.get('state') in {'reserved','starting','ready','exited','recovery_required','writer_store_closed'}:
+                        note['journal']['state']=value['state']
+                    reason=value.get('reason')
+                    if type(reason) is str:note['journal']['reason_sha256']=sha(reason.encode())
+            except (ValueError,UnicodeError,TypeError):pass
+        encoded=json.dumps(note,sort_keys=True,allow_nan=False)
+        if len(encoded)<=8192:error.add_note('SOURCE CPU fixture diagnostic: '+encoded)
+    except BaseException:pass  # Preserve original error object, message, cause and traceback.
+
+
 def _wait_returned_cpu_settlement(root, nonce, child, cpu, deadline):
     """Bounded read-only fixture barrier; observations cannot become authority."""
-    import stat
-    from backend.engine.application_launch_lease import inspect_launch, _identity, LeaseTransitionBusy
     target=root/'projects'/'source-cpu-controller-returned.json'
     complete=Path(str(target)+'.complete')
     witness=getattr(child,'_original_cpu_fixture_supervisor',None)
     assert type(deadline) in (int,float) and math.isfinite(deadline)
     assert getattr(child,'_original_cpu_fixture_nonce',None)==nonce and witness is not None
     assert child.pid==witness['pid']
+    progress={'phase':'await_complete','loop_count':0,'busy_count':0}
+    try:
+        _observe_returned_cpu_settlement(root,nonce,child,cpu,deadline,target,complete,witness,progress)
+    except BaseException as error:
+        try:_note_cpu_fixture_failure(error,root,child,deadline,progress)
+        except BaseException:pass
+        raise
+
+
+def _observe_returned_cpu_settlement(root,nonce,child,cpu,deadline,target,complete,witness,progress):
+    import stat
+    from backend.engine.application_launch_lease import inspect_launch, _identity, LeaseTransitionBusy
     while time.monotonic()<deadline:
+        progress['loop_count']+=1;progress['phase']='child_liveness'
         assert child.poll() is None, 'Original controller died before CPU settlement observation'
         assert _identity(child.pid)==witness and cpu['nonce']==nonce
         assert time.monotonic()<deadline
+        progress['phase']='await_complete'
         try:
             published=complete.lstat()
         except FileNotFoundError:
             time.sleep(max(0,min(.01,deadline-time.monotonic())));continue
+        progress['phase']='check_complete'
         assert stat.S_ISREG(published.st_mode) and published.st_nlink==1 and published.st_size==0
+        progress['phase']='await_body'
         try:
             named=target.lstat()
         except FileNotFoundError:
             time.sleep(max(0,min(.01,deadline-time.monotonic())));continue
+        progress['phase']='read_body'
         assert stat.S_ISREG(named.st_mode) and named.st_nlink==1 and 0<named.st_size<=65536
         descriptor=os.open(target,os.O_RDONLY|os.O_NOFOLLOW)
         try:
@@ -1426,13 +1539,18 @@ def _wait_returned_cpu_settlement(root, nonce, child, cpu, deadline):
                 assert key not in value;value[key]=item
             return value
         observation=json.loads(raw,object_pairs_hook=exact_pairs)
+        progress['phase']='observer_admission'
         try:
             journal=inspect_launch(root);snapshot,registry_raw,publication_raw=_writer_snapshot_raw_evidence(root,nonce)
             cpu_receipt_raw=_cpu_receipt_raw_evidence(root,nonce,cpu)
         except LeaseTransitionBusy:
+            progress['phase']='observer_busy';progress['busy_count']+=1
+            progress['last_busy']=time.monotonic()
+            if 'first_busy' not in progress:progress['first_busy']=progress['last_busy']
             # Only original read-only entry busy; retain the original 50 s cap.
             time.sleep(max(0,min(.01,deadline-time.monotonic())));continue
         assert time.monotonic()<deadline
+        progress['phase']='validate_body'
         _assert_returned_cpu_settlement(observation,cpu,witness,registry_raw=registry_raw,publication_raw=publication_raw,cpu_receipt_raw=cpu_receipt_raw)
         assert journal['state']=='ready' and journal['nonce']==nonce and journal['supervisor']==witness
         assert journal['binding']==cpu['binding'] and journal['process']==cpu['main_process']
@@ -1452,17 +1570,26 @@ def _wait_returned_cpu_settlement(root, nonce, child, cpu, deadline):
         assert json.loads(intent_raw)['request']==observation['request']
         assert target.read_bytes()==raw and _identity(child.pid)==witness and child.poll() is None
         assert time.monotonic()<deadline
+        progress['phase']='validated'
         return
     pytest.fail('Original typed SOURCE CPU settlement did not return within the original receipt deadline')
 
 
 def _wait_receipt_and_cpu_settlement(root, nonce, child):
-    deadline=time.monotonic()+50
-    if (root/'projects'/completion_boundary.CONFIG).exists():
-        deadline=completion_boundary.configuration(root/'projects')['deadline']
-    remaining=deadline-time.monotonic();assert remaining>0
-    target,cpu=wait_receipt(root,nonce,child,timeout=remaining)
-    assert time.monotonic()<deadline
+    deadline=time.monotonic()+50;progress={'phase':'receipt'}
+    try:
+        if (root/'projects'/completion_boundary.CONFIG).exists():
+            deadline=completion_boundary.configuration(root/'projects')['deadline']
+        remaining=deadline-time.monotonic();assert remaining>0
+        target,cpu=wait_receipt(root,nonce,child,timeout=remaining)
+        try:
+            if hasattr(child,'_original_cpu_fixture_times'):child._original_cpu_fixture_times['receipt_returned']=time.monotonic()
+        except BaseException:pass
+        assert time.monotonic()<deadline
+    except BaseException as error:
+        try:_note_cpu_fixture_failure(error,root,child,deadline,progress)
+        except BaseException:pass
+        raise
     _wait_returned_cpu_settlement(root,nonce,child,cpu,deadline)
     return target,cpu
 
@@ -1978,3 +2105,161 @@ def test_source_cpu_completion_compat_configured_wait_never_defaults_invalid_dea
     def forbidden(*args,**kwargs):pytest.fail('Invalid configured state must not start receipt observation')
     monkeypatch.setitem(globals(),'wait_receipt',forbidden)
     with pytest.raises((AssertionError,KeyError,ValueError)):_wait_receipt_and_cpu_settlement(tmp_path,'original',object())
+
+
+def _cpu_failure_note(error):
+    notes=[note for note in getattr(error,'__notes__',[]) if note.startswith('SOURCE CPU fixture diagnostic: ')]
+    assert len(notes)==1
+    return json.loads(notes[0].split(': ',1)[1])
+
+
+@pytest.mark.parametrize('case',['missing_complete','missing_body','invalid_complete','malformed_body','busy','exit','expired'])
+def test_source_cpu_failure_note_distinguishes_original_settlement_phases_without_new_admission(tmp_path,monkeypatch,case):
+    from types import SimpleNamespace
+    from backend.engine import application_launch_lease as lease
+    projects=tmp_path/'projects';projects.mkdir();target=projects/'source-cpu-controller-returned.json'
+    now=[10.];sleeps=[];inspections=[];witness={'pid':123}
+    def sleep(seconds):sleeps.append(seconds);now[0]+=seconds
+    monkeypatch.setitem(globals(),'time',SimpleNamespace(monotonic=lambda:now[0],sleep=sleep))
+    monkeypatch.setattr(lease,'_identity',lambda pid:witness)
+    child=SimpleNamespace(pid=123,_original_cpu_fixture_supervisor=witness,_original_cpu_fixture_nonce='original',poll=lambda:7 if case=='exit' else None)
+    def inspect(root):
+        inspections.append(root);raise lease.LeaseTransitionBusy('private synthetic admission detail')
+    monkeypatch.setattr(lease,'inspect_launch',inspect)
+    if case in {'missing_body','invalid_complete','malformed_body','busy'}:
+        Path(str(target)+'.complete').write_bytes(b'private' if case=='invalid_complete' else b'')
+    if case in {'malformed_body','busy'}:target.write_bytes(b'{' if case=='malformed_body' else b'{"secret":"private proof bytes"}')
+    deadline=10. if case=='expired' else 10.02
+    with pytest.raises(BaseException) as caught:_wait_returned_cpu_settlement(tmp_path,'original',child,{'nonce':'original'},deadline)
+    note=_cpu_failure_note(caught.value)
+    assert note['phase']=={'missing_complete':'await_complete','missing_body':'await_body','invalid_complete':'check_complete','malformed_body':'read_body','busy':'observer_busy','exit':'child_liveness','expired':'await_complete'}[case]
+    assert note['child_exit']==(7 if case=='exit' else None)
+    assert note['busy_count']==len(inspections) and bool(inspections)==(case=='busy')
+    if case in {'missing_complete','missing_body','busy','expired'}:
+        assert str(caught.value)=='Original typed SOURCE CPU settlement did not return within the original receipt deadline'
+        assert now[0]==deadline and note['remaining_seconds']==0
+    if case=='busy':assert note['first_busy_seconds']<=note['last_busy_seconds'] and note['loop_count']==len(inspections)
+    assert 'private' not in json.dumps(note) and str(tmp_path) not in json.dumps(note)
+    assert not (projects/'source-cpu-fixture-error.json').exists()
+
+
+@pytest.mark.parametrize('broken_note',[False,True])
+def test_source_cpu_failure_note_never_replaces_primary_exception_or_traceback(tmp_path,monkeypatch,broken_note):
+    from types import SimpleNamespace
+    from backend.engine import application_launch_lease as lease
+    (tmp_path/'projects').mkdir();primary=RuntimeError('private original failure');witness={'pid':123}
+    def identity(pid):raise primary
+    monkeypatch.setattr(lease,'_identity',identity)
+    if broken_note:
+        def failed(*args,**kwargs):raise OSError('private diagnostic read failure')
+        monkeypatch.setitem(globals(),'_note_cpu_fixture_failure',failed)
+    child=SimpleNamespace(pid=123,_original_cpu_fixture_supervisor=witness,_original_cpu_fixture_nonce='original',poll=lambda:None)
+    with pytest.raises(RuntimeError) as caught:_wait_returned_cpu_settlement(tmp_path,'original',child,{'nonce':'original'},time.monotonic()+1)
+    assert caught.value is primary and str(caught.value)=='private original failure'
+    tb=caught.value.__traceback__
+    while tb.tb_next is not None:tb=tb.tb_next
+    assert tb.tb_frame.f_code is identity.__code__
+    if not broken_note:assert _cpu_failure_note(caught.value)['phase']=='child_liveness'
+
+
+@pytest.mark.parametrize('failure_phase',['execute','record'])
+@pytest.mark.parametrize('broken_publisher',[False,True])
+def test_source_cpu_failure_note_records_correct_child_phase_and_preserves_primary(tmp_path,monkeypatch,failure_phase,broken_publisher):
+    from types import SimpleNamespace
+    from contextlib import nullcontext
+    projects=tmp_path/'projects';projects.mkdir();owner=SimpleNamespace(root=tmp_path);primary=ValueError('private original body')
+    monkeypatch.setattr(completion_boundary,'controller_boundary',lambda *_:nullcontext())
+    def original(owner,capability):
+        if failure_phase=='execute':raise primary
+        return {'original':'receipt'}
+    def record(owner,receipt):
+        assert receipt=={'original':'receipt'};raise primary
+    monkeypatch.setitem(globals(),'_record_returned_cpu_settlement',record)
+    if broken_publisher:
+        def failed(*args,**kwargs):raise OSError('private publisher failure')
+        monkeypatch.setattr(completion_boundary,'write',failed)
+    with pytest.raises(ValueError) as caught:_execute_and_record_source_cpu(original,owner,None)
+    assert caught.value is primary
+    expected=original.__code__ if failure_phase=='execute' else record.__code__
+    tb=caught.value.__traceback__
+    while tb.tb_next is not None:tb=tb.tb_next
+    assert tb.tb_frame.f_code is expected
+    if not broken_publisher:
+        raw=(projects/'source-cpu-fixture-error.json').read_bytes();note=json.loads(raw)
+        assert b'private' not in raw
+        assert note['phase']==('completion_before_controller_return' if failure_phase=='execute' else 'controller_returned_recording')
+
+
+@pytest.mark.parametrize('case',['malformed','symlink','oversize','read_failure','changed'])
+def test_source_cpu_failure_note_bounds_redacts_and_safely_summarizes_untrusted_files(tmp_path,monkeypatch,case):
+    projects=tmp_path/'projects';projects.mkdir();target=projects/completion_boundary.READY
+    if case=='symlink':
+        secret=tmp_path/'private-path';secret.write_bytes(b'private secret body');target.symlink_to(secret)
+    elif case=='oversize':target.write_bytes(b'private'*1000)
+    else:target.write_bytes(b'{' if case=='malformed' else b'{"token":"private secret body","time":10,"deadline":20}')
+    original_read=os.read
+    if case=='read_failure':
+        def failed(*args):raise OSError('private read error')
+        monkeypatch.setattr(os,'read',failed)
+    elif case=='changed':
+        def changed(descriptor,count):
+            raw=original_read(descriptor,count);target.write_bytes(b'private replacement');return raw
+        monkeypatch.setattr(os,'read',changed)
+    primary=AssertionError('original timeout')
+    _note_cpu_fixture_failure(primary,tmp_path,None,20.,{'phase':'await_complete','loop_count':0,'busy_count':0})
+    note=_cpu_failure_note(primary);marker=note['files'][completion_boundary.READY]
+    assert marker['status']=={'malformed':'regular','symlink':'nonregular','oversize':'oversize','read_failure':'read_error','changed':'changed'}[case]
+    assert 'private' not in json.dumps(note) and str(tmp_path) not in json.dumps(note)
+    assert 'time_seconds' not in marker
+    assert len(json.dumps(note))<=8192 and str(primary)=='original timeout'
+
+
+@pytest.mark.parametrize('phase',['startup','receipt'])
+def test_source_cpu_failure_note_covers_original_parent_failure_without_renewal(tmp_path,monkeypatch,phase):
+    from types import SimpleNamespace
+    projects=tmp_path/'projects';projects.mkdir();now=[10.];primary=RuntimeError('private original parent failure');calls=[]
+    monkeypatch.setitem(globals(),'time',SimpleNamespace(monotonic=lambda:now[0]))
+    monkeypatch.setattr(completion_boundary,'time',SimpleNamespace(monotonic=lambda:now[0]))
+    def failed(*args,**kwargs):calls.append(kwargs);raise primary
+    if phase=='startup':
+        monkeypatch.setitem(globals(),'start_cpu_stack',failed)
+        invoke=lambda:_start_ready_cpu_stack((tmp_path,))
+    else:
+        completion_boundary.write(projects,completion_boundary.CONFIG,{'root':str(tmp_path),'token':'private','deadline':40.})
+        monkeypatch.setitem(globals(),'wait_receipt',failed)
+        invoke=lambda:_wait_receipt_and_cpu_settlement(tmp_path,'original',SimpleNamespace(poll=lambda:None))
+    with pytest.raises(RuntimeError) as caught:invoke()
+    assert caught.value is primary and now==[10.]
+    note=_cpu_failure_note(caught.value)
+    assert note['phase']==phase and note['remaining_seconds']==(50. if phase=='startup' else 30.)
+    assert calls==([{}] if phase=='startup' else [{'timeout':30.}])
+    assert 'private' not in json.dumps(note)
+
+
+def test_source_cpu_failure_note_exposes_only_known_phase_times_and_hashed_raw_recovery(tmp_path,monkeypatch):
+    from types import SimpleNamespace
+    from backend.engine import application_launch_lease as lease
+    projects=tmp_path/'projects';projects.mkdir();journal=tmp_path/'.application-launches'/'original';journal.mkdir(parents=True)
+    completion_boundary.write(projects,completion_boundary.CONFIG,{'token':'private config','root':'private path','deadline':60.})
+    completion_boundary.write(projects,completion_boundary.READY,{'token':'private proof','time':12.,'deadline':45.,'extra':'private'})
+    (journal/'journal.json').write_bytes(canonical({'state':'recovery_required','reason':'private recorder failure','profile':'private profile'}))
+    def forbidden(*args,**kwargs):pytest.fail('diagnostic must never acquire admission')
+    monkeypatch.setattr(lease,'inspect_launch',forbidden)
+    monkeypatch.setitem(globals(),'_writer_snapshot_raw_evidence',forbidden)
+    monkeypatch.setitem(globals(),'_cpu_receipt_raw_evidence',forbidden)
+    monkeypatch.setitem(globals(),'time',SimpleNamespace(monotonic=lambda:15.))
+    child=SimpleNamespace(poll=lambda:None,_original_cpu_fixture_nonce='original',
+        _original_cpu_fixture_times={'startup_enter':10.,'ack_returned':11.,'receipt_returned':14.})
+    primary=AssertionError('original timeout')
+    _note_cpu_fixture_failure(primary,tmp_path,child,60.,{'phase':'await_complete'})
+    note=_cpu_failure_note(primary)
+    assert note['child_failure']=={'phase':'unknown'}
+    assert note['parent_times']=={'startup_enter':0.,'ack_returned':1.,'receipt_returned':4.}
+    assert note['files'][completion_boundary.READY]['time_seconds']==2.
+    assert note['files'][completion_boundary.READY]['deadline_seconds']==35.
+    assert note['journal']['state']=='recovery_required' and note['journal']['reason_sha256']==sha(b'private recorder failure')
+    assert 'private' not in json.dumps(note)
+    completion_boundary.write(projects,'source-cpu-fixture-error.json',{'phase':'controller_returned_recording',
+        'exception':'ValueError','frames':[{'function':'record','line':123}],'body':'private'})
+    recorded=AssertionError('original timeout');_note_cpu_fixture_failure(recorded,tmp_path,child,60.,{'phase':'await_complete'})
+    assert _cpu_failure_note(recorded)['child_failure']=={'phase':'controller_returned_recording','exception':'ValueError','frames':[{'function':'record','line':123}]}
