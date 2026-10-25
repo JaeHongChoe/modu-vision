@@ -453,3 +453,25 @@ for(const row of [
   assert.equal(calls,0);assert.equal(input.persistedThreshold,.5);assert.equal(input.confidenceThreshold,.5);
  }
 });
+
+test('owned successful null alone marks heatmap unavailable across pending, errors, invalidation and superseded responses',async()=>{
+ const f=fixture();f.results.metrics={active_threshold:.5};f.results.test_predictions=[{...samples[0],defect_score:.3}];
+ try{
+  assert.equal(f.state().heatmapUnavailable,false,'initial absence is not a settled null');
+  await f.state().loadEvaluation('job',{folderPath:'/source',task:'classification'});f.state().setSampleFilter('saved_escape');
+  f.api.evaluation.getHeatmap=async()=>({overlay_base64:'prior'});await f.state().updateHeatmap();assert.equal(f.state().heatmapUnavailable,false);
+  const nullResult=pendingHeatmap();f.api.evaluation.getHeatmap=()=>nullResult.promise;const request=f.state().updateHeatmap();
+  assert.equal(f.state().heatmapOverlayBase64,null);assert.equal(f.state().heatmapLoading,true);assert.equal(f.state().heatmapUnavailable,false);
+  nullResult.resolve({overlay_base64:null});await request;assert.equal(f.state().heatmapUnavailable,true);assert.equal(f.state().heatmapLoading,false);assert.equal(f.state().heatmapError,null);
+  assert.equal(renderStudio(f.state()).nodes.find(n=>n.props.onThresholdChange).props.heatmapUnavailable,true);
+  f.state().setConfidenceThreshold(.2);assert.equal(f.state().heatmapUnavailable,false,'debounce invalidation revokes null');
+  assert.equal(renderStudio({...f.state(),heatmapUnavailable:true}).nodes.find(n=>n.props.onThresholdChange).props.heatmapUnavailable,false,'preview presentation is unchanged');
+  f.state().setSampleFilter('all');f.api.evaluation.getHeatmap=async()=>{throw Error('controlled');};await f.state().updateHeatmap();assert.equal(f.state().heatmapUnavailable,false);assert.ok(f.state().heatmapError);
+  const old=pendingHeatmap();f.api.evaluation.getHeatmap=()=>old.promise;const stale=f.state().updateHeatmap();
+  f.api.evaluation.getHeatmap=async()=>({overlay_base64:'fresh'});await f.state().updateHeatmap();old.resolve({overlay_base64:null});await stale;
+  assert.equal(f.state().heatmapUnavailable,false);assert.equal(f.state().heatmapOverlayBase64,'fresh');
+  f.api.evaluation.getHeatmap=async()=>({overlay_base64:null});await f.state().updateHeatmap();assert.equal(f.state().heatmapUnavailable,true);
+  f.state().invalidateForDataChange();assert.equal(f.state().heatmapUnavailable,false);await f.state().updateHeatmap();assert.equal(f.state().heatmapUnavailable,false,'missing prediction remains initial');
+  f.useEvaluationStore.setState({selectedPrediction:samples[0],executionEvidence:{common_cohort:{dataset_version_id:'v1'}}});await f.state().updateHeatmap();assert.equal(f.state().heatmapUnavailable,false,'refusal is not null success');
+ }finally{f.state().invalidateForDataChange();}
+});

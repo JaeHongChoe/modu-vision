@@ -47,7 +47,7 @@ function invalidateHeatmap() {
   currentHeatmapRequestId += 1;
   if (heatmapDebounceTimer) clearTimeout(heatmapDebounceTimer);
   heatmapDebounceTimer = null;
-  useEvaluationStore.setState({heatmapOverlayBase64: null, heatmapLoading: false, heatmapError: null});
+  useEvaluationStore.setState({heatmapOverlayBase64: null, heatmapLoading: false, heatmapError: null, heatmapUnavailable: false});
 }
 
 
@@ -195,6 +195,8 @@ interface EvaluationState {
   heatmapOverlayBase64: string | null;
   heatmapLoading: boolean;
   heatmapError: string | null;
+  /** Only a current successful response without pixels; revoked with overlay ownership. */
+  heatmapUnavailable: boolean;
   isExportingReport: boolean;
   exportedReportPath: string | null;
   errorMessage: string | null;
@@ -250,7 +252,7 @@ export const useEvaluationStore = create<EvaluationState>((set, get) => ({
   persistedThreshold: null,
   heatmapOverlayBase64: null,
   heatmapLoading: false,
-  heatmapError: null,
+  heatmapError: null, heatmapUnavailable: false,
   isExportingReport: false,
   exportedReportPath: null,
   errorMessage: null,
@@ -381,7 +383,7 @@ export const useEvaluationStore = create<EvaluationState>((set, get) => ({
       currentHeatmapRequestId += 1;
       set({ executionEvidence:null, remoteRequest:null, remoteOperation:null, remoteOperationError:null, isLoading: false, jobId: null, persistedThreshold: null, sampleFilter: get().sampleFilter === 'saved_escape' ? 'all' : get().sampleFilter, metrics: {}, classSemantics: null, confusionMatrix: null,
         testPredictions: [], filteredPredictions: [], selectedPrediction: null, selectedCell: null,
-        overkillAnalysis: null, heatmapOverlayBase64: null, heatmapLoading: false, heatmapError: null,
+        overkillAnalysis: null, heatmapOverlayBase64: null, heatmapLoading: false, heatmapError: null, heatmapUnavailable: false,
         errorMessage: '현재 데이터로 학습한 모델이 없습니다. 3단계에서 학습을 완료하세요.' });
       return;
     }
@@ -408,7 +410,7 @@ export const useEvaluationStore = create<EvaluationState>((set, get) => ({
           set({executionEvidence:null, remoteRequest:null, remoteOperation:null, remoteOperationError:null,
             isLoading:false, jobId:null, persistedThreshold:null, metrics:{}, classSemantics:null, confusionMatrix:null,
             testPredictions:[], filteredPredictions:[], selectedPrediction:null, selectedCell:null,
-            overkillAnalysis:null, heatmapOverlayBase64:null, heatmapLoading:false, heatmapError:null,
+            overkillAnalysis:null, heatmapOverlayBase64:null, heatmapLoading:false, heatmapError:null, heatmapUnavailable:false,
             errorMessage:'현재 데이터로 학습한 모델이 없습니다. 3단계에서 학습을 완료하세요.'});
           return;
         }
@@ -472,7 +474,7 @@ export const useEvaluationStore = create<EvaluationState>((set, get) => ({
       jobId: null, persistedThreshold: null, allowLatestRecovery: allowSourceRecovery, isLoading: false,
       metrics: {}, classSemantics: null, confusionMatrix: null, selectedCell: null,
       testPredictions: [], filteredPredictions: [], selectedPrediction: null,
-      heatmapOverlayBase64: null, heatmapLoading: false, heatmapError: null,
+      heatmapOverlayBase64: null, heatmapLoading: false, heatmapError: null, heatmapUnavailable: false,
       isExportingReport: false, exportedReportPath: null, errorMessage: null,
       sampleFilter: 'all', overkillAnalysis: null, isAnalyzingTradeoff: false,
       isCalibrating: false, calibrationMessage: null, calibrationSuccess: false,
@@ -538,11 +540,11 @@ export const useEvaluationStore = create<EvaluationState>((set, get) => ({
         state.metrics.score_spec ? {...state.metrics.score_spec,threshold:heatmapThreshold} : undefined
       );
       if (current()) {
-        set({ heatmapOverlayBase64: res.overlay_base64 || null, heatmapLoading: false, heatmapError: null });
+        set({ heatmapOverlayBase64: res.overlay_base64 || null, heatmapLoading: false, heatmapError: null, heatmapUnavailable: !res.overlay_base64 });
       }
     } catch {
       if (current()) {
-        set({ heatmapOverlayBase64: null, heatmapLoading: false, heatmapError: '현재 기준의 열지도를 불러오지 못했습니다.' });
+        set({ heatmapOverlayBase64: null, heatmapLoading: false, heatmapUnavailable: false, heatmapError: '현재 기준의 열지도를 불러오지 못했습니다.' });
       }
     }
   },
