@@ -458,6 +458,90 @@ def test_replay_fixture_profile_targets_only_the_original_draining_guard_and_pre
     finally:sys.setprofile(previous)
 
 
+@pytest.mark.parametrize('ignored',['foreign_object','wrong_code','wrong_thread','wrong_phase','before_prepare_send'])
+def test_nonce_fixture_profile_waits_only_at_the_sent_original_prepared_guard(tmp_path,monkeypatch,ignored):
+    """A prepared observer must neither block preparation nor select foreign calls."""
+    calls=[]
+    class OriginalGuard:
+        def fresh(self, deadline):
+            calls.append(self)
+            raise ValueError('unchanged prepared guard')
+    class OtherGuard:
+        def fresh(self, deadline):
+            raise ValueError('unchanged other code')
+    guard=OriginalGuard();states={guard:{'phase':'prepared','sent':True}}
+    refusal=tmp_path/'managed-controller-refusal.json';refusal.write_text('{}')
+    ordinary=tmp_path/'ordinary-stop-requested.json'
+    boundary=tmp_path/'managed-nonce-proof-boundary.json'
+    clock=[10.0];sleeps=[];observed=[]
+    monkeypatch.setattr(time,'monotonic',lambda:clock[0])
+    def sleep(seconds):
+        assert 0<seconds<=.01 and boundary.is_file()
+        sleeps.append(seconds);clock[0]+=seconds
+        if len(sleeps)==2:ordinary.write_text('{}')
+    monkeypatch.setattr(time,'sleep',sleep)
+    monkeypatch.setitem(globals(),'_fixture_validate_recovery_publication',lambda root,path,*,absolute_deadline:observed.append((root,path,absolute_deadline)))
+    callback=_fixture_original_draining_guard_barrier(tmp_path,OriginalGuard,states,
+        intended_phase='prepared',boundary_name=boundary.name)
+    previous=sys.getprofile();deadline=10.03
+    def ignored_call():
+        target=OriginalGuard() if ignored=='foreign_object' else OtherGuard() if ignored=='wrong_code' else guard
+        with pytest.raises(ValueError):target.fresh(deadline)
+        assert sys.getprofile() is callback
+    try:
+        if ignored=='wrong_phase':states[guard]['phase']='draining'
+        if ignored=='before_prepare_send':states[guard]['sent']=False
+        if ignored=='wrong_thread':
+            errors=[]
+            def foreign_thread():
+                try:
+                    sys.setprofile(callback);ignored_call()
+                except BaseException as error:errors.append(error)
+                finally:sys.setprofile(None)
+            thread=threading.Thread(target=foreign_thread);thread.start();thread.join(1)
+            assert not thread.is_alive() and not errors
+        else:
+            sys.setprofile(callback);ignored_call()
+        assert not boundary.exists() and not ordinary.exists() and not sleeps and not observed
+        states[guard].update(phase='prepared',sent=True)
+        sys.setprofile(callback)
+        with pytest.raises(ValueError,match='unchanged prepared guard') as caught:guard.fresh(deadline)
+        assert sys.getprofile() is None and ordinary.is_file() and len(sleeps)==2
+        assert json.loads(boundary.read_bytes())=={'pid':os.getpid(),'original_deadline':10.03}
+        assert observed==[(tmp_path.parent,refusal,10.03)]
+        frames=[];trace=caught.value.__traceback__
+        while trace is not None:frames.append(trace.tb_frame.f_code.co_name);trace=trace.tb_next
+        assert frames==['test_nonce_fixture_profile_waits_only_at_the_sent_original_prepared_guard','fresh']
+        before=boundary.read_bytes();count=len(calls)
+        with pytest.raises(ValueError,match='unchanged prepared guard'):guard.fresh(deadline)
+        assert len(calls)==count+1 and boundary.read_bytes()==before and len(sleeps)==2 and len(observed)==1
+    finally:sys.setprofile(previous)
+
+
+def test_nonce_fixture_profile_cannot_renew_the_original_prepared_deadline(tmp_path,monkeypatch):
+    """Missing ordinary stop exhausts the same guard budget before its body executes."""
+    calls=[]
+    class OriginalGuard:
+        def fresh(self, deadline):calls.append(deadline)
+    guard=OriginalGuard();states={guard:{'phase':'prepared','sent':True}}
+    (tmp_path/'managed-controller-refusal.json').write_text('{}')
+    clock=[10.0];sleeps=[]
+    monkeypatch.setattr(time,'monotonic',lambda:clock[0])
+    def sleep(seconds):
+        assert 0<seconds<=.01;sleeps.append(seconds);clock[0]+=seconds
+    monkeypatch.setattr(time,'sleep',sleep)
+    callback=_fixture_original_draining_guard_barrier(tmp_path,OriginalGuard,states,
+        intended_phase='prepared',boundary_name='managed-nonce-proof-boundary.json')
+    previous=sys.getprofile()
+    try:
+        sys.setprofile(callback)
+        with pytest.raises(AssertionError,match='original.*deadline'):guard.fresh(10.025)
+        assert sys.getprofile() is None and clock[0]==10.025 and sleeps and not calls
+        assert json.loads((tmp_path/'managed-nonce-proof-boundary.json').read_bytes())['original_deadline']==10.025
+        assert not (tmp_path/'ordinary-stop-requested.json').exists()
+    finally:sys.setprofile(previous)
+
+
 def test_replay_fixture_recovery_coherence_preserves_python_integral_float_and_refuses_changed_pointer(tmp_path,monkeypatch):
     """The original Python hash, including created_at .0, validates the candidate."""
     from backend.engine import application_launch_lease as lease,runtime_update as update
@@ -491,7 +575,8 @@ def _fixture_validate_recovery_publication(root, observation, *, absolute_deadli
     assert time.monotonic()<absolute_deadline, 'Fixture coherence exceeded its original absolute deadline'
 
 
-def _fixture_original_draining_guard_barrier(projects, original_class, retained_states):
+def _fixture_original_draining_guard_barrier(projects, original_class, retained_states, *,
+        intended_phase='draining', boundary_name='managed-replay-proof-boundary.json'):
     """One test-only call boundary; original fresh runs after this returns."""
     import os
     import sys
@@ -500,10 +585,13 @@ def _fixture_original_draining_guard_barrier(projects, original_class, retained_
     def profile(frame,event,arg):
         if event!='call' or frame.f_code is not original_code or threading.get_ident()!=original_thread:return
         state=retained_states.get(frame.f_locals.get('self'))
-        if state is None or state['phase']!='draining':return
+        if state is None or state['phase']!=intended_phase:return
+        # prepared_frame calls fresh before sending its genuine response. Only
+        # its later service call can wait for the controller's damaged request.
+        if intended_phase=='prepared' and state.get('sent') is not True:return
         sys.setprofile(None)  # No wrapper is added to a genuine guard traceback.
         deadline=frame.f_locals['deadline']
-        _atomic_fixture_json(projects/'managed-replay-proof-boundary.json',{'pid':os.getpid(),'original_deadline':deadline})
+        _atomic_fixture_json(projects/boundary_name,{'pid':os.getpid(),'original_deadline':deadline})
         _fixture_wait_before_original_deadline([projects/'managed-controller-refusal.json',projects/'ordinary-stop-requested.json'],absolute_deadline=deadline)
         _fixture_validate_recovery_publication(projects.parent,projects/'managed-controller-refusal.json',absolute_deadline=deadline)
     return profile
@@ -584,10 +672,12 @@ with maintenance_guard(root):
     except ValueError as e:(projects/'late-producer-refusal.txt').write_text(str(e));return
    time.sleep(.01)
  threading.Thread(target=late_probe,daemon=True).start()
- if {damage!r}=='identical_request_replay':
-  # Schedule only immediately before the original draining fresh call. The
-  # original guard, frame send and their exception stack remain unchanged.
-  sys.setprofile(_fixture_original_draining_guard_barrier(projects,h._BackendShutdown,h._BACKEND_SHUTDOWNS))
+ if {damage!r} in ('changed_nonce','identical_request_replay'):
+  # Select the genuine post-send prepared guard for changed nonce, or the
+  # draining guard for replay. Original calls and exception stacks stay intact.
+  phase='prepared' if {damage!r}=='changed_nonce' else 'draining'
+  boundary='managed-nonce-proof-boundary.json' if {damage!r}=='changed_nonce' else 'managed-replay-proof-boundary.json'
+  sys.setprofile(_fixture_original_draining_guard_barrier(projects,h._BackendShutdown,h._BACKEND_SHUTDOWNS,intended_phase=phase,boundary_name=boundary))
  backend_execution_service(stop)
  server.should_exit=True;server_thread.join(2);listener.close()
  assert not server_thread.is_alive()
@@ -1431,6 +1521,10 @@ def test_actual_controller_refuses_changed_and_replayed_original_main_drain_fram
         assert not (projects/'managed-drain-received.json').exists()
         ordinary=json.loads(wait_ordinary_stop(projects,child,seconds=3))
         assert ordinary['pid']==cpu['backend_process']['pid']
+        boundary_name='managed-nonce-proof-boundary.json' if damage=='changed_nonce' else 'managed-replay-proof-boundary.json'
+        boundary=json.loads((projects/boundary_name).read_bytes())
+        assert boundary['pid']==cpu['backend_process']['pid']
+        assert type(boundary['original_deadline']) in (int,float) and math.isfinite(boundary['original_deadline'])
         (projects/'exit.trigger').touch()
         result=json.loads(wait_file(projects/'managed-stop-result.json',seconds=5))
         assert result['signal'] is None and result['error'] is not None
