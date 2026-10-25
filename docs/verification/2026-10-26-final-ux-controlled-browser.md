@@ -1,0 +1,22 @@
+# Final UX: controlled browser qualification
+
+The final browser run passed on clean source `2da2204944aab6ddcebf9c9d561e627d1957f978`, using a renderer built from that exact commit. The later documentation commit does not replace this capture identity. [Anonymized receipt](receipts/2026-10-26-final-ux-controlled-browser.json) records source, asset, fixture, request, decoded-pixel and screenshot hashes. Private workspace paths and raw captures are retained separately.
+
+A current, successful heatmap response with no pixels now produces an explicit unavailable status in saved review. Initial absence, debounce, pending requests, errors, missing predictions, common-cohort refusal and superseded responses do not acquire that status. The existing image, source, job, transport, generation and threshold ownership predicates remain in force. A measured narrow-toolbar failure also led to a bounded browser path form: at 1024×900 the input now measures 204.25px, within a 320px form; help and submit button stay inside it, and the enclosing scrolling toolbar does not clip it vertically. The native host still omits this browser control.
+
+The 2560×1440 simple-view exercise proves these controlled states:
+
+- A score of 0.30 is a correct defect at preview 0.20 while the footer retains one saved miss at 0.50. The footer CTA selects the saved missed image; its warning, card and selected verdict agree with the saved threshold. Green `정상 (OK)` is the model's missed-defect decision here, not evidence of stale pixels.
+- Ten actual heatmap GETs bind the owned job, image, file, criterion and project context. All ten complete response bodies are verified; seven mounted PNG checks decode every RGBA pixel at 64×64. The saved 0.50 raster differs from preview 0.20. A late 0.50 response for the same image cannot replace the fresh 0.20 raster.
+- Pending, HTTP 503 and successful null responses remove the prior heatmap element. Error and unavailable messages are distinct. Successful selection restores pixels, and leaving saved review restores the retained preview criterion.
+- Footer details give neutral image/label/retraining guidance. A real isolated class override initiates a held genuine import-summary response; pending metadata displays checking text and disables import. Split-action blocking is covered by the store/render regressions. Browser folder-path help remains visible and described by the input.
+
+Eleven unchanged raw PNG captures are retained: nine full 2560×1440 frames, one 1024×900 geometry frame and one actual DOM card screenshot. The 84 original guide files still match their retained input manifest. These are synthetic UI captures, not installation, model-quality or operational approval evidence.
+
+## Verification and limits
+
+The final required renderer/main Node suite passed **2,272/2,272**, with zero skipped or cancelled tests. Product and E2E type checks passed; service/action evidence integrity gates passed without adding acceptance credit. Focused null-state RED/GREEN and the actual 18.59px geometry RED are retained. Earlier fixture selector/contract failures, the preliminary run with a weak geometry oracle, and a build whose post-build status was dirty remain preserved and are excluded from the final capture proof. The final build checks clean Git state and identical product inputs before and after compilation.
+
+An additional broad local scripts run passed 153/157. Three package-license tests rejected their local macOS temporary-path alias as a linked output. The release-candidate failed-health test rejected the fixture before native execution, but its expected error-message regex differed. Task4 changes none of those test or release-production paths; no baseline runtime or hosted-CI pass is inferred. These extra failures are separate from the complete renderer result and remain disclosed in the receipt.
+
+Controlled synthetic browser UI/transport test with genuine isolated project/import/thumbnail handling and one class override; catalog/job/readiness/evaluation/impact/heatmap replies intercepted. **No training, inference, model-quality, provider/account, publisher, Windows/native-install or human first-use/field acceptance executed.** The optional A→B→A transport browser scenario was not selected; the existing store ownership tests remain part of the Node suite. The isolated Python environment uses FastAPI 0.142.2, Starlette 1.7.0 and Pydantic 2.10.3 with existing ML packages; it is not the locked hosted CI environment. No shared environment was modified.

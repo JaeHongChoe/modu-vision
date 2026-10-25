@@ -1,0 +1,545 @@
+{
+  "schema_version": 1,
+  "kind": "controlled_synthetic_browser_UI_transport_not_acceptance",
+  "source_sha": "2da2204944aab6ddcebf9c9d561e627d1957f978",
+  "source_clean_at_build_and_capture": true,
+  "build": {
+    "index_sha256": "75be5405a249b4eb5ebd1f6f569bc7f1d0baa63a9720d667a60536774da1d5e5",
+    "asset_tree_sha256": "f4e130445673dd1b0cf391eed684b4eecfa522692f37b8fe24a1d5ef240e1e71",
+    "source_tree_sha256": "715c2d824519e4645ab76fdf7875718233f5c3330aea50e779b209202b81e317",
+    "assets": [
+      {
+        "path": "assets/main-CCxGxytK.js",
+        "bytes": 2267106,
+        "sha256": "cb811e46b70371c56a1d82586564032764cfdd9cad2881b1bf94744f8480687f"
+      },
+      {
+        "path": "assets/main-DxAJrrWp.css",
+        "bytes": 140494,
+        "sha256": "52bf2566d02b33bfab1d285ff9926bd4d7623401fb5f81bab4de312fb36bc74c"
+      },
+      {
+        "path": "fonts/PRETENDARD-LICENSE.txt",
+        "bytes": 4423,
+        "sha256": "3ed95fe0a137e4d22253be16e3aafb3524fb89ed9e9c827a1d749d3691b4511f"
+      },
+      {
+        "path": "fonts/PRETENDARD-VARIABLE-LICENSE.txt",
+        "bytes": 4418,
+        "sha256": "d31ddd9f2bed32fd7e302a205cf2380ba0de6529152d239ef99cfb6f261bfc04"
+      },
+      {
+        "path": "fonts/PretendardStdVariable.woff2",
+        "bytes": 291680,
+        "sha256": "64a2b7110454edf0e5f555785273b5817d7e3a0a107a55acf8e4150e09a31557"
+      },
+      {
+        "path": "fonts/PretendardVariable.woff2",
+        "bytes": 2057688,
+        "sha256": "9599f12fd42fc0bce1cd50b47a0c022e108d7aa64dd0d1bb0ed44f3282d900b4"
+      },
+      {
+        "path": "index.html",
+        "bytes": 2482,
+        "sha256": "75be5405a249b4eb5ebd1f6f569bc7f1d0baa63a9720d667a60536774da1d5e5"
+      }
+    ]
+  },
+  "test": "scripts/e2e/saved-evaluation-threshold-ownership.spec.ts::saved threshold owns settled null status and decoded raster through preview, pending, failure and late responses",
+  "test_sha256": "ba0f047b4f2355ce92b403cc2391cc6e166320955cd2cd2666361d89f8bda462",
+  "helper_sha256": "899bacbad44f4de535d94429593fd127601deace972328667a603aeed6624e18",
+  "scope": {
+    "genuine": [
+      "isolated project create/update/readback",
+      "seven synthetic PNG imports and thumbnail handling",
+      "one UI class override and deferred genuine import summary"
+    ],
+    "controlled": [
+      "catalog",
+      "completed-job status",
+      "readiness",
+      "provenance impact",
+      "evaluation results",
+      "optional overkill null response",
+      "heatmap responses",
+      "empty comparison model catalog"
+    ],
+    "not_executed": [
+      "training",
+      "inference",
+      "model quality",
+      "provider/account",
+      "publisher/signing",
+      "Windows/native installation",
+      "human first use/field acceptance",
+      "optional A-B-A transport browser migration"
+    ]
+  },
+  "validation": {
+    "renderer": {
+      "passed": 2272,
+      "failed": 0,
+      "skipped": 0
+    },
+    "types": "pass",
+    "service_and_action_evidence_integrity": "pass; no acceptance credit",
+    "browser": {
+      "passed": 1,
+      "failed": 0,
+      "retries": 0,
+      "viewport": [
+        2560,
+        1440
+      ],
+      "narrow_viewport": [
+        1024,
+        900
+      ]
+    },
+    "forbidden_requests": [],
+    "page_errors": [],
+    "owned_backend_stopped": true
+  },
+  "heatmap_requests": [
+    {
+      "wire_index": 22,
+      "method": "GET",
+      "endpoint": "/api/evaluation/heatmap/test-NG-0",
+      "job_id": "job_ui_saved_threshold_A",
+      "file_path": "<owned-source>/test/NG/test-NG-0.png",
+      "threshold": 0.5,
+      "format": "base64",
+      "request_url_sha256": "c52631dd96bcec5addc958974305ab1610c96fa128659554075663b7cebd4ceb",
+      "project_context_matches": true,
+      "status": 200,
+      "complete_response": true,
+      "response_sha256": "222959ae9573f19e89fcd867a8ca1f1cf6e047ac28dc6e7f0c1444759e74a13c",
+      "overlay": "pixels",
+      "identity_blue": 101
+    },
+    {
+      "wire_index": 26,
+      "method": "GET",
+      "endpoint": "/api/evaluation/heatmap/test-NG-0",
+      "job_id": "job_ui_saved_threshold_A",
+      "file_path": "<owned-source>/test/NG/test-NG-0.png",
+      "threshold": 0.2,
+      "format": "base64",
+      "request_url_sha256": "416742e3752f33f66e4861a0a937d9461ba282327ad25792a2a86c75fb480a91",
+      "project_context_matches": true,
+      "status": 200,
+      "complete_response": true,
+      "response_sha256": "4a6368a2df16f2835e48d012bf38035e6811472fed8f8931b87d9bbd741b1fc3",
+      "overlay": "pixels",
+      "identity_blue": 102
+    },
+    {
+      "wire_index": 27,
+      "method": "GET",
+      "endpoint": "/api/evaluation/heatmap/test-NG-0",
+      "job_id": "job_ui_saved_threshold_A",
+      "file_path": "<owned-source>/test/NG/test-NG-0.png",
+      "threshold": 0.5,
+      "format": "base64",
+      "request_url_sha256": "c52631dd96bcec5addc958974305ab1610c96fa128659554075663b7cebd4ceb",
+      "project_context_matches": true,
+      "status": 200,
+      "complete_response": true,
+      "response_sha256": "e8ba8edab7cb85868685957971a265ba252c6a75cd4b752ab76b79b540be5523",
+      "overlay": "pixels",
+      "identity_blue": 103
+    },
+    {
+      "wire_index": 28,
+      "method": "GET",
+      "endpoint": "/api/evaluation/heatmap/test-NG-0",
+      "job_id": "job_ui_saved_threshold_A",
+      "file_path": "<owned-source>/test/NG/test-NG-0.png",
+      "threshold": 0.5,
+      "format": "base64",
+      "request_url_sha256": "c52631dd96bcec5addc958974305ab1610c96fa128659554075663b7cebd4ceb",
+      "project_context_matches": true,
+      "status": 503,
+      "complete_response": true,
+      "response_sha256": "079403e399304f27c27756258e058bbe3558d67054d9bfef578ad95a9b3ea4f6",
+      "overlay": "error",
+      "identity_blue": 104
+    },
+    {
+      "wire_index": 29,
+      "method": "GET",
+      "endpoint": "/api/evaluation/heatmap/test-NG-0",
+      "job_id": "job_ui_saved_threshold_A",
+      "file_path": "<owned-source>/test/NG/test-NG-0.png",
+      "threshold": 0.5,
+      "format": "base64",
+      "request_url_sha256": "c52631dd96bcec5addc958974305ab1610c96fa128659554075663b7cebd4ceb",
+      "project_context_matches": true,
+      "status": 200,
+      "complete_response": true,
+      "response_sha256": "82564774db1b2b392ff9f80bb8287df862a8298169a4b469dbcfa923c47dddfd",
+      "overlay": "pixels",
+      "identity_blue": 105
+    },
+    {
+      "wire_index": 30,
+      "method": "GET",
+      "endpoint": "/api/evaluation/heatmap/test-NG-0",
+      "job_id": "job_ui_saved_threshold_A",
+      "file_path": "<owned-source>/test/NG/test-NG-0.png",
+      "threshold": 0.5,
+      "format": "base64",
+      "request_url_sha256": "c52631dd96bcec5addc958974305ab1610c96fa128659554075663b7cebd4ceb",
+      "project_context_matches": true,
+      "status": 200,
+      "complete_response": true,
+      "response_sha256": "0621f2c73bbfdafc893bc9aa355d98110b9bf7935304cd1f101f28a16b26af47",
+      "overlay": "unavailable",
+      "identity_blue": 106
+    },
+    {
+      "wire_index": 31,
+      "method": "GET",
+      "endpoint": "/api/evaluation/heatmap/test-NG-0",
+      "job_id": "job_ui_saved_threshold_A",
+      "file_path": "<owned-source>/test/NG/test-NG-0.png",
+      "threshold": 0.5,
+      "format": "base64",
+      "request_url_sha256": "c52631dd96bcec5addc958974305ab1610c96fa128659554075663b7cebd4ceb",
+      "project_context_matches": true,
+      "status": 200,
+      "complete_response": true,
+      "response_sha256": "46cc171e6b78a2a875d1d0cc4bee0222f8b49f5dc48cf619944a455a5c0b3529",
+      "overlay": "pixels",
+      "identity_blue": 107
+    },
+    {
+      "wire_index": 32,
+      "method": "GET",
+      "endpoint": "/api/evaluation/heatmap/test-NG-0",
+      "job_id": "job_ui_saved_threshold_A",
+      "file_path": "<owned-source>/test/NG/test-NG-0.png",
+      "threshold": 0.5,
+      "format": "base64",
+      "request_url_sha256": "c52631dd96bcec5addc958974305ab1610c96fa128659554075663b7cebd4ceb",
+      "project_context_matches": true,
+      "status": 200,
+      "complete_response": true,
+      "response_sha256": "3a76b57a5c85c409ab6eb04eb6c89cfb55cf529a2acf5a5964fb8fb73d48b768",
+      "overlay": "pixels",
+      "identity_blue": 108
+    },
+    {
+      "wire_index": 33,
+      "method": "GET",
+      "endpoint": "/api/evaluation/heatmap/test-NG-0",
+      "job_id": "job_ui_saved_threshold_A",
+      "file_path": "<owned-source>/test/NG/test-NG-0.png",
+      "threshold": 0.2,
+      "format": "base64",
+      "request_url_sha256": "416742e3752f33f66e4861a0a937d9461ba282327ad25792a2a86c75fb480a91",
+      "project_context_matches": true,
+      "status": 200,
+      "complete_response": true,
+      "response_sha256": "53863e0436d181ee9c1ca575ac344f03e124e29173f631f974dcf8492a32d226",
+      "overlay": "pixels",
+      "identity_blue": 109
+    },
+    {
+      "wire_index": 34,
+      "method": "GET",
+      "endpoint": "/api/evaluation/heatmap/test-NG-0",
+      "job_id": "job_ui_saved_threshold_A",
+      "file_path": "<owned-source>/test/NG/test-NG-0.png",
+      "threshold": 0.2,
+      "format": "base64",
+      "request_url_sha256": "416742e3752f33f66e4861a0a937d9461ba282327ad25792a2a86c75fb480a91",
+      "project_context_matches": true,
+      "status": 200,
+      "complete_response": true,
+      "response_sha256": "e7e0ba901c5dc23021a00f7c65a7fc502c10d8e59f9e1d3043a8ab7b81ad2eb2",
+      "overlay": "pixels",
+      "identity_blue": 110
+    }
+  ],
+  "rasters": [
+    {
+      "wire_index": 22,
+      "encoded_sha256": "b6fbef88db95196fc29d55b10c9d38e74c1eabf9fdddf9046d0a80bf67ecf645",
+      "rgba_sha256": "3d54f3f267d1380de24cf4b92c708c7d06a529bf0f616d00747ba70ca7829395",
+      "expected_rgba_sha256": "3d54f3f267d1380de24cf4b92c708c7d06a529bf0f616d00747ba70ca7829395",
+      "width": 64,
+      "height": 64
+    },
+    {
+      "wire_index": 26,
+      "encoded_sha256": "4341c27cfa049905942e7ab74065b8a6445e6c97248bc11ad3e15805ec4975ea",
+      "rgba_sha256": "c8384f321f88f95f538d2dd61c330e205ec357e27aa8c50f9b560db16447fd0a",
+      "expected_rgba_sha256": "c8384f321f88f95f538d2dd61c330e205ec357e27aa8c50f9b560db16447fd0a",
+      "width": 64,
+      "height": 64
+    },
+    {
+      "wire_index": 27,
+      "encoded_sha256": "ef81437e5901e87450379bc3b597769db1fe97ea65815fc8196e88a4734d8e12",
+      "rgba_sha256": "79481e3430abda7b3b19c9766de99d0f52770436f3ba79eeb0309f6fc9bdb081",
+      "expected_rgba_sha256": "79481e3430abda7b3b19c9766de99d0f52770436f3ba79eeb0309f6fc9bdb081",
+      "width": 64,
+      "height": 64
+    },
+    {
+      "wire_index": 29,
+      "encoded_sha256": "0e49879e8d3c32689ee291d56610e188cde11a8322181ad9047b17d3007a3377",
+      "rgba_sha256": "e7580e6235db08e2863f8422b9a8cc4b82498d35b346fa2b00c4a0d97e790e40",
+      "expected_rgba_sha256": "e7580e6235db08e2863f8422b9a8cc4b82498d35b346fa2b00c4a0d97e790e40",
+      "width": 64,
+      "height": 64
+    },
+    {
+      "wire_index": 31,
+      "encoded_sha256": "6c6471309bc98bfe005e5d33ad0a978aabd3d435b7f34ade5a8f61132fff4bdc",
+      "rgba_sha256": "eedc96e17043ce4e09bceeb3d495362a3a0d268aed6c3a9742b46960f16cac98",
+      "expected_rgba_sha256": "eedc96e17043ce4e09bceeb3d495362a3a0d268aed6c3a9742b46960f16cac98",
+      "width": 64,
+      "height": 64
+    },
+    {
+      "wire_index": 34,
+      "encoded_sha256": "276f80efc2e840bf06e7f093b9ccc17811cfb217dc292b75d265d38e6ac9c5cb",
+      "rgba_sha256": "1f33aba33750076d7a183033f5f1bf9966a0b33059481f56ebaa1dbe28bbc4ab",
+      "expected_rgba_sha256": "1f33aba33750076d7a183033f5f1bf9966a0b33059481f56ebaa1dbe28bbc4ab",
+      "width": 64,
+      "height": 64
+    },
+    {
+      "wire_index": 34,
+      "encoded_sha256": "276f80efc2e840bf06e7f093b9ccc17811cfb217dc292b75d265d38e6ac9c5cb",
+      "rgba_sha256": "1f33aba33750076d7a183033f5f1bf9966a0b33059481f56ebaa1dbe28bbc4ab",
+      "expected_rgba_sha256": "1f33aba33750076d7a183033f5f1bf9966a0b33059481f56ebaa1dbe28bbc4ab",
+      "width": 64,
+      "height": 64
+    }
+  ],
+  "captures": [
+    {
+      "name": "s4-preview20-saved50-footer",
+      "sha256": "96538591c7f41c1ee4ece3dc932eeb318d807c17b4227acfce73d63c5a2c00f3",
+      "width": 2560,
+      "height": 1440
+    },
+    {
+      "name": "s4-preview-card-row",
+      "sha256": "58f9c0958e0d56dd137f1e6a6f1b4c2099a5e14317c0aada30e94b6861411688",
+      "width": 369,
+      "height": 131
+    },
+    {
+      "name": "f4-saved-miss-neutral-details",
+      "sha256": "fa56c7c4b8bc20e82f31dd96a64d73f0b41f9b0951cd50cb79c20bfd5cb03b5e",
+      "width": 2560,
+      "height": 1440
+    },
+    {
+      "name": "s4-saved50-pending-cleared",
+      "sha256": "367efc0d5f2bce7882028d0ffde2cd8f586c743d7e6897003b4e0631df05f569",
+      "width": 2560,
+      "height": 1440
+    },
+    {
+      "name": "s4-saved50-owned-raster",
+      "sha256": "30ffb7c31ef48c020b826bc2d81b1a50dab58e21961d1ac5382bfab8129e727f",
+      "width": 2560,
+      "height": 1440
+    },
+    {
+      "name": "s4-saved50-error-cleared",
+      "sha256": "3b66d1f147f42ef2066e1f56448bba18fe2e391f65a12b2761fb9723bc3065cb",
+      "width": 2560,
+      "height": 1440
+    },
+    {
+      "name": "s4-saved50-unavailable-cleared",
+      "sha256": "9a1cf822b4b84573113ebd636e130336132d774006134fcefde2164203cd9ce4",
+      "width": 2560,
+      "height": 1440
+    },
+    {
+      "name": "s4-late-response-owned",
+      "sha256": "f8e8980a34aaf6bc46e2c50c07c5ab6f32a17fb28d106054db2a75f72744550a",
+      "width": 2560,
+      "height": 1440
+    },
+    {
+      "name": "d1-browser-path-help",
+      "sha256": "3b03972e067458f777c88f6f5721101f7383e4c11b5eae7c5cd02cc41c9b2ba2",
+      "width": 2560,
+      "height": 1440
+    },
+    {
+      "name": "d1-browser-path-help-narrow",
+      "sha256": "a9500cf1187a62d971d9f15eefbaf71611d98c29be1b6dc3cd1de6beae98b1aa",
+      "width": 1024,
+      "height": 900
+    },
+    {
+      "name": "d1-summary-refresh-pending",
+      "sha256": "e25a8784960ab4928416e61e807d4651520d4105a8b2f30ec8562a8f852f7b1c",
+      "width": 2560,
+      "height": 1440
+    }
+  ],
+  "input_files": [
+    {
+      "path": "train/OK/train-OK-0.png",
+      "sha256": "f399a41e79c9c78840defd7b4b491dec95743cc897d375f64586d8093b9c2cc3"
+    },
+    {
+      "path": "train/NG/train-NG-0.png",
+      "sha256": "510057fc9884db99d8ada5b5d15a679e444bb10118e0ad2bdb94cd9f2822cee7"
+    },
+    {
+      "path": "val/OK/val-OK-0.png",
+      "sha256": "94e221dc9b7851949bb5af1d262a7bf4ece65f399a4dd1d0b086ff856d39c180"
+    },
+    {
+      "path": "val/NG/val-NG-0.png",
+      "sha256": "46dcf6ae5ac61fe7716872d6b65574f5f18cff5eb83fe13dc80707a706932258"
+    },
+    {
+      "path": "test/OK/test-OK-0.png",
+      "sha256": "562fadbad3145d0cd5a7cebe7393375d5bae697b5a68d103011fc0b645164240"
+    },
+    {
+      "path": "test/NG/test-NG-0.png",
+      "sha256": "b9602d1f068747fa5977f36e5c6a312e05a9500d3365b031cf3e888901c281bf"
+    },
+    {
+      "path": "test/NG/test-NG-1.png",
+      "sha256": "0c1a7b34200675cb9c59aa99867aad7a65eb45b4c5cbc0dc15801649a7d36c12"
+    }
+  ],
+  "geometry": {
+    "form": {
+      "x": 170.078125,
+      "y": 650,
+      "right": 490.078125,
+      "bottom": 772,
+      "width": 320,
+      "height": 122,
+      "scrollWidth": 320,
+      "clientWidth": 320
+    },
+    "input": {
+      "x": 170.078125,
+      "y": 678,
+      "right": 374.328125,
+      "bottom": 708,
+      "width": 204.25,
+      "height": 30,
+      "scrollWidth": 202,
+      "clientWidth": 202
+    },
+    "help": {
+      "x": 170.078125,
+      "y": 712,
+      "right": 490.078125,
+      "bottom": 772,
+      "width": 320,
+      "height": 60,
+      "scrollWidth": 320,
+      "clientWidth": 320
+    },
+    "button": {
+      "x": 382.328125,
+      "y": 662,
+      "right": 490.078125,
+      "bottom": 696,
+      "width": 107.75,
+      "height": 34,
+      "scrollWidth": 106,
+      "clientWidth": 106
+    },
+    "scrollbox": {
+      "x": 12,
+      "y": 650,
+      "right": 671.03125,
+      "bottom": 772,
+      "width": 659.03125,
+      "height": 122,
+      "scrollWidth": 928,
+      "clientWidth": 659
+    },
+    "toolbar": {
+      "x": 0,
+      "y": 638,
+      "right": 1024,
+      "bottom": 785,
+      "width": 1024,
+      "height": 147,
+      "scrollWidth": 1024,
+      "clientWidth": 1024
+    },
+    "scrollLeft": 0,
+    "viewport": {
+      "width": 1024,
+      "height": 900
+    }
+  },
+  "private_proof_sha256": "2d3d4164dbf9bc91a902f0ef0a03117344b21297fc829bfa9e8edc08e702e0c8",
+  "private_harness_manifest_sha256": "997ffd044fe445364593a3bfa3bc85451ab0e542a675c2cc365fe40f7d17b0d6",
+  "original_guide_files_verified": 84,
+  "original_manifest_sha256": "66bcb92fac15a35ff94d46d2f656494127efaf1985b0adc7794f6c6816cbe687",
+  "retained_preliminary_runs": {
+    "01": "failed before app UI: image-list fixture used images instead of items",
+    "02": "failed training completion selector: folded simple-view copy",
+    "03": "failed training completion selector: hidden checklist item",
+    "04": "failed footer text expectation: real footer says missed defects, not abbreviated miss label",
+    "05": "preliminary core pass with weak geometry oracle; excluded from final guide evidence",
+    "06": "meaningful geometry RED: input 18.59px; remaining summary step not reached",
+    "07": "final pass on clean source and final build"
+  },
+  "extra_script_check": {
+    "passed": 153,
+    "failed": 4,
+    "scope": "additional broad local scripts suite, separate from required renderer suite",
+    "failures": [
+      "package-license-texts: actual package license bytes ship and tampering fails readback: linked license output",
+      "package-license-texts: Electron runtime license and Chromium notices survive desktop packaging: linked license output",
+      "package-license-texts: a license readback rejects unlisted files and duplicate paths: linked license output",
+      "release-candidate: pinned failed health receipt cannot become acceptance through object truthiness: expected error-message regex differs from actual fail-closed native acceptance error"
+    ],
+    "qualification": "Three license fixture failures occur under the local macOS alias temp path. Release-candidate fails closed before native calls but its message assertion differs. These targets and release product paths have no Task4 diff; no baseline execution or hosted CI result is inferred."
+  },
+  "environment": {
+    "node": "v26.4.0",
+    "playwright": "1.63.0",
+    "electron": "44.5.1",
+    "python": "Python 3.13.5"
+  },
+  "custody": {
+    "project_config": {
+      "comparison": "Canonical JSON of genuine setup GET /api/project/current equals final project.json object. Initial persisted-file byte preimage was not separately captured.",
+      "setup_api_canonical_sha256": "7a87d80bee26756e0a7cb6b7cfe030857c39d5d02af4e7809ae91a98ecff8136",
+      "final_file_canonical_sha256": "7a87d80bee26756e0a7cb6b7cfe030857c39d5d02af4e7809ae91a98ecff8136",
+      "final_file_raw_sha256": "d0c9222ba19c9af88339d5cbfb8a80ab66544beeef616cf83ae00b46eeca5a69",
+      "equal": true
+    },
+    "synthetic_source_files_unchanged": 7,
+    "model_report_artifacts_at_end": [],
+    "calibration": "No calibration write requested; evaluation and null optional analysis were intercepted. No preexisting model/report/calibration artifact was used.",
+    "allowed_runtime_writes": [
+      "PUT /api/dataset/metadata/class-override",
+      "POST /api/dataset/import"
+    ],
+    "actual_writes": [
+      {
+        "method": "PUT",
+        "endpoint": "dataset/metadata/class-override"
+      },
+      {
+        "method": "POST",
+        "endpoint": "dataset/import"
+      }
+    ]
+  }
+}
