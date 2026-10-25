@@ -204,3 +204,25 @@ def test_a_conflict_stops_the_batch_but_one_unreadable_image_does_not(workspace,
         assert (batch['status'],batch['processed'],batch['failed'],batch['generated'])==expected,batch
         assert detail in batch['error']
     monkeypatch.setattr(routes_label_candidates,'_generate_candidates',original)
+
+
+def test_a_running_trained_model_batch_blocks_adopting_and_taking_back_a_phrase_or_sam2_draft(workspace,monkeypatch):
+    """The trained-model batch (_LIVE_BATCHES) refuses an external draft's adoption and its take-back too, as class rename
+    already does, and nothing is written."""
+    client,project,source=workspace
+    proposal=client.post('/api/label-candidates/generate',json={'backend':'template_match','image_path':str(source/'target.png'),'exemplar_path':str(source/'exemplar.png'),'label':'Scratch','threshold':.99}).json()
+    chosen=[proposal['candidates'][0]['id']];path=dataset_annotation_dir(source,Path(project['annotations_dir']),use_scope=False)/'target.json'
+    key=routes_label_suggestions._project_batch_key(project)
+    monkeypatch.setitem(routes_label_suggestions._LIVE_BATCHES,key,object())
+    refused=client.post('/api/label-suggestions/'+proposal['id']+'/review',json={'decision':'accept','candidate_ids':chosen})
+    assert refused.status_code==409,refused.text
+    assert '일괄 초안 만들기가 진행 중' in refused.json()['detail'] and '채택하세요' in refused.json()['detail']
+    assert not path.exists() and client.get('/api/label-suggestions/'+proposal['id']).json()['status']=='pending'
+    routes_label_suggestions._LIVE_BATCHES.pop(key)
+    assert client.post('/api/label-suggestions/'+proposal['id']+'/review',json={'decision':'accept','candidate_ids':chosen}).status_code==200
+    before=path.read_bytes()
+    monkeypatch.setitem(routes_label_suggestions._LIVE_BATCHES,key,object())
+    refused_undo=client.post('/api/label-suggestions/'+proposal['id']+'/undo',json={'actor':'operator'})
+    assert refused_undo.status_code==409,refused_undo.text
+    assert '일괄 초안 만들기가 진행 중' in refused_undo.json()['detail'] and '되돌리세요' in refused_undo.json()['detail']
+    assert path.read_bytes()==before and client.get('/api/label-suggestions/'+proposal['id']).json()['status']=='accepted'

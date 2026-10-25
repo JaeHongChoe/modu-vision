@@ -1,4 +1,5 @@
 """Common first-use preparation and same-job reopen inventory."""
+import re
 import sqlite3
 from pathlib import Path
 from typing import Literal
@@ -20,6 +21,22 @@ class ReadinessRequest(BaseModel):
     config_overrides:dict=Field(default_factory=dict)
     family_dataset_path:str|None=None
     warm_start_job_id:str|None=None
+
+_HANGUL=re.compile('[가-힣]')
+# The step-3 card shows every action below as the person's next step: a Korean reason and what to do, never an internal
+# English message (a detection project with no saved split raised the loader's 'images_dir and annotation_file must be
+# specified for DetectionDataset' here). A Korean refusal is kept as it is.
+DATA_UNREADABLE='저장된 학습·검증 분할을 읽지 못했습니다. 1단계에서 이미지 폴더를 확인하고 분할을 저장한 뒤 다시 확인하세요.'
+PARENT_UNCHECKED='이어 학습할 이전 모델이나 학습 데이터를 확인하지 못했습니다. 이전 모델 선택을 해제하거나 1단계에서 데이터를 다시 확인하세요.'
+SERVER_RUNTIME_UNCHECKED='선택한 서버의 학습 실행 환경을 확인하지 못했습니다. 서버 관리에서 연결과 필요한 패키지를 확인하세요.'
+SERVER_WEIGHTS_UNCHECKED='서버의 사전학습 가중치를 확인하지 못했습니다. 서버 연결과 캐시 폴더를 확인하세요.'
+
+def readable_action(exc,fallback,detail=False):
+    """`detail` keeps a library's own words (a missing package, a server path) after the Korean sentence, as the other
+    refusals do; a local loader message is left out, since it names nothing the person can act on."""
+    message=str(exc.detail) if isinstance(exc,HTTPException) else str(exc)
+    if _HANGUL.search(message):return message
+    return f'{fallback} ({message})' if detail and message else fallback
 
 def selected_profile(identifier):
     from backend.remote.profiles import get_profile_store
@@ -52,7 +69,7 @@ def input_readiness(project,task):
         if counts.get('val',0)==0:actions.append('현재 검수 정책·분할에서 검증 이미지가 없습니다. 검증 분할의 라벨을 검수하세요.')
         return {'split_counts':counts,'review_eligibility_sha256':review['eligibility_sha256']},actions
     except (ValueError,OSError,RuntimeError) as exc:
-        return {'split_counts':{}},[str(exc)]
+        return {'split_counts':{}},[readable_action(exc,DATA_UNREADABLE)]
 
 def task_record(record):
     """Execution controls and saved model selection use separate exact identities."""
@@ -89,20 +106,20 @@ def readiness(body:ReadinessRequest,request:Request):
                 dataset=resolve_training_input(project,body.task,body.family_dataset_path)
             if body.warm_start_job_id:
                 parent=resolve_training_parent(project,body.warm_start_job_id,body.task,dataset,body.preset,options)
-        except (ValueError,OSError,RuntimeError,HTTPException) as exc:actions.append(str(exc))
+        except (ValueError,OSError,RuntimeError,HTTPException) as exc:actions.append(readable_action(exc,PARENT_UNCHECKED,detail=True))
         from backend.remote.ssh_transport import require_training_runtime
         try:
             require_training_runtime(probe,body.task,body.preset,options,warm_start=bool(body.warm_start_job_id))
-            if profile.gpu_selector and (probe.get('checks') or {}).get('cuda_device_count',0)<1:raise ValueError('Selected GPU is unavailable on the server')
+            if profile.gpu_selector and (probe.get('checks') or {}).get('cuda_device_count',0)<1:raise ValueError('선택한 GPU를 서버에서 찾지 못했습니다. 서버의 GPU 설정을 확인하거나 CPU 프로필을 고르세요.')
             if profile.distributed_processes>1:
                 from backend.remote.distributed import validate_distributed_request
                 validate_distributed_request(body.task,'cuda' if profile.gpu_selector else 'cpu',profile.distributed_processes,available_cuda=(probe.get('checks') or {}).get('cuda_device_count',0))
-        except (ValueError,RuntimeError) as exc:actions.append(str(exc))
+        except (ValueError,RuntimeError) as exc:actions.append(readable_action(exc,SERVER_RUNTIME_UNCHECKED,detail=True))
         try:
             weights=remote_weight_readiness(probe,body.task,actual_model,{**options,'preset':body.preset},checkpoint,parent)
-            if weights['state']=='missing':actions.append('Selected model pretrained weights are missing: import an official checkpoint or prepare the selected server cache')
+            if weights['state']=='missing':actions.append('선택한 모델의 사전학습 가중치가 서버에 없습니다. 공식 체크포인트를 가져오거나 서버 캐시를 준비하세요.')
         except (ValueError,OSError,RuntimeError) as exc:
-            weights={'state':'missing','content_verified':False};actions.append(str(exc))
+            weights={'state':'missing','content_verified':False};actions.append(readable_action(exc,SERVER_WEIGHTS_UNCHECKED,detail=True))
         return {'task':body.task,'model':body.model,'ready':not actions,'target':{'kind':'server','id':profile.id,'name':profile.name},
             'runtime':{'available':not actions,'device':'cuda' if profile.gpu_selector else 'cpu','reason':' · '.join(actions)},
             'dependencies':{'missing':[]},'weights':weights,
@@ -126,7 +143,7 @@ def readiness(body:ReadinessRequest,request:Request):
                 result['next_actions']=[action for action in result['next_actions'] if action!='import_official_weights']
                 result['ready']=result['runtime']['available'] and not result['dependencies']['missing']
     except (ValueError,OSError,RuntimeError,HTTPException) as exc:
-        result['ready']=False;result['next_actions'].append(str(exc))
+        result['ready']=False;result['next_actions'].append(readable_action(exc,PARENT_UNCHECKED,detail=True))
     if input_actions:
         result['ready']=False;result['next_actions'].extend(input_actions)
     return {**result,'selected_checkpoint_path':checkpoint,'target':{'kind':'local','id':None},'training_started':False,'input':inputs}

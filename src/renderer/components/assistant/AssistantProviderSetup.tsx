@@ -2,17 +2,17 @@
  * images, and the key. The key field sends its value straight to the main process and clears itself; the panel only
  * ever learns "키 저장됨". */
 import React, { useEffect, useState } from 'react';
-import type { AssistantApiFormat, AssistantProviderId } from '../../../types/electron';
+import type { AssistantApiFormat, AssistantApiKeyProviderId } from '../../../types/electron';
 import { useAssistantStore } from '../../stores/useAssistantStore';
 
-const DEFAULT_BASE: Record<AssistantProviderId, string> = { 'openai-compatible': 'https://api.openai.com/v1', anthropic: 'https://api.anthropic.com' };
+const DEFAULT_BASE: Record<AssistantApiKeyProviderId, string> = { 'openai-compatible': 'https://api.openai.com/v1', anthropic: 'https://api.anthropic.com' };
 const FIELD = 'w-full rounded border border-slate-600 bg-slate-900 px-2 py-1.5 text-slate-100';
 
 export const AssistantProviderSetup: React.FC = () => {
   const config = useAssistantStore(state => state.config);
   const configError = useAssistantStore(state => state.configError);
   const { saveProvider, removeKey, setActive, listModels } = useAssistantStore.getState();
-  const [provider, setProvider] = useState<AssistantProviderId>(config?.active ?? 'openai-compatible');
+  const [provider, setProvider] = useState<AssistantApiKeyProviderId>(config?.active === 'anthropic' ? 'anthropic' : 'openai-compatible');
   const saved = config?.providers.find(entry => entry.provider === provider) ?? null;
   const [baseUrl, setBaseUrl] = useState(saved?.baseUrl ?? DEFAULT_BASE[provider]);
   const [model, setModel] = useState(saved?.model ?? '');
@@ -25,7 +25,7 @@ export const AssistantProviderSetup: React.FC = () => {
 
   // Switching provider (or the first read of the settings) shows that provider's saved settings or its defaults.
   const loaded = Boolean(config);
-  useEffect(() => { const active = useAssistantStore.getState().config?.active; if (active) setProvider(active); }, [loaded]);
+  useEffect(() => { const active = useAssistantStore.getState().config?.active; if (active === 'anthropic' || active === 'openai-compatible') setProvider(active); }, [loaded]);
   useEffect(() => {
     const entry = useAssistantStore.getState().config?.providers.find(item => item.provider === provider);
     setBaseUrl(entry?.baseUrl ?? DEFAULT_BASE[provider]);setModel(entry?.model ?? '');
@@ -58,7 +58,7 @@ export const AssistantProviderSetup: React.FC = () => {
         </p>
       )}
       <label className="block">공급자
-        <select aria-label="도우미 공급자" className={FIELD} value={provider} onChange={event => setProvider(event.target.value as AssistantProviderId)}>
+        <select aria-label="도우미 공급자" className={FIELD} value={provider} onChange={event => setProvider(event.target.value as AssistantApiKeyProviderId)}>
           <option value="openai-compatible">OpenAI 호환 (OpenAI, 로컬 서버 등)</option>
           <option value="anthropic">Anthropic</option>
         </select>

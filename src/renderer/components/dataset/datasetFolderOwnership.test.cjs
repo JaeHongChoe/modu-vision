@@ -89,6 +89,9 @@ function harness({ holdSave = false, holdImport = false, holdImages = false, hol
   const jsx = (type, props) => ({ type, props });
   const helpers = Object.fromEntries(['classDistribution', 'datasetImportView', 'splitCalibrator', 'datasetLayout'].map(name =>
     ['./' + name, load(path.join(__dirname, name + '.ts'), {})]));
+  const shared = load(path.resolve(__dirname, '../../stores/assistContext.ts'), {});
+  helpers['../../stores/assistContext'] = shared;
+  helpers['../common/useScopedError'] = load(path.resolve(__dirname, '../common/useScopedError.ts'), {react});
   helpers['../../utils/datasetSplitCapability'] = load(path.resolve(__dirname, '../../utils/datasetSplitCapability.ts'), {});
   const scopedThumbnail = load(path.resolve(__dirname, '../common/ScopedDatasetThumbnail.tsx'), {'../../services/api': apiModule, '../../stores/thumbnailDiagnostics': {recordThumbnailRead: () => {}}});
   const filename = path.join(__dirname, 'DatasetStudio.tsx'), m = new Module(filename, module);
@@ -127,12 +130,20 @@ function harness({ holdSave = false, holdImport = false, holdImages = false, hol
     } });
     store.setState({ folderPath: `/source/${id}`, datasetKey: `/source/${id}\0classification`, totalImages: 17, isLoading: false });
   };
-  return { store, project, render, select, pickers, saves, imports, imageReads, imageRequests, imageResult, summaries, splits, summary, calls, move, changeAuthority,
+  return { store, project, shared, render, select, pickers, saves, imports, imageReads, imageRequests, imageResult, summaries, splits, summary, calls, move, changeAuthority,
     acceptAuthority: () => {generation++; context = {workspace_id: `workspace-${backend}`, project_id: project.project.id, actor_id: 'actor', mode: backend === 'A' ? 'local' : 'team'};},
     // This source harness sees the real scoped component's input, not decoded DOM pixels.
     gallery: () => nodes(render()).filter(node => node.type === scopedThumbnail.ScopedDatasetThumbnail).map(node => node.props.path),
     unmount: () => slots.forEach(slot => slot?.cleanup?.()) };
 }
+
+test('a folder dialog failure reaches guidance while a late failure from the previous labelset does not', async () => {
+  const h = harness(); const pending = h.select(); h.pickers[0].reject(Error('폴더 창을 열지 못했습니다. 경로 입력을 사용하세요.')); await pending; h.render();
+  assert.deepEqual(h.shared.assistPanelErrors(), [{source: '데이터 준비', text: '폴더 창을 열지 못했습니다. 경로 입력을 사용하세요.'}]);
+  const late = h.select(); h.project.project.active_labelset_id = 'next'; h.render();
+  h.pickers[1].reject(Error('이전 라벨 세트의 폴더 창 실패')); await late; h.render();
+  assert.deepEqual(h.shared.assistPanelErrors(), []); h.unmount();
+});
 
 for (const [name, change] of [['project', { id: 'B', advanceGeneration: false }],
   ['backend with the same project ID', { transport: 'B' }],

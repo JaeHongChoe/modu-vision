@@ -10,18 +10,18 @@ const {AssistantConversation}=load(path.join(__dirname,'assistantSession.ts'),ca
 const {createAssistantTools}=load(path.join(__dirname,'assistantTools.ts'),cache);
 
 function harness(replies,{contexts}={}){
- const sent=[],logged=[],events=[],runs=[],executed=[];let contextCount=0;
+ const sent=[],logged=[],events=[],runs=[],executed=[];let contextCount=0;const authority={scope:'project-a',project:'project-a',write:'image-a:revision-1'};
  const deps={snapshot:()=>({stage:3,status:'ready',blocker:null,nextAction:{label:'학습 시작',step:3},progress:null,errors:[]}),
   facts:()=>({task:'classification',view:'simple',shared:false,images:20,unlabeled:0,classes:{OK:10,NG:10},split:{train:14,val:4,test:2},splitState:'saved',trainingStatus:'idle',currentImage:null}),
   setStep:async()=>{},focusTarget:()=>{},setTrainRatio:()=>{},splitSupport:()=>({supported:true,reason:null}),
   applySplit:async(...args)=>{executed.push(['applySplit',...args]);return {ok:true};},findImage:()=>[],setImageClass:async()=>({}),draftModels:async()=>[],
   startDraftBatch:async()=>({}),draftStats:async()=>({models:[]}),impact:async()=>({}),evaluation:()=>null,
   training:()=>({isTraining:false,status:'idle',preset:'balanced',computeOnServer:false,folderReady:true}),startTraining:async()=>{executed.push(['startTraining']);return {jobId:'job_1'};}};
- const bridge={send:async input=>{sent.push(JSON.parse(JSON.stringify(input)));const reply=replies.shift();return typeof reply==='function'?reply(input):reply;},
+ const bridge={send:async input=>{sent.push(JSON.parse(JSON.stringify(input)));const reply=replies.shift();return typeof reply==='function'?reply(input):(reply??answer('끝'));},
   cancel:async()=>true,beginRun:async(runId,tool)=>{runs.push(['begin',runId,tool]);return true;},endRun:async runId=>{runs.push(['end',runId]);}};
- const conversation=new AssistantConversation({bridge,tools:createAssistantTools(deps),context:()=>contexts?contexts[contextCount++]:{step:3},
-  log:async entry=>{logged.push(entry);},provider:()=>'anthropic'},event=>events.push(event));
- return {conversation,sent,logged,events,runs,executed};
+ const tools=createAssistantTools(deps);const conversation=new AssistantConversation({bridge,tools,context:()=>contexts?contexts[contextCount++]:{step:3},
+  scope:()=>authority.scope,projectScope:()=>authority.project,writeBinding:()=>authority.write,log:async entry=>{logged.push(entry);},provider:()=>'anthropic'},event=>events.push(event));
+ return {conversation,sent,logged,events,runs,executed,authority,bridge,deps,tools};
 }
 const call=(id,name,args={})=>({id,name,arguments:args});
 const answer=(text,toolCalls=[])=>({ok:true,text,toolCalls,stop:toolCalls.length?'tool':'end'});
@@ -94,4 +94,109 @@ test('a provider error is shown with its Korean action and the unanswered questi
  assert.ok(h.events.some(event=>event.kind==='error'&&event.error.code==='rate_limited'));
  assert.deepEqual(h.conversation.messages,[]);assert.equal(h.conversation.busy,false);
  assert.deepEqual(h.logged.map(entry=>[entry.result,entry.error_code]),[['error','rate_limited']]);
+});
+
+const deferred=()=>{let resolve;const promise=new Promise(r=>resolve=r);return {promise,resolve};};
+test('a write preview cannot authorize another project or changed image/settings',async()=>{
+ for(const kind of ['scope','write']){
+  const h=harness([answer('',[call('w1','start_training')])]);await h.conversation.ask('학습 시작');
+  h.authority[kind]='changed';await h.conversation.decide(true);
+  assert.deepEqual(h.executed,[]);assert.deepEqual(h.runs,[]);assert.equal(h.sent.length,1);
+  assert.equal(h.conversation.pending,null);assert.equal(h.conversation.busy,false);
+  assert.ok(h.events.some(e=>e.kind==='notice'&&/바뀌/.test(e.text)));
+ }
+});
+test('a delayed provider reply from another project is dropped before logging, tools, or history',async()=>{
+ const reply=deferred(),h=harness([()=>reply.promise]);const asking=h.conversation.ask('A 상태');
+ h.authority.scope='project-b';reply.resolve(answer('A 응답',[call('w1','start_training')]));await asking;
+ assert.deepEqual(h.logged,[]);assert.deepEqual(h.executed,[]);assert.deepEqual(h.conversation.messages,[]);
+ assert.equal(h.conversation.pending,null);assert.ok(!h.events.some(e=>e.kind==='assistant'));
+});
+test('a context change during async preview does not create a confirmation',async()=>{
+ const ready=deferred(),h=harness([answer('',[call('w1','generate_label_drafts')])]);
+ h.tools.preview=()=>ready.promise;
+ const asking=h.conversation.ask('초안');await new Promise(r=>setImmediate(r));
+ h.authority.scope='project-b';ready.resolve({title:'초안',lines:[],undo:'거절'});await asking;
+ assert.equal(h.conversation.pending,null);assert.deepEqual(h.executed,[]);
+ assert.ok(!h.events.some(e=>e.kind==='tool'));
+});
+test('a failed or stale run grant never executes; an acquired stale grant is released',async()=>{
+ for(const stale of [false,true]){
+  const h=harness([answer('',[call('w1','start_training')])]);await h.conversation.ask('학습');
+  const grant=deferred();h.bridge.beginRun=async()=>grant.promise;
+  const deciding=h.conversation.decide(true);if(stale)h.authority.scope='project-b';
+  grant.resolve(stale);await deciding;
+  assert.deepEqual(h.executed,[]);assert.equal(h.sent.length,1);
+  assert.equal(h.runs.filter(x=>x[0]==='end').length,stale?1:0);
+ }
+});
+test('invalidation cancels the owned request and old completion cannot overwrite a new question',async()=>{
+ const old=deferred(),fresh=deferred(),h=harness([()=>old.promise,()=>fresh.promise]);
+ const first=h.conversation.ask('A');const cancelled=[];h.bridge.cancel=async id=>{cancelled.push(id);return true;};
+ h.conversation.invalidate();h.authority.scope='project-b';const second=h.conversation.ask('B');
+ old.resolve(answer('늦은 A'));await first;assert.equal(h.conversation.busy,true);assert.equal(cancelled.length,1);
+ fresh.resolve(answer('B 응답'));await second;
+ assert.deepEqual(h.conversation.messages.map(m=>m.text),['B','B 응답']);assert.equal(h.conversation.busy,false);
+ assert.deepEqual(h.logged.map(e=>e.tool),['conversation']);
+});
+test('IPC failures are shown without executing an unarmed write or losing an executed outcome',async()=>{
+ const denied=harness([answer('',[call('w1','start_training')])]);await denied.conversation.ask('학습');
+ denied.bridge.beginRun=async()=>{throw Error('IPC unavailable');};await denied.conversation.decide(true);
+ assert.deepEqual(denied.executed,[]);assert.equal(denied.conversation.busy,false);assert.ok(denied.events.some(e=>e.kind==='notice'&&/실행하지 않았/.test(e.text)));
+ const done=harness([answer('',[call('w1','start_training')]),answer('학습 시작됨')]);await done.conversation.ask('학습');
+ done.bridge.endRun=async()=>{throw Error('IPC unavailable');};await done.conversation.decide(true);
+ assert.deepEqual(done.executed,[['startTraining']]);assert.equal(done.logged.find(x=>x.tool==='start_training').result,'ok');
+ assert.ok(done.events.some(e=>e.kind==='notice'&&/실행 결과/.test(e.text)));
+});
+test('an async read of settings cannot return evidence after the captured settings change',async()=>{
+ const read=deferred(),entered=deferred(),h=harness([answer('',[call('r1','read_status')])]);h.tools.runAutomatic=()=>{entered.resolve();return read.promise;};
+ const asking=h.conversation.ask('준비 상태');await entered.promise;h.authority.write='new-settings';
+ read.resolve({ok:true,summary:'옛 준비 상태',content:'old-ready'});await asking;
+ assert.ok(!h.events.some(e=>e.kind==='tool'));assert.equal(h.sent.length,1);assert.deepEqual(h.conversation.messages,[]);
+});
+test('an authorized write may update its own state and is logged as executed, not context-changed',async()=>{
+ const h=harness([answer('',[call('w1','start_training')]),answer('학습 시작됨')]);
+ h.deps.startTraining=async()=>{h.executed.push(['startTraining']);h.authority.write='training-is-now-running';return {jobId:'job_1'};};
+ await h.conversation.ask('학습');await h.conversation.decide(true);
+ assert.deepEqual(h.executed,[['startTraining']]);const result=h.logged.find(e=>e.tool==='start_training');
+ assert.equal(result.result,'ok');assert.equal(result.error_code,undefined);assert.equal(result.link,'job:job_1');
+});
+test('an image answer cannot invoke unsolicited tools or start a second provider request',async()=>{
+ const h=harness([answer('이미지 설명',[call('r1','read_dataset_summary'),call('w1','start_training')]),answer('unexpected second request')]);
+ await h.conversation.ask('이 이미지는?',{grantId:'g',imageIdentity:'a'.repeat(64),mediaType:'image/png',base64:'AAAA'});
+ assert.equal(h.sent.length,1);assert.deepEqual(h.executed,[]);assert.equal(h.conversation.pending,null);
+ assert.ok(!h.events.some(e=>e.kind==='tool'));assert.equal(h.conversation.messages.at(-1).toolCalls,undefined);
+ assert.ok(h.events.some(e=>e.kind==='notice'&&/이미지.*도구/.test(e.text)));
+});
+// Defect: stop or a provider/model change during a confirmed write let the backend write finish, then dropped its run-log
+// record and panel line. The outcome is recorded whenever the project is unchanged; only a project change withholds it.
+test('stop or a settings change while a confirmed write runs still records and shows the outcome',async()=>{
+ for(const change of ['stop','settings']){
+  const h=harness([answer('',[call('w1','start_training')]),answer('학습 시작됨')]),entered=deferred(),release=deferred();let writing;
+  h.deps.startTraining=async()=>{h.executed.push(['startTraining']);entered.resolve();await release.promise;return {jobId:'job_1'};};
+  await h.conversation.ask('학습');const deciding=h.conversation.decide(true);await entered.promise;writing=h.conversation.writing;
+  if(change==='stop')await h.conversation.stop();else {h.authority.scope='project-a:other-model';h.conversation.invalidate();}
+  release.resolve();await deciding;
+  const entry=h.logged.find(e=>e.tool==='start_training');
+  assert.deepEqual([entry?.result,entry?.confirmed,entry?.link,entry?.provider],['ok',true,'job:job_1','anthropic'],change);
+  assert.ok(h.events.some(e=>e.kind==='tool'&&e.name==='start_training'&&e.ok),change);
+  assert.deepEqual(h.executed,[['startTraining']],'the write ran exactly once');
+  assert.equal(writing,true,'the panel can tell a confirmed write is running');assert.equal(h.conversation.writing,false);
+  assert.equal(h.sent.length,change==='stop'?2:1,'stop is not offered mid-write; a settings change ends the turn after the record');
+  assert.equal(h.conversation.busy,false);
+ }
+});
+test('a project change while a confirmed write runs keeps the record out of the other project and says so',async()=>{
+ const h=harness([answer('',[call('w1','start_training')])]),entered=deferred(),release=deferred();
+ h.deps.startTraining=async()=>{entered.resolve();await release.promise;return {jobId:'job_1'};};
+ await h.conversation.ask('학습');const deciding=h.conversation.decide(true);await entered.promise;
+ h.authority.scope=h.authority.project='project-b';h.conversation.invalidate();release.resolve();await deciding;
+ assert.ok(!h.logged.some(e=>e.tool==='start_training'));assert.ok(h.events.some(e=>e.kind==='notice'&&/프로젝트/.test(e.text)&&/기록/.test(e.text)));
+});
+test('the confirmed draft write carries the model its preview showed',async()=>{
+ const h=harness([answer('',[call('w1','generate_label_drafts')]),answer('초안 시작')]),batches=[];let models=[{jobId:'job_a',task:'classification',dataState:'current',createdAt:null}];
+ h.deps.draftModels=async()=>models;h.deps.startDraftBatch=async(jobId,threshold)=>{batches.push([jobId,threshold]);return {id:'b1',total:3};};
+ await h.conversation.ask('초안 만들어 줘');assert.match(h.conversation.pending.preview.lines[0],/job_a/);
+ models=[{jobId:'job_b',task:'classification',dataState:'current',createdAt:null},...models];await h.conversation.decide(true);
+ assert.deepEqual(batches,[['job_a',0.5]]);assert.equal(h.logged.find(e=>e.tool==='generate_label_drafts').result,'ok');
 });

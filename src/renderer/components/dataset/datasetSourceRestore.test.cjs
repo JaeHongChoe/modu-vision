@@ -15,14 +15,51 @@ function harness(){
  store.setState({folderPath:'/source',hasSelectedFolder:true,datasetKey:'/source\0anomaly',sourceAuthority:datasetModule.readDatasetAuthority(),lastImportedKey:'/source\0anomaly',totalImages:2});
  const hook=object=>Object.assign(selector=>selector?selector(object):object,{getState:()=>object});
  const file=path.join(__dirname,'DatasetStudio.tsx'),m=new Module(file,module);m.filename=file;m.paths=Module._nodeModulePaths(__dirname);const original=m.require.bind(m);
- const helpers={'./classDistribution':load(path.join(__dirname,'classDistribution.ts'),{}),'./datasetImportView':load(path.join(__dirname,'datasetImportView.ts'),{}),'./splitCalibrator':load(path.join(__dirname,'splitCalibrator.ts'),{}),'./datasetLayout':load(path.join(__dirname,'datasetLayout.ts'),{}),'../../utils/datasetSplitCapability':load(path.resolve(__dirname,'../../utils/datasetSplitCapability.ts'),{})};
- const jsx=(type,props)=>({type,props});m.require=name=>name==='react'?react:name==='react/jsx-runtime'?{jsx,jsxs:jsx}:name==='../../stores/useDatasetStore'?{readDatasetAuthority:datasetModule.readDatasetAuthority,useDatasetStore:Object.assign(selector=>selector?selector(store.getState()):store.getState(),{getState:store.getState})}:name==='../../stores/useProjectStore'?{useProjectStore:hook(project)}:name==='../../services/api'?apiModule:name==='../runtime/useDeliveryScope'?{useDeliveryScope:()=>({key:project.project.id})}:Object.hasOwn(helpers,name)?helpers[name]:name.startsWith('.')?new Proxy({},{get:()=>()=>null}):original(name);
+ const shared=load(path.resolve(__dirname,'../../stores/assistContext.ts'),{});
+ const helpers={'./classDistribution':load(path.join(__dirname,'classDistribution.ts'),{}),'./datasetImportView':load(path.join(__dirname,'datasetImportView.ts'),{}),'./splitCalibrator':load(path.join(__dirname,'splitCalibrator.ts'),{}),'./datasetLayout':load(path.join(__dirname,'datasetLayout.ts'),{}),'../../utils/datasetSplitCapability':load(path.resolve(__dirname,'../../utils/datasetSplitCapability.ts'),{}),'../../stores/assistContext':shared,'../common/useScopedError':load(path.resolve(__dirname,'../common/useScopedError.ts'),{react})};
+ const jsx=(type,props)=>({type,props});m.require=name=>name==='react'?react:name==='react/jsx-runtime'?{jsx,jsxs:jsx}:name==='../../stores/useDatasetStore'?{readDatasetAuthority:datasetModule.readDatasetAuthority,useDatasetStore:Object.assign(selector=>selector?selector(store.getState()):store.getState(),{getState:store.getState})}:name==='../../stores/useProjectStore'?{useProjectStore:hook(project)}:name==='../../services/api'?apiModule:name==='../runtime/useDeliveryScope'?{useDeliveryScope:()=>({key:JSON.stringify(project.project)})}:Object.hasOwn(helpers,name)?helpers[name]:name.startsWith('.')?new Proxy({},{get:()=>()=>null}):original(name);
  m._compile(ts.transpileModule(fs.readFileSync(file,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022,jsx:ts.JsxEmit.ReactJSX,esModuleInterop:true}}).outputText,file);
  const render=()=>{cursor=0;const tree=m.exports.DatasetStudio();effects.splice(0).forEach(fn=>fn());return tree;};
  const switchProject=id=>{project.projectDir=`/projects/${id}`;project.project={...project.project,id,project_dir:project.projectDir};store.getState().setFolderPath('');store.getState().setFolderPath('/source');};
  const summary=total=>({total_images:total,classes:{},split:{train:0,val:0,test:0}});
- return{store,render,switchProject,reads,writes,pending,summary};
+ return{store,project,shared,render,switchProject,reads,writes,pending,summary,authority:datasetModule.readDatasetAuthority,unmount:()=>slots.forEach(slot=>slot?.cleanup?.())};
 }
+
+test('failed source restoration is readable in common guidance even before source acceptance, then clears with the error',async()=>{
+ const h=harness();h.render();h.switchProject('B');h.render();await tick();h.pending[0].reject(Error('저장 원본을 읽지 못했습니다. 폴더를 다시 선택하세요.'));await tick();h.render();
+ assert.equal(h.store.getState().sourceAuthority,null);
+ assert.deepEqual(h.shared.assistPanelErrors(),[{source:'데이터 준비',text:'저장 원본을 읽지 못했습니다. 폴더를 다시 선택하세요.'}]);
+ h.store.setState({importError:null});h.render();assert.deepEqual(h.shared.assistPanelErrors(),[]);h.unmount();
+});
+
+test('current source-save and split failures are summarized together and owned cleanup preserves other panels',()=>{
+ const h=harness();h.store.setState({sourceSaveError:'프로젝트 경로 저장 실패',splitError:'분할 저장 실패'});h.render();
+ assert.deepEqual(h.shared.assistPanelErrors(),[{source:'데이터 준비',text:'프로젝트 경로 저장 실패 · 분할 저장 실패'}]);
+ const other=h.shared.registerPanelError('데이터 준비','다른 패널 오류');h.unmount();
+ assert.deepEqual(h.shared.assistPanelErrors(),[{source:'데이터 준비',text:'다른 패널 오류'}]);other();
+});
+
+test('dataset guidance retires visible errors while project or session switching is in progress',()=>{
+ const h=harness();h.store.setState({splitError:'분할 저장 실패'});h.render();assert.equal(h.shared.assistPanelErrors().length,1);
+ h.project.isProjectBusy=true;h.render();assert.deepEqual(h.shared.assistPanelErrors(),[]);
+ h.project.isProjectBusy=false;h.render();assert.equal(h.shared.assistPanelErrors().length,1);
+ h.project.sharedSessionChanging=true;h.render();assert.deepEqual(h.shared.assistPanelErrors(),[]);h.unmount();
+});
+
+test('retained dataset errors cannot acquire a changed project, source, task or labelset scope',()=>{
+ for(const change of [
+  h=>{h.project.project.id='B';h.project.projectDir='/projects/B';},
+  h=>{h.project.project.source_dataset_dir='/new';h.store.setState({folderPath:'/new',datasetKey:'/new\0anomaly'});},
+  h=>{h.project.task=h.project.project.task='detection';h.store.setState({datasetKey:'/source\0detection'});},
+  h=>{h.project.project.active_labelset_id='next';},
+ ]){
+  const h=harness();h.store.setState({splitError:'이전 입력의 분할 오류'});h.render();assert.equal(h.shared.assistPanelErrors().length,1);
+  change(h);const seen=[];const unsubscribe=h.shared.subscribeAssistContext(()=>seen.push(...h.shared.assistPanelErrors()));h.render();h.render();
+  assert.deepEqual(h.shared.assistPanelErrors(),[]);assert.deepEqual(seen,[]);
+  h.store.setState({splitError:null,sourceAuthority:h.authority(),isLoading:false});h.render();h.store.setState({splitError:'이전 입력의 분할 오류'});h.render();
+  assert.deepEqual(h.shared.assistPanelErrors(),[{source:'데이터 준비',text:'이전 입력의 분할 오류'}]);unsubscribe();h.unmount();
+ }
+});
 
 test('same-folder project reset restores its own source exactly once without content writes',async()=>{
  const h=harness();h.render();assert.equal(h.reads.length,0,'already imported source is not fetched again');
@@ -44,4 +81,21 @@ test('an older in-flight same-folder summary cannot replace the next project sou
 });
 test('clearing a source does not dispatch a summary for the empty folder',()=>{
  const h=harness();h.render();h.store.getState().setFolderPath('');h.render();assert.deepEqual(h.reads,[]);assert.deepEqual(h.writes,[]);
+});
+
+function descendants(node,output=[]){if(!node||typeof node!=='object')return output;if(Array.isArray(node)){node.forEach(n=>descendants(n,output));return output;}output.push(node);descendants(node.props?.children,output);return output;}
+const slider=tree=>descendants(tree).find(n=>n.type==='input'&&n.props.type==='range');
+test('assistant split prefill updates an already mounted bar without saving or overwriting later manual input',()=>{
+ const h=harness();h.store.setState({splitSupported:true,split:{train:16,val:2,test:2},totalImages:20,splitState:'saved'});
+ let tree=h.render();assert.equal(slider(tree).props.value,80);
+ h.store.getState().prefillSplit(0.7);h.render();tree=h.render();assert.equal(slider(tree).props.value,70);
+ assert.deepEqual(h.store.getState().split,{train:16,val:2,test:2});assert.deepEqual(h.writes,[]);
+ slider(tree).props.onChange({target:{value:'85'}});tree=h.render();assert.equal(slider(tree).props.value,85);
+ h.render();tree=h.render();assert.equal(slider(tree).props.value,85,'a consumed request does not undo a manual edit');
+});
+test('a split prefill from another dataset or authority is not adopted',()=>{
+ const h=harness();h.store.setState({splitSupported:true,split:{train:16,val:2,test:2},totalImages:20,splitState:'saved'});h.render();
+ h.store.getState().prefillSplit(0.6);const old=h.store.getState().splitPrefill;
+ h.switchProject('B');h.store.setState({datasetKey:'/source\0anomaly',sourceAuthority:'other',splitPrefill:old,split:{train:16,val:2,test:2},totalImages:20,splitState:'saved'});
+ h.render();const tree=h.render();assert.equal(slider(tree).props.value,80);assert.deepEqual(h.writes,[]);
 });

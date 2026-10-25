@@ -5,8 +5,7 @@
 
 import React, { useState } from 'react';
 import { Plus, Tag } from 'lucide-react';
-import { DEFAULT_CATEGORIES, useAnnotationStore } from '../../stores/useAnnotationStore';
-import { useDatasetStore } from '../../stores/useDatasetStore';
+import { DEFAULT_CATEGORIES, isStandInCategory, useAnnotationStore } from '../../stores/useAnnotationStore';
 import { useProjectStore } from '../../stores/useProjectStore';
 
 export const CategorySelector: React.FC = () => {
@@ -16,22 +15,18 @@ export const CategorySelector: React.FC = () => {
   const [newCatName, setNewCatName] = useState('');
   const [isAdding, setIsAdding] = useState(false);
   const [showSamples, setShowSamples] = useState(false);
-  // The simple view leads with the project's own classes: the built-in example defect names stay one click away
-  // while unused, and a dataset class that has no label class yet is offered as one click. Display only; the
-  // categories and their IDs in saved labels are unchanged.
+  // The chips are the project's classes (the store adds every class the dataset counts) and the drawing class is one
+  // of them. The built-in example defect names are dashed buttons that create the class on a click: folded behind
+  // '예시 이름' in the simple view, inline in the full view, none under a label book. Display only; saved labels and
+  // their IDs are unchanged.
   const simpleView = useProjectStore((state) => state.viewMode) === 'simple';
   // Classification takes each image's class from its folder or the class picker above; this bar names drawn regions.
   const classification = useProjectStore((state) => state.task) === 'classification';
   const detection = useProjectStore((state) => state.task) === 'detection';
-  const datasetClasses = Object.keys(useDatasetStore((state) => state.classes) || {});
   const countOf = (cat: { id: number; name: string }) => annotations.filter((a) => a.category_id === cat.id || a.label === cat.name).length;
-  const isUnusedSample = (cat: { id: number; name: string }) => simpleView && !labelbookVersion && cat.name !== 'OK'
-    && DEFAULT_CATEGORIES.some((d) => d.id === cat.id && d.name === cat.name)
-    && !datasetClasses.includes(cat.name) && countOf(cat) === 0;
-  // The class used for drawing is always visible, even when it is an unused example name.
-  const samples = categories.filter((cat) => isUnusedSample(cat) && cat.id !== activeCategory.id);
-  const shown = showSamples ? categories : categories.filter((cat) => !isUnusedSample(cat) || cat.id === activeCategory.id);
-  const missing = simpleView && !labelbookVersion ? datasetClasses.filter((name) => !categories.some((cat) => cat.name === name)) : [];
+  const samples = labelbookVersion ? [] : DEFAULT_CATEGORIES.filter((d) => d.id > 0 && !categories.some((c) => c.name.toLowerCase() === d.name.toLowerCase()));
+  // With no defect class yet the store draws under its stand-in: say which name the first labels get.
+  const firstClassNote = !labelbookVersion && isStandInCategory(activeCategory);
 
   const handleAdd = () => {
     if (newCatName.trim()) {
@@ -53,9 +48,9 @@ export const CategorySelector: React.FC = () => {
         <span>클래스:</span>
       </span>
 
-      {shown.map((cat) => {
+      {categories.map((cat) => {
         const count = countOf(cat);
-        const isActive = activeCategory.id === cat.id;
+        const isActive = cat.id === activeCategory.id;
 
         return (
           <button
@@ -79,13 +74,13 @@ export const CategorySelector: React.FC = () => {
         );
       })}
 
-      {missing.map((name) => (
-        <button key={`missing:${name}`} type="button" onClick={() => addCategory(name)} title={`데이터셋의 ${name} 클래스를 라벨 클래스로 추가합니다`}
-          className="flex items-center gap-1 whitespace-nowrap rounded-full border border-dashed border-cyan-600 px-2.5 py-1 text-xs text-cyan-200 hover:bg-cyan-950/40">
-          <Plus className="h-3 w-3" aria-hidden="true" /><span>{name}</span>
+      {(!simpleView || showSamples) && samples.map((d) => (
+        <button key={`sample:${d.name}`} type="button" onClick={() => addCategory(d.name, d.color, d.id)} title={`예시 이름입니다. 누르면 '${d.name}' 클래스를 만들고 선택합니다`}
+          className="flex items-center gap-1 whitespace-nowrap rounded-full border border-dashed border-slate-600 px-2.5 py-1 text-xs text-slate-400 hover:bg-slate-800 hover:text-slate-200">
+          <Plus className="h-3 w-3" aria-hidden="true" /><span>{d.name}</span>
         </button>
       ))}
-      {samples.length > 0 && (
+      {simpleView && samples.length > 0 && (
         <button type="button" aria-expanded={showSamples} onClick={() => setShowSamples((open) => !open)}
           className="whitespace-nowrap rounded-full px-2 py-1 text-xs text-slate-500 hover:text-slate-300">
           {showSamples ? '예시 이름 숨기기' : `예시 이름 ${samples.length}개`}
@@ -121,6 +116,7 @@ export const CategorySelector: React.FC = () => {
           <Plus className="w-3.5 h-3.5" />
         </button>
       )}
+      {firstClassNote && <span className="whitespace-nowrap text-[11px] text-slate-400">불량 클래스가 아직 없어 그리는 라벨은 '{activeCategory.name}' 클래스로 저장됩니다 · 다른 이름은 + 로 추가</span>}
       {/* 한 장에 하나씩 (detection): one drag per image instead of drag + next; off by default for images with several defects. */}
       {detection && setAdvanceOnBox && <label className="ml-2 flex items-center gap-1 whitespace-nowrap text-xs text-slate-300"
         title="켜면 상자를 하나 그릴 때마다 저장하고 다음 이미지로 넘어갑니다. 한 장에 결함이 여러 개면 끄세요.">

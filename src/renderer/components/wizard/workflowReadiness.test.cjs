@@ -334,8 +334,15 @@ test('step 4 shows the loaded evaluation as an accuracy range, missed defects an
  const range=wilsonInterval(45,50),counts={samples:50,escapes:2,overkills:3,accuracy:90,low:Math.round(range.low*100),high:Math.round(range.high*100)};
  assert.deepEqual([counts.low,counts.high],[79,96]);assert.match(accuracyNote(45,50),/ 79~96%\)$/);
  const evaluated=getNextAction({...withModel,evaluation:counts});
- assert.equal(evaluated.status,'ready');assert.equal(evaluated.nextAction.label,'검사 흐름 만들기 (5단계)');
+ // 2 missed defects: the step is looked at before step 5 (5.3-4), the action opens the 미검 tab.
+ assert.equal(evaluated.status,'blocked');assert.equal(evaluated.nextAction.label,'틀린 이미지 보기');
+ assert.deepEqual([evaluated.nextAction.step,evaluated.nextAction.target],[4,'workflow-missed-defects']);
+ assert.equal(evaluated.missingInputs[0],'모델이 시험 이미지의 불량을 놓쳤습니다');assert.match(evaluated.missingInputs[1],/라벨 수정.*판정 기준 점수를 낮추거나.*→ 버튼/);assert.doesNotMatch(evaluated.missingInputs[1],/추천 점수 적용/,'a label shown in the simple view only');
  assert.deepEqual(evaluated.progress,counts);
+ // False alarms alone keep the ready path: the recommended score trades them for no misses, and the line still shows them.
+ const alarms=getNextAction({...withModel,evaluation:{...counts,escapes:0}});
+ assert.equal(alarms.status,'ready');assert.equal(alarms.nextAction.label,'검사 흐름 만들기 (5단계)');
+ assert.match(progressLine(4,alarms.progress,true),/잘못 잡은 정상 3장/);
  assert.equal(progressLine(4,evaluated.progress,true),' · 정확도 90% (79~96% 사이일 수 있음) · 놓친 불량 2장 · 잘못 잡은 정상 3장','the card\'s "could be" wording, not a certain range');
  assert.equal(progressLine(4,evaluated.progress,false),' · 90% right (could be 79~96%) · 2 missed defects · 3 false alarms');
  assert.equal(progressLine(4,{...counts,low:null},true),' · 정확도 90% · 놓친 불량 2장 · 잘못 잡은 정상 3장','no range without both ends');
@@ -451,7 +458,7 @@ test('the production hook feeds the training clock, the evaluation counts and th
   four.evaluation.jobId='m';four.evaluation.confidenceThreshold=0.5;
   four.evaluation.testPredictions=[{file_path:'a.png',verdict:'CORRECT_OK'},{file_path:'b.png',verdict:'CORRECT_NG'},{file_path:'c.png',verdict:'ESCAPE'},{file_path:'d.png',verdict:'OVERKILL'},{file_path:'e.png',verdict:'REVIEW'}];
   four.mount();resolveAll(four);const result=await four.settle();
-  assert.equal(result.readiness.status,'ready');
+  assert.equal(result.readiness.status,'blocked','one missed defect (c.png): looked at before step 5');assert.equal(result.readiness.nextAction.label,'틀린 이미지 보기');
   assert.deepEqual(result.readiness.progress,{samples:5,escapes:1,overkills:1,accuracy:40,low:12,high:77},'counted with the evaluation screen\'s verdict and range');
   assert.match(loadSampleConfidence().accuracyNote(2,5),/실제는 12~77% 사이/,'the range the step-4 card prints for 2 right of 5');
   four.evaluation.testPredictions=[{file_path:'a.png',verdict:'REVIEW'},{file_path:'b.png',verdict:'REVIEW'}];
@@ -591,4 +598,83 @@ test('a new inspection result replaces the step-6 counts in place; only its own 
  // Done images match the header's processed + errors, and the failures travel with them.
  assert.match(panel,/inspected: counts\.processed \+ counts\.errors, total: counts\.total, ng: counts\.ng, \.\.\.\(counts\.errors \? \{failed: counts\.errors\} : \{\}\)/);
  assert.match(panel,/const progress = summary\.total \? summary\.processed \+ summary\.errors : 0;/);
+});
+
+test('a failed training job guides the person to its error details instead of a ready start action',()=>{
+ const {getNextAction}=load();
+ const result=getNextAction({...base,stage:3,splitState:'saved',trainingStatus:'failed'});
+ assert.equal(result.status,'blocked');
+ assert.match(result.missingInputs.join(' '),/학습.*실패/);
+ assert.equal(result.nextAction.kind,'details');
+ assert.equal(result.nextAction.step,3);
+ assert.match(result.nextAction.label,/오류/);
+});
+
+// The footer's jump and the first-run guide reach their target by id. Three targets used to be found by their Korean
+// button text or title: in English nothing was found, and '프로젝트 관리 열기' only focused the project button (the guide
+// closed and nothing opened). Each target now carries its id, and the project button opens its dialog.
+test('every footer target is an element id or a named opener in the renderer',()=>{
+ const readiness=fs.readFileSync(path.join(__dirname,'workflowReadiness.ts'),'utf8');
+ const targets=[...new Set([...readiness.matchAll(/'((?:workflow|flow-area|draft)-[a-z0-9-]+|labeling-canvas|image-class-picker)'/g)].map(m=>m[1]))];
+ for(const expected of ['workflow-project','workflow-data','workflow-label-review','workflow-training','labeling-canvas','flow-area-edit','flow-area-evaluate'])assert.ok(targets.includes(expected),expected);
+ const root=path.join(__dirname,'..','..');const sources=[];
+ const walk=dir=>{for(const entry of fs.readdirSync(dir,{withFileTypes:true})){const file=path.join(dir,entry.name);if(entry.isDirectory())walk(file);else if(/\.tsx$/.test(entry.name))sources.push(fs.readFileSync(file,'utf8'));}};
+ walk(root);const all=sources.join('\n');
+ const flowAreas=fs.readFileSync(path.join(root,'components','flowchart','FlowEditorWorkspace.tsx'),'utf8');
+ for(const target of targets){
+  const literal=all.includes(`id="${target}"`)||all.includes(`data-workflow-opens="${target}"`);
+  const flowArea=target.startsWith('flow-area-')&&flowAreas.includes('id={`flow-area-${key}`}')&&flowAreas.includes(`['${target.slice('flow-area-'.length)}',`);
+  assert.ok(literal||flowArea,`${target} has an element`);
+ }
+ assert.doesNotMatch(readiness,/textContent\?\.trim\(\)===label|\[title="프로젝트 관리"\]/,'no lookup by interface text');
+ assert.match(fs.readFileSync(path.join(root,'components','wizard','WizardHeader.tsx'),'utf8'),/<button type="button" id="workflow-project" aria-haspopup="dialog" aria-expanded=\{showProjectPanel\} data-workflow-open-on-focus onClick=\{\(\) => setShowProjectPanel\(true\)\}/);
+ assert.match(fs.readFileSync(path.join(root,'components','onboarding','FirstRunStudio.tsx'),'utf8'),/onClick=\{\(\) => \{ onClose\(\); focusWorkflowTarget\('workflow-project'\); \}\}>프로젝트 관리 열기<\/button>/);
+});
+
+test('the jump presses a closed dialog opener and leaves it the focus; other openers and targets are focused',()=>{
+ const source=fs.readFileSync(path.join(__dirname,'workflowReadiness.ts'),'utf8');
+ const start=source.indexOf('export function focusWorkflowTarget'),end=source.indexOf('\n}\n',start)+3;
+ const helpers=source.slice(source.indexOf('function openFoldsAround'),source.indexOf('\n}\n',source.indexOf('function openFoldsAround'))+3);
+ const js=ts.transpileModule(helpers+source.slice(start,end),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText;
+ const make=(id,attrs={})=>{const el={id,attrs:{...attrs},clicks:0,focused:false,scrolled:false,parentElement:null,closest:()=>null,
+  getAttribute(name){return name in this.attrs?String(this.attrs[name]):null;},hasAttribute(name){return name in this.attrs;},
+  click(){this.clicks++;if('aria-expanded' in this.attrs)this.attrs['aria-expanded']='true';},scrollIntoView(){this.scrolled=true;},focus(){this.focused=true;doc.activeElement=this;}};return el;};
+ const frames=[];const doc={activeElement:null,elements:{},getElementById(id){return this.elements[id]||null;},querySelector:()=>null};
+ const run=new Function('document','requestAnimationFrame','HTMLElement','exports',js+';exports.focusWorkflowTarget=focusWorkflowTarget;');
+ const exports={};run(doc,fn=>frames.push(fn),function(){},exports);
+ const flush=()=>{while(frames.length)frames.shift()();};
+ const project=make('workflow-project',{'aria-haspopup':'dialog','aria-expanded':'false','data-workflow-open-on-focus':''});
+ const queue=make('draft-review-queue',{'aria-expanded':'false','data-workflow-open-on-focus':''});
+ const data=make('workflow-data');
+ doc.elements={'workflow-project':project,'draft-review-queue':queue,'workflow-data':data};
+ exports.focusWorkflowTarget('workflow-project');flush();
+ assert.equal(project.clicks,1,'the project dialog is opened');assert.equal(project.focused,false,'the dialog keeps the focus it takes');
+ exports.focusWorkflowTarget('draft-review-queue');flush();
+ assert.equal(queue.clicks,1);assert.equal(queue.focused,true,'a popover opener is still focused');
+ exports.focusWorkflowTarget('workflow-data');flush();
+ assert.equal(data.clicks,0);assert.equal(data.focused,true);assert.equal(data.scrolled,true);
+ // Step 4's '틀린 이미지 보기' presses the 미검 tab once (the list then shows the missed images) and focuses it.
+ const missed=make('workflow-missed-defects',{role:'tab','aria-selected':'false'});doc.elements['workflow-missed-defects']=missed;
+ exports.focusWorkflowTarget('workflow-missed-defects');flush();
+ assert.equal(missed.clicks,1);assert.equal(missed.focused,true);
+ const shown=make('workflow-missed-defects',{role:'tab','aria-selected':'true'});doc.elements['workflow-missed-defects']=shown;
+ exports.focusWorkflowTarget('workflow-missed-defects');flush();
+ assert.equal(shown.clicks,0,'an already selected tab is not pressed again');assert.equal(shown.focused,true);
+});
+
+test('step 4 waits for the evaluation screen\'s read, is not done without its results, and a result with no image to score keeps the ready path',()=>{
+ const {getNextAction}=load();
+ const model={job_id:'m',task:'classification',checkpoint_state:'current',data_state:'current',scope_matches:true};
+ const withModel={...base,stage:4,modelJobId:'m',evidence:{...base.evidence,impact:{...base.evidence.impact,models:[model],model_evaluations:[{job_id:'m',state:'current',evaluation_id:'e1'}]}}};
+ const loading=getNextAction({...withModel,evaluationLoading:true});
+ assert.deepEqual([loading.status,loading.nextAction.label,loading.nextAction.step,loading.nextAction.kind],['checking','준비도 다시 확인',4,'refresh']);
+ // Recorded but not on the screen (a failed read, or a selection that cleared it): the misses are unknown, the step is not done.
+ const missing=getNextAction({...withModel,evaluationLoading:false});
+ assert.deepEqual([missing.status,missing.nextAction.label,missing.nextAction.step,missing.nextAction.target],['unknown','새로고침 버튼으로 이동 (4단계)',4,'evaluation-refresh']);
+ assert.equal(missing.missingInputs[0],'시험 이미지 평가 결과가 화면에 없습니다');
+ const failed=getNextAction({...withModel,evaluationError:'연결이 끊겼습니다'});
+ assert.deepEqual([failed.status,failed.missingInputs[0]],['blocked','시험 이미지 평가 결과를 읽지 못했습니다: 연결이 끊겼습니다'],'a failed read is for a person to look at');
+ const unscored=getNextAction({...withModel,evaluation:{samples:5,escapes:0,overkills:0,accuracy:null,low:null,high:null}});
+ assert.equal(unscored.status,'ready');assert.equal(unscored.nextAction.label,'검사 흐름 만들기 (5단계)');
+ assert.equal(getNextAction({...withModel,evaluationLoading:true,evaluation:{samples:3,escapes:3,overkills:0,accuracy:0,low:0,high:56}}).nextAction.label,'틀린 이미지 보기','counts already in: the misses decide');
 });

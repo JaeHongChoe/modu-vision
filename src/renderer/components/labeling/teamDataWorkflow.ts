@@ -14,5 +14,6 @@ export function bookPalette(rows:Pick<BookCategory,'id'|'name'|'color'>[],existi
 }
 export function reviewTrainingMessage(readiness:Pick<TeamReadiness,'ready'|'blockers'> & {counts:Partial<TeamReadiness['counts']>}):string{
  if(!readiness.ready)return readiness.blockers.join(' · ')||'학습할 승인 데이터를 준비하세요.';
- return `학습 대상 ${readiness.counts.eligible||0}장 · 승인 ${readiness.counts.approved||0}장 · 검수 대기 ${readiness.counts.pending||0}장. 기존 시험 분할을 유지합니다.`;
+ // eligible is counted before labels and the split: it is what review has not excluded, not what will be trained.
+ return `검수로 빠지지 않은 이미지 ${readiness.counts.eligible||0}장 · 승인 ${readiness.counts.approved||0}장 · 검수 대기 ${readiness.counts.pending||0}장 (라벨 없는 이미지와 시험 이미지도 센 수). 기존 시험 분할을 유지합니다.`;
 }

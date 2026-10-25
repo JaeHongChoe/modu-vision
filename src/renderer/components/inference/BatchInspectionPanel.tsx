@@ -11,6 +11,8 @@ import { useFlowchartStore } from '../../stores/useFlowchartStore';
 import { useProjectStore } from '../../stores/useProjectStore';
 import { useInspectionRunStore } from '../../stores/useInspectionRunStore';
 import { publishInspectionProgress } from '../../stores/workflowProgress';
+import { registerPanelError } from '../../stores/assistContext';
+import { useScopedError } from '../common/useScopedError';
 import type { FlowchartPipeline } from '../../types';
 import { activeSavedVersion, savedFlowIdentity, type SavedFlowIdentity } from '../flowchart/flowHandoff';
 import { SavedFlowIdentityCard } from '../flowchart/SavedFlowIdentityCard';
@@ -65,25 +67,29 @@ export const BatchInspectionPanel: React.FC = () => {
   const task = useProjectStore((state) => state.task);
   const projectDir = useProjectStore((state) => state.projectDir);
   const project = useProjectStore((state) => state.project);
+  const projectBusy = useProjectStore((state) => state.isProjectBusy);
   const setStep = useProjectStore((state) => state.setStep);
   const technicalDetails = useProjectStore((state) => state.technicalDetails);
   const hasUnsavedDraft = useFlowchartStore((state) => state.pipelineDirty);
   const { folderPath, datasetKey, hasSelectedFolder, importError, sourceSaveError, isLoading: datasetIsLoading,
     isSplitting, lastImportedKey, staleDatasetKeys } = useDatasetStore();
   const contextRevision = useFlowchartStore((state) => state.contextRevision);
+  const errorScope = JSON.stringify([projectDir, project?.id, project?.source_dataset_dir,
+    project?.active_labelset_id || 'default', task, folderPath, datasetKey, contextRevision,
+    getApiPersistenceIdentity(), getProjectContextGeneration()]);
   const [scope, setScope] = useState<BatchScope>('test');
   const [report, setReport] = useState<BatchInspectionReport | null>(null);
   const [filter, setFilter] = useState<BatchFilter>('all');
   const [selectedPath, setSelectedPath] = useState<string | null>(null);
   const [isRunning, setIsRunning] = useState(false);
   const [stopRequested, setStopRequested] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useScopedError(errorScope);
   const [history, setHistory] = useState<InspectionRunSummary[]>([]);
-  const [historyError, setHistoryError] = useState<string | null>(null);
+  const [historyError, setHistoryError] = useScopedError(errorScope);
   const [historyLoading, setHistoryLoading] = useState(false);
   const [savedFlow, setSavedFlow] = useState<{ version: SavedFlowVersion; pipeline: FlowchartPipeline; identity: SavedFlowIdentity } | null>(null);
   const [savedFlowLoading, setSavedFlowLoading] = useState(false);
-  const [savedFlowError, setSavedFlowError] = useState<string | null>(null);
+  const [savedFlowError, setSavedFlowError] = useScopedError(errorScope);
   const [reviewer, setReviewer] = useState(() => localStorage.getItem('inspection-reviewer') || 'operator');
   const [reviewReason, setReviewReason] = useState('');
   const [reviewSaving, setReviewSaving] = useState(false);
@@ -189,7 +195,7 @@ export const BatchInspectionPanel: React.FC = () => {
       if (active) setSavedFlowError(cause instanceof Error ? cause.message : String(cause));
     }).finally(() => { if (active) setSavedFlowLoading(false); });
     return () => { active = false; };
-  }, [resetKey]);
+  }, [resetKey, errorScope]);
 
   useEffect(() => {
     historyRequestRef.current += 1;
@@ -203,7 +209,7 @@ export const BatchInspectionPanel: React.FC = () => {
     setScope('test');
     setError(null);
     setReviewSaving(false);
-  }, [resetKey]);
+  }, [resetKey, errorScope]);
 
   useEffect(() => {
     setReport(null);
@@ -230,7 +236,7 @@ export const BatchInspectionPanel: React.FC = () => {
       if (isCurrent()) setHistoryError(cause instanceof Error ? cause.message : String(cause));
     }).finally(() => { if (isCurrent()) setHistoryLoading(false); });
     return () => { active = false; };
-  }, [folderPath, task, projectDir, historyContext.canonicalSourceFolder, sourceReady,requestedRun,handoff?.taskKey,handoff?.selectionId]);
+  }, [folderPath, task, projectDir, historyContext.canonicalSourceFolder, sourceReady,requestedRun,handoff?.taskKey,handoff?.selectionId,errorScope]);
 
   const openHistoryRun = async (runId: string, preferredImagePath?: string) => {
     const started = historyContext;
@@ -384,6 +390,19 @@ export const BatchInspectionPanel: React.FC = () => {
   useEffect(() => () => publishInspectionProgress(progressScope, null), [progressScope]);
   const visibleRows = filterBatchRows(rows, filter);
   const selected = visibleRows.find((row) => row.image.file_path === selectedPath) ?? visibleRows[0] ?? null;
+  const visibleError = [...new Set([
+    visibleCounts?.state === 'error' ? visibleCounts.message : null,
+    savedFlowError, error, historyError, selected?.error,
+  ].filter(Boolean))].join(' · ');
+  const publishedErrorScope = useRef(errorScope);
+  useEffect(() => {
+    // The source-reset effect retires the previous report after this render. Never publish its row error
+    // under the next project/label set while that state update is waiting to render.
+    if (publishedErrorScope.current !== errorScope) { publishedErrorScope.current = errorScope; return; }
+    if (project?.project_dir !== projectDir || project.task !== task || project.source_dataset_dir !== folderPath
+      || projectBusy) return;
+    return registerPanelError('검사 실행', visibleError);
+  }, [errorScope, project, projectDir, task, folderPath, projectBusy, visibleError]);
   const previewSource=inspectionPreview(selected?.result?.annotated_image,selected?.image.thumbnail_url);
   const previewIsResult=!!selected?.result?.annotated_image&&safeSnapshot(selected.result.annotated_image);
   const closeEvidence=()=>{evidenceRequest.current++;setEvidenceView(null);};

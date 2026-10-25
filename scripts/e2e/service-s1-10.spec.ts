@@ -13,6 +13,10 @@ test('a plain browser explains that it cannot open a folder dialog, and paths ar
  await page.goto(renderer.url);
  await expect(page.getByRole('navigation',{name:'프로젝트 작업 공간'})).toBeVisible();
  expect(await page.evaluate(()=>'api' in window),'no preload bridge in a plain browser').toBe(false);
+ // The workspace row shows before the current project has loaded, and the step's notice belongs to the project scope it
+ // was raised in (a scope change hides it). Click once this project is the current one: a CI run clicked while
+ // /api/project/current was still answering, and the notice raised in the empty scope was hidden when the project arrived.
+ await expect(page.getByRole('button',{name:'S110 workspace'}).first()).toBeVisible();
  // the dataset step's folder button answers instead of doing nothing
  await page.getByRole('button',{name:'데이터셋 폴더 열기'}).click();
  await expect(page.getByRole('alert').filter({hasText:'브라우저에서는 폴더·파일 선택 창을 열 수 없습니다'})).toBeVisible();

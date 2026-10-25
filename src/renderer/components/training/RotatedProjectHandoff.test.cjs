@@ -45,7 +45,7 @@ function fixture(){
  const program={automated:{capabilities:async()=>({tasks:{rotated_detection:cap}}),jobs:async()=>({jobs:[]})}};
  const mocks={
   react,'react/jsx-runtime':{jsx,jsxs:jsx,Fragment:'fragment'},'lucide-react':{},
-  '../../stores/useProjectStore':{useProjectStore:store},'../../stores/useDatasetStore':{useDatasetStore:datasetStore},'../../stores/useTrainingStore':{useTrainingStore:()=>training},'../../stores/useComputeStore':{useComputeStore:computeStore},
+  '../../stores/useProjectStore':{useProjectStore:store},'../../stores/useDatasetStore':{useDatasetStore:datasetStore,readDatasetAuthority:()=> 'owned'},'../../stores/useTrainingStore':{useTrainingStore:()=>training},'../../stores/useComputeStore':{useComputeStore:computeStore},
   '../../services/api':{api:{},request,getApiPersistenceIdentity:()=> 'local'},
   '../../services/specializedApi':{specializedApi:{rotated:{models:async()=>({models:[]}),manifest:async p=>manifest(p)}}},
   '../../services/modelExecution':{},
@@ -57,7 +57,7 @@ function fixture(){
   '../../utils/trainingComputeReadiness':{trainingComputeReadiness:()=>({ready:true})},
   './modelTrainingOptions':{modelChoices:{classification:[{value:'model'}]},dinoSyntheticDefaults:{},manualTrainingRecipe:()=>({}),trainingModelOverrides:()=>({})},
   '../wizard/TaskChangeImpactDialog':{taskPreviewScope:()=> 'scope'},'../common/errorActions':{},'./trainingLog':{},
-  './TrainingSchedulingSettings':{defaultTrainingScheduling:{},trainingSchedulingOptions:()=>({})},'./useSelectedCoreJob':{useSelectedCoreJob:()=>null}
+  './TrainingSchedulingSettings':{defaultTrainingScheduling:{},trainingSchedulingOptions:()=>({})},'./useSelectedCoreJob':{useSelectedCoreJob:()=>({job:null,error:null})}
  };
  for(const name of ['../common/OperatorGuidanceBanner','../common/GuardrailBanner','../common/LedAnnunciator','./OscilloscopeLossCurve','./HardwareTelemetryPanel','./RecipePresetSelector','./OCRWorkbench','./DefectGANWorkbench','./EnhancementWorkbench','./ModelFamilyCatalog','./DinoSyntheticOptions','./PatchClassificationWorkbench','./RotationWorkbench','./TrainingPreparationPanel','./JobProgressView','../runtime/OperationsObservabilityPanel','./ModelExecutionEvidence'])mocks[name]={};
  const {WarmStartSelector}=load('WarmStartSelector.tsx',mocks);mocks['./WarmStartSelector']={WarmStartSelector};

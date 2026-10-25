@@ -13,6 +13,8 @@ import { applyConvertedShape } from '../components/labeling/convertedAnnotation'
 import {bookPalette,imageLeaseToken} from '../components/labeling/teamDataWorkflow';
 import type {BookCategory,EditLease} from '../services/teamDataApi';
 
+// Example defect names: the class bar offers them as one-click additions, never as the palette or the drawing class by
+// themselves. OK (id 0) is the normal tag.
 export const DEFAULT_CATEGORIES: Category[] = [
   { id: 0, name: 'OK', color: '#10b981' },
   { id: 1, name: 'Solder Bridge', color: '#3b82f6' },
@@ -21,6 +23,49 @@ export const DEFAULT_CATEGORIES: Category[] = [
   { id: 4, name: 'Void', color: '#a855f7' },
   { id: 5, name: 'Contamination', color: '#06b6d4' },
 ];
+// The drawing class of a project that has no class yet: neutral, the backend's own default label, ASCII because result
+// overlays print class names with OpenCV's font. The class bar says so, and 클래스 이름 변경 renames it with a backup.
+// It is also the drawing class before the first load of a project (whether a class was picked is `classPicked`).
+export const FIRST_CLASS: Category = { id: 1, name: 'defect', color: '#3b82f6' };
+const BASE_CATEGORIES: Category[] = [DEFAULT_CATEGORIES[0]];
+// The copy of FIRST_CLASS the store puts in a palette is marked (a symbol key survives the palette's object spreads and is
+// never serialised), so a class a person names 'defect' is never mistaken for it.
+const STAND_IN = Symbol('stand-in class');
+const isStandIn = (c: Category) => Boolean((c as Category & { [STAND_IN]?: true })[STAND_IN]);
+/** Whether `c` is the store's stand-in (the class bar says which name the first labels get). */
+export const isStandInCategory = isStandIn;
+// The stand-in becomes a real class once a person picks it or draws with it: drop the mark there and in the palette.
+const unmarked = (c: Category): Category => ({ id: c.id, name: c.name, color: c.color });
+// Normal-class names keep their chips, but a region is drawn to mark a defect, so none of them is the default drawing
+// class. This is the normal test of utils/classSemantics.ts (the renderer port of backend class_semantics), repeated here
+// because the store takes no new imports (its tests load it with fixed module mocks); drawingClassDefault.test.cjs checks
+// that both agree on every shared case in classSemanticsCases.json.
+const NORMAL_WHOLE = new Set(['0', 'bg', 'background', 'nodefect', 'nondefect', 'nondefective', 'notdefective', 'defectfree']);
+const NORMAL_TOKENS = new Set(['ok', 'good', 'normal', 'pass', 'passed', '정상', '정상품', '양품', '합격']);
+const DEFECT_TOKENS = new Set(['ng', 'nok', 'defect', 'defective', 'fail', 'failed', '불량', '불량품', '불합격', '비정상', '결함']);
+export function isNormalClassName(name: string): boolean {
+  const tokens = String(name).normalize('NFKC').toLowerCase().trim().split(/[\s_\-./]+/u).filter(Boolean);
+  if (NORMAL_WHOLE.has(tokens.join(''))) return true;
+  const found = new Set<string>();
+  let negate = false;
+  for (const token of tokens) {
+    if (token === 'no' || token === 'non' || token === 'not') { negate = true; continue; }
+    const role = NORMAL_TOKENS.has(token) ? 'normal' : DEFECT_TOKENS.has(token) ? 'defect' : null;
+    if (role) found.add(negate ? (role === 'normal' ? 'defect' : 'normal') : role);
+    negate = false;
+  }
+  return found.size === 1 && found.has('normal');
+}
+const pickable = (c: Category) => c.id > 0 && !isNormalClassName(c.name);
+/** A shape drawn under the drawing class makes it the person's class (kept on the next images), and a stand-in drawn
+ *  with becomes a real class. */
+function claimDrawingClass(state: { activeCategory: Category; categories: Category[] }, item: { label?: string; category_id?: number }) {
+  const active = state.activeCategory;
+  if (item.label !== active.name || item.category_id !== active.id) return {};
+  if (!isStandIn(active)) return { classPicked: true };
+  const real = unmarked(active);
+  return { classPicked: true, activeCategory: real, categories: state.categories.map((c) => isStandIn(c) && c.id === active.id ? real : c) };
+}
 
 const MAX_HISTORY = 40;
 let annotationLoadSequence = 0;
@@ -99,6 +144,10 @@ interface AnnotationState {
    *  and a save tried in between says the lease is on its way instead of asking for 편집 시작 again. */
   editLeaseAcquiring: { image_uuid: string } | null;
   labelbookVersion: number | null;
+  /** The source folder and task the class palette was built for; another one starts a fresh palette. */
+  paletteContext: string | null;
+  /** The person picked the drawing class (a chip, a new class) or drew with it; until then each image's load picks the default. */
+  classPicked: boolean;
   setTeamEditingEnabled: (enabled:boolean) => void;
   setTeamReviewEnabled: (enabled:boolean) => void;
   setEditLease: (lease:EditLease|null) => void;
@@ -135,7 +184,7 @@ interface AnnotationState {
   setActiveTool: (tool: ToolType) => void;
   setActiveCategory: (cat: Category) => void;
   setCurrentLabel: (label: string) => void;
-  addCategory: (name: string, color?: string) => void;
+  addCategory: (name: string, color?: string, preferredId?: number) => void;
   setBrushRadius: (radius: number) => void;
   commitBrushMask: (dataUrl: string) => void;
 
@@ -183,12 +232,17 @@ export const useAnnotationStore = create<AnnotationState>((set, get) => ({
   editLease:null,
   editLeaseAcquiring:null,
   labelbookVersion:null,
+  paletteContext:null,
+  classPicked:false,
   setTeamEditingEnabled:(enabled)=>set({teamEditingEnabled:enabled}),
   setTeamReviewEnabled:(enabled)=>set({teamReviewEnabled:enabled}),
   setEditLease:(editLease)=>set({editLease}),
   // The 'on its way' notice of a save refused meanwhile goes with the request, so a refused 편집 시작 does not leave it behind.
   setEditLeaseAcquiring:(editLeaseAcquiring)=>set(state=>({editLeaseAcquiring,...(!editLeaseAcquiring&&state.saveMessage===LEASE_PENDING_MESSAGE?{saveMessage:null}:{})})),
-  setLabelbook:(version,categories)=>{const next=categories?.length?bookPalette(categories,get().categories):get().categories;const active=next.find(row=>row.name===get().activeCategory.name)||next[0];set({labelbookVersion:version,categories:next,...(active?{activeCategory:active,currentLabel:active.name}:{})});},
+  // With no book there is nothing to enforce (the panel clears the book on every scope change, often before the first
+  // labels load), so the drawing class stays. With one, a save under a class outside it is refused (team_data.py): the
+  // drawing class is a book class, the one in use or else the first that is not the OK tag.
+  setLabelbook:(version,categories)=>{if(!categories?.length){set({labelbookVersion:version});return;}const next=bookPalette(categories,get().categories);const book=next.slice(0,categories.length);const kept=book.find(row=>row.name===get().activeCategory.name);const active=kept||book.find(pickable)||book.find(row=>row.id>0)||book[0];set({labelbookVersion:version,categories:next,activeCategory:active,currentLabel:active.name,classPicked:get().classPicked&&Boolean(kept)});},
   task: 'detection',
   images: [],
   currentImageIndex: -1,
@@ -198,9 +252,9 @@ export const useAnnotationStore = create<AnnotationState>((set, get) => ({
   annotations: [],
   selectedAnnotationId: null,
   activeTool: 'bbox',
-  activeCategory: DEFAULT_CATEGORIES[1],
-  currentLabel: DEFAULT_CATEGORIES[1].name,
-  categories: DEFAULT_CATEGORIES,
+  activeCategory: FIRST_CLASS,
+  currentLabel: FIRST_CLASS.name,
+  categories: BASE_CATEGORIES,
   brushRadius: 12,
 
   viewTransform: { scale: 1, offsetX: 0, offsetY: 0 },
@@ -235,7 +289,7 @@ export const useAnnotationStore = create<AnnotationState>((set, get) => ({
     const current = idx >= 0 ? images[idx] : null;
     set({
       images,
-      ...(!images.length?{teamEditingEnabled:false,teamReviewEnabled:false,editLease:null,editLeaseAcquiring:null,labelbookVersion:null,categories:DEFAULT_CATEGORIES}:{}),
+      ...(!images.length?{teamEditingEnabled:false,teamReviewEnabled:false,editLease:null,editLeaseAcquiring:null,labelbookVersion:null,paletteContext:null,classPicked:false,categories:BASE_CATEGORIES,activeCategory:FIRST_CLASS,currentLabel:FIRST_CLASS.name}:{}),
       externalSelectionPath: current?.file_path === externalSelectionPath ? externalSelectionPath : null,
       metadata: null,
       loadedAnnotationContext: null,
@@ -377,6 +431,7 @@ export const useAnnotationStore = create<AnnotationState>((set, get) => ({
       annotations: [...annotations, itemWithId],
       selectedAnnotationId: itemWithId.id || null,
       isDirty: true,
+      ...claimDrawingClass(get(), itemWithId),
     });
   },
 
@@ -425,7 +480,11 @@ export const useAnnotationStore = create<AnnotationState>((set, get) => ({
 
   setActiveTool: (tool) => set({ activeTool: tool, autoSelectError: null }),
 
-  setActiveCategory: (cat) => set({ activeCategory: cat, currentLabel: cat.name }),
+  setActiveCategory: (cat) => {
+    const picked = isStandIn(cat) ? unmarked(cat) : cat;
+    set((state) => ({ activeCategory: picked, currentLabel: picked.name, classPicked: true,
+      ...(picked !== cat ? { categories: state.categories.map((c) => isStandIn(c) && c.id === cat.id ? picked : c) } : {}) }));
+  },
 
   setCurrentLabel: (label) => {
     const cat = get().categories.find((c) => c.name === label) || {
@@ -433,12 +492,18 @@ export const useAnnotationStore = create<AnnotationState>((set, get) => ({
       name: label,
       color: '#3b82f6',
     };
-    set({ currentLabel: label, activeCategory: cat });
+    set({ currentLabel: label, activeCategory: cat, classPicked: true });
   },
 
-  addCategory: (name, color) => {
+  addCategory: (name, color, preferredId) => {
     const { categories } = get();
-    const newId = categories.length > 0 ? Math.max(...categories.map((c) => c.id)) + 1 : 1;
+    // The palette merges names ignoring letter case, so a name it already has picks that class (a stand-in becomes real)
+    // instead of a second class under another id that the next image would drop.
+    const existing = categories.find((c) => c.name.toLowerCase() === name.toLowerCase());
+    if (existing) { get().setActiveCategory(existing); return; }
+    // An example name keeps its own id while that id is free, so the same example gets the same id in every project.
+    const newId = preferredId && preferredId > 0 && !categories.some((c) => c.id === preferredId) ? preferredId
+      : categories.length > 0 ? Math.max(...categories.map((c) => c.id)) + 1 : 1;
     const newCat: Category = {
       id: newId,
       name,
@@ -448,6 +513,7 @@ export const useAnnotationStore = create<AnnotationState>((set, get) => ({
       categories: [...categories, newCat],
       activeCategory: newCat,
       currentLabel: name,
+      classPicked: true,
     });
   },
 
@@ -468,6 +534,7 @@ export const useAnnotationStore = create<AnnotationState>((set, get) => ({
       history: [...history, annotations].slice(-MAX_HISTORY),
       future: [],
       isDirty: true,
+      ...claimDrawingClass(get(), updated),
     });
   },
 
@@ -569,7 +636,34 @@ export const useAnnotationStore = create<AnnotationState>((set, get) => ({
         color: item.color || DEFAULT_CATEGORIES.find((c) => c.name === item.label)?.color || '#3b82f6',
       }));
 
-      const currentCats=labelCategoryPalette(get().categories,items,data.mask_classes);
+      // The project's own classes, most used first, join the palette and the most used one is the default drawing class.
+      // The import summary also counts 'defect_mask' (segmentation: mask images) and 'good' (anomaly: normal images);
+      // neither is a class to draw. A label book sets the classes itself.
+      const counts=useDatasetStore.getState().classes||{};const task=get().task;
+      const projectClasses=get().labelbookVersion?[]:Object.keys(counts)
+        .filter(name=>!(task==='segmentation'&&name==='defect_mask')&&!(task==='anomaly'&&name==='good')).sort((a,b)=>counts[b]-counts[a]);
+      // A palette built for another source folder or task starts fresh, as on a project switch (a label book keeps its own).
+      const paletteContext=JSON.stringify([useDatasetStore.getState().folderPath,task]);
+      const fresh=!get().labelbookVersion&&get().paletteContext!==null&&get().paletteContext!==paletteContext;
+      // The stand-in class of a project without classes leaves once the project has its own, unless this image uses it.
+      const standIn=(c:Category)=>isStandIn(c)&&projectClasses.length>0
+        &&!projectClasses.some(name=>name.toLowerCase()===c.name.toLowerCase())&&!items.some(a=>a.label===c.name);
+      // A stand-in whose name the project or this image now has is a real class: it keeps its id and loses the mark.
+      const owned=(c:Category)=>projectClasses.some(name=>name.toLowerCase()===c.name.toLowerCase())||items.some(a=>a.label.toLowerCase()===c.name.toLowerCase());
+      const merged=labelCategoryPalette((fresh?BASE_CATEGORIES:get().categories).filter(c=>!standIn(c)).map(c=>isStandIn(c)&&owned(c)?unmarked(c):c),items,data.mask_classes,projectClasses);
+      let freeId=1;while(merged.some(c=>c.id===freeId))freeId++;
+      const currentCats=merged.some(pickable)?merged:[...merged,{...FIRST_CLASS,id:freeId,[STAND_IN]:true} as Category];
+      const named=(name:string)=>currentCats.find(c=>c.id>0&&c.name.toLowerCase()===name.toLowerCase());
+      const firstPickable=(names:string[])=>names.map(named).find(c=>c&&pickable(c));
+      // A class the person picked (or drew with) stays picked while it exists. Otherwise each image's load picks a defect
+      // class: this image's own first (the dataset counts can name a class the masks do not), then the project's most
+      // used, never a normal name.
+      const current=get().activeCategory;
+      // The palette merges names ignoring letter case, so the pick follows its entry the same way.
+      const kept=!fresh&&get().classPicked?(currentCats.find(c=>c.name===current.name)||currentCats.find(c=>c.name.toLowerCase()===current.name.toLowerCase())):undefined;
+      const own=[...(data.mask_classes||[]).filter((c:{id:number})=>c.id>0).map((c:{name:string})=>c.name),
+        ...items.filter(a=>a.type!=='tag'&&a.category_id).map(a=>a.label)];
+      const active=kept||firstPickable(own)||firstPickable(projectClasses)||currentCats.find(pickable)||currentCats[0]||current;
 
       const nextDimensions = data.image_width && data.image_height
         ? { width: data.image_width, height: data.image_height }
@@ -579,7 +673,10 @@ export const useAnnotationStore = create<AnnotationState>((set, get) => ({
         annotations: items,
         metadata: data.metadata || null,
         categories: currentCats,
-        activeCategory: currentCats.find(c=>c.name===get().activeCategory.name)||currentCats[0]||get().activeCategory,
+        activeCategory: active,
+        currentLabel: active.name,
+        paletteContext,
+        classPicked: Boolean(kept),
         imageDimensions: nextDimensions,
         maskUrl: data.mask_file ? annotationMaskUrl(currentImage) : null,
         isDirty: false,

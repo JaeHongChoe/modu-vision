@@ -84,7 +84,7 @@ test('the simple view folds the step 3 training location, the step 4 comparison,
 test('간단히 보기 is one header row: the steps join the first row, the second row and the workspace row are 모두 보기 only, and every other control keeps its name under 더 보기',()=>{
  const header=read('src/renderer/components/wizard/WizardHeader.tsx');
  assert.match(header,/\{!full && <div[^>]*>\{stepBar\}<\/div>\}/,'the step bar sits in the first row in the simple view');
- assert.match(header,/\{full && \(\s*<div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 bg-\[#131822\] px-4 py-2">\s*\{taskSelect\}\s*\{stepBar\}\s*\{modelLocation\}/,'모두 보기 keeps the second row as it was');
+ assert.match(header,/\{full && \(\s*<div(?: data-wizard-header-row="steps")? className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 bg-\[#131822\] px-4 py-2">\s*\{taskSelect\}\s*\{stepBar\}\s*\{modelLocation\}/,'모두 보기 keeps the second row and controls as they were, with its optional layout marker');
  const menu=header.slice(header.indexOf("{ko ? '더 보기' : 'More'}</summary>"),header.indexOf('</details>}'));
  // A problem (backend not answering, a chosen server not checked) is lifted into the row instead of hiding in the menu.
  assert.match(header,/\{\(full \|\| probeProblem\) && probeNote\}\s*\{!full && engineProblem && engineChip\}/);
@@ -143,10 +143,11 @@ test('the simple view gives every step a plain page header and moves each step\'
  const studio=read('src/renderer/components/dataset/DatasetStudio.tsx');assert.match(studio,/`폴더: \$\{folderPath/);
 });
 
-test('the simple view states the training target in one sentence and folds the review counts and team actions',()=>{
+test('the simple view states the team review result in one sentence, never as a training count, and folds the review counts and team actions',()=>{
  const readiness=read('src/renderer/components/training/TeamTrainingReadiness.tsx');
  const simple=readiness.slice(readiness.indexOf("if(project.viewMode==='simple')"),readiness.indexOf(' return <section aria-label="팀 검수 학습 준비"',readiness.indexOf("if(project.viewMode==='simple')")+1));
- assert.match(simple,/학습에 쓸 이미지/);assert.match(simple,/학습 대상 이미지 \$\{value\.counts\.eligible/);assert.match(simple,/:reviewTrainingMessage\(value\)/,'blockers still read as before');
+ assert.match(simple,/<strong>팀 검수<\/strong>/);assert.match(simple,/팀 검수 기준으로는 학습할 수 있습니다/);assert.match(simple,/:reviewTrainingMessage\(value\)/,'blockers still read as before');
+ assert.ok(!simple.includes('학습 대상'),'the training count is the saved split in item 1, not the review count');
  const folded=simple.slice(simple.indexOf('<summary'));
  for(const detail of ['reviewTrainingMessage(value)','라벨 기준','대상 다시 확인','팀 검수 열기'])assert.ok(folded.includes(detail),`${detail} sits behind 검수 세부`);
  assert.ok(!simple.includes('sha256'),'hashes stay in the full view');

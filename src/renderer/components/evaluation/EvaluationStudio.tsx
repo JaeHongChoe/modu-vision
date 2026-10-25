@@ -47,6 +47,8 @@ import { accuracyNote, smallTestWarning } from './sampleConfidence';
 import { FieldReadinessPanel } from '../common/FieldReadinessPanel';
 import { scoreUnitLabel } from '../../utils/plainLabels';
 import { SpecialistFamilyNote } from '../common/SpecialistFamilyNote';
+import {useScopedError} from '../common/useScopedError';
+import {registerPanelError} from '../../stores/assistContext';
 
 const comparisonTasks = new Set<string>([
   'classification', 'detection', 'segmentation', 'anomaly', 'patch_classification',
@@ -124,15 +126,15 @@ export const EvaluationStudio: React.FC = () => {
   const [cohortModel,setCohortModel]=useState('');
   const modelSelectionRevision=useRef(0);
   const [evaluationDevice, setEvaluationDevice] = useState('cpu');
-  const [cohortError, setCohortError] = useState<string | null>(null);
   useEffect(()=>setEvaluationDevice('cpu'),[selectedProfileId]);
   const profileIdentity = JSON.stringify(profiles.find(profile=>profile.id===selectedProfileId) || null);
   const scope = JSON.stringify([profileIdentity, project?.id, projectDir, sourceFolder, task, project?.active_labelset_id, selectedProfileId, transportRevision, getApiPersistenceIdentity()]);
   const scopeRef = useRef(scope); scopeRef.current = scope;
+  const [cohortError, setCohortError] = useScopedError(scope);
   const [evalTab, setEvalTab] = useState<'matrix' | 'overkill'>('matrix');
   const [comparisonTask, setComparisonTask] = useState<FlowModelTask>(task);
   const [comparisonRefreshRevision, setComparisonRefreshRevision] = useState(0);
-  const [reportError, setReportError] = useState<string | null>(null);
+  const [reportError, setReportError] = useScopedError(scope);
   const [hoveredCell, setHoveredCell] = useState<{
     i: number;
     j: number;
@@ -189,6 +191,14 @@ export const EvaluationStudio: React.FC = () => {
   }, [scope, invalidateForDataChange]);
 
   useEffect(() => {
+    if (!evaluationReadScope) return;
+    // The scope-reset effect above clears store errors before this read. Local late callbacks stay scoped as well.
+    const current = useEvaluationStore.getState();
+    const text = [...new Set([cohortError, reportError, current.errorMessage, current.remoteOperationError].filter(Boolean))].join(' · ');
+    return registerPanelError('모델 평가', text);
+  }, [scope, evaluationReadScope, cohortError, reportError, errorMessage, remoteOperationError]);
+
+  useEffect(() => {
     if (!isLoading || !remoteRequest) return;
     let active=true, busy=false;
     const poll = async () => { if(!active || busy)return; busy=true; try {await refreshRemoteOperation();} finally {busy=false;} };
@@ -242,9 +252,11 @@ export const EvaluationStudio: React.FC = () => {
   }, [task, handoff?.kind, handoff?.comparisonTask, handoff?.selectionId]);
 
   const handleExportHtml = async () => {
+    const expected=scope, generation=getProjectContextGeneration();
     setReportError(null);
     try {
       const filePath = await exportReport('html');
+      if(scopeRef.current!==expected || getProjectContextGeneration()!==generation)return;
       // The desktop app opens the saved report; a browser cannot open a file on the backend's computer, so it says where it is.
       if (host.can('openPaths')) await host.openPath(filePath);
       else setReportError(`HTML 보고서를 저장했습니다: ${filePath}. 브라우저에서는 이 파일을 열 수 없습니다.`);
@@ -497,7 +509,8 @@ export const EvaluationStudio: React.FC = () => {
         );
         return (
           <section aria-label="평가 결과 한눈에 보기" className="grid shrink-0 grid-cols-2 gap-3 border-b border-[#2B3547] bg-[#0E1520] px-6 py-4 lg:grid-cols-4">
-            {card('맞힌 이미지', `${right} / ${sampleCounts.all}장`, accuracyNote(right, sampleCounts.all), 'border-emerald-700/60 bg-emerald-950/20')}
+            {/* The first card's colour follows the result like the cards beside it: missed defects rose, false alarms amber. */}
+            {card('맞힌 이미지', `${right} / ${sampleCounts.all}장`, accuracyNote(right, sampleCounts.all), sampleCounts.escape ? 'border-rose-700/70 bg-rose-950/30' : sampleCounts.overkill ? 'border-amber-700/70 bg-amber-950/30' : right ? 'border-emerald-700/60 bg-emerald-950/20' : 'border-[#2B3547] bg-[#131822]')}
             {card('놓친 불량 (미검)', `${sampleCounts.escape}장`, sampleCounts.escape ? '아래 목록의 미검 탭에서 이미지를 확인하세요' : '놓친 불량이 없습니다', sampleCounts.escape ? 'border-rose-700/70 bg-rose-950/30' : 'border-emerald-700/60 bg-emerald-950/20')}
             {card('잘못 잡은 정상 (과검)', `${sampleCounts.overkill}장`, sampleCounts.overkill ? '과검 탭에서 이미지를 확인하세요' : '정상을 불량으로 잡은 이미지가 없습니다', sampleCounts.overkill ? 'border-amber-700/70 bg-amber-950/30' : 'border-emerald-700/60 bg-emerald-950/20')}
             {card('판정 기준 점수', confidenceThreshold.toFixed(2), '오른쪽 위 기준값에서 바꿀 수 있습니다', 'border-[#2B3547] bg-[#131822]')}
@@ -519,6 +532,8 @@ export const EvaluationStudio: React.FC = () => {
         <div className="flex items-center space-x-3">
           <button
             type="button"
+            // The step-4 footer's '평가 결과 다시 읽기' (results recorded but not on the screen) brings this button into view.
+            id="evaluation-refresh"
             onClick={refreshEvaluation}
             disabled={isLoading}
             className="flex items-center space-x-1.5 px-3 py-1.5 bg-[#1A212E] hover:bg-[#2B3547] rounded-[4px] text-slate-300 font-medium border border-[#2B3547] cursor-pointer transition-all"
@@ -760,7 +775,7 @@ export const EvaluationStudio: React.FC = () => {
             </>}
           </div>
 
-          {detectionGrains && <DetectionEvaluationGrains summary={detectionGrains} language={language} />}
+          {detectionGrains && <DetectionEvaluationGrains summary={detectionGrains} language={language} simple={simpleView} />}
 
           {/* Sub-Tab Selector: Confusion Matrix vs Overkill / Underkill */}
           <div className="flex items-center space-x-1 bg-[#0B0E14] p-1 rounded-[4px] border border-[#2B3547]">
@@ -1064,11 +1079,23 @@ export const EvaluationStudio: React.FC = () => {
               )}
             </div>
 
-            {/* Standard 4-Tab Industrial Sample Filtering (+ ALL) */}
-            <div className="flex flex-col space-y-1 p-1 bg-[#0B0E14] rounded-[4px] border border-[#2B3547] text-[11px] mb-2 font-medium">
+            {/* Standard 4-Tab Industrial Sample Filtering (+ ALL): one filter is selected at a time, so they are tabs. The
+                selected one is the Tab stop; the arrow keys, Home and End move between them (as in the flow editor). */}
+            <div role="tablist" aria-label="평가 이미지 필터" onKeyDown={(event) => {
+              const tabs = [...event.currentTarget.querySelectorAll<HTMLButtonElement>('[role="tab"]')];
+              const index = tabs.indexOf(event.target as HTMLButtonElement);
+              const next = index < 0 ? null : event.key === 'ArrowRight' ? (index + 1) % tabs.length : event.key === 'ArrowLeft' ? (index + tabs.length - 1) % tabs.length
+                : event.key === 'Home' ? 0 : event.key === 'End' ? tabs.length - 1 : null;
+              if (next === null) return;
+              event.preventDefault(); tabs[next].click(); tabs[next].focus();
+            }} className="flex flex-col space-y-1 p-1 bg-[#0B0E14] rounded-[4px] border border-[#2B3547] text-[11px] mb-2 font-medium">
               <div className="grid grid-cols-3 gap-1">
                 <button
                   type="button"
+                  role="tab"
+                  aria-controls="evaluation-image-list"
+                  aria-selected={sampleFilter === 'all'}
+                  tabIndex={sampleFilter === 'all' ? 0 : -1}
                   onClick={() => setSampleFilter('all')}
                   className={`py-1 px-1 rounded-[3px] transition-all cursor-pointer text-center truncate font-mono text-[10px] ${
                     sampleFilter === 'all'
@@ -1080,6 +1107,12 @@ export const EvaluationStudio: React.FC = () => {
                 </button>
                 <button
                   type="button"
+                  role="tab"
+                  aria-controls="evaluation-image-list"
+                  aria-selected={sampleFilter === 'escape' || sampleFilter === 'fn_escape'}
+                  tabIndex={sampleFilter === 'escape' || sampleFilter === 'fn_escape' ? 0 : -1}
+                  // The footer's '틀린 이미지 보기' (step 4, missed defects) reaches this tab by id and presses it.
+                  id="workflow-missed-defects"
                   onClick={() => setSampleFilter('escape')}
                   className={`py-1 px-1 rounded-[3px] transition-all cursor-pointer text-center truncate font-mono text-[10px] flex items-center justify-center space-x-1 ${
                     sampleFilter === 'escape' || sampleFilter === 'fn_escape'
@@ -1094,6 +1127,10 @@ export const EvaluationStudio: React.FC = () => {
                 </button>
                 <button
                   type="button"
+                  role="tab"
+                  aria-controls="evaluation-image-list"
+                  aria-selected={sampleFilter === 'overkill' || sampleFilter === 'fp_overkill'}
+                  tabIndex={sampleFilter === 'overkill' || sampleFilter === 'fp_overkill' ? 0 : -1}
                   onClick={() => setSampleFilter('overkill')}
                   className={`py-1 px-1 rounded-[3px] transition-all cursor-pointer text-center truncate font-mono text-[10px] flex items-center justify-center space-x-1 ${
                     sampleFilter === 'overkill' || sampleFilter === 'fp_overkill'
@@ -1110,6 +1147,10 @@ export const EvaluationStudio: React.FC = () => {
               <div className="grid grid-cols-2 gap-1">
                 <button
                   type="button"
+                  role="tab"
+                  aria-controls="evaluation-image-list"
+                  aria-selected={sampleFilter === 'defect' || sampleFilter === 'tp_defect'}
+                  tabIndex={sampleFilter === 'defect' || sampleFilter === 'tp_defect' ? 0 : -1}
                   onClick={() => setSampleFilter('defect')}
                   className={`py-1 px-1 rounded-[3px] transition-all cursor-pointer text-center truncate font-mono text-[10px] flex items-center justify-center space-x-1 ${
                     sampleFilter === 'defect' || sampleFilter === 'tp_defect'
@@ -1122,6 +1163,10 @@ export const EvaluationStudio: React.FC = () => {
                 </button>
                 <button
                   type="button"
+                  role="tab"
+                  aria-controls="evaluation-image-list"
+                  aria-selected={sampleFilter === 'normal' || sampleFilter === 'tn_normal'}
+                  tabIndex={sampleFilter === 'normal' || sampleFilter === 'tn_normal' ? 0 : -1}
                   onClick={() => setSampleFilter('normal')}
                   className={`py-1 px-1 rounded-[3px] transition-all cursor-pointer text-center truncate font-mono text-[10px] flex items-center justify-center space-x-1 ${
                     sampleFilter === 'normal' || sampleFilter === 'tn_normal'
@@ -1135,6 +1180,9 @@ export const EvaluationStudio: React.FC = () => {
               </div>
             </div>
 
+            {/* The filter tabs' panel: the list or its empty state. display: contents keeps them in the column, and each child
+                gets the 0.5rem the column's space-y-2 gave it before (that rule only reaches the column's own children). */}
+            <div id="evaluation-image-list" role="tabpanel" aria-label="평가 이미지 목록" className="contents [&>*]:mt-2">
             {/* Empty State for Filter Tabs */}
             {filteredPredictions.length === 0 && (
               <div className="p-4 text-center text-xs text-slate-400 space-y-2 my-auto bg-[#0B0E14] rounded-[4px] border border-[#2B3547]">
@@ -1143,7 +1191,7 @@ export const EvaluationStudio: React.FC = () => {
                 ) : sampleFilter === 'escape' || sampleFilter === 'fn_escape' ? (
                   <>
                     <div className="text-xl">🛡️</div>
-                    <div className="font-bold text-slate-200">{hasDefectSamples ? '현재 검증 표본에서 미검 0건' : 'NG 검증 표본 없음'}</div>
+                    <div className="font-bold text-slate-200">{selectedCell ? '선택한 혼동 행렬 칸에는 미검 이미지가 없습니다 · 위의 필터 초기화를 누르면 모든 미검 이미지가 보입니다' : hasDefectSamples ? '현재 검증 표본에서 미검 0건' : 'NG 검증 표본 없음'}</div>
                     <p className="text-[11px] text-slate-400 leading-relaxed">
                       표본 밖의 결함 검출 성능이나 현장 유출률은 검증되지 않았습니다.
                     </p>
@@ -1151,7 +1199,7 @@ export const EvaluationStudio: React.FC = () => {
                 ) : sampleFilter === 'overkill' || sampleFilter === 'fp_overkill' ? (
                   <>
                     <div className="text-xl">✨</div>
-                    <div className="font-bold text-slate-200">{hasNormalSamples ? '현재 검증 표본에서 과검 0건' : 'OK 검증 표본 없음'}</div>
+                    <div className="font-bold text-slate-200">{selectedCell ? '선택한 혼동 행렬 칸에는 과검 이미지가 없습니다 · 위의 필터 초기화를 누르면 모든 과검 이미지가 보입니다' : hasNormalSamples ? '현재 검증 표본에서 과검 0건' : 'OK 검증 표본 없음'}</div>
                     <p className="text-[11px] text-slate-400 leading-relaxed">
                       실제 정상 제품의 과검률을 판단하려면 OK 검증 표본이 필요합니다.
                     </p>
@@ -1224,6 +1272,7 @@ export const EvaluationStudio: React.FC = () => {
                 </div>
               );
             })}
+            </div>
           </div>
 
           {/* Synchronized Dual-Viewport Inspection Panel */}

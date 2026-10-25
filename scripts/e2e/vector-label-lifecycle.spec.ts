@@ -10,7 +10,7 @@ type Reply={status:number;body:string;url:string};
 type Api=(route:string,body?:unknown,method?:string)=>Promise<Reply>;
 const sha=(data:Buffer)=>crypto.createHash('sha256').update(data).digest('hex');
 const tools=[
- {action:'vector-bbox-draw',title:'바운딩 박스 (BBox - 2)',type:'bbox',label:'Solder Bridge',category:1},
+ {action:'vector-bbox-draw',title:'바운딩 박스 (BBox - 2)',type:'bbox',label:'defect',category:1},
  {action:'vector-polygon-draw',title:'다각형 폴리곤 (Polygon - 4)',type:'polygon',label:'Scratch',category:2},
  {action:'vector-obb-draw',title:'회전 바운딩 박스 (Rotated BBox OBB - 3)',type:'rotated_bbox',label:'Crack',category:3},
 ] as const;

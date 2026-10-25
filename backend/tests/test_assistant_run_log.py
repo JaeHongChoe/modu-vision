@@ -36,6 +36,18 @@ def _entry(**changes):
             'args_sha256': 'b' * 64, 'confirmed': True, 'result': 'ok', 'provider': 'anthropic', **changes}
 
 
+def test_chatgpt_run_logs_name_the_provider_without_account_identity_or_credentials(tmp_path):
+    client, _, project_dir = _setup(tmp_path)
+    response = client.post('/api/assistant/runs', json=_entry(provider='chatgpt', tool='conversation',
+                                                           tier='conversation', confirmed=False))
+    assert response.status_code == 200, response.text
+    assert response.json()['provider'] == 'chatgpt'
+    raw = (project_dir / 'assistant' / 'runs.jsonl').read_text()
+    for field in ('access_token', 'refresh_token', 'client_id', 'subject'):
+        assert field not in raw
+    assert client.post('/api/assistant/runs', json=_entry(provider='chatgpt', account_id='private')).status_code == 422
+
+
 def test_the_log_appends_lists_and_archives_without_deleting(tmp_path):
     client, _, project_dir = _setup(tmp_path)
     assert client.get('/api/assistant/runs').json() == {'runs': [], 'total': 0, 'archives': 0}

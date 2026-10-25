@@ -126,3 +126,37 @@ def test_the_card_can_read_local_readiness_without_a_write(tmp_path):
     posted = api.post('/api/training-workspace/readiness', json={'task': 'classification', 'model': 'dinov3_vits16', 'device': 'auto'})
     assert read.status_code == posted.status_code == 200
     assert {k: read.json()[k] for k in ('runtime', 'weights', 'dependencies')} == {k: posted.json()[k] for k in ('runtime', 'weights', 'dependencies')}
+
+
+def test_a_detection_project_without_a_saved_split_gets_a_korean_next_action(tmp_path):
+    # A new detection project from a plain image folder has no saved split yet: the loader's own English ValueError used
+    # to reach the step-3 card as the person's next action.
+    from fastapi.testclient import TestClient
+    from backend.main import create_app
+    from backend.api import routes_training_workspace as workspace
+    app = create_app(project_dir=str(tmp_path / 'projects'))
+    api = TestClient(app, headers={'X-Vision-Token': app.state.api_token})
+    assert api.post('/api/project/create', json={'name': 'detection', 'task': 'detection'}).status_code == 200
+    source = tmp_path / 'plain'
+    source.mkdir()
+    for index in range(3):
+        Image.new('RGB', (64, 64), 'gray').save(source / f'part_{index:02d}.png')
+    assert api.put('/api/project/update', json={'source_dataset_dir': str(source)}).status_code == 200
+    body = api.get('/api/training-workspace/readiness', params={'task': 'detection', 'model': 'yolo26n'}).json()
+    assert body['ready'] is False
+    assert workspace.DATA_UNREADABLE in body['next_actions']
+    assert not any('must be specified' in action or 'DetectionDataset' in action for action in body['next_actions'])
+    assert all(workspace._HANGUL.search(action) or action.isidentifier() for action in body['next_actions'])
+
+
+def test_readiness_keeps_a_korean_refusal_and_replaces_an_english_one():
+    from fastapi import HTTPException
+    from backend.api import routes_training_workspace as workspace
+    assert workspace.readable_action(ValueError('저장된 분할의 원본 이미지가 없습니다. 데이터·분할을 다시 확인하세요.'), 'fallback').startswith('저장된 분할')
+    assert workspace.readable_action(ValueError('images_dir and annotation_file must be specified'), workspace.DATA_UNREADABLE) == workspace.DATA_UNREADABLE
+    assert workspace.readable_action(HTTPException(409, '이전 모델이 다른 라벨 세트로 학습됐습니다. 새로 학습하세요.'), 'fallback').startswith('이전 모델')
+    assert workspace.readable_action(HTTPException(409, 'Parent checkpoint changed'), workspace.PARENT_UNCHECKED) == workspace.PARENT_UNCHECKED
+    # A server's missing package or path stays readable after the Korean sentence; a local loader message does not.
+    assert workspace.readable_action(ValueError('missing packages: timm'), workspace.SERVER_RUNTIME_UNCHECKED, detail=True) == f'{workspace.SERVER_RUNTIME_UNCHECKED} (missing packages: timm)'
+    for text in (workspace.DATA_UNREADABLE, workspace.PARENT_UNCHECKED, workspace.SERVER_RUNTIME_UNCHECKED, workspace.SERVER_WEIGHTS_UNCHECKED):
+        assert text.endswith('세요.') and workspace._HANGUL.search(text)

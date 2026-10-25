@@ -19,8 +19,33 @@ export function deviceLabel(device:LocalDevice,check:{runtime:{available:boolean
   if(check?.runtime.available)return `${check.runtime.device.split(':')[0].toUpperCase()}${check.runtime.auto?' (자동 선택)':''}`;
   return device==='auto'?'자동 선택':device.toUpperCase();
 }
-export function TrainingPreparationPanel({family,model,preset='fast',checkpoint='',device='cpu',config={},datasetPath,warmStartJobId,onCheckpointChange}:{family:ModelFamily;model?:string;preset?:TrainingPreset;checkpoint?:string;device?:LocalDevice;config?:Record<string,unknown>;datasetPath?:string;warmStartJobId?:string;onCheckpointChange?:(path:string)=>void}) {
-  const {project,projectDir,setStep,viewMode}=useProjectStore();const simpleView=viewMode==='simple';const dataset=useDatasetStore();const compute=useComputeStore();
+/** Item 1's words. For the project's own task, training uses the split step 1 keeps (its train · val · test numbers),
+ *  never the labeled total, which also counts the test images. With no split to train on (0/0/0: before the first split,
+ *  after a new label, or a stale split) the line says so instead of calling the labeled images trainable, since training
+ *  cannot start then. Unlabeled images stay out until labeled and split again; re-applying the split deals every labeled
+ *  image out again. Another family trains on its own prepared data, so its line stops at the originals. */
+export function projectImagesLine(input:{name?:string;sourceImages?:number;totalImages:number;unlabeledImages?:number;split?:{train:number;val:number;test:number}|null;splitState?:string|null;core:boolean;loading?:boolean;failed?:boolean}):{line:string;note:string|null}{
+  const head=`${input.name??''} · 원본 ${input.sourceImages||input.totalImages}장`,split=input.split;
+  if(!input.core)return {line:head,note:null};
+  if(input.loading)return {line:`${input.name??''} · 이미지 수를 읽는 중…`,note:null};
+  if(input.failed)return {line:`${input.name??''} · 이미지를 읽지 못했습니다 · 1단계에서 데이터를 다시 가져오세요`,note:null};
+  const labeled=`${head} · 라벨 ${input.totalImages}장`;
+  const splitExists=Boolean(split&&split.train+split.val+split.test>0);
+  const line=splitExists&&split
+    ?`${head} · 학습 ${split.train} · 검증 ${split.val} · 시험 ${split.test}장${input.splitState==='automatic'?' (자동 · 저장 안 됨)':''}`
+    // No label at all: the split refuses an unlabeled set, so labels come first.
+    :input.totalImages===0?`${labeled} · 2단계에서 라벨을 단 뒤 1단계에서 분할을 적용하세요`
+    :input.splitState==='saved'?`${labeled} · 저장된 분할에 없는 라벨 이미지가 있어 1단계에서 분할을 다시 적용해야 합니다`
+    :input.splitState==='stale'?`${labeled} · 저장한 분할이 폴더와 달라 1단계에서 분할을 다시 저장해야 합니다`
+    :`${labeled} · 분할 전 (1단계에서 분할을 적용하세요)`;
+  // Re-applying (and its reshuffle of the test images) is said only when a split was saved before.
+  const again=splitExists||input.splitState==='saved';
+  return {line,note:(input.unlabeledImages||0)>0&&input.totalImages>0
+    ?`라벨 없는 ${input.unlabeledImages}장은 학습에서 빠집니다. 라벨을 달거나 초안을 채택한 뒤 1단계에서 분할을 ${again?'다시 적용해야 학습·검증·시험으로 나뉘어 들어갑니다 (다시 적용하면 기존 시험 이미지도 다시 나뉩니다).':'적용해야 학습·검증·시험으로 나뉘어 들어갑니다.'}`:null};
+}
+// `trained`: the screen holds a finished run, so the check's 'not yet run' note becomes what the check covers.
+export function TrainingPreparationPanel({family,model,preset='fast',checkpoint='',device='cpu',config={},datasetPath,warmStartJobId,onCheckpointChange,trained=false}:{family:ModelFamily;model?:string;preset?:TrainingPreset;checkpoint?:string;device?:LocalDevice;config?:Record<string,unknown>;datasetPath?:string;warmStartJobId?:string;onCheckpointChange?:(path:string)=>void;trained?:boolean}) {
+  const {project,projectDir,setStep,viewMode,task}=useProjectStore();const simpleView=viewMode==='simple';const dataset=useDatasetStore();const compute=useComputeStore();
   const [checked,setChecked]=useState<{scope:string;value:Readiness}|null>(null);const [error,setError]=useState('');const [busy,setBusy]=useState(false);
   const [epoch,setEpoch]=useState(getProjectContextGeneration);
   const generation=getProjectContextGeneration(),identity=getApiPersistenceIdentity();
@@ -70,17 +95,18 @@ export function TrainingPreparationPanel({family,model,preset='fast',checkpoint=
   };
   const automatic=!compute.selectedProfileId&&Boolean(source)&&Boolean(model)&&!datasetPath&&!warmStartJobId;
   useEffect(()=>{if(!automatic)return;const timer=setTimeout(()=>void read(),400);return()=>clearTimeout(timer);},[scope,automatic]);
+  const images=projectImagesLine({name:project?.name,sourceImages:dataset.sourceImages,totalImages:dataset.totalImages,unlabeledImages:dataset.unlabeledImages,split:dataset.split,splitState:dataset.splitState,core:family===task&&!datasetPath,loading:dataset.isLoading,failed:Boolean(dataset.importError)});
   return <section aria-label="공통 모델 준비" className="rounded-xl border border-slate-600 bg-[#101A28] p-4 text-sm text-slate-200">
     <h2 className="flex items-center gap-2 font-semibold"><CheckCircle className="h-4 w-4 text-cyan-300" />{prep.label} 준비</h2>
     <ol className="mt-3 grid gap-2 md:grid-cols-3">
-      <li className="rounded border border-slate-700 p-3"><strong>1. 프로젝트 이미지</strong><p className="mt-1 text-slate-300">{source?`${project?.name} · 원본 ${dataset.sourceImages||dataset.totalImages}장 · 학습 대상 ${dataset.totalImages}장`:'프로젝트에 원본 이미지를 연결하세요.'}</p><button type="button" onClick={()=>void setStep(1)} className={`${programButton} mt-2`}>데이터 확인</button></li>
+      <li className="rounded border border-slate-700 p-3"><strong>1. 프로젝트 이미지</strong><p className="mt-1 text-slate-300">{source?images.line:'프로젝트에 원본 이미지를 연결하세요.'}</p>{source&&images.note&&<p className="mt-1 text-xs text-slate-400">{images.note}</p>}<button type="button" onClick={()=>void setStep(1)} className={`${programButton} mt-2`}>데이터 확인</button></li>
       <li className="rounded border border-slate-700 p-3"><strong>2. 정답·시험 분리</strong><p className="mt-1 text-slate-300">{prep.truth}</p><button type="button" onClick={()=>void setStep(2)} className={`${programButton} mt-2`}>정답 검토</button></li>
       <li className="rounded border border-slate-700 p-3"><strong>3. 모델·실행 환경</strong><p className="mt-1 text-slate-300">{compute.selectedProfileId?`새 학습: ${compute.profiles.find(row=>row.id===compute.selectedProfileId)?.name || '선택 서버'}`:`이 컴퓨터 · ${deviceLabel(device,check)}`}</p><button type="button" disabled={busy||!source} onClick={()=>void inspect()} className={`${programButton} mt-2`}><RefreshCw className="mr-1 inline h-3 w-3" />{busy?'확인 중…':compute.selectedProfileId?'서버 준비 검사':'로컬 준비 검사'}</button></li>
     </ol>
     <TeamTrainingReadiness />
     {!simpleView&&<><p className="mt-3 text-slate-300">다음 행동: {prep.route}</p><p className="mt-1 text-slate-400">평가: {prep.evaluation}</p></>}
     {compute.selectedProfileId&&<p className="mt-2 text-slate-400">선택 서버의 모델별 준비 상태를 확인합니다. 학습 작업을 등록하거나 모델을 다운로드하지 않습니다.</p>}
-    {check&&<div role="status" className="mt-3 rounded border border-slate-600 p-3"><strong className={check.ready?'text-emerald-300':'text-amber-200'}>{check.ready?'준비 항목 확인됨':'준비 필요'}</strong><p className="mt-1">장치: {check.runtime.available?check.runtime.device:check.runtime.reason} · 가중치: {({file_available:'파일 있음 · 학습 시 구조 검증',unreadable:'파일 읽기·안정된 해시 확인 실패',wrong_format:'파일 형식이 이름과 맞지 않음',not_required:'별도 사전학습 파일 불필요',transfer_ready:'프로젝트 파일 해시 확인 · 학습 시 서버로 전송',server_file_available:'서버 캐시 파일 있음 · 학습 시 구조 검증',parent_verified:'부모 모델 해시·호환 구조 확인'} as Record<string,string>)[check.weights.state]||'준비 필요'}</p>{check.weights.sha256&&<p className="mt-2 break-all" aria-label="사전학습 파일 식별 정보">{check.weights.filename} · {check.weights.origin==='explicit_file'?'지정한 파일':'캐시 파일'} · SHA256: {check.weights.sha256}<span className="block text-slate-400">파일 내용의 식별값입니다. 제공처 진위·모델 구조·품질 승인을 뜻하지 않습니다.</span></p>}{check.dependencies.missing.length>0&&<p className="mt-1 text-amber-200">설치 필요: {check.dependencies.missing.join(', ')}</p>}{check.weights.state==='missing'&&(!compute.selectedProfileId&&prefetchSupported(check.model)?<WeightsPrefetch model={check.model} onDone={()=>void read()} />:<p className="mt-1">공식 사전학습 파일을 준비하고 아래 상세 설정에서 가져오세요. 접근 승인이 필요한 모델은 제공처 승인 절차를 완료하세요.</p>)}{check.weights.problem&&<p role="alert" className="mt-1 text-amber-200">{check.weights.problem}</p>}{check.next_actions.length>0&&<ul className="mt-2 list-disc pl-5 text-amber-200">{check.next_actions.map(action=><li key={action}>{action}</li>)}</ul>}<p className="mt-1 text-slate-400">실제 학습·추론 실행과 모델 품질 승인은 아직 확인하지 않았습니다.</p></div>}
+    {check&&<div role="status" className="mt-3 rounded border border-slate-600 p-3"><strong className={check.ready?'text-emerald-300':'text-amber-200'}>{check.ready?'준비 항목 확인됨':'준비 필요'}</strong><p className="mt-1">장치: {check.runtime.available?check.runtime.device:check.runtime.reason} · 가중치: {({file_available:'파일 있음 · 학습 시 구조 검증',unreadable:'파일 읽기·안정된 해시 확인 실패',wrong_format:'파일 형식이 이름과 맞지 않음',not_required:'별도 사전학습 파일 불필요',transfer_ready:'프로젝트 파일 해시 확인 · 학습 시 서버로 전송',server_file_available:'서버 캐시 파일 있음 · 학습 시 구조 검증',parent_verified:'부모 모델 해시·호환 구조 확인'} as Record<string,string>)[check.weights.state]||'준비 필요'}</p>{check.weights.sha256&&<p className="mt-2 break-all" aria-label="사전학습 파일 식별 정보">{check.weights.filename} · {check.weights.origin==='explicit_file'?'지정한 파일':'캐시 파일'} · SHA256: {check.weights.sha256}<span className="block text-slate-400">파일 내용의 식별값입니다. 제공처 진위·모델 구조·품질 승인을 뜻하지 않습니다.</span></p>}{check.dependencies.missing.length>0&&<p className="mt-1 text-amber-200">설치 필요: {check.dependencies.missing.join(', ')}</p>}{check.weights.state==='missing'&&(!compute.selectedProfileId&&prefetchSupported(check.model)?<WeightsPrefetch model={check.model} onDone={()=>void read()} />:<p className="mt-1">공식 사전학습 파일을 준비하고 아래 상세 설정에서 가져오세요. 접근 승인이 필요한 모델은 제공처 승인 절차를 완료하세요.</p>)}{check.weights.problem&&<p role="alert" className="mt-1 text-amber-200">{check.weights.problem}</p>}{check.next_actions.length>0&&<ul className="mt-2 list-disc pl-5 text-amber-200">{check.next_actions.map(action=><li key={action}>{action}</li>)}</ul>}<p className="mt-1 text-slate-400">{trained?'이 검사는 다음 학습의 준비 상태만 확인합니다. 모델 품질은 4단계 평가에서 확인합니다.':'실제 학습·추론 실행과 모델 품질 승인은 아직 확인하지 않았습니다.'}</p></div>}
     {!simpleView&&onCheckpointChange&&<button type="button" disabled={busy||!(check?.model||model)} onClick={()=>void importFile()} className={`${programButton} mt-3`}>사전학습 파일 선택·프로젝트에 가져오기</button>}
     {/* The simple view keeps the readiness result in view; the route, the evaluation note and the pretrained import wait here. */}
     {simpleView&&<details className="mt-3 text-xs text-slate-400"><summary className="cursor-pointer">학습 순서·사전학습 파일</summary><p className="mt-2 text-slate-300">다음 행동: {prep.route}</p><p className="mt-1">평가: {prep.evaluation}</p>{onCheckpointChange&&<button type="button" disabled={busy||!(check?.model||model)} onClick={()=>void importFile()} className={`${programButton} mt-3`}>사전학습 파일 선택·프로젝트에 가져오기</button>}</details>}

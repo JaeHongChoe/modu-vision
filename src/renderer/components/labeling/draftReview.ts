@@ -112,6 +112,9 @@ export function supportLimitsText(limits: unknown): string {
 
 /** Another panel asked for a draft the queue could not find, even after reading the list again. */
 export const OPEN_REQUEST_MISSING_TEXT = '그 초안을 찾지 못했습니다(이미 채택·거절됐거나 다른 프로젝트의 초안입니다).';
+/** The server changed the open image's labels while the person had unsaved edits on it: the canvas was not replaced, and
+ *  a save with the old revision would be refused, so the edits stay (with their undo) and the image must be read again. */
+export const CANVAS_NOT_RELOADED_TEXT = '그동안 열린 이미지를 고쳐서 캔버스에는 바뀐 라벨을 다시 불러오지 않았습니다(고친 내용과 되돌리기 기록은 그대로입니다). 서버의 라벨이 바뀌어 이대로는 저장되지 않으니, 고친 내용을 확인한 뒤 이미지를 다시 불러와 바뀐 라벨 위에서 고쳐 저장하세요.';
 
 /** Another panel asked for a draft that is no longer waiting: say what became of it instead of opening nothing. */
 export function closedDraftText(draft: Pick<LabelSuggestion, 'status' | 'image_path'>): string {
@@ -258,10 +261,16 @@ export function gridPages(pending: LabelSuggestion[], pageSize: number): { pages
   return { pages, singles };
 }
 
-/** Why a page cannot be adopted yet, or null: every tile not excluded must have shown its image. */
-export function pageAdoptionRefusal(page: LabelSuggestion[], excluded: Set<string>, loaded: Set<string>): string | null {
+/** Why a page cannot be adopted yet, or null: every tile not excluded must have shown its image. A tile whose image
+ *  failed to load never will, so the refusal names it and the way out (leave it out, or open it and adopt it alone). */
+export function pageAdoptionRefusal(page: LabelSuggestion[], excluded: Set<string>, loaded: Set<string>, failed: Set<string> = new Set()): string | null {
   const included = page.filter((draft) => !excluded.has(draft.id));
   if (!included.length) return '이 페이지에서 채택할 초안이 없습니다. 제외를 풀거나 다음 페이지로 가세요.';
+  const broken = included.filter((draft) => failed.has(draft.id) && !loaded.has(draft.id));
+  if (broken.length) {
+    const names = broken.slice(0, 3).map((draft) => fileNameOf(draft.image_path)).join(', ') + (broken.length > 3 ? ' 외' : '');
+    return `이 페이지에서 미리보기를 불러오지 못한 초안 ${broken.length}건(${names})이 있습니다. 그 타일을 눌러 이 페이지 채택에서 빼고 채택하세요. 뺀 초안은 '열기'로 캔버스에서 확인한 뒤 따로 채택할 수 있습니다.`;
+  }
   const unseen = included.filter((draft) => !loaded.has(draft.id)).length;
   if (unseen) return `이 페이지에서 아직 보이지 않은 초안 ${unseen}건이 있습니다. 모두 보인 뒤 채택할 수 있습니다.`;
   return multiAdoptionRefusal(included);

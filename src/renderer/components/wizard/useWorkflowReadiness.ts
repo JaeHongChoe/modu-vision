@@ -25,6 +25,8 @@ export function useWorkflowReadiness() {
   const modelJobId=useEvaluationStore(s=>s.jobId);
   // A finished model evaluation is saved as evidence; re-read when its results arrive so step 4 can move on.
   const evaluatedSamples=useEvaluationStore(s=>s.testPredictions?.length ?? 0);
+  // Step 4 waits for the evaluation screen's own read before calling the step done (see getNextAction).
+  const evaluationLoading=useEvaluationStore(s=>s.isLoading),evaluationError=useEvaluationStore(s=>s.errorMessage);
   // Step 4's number line counts the loaded evaluation the way the evaluation screen does (same verdict, same inputs).
   const testPredictions=useEvaluationStore(s=>s.testPredictions),confidenceThreshold=useEvaluationStore(s=>s.confidenceThreshold);
   const overkillAnalysis=useEvaluationStore(s=>s.overkillAnalysis),classRoles=useEvaluationStore(s=>s.classSemantics?.roles);
@@ -119,7 +121,7 @@ export function useWorkflowReadiness() {
   // carried id: advice past the evidence check needs a ready receipt.
   const readyReceipt=receipt?.key===key&&receipt.evidence.status==='ready'?receipt:null;
   const flowVersionId=readyReceipt?readyReceipt.versionId:flowEditing&&lastFlowVersion.current?.scope===flowScope?lastFlowVersion.current.versionId:null;
-  const readiness=getNextAction({stage,projectReady:Boolean(projectDir&&project),sourceReady,totalImages:data.totalImages,sourceImages:data.sourceImages,train:data.split.train,val:data.split.val,training:trainingRun,evaluation,inspection,flowEditing,
+  const readiness=getNextAction({stage,projectReady:Boolean(projectDir&&project),sourceReady,totalImages:data.totalImages,sourceImages:data.sourceImages,train:data.split.train,val:data.split.val,training:trainingRun,evaluation,evaluationLoading,evaluationError,inspection,flowEditing,
     busy:projectBusy||data.isLoading||data.isSplitting||annotationDirty,task,splitState:data.splitState,populatedClasses:data.hasSelectedFolder?Object.values(data.classes||{}).filter(count=>count>0).length:undefined,
     classBlocker:data.hasSelectedFolder?classStartBlocker(data.classes||{},data.splitState==='saved'||data.splitState==='source_folders'?data.classSplitCounts??null:null,data.split):undefined,modelJobId:modelJobId || (training.isCurrentData?training.jobId:null),flowVersionId,
     flowDirty:flow.pipelineDirty,flowMatchesSaved:receipt?.key===key?receipt.flowMatchesSaved:false,trainingStatus:training.status,evidence,drafts:{pendingImages:pendingDrafts},

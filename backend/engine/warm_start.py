@@ -175,6 +175,24 @@ class WarmStartParent:
         }
 
 
+def recorded_labelset(job_dir: Path) -> str | None:
+    """The label set a completed run's receipt records it was trained under, or None when the receipt predates that."""
+    provenance = (completed_job_receipt(job_dir) or {}).get('training_provenance')
+    labelset = provenance.get('labelset_id') if isinstance(provenance, dict) else None
+    return labelset if isinstance(labelset, str) and labelset else None
+
+
+# A parent trained under another label set of the project learned that set's truth, even under the same class names:
+# the parent list leaves it out, and a start or readiness check that names it directly is refused the same way. A receipt
+# that names no label set predates the record and stays allowed (marked on the screen), as for drafts.
+OTHER_LABELSET_PARENT = '이어 학습할 모델은 다른 라벨 세트로 학습했습니다. 지금 라벨 세트로 학습한 모델을 고르거나 새로 학습하세요.'
+
+
+def other_labelset_parent(job_dir: Path, active_labelset: str | None) -> bool:
+    trained = recorded_labelset(job_dir)
+    return trained is not None and trained != (active_labelset or 'default')
+
+
 def resolve_warm_start_parent(
     job_id: str, models_dir: str | Path, source_dataset_path: str | Path,
     task: str, architecture: str,

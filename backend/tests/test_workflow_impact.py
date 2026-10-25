@@ -235,3 +235,18 @@ def test_evaluation_of_the_current_checkpoint_is_current_and_an_unbound_one_is_n
     report=workflow_impact.analyze(project)
     assert report['models'][0]['data_state']=='changed'
     assert sorted(row['state'] for row in report['model_evaluations'])==['changed','revalidation_required']
+
+
+def test_a_deployment_store_still_being_created_reads_as_no_approval_and_a_damaged_one_is_refused(tmp_path):
+    # The deployment routes' first connect() creates the file before its tables; an impact read racing that first visit
+    # once answered 409 'no such table: active_revisions' (full run 40114486566). A store with no revision yet holds no
+    # approval; revisions without the active table are damage and stay an error (the route answers 409).
+    import sqlite3
+    import pytest
+    project,_=project_fixture(tmp_path);database=Path(project['project_dir'])/'model_deployments.sqlite3'
+    database.write_bytes(b'')
+    assert workflow_impact.analyze(project)['approvals']==[]
+    with sqlite3.connect(database) as connection:connection.execute('CREATE TABLE revisions (revision_id TEXT PRIMARY KEY)')
+    assert workflow_impact.analyze(project)['approvals']==[]
+    with sqlite3.connect(database) as connection:connection.execute("INSERT INTO revisions VALUES ('r1')")
+    with pytest.raises(sqlite3.OperationalError,match='no such table: active_revisions'):workflow_impact.analyze(project)

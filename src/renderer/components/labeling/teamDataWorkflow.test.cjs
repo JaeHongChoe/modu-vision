@@ -36,7 +36,10 @@ test('saved guidance palette never silently drops existing labels',()=>{
 test('training transition blocks an empty approved cohort and keeps pending work explicit',()=>{
  const {reviewTrainingMessage}=load('./teamDataWorkflow.ts');
  assert.match(reviewTrainingMessage({ready:false,counts:{eligible:0,pending:4,approved:0},blockers:['승인 데이터가 없습니다.']}),/승인 데이터/);
- assert.match(reviewTrainingMessage({ready:true,counts:{eligible:3,pending:2,approved:3},blockers:[]}),/3/);assert.match(reviewTrainingMessage({ready:true,counts:{eligible:3,pending:2,approved:3},blockers:[]}),/2/);
+ // The review's eligible count includes unlabeled and test images, so it is named as what review kept, not as training images.
+ const ready=reviewTrainingMessage({ready:true,counts:{eligible:3,pending:2,approved:3},blockers:[]});
+ assert.equal(ready,'검수로 빠지지 않은 이미지 3장 · 승인 3장 · 검수 대기 2장 (라벨 없는 이미지와 시험 이미지도 센 수). 기존 시험 분할을 유지합니다.');
+ assert.doesNotMatch(ready,/학습 대상/);
 });
 test('annotation save sends the valid owned lease and cannot reuse it for a different image',async()=>{
  const bodies=[];const m=load('../../stores/useAnnotationStore.ts',{'../services/api':{api:{},getApiBaseUrl:()=>''},'./useDatasetStore':{useDatasetStore:{getState:()=>({annotationsChanged:async()=>{}})}},'../services/datasetWorkflow':{datasetWorkflow:{saveAnnotations:async body=>{bodies.push(body);return{status:'saved'};}}}});

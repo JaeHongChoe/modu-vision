@@ -9,6 +9,7 @@ function load(file,cache=new Map()){if(cache.has(file))return cache.get(file).ex
 const cache=new Map();
 const {AssistantService,SYSTEM_INSTRUCTIONS}=load(path.join(__dirname,'service.ts'),cache);
 const {AssistantKeyStore}=load(path.join(__dirname,'keyStore.ts'),cache);
+const ID='a'.repeat(64);
 const KEY='test-placeholder-key-0003';
 const encryptor={isAvailable:()=>true,encrypt:plain=>Buffer.from('enc:'+Buffer.from(plain).toString('hex')),decrypt:cipher=>Buffer.from(cipher.toString().slice(4),'hex').toString()};
 
@@ -54,23 +55,23 @@ test('an image leaves only once, against a fresh grant, for a model marked as ta
  const image={mediaType:'image/png',base64:'iVBORw0KGgo='};
  const withoutGrant=await send(service,{image:{grantId:'img_000000000000000000000000',...image}});
  assert.equal(withoutGrant.error.code,'image_refused');assert.equal(requests.length,0,'nothing was sent without the confirmation');
- const grant=service.imageIntent({fileName:'/Users/someone/lot/ok_03.png'});
+ const grant=service.imageIntent({imageIdentity:ID,fileName:'/Users/someone/lot/ok_03.png'});
  assert.equal(grant.ok,true);assert.match(grant.message,/^이 이미지 1장\(ok_03\.png\)을 OpenAI 호환 서버\(127\.0\.0\.1:\d+\)로 보냅니다/);
- const sent=await send(service,{image:{grantId:grant.grantId,...image}});
+ const sent=await send(service,{image:{grantId:grant.grantId,imageIdentity:ID,...image}});
  assert.equal(sent.ok,true);assert.equal(requests.length,1);
  assert.deepEqual(requests[0].body.messages[1].content[1],{type:'image_url',image_url:{url:'data:image/png;base64,iVBORw0KGgo='}});
- const reused=await send(service,{image:{grantId:grant.grantId,...image}});
+ const reused=await send(service,{image:{grantId:grant.grantId,imageIdentity:ID,...image}});
  assert.equal(reused.error.code,'image_refused','one confirmation, one image');
- const late=service.imageIntent({fileName:'a.png'});clock+=120_001;
- assert.equal((await send(service,{image:{grantId:late.grantId,...image}})).error.code,'image_refused','an old confirmation expires');
- const fresh=service.imageIntent({fileName:'a.png'});
- assert.equal((await send(service,{image:{grantId:fresh.grantId,mediaType:'image/svg+xml',base64:'PHN2Zz4='}})).error.code,'image_refused','only PNG, JPEG and WebP');
+ const late=service.imageIntent({imageIdentity:ID,fileName:'a.png'});clock+=120_001;
+ assert.equal((await send(service,{image:{grantId:late.grantId,imageIdentity:ID,...image}})).error.code,'image_refused','an old confirmation expires');
+ const fresh=service.imageIntent({imageIdentity:ID,fileName:'a.png'});
+ assert.equal((await send(service,{image:{grantId:fresh.grantId,imageIdentity:ID,mediaType:'image/svg+xml',base64:'PHN2Zz4='}})).error.code,'image_refused','only PNG, JPEG and WebP');
  assert.equal(requests.length,1);
 });
 
 test('a model not marked for images gets no grant at all',async t=>{
  const {service,requests}=await setup(t,{supportsImages:false});
- const grant=service.imageIntent({fileName:'a.png'});
+ const grant=service.imageIntent({imageIdentity:ID,fileName:'a.png'});
  assert.equal(grant.ok,false);assert.equal(grant.error.code,'image_refused');assert.equal(requests.length,0);
 });
 
@@ -94,4 +95,62 @@ test('settings errors read as a Korean reason and action, never as a key',async 
  assert.throws(()=>service.save({provider:'anthropic',baseUrl:'https://api.anthropic.com',model:'m',supportsImages:false,key:KEY}),error=>/보호 저장소/.test(error.message)&&/평문/.test(error.message)&&!error.message.includes(KEY));
  const missing=await service.send({requestId:'req_'+'2'.repeat(24),context:{},messages:[{role:'user',text:'q'}],tools:[]});
  assert.equal(missing.error.code,'no_provider');
+});
+
+test('a grant is tied to the shown image identity and receiver configuration, not just provider/model',async t=>{
+ const {service,store,requests,base}=await setup(t);
+ const input={provider:'openai-compatible',baseUrl:base,model:'mock-model',format:'chat',supportsImages:true};
+ const image={mediaType:'image/png',base64:'iVBORw0KGgo='};
+ const wrongImage=service.imageIntent({fileName:'a.png',imageIdentity:ID});
+ assert.equal((await send(service,{image:{grantId:wrongImage.grantId,imageIdentity:'b'.repeat(64),...image}})).error?.code,'image_refused');
+ const wrongReceiver=service.imageIntent({fileName:'a.png',imageIdentity:ID});
+ store.save({...input,baseUrl:base+'/other'});
+ assert.equal((await send(service,{image:{grantId:wrongReceiver.grantId,imageIdentity:ID,...image}})).error?.code,'image_refused');
+ store.save(input);
+ const wrongFormat=service.imageIntent({fileName:'a.png',imageIdentity:ID});store.save({...input,format:'responses'});
+ assert.equal((await send(service,{image:{grantId:wrongFormat.grantId,imageIdentity:ID,...image}})).error?.code,'image_refused');
+ assert.equal(requests.length,0,'no pixels left for a changed image or endpoint/format');
+});
+test('settings changes revoke existing image grants even when changed back',async t=>{
+ const {service,requests,base}=await setup(t);
+ const grant=service.imageIntent({fileName:'a.png',imageIdentity:ID});
+ const input={provider:'openai-compatible',baseUrl:base,model:'mock-model',format:'chat',supportsImages:true};
+ service.save({...input,model:'other'});service.save(input);
+ const result=await send(service,{image:{grantId:grant.grantId,imageIdentity:ID,mediaType:'image/png',base64:'iVBORw0KGgo='}});
+ assert.equal(result.error?.code,'image_refused');assert.equal(requests.length,0);
+ assert.equal(service.imageIntent({fileName:'a.png'}).ok,false,'a filename alone does not identify the confirmed image');
+});
+
+// Defect: the explicit API recipient lived only in memory and chatgptBegin reset it, so a denied/failed/expired login or a
+// fresh launch without OS encryption switched the assistant to ChatGPT. Only a saved successful connection may switch it.
+function chatgptFake(){
+ let state={accounts:[],active:null,encryptionAvailable:true,status:'idle'};const listeners=[];
+ const connection={state:()=>structuredClone(state),authority:()=>'0',onConnected:listener=>{listeners.push(listener);},
+  begin:async()=>{state={...state,status:'waiting'};return connection.state();},cancel:()=>{state={...state,status:'idle'};},
+  selectAccount:id=>{state={...state,active:id};},selectModel:()=>{},acknowledgePlanUsage:()=>{},resumeUsage:()=>{},recover:()=>{},signOut:async()=>{},dispose:()=>{},
+  listModels:async()=>[],complete:async()=>({text:'ChatGPT 답변',toolCalls:[],stop:'end'}),set:change=>{state={...state,...change};},
+  connect:()=>{state={...state,accounts:[{recordId:'opaque-a',label:'계정',model:'m',signedIn:true,planUsageEnabled:true}],active:'opaque-a',status:'connected'};listeners.forEach(listener=>listener('opaque-a'));}};
+ return connection;
+}
+test('a failed ChatGPT login keeps the chosen API provider, also on a fresh launch without OS encryption',async t=>{
+ const {store,requests}=await setup(t,{key:null}),chatgpt=chatgptFake();let service=new AssistantService({store,chatgpt});
+ assert.equal(service.setActive('openai-compatible').active,'openai-compatible');
+ for(const failure of ['access_denied','attempt_expired']){
+  await service.chatgptBegin({termsAccepted:true});chatgpt.set({status:'error',error:{code:'forbidden',reason:failure,action:'다시 시도'}});
+  assert.equal(service.state().active,'openai-compatible',failure);
+ }
+ assert.equal((await send(service)).ok,true);assert.equal(requests.length,1,'the question went to the chosen API provider');
+ chatgpt.set({status:'idle',error:undefined,encryptionAvailable:false});
+ const noEncryption=new AssistantKeyStore(path.dirname(store.file),{...encryptor,isAvailable:()=>false});
+ service=new AssistantService({store:noEncryption,chatgpt});
+ assert.equal(service.state().active,'openai-compatible','a fresh launch keeps the persisted choice');
+ const persisted=fs.readFileSync(store.file,'utf8');assert.ok(!/opaque-a|계정|token/i.test(persisted),'only the recipient kind is stored');
+});
+test('only a saved successful ChatGPT connection replaces the API choice, and a persisted ChatGPT choice still fails closed',async t=>{
+ const {store}=await setup(t,{key:null}),chatgpt=chatgptFake();const service=new AssistantService({store,chatgpt});
+ service.setActive('openai-compatible');await service.chatgptBegin({termsAccepted:true});
+ assert.equal(service.state().active,'openai-compatible','a login in progress is not yet a choice');
+ chatgpt.connect();assert.equal(service.state().active,'chatgpt');
+ chatgpt.set({accounts:[],active:null,status:'error',encryptionAvailable:false});
+ assert.equal(new AssistantService({store,chatgpt}).state().active,'chatgpt','never silently from ChatGPT to the API provider');
 });

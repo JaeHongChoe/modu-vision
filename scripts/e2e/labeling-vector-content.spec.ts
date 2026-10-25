@@ -25,7 +25,7 @@ async function exercise(page:Page,workspace:Workspace,evidence:Evidence,api:Owne
  const query=`/api/annotations/part?file_path=${encodeURIComponent(imagePath)}`;
  const save=async()=>{const reply=page.waitForResponse(r=>new URL(r.url()).pathname==='/api/annotations/save'&&r.request().method()==='POST');await page.getByRole('button',{name:'변경 저장',exact:true}).click();expect((await reply).status()).toBe(200);return api(query);};
  await page.getByTitle('바운딩 박스 (BBox - 2)',{exact:true}).click();await drag(20,20,70,60);const boxSaved=await save();
- const box=boxSaved.annotations.find((a:any)=>a.type==='bbox');expect(box.label).toBe('Solder Bridge');expect(box.category_id).toBe(1);expect(box.bbox).toEqual([20,20,70,60]);
+ const box=boxSaved.annotations.find((a:any)=>a.type==='bbox');expect(box.label).toBe('defect');expect(box.category_id).toBe(1);expect(box.bbox).toEqual([20,20,70,60]);
  await page.getByRole('button',{name:/^Scratch(?: \d+)?$/}).click();await page.getByTitle('다각형 폴리곤 (Polygon - 4)',{exact:true}).click();
  await page.getByTitle('실제 크기 (1:1)',{exact:true}).click();
  const polygon=[[120,30],[180,30],[150,80]];for(const [x,y] of polygon){const p=await point(x,y);await page.mouse.click(p.x,p.y);}await page.keyboard.press('Enter');const polygonSaved=await save();
@@ -40,7 +40,7 @@ async function exercise(page:Page,workspace:Workspace,evidence:Evidence,api:Owne
  expect(shiftedSaved.annotations.find((a:any)=>a.type==='bbox').bbox).toEqual(box.bbox);expect(shiftedSaved.annotations.find((a:any)=>a.type==='polygon').polygon).toEqual(polygon);
  await page.getByTitle('라벨 삭제',{exact:true}).nth(0).click();const deleted=await save();expect(deleted.annotations).toHaveLength(2);expect(deleted.annotations.some((a:any)=>a.type==='bbox')).toBe(false);
  await page.getByTitle('실행 취소 (Ctrl+Z)',{exact:true}).click();const restored=await save();expect(restored.annotations).toEqual(shiftedSaved.annotations);
- await page.reload();await expect(page.getByRole('button',{name:/^Solder Bridge 1$/})).toBeVisible();await expect(page.getByRole('button',{name:/^Scratch 1$/})).toBeVisible();await expect(page.getByRole('button',{name:/^Crack 1$/})).toBeVisible();
+ await page.reload();await expect(page.getByRole('button',{name:/^defect 1$/})).toBeVisible();await expect(page.getByRole('button',{name:/^Scratch 1$/})).toBeVisible();await expect(page.getByRole('button',{name:/^Crack 1$/})).toBeVisible();
  const reopened=await api(query);expect(reopened.annotations).toEqual(restored.annotations);expect(hash(fs.readFileSync(imagePath))).toBe(originalSha);
  const raster=await page.evaluate(async data=>{const img=new Image();await new Promise<void>((resolve,reject)=>{img.onload=()=>resolve();img.onerror=()=>reject(Error('Saved vector raster decode failed'));img.src=data;});const canvas=document.createElement('canvas');canvas.width=img.width;canvas.height=img.height;const ctx=canvas.getContext('2d')!;ctx.drawImage(img,0,0);return{width:img.width,height:img.height,classes:[[45,40],[150,45],[120,170]].map(([x,y])=>ctx.getImageData(x,y,1,1).data[0])};},'data:image/png;base64,'+fs.readFileSync(reopened.mask_file).toString('base64'));
  expect(raster).toEqual({width:256,height:256,classes:[1,2,3]});

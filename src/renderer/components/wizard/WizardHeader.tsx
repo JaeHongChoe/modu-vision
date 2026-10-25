@@ -282,13 +282,15 @@ export const WizardHeader: React.FC<{ simpleControls?: React.ReactNode; simpleMe
       {/* Row 1 (draggable). 모두 보기: the project, where work runs, history, language. 간단히 보기: the whole header —
           the project, the six steps, 모두 보기 and the 더 보기 menu. */}
       <div
+        data-wizard-header-row="project"
         className={`flex min-h-11 flex-wrap items-center justify-between gap-x-3 gap-y-1 ${full ? 'border-b border-[#2B3547] ' : ''}bg-[#0E121A] py-1 ${window.api?.platform === 'darwin' ? 'pl-24 pr-4' : 'px-4'}`}
         style={{ WebkitAppRegion: 'drag' } as React.CSSProperties}
       >
         <div className="flex flex-wrap items-center gap-2" style={noDrag}>
           {/* 간단히 보기 drops the wordmark below 1440px so the project, the steps and the two toggles fit one row. */}
           <span className={`text-sm font-bold tracking-wide text-slate-100${full ? '' : ' hidden min-[1440px]:inline'}`}>Vision AI Studio</span>
-          <button type="button" onClick={() => setShowProjectPanel(true)} title={ko ? '프로젝트 관리' : 'Manage projects'} className={`group flex max-w-xs items-center gap-1.5 ${QUIET}`}>
+          {/* The footer's '프로젝트 만들기·열기' and the first-run guide's '프로젝트 관리 열기' open this through focusWorkflowTarget. */}
+          <button type="button" id="workflow-project" aria-haspopup="dialog" aria-expanded={showProjectPanel} data-workflow-open-on-focus onClick={() => setShowProjectPanel(true)} title={ko ? '프로젝트 관리' : 'Manage projects'} className={`group flex max-w-xs items-center gap-1.5 ${QUIET}`}>
             <FolderKanban className="h-4 w-4 shrink-0 text-cyan-400" aria-hidden="true" />
             <span className="truncate font-semibold">{projectName}</span>
             <ChevronDown className="h-3.5 w-3.5 shrink-0 text-slate-400" aria-hidden="true" />
@@ -370,7 +372,7 @@ export const WizardHeader: React.FC<{ simpleControls?: React.ReactNode; simpleMe
 
       {/* Row 2 (모두 보기): the inspection type and the six steps. Labels wrap on a narrow window instead of being cut off. */}
       {full && (
-        <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 bg-[#131822] px-4 py-2">
+        <div data-wizard-header-row="steps" className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 bg-[#131822] px-4 py-2">
           {taskSelect}
           {stepBar}
           {modelLocation}

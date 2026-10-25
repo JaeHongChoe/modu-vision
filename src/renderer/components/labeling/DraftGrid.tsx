@@ -13,12 +13,15 @@ interface Props {
   excluded: Set<string>;
   /** Drafts whose tile image has shown on this page: only these count as seen. */
   loaded: Set<string>;
+  /** Drafts whose tile image could not be read: they say so instead of loading forever. */
+  failed?: Set<string>;
   authority: string;
   context: ProjectContext | null;
   current: () => boolean;
   disabled: boolean;
   onToggle: (id: string) => void;
   onLoaded: (id: string) => void;
+  onFailed?: (id: string) => void;
   onOpen: (draft: LabelSuggestion) => void;
 }
 
@@ -52,7 +55,7 @@ function tileLabels(draft: LabelSuggestion, selected: Set<string> | undefined): 
 
 /** A page of drafts as tiles. A tile is a button: pressed means "included in this page's adoption". A click never
  *  moves the canvas; '열기' does. Arrow keys move between tiles and stay inside the grid. */
-export const DraftGrid: React.FC<Props> = ({ drafts, choices, excluded, loaded, authority, context, current, disabled, onToggle, onLoaded, onOpen }) => {
+export const DraftGrid: React.FC<Props> = ({ drafts, choices, excluded, loaded, failed, authority, context, current, disabled, onToggle, onLoaded, onFailed, onOpen }) => {
   const onKeyDown = useCallback((event: React.KeyboardEvent<HTMLDivElement>) => {
     const keys = ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'];
     if (!keys.includes(event.key)) return;
@@ -70,6 +73,7 @@ export const DraftGrid: React.FC<Props> = ({ drafts, choices, excluded, loaded, 
       {drafts.map((draft) => {
         const included = !excluded.has(draft.id);
         const seen = loaded.has(draft.id);
+        const broken = !seen && !!failed?.has(draft.id);
         const labels = tileLabels(draft, choices.get(draft.id));
         return (
           <div key={draft.id} className={`relative flex flex-col overflow-hidden rounded-lg border ${included ? 'border-emerald-700' : 'border-slate-700 opacity-60'} bg-[#0B0E14]`}>
@@ -78,10 +82,11 @@ export const DraftGrid: React.FC<Props> = ({ drafts, choices, excluded, loaded, 
               className="relative block w-full focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400" style={{ aspectRatio: `${draft.image_width} / ${draft.image_height}` }}>
               <ScopedDatasetThumbnail path={`/api/dataset/thumbnail/${encodeURIComponent(draft.image_id)}?file_path=${encodeURIComponent(draft.image_path)}&size=256`}
                 authority={authority} context={context} current={current} alt="모델 라벨 제안 미리보기" className="absolute inset-0 h-full w-full object-contain"
-                onLoad={() => onLoaded(draft.id)} />
+                onLoad={() => onLoaded(draft.id)} onFailed={() => onFailed?.(draft.id)} />
               {seen && <Overlay draft={draft} selected={choices.get(draft.id)} />}
               {seen && labels.tags.length > 0 && <span className="absolute left-1 top-1 max-w-[calc(100%-8px)] truncate rounded bg-cyan-950 px-1.5 py-0.5 text-[11px] font-semibold text-cyan-100" title={labels.tags.join(' · ')}>{labels.tags.join(' · ')}</span>}
-              {!seen && <span className="absolute inset-x-0 bottom-0 bg-black/60 px-1 py-0.5 text-[11px] text-slate-200">불러오는 중 · 보인 뒤 채택 가능</span>}
+              {broken && <span className="absolute inset-x-0 bottom-0 bg-black/70 px-1 py-0.5 text-[11px] text-amber-200">미리보기를 불러오지 못했습니다 · 눌러서 빼거나 '열기'로 확인</span>}
+              {!seen && !broken && <span className="absolute inset-x-0 bottom-0 bg-black/60 px-1 py-0.5 text-[11px] text-slate-200">불러오는 중 · 보인 뒤 채택 가능</span>}
             </button>
             <div className="flex items-center justify-between gap-1 px-1.5 py-1 text-[11px] text-slate-300">
               <span className="min-w-0 truncate" title={fileName(draft.image_path)}>{fileName(draft.image_path)}</span>

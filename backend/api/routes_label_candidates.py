@@ -366,7 +366,8 @@ def review_external_proposal(project,proposal,req):
     studio=dataset_annotation_dir(image.parent,Path(project['annotations_dir']),use_scope=False)
     json_path=studio/f'{image.stem}.json';mask_path=studio/'masks'/f'{image.stem}.png'
     batch=labeling_tasks.read(project,proposal['batch_id']) if proposal.get('batch_id') else None
-    if labeling_tasks.active(project): raise HTTPException(409,detail='라벨 작업이 진행 중입니다. 끝나거나 취소한 뒤 채택하세요.')
+    # Either kind of running draft work (this phrase/SAM2 kind or the trained-model batch) blocks the adoption.
+    if refusal:=suggestions.draft_work_refusal(project,'채택하세요'): raise HTTPException(409,detail=refusal)
     if proposal.get('labelset_id',project.get('active_labelset_id','default'))!=project.get('active_labelset_id','default'):
         raise HTTPException(409,detail='라벨 세트가 바뀌어 이 초안은 채택할 수 없습니다. 거절하세요.')
     expected_fingerprint=batch['review_fingerprint'] if batch else proposal['dataset_fingerprint']
