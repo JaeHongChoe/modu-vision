@@ -390,7 +390,8 @@ def verify_bound_functions(functions, source_root, source_pins):
         if (spec.role == 'original_required_execute'
                 and (source_pins == CURRENT_PRODUCER_SOURCE_PINS
                      or source_pins == COMBINED_PRODUCER_SOURCE_PINS
-                     or source_pins == PARAMETERLESS_ROTATION_PRODUCER_SOURCE_PINS)):
+                     or source_pins == PARAMETERLESS_ROTATION_PRODUCER_SOURCE_PINS
+                     or source_pins == COLD_SCHEMA_PRODUCER_SOURCE_PINS)):
             # Current execute must remain the registered observer even when an
             # unwrapped original engine code object is otherwise source-pinned.
             relative = 'backend/engine/original_owned_flow_execution_request.py'
@@ -460,6 +461,15 @@ COMBINED_PRODUCER_SOURCE_PINS = types.MappingProxyType({name: types.MappingProxy
 PARAMETERLESS_ROTATION_PRODUCER_SOURCE_PINS = types.MappingProxyType({name: types.MappingProxyType(dict(row))
     for name, row in {**COMBINED_PRODUCER_SOURCE_PINS, 'backend/engine/rotation.py': {
         'size': 20800, 'sha256': '6fd1d70540d08263f46d1165dddd3e0ca1071abf2c1723bf2aa7572e9bd82899'}}.items()})
+# Separate exact successor: the five unchanged graph classes now live in a cold
+# schema module. Both that dependency and its importing engine must be pinned;
+# the prior inline-schema cohort remains bound to its original six sources.
+COLD_SCHEMA_PRODUCER_SOURCE_PINS = types.MappingProxyType({name: types.MappingProxyType(dict(row))
+    for name, row in {**PARAMETERLESS_ROTATION_PRODUCER_SOURCE_PINS,
+        'backend/engine/flowchart_engine.py': {'size': 149170,
+            'sha256': 'aa2b99d4e8fd2d76e6123f98f89e8fc670b8107139f9ad7571187de85e9e833a'},
+        'backend/engine/flowchart_schema.py': {'size': 2873,
+            'sha256': '37f10afcb3637ce1222597a695a074724484ea88571d3885914a0155d31e707c'}}.items()})
 REGISTERED_ENGINE_OBSERVER_PIN = types.MappingProxyType({'size': 40214,
     'sha256': '9102a6126774d9d68b6097d844dcc5c8984b09fe0ab14b97fd06ce7d4db80fe3'})
 
@@ -582,14 +592,14 @@ def observe_required_engine_call(engine,kwargs,prepared=None):
 
 
 def _fixed_source_cohort(source_root, expected=None):
-    # Two complete coupled records only; no independent source/profile lists.
+    # Complete coupled records only; no independent source/profile lists.
     for cohort in RETAINED_CAPTURE_COHORTS:
         if expected is not None and cohort is not expected: continue
         try:
             return cohort, verify_bound_functions((),source_root,cohort['source_pins'])
         except (OSError,ValueError,SyntaxError):
             continue
-    raise ValueError('Fixed original six-file source custody refused')
+    raise ValueError('Fixed original source custody refused')
 
 
 def _verify_fixed_source_files(source_root):
@@ -754,6 +764,10 @@ PARAMETERLESS_ROTATION_CAPTURE_COHORT = types.MappingProxyType({
     'profile_id': 'server42-l40s-2-native43-20261016-01',
     'execution_profile_sha256': '6f36f621864d3c6b327295f684118434c6c1d18ddee8b21f30071527b0e7ea49',
     'source_pins': PARAMETERLESS_ROTATION_PRODUCER_SOURCE_PINS})
+COLD_SCHEMA_CAPTURE_COHORT = types.MappingProxyType({
+    'profile_id': 'server42-l40s-2-native43-20261016-01',
+    'execution_profile_sha256': '6f36f621864d3c6b327295f684118434c6c1d18ddee8b21f30071527b0e7ea49',
+    'source_pins': COLD_SCHEMA_PRODUCER_SOURCE_PINS})
 RETAINED_CAPTURE_COHORTS = (
     types.MappingProxyType({'profile_id': RETAINED_PROFILE_ID,
         'execution_profile_sha256': RETAINED_EXECUTION_PROFILE_SHA,
@@ -765,6 +779,7 @@ RETAINED_CAPTURE_COHORTS = (
         'execution_profile_sha256': '6f36f621864d3c6b327295f684118434c6c1d18ddee8b21f30071527b0e7ea49',
         'source_pins': COMBINED_PRODUCER_SOURCE_PINS}),
     PARAMETERLESS_ROTATION_CAPTURE_COHORT,
+    COLD_SCHEMA_CAPTURE_COHORT,
 )
 
 
