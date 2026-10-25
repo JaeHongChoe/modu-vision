@@ -11,7 +11,7 @@ The 2560×1440 simple-view exercise proves these controlled states:
 - Pending, HTTP 503 and successful null responses remove the prior heatmap element. Error and unavailable messages are distinct. Successful selection restores pixels, and leaving saved review restores the retained preview criterion.
 - Footer details give neutral image/label/retraining guidance. A real isolated class override initiates a held genuine import-summary response; pending metadata displays checking text and disables import. Split-action blocking is covered by the store/render regressions. Browser folder-path help remains visible and described by the input.
 
-Eleven unchanged raw PNG captures are retained: nine full 2560×1440 frames, one 1024×900 geometry frame and one actual DOM card screenshot. The 84 original guide files still match their retained input manifest. These are synthetic UI captures, not installation, model-quality or operational approval evidence.
+Eleven unchanged raw PNG captures are retained: nine full 2560×1440 frames, one 1024×900 geometry frame and one actual DOM selected-prediction-row screenshot (369×131). Its retained filename `s4-preview-card-row.png` does not mean the four summary metric cards; it must not replace the guide metric-card image. The full preview overview shows those four cards. The 84 original guide files still match their retained input manifest. These are synthetic UI captures, not installation, model-quality or operational approval evidence.
 
 ## Verification and limits
 

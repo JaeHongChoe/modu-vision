@@ -331,7 +331,8 @@
       "name": "s4-preview-card-row",
       "sha256": "58f9c0958e0d56dd137f1e6a6f1b4c2099a5e14317c0aada30e94b6861411688",
       "width": 369,
-      "height": 131
+      "height": 131,
+      "meaning": "Actual selected prediction row in the evaluation image list (test-NG-0.png), not the four summary metric cards. Original capture filename retained; do not replace img-step4-cards.png with this image. Use the full preview overview to show those four cards."
     },
     {
       "name": "f4-saved-miss-neutral-details",
