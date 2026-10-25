@@ -20,6 +20,7 @@ from backend.tests.test_application_launch_execution import (
     cpu_stack, start_cpu_stack, wait_receipt, stop_stack, controlled_canary_publication, _atomic_fixture_json,
 )
 from backend.tests.test_service_s6_04 import canonical, sha
+from backend.tests import _source_cpu_completion_boundary as completion_boundary
 
 
 pytestmark = pytest.mark.skipif(os.name != 'posix', reason='Owned bridge uses POSIX descriptors/lifetime locks')
@@ -29,7 +30,7 @@ def test_real_controller_enrolls_backend_before_actual_cpu_and_retains_blocking_
     """The existing source controller lacked a writer epoch despite real CPU success."""
     values = cpu_stack(tmp_path)
     root = values[0]
-    child, ack = start_cpu_stack(values, prefix=['-c', _source_cpu_settlement_fixture_prefix()])
+    child, ack = _start_ready_cpu_stack(values, prefix=['-c', _source_cpu_settlement_fixture_prefix()])
     try:
         _, cpu = _wait_receipt_and_cpu_settlement(root, ack['nonce'], child)
         assert cpu['semantic_output']['final_verdict'] == 'OK'
@@ -608,7 +609,7 @@ def managed_stack(tmp_path, monkeypatch, *, uncovered=False, damage=None):
     original_fixture = fixtures.fixture
     compiler = "const fs=require('fs'),ts=require('typescript');process.stdout.write(ts.transpileModule(fs.readFileSync(process.argv[1],'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022,esModuleInterop:true}}).outputText)"
     supervisor = subprocess.check_output(['node', '-e', compiler, str(repository/'src/main/supervisor.ts')])
-    scheduling_source=''.join(__import__('inspect').getsource(helper) for helper in (_fixture_wait_before_original_deadline,_fixture_validate_recovery_publication,_fixture_original_draining_guard_barrier))
+    scheduling_source=''.join(__import__('inspect').getsource(helper) for helper in (_fixture_wait_before_original_deadline,_fixture_validate_recovery_publication,_fixture_original_draining_guard_barrier,_fixture_cpu_completion_profile))
     backend = ('#!'+sys.executable+'\n'+fixtures._fixture_json_publisher_source()+scheduling_source+f'''
 import sys,os,time,json,threading,signal,socket
 from pathlib import Path
@@ -672,12 +673,14 @@ with maintenance_guard(root):
     except ValueError as e:(projects/'late-producer-refusal.txt').write_text(str(e));return
    time.sleep(.01)
  threading.Thread(target=late_probe,daemon=True).start()
+ original_profile=None
  if {damage!r} in ('changed_nonce','identical_request_replay'):
   # Select the genuine post-send prepared guard for changed nonce, or the
   # draining guard for replay. Original calls and exception stacks stay intact.
   phase='prepared' if {damage!r}=='changed_nonce' else 'draining'
   boundary='managed-nonce-proof-boundary.json' if {damage!r}=='changed_nonce' else 'managed-replay-proof-boundary.json'
-  sys.setprofile(_fixture_original_draining_guard_barrier(projects,h._BackendShutdown,h._BACKEND_SHUTDOWNS,intended_phase=phase,boundary_name=boundary))
+  original_profile=_fixture_original_draining_guard_barrier(projects,h._BackendShutdown,h._BACKEND_SHUTDOWNS,intended_phase=phase,boundary_name=boundary)
+ sys.setprofile(_fixture_cpu_completion_profile(projects,original_profile))
  backend_execution_service(stop)
  server.should_exit=True;server_thread.join(2);listener.close()
  assert not server_thread.is_alive()
@@ -725,7 +728,29 @@ fs.writeFileSync(path.join(launch.projects,'managed-stop-result.json'),JSON.stri
             return sign(payload)
         value['sign']=changed_layout;return value
     monkeypatch.setattr(fixtures,'fixture',fixture)
-    return fixtures.cpu_stack(tmp_path)
+    values=fixtures.cpu_stack(tmp_path)
+    _atomic_fixture_json(values[0]/'projects'/completion_boundary.CONFIG,
+        {'token':__import__('uuid').uuid4().hex,'root':str(values[0])})
+    return values
+
+
+def _fixture_cpu_completion_profile(projects, original_profile):
+    from backend.tests import _source_cpu_completion_boundary as boundary
+    from backend.tests.test_application_launch_quiescence_bridge import _cpu_contention_backend
+    profile=boundary.backend_profile(projects, original_profile)
+    if 'contention' in boundary.read(projects,boundary.CONFIG):
+        return _cpu_contention_backend(projects,profile)
+    return profile
+
+
+def _start_ready_cpu_stack(values, **kwargs):
+    """Capture the original receipt budget once in the parent before startup."""
+    projects=values[0]/'projects'
+    if (projects/completion_boundary.CONFIG).exists():
+        metadata=completion_boundary.read(projects,completion_boundary.CONFIG)
+        assert 'deadline' not in metadata, 'Fixture startup cannot renew its deadline'
+        _atomic_fixture_json(projects/completion_boundary.CONFIG,{**metadata,'deadline':time.monotonic()+50})
+    return start_cpu_stack(values,**kwargs)
 
 
 def wait_file(path, *, seconds=5, absolute_deadline=None):
@@ -964,7 +989,7 @@ def _managed_fixture_cleanup(child, root):
 def test_actual_source_cpu_then_managed_drain_and_original_node_exit_keeps_lease_blocked(tmp_path,monkeypatch,uncovered):
     import urllib.request,urllib.error
     values=managed_stack(tmp_path,monkeypatch,uncovered=uncovered);root=values[0];projects=root/'projects'
-    child,ack=start_cpu_stack(values,prefix=['-c',_source_cpu_settlement_fixture_prefix()])
+    child,ack=_start_ready_cpu_stack(values,prefix=['-c',_source_cpu_settlement_fixture_prefix()])
     with _managed_fixture_cleanup(child, root):
         _,cpu=_wait_receipt_and_cpu_settlement(root,ack['nonce'],child)
         assert cpu['semantic_output']['final_verdict']=='OK'
@@ -1324,12 +1349,42 @@ def _source_cpu_settlement_fixture_prefix():
 from backend.tests import test_application_launch_quiescence_bridge as fixture
 original_execute_cpu=controller.execute_cpu
 def execute_cpu(owner, capability):
-    receipt=original_execute_cpu(owner, capability)
+    receipt=fixture._execute_ready_source_cpu(original_execute_cpu, owner, capability)
     fixture._record_returned_cpu_settlement(owner, receipt)
     return receipt
 controller.execute_cpu=execute_cpu
 raise SystemExit(controller.main())
 '''
+
+
+def _execute_ready_source_cpu(original,owner,capability):
+    try:
+        with completion_boundary.controller_boundary(owner,original.__code__):
+            projects=owner.root/'projects'
+            if (projects/completion_boundary.CONFIG).exists() and 'contention' in completion_boundary.read(projects,completion_boundary.CONFIG):
+                return _cpu_contention_execute(original,owner,capability)
+            return original(owner,capability)
+    except BaseException as error:
+        _record_cpu_fixture_failure(owner.root/'projects',error)
+        raise
+
+
+def _record_cpu_fixture_failure(projects,error):
+    """Bounded code/phase/type and hashes only; never exception text or locals."""
+    try:
+        frames=[];tb=error.__traceback__
+        while tb is not None and len(frames)<12:
+            frames.append({'function':tb.tb_frame.f_code.co_name[:80],'line':tb.tb_lineno});tb=tb.tb_next
+        markers={}
+        for name in (completion_boundary.CONFIG,completion_boundary.PENDING,completion_boundary.READY,'cpu-gate-held.json','cpu-gate-enter.json'):
+            path=projects/name
+            markers[name]={'exists':path.is_file()}
+            if path.is_file():
+                with path.open('rb') as stream:raw=stream.read(4097)
+                if len(raw)<=4096:markers[name]['sha256']=sha(raw)
+        completion_boundary.write(projects,'source-cpu-fixture-error.json',{'phase':'completion_before_controller_return',
+            'exception':type(error).__name__[:80],'frames':frames,'markers':markers})
+    except BaseException:pass  # Diagnostics cannot replace the original failure.
 
 
 def _wait_returned_cpu_settlement(root, nonce, child, cpu, deadline):
@@ -1400,6 +1455,8 @@ def _wait_returned_cpu_settlement(root, nonce, child, cpu, deadline):
 
 def _wait_receipt_and_cpu_settlement(root, nonce, child):
     deadline=time.monotonic()+50
+    if (root/'projects'/completion_boundary.CONFIG).exists():
+        deadline=completion_boundary.read(root/'projects',completion_boundary.CONFIG)['deadline']
     remaining=deadline-time.monotonic();assert remaining>0
     target,cpu=wait_receipt(root,nonce,child,timeout=remaining)
     assert time.monotonic()<deadline
@@ -1544,7 +1601,7 @@ def _assert_damaged_registry(registry, damage, refusal, cpu, registry_sha256):
 def test_actual_controller_refuses_changed_and_replayed_original_main_drain_frames(tmp_path,monkeypatch,damage):
     """Owned real source channel; only the test-origin frame is intentionally damaged."""
     values=managed_stack(tmp_path,monkeypatch,damage=damage);root=values[0];projects=root/'projects'
-    child,ack=start_cpu_stack(values,prefix=['-c',_source_cpu_settlement_fixture_prefix()])
+    child,ack=_start_ready_cpu_stack(values,prefix=['-c',_source_cpu_settlement_fixture_prefix()])
     # The cleanup keeps this body's own failure; a cleanup error is added as a note instead of replacing it.
     with _managed_fixture_cleanup(child,root):
         _,cpu=_wait_receipt_and_cpu_settlement(root,ack['nonce'],child)
@@ -1578,3 +1635,267 @@ def test_actual_controller_refuses_changed_and_replayed_original_main_drain_fram
         with pytest.raises(ValueError):assert_quiescent(root)
         (projects/'managed-damaged-frame-proof.json').write_bytes(canonical({'damage':damage,'cpu':cpu,'refusal':refusal,
             'stop':result,'registry':snapshot,'backend_stderr':stderr,'private_fixture_channel_close_after_durable_refusal':True,'native':False,'whole_tree':False,'lease_release':False}))
+
+
+# These controlled schedules retain the original nonblocking admission. They
+# deliberately hold the actual post-send validator's pinned flock, never a mock.
+def _cpu_gate_wait(projects,name,deadline):
+    while time.monotonic()<deadline:
+        if (projects/'cpu-gate-abort.json').exists():raise AssertionError('Owned contention gate aborted')
+        if (projects/name).exists():return completion_boundary.read(projects,name)
+        time.sleep(min(.005,max(0,deadline-time.monotonic())))
+    raise AssertionError('Owned contention gate exceeded original deadline')
+
+
+def _cpu_contention_backend(projects,boundary):
+    import dis
+    from backend.engine import application_launch_lease as lease
+    metadata=completion_boundary.read(projects,completion_boundary.CONFIG)
+    schedule=metadata['contention'];held=False
+    lockcode=lease._transition_admission.__wrapped__.__code__
+    def profile(frame,event,arg):
+        nonlocal held
+        boundary(frame,event,arg)
+        action=boundary.action
+        if frame is action and event=='call' and schedule=={'entry':'publish','mode':'busy'}:
+            _cpu_gate_wait(projects,'cpu-gate-target.json',min(metadata['deadline'],boundary.deadline))
+        if held or event!='return' or frame.f_code is not lockcode or frame.f_locals.get('locked') is not True:return
+        ancestor=frame.f_back
+        while ancestor is not None and ancestor is not action:ancestor=ancestor.f_back
+        if ancestor is None:return
+        instructions=list(dis.get_instructions(frame.f_code))
+        index=next(i for i,item in enumerate(instructions) if item.offset==frame.f_lasti)
+        assert instructions[index].opname=='YIELD_VALUE' or (instructions[index].opname=='RESUME' and instructions[index-1].opname=='YIELD_VALUE')
+        held=True;info=os.fstat(frame.f_locals['fd'])
+        completion_boundary.write(projects,'cpu-gate-held.json',{'device':info.st_dev,'inode':info.st_ino,
+            'time':time.monotonic(),'deadline':min(metadata['deadline'],boundary.deadline)})
+        expected='cpu-gate-busy.json' if schedule['mode']=='busy' else 'cpu-gate-verify.json'
+        _cpu_gate_wait(projects,expected,min(metadata['deadline'],boundary.deadline))
+    return profile
+
+
+def _cpu_contention_execute(original,owner,capability):
+    from backend.engine import application_launch_execution as execution,application_launch_lease as lease
+    projects=owner.root/'projects';metadata=completion_boundary.read(projects,completion_boundary.CONFIG)
+    schedule=metadata['contention'];previous=sys.getprofile();thread=threading.get_ident()
+    target=execution.verify_completion.__code__ if schedule['entry']=='verify' else lease.LaunchSupervisor._publish_cpu_execution.__code__
+    def profile(frame,event,arg):
+        exact=event=='call' and threading.get_ident()==thread and frame.f_back is not None and frame.f_back.f_code is original.__code__
+        if exact and frame.f_code is execution.verify_completion.__code__ and frame.f_locals.get('owner') is owner:
+            completion_boundary.write(projects,'cpu-gate-verify.json',{'time':time.monotonic()})
+        if exact and frame.f_code is target and frame.f_locals.get('owner',frame.f_locals.get('self')) is owner:
+            completion_boundary.write(projects,'cpu-gate-target.json',{'time':time.monotonic()})
+            if schedule['mode']=='busy':
+                held=_cpu_gate_wait(projects,'cpu-gate-held.json',metadata['deadline'])
+                info=(owner.root/lease.LEASES/owner.nonce/lease.TRANSITION_LOCK).stat()
+                assert (info.st_dev,info.st_ino)==(held['device'],held['inode'])
+            if schedule['mode']=='busy':
+                completion_boundary.write(projects,'cpu-gate-enter.json',{'time':time.monotonic(),
+                    'function':frame.f_code.co_name,'device':info.st_dev,'inode':info.st_ino})
+            sys.setprofile(None)
+        # Busy controls intentionally enter while held. Released controls use
+        # the real readiness observer, then the unchanged target functions.
+        if schedule['mode']=='released' and previous is not None:
+            previous(frame,event,arg)
+            if exact and frame.f_code is target:
+                completion_boundary.write(projects,'cpu-gate-enter.json',{'time':time.monotonic(),'function':frame.f_code.co_name})
+            if exact and frame.f_code is execution.verify_completion.__code__ and schedule['entry']=='publish':sys.setprofile(profile)
+    sys.setprofile(profile)
+    try:return original(owner,capability)
+    except lease.LeaseTransitionBusy as exc:
+        completion_boundary.write(projects,'cpu-gate-busy.json',{'type':type(exc).__name__,
+            'cause_type':type(exc.__cause__).__name__,'cause_errno':getattr(exc.__cause__,'errno',None),'time':time.monotonic()})
+        raise
+    finally:sys.setprofile(previous)
+
+
+def _cpu_contention_cleanup(root,child,primary):
+    first=None
+    for cleanup in (lambda:completion_boundary.write(root/'projects','cpu-gate-abort.json',{'released':True}),
+                    lambda:stop_stack(child,root) if child is not None else None):
+        try:cleanup()
+        except BaseException as error:
+            if primary is None:
+                if first is None:first=error
+            else:
+                try:primary.add_note('Owned CPU gate cleanup also failed: '+type(error).__name__)
+                except BaseException:pass
+    if first is not None:raise first
+
+
+@pytest.mark.parametrize('entry,mode',[('verify','busy'),('publish','busy'),('verify','released'),('publish','released')])
+def test_source_cpu_completion_real_contention_and_readiness(tmp_path,monkeypatch,entry,mode):
+    """Removing readiness breaks released success; weakening real flock breaks busy refusal."""
+    import errno
+    original_stack=managed_stack;roots=[];child=None
+    def stack(*args,**kwargs):
+        values=original_stack(*args,**kwargs);root=values[0];roots.append(root)
+        metadata=completion_boundary.read(root/'projects',completion_boundary.CONFIG)
+        _atomic_fixture_json(root/'projects'/completion_boundary.CONFIG,{**metadata,'contention':{'entry':entry,'mode':mode}})
+        return values
+    monkeypatch.setattr(sys.modules[__name__],'managed_stack',stack)
+    try:
+        if mode=='released':
+            test_actual_controller_refuses_changed_and_replayed_original_main_drain_frames(tmp_path,monkeypatch,'identical_request_replay')
+            projects=roots[0]/'projects';ready=completion_boundary.read(projects,completion_boundary.READY)
+            entered=completion_boundary.read(projects,'cpu-gate-enter.json')
+            assert ready['normal_return'] is True and ready['time']<=entered['time']<ready['deadline']
+            assert not (projects/'cpu-gate-busy.json').exists()
+            assert (projects/'source-cpu-controller-returned.json.complete').is_file()
+        else:
+            values=stack(tmp_path,monkeypatch,damage='identical_request_replay');root=values[0];projects=root/'projects'
+            child,ack=_start_ready_cpu_stack(values,prefix=['-c',_source_cpu_settlement_fixture_prefix()])
+            deadline=completion_boundary.read(projects,completion_boundary.CONFIG)['deadline']
+            with pytest.raises(pytest.fail.Exception,match='CPU execution refused: Private bootstrap or execution refused: Lease transition is busy; retry after it completes'):
+                wait_receipt(root,ack['nonce'],child,timeout=max(0,deadline-time.monotonic()))
+            busy=completion_boundary.read(projects,'cpu-gate-busy.json');held=completion_boundary.read(projects,'cpu-gate-held.json')
+            entered=completion_boundary.read(projects,'cpu-gate-enter.json')
+            assert busy['type']=='LeaseTransitionBusy' and busy['cause_type']=='BlockingIOError'
+            assert busy['cause_errno'] in {errno.EAGAIN,errno.EWOULDBLOCK}
+            assert entered['function']==('verify_completion' if entry=='verify' else '_publish_cpu_execution')
+            assert held['time']<=entered['time']<=busy['time']<held['deadline']
+            assert (held['device'],held['inode'])==(entered['device'],entered['inode'])
+            row=json.loads((root/'.application-launches'/ack['nonce']/'journal.json').read_bytes())
+            assert row['state']=='recovery_required' and row['cpu_execution']['receipt_sha256'] is None
+            assert row['reason']=='Private bootstrap or execution refused: Lease transition is busy; retry after it completes'
+            assert not (root/'.application-launches'/ack['nonce']/'cpu-execution-receipt.json').exists()
+            assert not (projects/'drain.trigger').exists() and not (projects/'source-cpu-controller-returned.json.complete').exists()
+    finally:
+        if roots:_cpu_contention_cleanup(roots[0],child,sys.exc_info()[1])
+
+
+@pytest.mark.parametrize('negative',['code','thread','cache','queue','request','token','pre_send','phase','unsent','expired','nonfinite','root','nonce'])
+def test_source_cpu_completion_selector_refuses_foreign_context(negative):
+    code=object();cache={};queue=object();request={'nonce':'original'}
+    values=dict(actual_code=code,code=code,actual_thread=1,thread=1,actual_cache=cache,cache=cache,
+        actual_queue=queue,queue=queue,request=request,retained_request=request.copy(),token='a',retained_token='a',
+        completion_sent=True,phase='waiting_publication',deadline=11.,now=10.,actual_callsite=20,callsite=20,
+        actual_root=Path('/owned'),root=Path('/owned'),nonce='original')
+    assert completion_boundary.selected(**values)
+    changes={'code':('actual_code',object()),'thread':('actual_thread',2),'cache':('actual_cache',{}),
+        'queue':('actual_queue',object()),'request':('request',{'nonce':'foreign'}),'token':('token','b'),
+        'pre_send':('actual_callsite',19),'phase':('phase','active'),'unsent':('completion_sent',False),
+        'expired':('now',11.),'nonfinite':('deadline',float('inf')),'root':('actual_root',Path('/foreign')),'nonce':('nonce','foreign')}
+    key,value=changes[negative];values[key]=value
+    assert not completion_boundary.selected(**values)
+
+
+def test_source_cpu_completion_normal_return_excludes_original_exception():
+    events=[]
+    def normal():return {'proof':'synthetic'}
+    def error():raise ValueError('Original fixture error')
+    def profile(frame,event,arg):
+        if frame.f_code in {normal.__code__,error.__code__} and event=='return':events.append(completion_boundary.normal_return(frame,event))
+    previous=sys.getprofile()
+    try:
+        sys.setprofile(profile);assert normal()=={'proof':'synthetic'}
+        with pytest.raises(ValueError,match='Original fixture error') as caught:error()
+    finally:sys.setprofile(previous)
+    assert events==[True,False]
+    assert caught.value.__traceback__.tb_next.tb_frame.f_code is error.__code__
+
+
+@pytest.mark.parametrize('negative',['expired_parent','expired_action','foreign_token','foreign_request','foreign_root','foreign_nonce','exceptional','nonfinite'])
+def test_source_cpu_completion_ready_marker_cannot_grant_authority(tmp_path,negative):
+    projects=tmp_path/'projects';projects.mkdir();now=time.monotonic()
+    metadata={'root':str(tmp_path),'token':'synthetic','deadline':now+1};request={'nonce':'original'}
+    pending={'root':str(tmp_path),'token':'synthetic','nonce':'original',
+        'request_sha256':completion_boundary.request_hash(request),'deadline':now+.5}
+    ready={**pending,'normal_return':True,'time':now}
+    if negative=='expired_parent':metadata['deadline']=now-1
+    elif negative=='expired_action':pending['deadline']=ready['deadline']=now-1
+    elif negative=='foreign_token':ready['token']='foreign'
+    elif negative=='foreign_request':ready['request_sha256']='0'*64
+    elif negative=='foreign_root':ready['root']=str(tmp_path/'foreign')
+    elif negative=='foreign_nonce':ready['nonce']='foreign'
+    elif negative=='exceptional':ready['normal_return']=False
+    else:ready['deadline']=float('inf')
+    completion_boundary.write(projects,completion_boundary.PENDING,pending)
+    completion_boundary.write(projects,completion_boundary.READY,ready)
+    with pytest.raises(AssertionError):completion_boundary.wait_ready(projects,metadata,request)
+
+
+def test_source_cpu_completion_gate_cleanup_releases_without_masking_primary(tmp_path):
+    completion_boundary.write(tmp_path,'cpu-gate-abort.json',{'released':True})
+    with pytest.raises(AssertionError,match='Owned contention gate aborted'):
+        _cpu_gate_wait(tmp_path,'missing.json',time.monotonic()+1)
+
+
+@pytest.mark.parametrize('with_primary',[False,True])
+def test_source_cpu_completion_cleanup_keeps_original_failure_and_releases_gate(tmp_path,monkeypatch,with_primary):
+    projects=tmp_path/'projects';projects.mkdir();secondary=ValueError('cleanup');primary=RuntimeError('original') if with_primary else None
+    def failed_stop(*args):raise secondary
+    monkeypatch.setitem(globals(),'stop_stack',failed_stop)
+    if with_primary:
+        _cpu_contention_cleanup(tmp_path,object(),primary)
+        assert primary.__notes__==['Owned CPU gate cleanup also failed: ValueError']
+    else:
+        with pytest.raises(ValueError) as caught:_cpu_contention_cleanup(tmp_path,object(),None)
+        assert caught.value is secondary
+    assert completion_boundary.read(projects,'cpu-gate-abort.json')=={'released':True}
+    with pytest.raises(AssertionError,match='Owned contention gate aborted'):
+        _cpu_gate_wait(projects,'absent.json',time.monotonic()+1)
+
+
+def test_source_cpu_completion_foreign_controller_preserves_original_profile_and_error(tmp_path):
+    from types import SimpleNamespace
+    from backend.engine import application_launch_controller as controller,application_launch_execution as execution
+    projects=tmp_path/'projects';projects.mkdir()
+    completion_boundary.write(projects,completion_boundary.CONFIG,{'root':str(tmp_path),'token':'synthetic','deadline':time.monotonic()+1})
+    owner=SimpleNamespace(root=tmp_path,nonce='original');foreign=SimpleNamespace(root=tmp_path,nonce='original')
+    events=[]
+    def previous(frame,event,arg):
+        if frame.f_code is execution.verify_completion.__code__ and event in {'call','return'}:events.append(event)
+    saved=sys.getprofile()
+    try:
+        sys.setprofile(previous)
+        with completion_boundary.controller_boundary(owner,controller.execute_cpu.__code__):
+            with pytest.raises(execution.ExecutionError,match='CPU completion differs from original request') as caught:
+                execution.verify_completion(foreign,{}, {})
+        assert sys.getprofile() is previous
+    finally:sys.setprofile(saved)
+    assert events==['call','return']
+    assert caught.value.__traceback__.tb_next.tb_frame.f_code is execution.verify_completion.__code__
+    assert not (projects/completion_boundary.READY).exists()
+
+
+def test_source_cpu_completion_failure_diagnostics_contain_only_bounded_code_and_hashes(tmp_path):
+    completion_boundary.write(tmp_path,completion_boundary.CONFIG,{'token':'private synthetic token'})
+    try:raise ValueError('private bootstrap or proof must never be copied')
+    except ValueError as error:_record_cpu_fixture_failure(tmp_path,error)
+    raw=(tmp_path/'source-cpu-fixture-error.json').read_bytes();value=json.loads(raw)
+    assert b'private' not in raw and len(raw)<4096
+    assert value['exception']=='ValueError' and value['phase']=='completion_before_controller_return'
+    assert len(value['frames'])==1 and value['frames'][0]['function'].startswith('test_source_cpu_completion_failure_diagnostics_')
+    assert len(value['frames'][0]['function'])<=80 and type(value['frames'][0]['line']) is int
+    assert value['markers'][completion_boundary.CONFIG]['sha256']==sha((tmp_path/completion_boundary.CONFIG).read_bytes())
+    assert value['markers'][completion_boundary.READY]=={'exists':False}
+
+
+def test_source_cpu_completion_expired_observer_restores_only_its_previous_profile(tmp_path):
+    from types import SimpleNamespace
+    from backend.engine import application_launch_execution as execution
+    projects=tmp_path/'projects';projects.mkdir();request={'nonce':'original'}
+    completion_boundary.write(projects,completion_boundary.CONFIG,{'root':str(tmp_path),'token':'synthetic','deadline':time.monotonic()-1})
+    owner=SimpleNamespace(root=tmp_path,nonce='original')
+    def original(owner,capability):return execution.verify_completion(owner,{'request':request},{'request':request})
+    def previous(frame,event,arg):pass
+    saved=sys.getprofile()
+    try:
+        sys.setprofile(previous)
+        with pytest.raises(AssertionError,match='SOURCE completion readiness exceeded its original deadline'):
+            with completion_boundary.controller_boundary(owner,original.__code__):original(owner,None)
+        assert sys.getprofile() is previous
+    finally:sys.setprofile(saved)
+    assert not (projects/completion_boundary.READY).exists()
+
+
+def test_source_cpu_completion_gate_cleanup_attempts_stop_after_marker_failure(tmp_path,monkeypatch):
+    first=OSError('marker failure');stopped=[];child=object()
+    def failed_write(*args,**kwargs):raise first
+    def stop(actual_child,root):stopped.append((actual_child,root))
+    monkeypatch.setattr(completion_boundary,'write',failed_write)
+    monkeypatch.setitem(globals(),'stop_stack',stop)
+    with pytest.raises(OSError) as caught:_cpu_contention_cleanup(tmp_path,child,None)
+    assert caught.value is first
+    assert stopped==[(child,tmp_path)]
