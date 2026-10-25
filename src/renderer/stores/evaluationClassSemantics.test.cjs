@@ -423,3 +423,33 @@ test('eligible calibration with no prior analysis offers calculation rather than
  assert.match(view.text(view.nodes[0]),/아직 임계값 분석 결과가 없습니다/);
  assert.doesNotMatch(view.text(view.nodes[0]),/NG와 OK 검증 예측이 모두 있어야/);
 });
+
+// A REVIEW row cannot disappear behind another row's correct verdict. Keep the
+// real store verdict implementation, including per-image truth and nonfinite scores.
+const scoredNG=(id,score)=>({...sample(id,'NG','NG'),defect_score:score});
+const scoredOK=(id,score)=>({...sample(id,'normal','normal'),defect_score:score});
+const unscoredNG={image_id:'unscored',ground_truth:'NG'};
+for(const row of [
+ {name:'correct NG and missing NG prediction',items:[scoredNG('ng',.9),unscoredNG],misses:0,calibration:false},
+ {name:'correct OK and missing NG prediction',items:[scoredOK('ok',.1),unscoredNG],misses:0,calibration:true},
+ {name:'observed miss and missing NG prediction',items:[scoredNG('miss',.1),unscoredNG],misses:1,calibration:false},
+ {name:'observed miss and per-image NG without a score',items:[scoredNG('miss',.1),{image_id:'image-truth',is_defect:true}],misses:1,calibration:false},
+ {name:'correct NG and nonfinite NG score',items:[scoredNG('ng',.9),{...unscoredNG,defect_score:NaN}],misses:0,calibration:false},
+ {name:'correct NG and missing truth',items:[scoredNG('ng',.9),sample('missing-truth',undefined,'NG')],misses:0,calibration:false},
+ {name:'known NG alone without prediction',items:[unscoredNG],misses:0,calibration:false},
+])test('rendered mixed miss evidence exposes unresolved verdicts: '+row.name,()=>{
+ for(const language of ['ko','en']){
+  let calls=0;const input={jobId:'job',persistedThreshold:.5,confidenceThreshold:.5,testPredictions:row.items,filteredPredictions:[],calibrateZeroEscape:()=>calls++,applyOptimalThreshold:()=>calls++,setConfidenceThreshold:()=>calls++};
+  const view=renderStudio(input,{language});
+  view.nodes.find(n=>n.type==='button'&&/과검\/미검 최적화|Zero-Escape/.test(view.text(n))).props.onClick();view.rerender();
+  const card=view.nodes.find(n=>n.type==='div'&&String(n.props.className).startsWith('p-3 rounded-[4px] border'));
+  assert.match(view.text(card),language==='ko'?/판정 미확인.*1장/:/1 unresolved/i);
+  assert.match(view.text(card),language==='ko'?/점수.*예측.*확인/:/score.*prediction/i);
+  assert.doesNotMatch(view.text(card),/NG 정답 표본 없음|No NG reference samples|현재 평가 표본에서 미검 0건|No misses in this evaluation sample/);
+  assert.doesNotMatch(card.props.className,/bg-\[#064E3B\]/,'incomplete evidence never earns a green measured-zero card');
+  if(row.misses){assert.match(view.text(card),language==='ko'?/1건/:/1/);assert.match(card.props.className,/bg-\[#450A0A\]/,'an observed miss stays red and visible despite another unresolved verdict');}
+  else assert.match(view.text(card),/—/,'no complete sample count is asserted');
+  assert.equal(view.nodes.find(n=>n.type==='button'&&view.text(n)==='평가 임계값 적용').props.disabled,!row.calibration,'calibration eligibility remains unchanged');
+  assert.equal(calls,0);assert.equal(input.persistedThreshold,.5);assert.equal(input.confidenceThreshold,.5);
+ }
+});

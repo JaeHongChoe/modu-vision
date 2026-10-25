@@ -298,6 +298,7 @@ export const EvaluationStudio: React.FC = () => {
     let overkills = 0;
     let normalOks = 0;
     let correctNgs = 0;
+    let reviews = 0;
 
     testPredictions.forEach((p) => {
       const v = computeSampleVerdict(p, confidenceThreshold, overkillAnalysis, classSemantics?.roles);
@@ -305,6 +306,7 @@ export const EvaluationStudio: React.FC = () => {
       else if (v === 'OVERKILL') overkills++;
       else if (v === 'CORRECT_OK') normalOks++;
       else if (v === 'CORRECT_NG') correctNgs++;
+      else if (v === 'REVIEW') reviews++;
     });
 
     return {
@@ -313,6 +315,7 @@ export const EvaluationStudio: React.FC = () => {
       overkill: overkills,
       normal: normalOks,
       defect: correctNgs,
+      review: reviews,
     };
   }, [testPredictions, confidenceThreshold, overkillAnalysis, classSemantics]);
   const detectionGrains = useMemo(() => task === 'detection' && testPredictions.length > 0
@@ -348,11 +351,16 @@ export const EvaluationStudio: React.FC = () => {
     ? (language === 'ko' ? '평가 결과 없음' : 'No evaluation result')
     : !testPredictions.length
     ? (language === 'ko' ? '검증 예측 없음' : 'No validation predictions')
+    : sampleCounts.review > 0
+    ? (language === 'ko'
+      ? `판정 미확인 ${sampleCounts.review}장 · 점수·예측과 정답 역할을 확인하세요. 미검 수는 판정 가능한 표본에서 확인한 수입니다.`
+      : `${sampleCounts.review} unresolved verdict(s). Check scores, predictions and reference roles. Misses shown cover scored samples only.`)
     : sampleCounts.escape + sampleCounts.defect === 0
     ? (sampleCounts.normal + sampleCounts.overkill > 0
       ? (language === 'ko' ? 'NG 정답 표본 없음' : 'No NG reference samples')
       : (language === 'ko' ? '정상·불량 정답 역할을 확인하세요.' : 'Check the normal and defect reference roles.'))
     : null;
+  const hasObservedMisses = Boolean(!isLoading && jobId && sampleCounts.escape > 0);
   const hasReportableResult = Boolean(jobId && Object.keys(metrics).length > 0 && testPredictions.length > 0);
   const reportAvailabilityHint = executionEvidence?.common_cohort
     ? '선택 코호트 보고서 내보내기는 아직 지원되지 않습니다.'
@@ -1048,10 +1056,10 @@ export const EvaluationStudio: React.FC = () => {
               <div className="grid grid-cols-2 gap-2 text-xs">
                 <div
                   className={`p-3 rounded-[4px] border ${
-                    missedSampleUnavailableReason
-                      ? 'bg-[#1A212E] border-[#2B3547] text-slate-300'
-                      : sampleCounts.escape > 0
+                    hasObservedMisses
                       ? 'bg-[#450A0A] border-[#EF4444] text-[#FCA5A5]'
+                      : missedSampleUnavailableReason
+                      ? 'bg-[#1A212E] border-[#2B3547] text-slate-300'
                       : 'bg-[#064E3B] border-[#10B981] text-[#6EE7B7]'
                   }`}
                 >
@@ -1060,14 +1068,14 @@ export const EvaluationStudio: React.FC = () => {
                       <span>{language === 'ko' ? '미검 (불량 유출)' : 'Underkill (Escape)'}</span>
                       <JargonTooltip termKey="underkill" />
                     </span>
-                    {!missedSampleUnavailableReason && (sampleCounts.escape > 0 ? (
+                    {hasObservedMisses ? (
                       <AlertTriangle className="w-3.5 h-3.5 text-[#EF4444] animate-pulse" />
-                    ) : (
+                    ) : !missedSampleUnavailableReason && (
                       <CheckCircle2 className="w-3.5 h-3.5 text-[#10B981]" />
-                    ))}
+                    )}
                   </div>
                   <div className="text-base font-bold font-mono tabular-nums mt-1">
-                    {missedSampleUnavailableReason ? '—' : `${sampleCounts.escape}건`}
+                    {missedSampleUnavailableReason && !hasObservedMisses ? '—' : `${sampleCounts.escape}건`}
                   </div>
                   <div className="text-[10px] opacity-75">
                     {missedSampleUnavailableReason || (sampleCounts.escape > 0
