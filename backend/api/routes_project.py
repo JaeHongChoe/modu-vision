@@ -284,6 +284,15 @@ class RetentionRestoreRequest(BaseModel):
     trash_id: str = Field(pattern='^[0-9a-f]{32}$')
 
 
+class ProjectSourcePrecondition(BaseModel):
+    model_config = ConfigDict(extra="forbid", strict=True)
+    project_id: str
+    source_dataset_dir: Optional[str]
+    task: Literal["classification", "detection", "segmentation", "anomaly"]
+    annotations_dir: str
+    active_labelset_id: str
+
+
 class ProjectUpdateRequest(BaseModel):
     model_config = ConfigDict(extra="ignore")
     name: Optional[str] = Field(None, min_length=1, max_length=100)
@@ -291,6 +300,7 @@ class ProjectUpdateRequest(BaseModel):
     description: Optional[str] = None
     active_preset: Optional[Literal["fast", "precision"]] = None
     source_dataset_dir: Optional[str] = None
+    expected_source: Optional[ProjectSourcePrecondition] = None
 
 
 class ProjectConfigResponse(BaseModel):
@@ -478,7 +488,13 @@ def _project_context_mutation(project):
 @router.put("/update", response_model=ProjectConfigResponse)
 def update_project(req: ProjectUpdateRequest, request: Request):
     with _project_context_mutation(get_current_project(request)) as project:
-        updates = req.model_dump(exclude_unset=True)
+        if req.expected_source is not None:
+            current_source = {"project_id": project["id"], "source_dataset_dir": project.get("source_dataset_dir"),
+                              "task": project["task"], "annotations_dir": project["annotations_dir"],
+                              "active_labelset_id": project.get("active_labelset_id", "default")}
+            if req.expected_source.model_dump() != current_source:
+                raise HTTPException(status_code=409, detail="프로젝트의 데이터 원본이나 작업 종류, 라벨 세트가 바뀌었습니다. 목록을 새로 고친 뒤 다시 시도하세요.")
+        updates = req.model_dump(exclude_unset=True, exclude={"expected_source"})
         if "source_dataset_dir" in updates and updates["source_dataset_dir"]:
             source = Path(updates["source_dataset_dir"]).expanduser().resolve()
             workspace = Path(project["project_dir"]).resolve()

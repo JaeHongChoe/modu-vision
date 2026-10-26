@@ -41,6 +41,7 @@ export const SharedProjectPanel:React.FC=()=>{
   const [connection,setConnection]=useState<SharedConnection|null>(null),[server,setServer]=useState(host.kind()==='browser'&&host.can('sharedSessions')?window.location.origin:''),[username,setUsername]=useState(''),[password,setPassword]=useState(''),[projects,setProjects]=useState<SharedProject[]>([]),[selection,setSelection]=useState(''),[users,setUsers]=useState<SharedUser[]>([]),[newUser,setNewUser]=useState(''),[newPassword,setNewPassword]=useState(''),[member,setMember]=useState(''),[role,setRole]=useState('viewer'),[name,setName]=useState(''),[sourceDraft,setSourceDraft]=useState<SourceDraft>(emptySource),[busy,setBusy]=useState(false),[error,setError]=useState('');
   const visibleProject=useProjectStore(state=>state.project);
   const projectBusy=useProjectStore(state=>state.isProjectBusy);
+  const dataBusy=useDatasetStore(state=>state.isLoading||state.isSplitting);
   const sourceScope=acceptedSourceScope(connection);
   useEffect(()=>{
     setSourceDraft(sourceScope?{value:visibleProject?.source_dataset_dir||'',scope:sourceScope}:emptySource);
@@ -79,7 +80,7 @@ export const SharedProjectPanel:React.FC=()=>{
   };
   const createProject=async()=>{assertProjectIdle();await saveOpenEdits();assertProjectIdle();setSourceDraft(emptySource);const project=await api.project.create({name,task:newTask});setName('');await refresh();assertProjectIdle();setConnection(await host.shared.select(project.id));setSelection(project.id);assertProjectIdle();await useProjectStore.getState().syncCurrentProject();};
   const updateSource=async()=>{assertProjectIdle();const scope=acceptedSourceScope(connection);if(!scope||sourceDraft.scope!==scope)throw new Error('공유 프로젝트 선택을 완료한 뒤 원본 경로를 다시 확인하세요.');await api.project.update({source_dataset_dir:sourceDraft.value});await useProjectStore.getState().syncCurrentProject();};
-  const changing=busy||projectBusy;
+  const changing=busy||projectBusy||dataBusy;
   const sourceReady=!!sourceScope&&sourceDraft.scope===sourceScope;
   const input='min-w-0 rounded border border-slate-600 bg-slate-950 px-2 py-1.5 text-xs text-slate-200';
   return <details className="mt-3 rounded-lg border border-slate-700 bg-[#142131] p-3" open={!!connection}><summary className="flex cursor-pointer items-center gap-2 text-xs font-semibold text-cyan-200"><Users className="h-4 w-4"/>공동 작업 서버{connection&&<span className="ml-auto text-[10px] text-emerald-300">{connection.user.username}</span>}</summary>

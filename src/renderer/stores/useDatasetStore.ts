@@ -5,7 +5,7 @@
 
 import { create } from 'zustand';
 import type { ClassSplitCounts, ImageMeta, VisionTask } from '../types';
-import { api, getApiPersistenceIdentity, getProjectContext, getProjectContextGeneration, resolveApiUrl, type DatasetQuickValidation } from '../services/api';
+import { api, getApiPersistenceIdentity, getProjectContext, getProjectContextGeneration, resolveApiUrl, type DatasetQuickValidation, type ProjectSourceExpectation } from '../services/api';
 import type {DatasetPartition} from '../services/projectPreferences';
 import { useTrainingStore } from './useTrainingStore';
 import { useEvaluationStore } from './useEvaluationStore';
@@ -62,7 +62,7 @@ interface DatasetState {
   setClassFilter: (className: string | null) => void;
   setLabelFilter: (status: 'all' | 'labeled' | 'unlabeled') => void;
   setTrainRatio: (ratio: number) => void;
-  importFolder: (folder: string, task: VisionTask, allowRecoveryOverride?: boolean, restoreSaved?: boolean, isCurrent?: () => boolean) => Promise<void>;
+  importFolder: (folder: string, task: VisionTask, allowRecoveryOverride?: boolean, restoreSaved?: boolean, isCurrent?: () => boolean, expectedSource?: ProjectSourceExpectation) => Promise<void>;
   ensureImported: (task: VisionTask) => Promise<void>;
   generateSynthetic: (params: {
     task: VisionTask;
@@ -195,7 +195,7 @@ export const useDatasetStore = create<DatasetState>((set, get) => ({
     set({ trainRatio: ratio, splitPrefill: { id: ++splitPrefillSequence, datasetKey: state.datasetKey, authority, train, val, test: 100 - train - val } });
   },
 
-  importFolder: async (folder, task, allowRecoveryOverride, restoreSaved = false, isCurrent) => {
+  importFolder: async (folder, task, allowRecoveryOverride, restoreSaved = false, isCurrent, expectedSource) => {
     const authority = datasetAuthorityParts();
     const sameAuthority = () => {
       const current = datasetAuthorityParts();
@@ -242,7 +242,7 @@ export const useDatasetStore = create<DatasetState>((set, get) => ({
         : await api.dataset.import({ folder_path: folder, task, validate_images: true });
       if (!current()) return;
       if (!restoreSaved) try {
-        const project = await api.project.update({ source_dataset_dir: folder });
+        const project = await api.project.update({ source_dataset_dir: folder, ...(expectedSource ? {expected_source: expectedSource} : {}) });
         if (!current()) return;
         // The project API is the authority for the canonical source path. Keep
         // the renderer's project state aligned before allowing a switch.

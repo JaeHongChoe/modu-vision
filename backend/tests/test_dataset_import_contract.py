@@ -1,8 +1,11 @@
 """Realistic flat LabelMe dataset contracts for the data stage."""
 
 import csv
+import hashlib
+import io
 import itertools
 import json
+import zipfile
 
 import pytest
 from fastapi import HTTPException
@@ -301,6 +304,57 @@ def test_a_folder_of_images_with_no_label_yet_imports_for_detection_and_segmenta
             folder_path=str(folder), task=task, train_ratio=0.8, val_ratio=0.1, test_ratio=0.1))
     assert refused.value.status_code == 422 and "라벨이 있는 이미지가 아직 없어" in str(refused.value.detail)
     assert not any(folder.glob("*.json")), "nothing is written into the source folder"
+
+
+@pytest.mark.parametrize("task", ["detection", "segmentation"])
+def test_an_extracted_raw_image_archive_imports_without_changing_images_or_receipt(tmp_path, monkeypatch, task):
+    from backend.engine.dataset_archive_input import RECEIPT, extract_dataset_archive, verify_extraction
+
+    image = io.BytesIO()
+    Image.new("RGB", (16, 12)).save(image, format="PNG")
+    archive = io.BytesIO()
+    with zipfile.ZipFile(archive, "w") as zipped:
+        zipped.writestr("part.png", image.getvalue())
+    archive_sha256 = hashlib.sha256(archive.getvalue()).hexdigest()
+    folder = tmp_path / "extracted"
+    extract_dataset_archive(archive, folder, archive_sha256=archive_sha256)
+    before = {path.name: hashlib.sha256(path.read_bytes()).hexdigest() for path in folder.iterdir()}
+    assert set(before) == {"part.png", RECEIPT}
+    monkeypatch.setattr(routes_dataset, "SPLIT_MANIFEST_DIR", tmp_path / "manifests")
+    monkeypatch.setattr(routes_dataset, "STUDIO_ANNOTATIONS_DIR", tmp_path / "annotations")
+
+    imported = routes_dataset.import_dataset(routes_dataset.DatasetImportRequest(
+        folder_path=str(folder), task=task, validate_images=True))
+
+    assert imported["status"] == "success" and imported["source_images"] == 1
+    assert imported["total_images"] == (0 if task == "detection" else 1)
+    assert imported["unlabeled_images"] == (1 if task == "detection" else 0)
+    if task == "detection":
+        assert imported["labels_missing"] is True
+    assert imported["validation"]["checked_images"] == 1 and imported["validation"]["complete"] is True
+    with pytest.raises(HTTPException) as refused:
+        routes_dataset.split_dataset_endpoint(routes_dataset.DatasetSplitRequest(
+            folder_path=str(folder), task=task, train_ratio=0.8, val_ratio=0.1, test_ratio=0.1))
+    assert refused.value.status_code == 422 and "라벨이 있는 이미지가 아직 없어" in str(refused.value.detail)
+    assert {path.name: hashlib.sha256(path.read_bytes()).hexdigest() for path in folder.iterdir()} == before
+    assert verify_extraction(folder, archive_sha256)
+
+
+@pytest.mark.parametrize("extra", ["annotations_train.json", ".other.json", ".modu-extraction-backup.json", "train", "images", "masks"])
+def test_the_extraction_receipt_does_not_exempt_other_json_or_structured_layouts(tmp_path, extra):
+    from backend.engine.dataset_archive_input import RECEIPT
+
+    folder = tmp_path / "raw"
+    folder.mkdir()
+    Image.new("RGB", (16, 12)).save(folder / "part.png")
+    (folder / RECEIPT).write_text("{}")
+    assert not routes_dataset._flat_image_workspace(folder, "classification")
+    assert not routes_dataset._flat_image_workspace(folder, "anomaly")
+    if extra.lower().endswith(".json"):
+        (folder / extra).write_text("{}")
+    else:
+        (folder / extra).mkdir()
+    assert not routes_dataset._unlabeled_image_folder(folder)
 
 
 def test_a_raw_image_folder_is_not_taken_for_classification_or_a_structured_layout(tmp_path):

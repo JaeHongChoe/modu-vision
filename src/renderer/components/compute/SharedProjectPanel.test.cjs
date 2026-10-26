@@ -3,6 +3,7 @@ const tick=()=>new Promise(resolve=>setImmediate(resolve));
 function hostAdapterModule(name='hostAdapter.ts'){const file=path.join(__dirname,'..','..','services',name);const m=new Module(file,module);m.filename=file;m.paths=Module._nodeModulePaths(path.dirname(file));const original=m.require.bind(m);m.require=key=>key==='./browserSession'?hostAdapterModule('browserSession.ts'):original(key);m._compile(ts.transpileModule(fs.readFileSync(file,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText,file);return m.exports;}
 function load(filename,mocks){const m=new Module(filename,module);m.filename=filename;m.paths=Module._nodeModulePaths(path.dirname(filename));const original=m.require.bind(m);m.require=name=>name in mocks?mocks[name]:name==='../../services/hostAdapter'?hostAdapterModule():original(name);m._compile(ts.transpileModule(fs.readFileSync(filename,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022,jsx:ts.JsxEmit.React,esModuleInterop:true}}).outputText,filename);return m.exports;}
 function nodes(tree){if(!tree||typeof tree!=='object')return [];return [tree,...[].concat(tree.props?.children||[]).flatMap(nodes)];}
+function datasetHook(state={isLoading:false,isSplitting:false,setFolderPath(){}}){return Object.assign(selector=>selector(state),{getState:()=>state});}
 for(const operation of ['activate','login','disconnect','login_inventory_failure'])test(`${operation} switches the transport before remount loads and discards late old-server profiles`,async()=>{
   const isLogin=operation.startsWith('login');
   let server='old';const pending=[];let commit;
@@ -28,7 +29,7 @@ for(const operation of ['activate','login','disconnect','login_inventory_failure
     '../../services/api':{api,request,setSharedApiBase:()=>{},setProjectContext:()=>{},getProjectContext:()=>({workspace_id:'fixture',project_id:project.id,actor_id:'user',mode:'team'}),getProjectContextGeneration:()=>0,getApiPersistenceIdentity:()=>`shared:https://${server}.example`},
     '../../stores/useProjectStore':{useProjectStore:projectStore,saveOpenEdits:async()=>{}},
     '../../stores/useComputeStore':compute,
-    '../../stores/useDatasetStore':{useDatasetStore:{getState:()=>({setFolderPath:()=>{}})}},
+    '../../stores/useDatasetStore':{useDatasetStore:datasetHook()},
     '../../stores/useAnnotationStore':{useAnnotationStore:{getState:()=>({setReviewerName:()=>{},setImages:async()=>{}})}},
     '../../services/websocket':{telemetryService:{disconnect:()=>{},connect:async()=>{}}},
   }).SharedProjectPanel;
@@ -46,6 +47,33 @@ for(const operation of ['activate','login','disconnect','login_inventory_failure
   assert.equal(store.getState().selectedProfileId,'new-gpu');assert.equal(store.getState().isLoaded,true);
   if(operation==='login_inventory_failure')assert.match(values[14],/inventory is unavailable/);
   unsubscribe();delete global.window;
+});
+
+for(const flag of ['isLoading','isSplitting'])for(const loggedIn of [false,true])test(`${loggedIn?'project and disconnect':'login'} controls wait for ${flag} to settle`,()=>{
+  const connection={server_url:'https://owned.example',project_id:'p',user:{id:'owner',username:'owner',administrator:false},expires_at:2000000000};
+  const project={project:{id:'p',project_dir:'/owned/p',source_dataset_dir:'/owned/source'},isProjectBusy:false};
+  const dataset={isLoading:false,isSplitting:false,setFolderPath(){}};
+  const values=[loggedIn?connection:null,connection.server_url,'owner','controlled-password',[],'p',[],'','','','viewer','',{value:'',scope:null},false,''];let cursor=0;
+  const react={createElement:(type,props,...children)=>({type,props:{...props,children}}),useEffect:()=>{},useState:initial=>{
+    const index=cursor++;if(values[index]===undefined)values[index]=initial;return[values[index],value=>{values[index]=value;}];
+  }};
+  const Panel=load(path.resolve(__dirname,'SharedProjectPanel.tsx'),{
+    react:{__esModule:true,default:react,...react},'lucide-react':{Users:'icon',LogIn:'icon',LogOut:'icon'},
+    '../../services/api':{api:{},request:async()=>{},setSharedApiBase(){},setProjectContext(){},getApiPersistenceIdentity:()=> 'shared:https://owned.example',getProjectContextGeneration:()=>0,getProjectContext:()=>({workspace_id:'w',project_id:'p',actor_id:'owner',mode:'team'})},
+    '../../stores/useProjectStore':{useProjectStore:Object.assign(selector=>selector(project),{getState:()=>project}),saveOpenEdits:async()=>{}},
+    '../../stores/useComputeStore':{resetComputeTransportCache(){}},
+    '../../stores/useDatasetStore':{useDatasetStore:datasetHook(dataset)},
+    '../../stores/useAnnotationStore':{useAnnotationStore:{getState:()=>({})}},
+    '../../services/websocket':{telemetryService:{}},'../../services/hostAdapter':{host:{kind:()=> 'desktop',shared:{}}},
+  }).SharedProjectPanel;
+  const controls=()=>{cursor=0;const all=nodes(Panel());return loggedIn
+    ? [all.find(node=>node.props?.['aria-label']==='공동 작업 프로젝트'),all.find(node=>node.props?.['aria-label']==='공동 작업 서버 연결 해제')]
+    : [all.find(node=>node.type==='button'&&node.props.children.includes('연결·로그인'))];};
+  assert.ok(controls().every(control=>control.props.disabled===false),'idle controls are available');
+  dataset[flag]=true;
+  assert.ok(controls().every(control=>control.props.disabled===true),'owned data work must settle before offering a session change');
+  dataset[flag]=false;
+  assert.ok(controls().every(control=>control.props.disabled===false),'the existing controls become the observable wait after restoration');
 });
 
 // Exercise the real context subscription and telemetry client through the real
@@ -99,7 +127,7 @@ for(const outcome of ['success','auth_failure','inventory_failure','select_failu
       '../../services/api':{...apiModule,request},
       '../../stores/useProjectStore':{useProjectStore:projectStore,saveOpenEdits:async()=>{}},
       '../../stores/useComputeStore':{resetComputeTransportCache:()=>{}},
-      '../../stores/useDatasetStore':{useDatasetStore:{getState:()=>({setFolderPath:()=>{}})}},
+      '../../stores/useDatasetStore':{useDatasetStore:datasetHook()},
       '../../stores/useAnnotationStore':{useAnnotationStore:{getState:()=>({setReviewerName:()=>{},setImages:async()=>{}})}},
       '../../services/websocket':{telemetryService},
       '../../services/hostAdapter':{host:{kind:()=>'desktop',shared:{login:()=>loginResult,select:async()=>({...connection,project_id:newContext.project_id})}}},
@@ -158,7 +186,7 @@ for(const operation of ['login','activate','disconnect','login_sync_failure'])te
     '../../services/api':{api:{},request,setSharedApiBase:()=>{},setProjectContext:()=>{},getProjectContext:()=>context,getProjectContextGeneration:()=>0,getApiPersistenceIdentity:()=>'shared:https://new.example'},
     '../../stores/useProjectStore':{useProjectStore:projectStore,saveOpenEdits:async()=>{}},
     '../../stores/useComputeStore':{resetComputeTransportCache:()=>seen.push(['step views remounted',projectState.sharedSessionChanging])},
-    '../../stores/useDatasetStore':{useDatasetStore:{getState:()=>({setFolderPath:()=>{}})}},
+    '../../stores/useDatasetStore':{useDatasetStore:datasetHook()},
     '../../stores/useAnnotationStore':{useAnnotationStore:{getState:()=>({setReviewerName:()=>{},setImages:async()=>{}})}},
     '../../services/websocket':{telemetryService:{disconnect:()=>{},connect:async()=>{seen.push(['telemetry connected',projectState.sharedSessionChanging]);}}},
     '../../services/hostAdapter':{host:{kind:()=>'desktop',shared:{login:async()=>connection,select:async id=>({...connection,project_id:id}),disconnect:async()=>{}}}},

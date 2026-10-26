@@ -1313,12 +1313,21 @@ export type ProjectSelection = {
   project_id: string;
 };
 
+export type ProjectSourcePrecondition = {
+  project_id: string;
+  source_dataset_dir: string | null;
+  task: "classification" | "detection" | "segmentation" | "anomaly";
+  annotations_dir: string;
+  active_labelset_id: string;
+};
+
 export type ProjectUpdateRequest = {
   name?: string | null;
   task?: "classification" | "detection" | "segmentation" | "anomaly" | null;
   description?: string | null;
   active_preset?: "fast" | "precision" | null;
   source_dataset_dir?: string | null;
+  expected_source?: ProjectSourcePrecondition | null;
 };
 
 export type ProtocolTest = {

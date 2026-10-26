@@ -77,7 +77,7 @@ async function scenario(outcome) {
       react: {__esModule: true, default: react, ...react}, 'lucide-react': {Users: 'icon', LogIn: 'icon', LogOut: 'icon'},
       '../../services/api': api, '../../stores/useComputeStore': compute,
       '../../stores/useProjectStore': {useProjectStore: store, saveOpenEdits: async () => {}},
-      '../../stores/useDatasetStore': {useDatasetStore: {getState: () => ({setFolderPath() {}})}},
+      '../../stores/useDatasetStore': {useDatasetStore: Object.assign(selector => selector({isLoading: false, isSplitting: false}), {getState: () => ({setFolderPath() {}})})},
       '../../stores/useAnnotationStore': {useAnnotationStore: {getState: () => ({setReviewerName() {}, setImages: async () => {}})}},
       '../../services/websocket': {telemetryService: {disconnect() {}, connect: async () => {}}},
       '../../services/hostAdapter': {host: {kind: () => 'desktop', shared: {login: () => login, select: async id => {selectedCalls++; return {...connection, project_id: id};}}}},

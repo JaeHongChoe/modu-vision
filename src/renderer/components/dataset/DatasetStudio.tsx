@@ -25,6 +25,7 @@ import { host, hostErrorMessage } from '../../services/hostAdapter';
 import { ProceduralGeneratorModal } from './ProceduralGeneratorModal';
 import { DatasetVersionPanel } from './DatasetVersionPanel';
 import { DatasetImportPanel } from './DatasetImportPanel';
+import type {UploadedSourceScope} from './uploadedDatasetSource';
 import { validationStatus } from './datasetImportView';
 import { DatasetWorkflowPanel } from './DatasetWorkflowPanel';
 import {CaptureIntakePanel} from './CaptureIntakePanel';
@@ -142,6 +143,11 @@ export const DatasetStudio: React.FC = () => {
     setShowGeneratorModal,
     generateSynthetic,
   } = useDatasetStore();
+  const canOpenImports = Boolean(project?.id && projectDir === project.project_dir && project.task === task
+    && !isProjectBusy && !isLoading && !sessionChanging && (hasSelectedFolder || host.kind() === 'browser'));
+  const importsTitle = sessionChanging ? SESSION_CHANGING_NOTICE
+    : hasSelectedFolder ? '모든 이미지를 열어 검증한 고정 버전을 만들고 채택합니다'
+    : canOpenImports ? 'ZIP 파일을 올려 검증된 데이터 버전을 만듭니다' : '데이터셋을 먼저 불러오세요';
   // Relative thumbnails must never be rebuilt on a transport that did not
   // accept this source. Project acceptance can follow a server change later.
   const currentAuthority = readDatasetAuthority();
@@ -308,6 +314,70 @@ export const DatasetStudio: React.FC = () => {
     }
   };
 
+  const uploadedSourceOwner = () => {
+    const selected = useProjectStore.getState(), active = selected.project, context = getProjectContext();
+    if (!active?.id || !context || context.project_id !== active.id || selected.isProjectBusy || selected.sharedSessionChanging
+        || selected.projectDir !== active.project_dir || selected.task !== active.task) return null;
+    return JSON.stringify([getProjectContextGeneration(), getApiPersistenceIdentity(), selected.backendPort,
+      context.workspace_id, context.project_id, context.actor_id, context.mode, active.id, active.project_dir,
+      active.task, active.active_labelset_id || 'default', active.annotations_dir]);
+  };
+  const readUploadedSourceScope = (): UploadedSourceScope | null => {
+    const selected = useProjectStore.getState(), active = selected.project, dataset = useDatasetStore.getState();
+    const ownerKey = uploadedSourceOwner(), context = getProjectContext();
+    if (!ownerKey || !active || !context || dataset.isLoading || dataset.isSplitting || host.kind() !== 'browser') return null;
+    const expectedSource = {project_id: active.id, source_dataset_dir: active.source_dataset_dir,
+      task: active.task, annotations_dir: active.annotations_dir, active_labelset_id: active.active_labelset_id || 'default'};
+    return {ownerKey, context, projectId: active.id, projectDir: active.project_dir, task: active.task,
+      labelsetId: expectedSource.active_labelset_id, source: active.source_dataset_dir, expectedSource,
+      key: JSON.stringify([ownerKey, active.source_dataset_dir, dataset.folderPath, dataset.datasetKey,
+        dataset.sourceAuthority, readDatasetAuthority(), dataset.hasSelectedFolder])};
+  };
+  const handleUseUploadedSource = async (source: string) => {
+    const scope = readUploadedSourceScope();
+    if (!scope) throw new Error('현재 프로젝트의 데이터 원본을 먼저 확인하세요.');
+    const selection = ++folderSelection.current;
+    let savedTarget = false;
+    const ownsAction = () => selection === folderSelection.current && uploadedSourceOwner() === scope.ownerKey;
+    const current = () => {
+      if (!ownsAction()) return false;
+      const registered = useProjectStore.getState().project?.source_dataset_dir;
+      if (registered === source) {savedTarget = true; return true;}
+      return !savedTarget && registered === scope.source;
+    };
+    let failure: unknown;
+    try {
+      await importFolder(source, scope.task, undefined, false, current, scope.expectedSource);
+      if (!current()) throw new Error('데이터 원본을 고르는 중 프로젝트나 서버 연결이 바뀌었습니다.');
+      const loaded = useDatasetStore.getState();
+      if (loaded.sourceSaveError || loaded.importError) throw new Error(loaded.sourceSaveError || loaded.importError || '데이터 원본을 불러오지 못했습니다.');
+      if (useProjectStore.getState().project?.source_dataset_dir !== source || loaded.folderPath !== source
+          || loaded.datasetKey !== `${source}\0${scope.task}` || loaded.sourceAuthority !== readDatasetAuthority())
+        throw new Error('ZIP을 프로젝트 데이터 원본으로 저장했는지 확인하지 못했습니다.');
+      setShowImports(false);
+      return;
+    } catch (caught) { failure = caught; }
+    // A refused source write must not leave the inspected ZIP pretending to be the saved project source.
+    // Reopening the previous source is read-only; no rollback source write is issued.
+    const loaded = useDatasetStore.getState();
+    if (ownsAction() && useProjectStore.getState().project?.source_dataset_dir === scope.source
+        && loaded.folderPath === source && loaded.datasetKey === `${source}\0${scope.task}`) {
+      const restoreCurrent = () => ownsAction() && useProjectStore.getState().project?.source_dataset_dir === scope.source;
+      if (scope.source) {
+        try {
+          await importFolder(scope.source, scope.task, undefined, true, restoreCurrent);
+          if (restoreCurrent() && useDatasetStore.getState().importError) throw new Error(useDatasetStore.getState().importError || '');
+        } catch (restoreError) {
+          if (restoreCurrent()) {
+            useDatasetStore.getState().setFolderPath('');
+            throw new Error(`${hostErrorMessage(failure, 'ZIP 원본 선택에 실패했습니다.')} 기존 원본 화면도 다시 읽지 못했습니다: ${hostErrorMessage(restoreError, '다시 불러오세요.')}`);
+          }
+        }
+      } else if (restoreCurrent()) useDatasetStore.getState().setFolderPath('');
+    }
+    throw failure;
+  };
+
   const handleOpenImage = async (imageId: string, filePath: string) => {
     if (openingImageId) return;
     setImageOpenError(null);
@@ -446,8 +516,8 @@ export const DatasetStudio: React.FC = () => {
             <button
               type="button"
               onClick={() => setShowImports(true)}
-              disabled={!hasSelectedFolder || !project?.id || isLoading || sessionChanging}
-              title={sessionChanging ? SESSION_CHANGING_NOTICE : hasSelectedFolder ? '모든 이미지를 열어 검증한 고정 버전을 만들고 채택합니다' : '데이터셋을 먼저 불러오세요'}
+              disabled={!canOpenImports}
+              title={importsTitle}
               className="flex items-center gap-2 rounded-[4px] border border-emerald-700/60 bg-emerald-950/30 px-3 py-1.5 text-xs font-semibold text-emerald-200 hover:bg-emerald-900/40 disabled:cursor-not-allowed disabled:opacity-40"
             >
               <ListChecks className="h-4 w-4" />
@@ -461,8 +531,8 @@ export const DatasetStudio: React.FC = () => {
           <button
             type="button"
             onClick={() => setShowImports(true)}
-            disabled={!hasSelectedFolder || !project?.id || isLoading || sessionChanging}
-            title={sessionChanging ? SESSION_CHANGING_NOTICE : hasSelectedFolder ? '모든 이미지를 열어 검증한 고정 버전을 만들고 채택합니다' : '데이터셋을 먼저 불러오세요'}
+            disabled={!canOpenImports}
+            title={importsTitle}
             className="flex items-center gap-2 rounded-[4px] border border-emerald-700/60 bg-emerald-950/30 px-3 py-1.5 text-xs font-semibold text-emerald-200 hover:bg-emerald-900/40 disabled:cursor-not-allowed disabled:opacity-40"
           >
             <ListChecks className="h-4 w-4" />
@@ -1190,7 +1260,9 @@ export const DatasetStudio: React.FC = () => {
       <ProceduralGeneratorModal />
       {showImports && project?.id && <DatasetImportPanel projectId={project.id} datasetPath={folderPath}
         registeredSource={project.source_dataset_dir || null} task={task}
-        onClose={() => setShowImports(false)} onAccepted={() => { loadActiveRevision(); }} />}
+        onClose={() => setShowImports(false)} onAccepted={() => { loadActiveRevision(); }}
+        sourceSelectionScope={host.kind() === 'browser' ? readUploadedSourceScope : undefined}
+        onUseUploadedSource={host.kind() === 'browser' ? handleUseUploadedSource : undefined} />}
       {showVersions && <DatasetVersionPanel datasetPath={folderPath} highlightVersionId={highlightVersionId} onClose={() => { setShowVersions(false); setHighlightVersionId(null); }} onRestored={async () => {
         await importFolder(folderPath, task, false);
       }} />}

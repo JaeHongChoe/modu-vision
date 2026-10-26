@@ -44,6 +44,7 @@ from backend.engine.dataset_loaders import (
 )
 from backend.engine.industrial_adapters import inspect_industrial_dataset, find_matching_image, is_valid_labelme_file
 from backend.engine.annotation_storage import dataset_annotation_dir
+from backend.engine.dataset_archive_input import RECEIPT as DATASET_ARCHIVE_RECEIPT
 from backend.engine.source_text import read_source_text
 from backend.engine.synthetic_generator import generate_synthetic_dataset
 from backend.utils.error_catalog import format_error_response
@@ -247,7 +248,8 @@ def _has_flat_labelme_annotations(folder: Path) -> bool:
 
 
 def _unlabeled_image_folder(folder: Path) -> bool:
-    """Images directly in the folder and no label layout at all: no JSON, no class/split/images/masks subfolder. A
+    """Images directly in the folder and no label layout: no JSON except the archive extraction receipt, no
+    class/split/images/masks subfolder. A
     detection or segmentation project starts from such a folder and labels it in the app (Studio overlays), so split,
     drafts and metadata read it like a flat LabelMe folder that has no labelled image yet. The import counts it that way
     for detection only: a segmentation image without a mask is a background sample, counted as before."""
@@ -257,7 +259,7 @@ def _unlabeled_image_folder(folder: Path) -> bool:
         return False
     if any(entry.is_dir() and not entry.name.startswith(".") for entry in entries):
         return False
-    if any(entry.is_file() and entry.suffix.lower() == ".json" for entry in entries):
+    if any(entry.is_file() and entry.suffix.lower() == ".json" and entry.name != DATASET_ARCHIVE_RECEIPT for entry in entries):
         return False
     return any(entry.is_file() and not entry.name.startswith("._") and entry.suffix.lower() in SUPPORTED_IMAGE_EXTENSIONS
                for entry in entries)
