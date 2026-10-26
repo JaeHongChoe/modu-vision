@@ -386,8 +386,13 @@ async function main() {
         }
         if (!state.evaluated) {
             state.healthBefore = await api('/health');
+            // Reopen the exact saved candidate through the ordinary task handoff.
+            // A stage click alone need not have selected the just-completed job.
+            await page.getByRole('button', { name: '작업 센터', exact: true }).click();
+            const center = page.getByRole('dialog', { name: '작업 센터', exact: true });
+            await center.getByLabel('저장 작업 다시 열기', { exact: true }).selectOption('training:local:' + state.job_id);
             const evaluation = wire(page, '/api/evaluation/results', 'GET');
-            await stage(page, 3);
+            await center.getByRole('button', { name: '완료 후보 평가로 이동', exact: true }).click();
             state.evaluated = await checked(await evaluation);
             save();
         }
