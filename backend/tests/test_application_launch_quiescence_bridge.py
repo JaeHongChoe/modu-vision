@@ -616,6 +616,7 @@ def managed_stack(tmp_path, monkeypatch, *, uncovered=False, damage=None):
     backend = ('#!'+sys.executable+'\n'+fixtures._fixture_json_publisher_source()+scheduling_source+f'''
 import sys,os,time,json,threading,signal,socket
 from pathlib import Path
+from contextlib import ExitStack
 sys.path.insert(0,{str(repository)!r})
 from backend.engine.application_launch_handshake import early_backend_bootstrap,backend_bootstrap_ready,backend_execution_service,backend_work_admission,owned_cpu_writer_scope
 early_backend_bootstrap()
@@ -639,7 +640,7 @@ def cooperative_exit():
   if requested.is_set() and (projects/'exit.trigger').exists():stop.set();return
   time.sleep(.01)
 threading.Thread(target=cooperative_exit,daemon=True).start()
-with maintenance_guard(root):
+with maintenance_guard(root),ExitStack() as completion_observers:
  backend_bootstrap_ready();state=backend_work_admission()
  original_leave=state.leave
  def observed_leave(*,activity=None,normal_return=False):
@@ -684,8 +685,9 @@ with maintenance_guard(root):
   boundary='managed-nonce-proof-boundary.json' if {damage!r}=='changed_nonce' else 'managed-replay-proof-boundary.json'
   original_profile=_fixture_original_draining_guard_barrier(projects,h._BackendShutdown,h._BACKEND_SHUTDOWNS,intended_phase=phase,boundary_name=boundary)
  from backend.tests._source_cpu_completion_boundary import backend_observer
- with backend_observer(projects,original_profile,_fixture_cpu_completion_profile):
-  backend_execution_service(stop)
+ completion_observers.enter_context(backend_observer(projects,original_profile,_fixture_cpu_completion_profile))
+ backend_execution_service(stop)
+ completion_observers.close()
  server.should_exit=True;server_thread.join(2);listener.close()
  assert not server_thread.is_alive()
  (projects/'backend-cooperative-exit.json').write_text(json.dumps({{'pid':os.getpid(),'requested':requested.is_set()}}))
@@ -2891,3 +2893,108 @@ def test_observer_lifecycle_default_verify_handoff_keeps_required_publish_dispat
         assert sys.getprofile() is None
         assert completion_boundary.read(projects,'cpu-gate-enter.json')['function']=='_publish_cpu_execution'
     finally:sys.setprofile(saved)
+
+
+@pytest.mark.no_child
+@pytest.mark.parametrize('module_name,function_name', [
+    ('test_application_owned_source_cpu_relay_actual',
+     'test_actual_known_source_cpu_typed_relay_preserves_original_fences_through_final_ack'),
+    ('test_application_cpu_writer_lifetime',
+     'test_actual_original_cpu_epoch_inherits_writer_inode_and_keeps_scope_through_output'),
+    ('test_worker_preflight_writer_lifetime',
+     'test_actual_authenticated_source_preflight_cpu_preserves_guard_through_real_stages'),
+    ('test_application_preflight_child_relay_actual',
+     'test_actual_original_preflight_child_is_enrolled_bound_and_finalized'),
+])
+def test_shared_generated_backend_keeps_exact_consumer_injection_and_observer_scope(module_name, function_name, monkeypatch):
+    import ast,importlib,inspect
+    from backend.tests import test_application_launch_execution as fixtures
+    bridge=sys.modules[__name__]
+    def forbidden(*args,**kwargs):
+        raise AssertionError("Compile contract must never start a child or thread")
+    monkeypatch.setattr(subprocess.Popen,"__init__",forbidden)
+    monkeypatch.setattr(threading.Thread,"start",forbidden)
+
+    def _assigned(tree, name):
+        return next(node.value for node in ast.walk(tree) if isinstance(node, ast.Assign)
+                    and any(isinstance(target, ast.Name) and target.id == name for target in node.targets))
+
+    def _expression(node, scope):
+        # These expressions are the current trusted fixture constructors, not test
+        # backend execution. They only concatenate/encode the actual source bytes.
+        return eval(compile(ast.Expression(node), '<fixture-source-expression>', 'eval'), scope)
+
+    def _service_scopes(source):
+        scopes = []
+        def visit(node, retained):
+            if isinstance(node, ast.With):
+                retained = retained + [ast.unparse(item.context_expr) for item in node.items]
+            if isinstance(node, ast.Call) and isinstance(node.func, ast.Name) and node.func.id == 'backend_execution_service':
+                scopes.append(retained)
+            for child in ast.iter_child_nodes(node):
+                visit(child, retained)
+        visit(ast.parse(source), [])
+        assert len(scopes) == 1
+        return scopes[0]
+
+    def _assert_observer_lifetime(source):
+        tree = ast.parse(source)
+        maintenance = next(node for node in ast.walk(tree) if isinstance(node, ast.With)
+                           and any(ast.unparse(item.context_expr) == 'maintenance_guard(root)' for item in node.items))
+        assert ast.unparse(maintenance.items[-1].context_expr) == 'ExitStack()'
+        owner = ast.unparse(maintenance.items[-1].optional_vars)
+        statements = maintenance.body
+        entered = next(index for index, node in enumerate(statements) if isinstance(node, ast.Expr)
+                       and isinstance(node.value, ast.Call) and ast.unparse(node.value.func) == owner + '.enter_context'
+                       and len(node.value.args) == 1 and isinstance(node.value.args[0], ast.Call)
+                       and ast.unparse(node.value.args[0].func) == 'backend_observer')
+        service = next(index for index, node in enumerate(statements) if isinstance(node, ast.Expr)
+                       and isinstance(node.value, ast.Call) and ast.unparse(node.value.func) == 'backend_execution_service')
+        assert entered < service, 'Original observer must be entered before the service call'
+        assert ast.unparse(statements[service + 1]) == owner + '.close()', 'Normal return must close the observer immediately'
+
+    repository = Path(bridge.__file__).resolve().parents[2]
+    helpers = (bridge._fixture_wait_before_original_deadline,
+               bridge._fixture_validate_recovery_publication,
+               bridge._fixture_original_draining_guard_barrier,
+               bridge._fixture_cpu_completion_profile)
+    scope = dict(vars(bridge), fixtures=fixtures, repository=repository, uncovered=False, damage=None,
+                 scheduling_source=''.join(inspect.getsource(helper) for helper in helpers))
+    raw = _expression(_assigned(ast.parse(inspect.getsource(bridge.managed_stack)), 'backend'), scope)
+    compile(raw, '<original-shared-backend>', 'exec')
+    module = importlib.import_module('backend.tests.' + module_name)
+    consumer = ast.parse(inspect.getsource(getattr(module, function_name)))
+    instrumentation = _expression(_assigned(consumer, 'instrumentation'), scope)
+    needle = _expression(_assigned(consumer, 'needle'), scope)
+    replacement = next(node.value for node in ast.walk(consumer) if isinstance(node, ast.Assign)
+                       and any(ast.unparse(target) == "files['bin/backend_fixture.py']" for target in node.targets))
+    assert raw.count(needle) == 1
+    injected = _expression(replacement, dict(scope, raw=raw, files={'bin/backend_fixture.py': raw},
+                                           needle=needle, instrumentation=instrumentation))
+    compile(injected, '<instrumented-shared-backend-' + module_name + '>', 'exec')
+    assert _service_scopes(injected) == _service_scopes(raw), 'Consumer injection changed original observer lifetime'
+    assert raw.splitlines(keepends=True).count(needle) == 1, 'Consumer anchor must match one complete line'
+    _assert_observer_lifetime(raw)
+    _assert_observer_lifetime(injected)
+
+
+@pytest.mark.no_child
+@pytest.mark.parametrize('case',['both_protocols','missing_preflight','duplicate_preflight'])
+def test_preflight_fixture_diagnostic_selects_only_its_original_protocol_branch(case):
+    from backend.tests.test_application_preflight_child_relay_actual import instrument_original_bridge_refusal
+    fields="                    fields(request, ['schema_version', 'kind', 'action', 'nonce', 'epoch', 'binding_sha256', 'backend_claim_sha256', 'request_id', 'payload']);\n"
+    cpu="                if (request.kind === 'backend_cpu_child_request') {\n"+fields+'                }\n'
+    preflight="                if (request.kind === 'backend_preflight_request') {\n"+fields+'                }\n'
+    raw='        const invalidate = () => {\n        };\n'+cpu
+    if case!='missing_preflight':raw+=preflight
+    if case=='duplicate_preflight':raw+=preflight
+    if case!='both_protocols':
+        with pytest.raises(AssertionError):instrument_original_bridge_refusal(raw.encode())
+        return
+    result=instrument_original_bridge_refusal(raw.encode()).decode()
+    assert result.count(fields)==2 and result.count(cpu)==1
+    branch=result.index("                if (request.kind === 'backend_preflight_request') {")
+    observation=result.index('                    originalRelayDiagnostic={kind:request.kind,action:request.action')
+    validation=result.index(fields,branch)
+    assert branch<observation<validation
+    assert result.count('                    originalRelayDiagnostic={kind:request.kind,action:request.action')==1
