@@ -5,6 +5,7 @@
   "private": true,
   "main": "dist-electron/main/index.js",
   "scripts": {
+    "web": "node scripts/local-web.cjs",
     "start": "electron .",
     "dev": "tsc -p build/tsconfig.node.json && concurrently -k -n \"vite,electron-build,electron\" -c \"cyan,magenta,green\" \"vite\" \"tsc -p build/tsconfig.node.json -w --preserveWatchOutput\" \"wait-on tcp:127.0.0.1:5173 && electron .\"",
     "build:main": "tsc -p build/tsconfig.node.json",

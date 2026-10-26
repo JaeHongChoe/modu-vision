@@ -3,9 +3,13 @@
 ## Browser Studio
 
 Serve the built renderer and the authenticated API from the same HTTPS origin.
-Configure `--shared-auth-dir` and the exact origin in `MODU_BROWSER_ORIGINS` before
-starting the server. Provision the first administrator with the server process
-capability, outside the browser. A browser cannot bootstrap administration or
+`npm run web` builds the current source into its separate browser data root,
+configures the exact origin, and runs direct loopback-only Uvicorn TLS. Its first
+administrator is provisioned in the terminal through AccountStore before serving.
+See [local browser setup](local-browser.md) for certificate, data and OS limits.
+A manually hosted shared server instead configures `--shared-auth-dir` and the
+exact `MODU_BROWSER_ORIGINS` before startup, and provisions administration outside
+the browser with its server process capability. A browser cannot bootstrap administration or
 open another server's account session. Cross-origin account connections use the
 desktop client instead.
 
@@ -25,7 +29,7 @@ server-side refusals; the browser cannot grant itself permissions.
 | Server-side source path | Explicit server path; cannot access browser PC folders | Explicit path or native picker |
 | Local file/folder opening | Unavailable, with an explanation | Native bridge |
 | Desktop updates and OS service registration | Unavailable | Separate authorized native operation |
-| Telemetry | Server must proxy `/ws/` with trusted HTTPS/Origin handling | Native authenticated connection |
+| Telemetry | Launcher forwards `/ws/` directly to the authenticated ASGI app over WSS | Native authenticated connection |
 
 For an empty browser project, open **검증된 데이터 버전** in Step 1, choose a
 ZIP and use **ZIP 올리고 검증**. Validation and **이 버전 채택** publish the

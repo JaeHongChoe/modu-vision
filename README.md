@@ -96,6 +96,8 @@ GAN은 생성 데이터를 검토해 학습에 채택하는 용도이며, 검사
 
 ## 빠른 시작
 
+소스 환경을 설치한 뒤 일반 브라우저에서 실행하려면 `npm run web`을 사용합니다. 첫 실행 계정 설정, 로컬 HTTPS 인증서와 OS별 지원 범위는 [로컬 브라우저 실행 안내](docs/local-browser.md)를 확인하세요.
+
 ### 개발 환경
 
 **Git, Node.js 24, Python 3.13**을 준비합니다. 고정 버전은 **Python**: 3.13, **Node.js**: 24, **Electron**: 44입니다(Electron 44는 `package-lock.json`이 고정합니다). Windows·Linux 명령은 CPU용 해시 잠금 파일을 사용합니다. macOS arm64는 별도 잠금 파일이 없어 `requirements.txt`를 사용합니다. GPU 학습에는 장치에 맞는 드라이버와 Python 의존성 구성이 추가로 필요합니다.
