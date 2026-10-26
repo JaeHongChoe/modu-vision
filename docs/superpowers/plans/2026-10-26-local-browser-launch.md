@@ -81,6 +81,19 @@ Inserted before resuming Task 3. Actual acceptance created its first project thr
 - [ ] Run focused new/related shared-session component/store tests, full renderer suite once, app/e2e types and source-evidence gates. If current declarations need a refresh, report the exact flagged field first; never alter historical receipt bytes or assertions.
 - [ ] Self-review, commit only Task4 files and report RED/GREEN/diagnosis/concerns. Root supplies independent task review before Task3 resumes the same retained project/root.
 
+### Task 5: Canonical HTTPS default-port handling
+
+Inserted before the single model run after a bounded source/ASGI audit proved that an explicitly selected port443 generated a noncanonical Origin: internal readiness could pass but ordinary browsers omit the standard port and were refused. Default8443 is unaffected.
+
+**Files:** `backend/web.py`, `backend/local_web_app.py`, `backend/local_web_runtime.py`, related `backend/tests/test_local_web_app.py` and `backend/tests/test_local_web_cli.py`.
+
+**Interfaces:** Generated URL/Host/Origin at actual443 must be `https://localhost` / `localhost`; other ports remain explicit. Existing HTTPS account allowlist, exact authority, WSS and TLS fingerprint policies remain unchanged. Health probing defaults a missing HTTPS port to443.
+
+- [ ] Read the bounded `port443-audit.md` proof. Add actual ASGI/browser-canonical HTTP/WSS tests and health default-port behavior test; observe RED before editing.
+- [ ] Normalize only local origin construction/validation and health port fallback. Do not relax Host/Origin or authorize another origin/host.
+- [ ] Run focused app/CLI auth/TLS regressions, diff check and self-review. No privileged port listener, new server/model run, auth-system refactor or dependency change.
+- [ ] Commit only after root grants the git commit baton; independent task review follows. Task3 remains paused until Tasks4/5 are both reviewed, then resumes its retained project with current launch/model provenance.
+
 ### Task 3: Actual launcher browser round trip and closure evidence
 
 **Files:** Create focused integration test/runner under `scripts/qa/local-browser-acceptance.cjs` with `scripts/tests/local-browser-acceptance.test.cjs` as needed, and public `docs/verification/2026-10-26-local-browser.md` / `.json`; keep run artifacts in this plan's private workspace.
