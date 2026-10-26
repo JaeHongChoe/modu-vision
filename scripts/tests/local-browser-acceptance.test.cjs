@@ -89,3 +89,95 @@ test('owned artifact reservation preserves failed-start and screenshot files acr
         for(const name of ['launcher-resume.log','launcher-2.log'])assert.equal(fs.readFileSync(path.join(root,name),'utf8'),'old failure');
     }finally{fs.rmSync(root,{recursive:true,force:true});}
 });
+function cleanupFixture() {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'modu-cleanup-'));
+    const receipt = path.join(root, 'state.json');
+    const state = { status: 'passed', cleanup: [], failures: [], job_id: 'retained-job' };
+    fs.writeFileSync(receipt, JSON.stringify(state));
+    const writes = [];
+    return { root, receipt, state, writes, save() { writes.push(JSON.parse(JSON.stringify(state))); fs.writeFileSync(receipt, JSON.stringify(state)); }, dispose() { fs.rmSync(root, { recursive: true, force: true }); } };
+}
+test('browser close rejection still stops the owned server and persists cleanup failure', async () => {
+    const f = cleanupFixture();
+    let stopped = false;
+    try {
+        await assert.rejects(helper.finalizeRun({ state: f.state, save: f.save, bodySucceeded: true, browser: { async close() { throw new Error('browser close rejected'); } }, server: { async stop() { stopped = true; return { port_closed: true }; } } }), /browser close rejected/);
+        assert.equal(stopped, true, 'server cleanup must still be attempted');
+        const saved = JSON.parse(fs.readFileSync(f.receipt));
+        assert.equal(saved.status, 'failed');
+        assert.equal(saved.cleanup_errors[0].phase, 'browser.close');
+        assert.equal(saved.cleanup.length, 1);
+        assert.ok(saved.failures.some(row => row.message.includes('browser close rejected')));
+    }
+    finally {
+        f.dispose();
+    }
+});
+test('server stop rejection persists a failed receipt rather than the earlier success', async () => {
+    const f = cleanupFixture();
+    let closed = false;
+    try {
+        await assert.rejects(helper.finalizeRun({ state: f.state, save: f.save, bodySucceeded: true, browser: { async close() { closed = true; } }, server: { async stop() { throw new Error('server stop rejected'); } } }), /server stop rejected/);
+        assert.equal(closed, true);
+        const saved = JSON.parse(fs.readFileSync(f.receipt));
+        assert.equal(saved.status, 'failed');
+        assert.equal(saved.cleanup_errors[0].phase, 'server.stop');
+        assert.ok(saved.failures.some(row => row.message.includes('server stop rejected')));
+    }
+    finally {
+        f.dispose();
+    }
+});
+test('cleanup attempts all actions and preserves the original body failure and history', async () => {
+    const f = cleanupFixture(), original = new Error('original acceptance failure');
+    const calls = [];
+    f.state.status = 'failed';
+    f.state.failures.push({ message: original.message });
+    try {
+        await assert.rejects(helper.finalizeRun({ state: f.state, save: f.save, bodySucceeded: false, bodyError: original, browser: { async close() { calls.push('browser'); throw new Error('close fault'); } }, server: { async stop() { calls.push('server'); throw new Error('stop fault'); } } }), error => error === original);
+        assert.deepEqual(calls, ['browser', 'server']);
+        const saved = JSON.parse(fs.readFileSync(f.receipt));
+        assert.equal(saved.status, 'failed');
+        assert.equal(saved.failures[0].message, original.message);
+        assert.equal(saved.cleanup_errors.length, 2);
+        assert.equal(saved.failures.length, 3);
+    }
+    finally {
+        f.dispose();
+    }
+});
+test('success is persisted only after owned browser close and verified closed port', async () => {
+    const f = cleanupFixture(), calls = [];
+    f.state.status = 'cleanup-pending';
+    try {
+        await helper.finalizeRun({ state: f.state, save: f.save, bodySucceeded: true, browser: { async close() { assert.notEqual(f.state.status, 'passed'); calls.push('browser'); } }, server: { async stop() { assert.notEqual(f.state.status, 'passed'); calls.push('server'); return { port_closed: true }; } } });
+        assert.deepEqual(calls, ['browser', 'server']);
+        const saved = JSON.parse(fs.readFileSync(f.receipt));
+        assert.equal(saved.status, 'passed');
+        assert.ok(saved.closed_at);
+        assert.ok(saved.finished_at);
+        assert.equal(saved.cleanup_errors.length, 0);
+    }
+    finally {
+        f.dispose();
+    }
+});
+test('a returned open-port receipt cannot become successful acceptance', async () => {
+    const f = cleanupFixture();
+    try {
+        await assert.rejects(helper.finalizeRun({ state: f.state, save: f.save, bodySucceeded: true, server: { async stop() { return { port_closed: false }; } } }), /port.*clos/i);
+        assert.equal(JSON.parse(fs.readFileSync(f.receipt)).status, 'failed');
+    }
+    finally {
+        f.dispose();
+    }
+});
+test('initial and reconnect telemetry witnesses require hardware frames rather than heartbeat alone', () => {
+    const context = { project_id: 'project', workspace_id: 'workspace', actor_id: 'actor' }, origin = 'https://localhost:12345';
+    const initial = { origin: 'wss://localhost:12345', path: '/ws/telemetry', context, closed: false, frames: [{ event: 'pong' }] };
+    const reconnect = { ...initial, frames: [{ event: 'pong' }, { event: 'hardware_stats' }] };
+    assert.equal(helper.validTelemetrySocket(initial, origin, context), false, 'heartbeat-only initial socket is insufficient');
+    assert.equal(helper.validTelemetrySocket(reconnect, origin, context), true);
+    assert.equal(helper.validTelemetrySocket({ ...reconnect, closed: true }, origin, context), false);
+    assert.equal(helper.validTelemetrySocket(reconnect, origin, { ...context, actor_id: 'other' }), false);
+});

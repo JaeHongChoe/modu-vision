@@ -57,7 +57,66 @@ function parseReady(line, root) {
     assert.match(value.certificate_sha256, /^[0-9a-f]{64}$/);
     return value;
 }
-module.exports = { snapshot, verifySnapshot, reserveTraining, parseReady, fixtures, releaseUnsentTraining, observeResponse, recordLaunch, reserveArtifact };
+function validTelemetrySocket(row, origin, context) {
+    return Boolean(row.origin === origin.replace('https:', 'wss:') && row.path === '/ws/telemetry' && row.context?.project_id === context.project_id && row.context?.workspace_id === context.workspace_id && row.context?.actor_id === context.actor_id && row.frames.some(frame => frame.event === 'hardware_stats') && !row.closed);
+}
+// Final success belongs to the body AND every required owned cleanup action.
+async function finalizeRun({ state, browser, server, save, bodySucceeded = false, bodyError }) {
+    const errors = [];
+    state.cleanup ||= [];
+    state.failures ||= [];
+    state.cleanup_errors ||= [];
+    state.status = bodyError ? 'failed' : bodySucceeded ? 'cleanup-pending' : 'incomplete';
+    const failed = (phase, error) => {
+        errors.push(error);
+        const failure = { at: new Date().toISOString(), phase, message: String(error.stack || error), job_id: state.job_id || null };
+        state.cleanup_errors.push(failure);
+        state.failures.push(failure);
+    };
+    if (browser) {
+        try {
+            await browser.close();
+        }
+        catch (error) {
+            failed('browser.close', error);
+        }
+    }
+    if (server) {
+        try {
+            const receipt = await server.stop();
+            state.cleanup.push(receipt);
+            assert.equal(receipt.port_closed, true, 'Owned server port did not close');
+        }
+        catch (error) {
+            failed('server.stop', error);
+        }
+    }
+    state.closed_at = new Date().toISOString();
+    if (bodyError || errors.length) {
+        state.status = 'failed';
+        delete state.finished_at;
+    }
+    else if (bodySucceeded) {
+        state.status = 'passed';
+        state.finished_at = state.closed_at;
+    }
+    let persistError;
+    try {
+        save();
+    }
+    catch (error) {
+        state.status = 'failed';
+        persistError = error;
+    }
+    // A cleanup fault must not replace the original acceptance failure.
+    if (bodyError)
+        throw bodyError;
+    if (persistError)
+        throw persistError;
+    if (errors.length)
+        throw new AggregateError(errors, 'Owned cleanup failed: ' + errors.map(error => error.message || String(error)).join('; '));
+}
+module.exports = { snapshot, verifySnapshot, reserveTraining, parseReady, fixtures, releaseUnsentTraining, observeResponse, recordLaunch, reserveArtifact, finalizeRun, validTelemetrySocket };
 const pause = ms => new Promise(resolve => setTimeout(resolve, ms));
 async function portClosed(port) { return new Promise(resolve => { const socket = net.connect({ host: '127.0.0.1', port }); socket.once('connect', () => { socket.destroy(); resolve(false); }); socket.once('error', () => resolve(true)); }); }
 async function until(predicate, timeout = 30000) { const stop = Date.now() + timeout; while (Date.now() < stop) {
@@ -153,9 +212,13 @@ async function main() {
     const env = { ...process.env, VISION_AI_PYTHON: python, TORCH_HOME: torchHome, OMP_NUM_THREADS: '2', MKL_NUM_THREADS: '2' };
     let state = resume ? readJson(stateFile) : { started_at: new Date().toISOString(), run, root, source_head: execFileSync('git', ['rev-parse', 'HEAD'], { cwd: repo, encoding: 'utf8' }).trim(), synthetic_only: true, weights_sha256: weightsSha, failures: [], requests: [], cleanup: [] };
     const save = () => writeJson(stateFile, state);
+    // A resumed historical success is not success for this new attempt.
+    state.status = 'running';
+    delete state.finished_at;
     save();
     console.log('PRIVATE_RUN=' + run);
     let server, browser, context, page;
+    let bodyError, bodySucceeded = false;
     const sockets = [];
     let apiContext = null;
     const observe = target => {
@@ -423,7 +486,7 @@ async function main() {
         state.preserved ||= snapshot([state.checkpoint, state.metadataFile, state.receiptFile, state.evaluationFile, state.historyFile]);
         save();
         await screenshot('real-heldout-evaluation');
-        const validSocket = row => row.origin === server.ready.url.replace('https:', 'wss:') && row.path === '/ws/telemetry' && row.context?.project_id === state.project.id && row.context?.workspace_id === apiContext?.workspace_id && row.context?.actor_id === apiContext?.actor_id && row.frames.length && !row.closed;
+        const validSocket = row => validTelemetrySocket(row, server.ready.url, { ...apiContext, project_id: state.project.id });
         await expect.poll(() => sockets.some(validSocket), { timeout: 20000 }).toBe(true);
         state.wss_initial = sockets.filter(validSocket).map(row => ({ ...row }));
         save();
@@ -470,26 +533,21 @@ async function main() {
         const storage = await page.evaluate(() => JSON.stringify({ local: { ...localStorage }, session: { ...sessionStorage } }));
         assert.ok(!storage.includes(credential.password));
         state.secure_cookie = { httpOnly: session.httpOnly, secure: session.secure, sameSite: session.sameSite };
-        state.status = 'passed';
-        state.finished_at = new Date().toISOString();
+        state.status = 'cleanup-pending';
         save();
         await previousContext.close();
+        bodySucceeded = true;
     }
     catch (error) {
+        bodyError = error;
         state.status = 'failed';
         state.failures.push({ at: new Date().toISOString(), message: String(error.stack || error), job_id: state.job_id || null });
         save();
         if (page)
             await screenshot('failure-' + state.failures.length).catch(() => { });
-        throw error;
     }
     finally {
-        if (browser)
-            await browser.close();
-        if (server)
-            state.cleanup.push(await server.stop());
-        state.closed_at = new Date().toISOString();
-        save();
+        await finalizeRun({ state, browser, server, save, bodyError, bodySucceeded });
         console.log('FINAL_STATUS=' + state.status);
     }
 }
