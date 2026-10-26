@@ -270,3 +270,54 @@ def test_windows_tls_fails_before_creating_or_changing_files(state, tmp_path, mo
         state.ensure_tls(paths, cert, key)
     assert not paths.root.exists()
     assert (cert.read_bytes(), key.read_bytes()) == before
+
+
+def macos_acl_bytes(path):
+    """Snapshot native ACL text for preservation checks, without parsing ls output."""
+    import ctypes
+    library = ctypes.CDLL('/usr/lib/libSystem.B.dylib', use_errno=True)
+    library.acl_get_fd_np.argtypes = [ctypes.c_int, ctypes.c_int]
+    library.acl_get_fd_np.restype = ctypes.c_void_p
+    library.acl_to_text.argtypes = [ctypes.c_void_p, ctypes.POINTER(ctypes.c_ssize_t)]
+    library.acl_to_text.restype = ctypes.c_void_p
+    library.acl_free.argtypes = [ctypes.c_void_p]
+    library.acl_free.restype = ctypes.c_int
+    with path.open('rb') as stream:
+        acl = library.acl_get_fd_np(stream.fileno(), 0x100)
+    assert acl, 'the test fixture must have an actual native extended ACL'
+    text = None
+    try:
+        size = ctypes.c_ssize_t()
+        text = library.acl_to_text(acl, ctypes.byref(size))
+        assert text
+        return ctypes.string_at(text, size.value)
+    finally:
+        if text:
+            library.acl_free(text)
+        library.acl_free(acl)
+
+
+@pytest.mark.skipif(sys.platform != 'darwin', reason='actual macOS ACL fixtures')
+@pytest.mark.parametrize('custom', [True, False], ids=['supplied', 'default'])
+def test_macos_acl_read_grant_is_refused_without_changing_existing_keys(state, tmp_path, custom):
+    paths = state.web_paths(tmp_path / 'web')
+    cert, key = write_pair(tmp_path / 'custom') if custom else state.ensure_tls(paths)
+    subprocess.run(['/bin/chmod', '+a', 'everyone allow read', str(key)], check=True)
+    assert key.stat().st_mode & 0o777 == 0o600, 'ACL access is independent of POSIX mode'
+    before = cert.read_bytes(), key.read_bytes(), key.stat().st_mode, macos_acl_bytes(key)
+    with pytest.raises((ValueError, RuntimeError), match='ACL'):
+        state.ensure_tls(paths, cert, key) if custom else state.ensure_tls(paths)
+    assert (cert.read_bytes(), key.read_bytes(), key.stat().st_mode, macos_acl_bytes(key)) == before
+
+
+@pytest.mark.skipif(sys.platform != 'darwin', reason='actual macOS inherited ACL fixture')
+def test_generated_key_inherited_acl_is_refused_before_secret_write(state, tmp_path):
+    paths = state.web_paths(tmp_path / 'web')
+    paths.tls.mkdir(parents=True)
+    subprocess.run(['/bin/chmod', '+a', 'everyone allow read,file_inherit', str(paths.tls)], check=True)
+    with pytest.raises((ValueError, RuntimeError), match='ACL'):
+        state.ensure_tls(paths)
+    key = paths.tls / 'localhost-key.pem'
+    assert key.read_bytes() == b'', 'never serialize a private key into an inherited ACL grant'
+    assert macos_acl_bytes(key)
+    assert not (paths.tls / 'localhost-cert.pem').exists()

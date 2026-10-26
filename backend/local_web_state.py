@@ -150,12 +150,41 @@ def instance_lock(paths: WebPaths):
         yield
 
 
+def _private_key_permissions(fd: int, path: Path) -> None:
+    info = os.fstat(fd)
+    if info.st_mode & 0o077 or info.st_uid != os.getuid():
+        raise ValueError(f'TLS private key must be owned by you and accessible only to you (chmod 600): {path}')
+    if sys.platform == 'darwin':
+        import ctypes
+        import errno
+
+        guidance = (f'Cannot establish user-only TLS key privacy for {path}: '
+                    'review key and parent directory ACLs explicitly, then replace the TLS pair; no ACLs were changed')
+        try:
+            library = ctypes.CDLL('/usr/lib/libSystem.B.dylib', use_errno=True)
+            getter, free = library.acl_get_fd_np, library.acl_free
+            getter.argtypes, getter.restype = [ctypes.c_int, ctypes.c_int], ctypes.c_void_p
+            free.argtypes, free.restype = [ctypes.c_void_p], ctypes.c_int
+            ctypes.set_errno(0)
+            acl = getter(fd, 0x100)  # macOS SDK: ACL_TYPE_EXTENDED.
+            query_errno = ctypes.get_errno()
+        except (AttributeError, OSError) as exc:
+            raise RuntimeError(f'{guidance}; native ACL query unavailable') from exc
+        if acl:
+            # Any extended ACL is conservatively unsupported, including benign
+            # entries. POSIX mode bits do not describe these independent grants.
+            if free(acl) != 0:
+                raise RuntimeError(f'{guidance}; native ACL release failed')
+            raise ValueError(f'{guidance}; extended ACL present')
+        if query_errno != errno.ENOENT:
+            raise RuntimeError(f'{guidance}; native ACL query failed (errno {query_errno})')
+
+
 def _read_tls(path: Path, *, private: bool = False) -> bytes:
     fd = _regular_fd(path, os.O_RDONLY)
     with os.fdopen(fd, 'rb') as stream:
-        info = os.fstat(stream.fileno())
-        if private and (info.st_mode & 0o077 or info.st_uid != os.getuid()):
-            raise ValueError(f'TLS private key must be owned by you and accessible only to you (chmod 600): {path}')
+        if private:
+            _private_key_permissions(stream.fileno(), path)
         return stream.read()
 
 
@@ -206,6 +235,10 @@ def _generate_tls(cert_file: Path, key_file: Path) -> None:
     ):
         fd = _regular_fd(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL)
         with os.fdopen(fd, 'wb') as stream:
+            if path == key_file:
+                # A 0600 create can still inherit an independent macOS ACL.
+                # Establish privacy before serializing any secret key bytes.
+                _private_key_permissions(stream.fileno(), path)
             stream.write(content)
             stream.flush()
             os.fsync(stream.fileno())
