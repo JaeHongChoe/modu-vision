@@ -29,6 +29,14 @@ def manager(request,allowed=None):
     try:return ManagedService(project['project_dir']),project
     except (ValueError,OSError) as exc:raise HTTPException(409,str(exc)) from exc
 
+def host_manager(request):
+    """Startup registration outlives this server process on its host: shared mode keeps it to an administrator owner."""
+    service,project=manager(request,{'owner'})
+    account=getattr(request.state,'account_user',None)
+    if account and not account['administrator']:
+        raise HTTPException(403,'Only a server administrator who owns this project can change startup registration on the server host')
+    return service
+
 def execute(action):
     try:return action()
     except (ValueError,KeyError,OSError,RuntimeError,TimeoutError,httpx.HTTPError) as exc:raise HTTPException(409,str(exc)) from exc
@@ -68,20 +76,20 @@ def install(request:Request):
 
 @router.post('/install/activate')
 def activate_install(request:Request):
-    service,_=manager(request);return execute(service.activate_install)
+    service=host_manager(request);return execute(service.activate_install)
 @router.post('/install/remove')
 def remove_install(request:Request):
-    service,_=manager(request);return execute(service.uninstall_native)
+    service=host_manager(request);return execute(service.uninstall_native)
 
 @router.post('/scm/preflight')
 def scm_preflight(payload:ScmConfiguration,request:Request):
     service,_=manager(request);return execute(lambda:service.scm_preflight(payload.model_dump()))
 @router.post('/scm/prepare')
 def prepare_scm(payload:ScmConfiguration,request:Request):
-    service,_=manager(request);return execute(lambda:service.prepare_scm(payload.model_dump()))
+    service=host_manager(request);return execute(lambda:service.prepare_scm(payload.model_dump()))
 @router.post('/scm/activate')
 def activate_scm(request:Request):
-    service,_=manager(request);return execute(service.activate_scm)
+    service=host_manager(request);return execute(service.activate_scm)
 
 
 class CaptureGroupPolicyRequest(BaseModel):

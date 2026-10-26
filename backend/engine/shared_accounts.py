@@ -92,12 +92,19 @@ class AccountStore:
         if transport not in {'bearer','cookie'}:raise ValueError('Unknown session transport')
         now=time.time()
         with self._db() as db:
+            hashed=db.execute('SELECT * FROM users WHERE username=?',(username,)).fetchone()
+            # Hash outside the write transaction: every request's session check needs this database, so
+            # unauthenticated attempts must not hold its lock for the length of a password hash.
+            db.commit()
+            try:digest=self._password(password,hashed['salt'] if hashed else '00'*16)
+            except ValueError:digest=''
+            db.execute('BEGIN IMMEDIATE')
             failure=db.execute('SELECT * FROM failures WHERE username=?',(username,)).fetchone()
             row=db.execute('SELECT * FROM users WHERE username=?',(username,)).fetchone()
             blocked=failure is not None and failure['blocked_until']>now
-            try:digest=self._password(password,row['salt'] if row else '00'*16)
-            except ValueError:digest=''
-            valid=bool(row and not row['disabled'] and not blocked and hmac.compare_digest(digest,row['password_hash']))
+            # The account read again now must be the one whose salt was hashed, still enabled.
+            same=bool(row and hashed and row['id']==hashed['id'] and row['salt']==hashed['salt'])
+            valid=bool(same and not row['disabled'] and not blocked and hmac.compare_digest(digest,row['password_hash']))
             if not valid:
                 count=(failure['count'] if failure else 0)+1
                 db.execute('INSERT OR REPLACE INTO failures VALUES(?,?,?)',(username,count,now+900 if count>=10 else 0))
