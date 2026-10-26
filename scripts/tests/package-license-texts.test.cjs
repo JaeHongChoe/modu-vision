@@ -7,7 +7,7 @@ const os=require('node:os');
 const crypto=require('node:crypto');
 
 function fixture(){
-  const root=fs.mkdtempSync(path.join(os.tmpdir(),'modu-license-bundle-'));
+  const root=fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(),'modu-license-bundle-')));
   const entry=root+'/node_modules/example';fs.mkdirSync(entry,{recursive:true});
   fs.writeFileSync(entry+'/package.json',JSON.stringify({name:'example',version:'1.2'}));
   fs.writeFileSync(entry+'/LICENSE','original copyright and license\n');

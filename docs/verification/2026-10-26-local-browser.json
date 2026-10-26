@@ -1,0 +1,402 @@
+{
+  "schema_version": 1,
+  "date": "2026-10-26",
+  "status": "passed",
+  "scope": {
+    "synthetic_functional_acceptance": true,
+    "source_installed": true,
+    "actual_host": "macOS 27.0.1",
+    "browser": "isolated Playwright Chromium",
+    "product_certificate_bypass_flags": false,
+    "qa_browser_ignore_https_errors": true,
+    "system_trust_changed": false,
+    "proxy_or_native_bridge": false,
+    "storage_or_onboarding_injection": false,
+    "external_or_paid_calls": false,
+    "weights_downloaded": false,
+    "model_quality_approved": false,
+    "installer_or_native_approved": false,
+    "windows_runtime": "unavailable by TLS ACL policy",
+    "linux_runtime": "not qualified"
+  },
+  "provenance": {
+    "model_source_head": "586da76ae7f5bd5e7145ff473840c4c28f254065",
+    "first_evaluation_source_head": "fd17df6bf60bd657a4a2d7edf443226ae39ce04e",
+    "restart_readback_source_head": "9ea6483ee9dc48e0188005613aec66ad751d2e7c",
+    "launches": [
+      {
+        "source_head": "586da76ae7f5bd5e7145ff473840c4c28f254065",
+        "pid": 30575,
+        "renderer": {
+          "renderer/index.html": "1189ca74d86d4e948328c82dfc9e6c4dd0315801d849cf86571cbd5a53eedece",
+          "renderer/assets/main-Bvbn5-Jm.js": "df28d76e701907de77ed5b04cfe418bdf799943cc086b8b31d0e4eb45a3578ad",
+          "renderer/assets/main-CA3gRUln.css": "f865403fc51457874571cc22cddc9095fc8a28607cf9138a525d1e8b5b9dc80a"
+        }
+      },
+      {
+        "source_head": "fd17df6bf60bd657a4a2d7edf443226ae39ce04e",
+        "pid": 30960,
+        "renderer": {
+          "renderer/index.html": "e171a3d3d1fdc14e93bb774986754ea1a6321c7ee7b8e7510bf5bb3a176b127e",
+          "renderer/assets/main-ByaVFe-P.js": "3128f84b9e20a6e1ccb4fdc7c9eaaf2066900a8f14fe3b7a857b5976ad1b3631",
+          "renderer/assets/main-CA3gRUln.css": "f865403fc51457874571cc22cddc9095fc8a28607cf9138a525d1e8b5b9dc80a"
+        }
+      },
+      {
+        "source_head": "9ea6483ee9dc48e0188005613aec66ad751d2e7c",
+        "pid": 32550,
+        "renderer": {
+          "renderer/index.html": "2b4777458ac56a4d6c45c9e519aeb4106514f6a01b0256526ec06c75b062d12c",
+          "renderer/assets/main-CA3gRUln.css": "f865403fc51457874571cc22cddc9095fc8a28607cf9138a525d1e8b5b9dc80a",
+          "renderer/assets/main-DleBaAyp.js": "8b2a7485974267aa14590b3a09e68bd5964fbd697029f6ee10004aa234eaa923"
+        }
+      },
+      {
+        "source_head": "9ea6483ee9dc48e0188005613aec66ad751d2e7c",
+        "pid": 32595,
+        "renderer": {
+          "renderer/index.html": "2b4777458ac56a4d6c45c9e519aeb4106514f6a01b0256526ec06c75b062d12c",
+          "renderer/assets/main-CA3gRUln.css": "f865403fc51457874571cc22cddc9095fc8a28607cf9138a525d1e8b5b9dc80a",
+          "renderer/assets/main-DleBaAyp.js": "8b2a7485974267aa14590b3a09e68bd5964fbd697029f6ee10004aa234eaa923"
+        }
+      }
+    ]
+  },
+  "origin": "https://localhost:49887",
+  "certificate_sha256_der": "71330df3c7e85efd8e59602c5ddbc641d9ace048206d1f058f75af09115ae5ad",
+  "project_id": "3a9f2f10",
+  "task": "classification",
+  "dataset": {
+    "image_count": 16,
+    "unique_images": 16,
+    "archive_sha256": "567ef9d6dd994766b311701e32fe73ef5976a06af22797b95d7305762498c158",
+    "images": [
+      {
+        "relative_path": "OK/ok_0.png",
+        "sha256": "97b9b31ae32e840c54537791138b60b75c0c2c33a3918450a6cb882b9d3deb1a"
+      },
+      {
+        "relative_path": "OK/ok_1.png",
+        "sha256": "6c98c6137b76ac6c74ff60c1287fc66a541edf9f8d44b9ec9e86583ee1d383da"
+      },
+      {
+        "relative_path": "OK/ok_2.png",
+        "sha256": "7796fa18b6376048fd6af48897e64cbb8b3bcaec137e151510d93470f381252c"
+      },
+      {
+        "relative_path": "OK/ok_3.png",
+        "sha256": "5c9e40767cd9def4fefe079fd60865b5246d698a17e9882e181451c48d8ee967"
+      },
+      {
+        "relative_path": "OK/ok_4.png",
+        "sha256": "252e293cdaff0a0bd397cdb60e7bb76bdf0405646ab9ff3f90f8ec8d0f1ee4e6"
+      },
+      {
+        "relative_path": "OK/ok_5.png",
+        "sha256": "bfe9f03801bd1b6b6b408d72c7132227bd88d5f43474a4344b28e63acaa38489"
+      },
+      {
+        "relative_path": "OK/ok_6.png",
+        "sha256": "9a08740d824958aa3e6b726ad0df8612f96c6f57b6b1441df40892ec8966e77f"
+      },
+      {
+        "relative_path": "OK/ok_7.png",
+        "sha256": "0377f8ae8e54ab6cac9856908d0b1c8b0d1147a13a3ee2cc4871df0546f88f2a"
+      },
+      {
+        "relative_path": "NG/ng_0.png",
+        "sha256": "f9e93f2cc1f9c317bde6929ddd2a4572beeba7ac87e82b030f6db58e9e74efcf"
+      },
+      {
+        "relative_path": "NG/ng_1.png",
+        "sha256": "3311766b95e1fa51704574eebef2a0b603c31b778aa07d47fc4589190e676847"
+      },
+      {
+        "relative_path": "NG/ng_2.png",
+        "sha256": "8361c865738bbb3b5ea5421ad3240bb5884ddcd51a82458c1491cdf6c6082f5f"
+      },
+      {
+        "relative_path": "NG/ng_3.png",
+        "sha256": "853db2275d12c63d5435d2ac2a8d95b48db53237bf5130f94b33114234e0cea5"
+      },
+      {
+        "relative_path": "NG/ng_4.png",
+        "sha256": "8002aab3739b0fb25419c41c690bf60271b0d7a5c38b31c042cc33c401cc1aff"
+      },
+      {
+        "relative_path": "NG/ng_5.png",
+        "sha256": "f8ec2114f5e71b765bf994a08fc3cb80ba71775935618a165daa29b94475a4cc"
+      },
+      {
+        "relative_path": "NG/ng_6.png",
+        "sha256": "6140b48715c8f6e42393514b281efabfbff26ccf4f875a2a03938f7118be828d"
+      },
+      {
+        "relative_path": "NG/ng_7.png",
+        "sha256": "3207d855234d44a881fe8cbf767e16493c0ba8a1a1b474c0638d728a77f7965b"
+      }
+    ],
+    "split": {
+      "train": 10,
+      "val": 4,
+      "test": 2
+    },
+    "split_sha256": "1188c100df78eefb9b7eb8676f850008d4aaae515b2b0b40e75619b2d551a8ca",
+    "heldout": [
+      "NG/ng_1.png",
+      "OK/ok_3.png"
+    ],
+    "retained_labels": [
+      {
+        "image": "OK/ok_0.png",
+        "from": "OK",
+        "to": "NG",
+        "saved_revision": 2
+      },
+      {
+        "image": "NG/ng_0.png",
+        "from": "NG",
+        "to": "OK",
+        "saved_revision": 2
+      }
+    ]
+  },
+  "training": {
+    "post_count": 1,
+    "saved_job_count": 1,
+    "job_id": "job_1793010274_573b2e",
+    "status": "completed",
+    "model": "resnet18",
+    "epochs": 1,
+    "image_size": 64,
+    "batch_size": 2,
+    "device": "cpu",
+    "max_runtime_s": 60,
+    "cached_official_weights_sha256": "f37072fd47e89c5e827621c5baffa7500819f7896bbacec160b1a16c560e07ec"
+  },
+  "evaluation": {
+    "evaluation_id": "evaluation_b9391c4534494f40981efed827f4fb82",
+    "job_id": "job_1793010274_573b2e",
+    "heldout_prediction_count": 2,
+    "metrics": {
+      "evaluated_split": "test",
+      "selection_overlap": false,
+      "accuracy": 0.5,
+      "macro_precision": 0.25,
+      "macro_recall": 0.5,
+      "macro_f1": 0.3333,
+      "best_metric": 1.02647,
+      "per_class": {
+        "OK": {
+          "precision": 0.5,
+          "recall": 1,
+          "f1": 0.6667,
+          "support": 1
+        },
+        "NG": {
+          "precision": 0,
+          "recall": 0,
+          "f1": 0,
+          "support": 1
+        }
+      }
+    },
+    "confusion_matrix": {
+      "matrix": [
+        [
+          1,
+          0
+        ],
+        [
+          1,
+          0
+        ]
+      ],
+      "normalized_matrix": [
+        [
+          1,
+          0
+        ],
+        [
+          1,
+          0
+        ]
+      ],
+      "class_names": [
+        "OK",
+        "NG"
+      ],
+      "classes": [
+        "OK",
+        "NG"
+      ],
+      "cell_samples": {
+        "OK:OK": [
+          "OK/ok_3.png"
+        ],
+        "OK:NG": [],
+        "NG:OK": [
+          "NG/ng_1.png"
+        ],
+        "NG:NG": []
+      }
+    },
+    "mode": "standard automatic-device evaluation",
+    "health_resolver_before": "mps",
+    "health_resolver_after": "mps",
+    "device_limit": "Standard evaluation calls get_device() automatically. Health uses that resolver and reported mps; the training CPU selector does not pin evaluation, and this is not a separate evaluation device receipt."
+  },
+  "saved_artifacts": {
+    "projects/local_browser_synthetic_acceptance/models/job_1793010274_573b2e/best_model.pt": "44eea3d9ca85c631562c7febca660349bf703696a5bb4f3f3afc17843135e62d",
+    "projects/local_browser_synthetic_acceptance/models/job_1793010274_573b2e/model_meta.json": "fcacf04749598f780eed8bea861f5859439b1b7d9a9fbd1e200a30db2f22aa79",
+    "projects/local_browser_synthetic_acceptance/models/job_1793010274_573b2e/job_receipt.json": "ec8ce3389724f71b13649ce3efef0729c22d53aecbfa96f2d7f98c79906f6dee",
+    "projects/local_browser_synthetic_acceptance/models/job_1793010274_573b2e/eval_results.json": "85c4c67918af4d6ea7a10161628dc9bf661b3894068e51ac081c03d8475eb4df",
+    "projects/local_browser_synthetic_acceptance/reports/evaluations/evaluation_b9391c4534494f40981efed827f4fb82.json": "c917ff8b34c5b4368bef74417a0b76b84a2a5a21880b4ed7fbf3e7ce2a1e5cfb"
+  },
+  "websocket": {
+    "path": "/ws/telemetry",
+    "scheme": "wss",
+    "same_origin": true,
+    "initial_hardware_frames": 9,
+    "reconnected_hardware_frames": 31,
+    "same_page_reconnection": true,
+    "socket_close_observed_by_runner_assertion": true,
+    "same_port": 49887,
+    "bind_wait_added": false,
+    "previous_pid": 32550,
+    "restarted_pid": 32595
+  },
+  "fresh_login": {
+    "new_context": true,
+    "original_saved_job_reopened": true,
+    "original_evaluation_history_and_hashes_unchanged": true,
+    "image_label_split_readback_equal": true,
+    "fresh_csrf_ui_write": true,
+    "cookie_attributes": {
+      "httpOnly": true,
+      "secure": true,
+      "sameSite": "Strict"
+    }
+  },
+  "boundary_probes": {
+    "unauthenticated_api": 401,
+    "host": 403,
+    "origin": 403,
+    "forwarded": 200
+  },
+  "cleanup": {
+    "attempt_ports": [
+      {
+        "run": "run-2026-10-26T10-02-32-881Z",
+        "status": "failed",
+        "job_id": null,
+        "training_posts": 0,
+        "failures": [
+          "AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:"
+        ],
+        "port": 65438,
+        "port_closed_now": true
+      },
+      {
+        "run": "run-2026-10-26T10-03-06-840Z",
+        "status": "failed",
+        "job_id": null,
+        "training_posts": 0,
+        "failures": [
+          "locator.getAttribute: Error: strict mode violation: locator('summary').filter({ hasText: '더 보기' }).locator('..') resolved to 2 elements:"
+        ],
+        "port": 65466,
+        "port_closed_now": true
+      },
+      {
+        "run": "run-2026-10-26T10-03-41-972Z",
+        "status": "failed",
+        "job_id": null,
+        "training_posts": 0,
+        "failures": [
+          "TypeError: Cannot read properties of undefined (reading 'crc32')"
+        ],
+        "port": 65506,
+        "port_closed_now": true
+      },
+      {
+        "run": "run-2026-10-26T10-04-44-235Z",
+        "status": "failed",
+        "job_id": null,
+        "training_posts": 0,
+        "failures": [
+          "locator.click: Timeout 20000ms exceeded."
+        ],
+        "port": 49180,
+        "port_closed_now": true
+      },
+      {
+        "run": "run-2026-10-26T10-24-18-633Z",
+        "status": "passed",
+        "job_id": "job_1793010274_573b2e",
+        "training_posts": 1,
+        "failures": [
+          "page.waitForResponse: Timeout 30000ms exceeded while waiting for event \"response\"",
+          "Error: Launcher exited 1"
+        ],
+        "port": 49887,
+        "port_closed_now": true
+      }
+    ],
+    "final_run_owned_pids": [
+      {
+        "pid": 30574,
+        "running_now": false
+      },
+      {
+        "pid": 30575,
+        "running_now": false
+      },
+      {
+        "pid": 30959,
+        "running_now": false
+      },
+      {
+        "pid": 30960,
+        "running_now": false
+      },
+      {
+        "pid": 32549,
+        "running_now": false
+      },
+      {
+        "pid": 32550,
+        "running_now": false
+      },
+      {
+        "pid": 32594,
+        "running_now": false
+      },
+      {
+        "pid": 32595,
+        "running_now": false
+      }
+    ],
+    "all_checked_ports_closed": true,
+    "all_final_run_owned_pids_stopped": true
+  },
+  "continuity": "Fresh first-use UI create through the single completed training passed continuously. Initial stage-only evaluation navigation timed out, then the same saved job was explicitly reopened through Task Center after restart/login. Immediate same-port restart initially failed before the separately reviewed SO_REUSEADDR fix; the final same-job retry passed without a bind-wait workaround.",
+  "private_state_sha256": "a23fe98e3140a7713b1523830041127b661fb6c06f97a4af8c28ed107b23210f",
+  "entrypoint": "node scripts/local-web.cjs (npm run web target)",
+  "tests": {
+    "focused_helper_and_wrapper": {
+      "passed": 14,
+      "failed": 0
+    },
+    "raw_scripts_suite": {
+      "passed": 162,
+      "failed": 4,
+      "status": "not green"
+    },
+    "license_file_with_owned_canonical_tmpdir": {
+      "passed": 8,
+      "failed": 0
+    },
+    "remaining_unchanged_assertion": "scripts/tests/release-candidate.test.cjs: pinned failed health receipt cannot become acceptance through object truthiness; expected /launch and restart health/, actual Run native frozen-backend launch/restart acceptance on the actual target before packaging"
+  }
+}

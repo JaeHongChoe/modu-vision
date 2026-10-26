@@ -1,0 +1,615 @@
+{
+  "schema_version": 1,
+  "date": "2026-10-26",
+  "status": "passed",
+  "first_pass": true,
+  "attempts": 1,
+  "resumes": 0,
+  "started_at": "2026-10-26T12:13:05.548Z",
+  "finished_at": "2026-10-26T12:13:45.095Z",
+  "scope": {
+    "synthetic_functional_acceptance": true,
+    "actual_host": "macOS 27.0.1",
+    "browser": "isolated cached Playwright Chromium 1243",
+    "source_installed": true,
+    "direct_product_https_and_wss": true,
+    "proxy_or_native_bridge": false,
+    "storage_or_onboarding_injection": false,
+    "system_trust_changed": false,
+    "qa_browser_ignore_https_errors": true,
+    "product_certificate_bypass_flags": false,
+    "actual_user_data_or_credentials": false,
+    "weights_downloaded": false,
+    "model_quality_approved": false,
+    "installer_or_native_approved": false,
+    "windows_runtime": "unavailable by TLS key ACL policy",
+    "linux_runtime": "not qualified"
+  },
+  "provenance": {
+    "source_head": "069d9b269763bd0ea3b955c4b73f15c0e1287044",
+    "model_source_head": "069d9b269763bd0ea3b955c4b73f15c0e1287044",
+    "source_sha256": {
+      "scripts/qa/local-browser-acceptance.cjs": "c3fdec426822ab54ee87867019d40bf118740d7ad70ef3b01f35504e9a564d0f",
+      "scripts/tests/local-browser-acceptance.test.cjs": "dcc3021eef6811916648bbeeba46d48fbbbc0672fdbf2d4c973c546b28ef0e00",
+      "backend/web.py": "85a12dbeac7f2c8398781a7086685dd743c5665efb77abb9622acd027a204716",
+      "backend/local_web_runtime.py": "c28d0f39ad3e98100e18a5a646d372da0e21d8c06c826985dded0bccd9d6d00c",
+      "backend/local_web_app.py": "591b8998ded9b8daa44c98be3c6e6eaed5018f5dd2090bafb46d5f5cfd222f59",
+      "backend/local_web_state.py": "302af292865178653074cb182d001eefac1af85116c129dd1fd7a636236b8e4b",
+      "backend/main.py": "8e7add5967a821063cf96602e4d208145f0354b3dbc8612321a444d3357c5bda"
+    },
+    "launches": [
+      {
+        "source_head": "069d9b269763bd0ea3b955c4b73f15c0e1287044",
+        "pid": 50437,
+        "origin": "https://localhost:53154",
+        "certificate_sha256_der": "31f6cb80f4c3b527569a5e62b32d9cfffc28f1e144e3a1c08265463347bcfc31",
+        "renderer": {
+          "renderer/index.html": "456fb7228ab2b154517ed8f8f23459fdfc62715271e176a51f29c36336a5d5a8",
+          "renderer/assets/main-CA3gRUln.css": "f865403fc51457874571cc22cddc9095fc8a28607cf9138a525d1e8b5b9dc80a",
+          "renderer/assets/main-l0uZarZ8.js": "48206b5434b04a2e1ce2bbaf4013f287d606f3dcc349be969f4ff8b2a1c12703"
+        }
+      },
+      {
+        "source_head": "069d9b269763bd0ea3b955c4b73f15c0e1287044",
+        "pid": 50570,
+        "origin": "https://localhost:53154",
+        "certificate_sha256_der": "31f6cb80f4c3b527569a5e62b32d9cfffc28f1e144e3a1c08265463347bcfc31",
+        "renderer": {
+          "renderer/index.html": "456fb7228ab2b154517ed8f8f23459fdfc62715271e176a51f29c36336a5d5a8",
+          "renderer/assets/main-CA3gRUln.css": "f865403fc51457874571cc22cddc9095fc8a28607cf9138a525d1e8b5b9dc80a",
+          "renderer/assets/main-l0uZarZ8.js": "48206b5434b04a2e1ce2bbaf4013f287d606f3dcc349be969f4ff8b2a1c12703"
+        }
+      }
+    ]
+  },
+  "origin": "https://localhost:53154",
+  "certificate_sha256_der": "31f6cb80f4c3b527569a5e62b32d9cfffc28f1e144e3a1c08265463347bcfc31",
+  "project_id": "79170c0b",
+  "task": "classification",
+  "dataset": {
+    "image_count": 16,
+    "classes": {
+      "OK": 8,
+      "NG": 8
+    },
+    "zip_sha256": "567ef9d6dd994766b311701e32fe73ef5976a06af22797b95d7305762498c158",
+    "pixels": [
+      {
+        "relative_path": "OK/ok_0.png",
+        "sha256": "97b9b31ae32e840c54537791138b60b75c0c2c33a3918450a6cb882b9d3deb1a"
+      },
+      {
+        "relative_path": "OK/ok_1.png",
+        "sha256": "6c98c6137b76ac6c74ff60c1287fc66a541edf9f8d44b9ec9e86583ee1d383da"
+      },
+      {
+        "relative_path": "OK/ok_2.png",
+        "sha256": "7796fa18b6376048fd6af48897e64cbb8b3bcaec137e151510d93470f381252c"
+      },
+      {
+        "relative_path": "OK/ok_3.png",
+        "sha256": "5c9e40767cd9def4fefe079fd60865b5246d698a17e9882e181451c48d8ee967"
+      },
+      {
+        "relative_path": "OK/ok_4.png",
+        "sha256": "252e293cdaff0a0bd397cdb60e7bb76bdf0405646ab9ff3f90f8ec8d0f1ee4e6"
+      },
+      {
+        "relative_path": "OK/ok_5.png",
+        "sha256": "bfe9f03801bd1b6b6b408d72c7132227bd88d5f43474a4344b28e63acaa38489"
+      },
+      {
+        "relative_path": "OK/ok_6.png",
+        "sha256": "9a08740d824958aa3e6b726ad0df8612f96c6f57b6b1441df40892ec8966e77f"
+      },
+      {
+        "relative_path": "OK/ok_7.png",
+        "sha256": "0377f8ae8e54ab6cac9856908d0b1c8b0d1147a13a3ee2cc4871df0546f88f2a"
+      },
+      {
+        "relative_path": "NG/ng_0.png",
+        "sha256": "f9e93f2cc1f9c317bde6929ddd2a4572beeba7ac87e82b030f6db58e9e74efcf"
+      },
+      {
+        "relative_path": "NG/ng_1.png",
+        "sha256": "3311766b95e1fa51704574eebef2a0b603c31b778aa07d47fc4589190e676847"
+      },
+      {
+        "relative_path": "NG/ng_2.png",
+        "sha256": "8361c865738bbb3b5ea5421ad3240bb5884ddcd51a82458c1491cdf6c6082f5f"
+      },
+      {
+        "relative_path": "NG/ng_3.png",
+        "sha256": "853db2275d12c63d5435d2ac2a8d95b48db53237bf5130f94b33114234e0cea5"
+      },
+      {
+        "relative_path": "NG/ng_4.png",
+        "sha256": "8002aab3739b0fb25419c41c690bf60271b0d7a5c38b31c042cc33c401cc1aff"
+      },
+      {
+        "relative_path": "NG/ng_5.png",
+        "sha256": "f8ec2114f5e71b765bf994a08fc3cb80ba71775935618a165daa29b94475a4cc"
+      },
+      {
+        "relative_path": "NG/ng_6.png",
+        "sha256": "6140b48715c8f6e42393514b281efabfbff26ccf4f875a2a03938f7118be828d"
+      },
+      {
+        "relative_path": "NG/ng_7.png",
+        "sha256": "3207d855234d44a881fe8cbf767e16493c0ba8a1a1b474c0638d728a77f7965b"
+      }
+    ],
+    "source_adoption_and_selection_distinct": true,
+    "two_retained_class_overrides": [
+      {
+        "relative_path": "OK/ok_0.png",
+        "from": "OK",
+        "to": "NG",
+        "revision_at_restart": 2
+      },
+      {
+        "relative_path": "NG/ng_0.png",
+        "from": "NG",
+        "to": "OK",
+        "revision_at_restart": 2
+      }
+    ],
+    "split": {
+      "train": 10,
+      "val": 4,
+      "test": 2
+    },
+    "split_sha256": "888eb6ee7911426e7e3ffa7688c7ad83aa24edd2e776443b39fb5ca3628b7d59",
+    "heldout": [
+      "NG/ng_1.png",
+      "OK/ok_3.png"
+    ],
+    "post_restart_images_labels_split_equal": true
+  },
+  "training": {
+    "runs": 1,
+    "post_count": 1,
+    "saved_training_jobs": [
+      "job_1793016799_c39704"
+    ],
+    "job_id": "job_1793016799_c39704",
+    "status": "completed",
+    "model": "resnet18",
+    "device": "cpu",
+    "training_config": {
+      "epochs": 1,
+      "batch_size": 2,
+      "learning_rate": 0.001,
+      "weight_decay": 0.0001,
+      "image_size": 64,
+      "patience": 4,
+      "augmentation_profile": "industrial",
+      "train_mode": "head_only",
+      "partial_blocks": 2,
+      "use_amp": false,
+      "backbone": "resnet18"
+    },
+    "max_runtime_s": 60,
+    "official_weights_sha256": "f37072fd47e89c5e827621c5baffa7500819f7896bbacec160b1a16c560e07ec"
+  },
+  "evaluation": {
+    "job_id": "job_1793016799_c39704",
+    "evaluation_id": "evaluation_1eee761345fa483d8edae0cadcb35eda",
+    "opened_via_actual_task_center": true,
+    "evaluated_split": "test",
+    "selection_overlap": false,
+    "prediction_count": 2,
+    "exact_heldout_predictions": true,
+    "metrics": {
+      "evaluated_split": "test",
+      "selection_overlap": false,
+      "accuracy": 0,
+      "macro_precision": 0,
+      "macro_recall": 0,
+      "macro_f1": 0,
+      "best_metric": 0.85958,
+      "per_class": {
+        "OK": {
+          "precision": 0,
+          "recall": 0,
+          "f1": 0,
+          "support": 1
+        },
+        "NG": {
+          "precision": 0,
+          "recall": 0,
+          "f1": 0,
+          "support": 1
+        }
+      }
+    },
+    "confusion_matrix": [
+      [
+        0,
+        1
+      ],
+      [
+        1,
+        0
+      ]
+    ],
+    "confusion_class_order": [
+      "OK",
+      "NG"
+    ],
+    "device_mode": "automatic",
+    "before_health_device": "mps",
+    "after_health_device": "mps",
+    "per_evaluation_device_receipt": false,
+    "quality_conclusion": "No quality approval. Both two-image synthetic heldout examples were misclassified."
+  },
+  "artifact_sha256": [
+    {
+      "file": "projects/local_browser_synthetic_acceptance/models/job_1793016799_c39704/best_model.pt",
+      "sha256": "80fe5673fb290375258ab5401910784ff4cb96016df933feb3cbde95e2a5d580"
+    },
+    {
+      "file": "projects/local_browser_synthetic_acceptance/models/job_1793016799_c39704/model_meta.json",
+      "sha256": "826b61069b3bc51d1f206886486d57ce7ecf1f9006f101f6b2d10d17a0f67311"
+    },
+    {
+      "file": "projects/local_browser_synthetic_acceptance/models/job_1793016799_c39704/job_receipt.json",
+      "sha256": "3d3f77b5cea84e1bdab5e7f60af281af0fcb039737014b07b41dbb4ec3597582"
+    },
+    {
+      "file": "projects/local_browser_synthetic_acceptance/models/job_1793016799_c39704/eval_results.json",
+      "sha256": "fb1261553c367acc9e70a3080d208902e704114c9afe9d2f2374213661bab141"
+    },
+    {
+      "file": "projects/local_browser_synthetic_acceptance/reports/evaluations/evaluation_1eee761345fa483d8edae0cadcb35eda.json",
+      "sha256": "4eff84402c15f9c47a89bd15773bd08c24533e048c68b553c54a0db7deeacb40"
+    }
+  ],
+  "security": {
+    "policy_headers": {
+      "x-content-type-options": "nosniff",
+      "x-frame-options": "DENY",
+      "referrer-policy": "no-referrer",
+      "content-security-policy": "frame-ancestors 'none'"
+    },
+    "wire_matrices": [
+      {
+        "phase": "initial",
+        "source_head": "069d9b269763bd0ea3b955c4b73f15c0e1287044",
+        "origin": "https://localhost:53154",
+        "server_pid": 50437,
+        "completed_at": "2026-10-26T12:13:14.720Z",
+        "responses": {
+          "entry": {
+            "path": "/",
+            "status": 200,
+            "headers": {
+              "x-content-type-options": "nosniff",
+              "x-frame-options": "DENY",
+              "referrer-policy": "no-referrer",
+              "content-security-policy": "frame-ancestors 'none'"
+            }
+          },
+          "asset": {
+            "path": "/assets/main-CA3gRUln.css",
+            "status": 200,
+            "headers": {
+              "x-content-type-options": "nosniff",
+              "x-frame-options": "DENY",
+              "referrer-policy": "no-referrer",
+              "content-security-policy": "frame-ancestors 'none'"
+            }
+          },
+          "health": {
+            "path": "/health",
+            "status": 200,
+            "headers": {
+              "x-content-type-options": "nosniff",
+              "x-frame-options": "DENY",
+              "referrer-policy": "no-referrer",
+              "content-security-policy": "frame-ancestors 'none'"
+            }
+          },
+          "unauthenticated_api": {
+            "path": "/api/project/current",
+            "status": 401,
+            "headers": {
+              "x-content-type-options": "nosniff",
+              "x-frame-options": "DENY",
+              "referrer-policy": "no-referrer",
+              "content-security-policy": "frame-ancestors 'none'"
+            }
+          },
+          "host": {
+            "path": "/health",
+            "status": 403,
+            "headers": {
+              "x-content-type-options": "nosniff",
+              "x-frame-options": "DENY",
+              "referrer-policy": "no-referrer",
+              "content-security-policy": "frame-ancestors 'none'"
+            }
+          },
+          "origin": {
+            "path": "/api/project/current",
+            "status": 403,
+            "headers": {
+              "x-content-type-options": "nosniff",
+              "x-frame-options": "DENY",
+              "referrer-policy": "no-referrer",
+              "content-security-policy": "frame-ancestors 'none'"
+            }
+          },
+          "forwarded": {
+            "path": "/health",
+            "status": 200,
+            "headers": {
+              "x-content-type-options": "nosniff",
+              "x-frame-options": "DENY",
+              "referrer-policy": "no-referrer",
+              "content-security-policy": "frame-ancestors 'none'"
+            }
+          },
+          "missing_asset": {
+            "path": "/assets/__acceptance_missing_security_headers__.js",
+            "status": 404,
+            "headers": {
+              "x-content-type-options": "nosniff",
+              "x-frame-options": "DENY",
+              "referrer-policy": "no-referrer",
+              "content-security-policy": "frame-ancestors 'none'"
+            }
+          }
+        }
+      },
+      {
+        "phase": "restart",
+        "source_head": "069d9b269763bd0ea3b955c4b73f15c0e1287044",
+        "origin": "https://localhost:53154",
+        "server_pid": 50570,
+        "completed_at": "2026-10-26T12:13:40.990Z",
+        "responses": {
+          "entry": {
+            "path": "/",
+            "status": 200,
+            "headers": {
+              "x-content-type-options": "nosniff",
+              "x-frame-options": "DENY",
+              "referrer-policy": "no-referrer",
+              "content-security-policy": "frame-ancestors 'none'"
+            }
+          },
+          "asset": {
+            "path": "/assets/main-CA3gRUln.css",
+            "status": 200,
+            "headers": {
+              "x-content-type-options": "nosniff",
+              "x-frame-options": "DENY",
+              "referrer-policy": "no-referrer",
+              "content-security-policy": "frame-ancestors 'none'"
+            }
+          },
+          "health": {
+            "path": "/health",
+            "status": 200,
+            "headers": {
+              "x-content-type-options": "nosniff",
+              "x-frame-options": "DENY",
+              "referrer-policy": "no-referrer",
+              "content-security-policy": "frame-ancestors 'none'"
+            }
+          },
+          "unauthenticated_api": {
+            "path": "/api/project/current",
+            "status": 401,
+            "headers": {
+              "x-content-type-options": "nosniff",
+              "x-frame-options": "DENY",
+              "referrer-policy": "no-referrer",
+              "content-security-policy": "frame-ancestors 'none'"
+            }
+          },
+          "host": {
+            "path": "/health",
+            "status": 403,
+            "headers": {
+              "x-content-type-options": "nosniff",
+              "x-frame-options": "DENY",
+              "referrer-policy": "no-referrer",
+              "content-security-policy": "frame-ancestors 'none'"
+            }
+          },
+          "origin": {
+            "path": "/api/project/current",
+            "status": 403,
+            "headers": {
+              "x-content-type-options": "nosniff",
+              "x-frame-options": "DENY",
+              "referrer-policy": "no-referrer",
+              "content-security-policy": "frame-ancestors 'none'"
+            }
+          },
+          "forwarded": {
+            "path": "/health",
+            "status": 200,
+            "headers": {
+              "x-content-type-options": "nosniff",
+              "x-frame-options": "DENY",
+              "referrer-policy": "no-referrer",
+              "content-security-policy": "frame-ancestors 'none'"
+            }
+          },
+          "missing_asset": {
+            "path": "/assets/__acceptance_missing_security_headers__.js",
+            "status": 404,
+            "headers": {
+              "x-content-type-options": "nosniff",
+              "x-frame-options": "DENY",
+              "referrer-policy": "no-referrer",
+              "content-security-policy": "frame-ancestors 'none'"
+            }
+          }
+        }
+      }
+    ],
+    "total_checked_responses": 16,
+    "all_headers_valid": true,
+    "report_viewer_route_exercised": false,
+    "boundaries": {
+      "unauthenticated_api": 401,
+      "host": 403,
+      "origin": 403,
+      "forwarded": 200
+    },
+    "secure_cookie_attributes": {
+      "httpOnly": true,
+      "secure": true,
+      "sameSite": "Strict"
+    }
+  },
+  "restart": {
+    "same_origin": true,
+    "same_port": true,
+    "previous_pid": 50437,
+    "current_pid": 50570,
+    "same_certificate": true,
+    "extra_bind_wait": false,
+    "same_page_wss_reconnected": true,
+    "telemetry_path": "/ws/telemetry",
+    "project_workspace_actor_context_verified": true,
+    "initial_hardware_frames": 126,
+    "reconnected_hardware_frames": 29
+  },
+  "fresh_context": {
+    "actual_ui_login": true,
+    "original_job_reopened": true,
+    "saved_evaluation_reopened": true,
+    "artifact_hashes_unchanged": true,
+    "fresh_csrf_ui_change_and_restore": true
+  },
+  "request_counts": {
+    "POST /api/accounts/login": 2,
+    "POST /api/project/create": 1,
+    "PUT /api/dataset/metadata/class-override": 4,
+    "POST /api/dataset/split": 1,
+    "POST /api/training-workspace/readiness": 1,
+    "POST /api/training/start": 1
+  },
+  "cleanup": {
+    "status": "passed",
+    "owned_receipts": [
+      {
+        "wrapper_pid": 50436,
+        "server_pid": 50437,
+        "exit_code": 130,
+        "signal": null,
+        "port_closed": true
+      },
+      {
+        "wrapper_pid": 50569,
+        "server_pid": 50570,
+        "exit_code": 130,
+        "signal": null,
+        "port_closed": true
+      }
+    ],
+    "independent_verified_at": "2026-10-26T12:15:41.654Z",
+    "processes": [
+      {
+        "pid": 50436,
+        "present": false
+      },
+      {
+        "pid": 50437,
+        "present": false
+      },
+      {
+        "pid": 50569,
+        "present": false
+      },
+      {
+        "pid": 50570,
+        "present": false
+      }
+    ],
+    "ports": [
+      {
+        "address": "127.0.0.1",
+        "port": 53154,
+        "closed": true,
+        "error_code": "ECONNREFUSED"
+      }
+    ]
+  },
+  "failures": [],
+  "cleanup_errors": [],
+  "evidence": {
+    "private_state_sha256": "74c3f7daa0945fbd0a91f711f4134fa4d8478b24c2f92dc645dcf00721973466",
+    "dispatch_sha256": "28bc84460597b7ada75ce3b5e9c274d5ce4ca507f95f602ffc6691f40d2fe61e",
+    "stdout_sha256": "0680e76ab10dca5df273ce0170055939cf2f2fd20e8f33863c60095cf08d37e3",
+    "screenshot_sha256": {
+      "actual-default-ui-login-project-1.png": "6fe05224341b654a40e880ff4d93822137a84adb3d3a72e02b6bdf185d6f5763",
+      "original-saved-evaluation-new-login-1.png": "93fabcec2bff235f88a128306187b97622a523e2c80ecc282e810359736f43b3",
+      "real-cpu-training-completed-1.png": "46bade3d2a5e3206ab1a50d161b148533aeb9532a751605561ea7f00bdbbfb4e",
+      "real-heldout-evaluation-1.png": "c3c44a7bb361fd065519d6fa489757228b9b6b642cf39ed8708c9b774fc026fe",
+      "saved-two-opposite-labels-1.png": "37c7877075b3c431b2cd57cb2889de0141679ad91ab0d70370ce5fc07a7145a9"
+    },
+    "screenshot_visually_reviewed": "original-saved-evaluation-new-login-1.png"
+  },
+  "first_pass_scope": "Original 069d9b26 functional model/evaluation flow only",
+  "post_fix_readback": {
+    "source_head": "df55d815c0b7a785aec2fc1a0ee86ca65d8e9c23",
+    "model_source_head": "069d9b269763bd0ea3b955c4b73f15c0e1287044",
+    "normal_browser_compatibility": {
+      "status": 200,
+      "origin_header": null,
+      "sec_fetch_site": "same-origin",
+      "cookie_present": true,
+      "metadata_source": "CDP Network.requestWillBeSentExtraInfo",
+      "original_job_and_saved_evaluation_reopened": true,
+      "images_labels_split_equal": true,
+      "preserved_files_sha_equal": 27,
+      "new_training_or_evaluation_or_label_write": false
+    },
+    "measurement_failures_preserved": [
+      "Playwright request-header visibility assertion",
+      "Optional cross-port image response event timeout after required normal-browser readback"
+    ],
+    "cross_port_actual_wire_status_in_this_record": "qualified by final CDP probe",
+    "python_regressions_passed": 175,
+    "final_scripts_passed": 181,
+    "review_open_findings": 0,
+    "general_shared_server_get_csrf_policy_fixed": false,
+    "final_targeted_status": "passed",
+    "final_targeted_state_sha256": "aff24394aa1b3722d83d363b17d9da3e3195481968ea08d136820c4b2ad5638a",
+    "same_origin_wire": {
+      "origin_header": null,
+      "sec_fetch_site": "same-origin",
+      "cookie_present": true,
+      "wire_status": 200,
+      "security_headers": {
+        "x-content-type-options": "nosniff",
+        "x-frame-options": "DENY",
+        "referrer-policy": "no-referrer",
+        "content-security-policy": "frame-ancestors 'none'"
+      }
+    },
+    "cross_port_wire": {
+      "origin_header": null,
+      "sec_fetch_site": "same-site",
+      "cookie_present": true,
+      "wire_status": 403,
+      "security_headers": {
+        "x-content-type-options": "nosniff",
+        "x-frame-options": "DENY",
+        "referrer-policy": "no-referrer",
+        "content-security-policy": "frame-ancestors 'none'"
+      },
+      "loading_failed_code": "net::ERR_BLOCKED_BY_ORB",
+      "target": "/api/accounts/me",
+      "mode": "image subresource from owned HTTPS other port"
+    },
+    "original_model_state_sha256_unchanged": true,
+    "new_train_eval_or_label_mutation": false
+  }
+}
