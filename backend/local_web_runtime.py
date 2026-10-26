@@ -83,6 +83,7 @@ def _stop_renderer_builder(process, group):
 
 def _run_renderer_builder(argv):
     """Own spawn-to-reap lifetime even when a startup termination signal arrives."""
+    from backend.engine.process_isolation import session_isolation
     process = None
     group = None
     cleaning = False
@@ -104,7 +105,7 @@ def _run_renderer_builder(argv):
         # fork but before Popen is assigned must not leave an unowned builder.
         mask = signal.pthread_sigmask(signal.SIG_BLOCK, signals) if os.name == 'posix' else None
         try:
-            process = subprocess.Popen(argv, cwd=ROOT, shell=False, start_new_session=os.name == 'posix')
+            process = subprocess.Popen(argv, cwd=ROOT, shell=False, **session_isolation())
             group = process.pid if os.name == 'posix' else None
         finally:
             if mask is not None:
