@@ -20,6 +20,30 @@ def request_actor(request, declared):
     return account['username'] if account else declared
 
 
+def project_file_roots(project):
+    """A shared project's file selectors stay inside its storage or its registered source."""
+    roots=[Path(project['project_dir']).resolve()]
+    if project.get('source_dataset_dir'):roots.append(Path(project['source_dataset_dir']).resolve())
+    return roots
+
+
+def shared_project_file(request, file_path):
+    """The file a shared read may open: only the explicit selector, resolved inside the project.
+
+    Returns None outside shared mode, where the caller keeps its own lookup. A shared read never
+    falls back to a path segment or a name search of the server's folders."""
+    if getattr(getattr(request,'state',None),'account_user',None) is None:return None
+    # The project the middleware authorized for this request (no second project resolution).
+    project=getattr(request.state,'scoped_project',None)
+    if project is None:raise HTTPException(409,'먼저 권한이 있는 공유 프로젝트를 선택하세요.')
+    if not file_path:raise HTTPException(404,'이미지 파일을 찾을 수 없습니다')
+    candidate=Path(file_path).expanduser().resolve()
+    if not any(candidate.is_relative_to(root) for root in project_file_roots(project)):
+        raise HTTPException(403,'File selector is outside the authorized project')
+    if not candidate.is_file():raise HTTPException(404,'이미지 파일을 찾을 수 없습니다')
+    return candidate
+
+
 class SharedAuthorizationMiddleware:
     def __init__(self,app,project_app):self.app=app;self.project_app=project_app
 
@@ -152,8 +176,7 @@ class SharedAuthorizationMiddleware:
         state['permission_decision']=decision
         if method not in {'GET','HEAD','OPTIONS'}:store.record_decision(decision)
         # File selectors must stay inside this project's storage or registered source.
-        roots=[Path(project['project_dir']).resolve()]
-        if project.get('source_dataset_dir'):roots.append(Path(project['source_dataset_dir']).resolve())
+        roots=project_file_roots(project)
         def check_paths(value,key='',*,prospective_source=False):
             if isinstance(value,dict):
                 for child,data in value.items():

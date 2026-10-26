@@ -16,6 +16,7 @@ import json
 import logging
 import os
 import time
+from html import escape
 from pathlib import Path
 from typing import Any, Dict, List, Literal, Optional
 
@@ -52,14 +53,17 @@ def _render_standalone_html(
     created_at: str,
     include_images: bool = True,
 ) -> str:
-    """Renders single-file HTML report with real evaluation images and zero external dependencies."""
+    """Renders single-file HTML report with real evaluation images and zero external dependencies.
+
+    Class names, metric keys and the job id come from labels and stored results, so every one is escaped."""
     metrics = eval_data.get("metrics", {})
     cm = eval_data.get("confusion_matrix", {})
     classes = cm.get("classes") or cm.get("class_names") or ["OK", "Defect"]
     matrix = cm.get("matrix", [])
     task_name = str(eval_data.get("task", "classification")).lower()
     is_detection = task_name == "detection"
-    task = task_name.capitalize()
+    task = escape(task_name.capitalize())
+    job_label = escape(str(job_id))
     matrix_title = "Top box class table" if is_detection else "Confusion Matrix"
     matrix_explanation = (
         "<p>The highest-scoring box class per image is compared without a score threshold or IoU match. "
@@ -75,19 +79,19 @@ def _render_standalone_html(
             val_str = f"{v:.4f}" if isinstance(v, float) else str(v)
             metric_cards.append(f"""
             <div class="card">
-                <div class="card-title">{k.replace('_', ' ').title()}</div>
+                <div class="card-title">{escape(str(k).replace('_', ' ').title())}</div>
                 <div class="card-val">{val_str}</div>
             </div>
             """)
     metric_cards_html = "".join(metric_cards)
 
     # Generate confusion matrix table rows
-    cm_header = "".join([f"<th>{c} (Pred)</th>" for c in classes])
+    cm_header = "".join([f"<th>{escape(str(c))} (Pred)</th>" for c in classes])
     cm_rows = []
     for i, row in enumerate(matrix):
         c_true = classes[i] if i < len(classes) else f"Class_{i}"
-        tds = "".join([f"<td class='{'diag' if i==j else 'off-diag'}'>{val}</td>" for j, val in enumerate(row)])
-        cm_rows.append(f"<tr><th>{c_true} (True)</th>{tds}</tr>")
+        tds = "".join([f"<td class='{'diag' if i==j else 'off-diag'}'>{escape(str(val))}</td>" for j, val in enumerate(row)])
+        cm_rows.append(f"<tr><th>{escape(str(c_true))} (True)</th>{tds}</tr>")
     cm_table_html = "".join(cm_rows)
 
     # Render genuine inspection sample cards using real predictions & infer overlays
@@ -142,8 +146,8 @@ def _render_standalone_html(
             if not overlay_b64:
                 continue
 
-            pred_class = sample.get("predicted_class", "Unknown")
-            gt_class = sample.get("ground_truth", "Unknown")
+            pred_class = escape(str(sample.get("predicted_class", "Unknown")))
+            gt_class = escape(str(sample.get("ground_truth", "Unknown")))
             conf = float(sample.get("confidence", 0.0))
             is_correct = bool(sample.get("is_correct", True))
             status_text = (
@@ -185,7 +189,7 @@ def _render_standalone_html(
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Vision AI Studio — Inspection & Quality Report [{job_id}]</title>
+    <title>Vision AI Studio — Inspection & Quality Report [{job_label}]</title>
     <style>
         * {{
             box-sizing: border-box;
@@ -374,7 +378,7 @@ def _render_standalone_html(
                 <div class="badge badge-main">{task} AutoML Model</div>
             </div>
             <div class="meta">
-                <div><strong>Job ID:</strong> {job_id}</div>
+                <div><strong>Job ID:</strong> {job_label}</div>
                 <div><strong>Generated:</strong> {created_at}</div>
                 <div><strong>Status:</strong> Evaluated</div>
             </div>
@@ -488,4 +492,9 @@ def view_report(report_id: str, request: Request = None):
     with open(target_file, "r", encoding="utf-8") as f:
         html_content = f.read()
 
-    return HTMLResponse(content=html_content)
+    # A report is a static page: inline styles and data: images only. Reports written before markup
+    # escaping may still hold label text as HTML, so the page runs sandboxed and without scripts.
+    return HTMLResponse(content=html_content, headers={
+        "Content-Security-Policy": "sandbox; default-src 'none'; img-src data:; style-src 'unsafe-inline'",
+        "X-Content-Type-Options": "nosniff",
+    })
