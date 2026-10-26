@@ -19,6 +19,13 @@ catch (error) {
         throw new Error('Training already reserved; resume saved results instead of dispatching again');
     throw error;
 } }
+function reserveArtifact(run,prefix,suffix){
+    for(let index=1;;index++){
+        const file=path.join(run,prefix+'-'+index+suffix);
+        try{const descriptor=fs.openSync(file,'wx',0o600);fs.closeSync(descriptor);return file;}
+        catch(error){if(error.code!=='EEXIST')throw error;}
+    }
+}
 function recordLaunch(state,ready,files,head){
     state.launches ||= [];
     state.launches.push({at:new Date().toISOString(),source_head:head,ready,renderer:snapshot(files)});
@@ -50,7 +57,7 @@ function parseReady(line, root) {
     assert.match(value.certificate_sha256, /^[0-9a-f]{64}$/);
     return value;
 }
-module.exports = { snapshot, verifySnapshot, reserveTraining, parseReady, fixtures, releaseUnsentTraining, observeResponse, recordLaunch };
+module.exports = { snapshot, verifySnapshot, reserveTraining, parseReady, fixtures, releaseUnsentTraining, observeResponse, recordLaunch, reserveArtifact };
 const pause = ms => new Promise(resolve => setTimeout(resolve, ms));
 async function portClosed(port) { return new Promise(resolve => { const socket = net.connect({ host: '127.0.0.1', port }); socket.once('connect', () => { socket.destroy(); resolve(false); }); socket.once('error', () => resolve(true)); }); }
 async function until(predicate, timeout = 30000) { const stop = Date.now() + timeout; while (Date.now() < stop) {
@@ -60,7 +67,8 @@ async function until(predicate, timeout = 30000) { const stop = Date.now() + tim
 } throw new Error('Bounded condition timed out'); }
 async function launch(root, port, env, run, number) {
     const child = spawn(process.execPath, ['scripts/local-web.cjs', '--data-dir', root, '--port', String(port), '--no-open'], { cwd: path.resolve(__dirname, '../..'), env, stdio: ['ignore', 'pipe', 'pipe'] });
-    const log = fs.createWriteStream(path.join(run, `launcher-${number}.log`), { mode: 0o600 });
+    const logFile=reserveArtifact(run,`launcher-${number}`,'.log');
+    const log = fs.createWriteStream(logFile, { mode: 0o600, flags:'a' });
     let pending = '', ready, error;
     child.stdout.on('data', bytes => { log.write(bytes); pending += bytes.toString(); let newline; while ((newline = pending.indexOf('\n')) >= 0) {
         const line = pending.slice(0, newline).replace(/\r$/, '');
@@ -178,7 +186,7 @@ async function main() {
     const stage = (target, index) => target.getByRole('navigation', { name: 'Workflow Stages' }).getByRole('button').nth(index).click();
     const expand = async (target, text) => { const summary = target.locator('summary').filter({ hasText: text }); if (await summary.locator('..').getAttribute('open') === null)
         await summary.click(); };
-    const screenshot = async (name) => page.screenshot({ path: path.join(run, name + '.png'), fullPage: true });
+    const screenshot = async (name) => page.screenshot({ path: reserveArtifact(run,name,'.png'), fullPage: true });
     async function login(target, create = false) {
         await target.goto(server.ready.url);
         const all = target.getByRole('button', { name: '모두 보기', exact: true });

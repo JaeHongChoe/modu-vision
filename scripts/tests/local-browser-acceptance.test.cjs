@@ -79,3 +79,13 @@ test('launch provenance appends current source and build hashes without rewritin
     const root=fs.mkdtempSync(path.join(os.tmpdir(),'modu-provenance-'));
     try{const file=path.join(root,'index.html');fs.writeFileSync(file,'first build');const state={source_head:'initial'};helper.recordLaunch(state,{pid:1},[file],'first');fs.writeFileSync(file,'second build');helper.recordLaunch(state,{pid:2},[file],'second');assert.equal(state.source_head,'initial');assert.deepEqual(state.launches.map(row=>row.source_head),['first','second']);assert.notEqual(state.launches[0].renderer[file],state.launches[1].renderer[file]);assert.equal(state.launches[0].ready.pid,1);}finally{fs.rmSync(root,{recursive:true,force:true});}
 });
+test('owned artifact reservation preserves failed-start and screenshot files across resumes',()=>{
+    assert.equal(typeof helper.reserveArtifact,'function','unique artifact reservation required');
+    const root=fs.mkdtempSync(path.join(os.tmpdir(),'modu-artifacts-'));
+    try{for(const name of ['launcher-resume.log','launcher-2.log'])fs.writeFileSync(path.join(root,name),'old failure');
+        const first=helper.reserveArtifact(root,'launcher-resume','.log');fs.writeFileSync(first,'new failed startup');
+        const second=helper.reserveArtifact(root,'launcher-resume','.log');assert.notEqual(first,second);assert.equal(fs.readFileSync(first,'utf8'),'new failed startup');
+        const image=helper.reserveArtifact(root,'failure-1','.png');fs.writeFileSync(image,'saved screenshot');assert.notEqual(helper.reserveArtifact(root,'failure-1','.png'),image);assert.equal(fs.readFileSync(image,'utf8'),'saved screenshot');
+        for(const name of ['launcher-resume.log','launcher-2.log'])assert.equal(fs.readFileSync(path.join(root,name),'utf8'),'old failure');
+    }finally{fs.rmSync(root,{recursive:true,force:true});}
+});
