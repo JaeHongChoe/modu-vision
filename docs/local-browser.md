@@ -160,7 +160,10 @@ Windows에서는 아직 이 개인 키 보호 검사가 구현되지 않아 실�
 
 Electron의 데이터나 저장소 `projects/`를 자동으로 가져오지 않습니다.
 `--data-dir`은 웹 전용 새 폴더를 지정하세요. 계정 DB만 기존 데스크톱 프로젝트에
-복사해 연결하지 마세요.
+복사해 연결하지 마세요. 관리되는 artifact 바이트는 웹 데이터 폴더의 기존 기본 구조인
+`projects/.artifact-objects/`에 저장합니다. 이 실행기는 상속된
+`VISION_ARTIFACT_OBJECT_ROOT`, `VISION_ARTIFACT_S3_BUCKET`, `VISION_ARTIFACT_S3_ENDPOINT`를
+무시하며, 기존 객체 파일을 이동하지 않습니다.
 
 종료는 실행한 터미널에서 **Ctrl+C**를 누릅니다. 열린 HTTP 스트림은 최대 5초의 요청
 정리 대기 후 닫고 기존 backend lifespan을 실행합니다. 학습 작업의 종료·분리는 기존

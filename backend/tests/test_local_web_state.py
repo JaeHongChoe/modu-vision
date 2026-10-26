@@ -2,6 +2,7 @@
 
 from dataclasses import FrozenInstanceError
 from datetime import datetime, timedelta, timezone
+import hashlib
 import os
 from pathlib import Path
 import subprocess
@@ -87,6 +88,57 @@ def test_explicit_root_and_environment_isolate_mutable_stores(state, tmp_path, m
     assert os.environ['HF_HOME'] == str(tmp_path / 'shared-weights')
     assert not {name for name in set(sys.modules) - before if name.startswith('backend.engine') or name == 'backend.main'}
     assert all(path.is_dir() for path in vars(paths).values())
+
+
+@pytest.mark.parametrize('inherited', ['default', 'local', 's3', 'both'])
+def test_configured_artifacts_publish_inside_web_root_with_existing_layout(state, tmp_path, monkeypatch, inherited):
+    from types import SimpleNamespace
+
+    def forbidden_s3_client(*args, **kwargs):
+        pytest.fail('Web artifacts must not select an SDK client')
+
+    # Install the sentinel before importing/configuring storage: never import a
+    # real SDK or let it discover credentials, profiles, endpoints or the network.
+    monkeypatch.setitem(sys.modules, 'boto3', SimpleNamespace(client=forbidden_s3_client))
+    from backend.contracts.context import ContextRegistry
+    from backend.engine.artifact_store import ArtifactStore, FileObjectAdapter
+
+    foreign = tmp_path / 'foreign-objects'
+    for name in ('VISION_ARTIFACT_OBJECT_ROOT', 'VISION_ARTIFACT_S3_BUCKET', 'VISION_ARTIFACT_S3_ENDPOINT'):
+        monkeypatch.delenv(name, raising=False)
+    if inherited in ('local', 'both'):
+        monkeypatch.setenv('VISION_ARTIFACT_OBJECT_ROOT', str(foreign))
+    if inherited in ('s3', 'both'):
+        monkeypatch.setenv('VISION_ARTIFACT_S3_BUCKET', 'synthetic-web-isolation-bucket')
+        monkeypatch.setenv('VISION_ARTIFACT_S3_ENDPOINT', 'https://synthetic.invalid')
+
+    paths = state.web_paths(tmp_path / 'web')
+    # The existing default layout must remain readable, without migration.
+    existing_bytes = b'existing synthetic local object'
+    existing_hash = hashlib.sha256(existing_bytes).hexdigest()
+    object_root = paths.projects / '.artifact-objects'
+    existing = object_root / existing_hash[:2] / existing_hash
+    existing.parent.mkdir(parents=True)
+    existing.write_bytes(existing_bytes)
+
+    state.configure_environment(paths)
+    store = ArtifactStore.configured(ContextRegistry(paths.projects))
+    data = b'new synthetic web artifact'
+    digest = hashlib.sha256(data).hexdigest()
+    source = paths.root / 'synthetic-source.bin'
+    source.write_bytes(data)
+    store.adapter.publish(digest, source, len(data))
+
+    published = object_root / digest[:2] / digest
+    assert isinstance(store.adapter, FileObjectAdapter)
+    assert store.adapter.root == object_root.resolve()
+    assert published.resolve().is_relative_to(paths.root.resolve())
+    assert published.read_bytes() == data
+    assert store.adapter._path(existing_hash).read_bytes() == existing_bytes
+    assert not foreign.exists()
+    assert not any(name in os.environ for name in (
+        'VISION_ARTIFACT_OBJECT_ROOT', 'VISION_ARTIFACT_S3_BUCKET', 'VISION_ARTIFACT_S3_ENDPOINT',
+    ))
 
 
 def test_instance_lock_excludes_another_process_and_releases_on_error(state, tmp_path):

@@ -83,6 +83,10 @@ def configure_environment(paths: WebPaths) -> None:
         # An inherited explicit lease override otherwise escapes the new root.
         'VISION_RESOURCE_LEASE_DB': str(paths.root / 'resource_leases.sqlite3'),
     })
+    # Keep the registry-local default layout; inherited server/NAS/S3 choices
+    # must not redirect this local-only launcher's managed artifact bytes.
+    for name in ('VISION_ARTIFACT_OBJECT_ROOT', 'VISION_ARTIFACT_S3_BUCKET', 'VISION_ARTIFACT_S3_ENDPOINT'):
+        os.environ.pop(name, None)
 
 
 def _regular_fd(path: Path, flags: int, mode: int = 0o600) -> int:
