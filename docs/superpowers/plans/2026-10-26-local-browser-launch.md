@@ -94,6 +94,20 @@ Inserted before the single model run after a bounded source/ASGI audit proved th
 - [ ] Run focused app/CLI auth/TLS regressions, diff check and self-review. No privileged port listener, new server/model run, auth-system refactor or dependency change.
 - [ ] Commit only after root grants the git commit baton; independent task review follows. Task3 remains paused until Tasks4/5 are both reviewed, then resumes its retained project with current launch/model provenance.
 
+### Task 6: Immediate owned-server restart without waiting for TIME_WAIT
+
+Inserted during Task3 after the single real model and its evaluation completed. Graceful shutdown closed the owned listener, but immediate same-port bind failed until OS TIME_WAIT expired. Original backend.run_server already enables SO_REUSEADDR; the new launcher helper did not. Preserve the saved job/evaluation and verify restart without another model run.
+
+**Files:** `backend/web.py`, `backend/tests/test_local_web_cli.py` only.
+
+**Interfaces:** `bind_loopback(port)` still exclusively reserves the IPv4 loopback listener for its owner. On supported POSIX systems allow normal same-port reuse after a prior owned listener's active close; never enable SO_REUSEPORT or allow takeover of an active listener. Keep reservation exclusive through build/startup, including another data-root attempt.
+
+- [ ] Read the actual run5 restart failure and source comparison, then write a deterministic real-socket active-close/TIME_WAIT regression. Observe RED with the current helper.
+- [ ] Implement the smallest supported socket setup before bind. If listen is needed to keep an early port reservation exclusive with reuse enabled, do it without serving any HTTP before app readiness; Uvicorn must still own request handling.
+- [ ] Test immediate same-port rebind, active-listener conflict and duplicate reservation exclusion, loopback-only address and cleanup. Preserve existing error/no-other-process-stop behavior and Windows fail-closed scope; no privileged listener or SO_REUSEPORT.
+- [ ] Run scoped CLI/app/auth/TLS cases and diff check, self-review and commit only owned files. Report exact RED/GREEN plus the actual restart boundary; root independent review follows.
+- [ ] Task3 resumes the same original job/root after review, starts the patched server, observes live WSS, stops it and immediately restarts the same port. No bind-wait workaround or second training.
+
 ### Task 3: Actual launcher browser round trip and closure evidence
 
 **Files:** Create focused integration test/runner under `scripts/qa/local-browser-acceptance.cjs` with `scripts/tests/local-browser-acceptance.test.cjs` as needed, and public `docs/verification/2026-10-26-local-browser.md` / `.json`; keep run artifacts in this plan's private workspace.
