@@ -39,7 +39,7 @@ async function splitControlBody(response:import('@playwright/test').Response,dea
 // Original renderer/backend requests, state, source files and custody checks remain real.
 const harness=require('./fixtures/harness.cjs');
 const UI_SOURCE={
-  "src/renderer/components/dataset/DatasetWorkflowPanel.tsx": "0e41acdc75d43657ba707d09d88bd2cbaa2c834d693c558dfa63f72b510a78b5",
+  "src/renderer/components/dataset/DatasetWorkflowPanel.tsx": "3c740fece10eb4515a236844020578d88cb202a106b6f93b36bc3ce07c386186",
   "src/renderer/components/dataset/ExternalMaskExchangePanel.tsx": "6a5d0fd5e8b57d05ae7e91b47ba447eac694a5f7c37509da9d2fbe8d7924f7a4",
   "backend/api/routes_dataset.py": "daaea5f5e9633eee90daa699ebd20bcc9dd0473dc413dc3477b432ad73651008",
   "backend/api/routes_mask_exchange.py": "f66d4f4273692bf3c46f038c25b56a60ad4b4db5ba3dee9d31c3bac6dcd9a7c5",
