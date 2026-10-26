@@ -17,7 +17,7 @@ function parseReady(line,root){
   const url=new URL(value.url);assert.equal(url.protocol,'https:');assert.equal(url.hostname,'localhost');assert.ok(Number(url.port)>0);assert.equal(url.pathname,'/');assert.equal(url.search,'');assert.equal(url.hash,'');assert.equal(url.username,'');assert.equal(url.password,'');
   assert.ok(Number.isInteger(value.pid)&&value.pid>0);assert.equal(value.data_dir,root,'owned data root');assert.equal(value.certificate_file,path.join(root,'tls','localhost-cert.pem'));assert.match(value.certificate_sha256,/^[0-9a-f]{64}$/);return value;
 }
-module.exports={snapshot,verifySnapshot,reserveTraining,parseReady};
+module.exports={snapshot,verifySnapshot,reserveTraining,parseReady,fixtures};
 const pause=ms=>new Promise(resolve=>setTimeout(resolve,ms));
 async function portClosed(port){return new Promise(resolve=>{const socket=net.connect({host:'127.0.0.1',port});socket.once('connect',()=>{socket.destroy();resolve(false);});socket.once('error',()=>resolve(true));});}
 async function until(predicate,timeout=30000){const stop=Date.now()+timeout;while(Date.now()<stop){if(await predicate())return;await pause(200);}throw new Error('Bounded condition timed out');}
@@ -37,7 +37,7 @@ function bootstrap(python,root,credentialFile){
 function fixtures(run){
   // Only pure byte helpers are reused; appFlow and old fixture servers are never imported.
   const ts=require('typescript'),Module=require('node:module');
-  const load=(file,source)=>{const m=new Module(file,module);m.filename=file;m.paths=module.paths;m._compile(ts.transpile(source,{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}),file);return m.exports;};
+  const load=(file,source)=>{const m=new Module(file,module);m.filename=file;m.paths=module.paths;m._compile(ts.transpile(source,{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022,esModuleInterop:true}),file);return m.exports;};
   const zipFile=path.resolve(__dirname,'../e2e/fixtures/storedZip.ts');const {storedZip}=load(zipFile,fs.readFileSync(zipFile,'utf8'));
   const appFile=path.resolve(__dirname,'../e2e/qa/appFlow.ts');const source=fs.readFileSync(appFile,'utf8');const start=source.indexOf('function chunk('),end=source.indexOf('/** A small segmentation');const {png}=load(appFile,"import {crc32,deflateSync} from 'node:zlib';\n"+source.slice(start,end));
   const entries=[],pixels=[];for(const[classIndex,label]of ['OK','NG'].entries())for(let index=0;index<8;index++){

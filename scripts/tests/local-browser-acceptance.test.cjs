@@ -26,3 +26,7 @@ test('ready parsing requires exact public fields and requested owned root', () =
   assert.throws(()=>helper.parseReady('MODU_WEB_READY='+JSON.stringify({...data,token:'secret'}),'/owned'), /public fields/);
   assert.throws(()=>helper.parseReady('MODU_WEB_READY='+JSON.stringify(data),'/other'), /root/);
 });
+test('pure byte fixture reuse produces a ZIP with sixteen unique synthetic images',()=>{
+  const root=fs.mkdtempSync(path.join(os.tmpdir(),'modu-fixture-'));
+  try{const result=helper.fixtures(root);assert.equal(result.pixels.length,16);assert.equal(new Set(result.pixels.map(row=>row.sha256)).size,16);assert.equal(fs.readFileSync(result.archive).readUInt32LE(0),0x04034b50);}finally{fs.rmSync(root,{recursive:true,force:true});}
+});
