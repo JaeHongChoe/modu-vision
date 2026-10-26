@@ -575,10 +575,41 @@
       "Playwright request-header visibility assertion",
       "Optional cross-port image response event timeout after required normal-browser readback"
     ],
-    "cross_port_actual_wire_status_in_this_record": "not qualified",
+    "cross_port_actual_wire_status_in_this_record": "qualified by final CDP probe",
     "python_regressions_passed": 175,
     "final_scripts_passed": 181,
     "review_open_findings": 0,
-    "general_shared_server_get_csrf_policy_fixed": false
+    "general_shared_server_get_csrf_policy_fixed": false,
+    "final_targeted_status": "passed",
+    "final_targeted_state_sha256": "aff24394aa1b3722d83d363b17d9da3e3195481968ea08d136820c4b2ad5638a",
+    "same_origin_wire": {
+      "origin_header": null,
+      "sec_fetch_site": "same-origin",
+      "cookie_present": true,
+      "wire_status": 200,
+      "security_headers": {
+        "x-content-type-options": "nosniff",
+        "x-frame-options": "DENY",
+        "referrer-policy": "no-referrer",
+        "content-security-policy": "frame-ancestors 'none'"
+      }
+    },
+    "cross_port_wire": {
+      "origin_header": null,
+      "sec_fetch_site": "same-site",
+      "cookie_present": true,
+      "wire_status": 403,
+      "security_headers": {
+        "x-content-type-options": "nosniff",
+        "x-frame-options": "DENY",
+        "referrer-policy": "no-referrer",
+        "content-security-policy": "frame-ancestors 'none'"
+      },
+      "loading_failed_code": "net::ERR_BLOCKED_BY_ORB",
+      "target": "/api/accounts/me",
+      "mode": "image subresource from owned HTTPS other port"
+    },
+    "original_model_state_sha256_unchanged": true,
+    "new_train_eval_or_label_mutation": false
   }
 }
