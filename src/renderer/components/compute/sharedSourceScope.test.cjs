@@ -37,8 +37,9 @@ async function harness({ connected = true, additive = true } = {}) {
   const calls = [], writes = [];
   const value = state => ({ getState: () => state, setState: update => Object.assign(state, update) });
   const annotation = value({ isDirty: false, saveIfDirty: async () => true, setTask() {}, setImages: async () => true, setReviewerName() {} });
-  const dataset = value({ hasSelectedFolder: false, isLoading: false, isSplitting: false, isGenerating: false,
-    setFolderPath(folderPath) { this.folderPath = folderPath; }, ensureImported: async () => {} });
+  const datasetState = { hasSelectedFolder: false, isLoading: false, isSplitting: false, isGenerating: false,
+    setFolderPath(folderPath) { this.folderPath = folderPath; }, ensureImported: async () => {} };
+  const dataset = Object.assign(selector => selector ? selector(datasetState) : datasetState, value(datasetState));
   const projectApi = {
     getCurrent: async () => backend, list: async () => ({ projects: [] }),
     acceptContext(project, apply) { accepted = additive ? context(project) : null; apply?.(); },

@@ -211,7 +211,10 @@ export const useTrainingStore = create<TrainingState>((set, get) => ({
   setPreset: (preset) => set({ preset }),
 
   startTraining: async (datasetPath, task, warmStartParentJobId, modelOverrides, scheduling = {}) => {
-    if (useDatasetStore.getState().isSplitting) {
+    const dataset = useDatasetStore.getState();
+    if (dataset.isLoading) throw new Error('데이터 정보를 확인하는 중입니다. 완료 후 학습을 시작하세요.');
+    if (dataset.importError) throw new Error(`데이터 정보를 확인할 수 없습니다: ${dataset.importError}`);
+    if (dataset.isSplitting) {
       throw new Error('데이터 분할이 진행 중입니다. 완료 후 학습을 시작하세요.');
     }
     // 시작 시점의 컴퓨팅 선택을 캡처해 이후 서버 선택 변경과 이미 시작한 작업의 위치를 분리한다.

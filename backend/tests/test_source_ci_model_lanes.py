@@ -264,6 +264,19 @@ def test_cpu_and_browser_ci_have_independent_original_bounds_and_complete_comman
         'backend/tests/test_runtime_spawn_diagnostic.py',
     )
     command = cpu_step['run']
+    # Exactly these three saved-mask regressions were added after the preserved
+    # command below. Verify their single ordered insertion before checking every
+    # previous selector and bound against the existing historical hashes.
+    brush_controls = (
+        'backend/tests/test_dataset_reopen_counts.py',
+        'backend/tests/test_dataset_summary.py',
+        'backend/tests/test_original_current_summary_saved_metadata.py',
+    )
+    brush_marker = 'backend/tests/test_dataset_import_contract.py '
+    brush_insertion = ' '.join(brush_controls) + ' '
+    assert command.count(brush_marker + brush_insertion) == 1
+    assert all(command.split().count(reference) == 1 for reference in brush_controls)
+    command = command.replace(brush_marker + brush_insertion, brush_marker, 1)
     # These four source controls were published after the original lane. Remove
     # only their exact, contiguous insertion before checking the original bytes.
     source_controls = (
@@ -443,6 +456,25 @@ def test_fast_lane_runs_the_full_lanes_static_commands_in_its_own_queue_and_gate
         assert job['steps'][0]['with']['persist-credentials'] is False
         # Inputs reach commands only through the environment, never through expression text in a script.
         assert not any('${{ inputs.' in step.get('run', '') for step in job['steps'])
+
+
+def test_saved_brush_summary_regressions_run_in_full_cpu_and_changed_file_fast_selection():
+    """Dropping a saved-mask regression must fail before either CI lane silently omits it."""
+    import shlex
+    required = (
+        'backend/tests/test_dataset_reopen_counts.py',
+        'backend/tests/test_dataset_summary.py',
+        'backend/tests/test_original_current_summary_saved_metadata.py',
+    )
+    workflow = yaml.safe_load((ROOT / '.github/workflows/ci.yml').read_text())
+    steps = [step for step in workflow['jobs']['source']['steps']
+             if step.get('name') == 'CPU contract and recovery regressions']
+    assert len(steps) == 1
+    command = shlex.split(steps[0]['run'])
+    related = related_module()
+    for reference in required:
+        assert command.count(reference) == 1, f'Full CPU lane must run {reference} exactly once'
+        assert reference in related.select_pytest([reference]), f'Changed regression must reach fast CI: {reference}'
 
 
 def test_fast_selection_only_picks_full_lane_references_and_specs(tmp_path):

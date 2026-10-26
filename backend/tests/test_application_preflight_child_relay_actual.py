@@ -26,12 +26,14 @@ def instrument_original_bridge_refusal(raw):
                         observation:originalRelayDiagnostic,main_pid:process.pid,backend_pid:proc.pid,authority:false}),{flag:'wx',mode:384}); }
                 catch (diagnosticError) { /* Observation failure must never interrupt original invalidation. */ }
             }""")
-    observation='                    fields(request, [\'schema_version\', \'kind\', \'action\', \'nonce\', \'epoch\', \'binding_sha256\', \'backend_claim_sha256\', \'request_id\', \'payload\']);'
+    validation='                    fields(request, [\'schema_version\', \'kind\', \'action\', \'nonce\', \'epoch\', \'binding_sha256\', \'backend_claim_sha256\', \'request_id\', \'payload\']);'
+    branch="                if (request.kind === 'backend_preflight_request') {\n"
+    observation=branch+validation
     assert text.count(observation)==1
-    text=text.replace(observation,"""                    originalRelayDiagnostic={kind:request.kind,action:request.action,raw_sha256:hash(raw),
+    text=text.replace(observation,branch+"""                    originalRelayDiagnostic={kind:request.kind,action:request.action,raw_sha256:hash(raw),
                         original_request_utf8:raw.toString('utf8'),node_hrtime_ms:Number(process.hrtime.bigint())/1e6,node_performance_ms:performance.now(),
                         plan_deadline_monotonic:request.payload?.deadline_monotonic,budget_ms:request.payload?.budget_ms};
-"""+observation)
+"""+validation)
     return text.encode()
 
 

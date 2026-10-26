@@ -281,6 +281,10 @@ export interface LibraryResolution extends LibrarySelection {
 }
 /** A verified, project-scoped reference to stored bytes (an uploaded archive, a model, ...). */
 export interface ArtifactRef { id: string; revision: number; sha256: string }
+export interface ProjectSourceExpectation {
+  project_id: string; source_dataset_dir: string | null; task: VisionTask;
+  annotations_dir: string; active_labelset_id: string;
+}
 /** A resumable upload: the server holds `offset` committed bytes of `size_bytes`. */
 export interface ArtifactUpload {
   id: string; kind: string; sha256: string; size_bytes: number; offset: number; state: string; artifact_id: string | null;
@@ -926,7 +930,7 @@ export const api = {
       request<ProjectConfig>('/api/project/create', { method: 'POST', body: JSON.stringify(data) }),
     open: (projectDir: string) =>
       request<ProjectConfig>('/api/project/open', { method: 'POST', body: JSON.stringify({ project_dir: projectDir }) }),
-    update: (data: Partial<Pick<ProjectConfig, 'name' | 'task' | 'active_preset' | 'description' | 'source_dataset_dir'>>) =>
+    update: (data: Partial<Pick<ProjectConfig, 'name' | 'task' | 'active_preset' | 'description' | 'source_dataset_dir'>> & {expected_source?: ProjectSourceExpectation}) =>
       request<ProjectConfig>('/api/project/update', { method: 'PUT', body: JSON.stringify(data) }),
     listLabelsets: () => request<{ active_id: string; labelsets: ProjectLabelSet[] }>('/api/project/labelsets'),
     createLabelset: (name: string) => request<ProjectLabelSet>('/api/project/labelsets', {

@@ -146,3 +146,106 @@ def test_revoked_session_cannot_use_candidate_permission(team, candidate_source)
     response = owner.post('/api/dataset/import', json={'folder_path': str(candidate), 'task': 'classification'})
     assert response.status_code == 401, response.text
     assert manifest.read_bytes() == before
+
+
+def _source_precondition(project):
+    return {'project_id': project['id'], 'source_dataset_dir': project['source_dataset_dir'],
+            'task': project['task'], 'annotations_dir': project['annotations_dir'],
+            'active_labelset_id': project['active_labelset_id']}
+
+
+@pytest.mark.parametrize('changed', ['source', 'task', 'labelset', 'project_id', 'annotations_dir', 'active_labelset_id'])
+def test_conditional_source_update_refuses_changed_context_without_publishing(team, changed):
+    _, _, owner, project, _, _ = team
+    workspace = Path(project['project_dir'])
+    old, concurrent, picked = (workspace / 'dataset_imports' / name for name in ('old', 'concurrent', 'picked'))
+    for folder in (old, concurrent, picked):
+        folder.mkdir(parents=True)
+    registered = owner.put('/api/project/update', json={
+        'source_dataset_dir': str(old), 'task': 'classification'}).json()
+    expected = _source_precondition(registered)
+    old_label = Path(registered['annotations_dir']) / 'kept.json'
+    old_label.write_bytes(b'{"old_label": true}\n')
+    if changed == 'source':
+        assert owner.put('/api/project/update', json={'source_dataset_dir': str(concurrent)}).status_code == 200
+    elif changed == 'task':
+        assert owner.put('/api/project/update', json={'task': 'segmentation'}).status_code == 200
+    elif changed == 'labelset':
+        added = owner.post('/api/project/labelsets', json={'name': 'Concurrent labels'})
+        assert added.status_code == 200, added.text
+        assert owner.put(f"/api/project/labelsets/{added.json()['id']}/activate").status_code == 200
+    else:
+        expected[changed] = str(workspace / 'other-annotations') if changed == 'annotations_dir' else 'another-context'
+    current = owner.get('/api/project/current').json()
+    manifest = workspace / 'project.json'
+    before = manifest.read_bytes()
+
+    response = owner.put('/api/project/update', json={
+        'source_dataset_dir': str(picked), 'description': 'must not publish', 'expected_source': expected})
+
+    assert response.status_code == 409, response.text
+    assert '바뀌었습니다' in response.json()['detail']
+    assert manifest.read_bytes() == before
+    assert owner.get('/api/project/current').json() == current
+    assert old_label.read_bytes() == b'{"old_label": true}\n'
+
+
+@pytest.mark.parametrize('has_source', [False, True])
+def test_matching_source_precondition_saves_canonical_source_without_metadata(team, has_source):
+    _, _, owner, project, _, _ = team
+    workspace = Path(project['project_dir'])
+    old, picked = workspace / 'dataset_imports' / 'old', workspace / 'dataset_imports' / 'picked'
+    for folder in (old, picked):
+        folder.mkdir(parents=True)
+    if has_source:
+        assert owner.put('/api/project/update', json={'source_dataset_dir': str(old)}).status_code == 200
+    current = owner.get('/api/project/current').json()
+    old_label = Path(current['annotations_dir']) / 'kept.json'
+    old_label.write_bytes(b'{"old_label": true}\n')
+
+    response = owner.put('/api/project/update', json={
+        'source_dataset_dir': str(picked / '..' / 'picked'),
+        'expected_source': _source_precondition(current)})
+
+    assert response.status_code == 200, response.text
+    assert response.json()['source_dataset_dir'] == str(picked.resolve())
+    assert 'expected_source' not in response.json()
+    saved = json.loads((workspace / 'project.json').read_bytes())
+    assert 'expected_source' not in saved and saved['source_dataset_dir'] == str(picked.resolve())
+    assert old.is_dir() and old_label.read_bytes() == b'{"old_label": true}\n'
+    # Other callers keep the existing unconditional source-update behavior.
+    legacy = owner.put('/api/project/update', json={'source_dataset_dir': str(old)})
+    assert legacy.status_code == 200 and legacy.json()['source_dataset_dir'] == str(old)
+
+
+def test_source_precondition_requires_all_strict_fields_and_forbids_extra_fields(team):
+    _, _, owner, project, _, _ = team
+    current = owner.get('/api/project/current').json()
+    expected = _source_precondition(current)
+    malformed = [dict(expected, project_id=3), dict(expected, unrecognized='value'),
+                 {key: value for key, value in expected.items() if key != 'source_dataset_dir'}]
+    manifest = Path(project['project_dir']) / 'project.json'
+    before = manifest.read_bytes()
+    for precondition in malformed:
+        response = owner.put('/api/project/update', json={
+            'description': 'must not publish', 'expected_source': precondition})
+        assert response.status_code == 422, response.text
+        assert manifest.read_bytes() == before
+
+
+def test_source_precondition_does_not_grant_project_write_or_path_authority(team, tmp_path):
+    app, admin, owner, project, users, clients = team
+    current = owner.get('/api/project/current').json()
+    manifest = Path(project['project_dir']) / 'project.json'
+    before = manifest.read_bytes()
+    body = {'source_dataset_dir': str(Path(project['project_dir']) / 'dataset_imports' / 'picked'),
+            'expected_source': _source_precondition(current)}
+    for role in ('viewer', 'labeler', 'trainer', 'reviewer'):
+        app.state.accounts.set_membership(project['id'], users['targetuser']['id'], role, admin['id'])
+        client = clients['targetuser']
+        assert client.post('/api/accounts/select-project', json={'project_id': project['id']}).status_code == 200
+        assert client.put('/api/project/update', json=body).status_code == 403
+        assert manifest.read_bytes() == before
+    body['expected_source']['source_dataset_dir'] = str(tmp_path / 'unregistered-private-folder')
+    assert clients['projectowner'].put('/api/project/update', json=body).status_code == 403
+    assert manifest.read_bytes() == before

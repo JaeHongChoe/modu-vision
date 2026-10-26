@@ -1,10 +1,11 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { CheckCircle2, FileArchive, ListChecks, Play, RefreshCw, ShieldCheck, Square, X } from 'lucide-react';
-import { api, type DatasetDuplicateGroup, type DatasetImportView, type DatasetRevisionImage, type DatasetRevisionRow } from '../../services/api';
+import { api, request, type ProjectConfig, type DatasetDuplicateGroup, type DatasetImportView, type DatasetRevisionImage, type DatasetRevisionRow } from '../../services/api';
 import type { VisionTask } from '../../types';
 import { uploadArchive, type ArchiveProgress } from '../../services/archiveUpload';
 import { acceptBlocker, annotationSummary, archiveProgressText, clearImportKey, importSourceText, duplicateSummary, importEnded, importHeadline, importKeyFor, importProgress, revisionJobLabel, sourceMismatchNotice } from './datasetImportView';
 import { datasetImportError as message } from './datasetImportError';
+import {acceptedUploadedArchive, useAcceptedUploadedSource, type UploadedSourceScope} from './uploadedDatasetSource';
 
 interface Props {
   projectId: string;
@@ -14,6 +15,8 @@ interface Props {
   task: VisionTask;
   onClose: () => void;
   onAccepted: () => void;
+  sourceSelectionScope?: () => UploadedSourceScope | null;
+  onUseUploadedSource?: (source: string) => Promise<void>;
 }
 
 const storageKey = (projectId: string) => `modu.datasetImport.lastJob.${projectId}`;
@@ -22,7 +25,7 @@ const writeLastJob = (projectId: string, jobId: string) => { try { window.localS
 const newKey = () => (typeof crypto !== 'undefined' && 'randomUUID' in crypto ? crypto.randomUUID() : `import-${Date.now()}-${Math.random().toString(16).slice(2)}`);
 
 /** Validated dataset revisions: a durable import reads every image; nothing becomes active until it is accepted. */
-export const DatasetImportPanel: React.FC<Props> = ({ projectId, datasetPath, registeredSource, task, onClose, onAccepted }) => {
+export const DatasetImportPanel: React.FC<Props> = ({ projectId, datasetPath, registeredSource, task, onClose, onAccepted, sourceSelectionScope, onUseUploadedSource }) => {
   const [policy, setPolicy] = useState<'exclude' | 'reject'>('exclude');
   const [verify, setVerify] = useState(false);
   const [followLinks, setFollowLinks] = useState(false);
@@ -41,6 +44,8 @@ export const DatasetImportPanel: React.FC<Props> = ({ projectId, datasetPath, re
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const mounted = useRef(true);
+  const sourceAction = useRef(0);
+  const latestSourceInputs = useRef('');
   // One key per intended import: a retried request (lost response, second click, reopened panel) returns the same job.
   const settingsKey = `${projectId}|${registeredSource || ''}|${task}|${policy}|${verify}|${followLinks}`;
 
@@ -90,6 +95,8 @@ export const DatasetImportPanel: React.FC<Props> = ({ projectId, datasetPath, re
   }, [job?.job_id, job?.state]);
 
   const receipt = job?.result?.revision;
+  const uploadedCandidate = acceptedUploadedArchive(job, {active_revision: activeRevision, revisions}, task);
+  latestSourceInputs.current = JSON.stringify([projectId, datasetPath, registeredSource, task, uploadedCandidate]);
   useEffect(() => {
     setInvalid({ items: [], next: null });
     setGaps([]);
@@ -122,7 +129,7 @@ export const DatasetImportPanel: React.FC<Props> = ({ projectId, datasetPath, re
   }, [busy, onClose]);
 
   const start = async () => {
-    if (busy) return;
+    if (busy || !registeredSource) return;
     setBusy('start'); setError(null); setConfirming(false);
     try {
       const view = await api.datasetImports.start({ task, invalid_policy: policy, verify, follow_links: followLinks },
@@ -173,6 +180,28 @@ export const DatasetImportPanel: React.FC<Props> = ({ projectId, datasetPath, re
       void loadRevisions().catch(() => undefined);
     } finally { setBusy(null); }
   };
+  const useUploadedSource = async () => {
+    if (busy || !uploadedCandidate || !onUseUploadedSource || !sourceSelectionScope) return;
+    const scope = sourceSelectionScope();
+    if (!scope) return;
+    const action = ++sourceAction.current, inputs = latestSourceInputs.current;
+    const current = () => mounted.current && action === sourceAction.current && inputs === latestSourceInputs.current
+      && sourceSelectionScope()?.key === scope.key;
+    setBusy('use-source'); setError(null);
+    try {
+      await useAcceptedUploadedSource({candidate: uploadedCandidate, scope, isCurrent: current,
+        reads: {
+          context: () => api.context.get(scope.context),
+          project: () => request<ProjectConfig>('/api/project/current', {projectContext: scope.context}),
+          job: id => api.datasetImports.get(id), revisions: () => api.datasetImports.revisions(),
+          sourceStatus: id => api.datasetImports.sourceStatus(id),
+        }, onUse: onUseUploadedSource});
+    } catch (caught) {
+      if (mounted.current && action === sourceAction.current && sourceSelectionScope()?.ownerKey === scope.ownerKey) setError(message(caught));
+    } finally {
+      if (mounted.current && action === sourceAction.current) setBusy(null);
+    }
+  };
 
   const progress = importProgress(job);
   const running = Boolean(job && !importEnded(job));
@@ -204,12 +233,12 @@ export const DatasetImportPanel: React.FC<Props> = ({ projectId, datasetPath, re
               <label className="flex items-start gap-2 text-xs leading-5 text-slate-300"><input type="checkbox" checked={followLinks} onChange={(event) => setFollowLinks(event.target.checked)} className="mt-1" /><span>폴더 바로가기(링크)도 따라가기 · 이 PC의 원본에서만 허용됩니다</span></label>
             </fieldset>
             <div className="flex gap-2">
-              <button type="button" className="workspace-button workspace-button--primary flex-1" onClick={() => void start()} disabled={running || Boolean(busy)}><Play className="h-4 w-4" />{busy === 'start' ? '요청 중...' : '전체 검증 실행'}</button>
+              <button type="button" className="workspace-button workspace-button--primary flex-1" onClick={() => void start()} disabled={!registeredSource || running || Boolean(busy)}><Play className="h-4 w-4" />{busy === 'start' ? '요청 중...' : '전체 검증 실행'}</button>
               {running && <button type="button" className="workspace-button" onClick={() => void cancel()} disabled={Boolean(busy) || job?.cancel_requested}><Square className="h-4 w-4" />중지</button>}
             </div>
             <section aria-label="ZIP으로 가져오기" className="space-y-2 rounded-lg border border-[#344963] bg-[#18283B] p-3">
               <div className="flex items-center gap-2 text-sm font-semibold text-white"><FileArchive className="h-4 w-4 text-sky-300" />ZIP으로 가져오기</div>
-              <p className="text-[11px] leading-5 text-slate-400">ZIP은 이 프로젝트 폴더 안에 풀어서 같은 방식으로 검증합니다. 등록된 원본 폴더는 바뀌지 않습니다.</p>
+              <p className="text-[11px] leading-5 text-slate-400">ZIP은 이 프로젝트 폴더 안에 풀어서 검증합니다. 채택한 뒤 ‘이 ZIP으로 작업 시작’을 눌러야 데이터 원본을 바꿉니다.</p>
               <input type="file" accept=".zip,application/zip" aria-label="가져올 ZIP 파일" disabled={running || Boolean(busy)}
                 onChange={(event) => setArchive(event.target.files?.[0] || null)} className="block w-full text-[11px] text-slate-300 file:mr-2 file:rounded file:border-0 file:bg-[#26394D] file:px-2 file:py-1 file:text-slate-200" />
               {archive && <div className="break-all text-[11px] text-slate-400">{archive.name} · {(archive.size / (1024 * 1024)).toFixed(1)} MB</div>}
@@ -259,6 +288,10 @@ export const DatasetImportPanel: React.FC<Props> = ({ projectId, datasetPath, re
                     </button>
                     {confirming && <span className="text-[11px] text-amber-200">현재 활성 버전 {activeRevision ? activeRevision.slice(0, 12) : '없음'}을(를) 이 버전 {receipt.revision_id.slice(0, 12)}로 바꿉니다. 한 번 더 누르면 적용됩니다.</span>}
                     {blocker && <span className="text-[11px] text-slate-400">{blocker}</span>}
+                    {uploadedCandidate && onUseUploadedSource && sourceSelectionScope && <button type="button" className="workspace-button workspace-button--primary"
+                      onClick={() => void useUploadedSource()} disabled={Boolean(busy) || registeredSource === uploadedCandidate.root}>
+                      {busy === 'use-source' ? '원본을 확인하는 중...' : '이 ZIP으로 작업 시작'}
+                    </button>}
                   </div>
                 )}
               </section>

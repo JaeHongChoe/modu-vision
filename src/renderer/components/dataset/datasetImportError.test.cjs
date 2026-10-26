@@ -9,9 +9,9 @@ const FALLBACK = '요청을 처리하지 못했습니다. 잠시 후 다시 시�
 
 // Execute the real panel's API rejection -> state -> alert path. Only React's
 // hook scheduler and the API boundary are replaced; the panel/formatter run as shipped.
-function panelHarness(failure) {
+function panelHarness(failure, options = {}) {
   let cursor = 0;
-  const slots = [], effects = [];
+  const slots = [], effects = [], starts = [];
   const react = {
     createElement: (type, props, ...children) => ({ type, props: props || {}, children: children.flat() }),
     useState(initial) {
@@ -39,7 +39,10 @@ function panelHarness(failure) {
     m.paths = Module._nodeModulePaths(path.dirname(filename));
     m.require = ref => {
       if (ref === 'react') return react;
-      if (ref === '../../services/api') return { api: { datasetImports: { revisions: async () => { throw failure; } } } };
+      if (ref === '../../services/api') return { api: { datasetImports: {
+        revisions: async () => { throw failure; },
+        start: async (...args) => { starts.push(args); return {job_id: 'job'}; },
+      } } };
       if (ref === '../../services/archiveUpload') return {};
       if (ref.startsWith('.')) return load(path.resolve(path.dirname(filename), `${ref}.ts`));
       return Module.prototype.require.call(m, ref);
@@ -57,7 +60,7 @@ function panelHarness(failure) {
     global.window = fakeWindow;
     try {
       cursor = 0;
-      const tree = panel({ projectId: 'p', datasetPath: 'source', registeredSource: 'source',
+      const tree = panel({ projectId: 'p', datasetPath: 'source', registeredSource: 'source', ...options,
         task: 'detection', onClose() {}, onAccepted() {} });
       effects.splice(0).forEach(fn => fn());
       return tree;
@@ -70,7 +73,7 @@ function panelHarness(failure) {
     }
     return found;
   }
-  return { render, alerts };
+  return { render, alerts, starts };
 }
 
 for (const [name, failure, expected] of [
@@ -101,4 +104,18 @@ test('a circular error detail cannot replace the original failure with a renderi
   h.render();
   await new Promise(setImmediate);
   assert.deepEqual(h.alerts(h.render()), [FALLBACK]);
+});
+
+test('a project without a registered folder can select a ZIP but cannot start folder verification', async () => {
+  const h = panelHarness(undefined, {datasetPath: '', registeredSource: null});
+  const nodes = node => !node || typeof node !== 'object' ? [] : [node, ...(node.children || []).flatMap(nodes)];
+  const text = node => typeof node === 'string' ? node : (node?.children || []).map(text).join('');
+  const tree = nodes(h.render());
+  const folderStart = tree.find(node => node.type === 'button' && text(node) === '전체 검증 실행');
+  const zip = tree.find(node => node.props?.['aria-label'] === '가져올 ZIP 파일');
+  assert.equal(folderStart.props.disabled, true);
+  assert.equal(zip.props.disabled, false, 'ZIP intake does not depend on a registered folder');
+  folderStart.props.onClick();
+  await new Promise(setImmediate);
+  assert.deepEqual(h.starts, [], 'the handler also refuses a stale or directly invoked folder action');
 });

@@ -46,7 +46,7 @@ test('a declined assistant split never writes; a confirmed split saves and logs 
   await installDesktopHostShim(page,renderer.port);await page.goto(renderer.url);
   await expect(page.getByTitle('프로젝트 관리',{exact:true})).toContainText(project.name);
   // Project identity arrives before dataset hydration on a slow host. The real save entry guards current source and count.
-  await expect(page.getByRole('button',{name:'3-Way 분할 적용',exact:true})).toBeEnabled();
+  await expect(page.getByRole('button',{name:'이 비율로 나누기',exact:true})).toBeEnabled();
   await expect(page.getByRole('button',{name:'전체 (20)',exact:true})).toBeVisible();
   await page.evaluate(()=>{
     const config:AssistantConfigState={active:'chatgpt',encryptionAvailable:true,providers:[{

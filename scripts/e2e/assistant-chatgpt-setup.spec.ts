@@ -18,7 +18,7 @@ test('ChatGPT setup requires consent and explicit model selection; identity-only
   await page.route(/^https?:\/\//,route=>new URL(route.request().url()).origin===renderer.origin?route.fallback():route.abort('blockedbyclient'));
   await installDesktopHostShim(page,renderer.port);await page.goto(renderer.url);
   await expect(page.getByTitle('프로젝트 관리',{exact:true})).toContainText(project.name);
-  await expect(page.getByRole('button',{name:'3-Way 분할 적용',exact:true})).toBeEnabled();
+  await expect(page.getByRole('button',{name:'이 비율로 나누기',exact:true})).toBeEnabled();
   await page.evaluate(()=>{
     let version=0;
     const calls:string[]=[];

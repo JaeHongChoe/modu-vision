@@ -27,10 +27,40 @@ server-side refusals; the browser cannot grant itself permissions.
 | Desktop updates and OS service registration | Unavailable | Separate authorized native operation |
 | Telemetry | Server must proxy `/ws/` with trusted HTTPS/Origin handling | Native authenticated connection |
 
+For an empty browser project, open **검증된 데이터 버전** in Step 1, choose a
+ZIP and use **ZIP 올리고 검증**. Validation and **이 버전 채택** publish the
+reviewed dataset index; they do not change the working source. The separate
+**이 ZIP으로 작업 시작** action selects the accepted upload as this project's
+source and loads its images for labeling, training and evaluation. It requires
+existing `project.manage` authority, fresh project/actor/revision/source checks,
+and a matching source/task/labelset precondition at the source write. It never
+uses a browser PC path as a server path. A refused write keeps the prior saved
+source; a newer project view is not rolled back.
+
+Classification changes save through the image class picker; geometric labels
+use **변경 저장**. Save a train/validation/test split before training. Training
+and evaluation run on the backend server with that server's model/runtime and
+weights, not inside the browser. After reload, log in again and use **작업 센터**
+to reopen the original completed job and its saved evaluation. Source restoration
+must finish before connection or project-switching controls are enabled; this does not bypass the
+existing in-flight-work or unsaved-edit checks.
+
 `browser-team-session.spec.ts` exercises a real isolated API behind an owned
 loopback HTTPS proxy and the built renderer. Its self-signed certificate is a
 private test fixture, not production certificate provisioning. Development
 Electron and Windows install qualifications remain distinct.
+
+`browser-upload-lifecycle.spec.ts` covers the empty-project upload/source handoff.
+`browser-upload-annotation-reconnect.spec.ts` saves an actual canvas bounding box
+and reopens it after login. The opt-in `browser-training-reconnect.spec.ts`
+(`@owned-model`) performs one real ResNet18 epoch and held-out evaluation, then
+reopens the same job after reload, a new browser session and an owned backend
+restart. Set `MV_E2E_RESNET18_WEIGHTS` to an existing
+`resnet18-f37072fd.pth`; the test verifies its hash prefix and copies it into the
+isolated backend cache. It neither fabricates a checkpoint nor downloads model
+weights. These are synthetic functional checks, not field-quality or installer
+acceptance. Standard evaluation uses the backend's automatic device selection;
+the CPU training setting does not force its evaluation device.
 
 ## Extension admission
 

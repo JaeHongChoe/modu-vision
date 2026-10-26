@@ -195,7 +195,7 @@ test('step 1 in the simple view: a saved split is one line, the verified version
  assert.match(studio,/const splitFolded = simpleView && splitInfo\.foldable && !splitOpen;/,'only a saved (or source-folder) split folds');
  assert.match(studio,/<div className=\{splitFolded \? 'hidden' : 'flex flex-col space-y-2\.5'\}>/);
  assert.match(studio,/학습 \{calibrator\.counts\.train\} · 검증 \{calibrator\.counts\.val\} · 시험 \{calibrator\.counts\.test\}/);
- assert.match(studio,/simpleView \? '이 비율로 나누기' : '3-Way 분할 적용'/);
+ assert.match(studio,/language === 'ko'\s*\? '이 비율로 나누기'\s*: 'Apply 3-Way Split'/,'the final plain split action is consistent across view modes');
  assert.match(studio,/aria-label="학습 전 점검"/);assert.match(studio,/\.then\(\(\) => setSplitRatios\(prev => \(\{ \.\.\.prev, touchedFor: null \}\)\)\)/,'after a save the heading shows the saved split, not a preview');
  const more=studio.indexOf("'더 보기' : 'More'}</summary>");
  assert.ok(studio.indexOf('{simpleView && (',more)>more&&studio.indexOf('검증된 데이터 버전',more)<studio.indexOf('</details>}',more),'the verified version is a 더 보기 item in the simple view');

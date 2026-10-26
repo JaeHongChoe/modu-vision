@@ -25,6 +25,7 @@ import { host, hostErrorMessage } from '../../services/hostAdapter';
 import { ProceduralGeneratorModal } from './ProceduralGeneratorModal';
 import { DatasetVersionPanel } from './DatasetVersionPanel';
 import { DatasetImportPanel } from './DatasetImportPanel';
+import type {UploadedSourceScope} from './uploadedDatasetSource';
 import { validationStatus } from './datasetImportView';
 import { DatasetWorkflowPanel } from './DatasetWorkflowPanel';
 import {CaptureIntakePanel} from './CaptureIntakePanel';
@@ -142,6 +143,11 @@ export const DatasetStudio: React.FC = () => {
     setShowGeneratorModal,
     generateSynthetic,
   } = useDatasetStore();
+  const canOpenImports = Boolean(project?.id && projectDir === project.project_dir && project.task === task
+    && !isProjectBusy && !isLoading && !sessionChanging && (hasSelectedFolder || host.kind() === 'browser'));
+  const importsTitle = sessionChanging ? SESSION_CHANGING_NOTICE
+    : hasSelectedFolder ? '모든 이미지를 열어 검증한 고정 버전을 만들고 채택합니다'
+    : canOpenImports ? 'ZIP 파일을 올려 검증된 데이터 버전을 만듭니다' : '데이터셋을 먼저 불러오세요';
   // Relative thumbnails must never be rebuilt on a transport that did not
   // accept this source. Project acceptance can follow a server change later.
   const currentAuthority = readDatasetAuthority();
@@ -155,6 +161,10 @@ export const DatasetStudio: React.FC = () => {
   }, [sourceAuthority]);
   const sourceIsCurrent = galleryCurrent();
   const galleryImages = sourceIsCurrent ? images : [];
+  const metadataReady = !isLoading && !importError;
+  const metadataNotice = isLoading
+    ? (language === 'ko' ? '데이터 정보를 확인하는 중입니다. 잠시 기다려 주세요.' : 'Checking dataset information. Please wait.')
+    : (language === 'ko' ? '데이터 정보를 확인할 수 없습니다. 오류를 확인한 뒤 다시 불러오세요.' : 'Dataset information is unavailable. Review the error and reload.');
 
   // Thumbnail Grid Density (S: compact 96px, M: default 144px, L: detailed 200px)
   const [density, setDensity] = useState<'S' | 'M' | 'L'>('M');
@@ -170,20 +180,26 @@ export const DatasetStudio: React.FC = () => {
   }, []);
   const [showImports, setShowImports] = useState(false);
   // The active validated version of this project (full validation), so the step can say validation is done.
-  const [activeRevision, setActiveRevision] = useState<DatasetRevisionRow | null>(null);
+  const validationAuthority = JSON.stringify([sourceContextKey, currentAuthority]);
+  const validationOwner = useRef(validationAuthority);
+  validationOwner.current = validationAuthority;
+  const [activeRevisionResult, setActiveRevision] = useState<{ scope: string; row: DatasetRevisionRow | null } | null>(null);
+  const activeRevision = !isProjectBusy && !sessionChanging && activeRevisionResult?.scope === validationAuthority ? activeRevisionResult.row : null;
   // Only the latest read applies: an older read still in flight (from the mount) never replaces a later one.
   const revisionRead = useRef(0);
   const loadActiveRevision = useCallback(() => {
     const read = ++revisionRead.current;
+    if (!project?.id || isProjectBusy || sessionChanging) return () => { if (revisionRead.current === read) revisionRead.current += 1; };
     api.datasetImports.revisions().then(listed => {
-      if (revisionRead.current === read) setActiveRevision(listed.revisions.find(row => row.revision_id === listed.active_revision) || null);
-    }).catch(() => { if (revisionRead.current === read) setActiveRevision(null); });
+      if (revisionRead.current === read && validationOwner.current === validationAuthority) setActiveRevision({ scope: validationAuthority, row: listed.revisions.find(row => row.revision_id === listed.active_revision) || null });
+    }).catch(() => { if (revisionRead.current === read && validationOwner.current === validationAuthority) setActiveRevision(null); });
     return () => { if (revisionRead.current === read) revisionRead.current += 1; };
-  }, []);
+  }, [validationAuthority, project?.id, isProjectBusy, sessionChanging]);
   useEffect(() => loadActiveRevision(), [loadActiveRevision, project?.id, project?.source_dataset_dir, task]);
   // Whether the active version still matches the source, asked of the backend by the index's own inventory definition
   // (the quick import counts differently: nqa2 review P2-1); asked again after each import of the folder.
-  const [sourceStatus, setSourceStatus] = useState<DatasetSourceStatus | null>(null);
+  const [sourceStatusResult, setSourceStatus] = useState<{ scope: string; status: DatasetSourceStatus } | null>(null);
+  const sourceStatus = !isProjectBusy && !sessionChanging && sourceStatusResult?.scope === validationAuthority ? sourceStatusResult.status : null;
   const statusRead = useRef(0);
   const activeRevisionId = activeRevision?.revision_id ?? null;
   useEffect(() => {
@@ -191,12 +207,12 @@ export const DatasetStudio: React.FC = () => {
     setSourceStatus(null);
     if (activeRevisionId && !isLoading && hasSelectedFolder) {
       api.datasetImports.sourceStatus(activeRevisionId).then(status => {
-        if (statusRead.current === read) setSourceStatus(status);
-      }).catch(() => { if (statusRead.current === read) setSourceStatus(null); });
+        if (statusRead.current === read && validationOwner.current === validationAuthority) setSourceStatus({ scope: validationAuthority, status });
+      }).catch(() => { if (statusRead.current === read && validationOwner.current === validationAuthority) setSourceStatus(null); });
     }
     return () => { if (statusRead.current === read) statusRead.current += 1; };
-  }, [activeRevisionId, isLoading, hasSelectedFolder, quickValidation]);
-  const validation = validationStatus(quickValidation, activeRevision, project?.source_dataset_dir, task, sourceStatus);
+  }, [activeRevisionId, isLoading, hasSelectedFolder, quickValidation, validationAuthority]);
+  const validation = validationStatus(importError ? null : quickValidation, activeRevision, project?.source_dataset_dir, task, sourceStatus);
   const errorScope = JSON.stringify([sourceContextKey, projectDir, project?.id, project?.active_labelset_id, project?.source_dataset_dir, task, folderPath, datasetKey, currentAuthority]);
   const [imageOpenError, setImageOpenError] = useScopedError(errorScope);
   const rawErrors = [sourceSaveError, splitError, importError];
@@ -298,6 +314,70 @@ export const DatasetStudio: React.FC = () => {
     }
   };
 
+  const uploadedSourceOwner = () => {
+    const selected = useProjectStore.getState(), active = selected.project, context = getProjectContext();
+    if (!active?.id || !context || context.project_id !== active.id || selected.isProjectBusy || selected.sharedSessionChanging
+        || selected.projectDir !== active.project_dir || selected.task !== active.task) return null;
+    return JSON.stringify([getProjectContextGeneration(), getApiPersistenceIdentity(), selected.backendPort,
+      context.workspace_id, context.project_id, context.actor_id, context.mode, active.id, active.project_dir,
+      active.task, active.active_labelset_id || 'default', active.annotations_dir]);
+  };
+  const readUploadedSourceScope = (): UploadedSourceScope | null => {
+    const selected = useProjectStore.getState(), active = selected.project, dataset = useDatasetStore.getState();
+    const ownerKey = uploadedSourceOwner(), context = getProjectContext();
+    if (!ownerKey || !active || !context || dataset.isLoading || dataset.isSplitting || host.kind() !== 'browser') return null;
+    const expectedSource = {project_id: active.id, source_dataset_dir: active.source_dataset_dir,
+      task: active.task, annotations_dir: active.annotations_dir, active_labelset_id: active.active_labelset_id || 'default'};
+    return {ownerKey, context, projectId: active.id, projectDir: active.project_dir, task: active.task,
+      labelsetId: expectedSource.active_labelset_id, source: active.source_dataset_dir, expectedSource,
+      key: JSON.stringify([ownerKey, active.source_dataset_dir, dataset.folderPath, dataset.datasetKey,
+        dataset.sourceAuthority, readDatasetAuthority(), dataset.hasSelectedFolder])};
+  };
+  const handleUseUploadedSource = async (source: string) => {
+    const scope = readUploadedSourceScope();
+    if (!scope) throw new Error('현재 프로젝트의 데이터 원본을 먼저 확인하세요.');
+    const selection = ++folderSelection.current;
+    let savedTarget = false;
+    const ownsAction = () => selection === folderSelection.current && uploadedSourceOwner() === scope.ownerKey;
+    const current = () => {
+      if (!ownsAction()) return false;
+      const registered = useProjectStore.getState().project?.source_dataset_dir;
+      if (registered === source) {savedTarget = true; return true;}
+      return !savedTarget && registered === scope.source;
+    };
+    let failure: unknown;
+    try {
+      await importFolder(source, scope.task, undefined, false, current, scope.expectedSource);
+      if (!current()) throw new Error('데이터 원본을 고르는 중 프로젝트나 서버 연결이 바뀌었습니다.');
+      const loaded = useDatasetStore.getState();
+      if (loaded.sourceSaveError || loaded.importError) throw new Error(loaded.sourceSaveError || loaded.importError || '데이터 원본을 불러오지 못했습니다.');
+      if (useProjectStore.getState().project?.source_dataset_dir !== source || loaded.folderPath !== source
+          || loaded.datasetKey !== `${source}\0${scope.task}` || loaded.sourceAuthority !== readDatasetAuthority())
+        throw new Error('ZIP을 프로젝트 데이터 원본으로 저장했는지 확인하지 못했습니다.');
+      setShowImports(false);
+      return;
+    } catch (caught) { failure = caught; }
+    // A refused source write must not leave the inspected ZIP pretending to be the saved project source.
+    // Reopening the previous source is read-only; no rollback source write is issued.
+    const loaded = useDatasetStore.getState();
+    if (ownsAction() && useProjectStore.getState().project?.source_dataset_dir === scope.source
+        && loaded.folderPath === source && loaded.datasetKey === `${source}\0${scope.task}`) {
+      const restoreCurrent = () => ownsAction() && useProjectStore.getState().project?.source_dataset_dir === scope.source;
+      if (scope.source) {
+        try {
+          await importFolder(scope.source, scope.task, undefined, true, restoreCurrent);
+          if (restoreCurrent() && useDatasetStore.getState().importError) throw new Error(useDatasetStore.getState().importError || '');
+        } catch (restoreError) {
+          if (restoreCurrent()) {
+            useDatasetStore.getState().setFolderPath('');
+            throw new Error(`${hostErrorMessage(failure, 'ZIP 원본 선택에 실패했습니다.')} 기존 원본 화면도 다시 읽지 못했습니다: ${hostErrorMessage(restoreError, '다시 불러오세요.')}`);
+          }
+        }
+      } else if (restoreCurrent()) useDatasetStore.getState().setFolderPath('');
+    }
+    throw failure;
+  };
+
   const handleOpenImage = async (imageId: string, filePath: string) => {
     if (openingImageId) return;
     setImageOpenError(null);
@@ -321,6 +401,7 @@ export const DatasetStudio: React.FC = () => {
   const classEntries = Object.entries(classes);
   const distribution = classDistributionStats(task, classes, classCountUnit === 'images' ? (totalImages || sourceImages) : totalImages, classCountUnit ?? undefined);
   const isImbalanced = severeClassImbalance(classes);
+  const usesClassWeights = ['classification', 'patch_classification'].includes(task);
   const maxClassCount = Math.max(...Object.values(classes), 1);
   const appliedTotal = split.train + split.val + split.test;
 
@@ -331,12 +412,13 @@ export const DatasetStudio: React.FC = () => {
   // the presets, slider and apply button one click away.
   // Labels come from what the backend says the split is (saved, source folders, automatic or stale), so an unsaved
   // automatic split is never shown as saved and only a saved one folds to a single line.
-  const splitInfo = splitStatus({ mode: calibrator.mode, splitState, locked: splitUnavailableForTask });
+  const splitInfo = metadataReady ? splitStatus({ mode: calibrator.mode, splitState, locked: splitUnavailableForTask })
+    : { label: isLoading ? '확인 중' : '확인 필요', description: metadataNotice, foldable: false, tone: 'neutral' };
   const splitFolded = simpleView && splitInfo.foldable && !splitOpen;
-  const checklist = (importChecks({ task, totalImages: totalImages || 0, classes: classes || {}, split: split || { train: 0, val: 0, test: 0 },
+  const checklist = metadataReady ? (importChecks({ task, totalImages: totalImages || 0, classes: classes || {}, split: split || { train: 0, val: 0, test: 0 },
     splitState: splitState ?? null, classSplitCounts: classSplitCounts ?? null, corrupted: corruptedImages?.length ?? 0,
     excludedUndecodable: excludedUndecodable ?? null, labelsMissing: Boolean(labelsMissing), expectedLayout: expectedLayout || '',
-    splitLocked: splitUnavailableForTask }) as ReturnType<typeof importChecks> | null) ?? [];
+    splitLocked: splitUnavailableForTask }) as ReturnType<typeof importChecks> | null) ?? [] : [];
   const shownCounts = calibrator.counts;
   const shownRatios = calibrator.ratios;
 
@@ -434,8 +516,8 @@ export const DatasetStudio: React.FC = () => {
             <button
               type="button"
               onClick={() => setShowImports(true)}
-              disabled={!hasSelectedFolder || !project?.id || isLoading || sessionChanging}
-              title={sessionChanging ? SESSION_CHANGING_NOTICE : hasSelectedFolder ? '모든 이미지를 열어 검증한 고정 버전을 만들고 채택합니다' : '데이터셋을 먼저 불러오세요'}
+              disabled={!canOpenImports}
+              title={importsTitle}
               className="flex items-center gap-2 rounded-[4px] border border-emerald-700/60 bg-emerald-950/30 px-3 py-1.5 text-xs font-semibold text-emerald-200 hover:bg-emerald-900/40 disabled:cursor-not-allowed disabled:opacity-40"
             >
               <ListChecks className="h-4 w-4" />
@@ -449,8 +531,8 @@ export const DatasetStudio: React.FC = () => {
           <button
             type="button"
             onClick={() => setShowImports(true)}
-            disabled={!hasSelectedFolder || !project?.id || isLoading || sessionChanging}
-            title={sessionChanging ? SESSION_CHANGING_NOTICE : hasSelectedFolder ? '모든 이미지를 열어 검증한 고정 버전을 만들고 채택합니다' : '데이터셋을 먼저 불러오세요'}
+            disabled={!canOpenImports}
+            title={importsTitle}
             className="flex items-center gap-2 rounded-[4px] border border-emerald-700/60 bg-emerald-950/30 px-3 py-1.5 text-xs font-semibold text-emerald-200 hover:bg-emerald-900/40 disabled:cursor-not-allowed disabled:opacity-40"
           >
             <ListChecks className="h-4 w-4" />
@@ -562,31 +644,31 @@ export const DatasetStudio: React.FC = () => {
             </>}
           </div>
 
-          {split.train + split.val + split.test === 0 && totalImages > 0 && (
+          {metadataReady && split.train + split.val + split.test === 0 && totalImages > 0 && (
             <div className="text-[11px] text-amber-300">
               {language === 'ko' ? '분할을 아직 적용하지 않았습니다. 아래 비율은 적용 전 예상치입니다.' : 'Split not applied yet. Ratios below are estimates.'}
             </div>
           )}
 
           {/* Corrupted Images Alert if any */}
-          {unlabeledImages > 0 && (
+          {metadataReady && unlabeledImages > 0 && (
             <div className="p-2.5 bg-amber-950/30 border border-amber-500/40 rounded text-xs text-amber-200">
               원본 {sourceImages}장 중 주석 없는 {unlabeledImages}장은 갤러리에서만 보이며 학습 분할에서 제외됩니다.
             </div>
           )}
-          {task === 'segmentation' && !splitUnavailableForTask && classes.defect_mask && !classes.OK && !classes.good && (
+          {metadataReady && task === 'segmentation' && !splitUnavailableForTask && classes.defect_mask && !classes.OK && !classes.good && (
             <div className="p-2.5 bg-amber-950/30 border border-amber-500/40 rounded text-xs text-amber-200">
               결함 주석만 확인되었습니다. 정상(OK) 이미지가 없으면 과검률과 양산 판정 품질을 검증할 수 없습니다.
             </div>
           )}
-          {validation && (
+          {!isLoading && !isProjectBusy && !sessionChanging && validation && (
             <div role="status" className={validation.tone === 'ok'
               ? 'p-2.5 bg-emerald-950/30 border border-emerald-500/40 rounded text-xs text-emerald-200'
               : 'p-2.5 bg-amber-950/30 border border-amber-500/40 rounded text-xs text-amber-200'}>
               {validation.text}
             </div>
           )}
-          {corruptedImages.length > 0 && (
+          {metadataReady && corruptedImages.length > 0 && (
             <div className="p-2.5 bg-[#EF4444]/10 border border-[#EF4444]/40 rounded-[4px] text-xs text-red-200">
               <div className="flex items-center space-x-1.5 font-semibold text-[#EF4444] mb-1">
                 <AlertTriangle className="w-4 h-4" />
@@ -606,7 +688,7 @@ export const DatasetStudio: React.FC = () => {
           )}
 
           {/* Class Imbalance Warning if > 20:1 */}
-          {isImbalanced && (
+          {metadataReady && isImbalanced && (
             <div className="p-2.5 bg-[#F59E0B]/10 border border-[#F59E0B]/40 rounded-[4px] text-xs text-amber-200">
               <div className="flex items-center justify-between mb-1">
                 <div className="flex items-center space-x-1.5 font-semibold text-[#F59E0B]">
@@ -615,12 +697,15 @@ export const DatasetStudio: React.FC = () => {
                     {language === 'ko' ? '극심한 클래스 불균형 (ERR_003)' : 'Class Imbalance Warning'}
                   </span>
                 </div>
-                <JargonTooltip termKey="focal_loss" />
               </div>
               <p className="text-[11px] text-amber-300">
                 {language === 'ko'
-                  ? '다수 클래스와 소수 클래스 비율이 20:1을 초과합니다. 가중 손실함수(Focal Loss)가 적용됩니다.'
-                  : 'Class ratio exceeds 20:1. Weighted loss rebalancing will be used.'}
+                  ? (usesClassWeights
+                    ? '다수 클래스와 소수 클래스 비율이 20:1을 초과합니다. 분류 학습에는 클래스별 이미지 수에 따른 가중치가 적용됩니다. 적은 클래스의 이미지를 더 모으고 클래스별 평가 결과를 확인하세요.'
+                    : '다수 클래스와 소수 클래스 비율이 20:1을 초과합니다. 적은 클래스의 이미지와 라벨을 확인하고 클래스별 평가 결과를 검토하세요.')
+                  : (usesClassWeights
+                    ? 'Class ratio exceeds 20:1. Classification training uses weights from class image counts. Collect more minority-class images and review per-class evaluation results.'
+                    : 'Class ratio exceeds 20:1. Review minority-class images, labels and per-class evaluation results.')}
               </p>
             </div>
           )}
@@ -632,7 +717,7 @@ export const DatasetStudio: React.FC = () => {
                 <Sliders className="w-3.5 h-3.5 text-blue-400" />
                 <span className="text-xs font-bold text-slate-200 tracking-wide uppercase">
                   {language === 'ko' ? `학습 · 검증 · 시험 분할 (${splitInfo.label})`
-                    : showAppliedSplit ? 'Train / val / test split (saved)' : 'Train / val / test split (preview)'}
+                    : !metadataReady ? (isLoading ? 'Train / val / test split (checking)' : 'Train / val / test split (unavailable)') : showAppliedSplit ? 'Train / val / test split (saved)' : 'Train / val / test split (preview)'}
                 </span>
               </div>
               {simpleView && splitInfo.foldable ? <span className="flex items-center gap-2 text-[11px] text-slate-300">
@@ -642,8 +727,8 @@ export const DatasetStudio: React.FC = () => {
             </div>
             <div className={splitFolded ? 'hidden' : 'flex flex-col space-y-2.5'}>
 
-            <p className={`text-xs ${splitInfo.tone === 'warn' ? 'text-amber-200' : 'text-slate-400'}`} role={splitInfo.tone === 'warn' ? 'status' : undefined}>
-              {language === 'ko' ? splitInfo.description
+            <p className={`text-xs ${splitInfo.tone === 'warn' ? 'text-amber-200' : 'text-slate-400'}`} role={!metadataReady || splitInfo.tone === 'warn' ? 'status' : undefined}>
+              {!metadataReady ? metadataNotice : language === 'ko' ? splitInfo.description
                 : showAppliedSplit ? (splitUnavailableForTask ? 'The source folder\'s own split is used.' : 'This is the saved split. Pick a ratio below and apply it to change it.')
                 : 'Preview of the new split. Saved splits change when you select Apply.'}
             </p>
@@ -679,7 +764,7 @@ export const DatasetStudio: React.FC = () => {
             </div>
 
             {/* Master 3-Way Calibration Bar */}
-            <div className="space-y-1">
+            {metadataReady && <div className="space-y-1">
               <div className="w-full bg-[#0B0E14] h-2.5 rounded-[2px] border border-[#2B3547] overflow-hidden flex">
                 <div
                   className="bg-[#3B82F6] h-full transition-all duration-200"
@@ -708,7 +793,7 @@ export const DatasetStudio: React.FC = () => {
                   {language === 'ko' ? '시험' : 'Test'}: {shownRatios.test}% ({shownCounts.test})
                 </span>
               </div>
-            </div>
+            </div>}
 
             {/* Train Ratio Slider */}
             <div className="space-y-1">
@@ -736,7 +821,7 @@ export const DatasetStudio: React.FC = () => {
               onClick={() => void applySplit(splitRatios.train / 100, splitRatios.val / 100, splitRatios.test / 100)
                 .then(() => setSplitRatios(prev => ({ ...prev, touchedFor: null })))
                 .catch(() => {})}
-              disabled={!sourceIsCurrent || isSplitting || totalImages === 0 || splitUnavailableForTask}
+              disabled={!sourceIsCurrent || !metadataReady || isSplitting || totalImages === 0 || splitUnavailableForTask}
               title={splitUnavailableForTask ? splitUnavailableHint : undefined}
               className="w-full py-1.5 bg-[#2563EB] hover:bg-blue-500 text-white rounded-[4px] border border-blue-400 text-xs font-semibold flex items-center justify-center space-x-1.5 transition-tactile cursor-pointer disabled:opacity-40"
             >
@@ -747,11 +832,11 @@ export const DatasetStudio: React.FC = () => {
                     ? '분할 연산 중...'
                     : 'Splitting...'
                   : language === 'ko'
-                  ? simpleView ? '이 비율로 나누기' : '3-Way 분할 적용'
+                  ? '이 비율로 나누기'
                   : 'Apply 3-Way Split'}
               </span>
             </button>
-            {splitUnavailableForTask && totalImages > 0 && (
+            {metadataReady && splitUnavailableForTask && totalImages > 0 && (
               <p className="text-[11px] text-amber-300">{splitUnavailableHint}</p>
             )}
             {splitError && (
@@ -782,21 +867,21 @@ export const DatasetStudio: React.FC = () => {
               </span>
             </div>
 
-            {task === 'segmentation' && splitUnavailableForTask && (
+            {metadataReady && task === 'segmentation' && splitUnavailableForTask && (
               <p className="mb-2 text-[10px] text-slate-400">
                 {language === 'ko'
                   ? '이미지별 정상·결함 수가 아닌 마스크 채널별 이미지 수입니다.'
                   : 'Counts images per mask channel, not normal versus defect images.'}
               </p>
             )}
-            {distribution.countUnit === 'objects' && classEntries.length > 0 && (
+            {metadataReady && distribution.countUnit === 'objects' && classEntries.length > 0 && (
               <p className="mb-2 text-[10px] text-slate-400">
                 {language === 'ko'
                   ? `라벨된 이미지 ${distribution.imageCount}장 · 객체 주석 ${distribution.objectCount}개. 비율은 전체 객체 주석 수 기준입니다.`
                   : `${distribution.imageCount} labeled images · ${distribution.objectCount} object annotations. Percentages use the object total.`}
               </p>
             )}
-            {classCountUnit === 'images' && classEntries.length > 0 && (
+            {metadataReady && classCountUnit === 'images' && classEntries.length > 0 && (
               <p className="mb-2 text-[10px] text-slate-400">
                 {language === 'ko'
                   ? `학습에 쓰는 이미지 ${totalImages || sourceImages}장 기준입니다${sourceImages > totalImages && totalImages ? ` (사용 안 함 ${sourceImages - totalImages}장 제외)` : ''}. 여러 클래스가 있는 이미지는 클래스별로 각각 집계합니다.`
@@ -869,10 +954,10 @@ export const DatasetStudio: React.FC = () => {
                         />
                       </div>
 
-                      {appliedClassSplit && !confirmedClassSplit && <p className="mt-1 text-[10px] text-slate-400">
+                      {metadataReady && appliedClassSplit && !confirmedClassSplit && <p className="mt-1 text-[10px] text-slate-400">
                         {language === 'ko' ? '적용된 분할 집계 확인 중' : 'Loading applied split counts'}
                       </p>}
-                      {!splitUnavailableForTask && (!appliedClassSplit || confirmedClassSplit) && <div className="mt-1 pt-1 border-t border-[#2B3547]/50 flex flex-wrap items-center justify-between gap-1 text-[10px] font-mono tabular-nums text-slate-400">
+                      {metadataReady && !splitUnavailableForTask && (!appliedClassSplit || confirmedClassSplit) && <div className="mt-1 pt-1 border-t border-[#2B3547]/50 flex flex-wrap items-center justify-between gap-1 text-[10px] font-mono tabular-nums text-slate-400">
                         <span>{language === 'ko'
                           ? (confirmedClassSplit ? '적용된 분할' : '분할 예상')
                           : (confirmedClassSplit ? 'Applied split' : 'Split preview')}</span>
@@ -1175,7 +1260,9 @@ export const DatasetStudio: React.FC = () => {
       <ProceduralGeneratorModal />
       {showImports && project?.id && <DatasetImportPanel projectId={project.id} datasetPath={folderPath}
         registeredSource={project.source_dataset_dir || null} task={task}
-        onClose={() => setShowImports(false)} onAccepted={() => { loadActiveRevision(); }} />}
+        onClose={() => setShowImports(false)} onAccepted={() => { loadActiveRevision(); }}
+        sourceSelectionScope={host.kind() === 'browser' ? readUploadedSourceScope : undefined}
+        onUseUploadedSource={host.kind() === 'browser' ? handleUseUploadedSource : undefined} />}
       {showVersions && <DatasetVersionPanel datasetPath={folderPath} highlightVersionId={highlightVersionId} onClose={() => { setShowVersions(false); setHighlightVersionId(null); }} onRestored={async () => {
         await importFolder(folderPath, task, false);
       }} />}

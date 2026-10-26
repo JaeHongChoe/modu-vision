@@ -3,6 +3,13 @@ function load(){const filename=path.join(__dirname,'workflowReadiness.ts');asser
 function loadChecklist(){const filename=path.join(__dirname,'..','dataset','importChecklist.ts');const m=new Module(filename,module);m._compile(ts.transpileModule(fs.readFileSync(filename,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText,filename);return m.exports;}
 // The evaluation card's own range helper, so the footer's step-4 range is checked against the same numbers.
 function loadSampleConfidence(){const filename=path.join(__dirname,'..','evaluation','sampleConfidence.ts');const m=new Module(filename,module);m.require=name=>{assert.equal(name,'../dataset/importChecklist');return loadChecklist();};m._compile(ts.transpileModule(fs.readFileSync(filename,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText,filename);return m.exports;}
+// Use the production verdict, controlling only unused module-level dependencies.
+function productionVerdict(){
+ const compile=(file,mocks)=>{const m=new Module(file,module);m.require=name=>mocks[name];m._compile(ts.transpileModule(fs.readFileSync(file,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText,file);return m.exports;};
+ const roles=compile(path.join(__dirname,'../../utils/classSemantics.ts'),{});
+ return compile(path.join(__dirname,'../../stores/useEvaluationStore.ts'),{zustand:{create:()=>()=>{}},'../utils/classSemantics':roles,'../services/api':{},'./useProjectStore':{},'./useDatasetStore':{},'./useTrainingStore':{}}).computeSampleVerdict;
+}
+const computeSampleVerdict=productionVerdict();
 const base={stage:1,projectReady:true,sourceReady:true,totalImages:12,train:8,val:4,busy:false,task:'classification',modelJobId:null,flowVersionId:null,flowDirty:false,evidence:{status:'ready',review:{ready:true,counts:{eligible:12}},impact:{models:[],model_evaluations:[],flows:[],flow_evaluations:[],approvals:[],packages:[]}}};
 test('each stage has completed/missing inputs and exactly one recommended action',()=>{const {getNextAction}=load();for(let stage=1;stage<=6;stage++){const r=getNextAction({...base,stage,sourceReady:false,totalImages:0});assert.ok(r.missingInputs.length);assert.ok(Array.isArray(r.completedInputs));assert.equal(typeof r.nextAction.label,'string');assert.ok(r.nextAction.step>=1&&r.nextAction.step<=6);}});
 test('a detection folder with no label yet counts as imported and sends the person to step 2, not back to the import',()=>{const {getNextAction}=load();
@@ -65,7 +72,7 @@ function scopedHookFixture({stage=2}={}) {
   '../../stores/useComputeStore':{useComputeStore:store({transportRevision:0})},
   '../../stores/useDatasetStore':{useDatasetStore:store(data)},
   '../../stores/useTrainingStore':{useTrainingStore:store(training)},
-  '../../stores/useEvaluationStore':{useEvaluationStore:store(evaluation),computeSampleVerdict:item=>item.verdict??'REVIEW'},
+  '../../stores/useEvaluationStore':{useEvaluationStore:store(evaluation),computeSampleVerdict},
   '../../stores/useAnnotationStore':{useAnnotationStore:store(annotation)},
   '../../stores/useFlowchartStore':{useFlowchartStore:store(flow),flowSemanticKey:value=>JSON.stringify(value)},
   '../../stores/workflowEvidence':{subscribeWorkflowEvidence:()=>()=>{},workflowEvidenceRevision:()=>0},
@@ -337,7 +344,7 @@ test('step 4 shows the loaded evaluation as an accuracy range, missed defects an
  // 2 missed defects: the step is looked at before step 5 (5.3-4), the action opens the 미검 tab.
  assert.equal(evaluated.status,'blocked');assert.equal(evaluated.nextAction.label,'틀린 이미지 보기');
  assert.deepEqual([evaluated.nextAction.step,evaluated.nextAction.target],[4,'workflow-missed-defects']);
- assert.equal(evaluated.missingInputs[0],'모델이 시험 이미지의 불량을 놓쳤습니다');assert.match(evaluated.missingInputs[1],/라벨 수정.*판정 기준 점수를 낮추거나.*→ 버튼/);assert.doesNotMatch(evaluated.missingInputs[1],/추천 점수 적용/,'a label shown in the simple view only');
+ assert.equal(evaluated.missingInputs[0],'모델이 시험 이미지의 불량을 놓쳤습니다');assert.match(evaluated.missingInputs[1],/라벨 수정.*다시 학습.*평가.*→ 버튼/);assert.doesNotMatch(evaluated.missingInputs[1],/점수를 낮추|임계값.*하향|추천 점수 적용/,'a label shown in the simple view only');
  assert.deepEqual(evaluated.progress,counts);
  // False alarms alone keep the ready path: the recommended score trades them for no misses, and the line still shows them.
  const alarms=getNextAction({...withModel,evaluation:{...counts,escapes:0}});
@@ -455,13 +462,13 @@ test('the production hook feeds the training clock, the evaluation counts and th
   assert.deepEqual((await three.settle()).readiness.progress,{epoch:10,totalEpochs:10,etaSeconds:null,completed:true});
  }finally{three.unmount();}
  const four=scopedHookFixture({stage:4});try{
-  four.evaluation.jobId='m';four.evaluation.confidenceThreshold=0.5;
-  four.evaluation.testPredictions=[{file_path:'a.png',verdict:'CORRECT_OK'},{file_path:'b.png',verdict:'CORRECT_NG'},{file_path:'c.png',verdict:'ESCAPE'},{file_path:'d.png',verdict:'OVERKILL'},{file_path:'e.png',verdict:'REVIEW'}];
+  four.evaluation.jobId='m';four.evaluation.confidenceThreshold=0.5;four.evaluation.persistedThreshold=0.5;
+  four.evaluation.testPredictions=[{file_path:'a.png',ground_truth:'ok',defect_score:.1},{file_path:'b.png',ground_truth:'ng',defect_score:.9},{file_path:'c.png',ground_truth:'ng',defect_score:.3},{file_path:'d.png',ground_truth:'ok',defect_score:.8},{file_path:'e.png'}];
   four.mount();resolveAll(four);const result=await four.settle();
   assert.equal(result.readiness.status,'blocked','one missed defect (c.png): looked at before step 5');assert.equal(result.readiness.nextAction.label,'틀린 이미지 보기');
   assert.deepEqual(result.readiness.progress,{samples:5,escapes:1,overkills:1,accuracy:40,low:12,high:77},'counted with the evaluation screen\'s verdict and range');
   assert.match(loadSampleConfidence().accuracyNote(2,5),/실제는 12~77% 사이/,'the range the step-4 card prints for 2 right of 5');
-  four.evaluation.testPredictions=[{file_path:'a.png',verdict:'REVIEW'},{file_path:'b.png',verdict:'REVIEW'}];
+  four.evaluation.testPredictions=[{file_path:'a.png'},{file_path:'b.png'}];
   assert.deepEqual(four.render().readiness.progress,{samples:2,escapes:0,overkills:0,accuracy:null,low:null,high:null},'no image with an answer: no accuracy, the image count stays');
   four.evaluation.testPredictions=[];
   assert.equal(four.render().readiness.progress,undefined,'no loaded evaluation: no line');
@@ -677,4 +684,21 @@ test('step 4 waits for the evaluation screen\'s read, is not done without its re
  const unscored=getNextAction({...withModel,evaluation:{samples:5,escapes:0,overkills:0,accuracy:null,low:null,high:null}});
  assert.equal(unscored.status,'ready');assert.equal(unscored.nextAction.label,'검사 흐름 만들기 (5단계)');
  assert.equal(getNextAction({...withModel,evaluationLoading:true,evaluation:{samples:3,escapes:3,overkills:0,accuracy:0,low:0,high:56}}).nextAction.label,'틀린 이미지 보기','counts already in: the misses decide');
+});
+
+for(const row of [
+ {name:'saved miss survives a lower preview',saved:.5,preview:.2,score:.3,misses:1},
+ {name:'saved success survives a higher preview',saved:.2,preview:.5,score:.3,misses:0},
+ {name:'saved zero remains a valid probability threshold',saved:0,preview:.5,score:0,misses:0},
+ {name:'distance thresholds above one retain their verdict',saved:8,preview:2,score:4,misses:1},
+ {name:'patch-score equality remains a saved miss',saved:.3,preview:.2,score:.3,patch:true,misses:1},
+ {name:'live recommendation cannot replace accepted truth',saved:.5,preview:.5,score:.3,misses:1,analysis:true},
+ {name:'unknown saved authority cannot advance',saved:null,preview:.2,score:.3,unknown:true},
+])test('production readiness '+row.name,async()=>{
+ const f=scopedHookFixture({stage:4});try{
+  Object.assign(f.evaluation,{jobId:'m',persistedThreshold:row.saved,confidenceThreshold:row.preview,classSemantics:{roles:{OK:'defect'}},testPredictions:[{image_id:'ng',ground_truth:'OK',defect_score:row.score,...(row.patch?{map_semantics:'patch_score'}:{})}],overkillAnalysis:row.analysis?{optimal_threshold:.01,sample_details:[{image_id:'ng',is_defect:false,defect_score:0}]}:null});
+  f.mount();for(const request of f.requests)request.resolve(request.endpoint.includes('team-data')?{ready:true,counts:{eligible:12}}:f.impact({models:[{job_id:'m',task:'classification',checkpoint_state:'current',data_state:'current',scope_matches:true}],model_evaluations:[{job_id:'m',state:'current',evaluation_id:'e'}]}));
+  const result=(await f.settle()).readiness;
+  if(row.unknown){assert.equal(result.status,'unknown');assert.equal(result.progress,undefined);}else{assert.equal(result.progress.escapes,row.misses);assert.equal(result.status,row.misses?'blocked':'ready');}
+ }finally{f.unmount();}
 });

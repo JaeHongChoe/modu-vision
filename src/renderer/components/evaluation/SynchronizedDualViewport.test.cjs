@@ -14,20 +14,22 @@ function harness() {
   const load = file => { const m = new Module(file, module); m.filename=file; m.paths=Module._nodeModulePaths(path.dirname(file));
     m.require = name => name === 'react' ? react : name.endsWith('/utils/plainLabels') ? require('../../utils/plainLabels.fixture.cjs') : name === 'lucide-react' ? new Proxy({}, {get:(_, k)=>k})
       : name.endsWith('/services/api') ? {resolveApiUrl: value => value}
+      : ['./useTrainingStore','./useProjectStore','./useDatasetStore'].includes(name) ? {}
+      : name.endsWith('/utils/classSemantics') ? load(path.resolve(path.dirname(file), name+'.ts'))
       : name === './PhysicalScaleOverlay' ? {PhysicalScaleOverlay: 'Scale'}
       : name.endsWith('/utils/coordinateMath') ? load(path.resolve(path.dirname(file), name+'.ts'))
       : Module.prototype.require.call(m,name);
     m._compile(ts.transpileModule(fs.readFileSync(file,'utf8'), {compilerOptions: {jsx:ts.JsxEmit.React, module:ts.ModuleKind.CommonJS,
       target:ts.ScriptTarget.ES2022, esModuleInterop:true}}).outputText,file); return m.exports; };
   const {SynchronizedDualViewport} = load(path.join(__dirname,'SynchronizedDualViewport.tsx'));
-  const render = () => { cursor=0; return SynchronizedDualViewport({task:'segmentation', prediction:{image_id:'a',thumbnail_url:'/raw'},
-    confidenceThreshold:.5,onThresholdChange(){},heatmapOverlayBase64:'/heatmap',heatmapLoading:false}); };
+  const render = (overrides = {}) => { cursor=0; return SynchronizedDualViewport({task:'segmentation', prediction:{image_id:'a',thumbnail_url:'/raw'},
+    confidenceThreshold:.5,onThresholdChange(){},heatmapOverlayBase64:'/heatmap',heatmapLoading:false,...overrides}); };
   const nodes = tree => { const result=[]; const walk=n=>{if(n&&typeof n==='object'){result.push(n); n.children?.forEach(walk);}};walk(tree);return result; };
   const stages = tree => nodes(tree).filter(n=>n.props.onWheel);
   const transforms = tree => nodes(tree).filter(n=>n.props.style?.transform).map(n=>n.props.style.transform);
   const click = (tree,title) => nodes(tree).find(n=>n.props.title===title).props.onClick();
   const event = more => ({button:0, clientX:100,clientY:80,deltaY:-1,preventDefault(){},currentTarget:{getBoundingClientRect:()=>({left:0,top:0})},...more});
-  return {render,nodes,stages,transforms,click,event,refs};
+  return {render,nodes,stages,transforms,click,event,refs,verdict:(row,threshold)=>load(path.join(__dirname,'../../stores/useEvaluationStore.ts')).computeSampleVerdict(row,threshold)};
 }
 test('locked zoom synchronizes; unlocked wheel and pan change only the selected viewport; relock uses the active viewport',()=>{
   const h=harness(); let view=h.render();
@@ -69,4 +71,34 @@ test('fit uses actual canvas dimensions after toolbar wrapping and preserves the
   h.stages(view)[1].props.onMouseUp(h.event()); view=h.render();
   const raw=h.transforms(view)[0]; h.click(view,'Fit to Screen'); view=h.render();
   assert.equal(h.transforms(view)[0],raw); assert.match(h.transforms(view)[1],/scale\(0.12890625\)/);
+});
+
+test('saved review renders the real strict patch equality verdict and keeps REVIEW unknown',()=>{
+ const h=harness(),prediction={image_id:'patch',ground_truth:'ng',defect_score:.3,map_semantics:'patch_score',thumbnail_url:'/raw'};
+ const verdict=h.verdict(prediction,.3);assert.equal(verdict,'ESCAPE');
+ const text=node=>typeof node==='string'||typeof node==='number'?String(node):(node?.children||[]).map(text).join('');
+ const readout=props=>h.nodes(h.render({prediction,defectScore:.3,confidenceThreshold:.3,...props})).filter(node=>node.type==='strong').map(text);
+ assert.ok(readout({savedReviewVerdict:verdict}).includes('정상 (OK)'),'strict equality stays a missed defect at the saved threshold');
+ assert.ok(readout({savedReviewVerdict:'REVIEW'}).includes('—'),'unresolved evidence remains unknown');
+ assert.ok(readout({}).includes('불량 (NG)'),'ordinary preview keeps its existing score-based behavior');
+});
+
+test('failed saved heatmap is explicitly unavailable and cannot display prior overlay pixels',()=>{
+ const h=harness(),view=h.render({heatmapOverlayBase64:null,heatmapLoading:false,heatmapError:'현재 기준의 열지도를 불러오지 못했습니다.'});
+ const text=node=>typeof node==='string'?node:(node?.children||[]).map(text).join('');
+ assert.match(text(view),/현재 기준의 열지도를 불러오지 못했습니다/);
+ assert.equal(h.nodes(view).filter(node=>node.type==='img'&&node.props.alt==='Heatmap').length,0);
+});
+
+test('only settled owned null renders unavailable; initial, pending, error and restored pixels stay distinct',()=>{
+ const h=harness();const text=node=>typeof node==='string'?node:(node?.children||[]).map(text).join('');
+ for(const row of [
+  {heatmapOverlayBase64:null,heatmapUnavailable:false},
+  {heatmapOverlayBase64:null,heatmapUnavailable:true,heatmapLoading:true},
+  {heatmapOverlayBase64:null,heatmapUnavailable:true,heatmapError:'요청 실패'},
+  {heatmapOverlayBase64:'/restored',heatmapUnavailable:true},
+ ])assert.doesNotMatch(text(h.render(row)),/현재 기준에서 제공되는 열지도가 없습니다/);
+ const view=h.render({heatmapOverlayBase64:null,heatmapUnavailable:true});
+ assert.equal(h.nodes(view).filter(n=>n.props.role==='status').map(text).join(''),'현재 기준에서 제공되는 열지도가 없습니다.');
+ assert.equal(h.nodes(view).filter(n=>n.type==='img'&&n.props.alt==='Heatmap').length,0);
 });

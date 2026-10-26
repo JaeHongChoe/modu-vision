@@ -14,6 +14,7 @@ import {
   Sliders,
   Crosshair,
 } from 'lucide-react';
+import type { SampleVerdict } from '../../stores/useEvaluationStore';
 import type { ScoreSpec, TestPredictionItem, ViewTransform, Point, VisionTask } from '../../types';
 import { calculateZoomAtPoint, calculateFitToScreen, viewportToImage } from '../../utils/coordinateMath';
 import { PhysicalScaleOverlay } from './PhysicalScaleOverlay';
@@ -25,8 +26,12 @@ export interface SynchronizedDualViewportProps {
   prediction: TestPredictionItem | null;
   heatmapOverlayBase64: string | null;
   heatmapLoading: boolean;
+  heatmapError?: string | null;
+  heatmapUnavailable?: boolean;
   confidenceThreshold: number;
   scoreSpec?: ScoreSpec | null;
+  /** Accepted saved-review verdict supplied by the parent; absent during ordinary preview. */
+  savedReviewVerdict?: SampleVerdict;
   onThresholdChange: (tau: number) => void;
   defectScore?: number;
   groundTruth?: string;
@@ -40,14 +45,20 @@ export const SynchronizedDualViewport: React.FC<SynchronizedDualViewportProps> =
   prediction,
   heatmapOverlayBase64,
   heatmapLoading,
+  heatmapError,
+  heatmapUnavailable,
   confidenceThreshold,
   scoreSpec,
+  savedReviewVerdict,
   onThresholdChange,
   defectScore,
   groundTruth,
   predictedClass,
   plain = false,
 }) => {
+  const displayNg = !prediction ? null : savedReviewVerdict === undefined
+    ? defectScore == null ? null : defectScore >= confidenceThreshold
+    : savedReviewVerdict === 'REVIEW' ? null : savedReviewVerdict === 'CORRECT_NG' || savedReviewVerdict === 'OVERKILL';
   const rawSurfaceRef = useRef<HTMLDivElement | null>(null);
   const overlaySurfaceRef = useRef<HTMLDivElement | null>(null);
   const [transforms, setTransforms] = useState<[ViewTransform, ViewTransform]>([
@@ -275,6 +286,10 @@ export const SynchronizedDualViewport: React.FC<SynchronizedDualViewportProps> =
           <div className="absolute top-2 left-2 z-10 px-2 py-0.5 bg-[#0B0E14]/90 border border-[#2B3547] rounded-[3px] text-[10px] font-mono text-slate-300 flex items-center space-x-1.5">
             <span className="w-2 h-2 rounded-full bg-[#EF4444] animate-pulse" />
             <span className="font-bold text-[#EF4444]">{task === 'detection' ? 'DETECTION BOX OVERLAY' : '결함 열지도'}</span>
+            {heatmapError && <span role="status">{heatmapError}</span>}
+            {heatmapUnavailable && !heatmapLoading && !heatmapError && !heatmapOverlayBase64 && (
+              <span role="status">현재 기준에서 제공되는 열지도가 없습니다.</span>
+            )}
             {heatmapLoading && <span className="text-[#3B82F6] text-[9px] animate-pulse ml-1">[UPDATING...]</span>}
           </div>
 
@@ -320,8 +335,8 @@ export const SynchronizedDualViewport: React.FC<SynchronizedDualViewportProps> =
           {/* Bottom Readout */}
           <div className="p-2 bg-[#0B0E14] border-t border-[#2B3547] text-[10px] font-mono tabular-nums text-slate-400 flex justify-between">
             <span>{task === 'detection' ? '최대 박스 점수' : '결함 점수'}: <strong className="text-slate-200">{prediction && defectScore != null ? `${(defectScore * 100).toFixed(1)}%` : '—'}</strong></span>
-            <span>{task === 'detection' ? `IMAGE τ=${confidenceThreshold.toFixed(2)}` : '판정'}: <strong className={prediction && defectScore != null ? (defectScore >= confidenceThreshold ? 'text-[#EF4444]' : 'text-[#10B981]') : 'text-slate-400'}>
-              {prediction && defectScore != null ? (defectScore >= confidenceThreshold ? (task === 'detection' ? 'NG' : '불량 (NG)') : (task === 'detection' ? 'OK' : '정상 (OK)')) : '—'}
+            <span>{task === 'detection' ? `IMAGE τ=${confidenceThreshold.toFixed(2)}` : '판정'}: <strong className={displayNg === null ? 'text-slate-400' : displayNg ? 'text-[#EF4444]' : 'text-[#10B981]'}>
+              {displayNg === null ? '—' : displayNg ? (task === 'detection' ? 'NG' : '불량 (NG)') : (task === 'detection' ? 'OK' : '정상 (OK)')}
             </strong></span>
           </div>
         </div>
