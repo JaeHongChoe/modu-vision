@@ -66,6 +66,21 @@
 - [ ] Run task tests, relevant original authentication/host tests, e2e types, application typecheck, service/action evidence gates and diff check once. Record exact outputs/named failures; do not weaken assertions or source-pinned history.
 - [ ] Self-review and commit; report exact test evidence and any concerns.
 
+### Task 4: Repair first-project compute hydration found by actual browser acceptance
+
+Inserted before resuming Task 3. Actual acceptance created its first project through UI, saved ZIP/labels/split and passed model readiness, but training stayed disabled because the no-project compute-load error survived project creation. No training POST/job exists in that retained root.
+
+**Files:** Modify `src/renderer/components/compute/SharedProjectPanel.tsx`; create `src/renderer/components/compute/SharedProjectCreationHydration.test.cjs`. Preserve historical receipts and existing tests.
+
+**Interfaces:** Existing `createProject` handler must retire/refresh compute transport only under a verified newly accepted account/project context and connect telemetry after that canonical context. Consume existing `acceptedSourceScope`, `resetComputeTransportCache`, real project sync and normal host selection; no new public API. Task 3 must be able to start training without relogin/reselect workarounds.
+
+- [ ] Read exact retained failure in this plan's `private/run-2026-10-26T10-04-44-235Z` plus source path from panel to compute load error and training computeReady. Compare working post-login hydration before choosing the minimal source fix.
+- [ ] Write a failing component/store behavior test: no-project shared login leaves a real compute-load refusal; actual create handler accepts new canonical project; accepted refresh triggers actual compute load with new project/actor headers and clears the refusal. Watch RED before product edit.
+- [ ] Cover failed/unaccepted sync and superseded authority: no accepted refresh/protected hydration under another actor/project. Preserve busy/unsaved/source and session-changing guards; never weaken computeReady or swallow current server errors.
+- [ ] Implement only the first-project acceptance refresh/telemetry sequencing needed by this root cause; no generic store/auth refactor.
+- [ ] Run focused new/related shared-session component/store tests, full renderer suite once, app/e2e types and source-evidence gates. If current declarations need a refresh, report the exact flagged field first; never alter historical receipt bytes or assertions.
+- [ ] Self-review, commit only Task4 files and report RED/GREEN/diagnosis/concerns. Root supplies independent task review before Task3 resumes the same retained project/root.
+
 ### Task 3: Actual launcher browser round trip and closure evidence
 
 **Files:** Create focused integration test/runner under `scripts/qa/local-browser-acceptance.cjs` with `scripts/tests/local-browser-acceptance.test.cjs` as needed, and public `docs/verification/2026-10-26-local-browser.md` / `.json`; keep run artifacts in this plan's private workspace.
