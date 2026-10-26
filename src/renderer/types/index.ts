@@ -173,6 +173,9 @@ export interface TestPredictionItem {
 }
 
 export interface EvaluationResults {
+  zero_underkill_calibrated?: boolean;
+  optimal_threshold?: number;
+  calibration_evidence?: { threshold?: number } | null;
   class_semantics?: { version: 1; roles: import('../utils/classSemantics').ClassRoles; basis?: Record<string, string> };
   job_id: string;
   task: VisionTask;
@@ -214,6 +217,7 @@ export interface OverkillUnderkillPoint {
 }
 
 export interface OverkillUnderkillAnalysis {
+  calibration_evidence?: { threshold?: number } | null;
   sample_count: number;
   total_defects: number;
   total_normals: number;

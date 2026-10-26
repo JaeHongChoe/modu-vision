@@ -204,3 +204,148 @@ test('distance evaluation inherits calibrated threshold and sends a bound heatma
  assert.deepEqual(calls.at(-1)[4],{...spec,threshold:9});
  assert.equal(f.computeSampleVerdict(f.results.test_predictions[0],9,null,semantics.roles),'CORRECT_OK');
 });
+
+for(const row of [
+ {name:'legacy probability baseline',metrics:{},want:.5},
+ {name:'probability zero',metrics:{active_threshold:0},want:0},
+ {name:'distance above one',metrics:{active_threshold:8,score_spec:{domain:'distance'}},want:8},
+ {name:'missing anomaly authority',task:'anomaly',metrics:{},want:null},
+ {name:'missing distance authority',metrics:{score_spec:{domain:'distance'}},want:null},
+ ...[null,-1,1.1,NaN,Infinity,'0.2'].map(value=>({name:'invalid active '+value,metrics:{active_threshold:value},want:null})),
+ {name:'recommendation metric is not saved authority',task:'anomaly',metrics:{optimal_threshold:.2},want:null},
+ {name:'legacy saved calibration',metrics:{active_threshold:.5},saved:{zero_underkill_calibrated:true,optimal_threshold:.2},want:.2},
+ {name:'saved evidence agrees',metrics:{active_threshold:.5},saved:{zero_underkill_calibrated:true,optimal_threshold:0,calibration_evidence:{threshold:0}},want:0},
+ {name:'saved evidence conflicts',metrics:{active_threshold:.5},saved:{zero_underkill_calibrated:true,optimal_threshold:.2,calibration_evidence:{threshold:.3}},want:null},
+ {name:'saved evidence is malformed',metrics:{active_threshold:.5},saved:{zero_underkill_calibrated:true,optimal_threshold:.2,calibration_evidence:{}},want:null},
+ {name:'saved calibration threshold invalid',metrics:{active_threshold:.5},saved:{zero_underkill_calibrated:true,optimal_threshold:2},want:null},
+])test('accepted evaluation resolves '+row.name,async()=>{
+ const f=fixture(row.task);Object.assign(f.results,{task:row.task||'classification',metrics:row.metrics,...row.saved});
+ await f.state().loadEvaluation('job');assert.equal(f.state().persistedThreshold,row.want);
+ if(row.want!==null)assert.equal(f.state().confidenceThreshold,row.want);
+ f.state().invalidateForDataChange();assert.equal(f.state().persistedThreshold,null);
+});
+
+test('rendered preview mismatch explains the saved readiness threshold while preview badges remain interactive',()=>{
+ const view=renderStudio({jobId:'job',persistedThreshold:.5,confidenceThreshold:.2,classSemantics:semantics,testPredictions:[{...samples[0],defect_score:.3}],filteredPredictions:[{...samples[0],defect_score:.3}]});
+ assert.match(view.text(view.nodes[0]),/미리보기.*0\.20.*저장.*0\.50/);
+ assert.equal(view.nodes.find(n=>n.props.verdict).props.verdict,'CORRECT_NG');
+ const aligned=renderStudio({jobId:'job',persistedThreshold:.2,confidenceThreshold:.2});assert.doesNotMatch(aligned.text(aligned.nodes[0]),/미리보기.*저장/);
+});
+
+test('rendered unknown saved authority never formats a missing threshold as a number',()=>{
+ for(const persistedThreshold of [undefined,null])assert.doesNotThrow(()=>renderStudio({jobId:'job',persistedThreshold,confidenceThreshold:.2}));
+});
+
+// Exercise the actual footer destination through the rendered Studio handler and real store.
+function focusSavedMisses(view){
+ const target=view.nodes.find(node=>node.props.id==='workflow-missed-defects');
+ assert.ok(target,'saved-miss destination is rendered');
+ const previous={document:global.document,requestAnimationFrame:global.requestAnimationFrame,HTMLElement:global.HTMLElement};
+ const element={parentElement:null,getAttribute:key=>target.props[key]===undefined?null:String(target.props[key]),hasAttribute:key=>Object.hasOwn(target.props,key),click:()=>target.props.onClick(),scrollIntoView(){},focus(){global.document.activeElement=element;}};
+ try{global.document={getElementById:id=>id==='workflow-missed-defects'?element:null,activeElement:null};global.requestAnimationFrame=fn=>fn();global.HTMLElement=class{};load('../components/wizard/workflowReadiness.ts').focusWorkflowTarget('workflow-missed-defects');}
+ finally{for(const [key,value] of Object.entries(previous)){if(value===undefined)delete global[key];else global[key]=value;}}
+}
+for(const alreadySelected of [false,true])test('footer saved-miss destination reveals accepted saved misses with preview escape '+(alreadySelected?'already selected':'unselected'),async()=>{
+ const f=fixture();f.results.metrics={active_threshold:.5};f.results.test_predictions=[{...sample('saved-miss','OK','OK'),defect_score:.3},{...sample('normal','scratch','scratch'),defect_score:.1}];
+ await f.state().loadEvaluation('job',{folderPath:'/source',task:'classification'});f.state().setConfidenceThreshold(.2);
+ f.useEvaluationStore.setState({overkillAnalysis:{optimal_threshold:.1,sample_details:[{image_id:'saved-miss',is_defect:false,defect_score:0}]}});
+ if(alreadySelected)f.state().setSampleFilter('escape');
+ const enteredHeatmaps=[];f.api.evaluation.getHeatmap=async(...args)=>{enteredHeatmaps.push(args);return{};};
+ focusSavedMisses(renderStudio(f.state()));
+ assert.equal(enteredHeatmaps.at(-1)[2],.5,'entering review refreshes heatmap even when selected image stays the same');
+ assert.equal(f.state().overkillAnalysis.optimal_threshold,.1,'review preserves GET recommendation data');
+ assert.deepEqual(f.state().filteredPredictions.map(row=>row.image_id),['saved-miss']);
+ assert.equal(f.state().confidenceThreshold,.2,'review does not replace preview threshold');
+ f.state().computeFilteredList();await f.state().loadOverkillUnderkill();f.state().computeFilteredList();
+ assert.deepEqual(f.state().filteredPredictions.map(row=>row.image_id),['saved-miss'],'recomputation and arriving analysis cannot erase saved review');
+ const saved=renderStudio(f.state());assert.match(saved.text(saved.nodes[0]),/저장된.*0\.50/);assert.doesNotMatch(saved.text(saved.nodes[0]),/현재 검증 표본에서 미검 0건/);
+ assert.equal(saved.nodes.find(node=>node.props.verdict).props.verdict,'ESCAPE');
+ focusSavedMisses(saved);assert.equal(f.state().sampleFilter,'saved_escape','repeated footer focus keeps expanded saved review');
+ const returnButton=saved.nodes.find(node=>node.props.id==='workflow-missed-defects');assert.equal(returnButton.type,'button');assert.equal(returnButton.props.type,'button','native button supports keyboard activation');assert.equal(saved.text(returnButton),'미리보기로 돌아가기');
+ returnButton.props.onClick();assert.equal(f.state().sampleFilter,'escape');assert.equal(f.state().confidenceThreshold,.2);focusSavedMisses(renderStudio(f.state()));
+
+ assert.equal(saved.nodes.find(node=>node.props.onThresholdChange).props.savedReviewVerdict,'ESCAPE');
+ assert.equal(saved.nodes.find(node=>node.props.onThresholdChange).props.confidenceThreshold,.5,'selected-image viewport uses saved review threshold');
+ const heatmaps=[];f.api.evaluation.getHeatmap=async(...args)=>{heatmaps.push(args);return{};};await f.state().updateHeatmap();assert.equal(heatmaps.at(-1)[2],.5);
+ f.state().setConfidenceThreshold(.1);assert.notEqual(f.state().sampleFilter,'saved_escape','intentional threshold adjustment returns to preview');
+ assert.equal(f.state().persistedThreshold,.5);focusSavedMisses(renderStudio(f.state()));
+ const previewTab=saved.nodes.find(node=>node.props.role==='tab'&&saved.text(node).startsWith('미검'));previewTab.props.onClick();
+ assert.deepEqual(f.state().filteredPredictions,[],'ordinary escape tab returns to interactive preview including live analysis');
+ f.state().invalidateForDataChange();
+});
+test('saved review clears its matrix restriction and resets on accepted-result replacement and invalidation',async()=>{
+ const f=fixture();f.results.metrics={active_threshold:.5};f.results.test_predictions=[{...samples[0],defect_score:.3}];
+ await f.state().loadEvaluation('job',{folderPath:'/source',task:'classification'});f.state().setConfidenceThreshold(.2);
+ f.useEvaluationStore.setState({selectedCell:{trueClass:'scratch',predClass:'scratch'},confusionMatrix:{classes:['OK','scratch'],matrix:[[0,1],[0,0]],cell_samples:{'scratch:scratch':['other']}}});
+ focusSavedMisses(renderStudio(f.state()));assert.equal(f.state().selectedCell,null);assert.equal(f.state().filteredPredictions.length,1);
+ f.state().selectCell('scratch','scratch');assert.notEqual(f.state().sampleFilter,'saved_escape','ordinary matrix selection returns to preview');
+ focusSavedMisses(renderStudio(f.state()));assert.equal(f.state().sampleFilter,'saved_escape');
+ let finish;f.api.evaluation.getResults=()=>new Promise(resolve=>{finish=resolve;});const pending=f.state().loadEvaluation('job',{folderPath:'/source',task:'classification'});
+ assert.notEqual(f.state().sampleFilter,'saved_escape');assert.equal(f.state().persistedThreshold,null);
+ finish({...f.results,metrics:{active_threshold:.8},test_predictions:[{...samples[1],defect_score:.1}]});await pending;
+ assert.equal(f.state().sampleFilter,'all');assert.deepEqual(f.state().filteredPredictions.map(row=>row.image_id),['overkill']);
+ f.state().setSampleFilter('normal');f.api.evaluation.getResults=async()=>({...f.results,metrics:{active_threshold:.8},test_predictions:[{...samples[1],defect_score:.1}]});await f.state().loadEvaluation('job',{folderPath:'/source',task:'classification'});assert.equal(f.state().sampleFilter,'normal','replacement preserves ordinary preview filter choices');
+ focusSavedMisses(renderStudio(f.state()));f.state().invalidateForDataChange();assert.equal(f.state().sampleFilter,'all');assert.equal(f.state().persistedThreshold,null);
+});
+
+test('unknown saved authority cannot enter review or retain a stale selected image',async()=>{
+ const f=fixture('anomaly');f.results.task='anomaly';await f.state().loadEvaluation('job',{folderPath:'/source',task:'anomaly'});
+ const view=renderStudio(f.state());const target=view.nodes.find(node=>node.props.id==='workflow-missed-defects');assert.equal(target.props.disabled,true);
+ f.state().setSampleFilter('saved_escape');assert.notEqual(f.state().sampleFilter,'saved_escape');
+ f.useEvaluationStore.setState({persistedThreshold:.5,testPredictions:[{...samples[0],defect_score:.9}],selectedPrediction:samples[1]});
+ f.state().setSampleFilter('saved_escape');assert.deepEqual(f.state().filteredPredictions,[]);assert.equal(f.state().selectedPrediction,null);f.state().invalidateForDataChange();
+});
+
+test('matrix exit from saved review refreshes the preview heatmap for the same selected image',async()=>{
+ const f=fixture();f.results.metrics={active_threshold:.5};f.results.test_predictions=[{...samples[0],defect_score:.3}];
+ await f.state().loadEvaluation('job',{folderPath:'/source',task:'classification'});f.state().setConfidenceThreshold(.8);f.state().setSampleFilter('saved_escape');
+ const heatmaps=[];f.api.evaluation.getHeatmap=async(...args)=>{heatmaps.push(args);return{};};
+ f.state().selectCell('OK','scratch');assert.equal(f.state().sampleFilter,'escape');assert.equal(f.state().selectedPrediction.image_id,'escape');
+ assert.equal(heatmaps.at(-1)?.[2],.8,'same-image mode exit must replace its saved-threshold heatmap with preview authority');f.state().invalidateForDataChange();
+});
+
+const pendingHeatmap=()=>{let resolve,reject;const promise=new Promise((a,b)=>{resolve=a;reject=b;});return{promise,resolve,reject};};
+for(const differentImage of [false,true])test('saved review clears '+(differentImage?'different-image':'same-image')+' preview pixels while pending and after rejected replacement',async()=>{
+ const f=fixture(),miss={...sample('saved-miss','OK','OK'),defect_score:.3},other={...sample('other','OK','OK'),defect_score:.9};
+ f.results.metrics={active_threshold:.5};f.results.test_predictions=differentImage?[other,miss]:[miss,other];
+ try{
+  await f.state().loadEvaluation('job',{folderPath:'/source',task:'classification'});f.state().setConfidenceThreshold(.2);
+  f.api.evaluation.getHeatmap=async()=>({overlay_base64:'preview-pixels'});await f.state().updateHeatmap();assert.equal(f.state().heatmapOverlayBase64,'preview-pixels');
+  const replacement=pendingHeatmap();f.api.evaluation.getHeatmap=()=>replacement.promise;focusSavedMisses(renderStudio(f.state()));
+  assert.equal(f.state().selectedPrediction.image_id,'saved-miss');assert.equal(f.state().heatmapOverlayBase64,null,'preview pixels disappear before saved replacement settles');assert.equal(f.state().heatmapLoading,true);
+  replacement.reject(Error('controlled saved refresh failure'));await new Promise(setImmediate);
+  assert.equal(f.state().heatmapOverlayBase64,null);assert.equal(f.state().heatmapLoading,false);assert.match(f.state().heatmapError,/불러오지 못/);
+  const saved=renderStudio(f.state());assert.match(saved.nodes.find(node=>node.props.onThresholdChange).props.heatmapError,/불러오지 못/);
+  f.state().setSampleFilter('all');const preview=renderStudio(f.state());assert.equal(preview.nodes.find(node=>node.props.onThresholdChange).props.heatmapError,null,'ordinary preview error presentation is unchanged');
+ }finally{f.state().invalidateForDataChange();}
+});
+test('in-flight preview response cannot replace pending or successful saved-review pixels',async()=>{
+ const f=fixture();f.results.metrics={active_threshold:.5};f.results.test_predictions=[{...samples[0],defect_score:.3}];
+ try{
+  await f.state().loadEvaluation('job',{folderPath:'/source',task:'classification'});f.state().setConfidenceThreshold(.2);
+  const old=pendingHeatmap();f.api.evaluation.getHeatmap=()=>old.promise;const oldRequest=f.state().updateHeatmap();
+  const saved=pendingHeatmap();f.api.evaluation.getHeatmap=()=>saved.promise;focusSavedMisses(renderStudio(f.state()));assert.equal(f.state().heatmapOverlayBase64,null);
+  saved.resolve({overlay_base64:'saved-pixels'});await new Promise(setImmediate);assert.equal(f.state().heatmapOverlayBase64,'saved-pixels');
+  old.resolve({overlay_base64:'late-preview-pixels'});await oldRequest;assert.equal(f.state().heatmapOverlayBase64,'saved-pixels');assert.equal(f.state().heatmapError,null);
+ }finally{f.state().invalidateForDataChange();}
+});
+test('preview threshold transition invalidates saved overlay and in-flight response before debounce requests again',async()=>{
+ const f=fixture();f.results.metrics={active_threshold:.5};f.results.test_predictions=[{...samples[0],defect_score:.3}];
+ try{
+  await f.state().loadEvaluation('job',{folderPath:'/source',task:'classification'});f.state().setSampleFilter('saved_escape');
+  f.api.evaluation.getHeatmap=async()=>({overlay_base64:'saved-pixels'});await f.state().updateHeatmap();
+  const old=pendingHeatmap();f.api.evaluation.getHeatmap=()=>old.promise;const oldRequest=f.state().updateHeatmap();
+  f.state().setConfidenceThreshold(.8);assert.equal(f.state().heatmapOverlayBase64,null,'threshold change synchronously removes old authority');
+  old.resolve({overlay_base64:'late-saved-pixels'});await oldRequest;assert.equal(f.state().heatmapOverlayBase64,null,'old authority is revoked during debounce');assert.equal(f.state().heatmapError,null);
+ }finally{f.state().invalidateForDataChange();}
+});
+test('replacement evaluation read revokes old heatmap pixels and ownership immediately',async()=>{
+ const f=fixture();f.results.metrics={active_threshold:.5};f.results.test_predictions=[{...samples[0],defect_score:.3}];
+ try{
+  await f.state().loadEvaluation('job',{folderPath:'/source',task:'classification'});f.useEvaluationStore.setState({heatmapOverlayBase64:'old-evaluation-pixels'});
+  const old=pendingHeatmap();f.api.evaluation.getHeatmap=()=>old.promise;const oldRequest=f.state().updateHeatmap();
+  const read=pendingHeatmap();f.api.evaluation.getResults=()=>read.promise;const replacement=f.state().loadEvaluation('job',{folderPath:'/source',task:'classification'});
+  assert.equal(f.state().heatmapOverlayBase64,null);old.resolve({overlay_base64:'late-old-evaluation-pixels'});await oldRequest;assert.equal(f.state().heatmapOverlayBase64,null);
+  read.resolve({...f.results,test_predictions:[]});await replacement;assert.equal(f.state().selectedPrediction,null);assert.equal(f.state().heatmapOverlayBase64,null);
+ }finally{f.state().invalidateForDataChange();}
+});
