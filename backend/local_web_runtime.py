@@ -6,6 +6,7 @@ import json
 import os
 from pathlib import Path
 import shutil
+import signal
 import ssl
 import socket
 import stat
@@ -39,6 +40,88 @@ def _validate_build_target(output, root):
                 raise ValueError(f'Renderer entries must be unlinked regular files or directories: {entry}')
 
 
+def _stop_renderer_builder(process, group):
+    """Stop only this Popen's new build group, including a departed leader's children."""
+    def send_owned(signum):
+        try:
+            if group is not None:
+                os.killpg(group, signum)
+            elif process.poll() is None:
+                process.send_signal(signum)
+        except ProcessLookupError:
+            pass
+
+    def finished():
+        process.poll()  # Reap the direct child without waiting on grandchildren.
+        if group is None:
+            return process.returncode is not None
+        try:
+            os.killpg(group, 0)
+        except ProcessLookupError:
+            return True
+        except PermissionError:
+            # macOS may report EPERM for a just-killed descendant group during
+            # OS reaping. Keep waiting; do not mistake this for a live writer
+            # or let a probe error replace the original termination status.
+            return False
+        return False
+
+    send_owned(signal.SIGTERM)
+    deadline = time.monotonic() + 2
+    while not finished() and time.monotonic() < deadline:
+        time.sleep(.02)
+    if not finished():
+        send_owned(signal.SIGKILL)
+    # The direct child must be reaped while its caller still holds instance_lock.
+    process.wait(timeout=2)
+    # Allow killed descendants to exit; they may remain OS-owned zombies, but
+    # SIGKILL has already prevented them from returning to output-writing code.
+    deadline = time.monotonic() + 2
+    while not finished() and time.monotonic() < deadline:
+        time.sleep(.02)
+
+
+def _run_renderer_builder(argv):
+    """Own spawn-to-reap lifetime even when a startup termination signal arrives."""
+    process = None
+    group = None
+    cleaning = False
+    interrupted = None
+    signals = {signal.SIGINT, signal.SIGTERM}
+    previous = {signum: signal.getsignal(signum) for signum in signals}
+
+    def interrupt(signum, frame):
+        nonlocal interrupted
+        interrupted = interrupted or signum
+        # Repeated termination must not interrupt the cleanup's bounded waits.
+        if not cleaning:
+            raise SystemExit(128 + interrupted)
+
+    for signum in signals:
+        signal.signal(signum, interrupt)
+    try:
+        # Block the spawn/handle-assignment window: an async exception after
+        # fork but before Popen is assigned must not leave an unowned builder.
+        mask = signal.pthread_sigmask(signal.SIG_BLOCK, signals) if os.name == 'posix' else None
+        try:
+            process = subprocess.Popen(argv, cwd=ROOT, shell=False, start_new_session=os.name == 'posix')
+            group = process.pid if os.name == 'posix' else None
+        finally:
+            if mask is not None:
+                signal.pthread_sigmask(signal.SIG_SETMASK, mask)
+        return process.wait()
+    finally:
+        cleaning = True
+        try:
+            if process is not None:
+                _stop_renderer_builder(process, group)
+        finally:
+            for signum, handler in previous.items():
+                signal.signal(signum, handler)
+        if interrupted:
+            raise SystemExit(128 + interrupted)
+
+
 def build_renderer(paths):
     """Build current source under the caller's same-root instance_lock."""
     output = paths.root / 'renderer'
@@ -49,10 +132,9 @@ def build_renderer(paths):
         raise RuntimeError('Renderer build requires existing Node.js and npm ci dependencies; see docs/local-browser.md')
     output.mkdir(mode=0o700, exist_ok=True)
     _validate_build_target(output, paths.root)
-    result = subprocess.run([node, str(vite), 'build', '--outDir', str(output), '--emptyOutDir', '--base', '/'],
-                            cwd=ROOT, shell=False, check=False)
-    if result.returncode:
-        raise RuntimeError(f'Renderer build failed (exit {result.returncode}); server was not started')
+    status = _run_renderer_builder([node, str(vite), 'build', '--outDir', str(output), '--emptyOutDir', '--base', '/'])
+    if status:
+        raise RuntimeError(f'Renderer build failed (exit {status}); server was not started')
     _validate_build_target(output, paths.root)
     if not (output / 'index.html').is_file():
         raise RuntimeError('Renderer build did not produce index.html; server was not started')

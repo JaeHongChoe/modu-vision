@@ -176,27 +176,29 @@ def test_same_root_lock_prevents_second_build_and_is_released(tmp_path, monkeypa
         pass
 
 
-def test_build_uses_owned_output_and_current_repo_without_shell(tmp_path, monkeypatch):
+def test_build_uses_owned_output_and_source_cwd_without_shell_and_restores_handlers(tmp_path, monkeypatch):
     from backend.local_web_runtime import build_renderer
+    import backend.local_web_runtime as runtime
+    import signal
     paths = paths_at(tmp_path, monkeypatch)
     before_cwd = Path.cwd()
-    observed = []
-    def fake_run(argv, **kwargs):
-        observed.append((argv, kwargs))
-        output = Path(argv[argv.index('--outDir') + 1])
-        output.mkdir(exist_ok=True)
-        (output / 'index.html').write_text('synthetic build')
-        return subprocess.CompletedProcess(argv, 0)
-    monkeypatch.setattr(subprocess, 'run', fake_run)
+    previous = {signum: signal.getsignal(signum) for signum in (signal.SIGINT, signal.SIGTERM)}
+    source = tmp_path / 'source with spaces'
+    vite = source / 'node_modules/vite/bin/vite.js'
+    vite.parent.mkdir(parents=True)
+    vite.write_text("""
+const fs=require('fs'); const out=process.argv[process.argv.indexOf('--outDir')+1];
+fs.writeFileSync(out+'/index.html','synthetic build');
+fs.writeFileSync(out+'/argv.json',JSON.stringify({argv:process.argv.slice(2),cwd:process.cwd()}));
+""")
+    monkeypatch.setattr(runtime, 'ROOT', source)
     with __import__('backend.local_web_state', fromlist=['instance_lock']).instance_lock(paths):
         output = build_renderer(paths)
     assert output == paths.root / 'renderer'
-    argv, options = observed[0]
-    assert argv[1] == str(ROOT / 'node_modules/vite/bin/vite.js')
-    assert argv[2:] == ['build', '--outDir', str(output), '--emptyOutDir', '--base', '/']
-    assert options['cwd'] == ROOT
-    assert options.get('shell', False) is False
+    observed = json.loads((output / 'argv.json').read_text())
+    assert observed == {'argv': ['build', '--outDir', str(output), '--emptyOutDir', '--base', '/'], 'cwd': str(source)}
     assert Path.cwd() == before_cwd
+    assert {signum: signal.getsignal(signum) for signum in previous} == previous
 
 
 def test_failed_build_does_not_start_app_or_emit_ready(tmp_path, monkeypatch, capsys):
@@ -399,3 +401,100 @@ def test_open_stream_has_bounded_drain_and_backend_lifespan_cleanup(tmp_path, mo
     assert api.cancelled and api.stopped
     assert opened == []
     assert 'MODU_WEB_READY=' in capsys.readouterr().out
+
+
+@pytest.mark.skipif(os.name != 'posix', reason='POSIX owned build group and native signals')
+def test_sigterm_during_build_keeps_lock_until_owned_descendant_cannot_write(tmp_path):
+    """A dying leader must not hand its output to another owner while Vite children write."""
+    import signal
+    import time
+    from backend.local_web_state import instance_lock, web_paths
+    source = tmp_path / 'source'
+    vite = source / 'node_modules/vite/bin/vite.js'
+    vite.parent.mkdir(parents=True)
+    vite.write_text('''
+const fs = require('fs'); const {spawn} = require('child_process');
+const out = process.argv[process.argv.indexOf('--outDir') + 1];
+const writer = spawn(process.execPath, ['-e', `
+  const fs=require('fs'); const out=process.argv[1];
+  process.on('SIGTERM', () => {});
+  fs.writeFileSync(out+'/descendant-started', String(process.pid));
+  setInterval(() => fs.appendFileSync(out+'/writes', 'w'), 20);
+`, out], {stdio:'ignore'});
+process.on('SIGTERM', () => {
+  fs.writeFileSync(out+'/terminating', 'yes');
+  setTimeout(() => process.exit(0), 250);
+});
+fs.writeFileSync(out+'/leader-started', String(process.pid));
+setInterval(() => {}, 1000);
+''')
+    data = tmp_path / 'data'
+    output = data / 'renderer'
+    script = '''
+from pathlib import Path
+import sys
+from backend.local_web_state import configure_environment, instance_lock, web_paths
+import backend.local_web_runtime as runtime
+runtime.ROOT = Path(sys.argv[1])
+paths = web_paths(sys.argv[2]); configure_environment(paths)
+import signal
+previous = {sig: signal.getsignal(sig) for sig in (signal.SIGINT, signal.SIGTERM)}
+try:
+    with instance_lock(paths):
+        runtime.build_renderer(paths)
+finally:
+    (paths.root/'handlers-restored').write_text(str(all(signal.getsignal(sig) == handler for sig, handler in previous.items())))
+'''
+    log = (tmp_path / 'launcher.log').open('wb')
+    launcher = subprocess.Popen([sys.executable, '-c', script, str(source), str(data)], cwd=ROOT,
+                                stdout=subprocess.DEVNULL, stderr=log, start_new_session=True)
+    # This independent process is deliberately outside both owned groups.
+    unrelated = subprocess.Popen([sys.executable, '-c', 'import time; time.sleep(20)'], start_new_session=True)
+    owned_pids = []
+    try:
+        deadline = time.monotonic() + 5
+        while not (output / 'writes').exists() and time.monotonic() < deadline:
+            time.sleep(.02)
+        assert (output / 'writes').exists(), 'synthetic descendant did not start'
+        owned_pids = [int((output / name).read_text()) for name in ('leader-started', 'descendant-started')]
+        with pytest.raises(RuntimeError, match='owns this data root'):
+            with instance_lock(web_paths(data)):
+                pass
+        launcher.send_signal(signal.SIGTERM)
+        deadline = time.monotonic() + 2
+        while not (output / 'terminating').exists() and launcher.poll() is None and time.monotonic() < deadline:
+            time.sleep(.01)
+        # Termination cleanup must retain the lock, including a repeated signal.
+        if launcher.poll() is None:
+            launcher.send_signal(signal.SIGTERM)
+            with pytest.raises(RuntimeError, match='owns this data root'):
+                with instance_lock(web_paths(data)):
+                    pass
+        launcher.wait(timeout=7)
+        with instance_lock(web_paths(data)):
+            before = (output / 'writes').read_bytes()
+            time.sleep(.2)
+            after = (output / 'writes').read_bytes()
+        assert after == before, 'old builder descendant wrote while the next owner held the lock'
+        assert launcher.returncode == 143, (launcher.returncode, (tmp_path / 'launcher.log').read_text())
+        assert (data / 'handlers-restored').read_text() == 'True'
+        assert unrelated.poll() is None, 'unrelated process was terminated'
+    finally:
+        # Own only these disposable test children, even when exercising RED.
+        for group in (launcher.pid, owned_pids[0] if owned_pids else None):
+            if group:
+                try:
+                    os.killpg(group, signal.SIGKILL)
+                except ProcessLookupError:
+                    pass
+        for pid in owned_pids:
+            try:
+                os.kill(pid, signal.SIGKILL)
+            except ProcessLookupError:
+                pass
+        if launcher.poll() is None:
+            launcher.kill()
+        launcher.communicate(timeout=3)
+        unrelated.terminate()
+        unrelated.wait(timeout=3)
+        log.close()
