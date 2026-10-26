@@ -181,3 +181,46 @@ test('initial and reconnect telemetry witnesses require hardware frames rather t
     assert.equal(helper.validTelemetrySocket({ ...reconnect, closed: true }, origin, context), false);
     assert.equal(helper.validTelemetrySocket(reconnect, origin, { ...context, actor_id: 'other' }), false);
 });
+
+const secureHeaders = {
+    'x-content-type-options': 'nosniff',
+    'x-frame-options': 'DENY',
+    'referrer-policy': 'no-referrer',
+    'content-security-policy': "frame-ancestors 'none'",
+};
+test('successful HTTP status cannot hide any missing browser security header', () => {
+    for (const name of Object.keys(secureHeaders)) {
+        const headers = { ...secureHeaders };
+        delete headers[name];
+        assert.throws(() => helper.verifyWireResponse({ status: 200, headers }, 200), /security header/, name);
+    }
+});
+test('a refusal status cannot hide incorrect browser security header values', () => {
+    for (const [name, value] of Object.entries({
+        'x-content-type-options': 'sniff',
+        'x-frame-options': 'SAMEORIGIN',
+        'referrer-policy': 'unsafe-url',
+        'content-security-policy': "frame-ancestors *",
+    })) {
+        assert.throws(() => helper.verifyWireResponse({ status: 403, headers: { ...secureHeaders, [name]: value } }, 403), /security header/, name);
+    }
+});
+test('wire evidence contains only selected security headers and still verifies status', () => {
+    const response = { status: 401, headers: { ...secureHeaders, 'set-cookie': 'private-cookie', authorization: 'private-token', 'x-extra': 'unrelated' } };
+    assert.deepEqual(helper.verifyWireResponse(response, [401, 403]), { status: 401, headers: secureHeaders });
+    assert.throws(() => helper.verifyWireResponse({ ...response, status: 200 }, [401, 403]), /status/);
+    assert.equal(response.headers['set-cookie'], 'private-cookie', 'the original response is not rewritten');
+});
+test('a route-specific sandbox policy is preserved only when explicitly expected', () => {
+    const sandbox = "sandbox; default-src 'none'; img-src data:; style-src 'unsafe-inline'";
+    const headers = Object.freeze({ ...secureHeaders, 'content-security-policy': sandbox });
+    const checked = helper.verifyWireResponse({ status: 200, headers }, 200, { contentSecurityPolicy: sandbox });
+    assert.deepEqual(checked, { status: 200, headers });
+    assert.throws(() => helper.verifyWireResponse({ status: 200, headers }, 200), /security header/);
+});
+test('acceptance run base keeps the historical default', () => {
+    assert.equal(helper.resolveRunBase('/owned/repo', {}), '/owned/repo/.superpowers/sdd/2026-10-26-local-browser-launch/private');
+});
+test('an explicit acceptance run base places new evidence in the requested plan', () => {
+    assert.equal(helper.resolveRunBase('/owned/repo', { MV_BROWSER_ACCEPTANCE_BASE: '/owned/integration/private' }), '/owned/integration/private');
+});

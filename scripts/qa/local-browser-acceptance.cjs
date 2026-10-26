@@ -60,6 +60,29 @@ function parseReady(line, root) {
 function validTelemetrySocket(row, origin, context) {
     return Boolean(row.origin === origin.replace('https:', 'wss:') && row.path === '/ws/telemetry' && row.context?.project_id === context.project_id && row.context?.workspace_id === context.workspace_id && row.context?.actor_id === context.actor_id && row.frames.some(frame => frame.event === 'hardware_stats') && !row.closed);
 }
+const SECURITY_HEADERS = {
+    'x-content-type-options': 'nosniff',
+    'x-frame-options': 'DENY',
+    'referrer-policy': 'no-referrer',
+    'content-security-policy': "frame-ancestors 'none'",
+};
+function securityReceipt(response) {
+    return { status: response.status, headers: Object.fromEntries(Object.keys(SECURITY_HEADERS)
+            .filter(name => response.headers?.[name] !== undefined)
+            .map(name => [name, response.headers[name]])) };
+}
+function verifyWireResponse(response, expectedStatus, { contentSecurityPolicy = SECURITY_HEADERS['content-security-policy'] } = {}) {
+    assert.ok([expectedStatus].flat().includes(response.status), 'Unexpected HTTP response status');
+    const receipt = securityReceipt(response);
+    for (const [name, expected] of Object.entries({ ...SECURITY_HEADERS, 'content-security-policy': contentSecurityPolicy }))
+        assert.equal(receipt.headers[name], expected, 'Incorrect or missing browser security header: ' + name);
+    return receipt;
+}
+function resolveRunBase(repo, env = process.env) {
+    if (env.MV_BROWSER_ACCEPTANCE_BASE)
+        return path.resolve(env.MV_BROWSER_ACCEPTANCE_BASE);
+    return path.join(repo, '.superpowers/sdd/2026-10-26-local-browser-launch/private');
+}
 // Final success belongs to the body AND every required owned cleanup action.
 async function finalizeRun({ state, browser, server, save, bodySucceeded = false, bodyError }) {
     const errors = [];
@@ -116,7 +139,7 @@ async function finalizeRun({ state, browser, server, save, bodySucceeded = false
     if (errors.length)
         throw new AggregateError(errors, 'Owned cleanup failed: ' + errors.map(error => error.message || String(error)).join('; '));
 }
-module.exports = { snapshot, verifySnapshot, reserveTraining, parseReady, fixtures, releaseUnsentTraining, observeResponse, recordLaunch, reserveArtifact, finalizeRun, validTelemetrySocket };
+module.exports = { snapshot, verifySnapshot, reserveTraining, parseReady, fixtures, releaseUnsentTraining, observeResponse, recordLaunch, reserveArtifact, finalizeRun, validTelemetrySocket, verifyWireResponse, resolveRunBase };
 const pause = ms => new Promise(resolve => setTimeout(resolve, ms));
 async function portClosed(port) { return new Promise(resolve => { const socket = net.connect({ host: '127.0.0.1', port }); socket.once('connect', () => { socket.destroy(); resolve(false); }); socket.once('error', () => resolve(true)); }); }
 async function until(predicate, timeout = 30000) { const stop = Date.now() + timeout; while (Date.now() < stop) {
@@ -191,7 +214,7 @@ function fixtures(run) {
 async function main() {
     const { chromium, expect: baseExpect } = require('@playwright/test');
     const expect = baseExpect.configure({ timeout: 20000 });
-    const repo = path.resolve(__dirname, '../..'), base = path.join(repo, '.superpowers/sdd/2026-10-26-local-browser-launch/private');
+    const repo = path.resolve(__dirname, '../..'), base = resolveRunBase(repo);
     const resume = process.argv[2] === '--resume';
     const run = resume ? path.resolve(process.argv[3]) : path.join(base, 'run-' + new Date().toISOString().replace(/[:.]/g, '-'));
     fs.mkdirSync(run, { recursive: true, mode: 0o700 });
@@ -319,13 +342,47 @@ async function main() {
         recordLaunch(state,server.ready,rendererFiles(),currentHead());
         save();
         console.log('PRODUCT_READY=' + server.ready.url);
-        // Read-only unauthenticated and hostile boundary probes use the product TLS listener.
-        const probe = (route, headers = {}) => new Promise((resolve, reject) => { https.get(server.ready.url + route, { rejectUnauthorized: false, headers }, r => { r.resume(); r.on('end', () => resolve(r.statusCode)); }).on('error', reject); });
-        state.boundaries = { unauthenticated_api: await probe('/api/project/current'), host: await probe('/health', { Host: 'evil.invalid' }), origin: await probe('/api/project/current', { Origin: 'https://evil.invalid' }), forwarded: await probe('/health', { 'X-Forwarded-Host': 'evil.invalid', 'X-Forwarded-Proto': 'http' }) };
-        assert.ok([401, 403].includes(state.boundaries.unauthenticated_api));
-        assert.equal(state.boundaries.host, 403);
-        assert.equal(state.boundaries.origin, 403);
-        assert.equal(state.boundaries.forwarded, 200);
+        // Read-only probes use the real TLS listener. Persist only these public
+        // headers, including a failed response before asserting its policy.
+        const probe = (route, headers = {}) => new Promise((resolve, reject) => {
+            const request = https.get(server.ready.url + route, { rejectUnauthorized: false, headers }, response => {
+                response.on('error', reject);
+                response.resume();
+                response.on('end', () => resolve(securityReceipt({ status: response.statusCode, headers: response.headers })));
+            });
+            request.on('error', reject);
+            request.setTimeout(10000, () => request.destroy(new Error('Owned HTTPS security probe timed out: ' + route)));
+        });
+        const captureSecurityHeaders = async phase => {
+            const asset = fs.readdirSync(path.join(root, 'renderer/assets')).sort().find(name => /\.(js|css)$/.test(name));
+            assert.ok(asset, 'Built renderer asset required for actual wire security evidence');
+            const missing = '/assets/__acceptance_missing_security_headers__.js';
+            assert.ok(!fs.existsSync(path.join(root, 'renderer', missing.slice(1))));
+            const witness = { phase, at: new Date().toISOString(), source_head: currentHead(), origin: server.ready.url, server_pid: server.ready.pid, responses: {} };
+            state.security_headers ||= [];
+            state.security_headers.push(witness);
+            save();
+            for (const [name, route, status, headers] of [
+                ['entry', '/', 200],
+                ['asset', '/assets/' + encodeURIComponent(asset), 200],
+                ['health', '/health', 200],
+                ['unauthenticated_api', '/api/project/current', [401, 403]],
+                ['host', '/health', 403, { Host: 'evil.invalid' }],
+                ['origin', '/api/project/current', 403, { Origin: 'https://evil.invalid' }],
+                ['forwarded', '/health', 200, { 'X-Forwarded-Host': 'evil.invalid', 'X-Forwarded-Proto': 'http' }],
+                ['missing_asset', missing, 404],
+            ]) {
+                const response = await probe(route, headers);
+                witness.responses[name] = { path: route, ...response };
+                save();
+                verifyWireResponse(response, status);
+            }
+            witness.completed_at = new Date().toISOString();
+            save();
+            return witness.responses;
+        };
+        const boundaries = await captureSecurityHeaders(resume ? 'resume' : 'initial');
+        state.boundaries = Object.fromEntries(['unauthenticated_api', 'host', 'origin', 'forwarded'].map(name => [name, boundaries[name].status]));
         save();
         browser = await chromium.launch({ headless: true });
         context = await browser.newContext({ ignoreHTTPSErrors: true, viewport: { width: 1440, height: 1000 } });
@@ -500,6 +557,7 @@ async function main() {
         state.restart = { previous, current: server.ready };
         assert.equal(server.ready.url, previous.url);
         assert.notEqual(server.ready.pid, previous.pid);
+        await captureSecurityHeaders('restart');
         await expect.poll(() => sockets.some(row => row !== initial && validSocket(row)), { timeout: 30000 }).toBe(true);
         state.wss_reconnected = sockets.filter(row => row !== initial && validSocket(row)).map(row => ({ ...row }));
         save();
