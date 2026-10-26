@@ -123,11 +123,90 @@ def test_loopback_socket_owns_actual_port_and_preserves_conflicting_owner():
     with bind_loopback(0) as owner:
         actual = owner.getsockname()
         assert actual[0] == '127.0.0.1' and actual[1] > 0
+        if hasattr(socket, 'SO_REUSEPORT'):
+            assert owner.getsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT) == 0
         with pytest.raises(RuntimeError, match='port.*in use'):
             bind_loopback(actual[1])
         assert owner.getsockname() == actual
     with bind_loopback(actual[1]) as replacement:
         assert replacement.getsockname() == actual
+
+
+def test_loopback_reservation_listens_exclusively_without_serving_http():
+    from backend.web import bind_loopback
+    with bind_loopback(0) as owner:
+        address = owner.getsockname()
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as contender:
+            contender.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+            with pytest.raises(OSError):
+                contender.bind(address)
+                contender.listen(1)
+        with socket.create_connection(address, timeout=2) as client:
+            client.settimeout(.05)
+            client.sendall(b'GET / HTTP/1.1\r\nHost: localhost\r\n\r\n')
+            with pytest.raises(socket.timeout):
+                client.recv(1)
+
+
+def test_non_posix_loopback_socket_keeps_address_reuse_disabled(monkeypatch):
+    import backend.web as web
+    from types import SimpleNamespace
+    monkeypatch.setattr(web, 'os', SimpleNamespace(name='nt'))
+    with web.bind_loopback(0) as owner:
+        assert owner.getsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR) == 0
+
+
+@pytest.mark.skipif(os.name != 'posix', reason='POSIX TIME_WAIT reuse contract')
+def test_loopback_socket_rebinds_immediately_after_server_active_close():
+    """The server sends FIN first, so its port retains TIME_WAIT after close."""
+    from backend.web import bind_loopback
+    with bind_loopback(0) as owner:
+        address = owner.getsockname()
+        owner.listen(1)
+        owner.settimeout(2)
+        with socket.create_connection(address, timeout=2) as client:
+            connection, _ = owner.accept()
+            with connection:
+                connection.settimeout(2)
+                connection.shutdown(socket.SHUT_WR)
+                assert client.recv(1) == b''
+                client.shutdown(socket.SHUT_WR)
+                assert connection.recv(1) == b''
+    # No sleep, retry, SO_LINGER reset, or client-first close may hide TIME_WAIT.
+    with bind_loopback(address[1]) as replacement:
+        assert replacement.getsockname() == address
+
+
+@pytest.mark.parametrize('reuse', [False, True])
+def test_loopback_listener_refuses_takeover_and_remains_usable(reuse):
+    from backend.web import bind_loopback
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as owner:
+        if reuse:
+            owner.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        owner.bind(('127.0.0.1', 0))
+        owner.listen(1)
+        owner.settimeout(2)
+        address = owner.getsockname()
+        with pytest.raises(RuntimeError, match='port.*in use.*No other process was stopped'):
+            bind_loopback(address[1])
+        with socket.create_connection(address, timeout=2) as client:
+            connection, _ = owner.accept()
+            with connection:
+                connection.settimeout(2)
+                client.sendall(b'owner still active')
+                assert connection.recv(32) == b'owner still active'
+
+
+def test_other_data_root_cannot_take_reserved_port_before_build(tmp_path, monkeypatch, capsys):
+    from backend.web import bind_loopback, main
+    paths = paths_at(tmp_path, monkeypatch)
+    with bind_loopback(0) as owner:
+        address = owner.getsockname()
+        assert main(['--data-dir', str(paths.root), '--port', str(address[1]), '--no-open']) == 1
+        assert owner.getsockname() == address
+    assert 'No other process was stopped' in capsys.readouterr().err
+    assert not (paths.root / 'renderer').exists()
+    assert not (paths.auth / 'accounts.sqlite').exists()
 
 
 def paths_at(tmp_path, monkeypatch):

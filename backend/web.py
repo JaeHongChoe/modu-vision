@@ -2,6 +2,7 @@
 import argparse
 import asyncio
 import getpass
+import os
 from pathlib import Path
 import socket
 import sys
@@ -46,10 +47,17 @@ def ensure_first_account(store, data_dir):
 
 
 def bind_loopback(port):
-    """Reserve the one IPv4 loopback socket before deriving the public origin."""
+    """Reserve an exclusive IPv4 loopback listener before deriving the origin."""
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     try:
+        if os.name == 'posix':
+            # Permit restart after our accepted connections enter TIME_WAIT.
+            # Windows reuse has different ownership semantics; leave it disabled.
+            sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         sock.bind(('127.0.0.1', port))
+        # Reusable POSIX sockets must listen to exclude other reservations while
+        # the renderer builds. Uvicorn accepts/handles requests after app startup.
+        sock.listen()
     except OSError as exc:
         sock.close()
         raise RuntimeError(f'Local HTTPS port {port} is in use or unavailable; choose --port PORT. No other process was stopped') from exc
@@ -70,7 +78,6 @@ def main(argv=None):
             from backend.local_web_runtime import build_renderer, run_https
             renderer = build_renderer(paths)
             import json
-            import os
             os.environ['MODU_BROWSER_ORIGINS'] = json.dumps([origin])
             # Discard a desktop supervisor's capability; keep the freshly
             # generated backend capability entirely on the server.
