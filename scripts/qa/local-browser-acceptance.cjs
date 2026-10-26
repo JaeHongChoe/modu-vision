@@ -69,7 +69,7 @@ async function main(){
   const screenshot=async name=>page.screenshot({path:path.join(run,name+'.png'),fullPage:true});
   async function login(target,create=false){
     await target.goto(server.ready.url);const all=target.getByRole('button',{name:'모두 보기',exact:true});
-    if(await target.getByRole('button',{name:'서버 관리',exact:true}).count()===0)await expand(target,'더 보기');
+    if(await all.isVisible())await expand(target.locator('header'),'더 보기');
     await target.getByRole('button',{name:'서버 관리',exact:true}).click();await expand(target,'공동 작업 서버');
     await expect(target.getByLabel('공동 작업 서버 주소')).toHaveValue(server.ready.url);
     await target.getByLabel('공유 계정 이름',{exact:true}).fill(credential.username);await target.getByLabel('공유 계정 비밀번호',{exact:true}).fill(credential.password);
