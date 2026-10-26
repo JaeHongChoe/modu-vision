@@ -255,7 +255,23 @@ def test_real_cpu_ocr_runs_in_original_authenticated_backend_epoch_and_preserves
     values = cpu_stack(tmp_path,delay=8); root,value,current,project,reviewed,pin = values
     before = {p: sha(p.read_bytes()) for p in [project/'project.json', project/reviewed['input_path'],
         project/reviewed['package_path']/'manifest.json', project/reviewed['package_path']/'models'/('a'*32)/'best_model.pt']}
-    child,ack = start_cpu_stack(values)
+    controller = _fixture_json_publisher_source()+'''
+from backend.engine import application_launch_controller as c,application_launch_lease as lease
+import os,sys
+original=c.execute_cpu
+def observe_return(owner,capability):
+ receipt=original(owner,capability)
+ settled=owner._cpu_settlement
+ assert settled['kind']=='source_cpu_settled'
+ _atomic_fixture_json(owner.root/'projects'/'cpu-execution-returned.json',{
+  'controller':lease._identity(os.getpid()),'nonce':owner.nonce,
+  'request_id':settled['request_id'],'request_sha256':settled['request_sha256'],
+  'receipt_sha256':settled['receipt_sha256']},exclusive=True)
+ return receipt
+c.execute_cpu=observe_return
+raise SystemExit(c.main(sys.argv[1:]))
+'''
+    child,ack = start_cpu_stack(values,prefix=['-c',controller])
     try:
         directory=root/'.application-launches'/ack['nonce'];until=time.monotonic()+15
         coherent = None
@@ -273,7 +289,24 @@ def test_real_cpu_ocr_runs_in_original_authenticated_backend_epoch_and_preserves
             assert json.loads(observer.stdout)['status']=='ready'
         assert {p:p.read_bytes() for p in controls}==controls
         assert not (directory/'cpu-execution-receipt.json').exists()
-        target,receipt = wait_receipt(root,ack['nonce'],child)
+        receipt_until=time.monotonic()+50
+        target,receipt = wait_receipt(root,ack['nonce'],child,timeout=receipt_until-time.monotonic())
+        # Publication precedes the original SOURCE finish/settlement readbacks.
+        # Tampering before their normal return legitimately causes recovery.
+        returned=root/'projects'/'cpu-execution-returned.json'
+        returned_observation=None
+        while time.monotonic()<receipt_until:
+            if returned.exists():
+                returned_observation=json.loads(returned.read_bytes());break
+            assert child.poll() is None, 'Original controller died before CPU settlement'
+            row=json.loads((target.parent/'journal.json').read_bytes())
+            assert row['state']!='recovery_required',row['reason']
+            time.sleep(.05)
+        assert returned_observation is not None, 'Original CPU execution did not return after settlement'
+        assert returned_observation=={
+            'controller':child._original_cpu_fixture_supervisor,'nonce':ack['nonce'],
+            'request_id':receipt['request_id'],'request_sha256':receipt['request_sha256'],
+            'receipt_sha256':sha(target.read_bytes())}
         bootstrap = json.loads((target.parent/'bootstrap-receipt.json').read_bytes())
         assert receipt['status']=='succeeded'
         assert receipt['actual_cpu_execution_verified'] is True and receipt['owned_backend_execution_origin_verified'] is True
@@ -321,7 +354,7 @@ def test_real_cpu_ocr_runs_in_original_authenticated_backend_epoch_and_preserves
             '--cpu-known-image-plan-sha256',pin],cwd=REPOSITORY,capture_output=True,timeout=15)
         assert cli.returncode==0 and json.loads(cli.stdout)==observed_cpu
         (project/receipt['output_path']).write_bytes((project/receipt['output_path']).read_bytes()+b'changed output')
-        with pytest.raises(ValueError):inspect_execution(observer_args)
+        with pytest.raises(ValueError,match='Reviewed execution artifact checksum differs'):inspect_execution(observer_args)
         assert {p:p.read_bytes() for p in stable}==stable
     finally: stop_stack(child,root)
 

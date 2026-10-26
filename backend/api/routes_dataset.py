@@ -285,6 +285,13 @@ def _flat_labelme_class_counts(folder: Path, paired_images: set[Path], *, count_
         text = original_dataset_UI_read_text(annotation, encoding="utf-8") if annotation == studio_json else read_source_text(annotation)
         data = json.loads(text)
         shapes = data.get("annotations", []) if annotation == studio_json else data.get("shapes", [])
+        if count_images and annotation == studio_json:
+            from backend.engine.dataset_summary import active_mask_foreground_labels
+            raster_labels = active_mask_foreground_labels(image, shapes, data.get("mask_file"))
+            if raster_labels is not None:
+                for label in raster_labels:
+                    classes[label] = classes.get(label, 0) + 1
+                continue
         found = False
         image_labels = set()
         for shape in shapes:

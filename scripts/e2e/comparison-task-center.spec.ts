@@ -37,6 +37,27 @@ function ownedBytes(file: string, scope: string) {
   return {path:target,size:raw.length,sha256:crypto.createHash('sha256').update(raw).digest('hex'),identity:identity(before),raw};
 }
 
+// Source-centre samples witness that this synthetic image has decoded and Fit
+// has reached the actual base plane; metadata/annotation readiness is separate.
+async function comparisonCanvasSource(page:Page,red:number){
+  return page.locator('[data-canvas-container]').evaluate((container,red)=>{
+    const canvas=container.querySelector('canvas'),hud=document.querySelector('[data-testid="canvas-hud"]') as HTMLElement|null;
+    const rect=container.getBoundingClientRect(),dpr=window.devicePixelRatio||1;
+    const percent=Number(hud?.innerText.match(/배율\s*([\d.]+)\s*%/)?.[1]||0),scale=percent/100;
+    const ctx=canvas?.getContext('2d');if(!canvas||!ctx||!scale)return null;
+    const fitPercent=Math.round(Math.max(.01,Math.min(Math.max(rect.width-64,20)/64,Math.max(rect.height-64,20)/64,2.5))*100);
+    const offsetX=(rect.width-64*scale)/2,offsetY=(rect.height-64*scale)/2;
+    const samples=[];
+    for(const y of [16,32,48])for(const x of [16,32,48]){
+      const px=Math.floor((offsetX+(x+.5)*scale)*dpr),py=Math.floor((offsetY+(y+.5)*scale)*dpr);
+      if(px<0||py<0||px>=canvas.width||py>=canvas.height)return null;
+      samples.push({x,y,rgba:[...ctx.getImageData(px,py,1,1).data]});
+    }
+    return {ready:percent===fitPercent&&samples.every(({x,y,rgba})=>rgba[0]===red&&Math.abs(rgba[1]-x)<=1&&Math.abs(rgba[2]-y)<=1&&rgba[3]===255),
+      rect:{x:rect.x,y:rect.y,width:rect.width,height:rect.height},scale,dpr,offsetX,offsetY,fitPercent,samples};
+  },red);
+}
+
 async function exercise(page: Page, workspace: Workspace, evidence: Evidence, api: OwnedApi, native: boolean, startupUrl?: string, readNativeMetadata?: NativeMetadataRead) {
   const source = path.join(workspace.root, 'comparison-source');
   const originals: Record<string, string> = {};
@@ -225,11 +246,22 @@ async function exercise(page: Page, workspace: Workspace, evidence: Evidence, ap
   // 모두 보기 opens every helper panel, which leaves the canvas almost no height; 집중 편집 folds them (the evidence return
   // bar stays) as a user would before drawing.
   await page.getByRole('button',{name:'집중 편집',exact:true}).click();
-  await expect.poll(async()=>(await page.locator('[data-canvas-container]').boundingBox())?.height??0).toBeGreaterThan(200);
+  const rasterStarted=performance.now(),rasterDeadline=rasterStarted+20_000;
+  const rasterRemaining=()=>Math.max(1,Math.floor(rasterDeadline-performance.now()));
+  await expect.poll(async()=>(await page.locator('[data-canvas-container]').boundingBox())?.height??0,{timeout:rasterRemaining()}).toBeGreaterThan(200);
+  const fixtureClass=path.basename(path.dirname(editRow.file_path));expect(['NG','OK']).toContain(fixtureClass);
+  const expectedRed=fixtureClass==='NG'?40:220;
+  await expect.poll(async()=>(await comparisonCanvasSource(page,expectedRed))?.ready??false,{timeout:rasterRemaining()}).toBe(true);
+  const mapping=await comparisonCanvasSource(page,expectedRed);expect(mapping?.ready).toBe(true);
+  const rasterCaptured=performance.now();expect(rasterCaptured).toBeLessThan(rasterDeadline);
+  evidence.note('comparison_label_canvas_readiness',{image_path:editRow.file_path,image_sha256:editRow.image_sha256,
+    deadline:{started:rasterStarted,deadline:rasterDeadline,captured:rasterCaptured,budget_ms:20_000,shared_height_and_raster:true},
+    mapping,expected_rgb:'[class value, source x, source y]',source_size:[64,64],readiness_only:true,display_quality_acceptance:false});
   await page.getByTitle('바운딩 박스 (BBox - 2)',{exact:true}).click();
-  const canvasBox=await page.locator('[data-canvas-container]').boundingBox();expect(canvasBox).not.toBeNull();
-  await page.mouse.move(canvasBox!.x+canvasBox!.width*.45,canvasBox!.y+canvasBox!.height*.45);await page.mouse.down();
-  await page.mouse.move(canvasBox!.x+canvasBox!.width*.55,canvasBox!.y+canvasBox!.height*.55,{steps:8});await page.mouse.up();
+  const point=(fraction:number)=>({x:mapping!.rect.x+mapping!.offsetX+64*mapping!.scale*fraction,y:mapping!.rect.y+mapping!.offsetY+64*mapping!.scale*fraction});
+  const start=point(.45),end=point(.55);
+  await page.mouse.move(start.x,start.y);await page.mouse.down();
+  await page.mouse.move(end.x,end.y,{steps:8});await page.mouse.up();
   await expect(page.getByText(`라벨 목록 (${beforeLabels.annotations.length+1})`,{exact:true})).toBeVisible();
   await expect(editReturn.getByRole('button',{name:'원래 판정 근거로 돌아가기',exact:true})).toBeDisabled();
   await expect(editReturn.getByRole('button',{name:'근거 이미지의 현재 라벨 다시 열기',exact:true})).toBeDisabled();

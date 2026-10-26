@@ -7,7 +7,7 @@ import json
 import math
 from typing import Any, Dict
 
-from backend.engine.flowchart_engine import FlowchartPipeline
+from backend.engine.flowchart_schema import FlowchartPipeline
 
 
 def _normalized_graph_numbers(value: Any) -> Any:

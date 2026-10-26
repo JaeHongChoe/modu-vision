@@ -133,6 +133,24 @@ export const ModelComparisonPanel: React.FC<Props> = ({ projectDir, sourceFolder
   const [jobs, setJobs] = useState<ComparisonJob[]>([]);
   const [productFilter, setProductFilter] = useState('');
   const [lotFilter, setLotFilter] = useState('');
+  const filterChoice = useRef<{scope:string;reportId:string;product_filter:string;lot_filter:string}|null>(null);
+  const chooseFilter = (side:'product'|'lot',value:string) => {
+    if(!report||reportScope!==scopeKey)return;
+    filterChoice.current={scope:modelSelectionScope,reportId:report.comparison_id,
+      product_filter:side==='product'?value:productFilter,lot_filter:side==='lot'?value:lotFilter};
+    const returned=reviewReturnChoice.current;
+    if(returned?.scope===scopeKey&&returned.origin.comparison_id===report.comparison_id)
+      reviewReturnChoice.current={...returned,origin:{...returned.origin,
+        product_filter:filterChoice.current.product_filter,lot_filter:filterChoice.current.lot_filter}};
+    if(side==='product')setProductFilter(value);else setLotFilter(value);
+  };
+  const restoreReportFilters = (saved:ModelComparisonReport,origin?:{product_filter?:string;lot_filter?:string}|null) => {
+    const owner=filterChoice.current;
+    const filters=origin||(owner?.scope===modelSelectionScope&&owner.reportId===saved.comparison_id?owner:null);
+    if(!filters)return;
+    setProductFilter(typeof filters.product_filter==='string'&&(!filters.product_filter||saved.images.some(row=>(row.product||'(미지정)')===filters.product_filter))?filters.product_filter:'');
+    setLotFilter(typeof filters.lot_filter==='string'&&(!filters.lot_filter||saved.images.some(row=>(row.lot||'(미지정)')===filters.lot_filter))?filters.lot_filter:'');
+  };
   const [error, setError] = useState<string | null>(null);
   const [originPath,setOriginPath]=useState('');
   const [imageEvidence,setImageEvidence]=useState<{scope:string;view:EvidenceView}|null>(null);
@@ -144,6 +162,7 @@ export const ModelComparisonPanel: React.FC<Props> = ({ projectDir, sourceFolder
   useEffect(() => {
     let active = true;
     if(reviewReturnChoice.current?.scope!==scopeKey)reviewReturnChoice.current=null;
+    if(filterChoice.current?.scope!==modelSelectionScope)filterChoice.current=null;
     if(pendingManualReport.current?.scope!==modelSelectionScope)pendingManualReport.current=null;
     const sameScope=catalogRequest.current.scope===modelSelectionScope;
     const sameScopeRefresh=sameScope&&catalogRequest.current.refreshRevision!==refreshRevision;
@@ -159,13 +178,15 @@ export const ModelComparisonPanel: React.FC<Props> = ({ projectDir, sourceFolder
       && (manualModels.current.incumbent!==undefined||manualModels.current.candidate!==undefined);
     if(manualModels.current.scope!==modelSelectionScope)manualModels.current={scope:modelSelectionScope};
     const choice = ++reportChoice.current;
-    imageChoice.current++;setImageEvidence(null);
-    setEditBusy(false);setEditError('');
+    // Model recommendations may finish after the operator opens an original.
+    // They do not replace that exact report/image or cancel its in-flight read.
+    const keepEvidence=sameScope&&!sameScopeRefresh&&imageEvidence?.scope===scopeKey
+      &&imageEvidence.view.runId===report?.comparison_id;
+    if(!keepEvidence){imageChoice.current++;setImageEvidence(null);setEditBusy(false);setEditError('');}
     if(!keepManualPair)setModels([]);
     setRecords([]);
     if(!keepManualPair){setIncumbentId('');setCandidateId('');}
-    setReport(null);
-    setReportScope('');
+    if(!keepEvidence){setReport(null);setReportScope('');}
     setError(null);
     setOriginPath('');
     setIsLoading(false);
@@ -191,6 +212,7 @@ export const ModelComparisonPanel: React.FC<Props> = ({ projectDir, sourceFolder
       if(freshHandoff||reviewReturnChoice.current?.scope!==scopeKey)reviewReturnChoice.current=null;
       if(!freshHandoff&&reviewReturn)reviewReturnChoice.current={scope:scopeKey,origin:reviewReturn};
       if(freshHandoff||reviewReturn)pendingManualReport.current=null;
+      if(freshHandoff||reviewReturn)filterChoice.current=null;
       const manualReport=pendingManualReport.current?.scope===modelSelectionScope?pendingManualReport.current:null;
       const retainedOrigin=reviewReturnChoice.current?.origin;
       const origin=freshHandoff?null:retainedOrigin&&history.comparisons.some(row=>row.comparison_id===retainedOrigin.comparison_id)?retainedOrigin:null;
@@ -208,10 +230,7 @@ export const ModelComparisonPanel: React.FC<Props> = ({ projectDir, sourceFolder
           if(origin||manualReport)rememberSelection('report',savedId);
           if(pendingManualReport.current===manualReport)pendingManualReport.current=null;
           setReport(saved);setReportScope(scopeKey);setOriginPath(saved.images.some(row=>row.file_path===origin?.file_path)?origin?.file_path||'':'');
-          if(origin){
-            setProductFilter(typeof origin.product_filter==='string'&&(!origin.product_filter||saved.images.some(row=>(row.product||'(미지정)')===origin.product_filter))?origin.product_filter:'');
-            setLotFilter(typeof origin.lot_filter==='string'&&(!origin.lot_filter||saved.images.some(row=>(row.lot||'(미지정)')===origin.lot_filter))?origin.lot_filter:'');
-          }
+          restoreReportFilters(saved,origin);
         }}).catch(cause=>{if(active&&currentScope.current===scopeKey&&reportChoice.current===choice){
           if(pendingManualReport.current===manualReport)pendingManualReport.current=null;
           setError(errorMessage(cause));
@@ -267,7 +286,7 @@ export const ModelComparisonPanel: React.FC<Props> = ({ projectDir, sourceFolder
           const saved = await api.evaluation.getComparison(job.report_id, sourceFolder, task);
           if (!active || currentScope.current !== scopeKey || reportChoice.current!==choice) return;
           if(saved.comparison_id!==job.report_id)throw new Error('비교 결과의 식별자가 저장 기록과 일치하지 않습니다.');
-          setReport(saved); setReportScope(scopeKey);
+          setReport(saved); setReportScope(scopeKey);restoreReportFilters(saved);
         }
         const history = await api.evaluation.listComparisons(sourceFolder, task);
         if (active && currentScope.current === scopeKey && reportChoice.current===choice) setRecords(history.comparisons);
@@ -626,8 +645,8 @@ export const ModelComparisonPanel: React.FC<Props> = ({ projectDir, sourceFolder
           )}
           <div className="space-y-1.5" aria-label={isKo ? '이미지별 원판정' : 'Per-image raw verdicts'}>
             <div className="flex flex-wrap gap-2">
-              <label>제품<select aria-label="모델 비교 제품 필터" value={productFilter} onChange={(e) => setProductFilter(e.target.value)} className="ml-2 rounded border border-slate-600 bg-[#0F1B27] p-1"><option value="">전체</option>{Array.from(new Set(comparisonImages.map((r) => r.product || '(미지정)'))).map((v) => <option key={v}>{v}</option>)}</select></label>
-              <label>Lot<select aria-label="모델 비교 Lot 필터" value={lotFilter} onChange={(e) => setLotFilter(e.target.value)} className="ml-2 rounded border border-slate-600 bg-[#0F1B27] p-1"><option value="">전체</option>{Array.from(new Set(comparisonImages.map((r) => r.lot || '(미지정)'))).map((v) => <option key={v}>{v}</option>)}</select></label>
+              <label>제품<select aria-label="모델 비교 제품 필터" value={productFilter} onChange={(e) => chooseFilter('product',e.target.value)} className="ml-2 rounded border border-slate-600 bg-[#0F1B27] p-1"><option value="">전체</option>{Array.from(new Set(comparisonImages.map((r) => r.product || '(미지정)'))).map((v) => <option key={v}>{v}</option>)}</select></label>
+              <label>Lot<select aria-label="모델 비교 Lot 필터" value={lotFilter} onChange={(e) => chooseFilter('lot',e.target.value)} className="ml-2 rounded border border-slate-600 bg-[#0F1B27] p-1"><option value="">전체</option>{Array.from(new Set(comparisonImages.map((r) => r.lot || '(미지정)'))).map((v) => <option key={v}>{v}</option>)}</select></label>
               <span>{filteredImages.length}/{comparisonImages.length}장</span>
             </div>
             {filteredImages.map((row) => (
