@@ -590,11 +590,14 @@ def _fixture_original_draining_guard_barrier(projects, original_class, retained_
         # prepared_frame calls fresh before sending its genuine response. Only
         # its later service call can wait for the controller's damaged request.
         if intended_phase=='prepared' and state.get('sent') is not True:return
+        profile._fixture_guard_consumed=True
         sys.setprofile(None)  # No wrapper is added to a genuine guard traceback.
         deadline=frame.f_locals['deadline']
         _atomic_fixture_json(projects/boundary_name,{'pid':os.getpid(),'original_deadline':deadline})
         _fixture_wait_before_original_deadline([projects/'managed-controller-refusal.json',projects/'ordinary-stop-requested.json'],absolute_deadline=deadline)
         _fixture_validate_recovery_publication(projects.parent,projects/'managed-controller-refusal.json',absolute_deadline=deadline)
+    profile._fixture_guard_code=original_code
+    profile._fixture_guard_consumed=False
     return profile
 
 
@@ -613,6 +616,7 @@ def managed_stack(tmp_path, monkeypatch, *, uncovered=False, damage=None):
     backend = ('#!'+sys.executable+'\n'+fixtures._fixture_json_publisher_source()+scheduling_source+f'''
 import sys,os,time,json,threading,signal,socket
 from pathlib import Path
+from contextlib import ExitStack
 sys.path.insert(0,{str(repository)!r})
 from backend.engine.application_launch_handshake import early_backend_bootstrap,backend_bootstrap_ready,backend_execution_service,backend_work_admission,owned_cpu_writer_scope
 early_backend_bootstrap()
@@ -636,7 +640,7 @@ def cooperative_exit():
   if requested.is_set() and (projects/'exit.trigger').exists():stop.set();return
   time.sleep(.01)
 threading.Thread(target=cooperative_exit,daemon=True).start()
-with maintenance_guard(root):
+with maintenance_guard(root),ExitStack() as completion_observers:
  backend_bootstrap_ready();state=backend_work_admission()
  original_leave=state.leave
  def observed_leave(*,activity=None,normal_return=False):
@@ -680,8 +684,10 @@ with maintenance_guard(root):
   phase='prepared' if {damage!r}=='changed_nonce' else 'draining'
   boundary='managed-nonce-proof-boundary.json' if {damage!r}=='changed_nonce' else 'managed-replay-proof-boundary.json'
   original_profile=_fixture_original_draining_guard_barrier(projects,h._BackendShutdown,h._BACKEND_SHUTDOWNS,intended_phase=phase,boundary_name=boundary)
- sys.setprofile(_fixture_cpu_completion_profile(projects,original_profile))
+ from backend.tests._source_cpu_completion_boundary import backend_observer
+ completion_observers.enter_context(backend_observer(projects,original_profile,_fixture_cpu_completion_profile))
  backend_execution_service(stop)
+ completion_observers.close()
  server.should_exit=True;server_thread.join(2);listener.close()
  assert not server_thread.is_alive()
  (projects/'backend-cooperative-exit.json').write_text(json.dumps({{'pid':os.getpid(),'requested':requested.is_set()}}))
@@ -1378,11 +1384,13 @@ def _execute_and_record_source_cpu(original,owner,capability):
 
 def _execute_ready_source_cpu(original,owner,capability):
     try:
-        with completion_boundary.controller_boundary(owner,original.__code__):
+        with completion_boundary.controller_boundary(owner,original.__code__) as readiness:
             projects=owner.root/'projects'
             if (projects/completion_boundary.CONFIG).exists() and 'contention' in completion_boundary.read(projects,completion_boundary.CONFIG):
-                return _cpu_contention_execute(original,owner,capability)
-            return original(owner,capability)
+                return _cpu_contention_execute(original,owner,capability,selective=True)
+            from backend.engine import application_launch_execution as execution
+            with completion_boundary.controller_dispatch(readiness,(execution.verify_completion.__code__,)):
+                return original(owner,capability)
     except BaseException as error:
         try:_record_cpu_fixture_failure(owner.root/'projects',error)
         except BaseException:pass
@@ -1785,6 +1793,7 @@ def _cpu_contention_backend(projects,boundary):
     lockcode=lease._transition_admission.__wrapped__.__code__
     def profile(frame,event,arg):
         nonlocal held
+        if event=='call' and getattr(profile,'_sparse_entry',None) is frame:return
         boundary(frame,event,arg)
         if sys.getprofile() is not profile:return
         action=boundary.action
@@ -1803,10 +1812,11 @@ def _cpu_contention_backend(projects,boundary):
         expected='cpu-gate-busy.json' if schedule['mode']=='busy' else 'cpu-gate-verify.json'
         _cpu_gate_wait(projects,expected,min(metadata['deadline'],boundary.deadline))
     boundary.installed=profile
+    profile.boundary=boundary
     return profile
 
 
-def _cpu_contention_execute(original,owner,capability):
+def _cpu_contention_execute(original,owner,capability,*,selective=False):
     from backend.engine import application_launch_execution as execution,application_launch_lease as lease
     projects=owner.root/'projects';metadata=completion_boundary.read(projects,completion_boundary.CONFIG)
     schedule=metadata['contention'];readiness=sys.getprofile();thread=threading.get_ident()
@@ -1825,6 +1835,7 @@ def _cpu_contention_execute(original,owner,capability):
 
     def publish_profile(frame,event,arg):
         nonlocal active
+        if event=='call' and getattr(publish_profile,'_sparse_entry',None) is frame:return
         # Readiness is consumed: reject unrelated code before schedule work,
         # forwarding only to a genuinely retained upstream callback.
         if event!='call' or frame.f_code is not target:
@@ -1844,6 +1855,7 @@ def _cpu_contention_execute(original,owner,capability):
 
     def profile(frame,event,arg):
         nonlocal active
+        if event=='call' and getattr(profile,'_sparse_entry',None) is frame:return
         exact=(event=='call' and (frame.f_code is verify_code or frame.f_code is target) and threading.get_ident()==thread
             and frame.f_back is not None and frame.f_back.f_code is original.__code__
             and frame.f_locals.get('owner',frame.f_locals.get('self')) is owner)
@@ -1872,7 +1884,9 @@ def _cpu_contention_execute(original,owner,capability):
                 sys.setprofile(publish_profile)
     readiness.installed=profile
     sys.setprofile(profile)
-    try:return original(owner,capability)
+    try:
+        with completion_boundary.controller_dispatch(readiness,(verify_code,target),enabled=selective):
+            return original(owner,capability)
     except lease.LeaseTransitionBusy as exc:
         completion_boundary.write(projects,'cpu-gate-busy.json',{'type':type(exc).__name__,
             'cause_type':type(exc.__cause__).__name__,'cause_errno':getattr(exc.__cause__,'errno',None),'time':time.monotonic()})
@@ -2335,6 +2349,241 @@ def _observer_lifecycle_backend(tmp_path,monkeypatch,previous):
     return projects,cache,state,action,inner,outer
 
 
+def test_source_cpu_completion_observer_does_not_dispatch_real_inventory_frames(tmp_path,monkeypatch):
+    """The original all-event observer deterministically fails this control."""
+    from backend.engine import application_launch_execution as execution
+    projects,_,_,_,inner,outer=_observer_lifecycle_backend(tmp_path,monkeypatch,None)
+    unrelated=[]
+    def observed(frame,event,arg):
+        if frame.f_code is execution.runtime_source_identity.__code__:
+            unrelated.append(event)
+        return outer(frame,event,arg)
+    observed.boundary=inner
+    inner.installed=observed
+    with completion_boundary.backend_observer(projects,None,lambda *_:observed):
+        assert len(execution.runtime_source_identity())==64
+    assert unrelated==[], 'SOURCE fixture dispatched genuine inventory work through its completion observer'
+
+
+class _ModeledCodeMonitoring:
+    """Slot ownership only; no modeled event is CPU or completion evidence."""
+    events=type('Events',(),{'PY_START':1})()
+    def __init__(self,*,failure=None,full=False):
+        self.tools={i:'foreign-'+str(i) if full else None for i in range(6)}
+        self.callbacks={};self.masks={};self.failure=failure;self.failed=False
+    def get_tool(self,tool):return self.tools[tool]
+    def use_tool_id(self,tool,name):
+        assert self.tools[tool] is None;self.tools[tool]=name
+    def register_callback(self,tool,event,callback):
+        self.callbacks[tool,event]=callback
+        if callback is not None and self.failure=='register' and not self.failed:
+            self.failed=True;raise RuntimeError('original monitor registration failure')
+    def set_local_events(self,tool,code,mask):
+        self.masks[tool,code]=mask
+        if mask and self.failure=='activate' and not self.failed:
+            self.failed=True;raise RuntimeError('original monitor activation failure')
+    def free_tool_id(self,tool):self.tools[tool]=None
+
+
+@pytest.mark.parametrize('failure',['register','activate'])
+def test_source_cpu_monitor_partial_setup_cleans_only_owned_registration(monkeypatch,failure):
+    modeled=_ModeledCodeMonitoring(failure=failure)
+    modeled.tools[0]='foreign-tool';modeled.callbacks[0,1]='foreign-callback'
+    monkeypatch.setattr(completion_boundary.sys,'monitoring',modeled)
+    monitor=completion_boundary._CodeStarts()
+    def target():pass
+    with pytest.raises(RuntimeError,match='original monitor (registration|activation) failure'):
+        monitor.arm([target.__code__],lambda *_:None)
+    assert modeled.tools=={i:'foreign-tool' if i==0 else None for i in range(6)}
+    assert modeled.callbacks[0,1]=='foreign-callback'
+    assert all(value is None for (tool,_),value in modeled.callbacks.items() if tool!=0)
+    assert all(mask==0 for mask in modeled.masks.values())
+
+
+def test_source_cpu_monitor_does_not_clear_a_reassigned_external_tool(monkeypatch):
+    modeled=_ModeledCodeMonitoring();monkeypatch.setattr(completion_boundary.sys,'monitoring',modeled)
+    monitor=completion_boundary._CodeStarts()
+    def target():pass
+    monitor.arm([target.__code__],lambda *_:None)
+    modeled.tools[monitor.tool]='new-external-owner'
+    expected=(modeled.tools.copy(),modeled.callbacks.copy(),modeled.masks.copy())
+    monitor.close()
+    assert (modeled.tools,modeled.callbacks,modeled.masks)==expected
+
+
+@pytest.mark.parametrize('side',['backend','controller'])
+def test_source_cpu_monitor_full_slots_preserve_original_profile_path(tmp_path,monkeypatch,side):
+    from types import SimpleNamespace
+    modeled=_ModeledCodeMonitoring(full=True);monkeypatch.setattr(completion_boundary.sys,'monitoring',modeled)
+    def profile(*_):pass
+    profile.action=None;profile.installed=profile;profile.upstream=None
+    saved=sys.getprofile()
+    try:
+        if side=='backend':
+            with completion_boundary.backend_observer(tmp_path,None,lambda *_:profile):
+                assert sys.getprofile() is profile
+            assert sys.getprofile() is saved
+        else:
+            sys.setprofile(profile)
+            with completion_boundary.controller_dispatch(profile,[profile.__code__]):
+                assert sys.getprofile() is profile
+    finally:sys.setprofile(saved)
+    assert modeled.tools=={i:'foreign-'+str(i) for i in range(6)}
+    assert modeled.callbacks=={} and modeled.masks=={}
+
+
+@pytest.mark.parametrize('side',['backend','controller'])
+def test_source_cpu_sparse_setup_failure_releases_its_slot(tmp_path,monkeypatch,side):
+    from types import SimpleNamespace
+    before={i:sys.monitoring.get_tool(i) for i in range(6)}
+    def profile(*_):pass
+    profile.action=None
+    if side=='backend':
+        primary=ValueError('original callsite lookup failure')
+        def fail(*_):raise primary
+        monkeypatch.setattr(completion_boundary,'completion_post_line',fail)
+        with pytest.raises(ValueError) as caught:
+            with completion_boundary.backend_observer(tmp_path,None,lambda *_:profile):pass
+        assert caught.value is primary
+    else:
+        readiness=SimpleNamespace(upstream=None,installed=profile)
+        with pytest.raises(AssertionError):
+            with completion_boundary.controller_dispatch(readiness,[profile.__code__]):pass
+    assert {i:sys.monitoring.get_tool(i) for i in range(6)}==before
+
+
+def test_source_cpu_owned_profile_restore_failure_keeps_primary_and_cleans_monitor(monkeypatch):
+    modeled=_ModeledCodeMonitoring();monkeypatch.setattr(completion_boundary.sys,'monitoring',modeled)
+    primary=RuntimeError('original body');profile=object()
+    monkeypatch.setattr(completion_boundary.sys,'getprofile',lambda:profile)
+    def denied(*_):raise ValueError('profile restoration denied')
+    monkeypatch.setattr(completion_boundary.sys,'setprofile',denied)
+    with pytest.raises(RuntimeError) as caught:
+        with completion_boundary._CodeStarts() as monitor:
+            monitor.arm([denied.__code__],lambda *_:None)
+            try:raise primary
+            finally:completion_boundary._restore_profile(profile,None,primary)
+    assert caught.value is primary and all(owner is None for owner in modeled.tools.values())
+    assert all(mask==0 for mask in modeled.masks.values())
+
+
+def test_source_cpu_native_target_frame_entry_is_once_and_original_error_is_unchanged(tmp_path,monkeypatch):
+    from backend.engine import application_launch_handshake as h
+    calls=[]
+    def previous(frame,event,arg):
+        if frame.f_code is h._validate_service_action.__code__:calls.append(event)
+    projects,_,_,_,inner,_=_observer_lifecycle_backend(tmp_path,monkeypatch,previous)
+    saved=sys.getprofile();observed=[]
+    with completion_boundary._CodeStarts() as monitor:
+        def start(code,offset):
+            frame=sys._getframe(1)
+            assert frame.f_code is code is h._validate_service_action.__code__
+            assert frame.f_back.f_code is test_source_cpu_native_target_frame_entry_is_once_and_original_error_is_unchanged.__code__
+            observed.append(frame)
+            sys.setprofile(inner);inner(frame,'call',None)
+            inner._sparse_entry=frame
+            inner(frame,'call',None)  # A duplicate same-frame native entry is inert.
+        monitor.arm([h._validate_service_action.__code__],start)
+        try:
+            with pytest.raises(h.HandshakeError) as caught:h._validate_service_action({},time.monotonic()+1)
+        finally:sys.setprofile(saved)
+    assert len(observed)==1 and calls.count('call')==1 and calls.count('return')==1
+    trace=caught.value.__traceback__
+    while trace.tb_next is not None:trace=trace.tb_next
+    assert trace.tb_frame.f_code is h._validate_service_action.__code__
+    assert not (projects/completion_boundary.PENDING).exists()
+
+
+@pytest.mark.parametrize('foreign',['caller','thread'])
+def test_source_cpu_native_backend_foreign_call_keeps_original_refusal(tmp_path,monkeypatch,foreign):
+    from backend.engine import application_launch_handshake as h
+    projects,_,_,_,_,outer=_observer_lifecycle_backend(tmp_path,monkeypatch,None)
+    before={i:sys.monitoring.get_tool(i) for i in range(6)};errors=[]
+    def invoke():
+        assert sys.getprofile() is None
+        try:h._validate_service_action({},time.monotonic()+1)
+        except h.HandshakeError as error:
+            errors.append(error)
+            assert sys.getprofile() is None
+            return error
+    with completion_boundary.backend_observer(projects,None,lambda *_:outer):
+        if foreign=='caller':assert invoke() is errors[0]
+        else:
+            worker=threading.Thread(target=invoke);worker.start();worker.join(timeout=2)
+            assert not worker.is_alive()
+        assert len(errors)==1 and str(errors[0])=='Original service action queue is unavailable'
+        trace=errors[0].__traceback__
+        while trace.tb_next is not None:trace=trace.tb_next
+        assert trace.tb_frame.f_code is h._validate_service_action.__code__
+        assert not (projects/completion_boundary.PENDING).exists()
+        assert not (projects/completion_boundary.READY).exists()
+    assert {i:sys.monitoring.get_tool(i) for i in range(6)}==before
+
+
+def test_source_cpu_sparse_owned_drain_guard_stays_armed_until_original_selection(tmp_path,monkeypatch):
+    class OriginalGuard:
+        def fresh(self,deadline):raise ValueError('unchanged genuine guard body')
+    guard=OriginalGuard();states={guard:{'phase':'prepared'}}
+    projects=tmp_path/'projects'
+    monkeypatch.setitem(globals(),'_fixture_validate_recovery_publication',lambda *_a,**_k:None)
+    retained=_fixture_original_draining_guard_barrier(projects,OriginalGuard,states)
+    _,_,_,_,_,outer=_observer_lifecycle_backend(tmp_path,monkeypatch,retained)
+    (projects/'managed-controller-refusal.json').write_text('{}')
+    (projects/'ordinary-stop-requested.json').write_text('{}')
+    before={i:sys.monitoring.get_tool(i) for i in range(6)}
+    with completion_boundary.backend_observer(projects,retained,lambda *_:outer):
+        with pytest.raises(ValueError,match='unchanged genuine guard body'):guard.fresh(time.monotonic()+1)
+        assert not retained._fixture_guard_consumed
+        states[guard]['phase']='draining'
+        with pytest.raises(ValueError,match='unchanged genuine guard body'):guard.fresh(time.monotonic()+1)
+        assert retained._fixture_guard_consumed
+        assert {i:sys.monitoring.get_tool(i) for i in range(6)}==before
+        with pytest.raises(ValueError,match='unchanged genuine guard body'):guard.fresh(time.monotonic()+1)
+
+
+@pytest.mark.parametrize('entry',['verify','publish'])
+def test_source_cpu_sparse_controller_actual_code_keeps_foreign_thread_and_body_error(tmp_path,entry):
+    from types import SimpleNamespace
+    from backend.engine import application_launch_execution as execution,application_launch_lease as lease
+    projects=tmp_path/'projects';projects.mkdir();request={'nonce':'original'}
+    metadata={'root':str(tmp_path),'token':'unit','deadline':time.monotonic()+10,
+              'contention':{'entry':entry,'mode':'released'}}
+    completion_boundary.write(projects,completion_boundary.CONFIG,metadata)
+    pending={'root':str(tmp_path),'token':'unit','nonce':'original',
+             'request_sha256':completion_boundary.request_hash(request),'deadline':metadata['deadline']}
+    completion_boundary.write(projects,completion_boundary.PENDING,pending)
+    completion_boundary.write(projects,completion_boundary.READY,{**pending,'normal_return':True,'time':time.monotonic()})
+    owner=SimpleNamespace(root=tmp_path,nonce='original');foreign=[];main=threading.get_ident()
+    def original(actual_owner,capability):
+        assert sys.getprofile() is None
+        assert len(execution.runtime_source_identity())==64
+        if threading.get_ident()!=main:
+            return execution.verify_completion(owner,{'request':request},{'request':request})
+        def run():
+            try:original(owner,None)
+            except execution.ExecutionError as error:foreign.append(error)
+        worker=threading.Thread(target=run);worker.start();worker.join(timeout=2)
+        assert not worker.is_alive() and len(foreign)==1
+        assert not (projects/'cpu-gate-target.json').exists()
+        if entry=='verify':return execution.verify_completion(owner,{'request':request},{'request':request})
+        # Publish selection follows a real verify entry whose original body
+        # refuses; the profile must remain sparse between these two bodies.
+        with pytest.raises(execution.ExecutionError):execution.verify_completion(owner,{'request':request},{'request':request})
+        assert sys.getprofile() is None
+        return lease.LaunchSupervisor._publish_cpu_execution(owner,{})
+    before={i:sys.monitoring.get_tool(i) for i in range(6)}
+    with completion_boundary.controller_boundary(owner,original.__code__):
+        with pytest.raises((execution.ExecutionError,lease.LaunchLeaseError)) as caught:
+            _cpu_contention_execute(original,owner,None,selective=True)
+    trace=caught.value.__traceback__;codes=[]
+    while trace is not None:codes.append(trace.tb_frame.f_code);trace=trace.tb_next
+    expected=execution.verify_completion.__code__ if entry=='verify' else lease.LaunchSupervisor._publish_cpu_execution.__code__
+    assert expected in codes
+    assert codes[-1] is (expected if entry=='verify' else lease._refuse.__code__)
+    assert (projects/'cpu-gate-enter.json').exists()
+    assert {i:sys.monitoring.get_tool(i) for i in range(6)}==before
+
+
 @pytest.mark.parametrize('disable',['never','at_completion','after_handoff'])
 def test_observer_lifecycle_backend_retires_both_layers_and_preserves_upstream(tmp_path,monkeypatch,disable):
     """Leaving either consumed layer installed must fail the identity assertion."""
@@ -2644,3 +2893,108 @@ def test_observer_lifecycle_default_verify_handoff_keeps_required_publish_dispat
         assert sys.getprofile() is None
         assert completion_boundary.read(projects,'cpu-gate-enter.json')['function']=='_publish_cpu_execution'
     finally:sys.setprofile(saved)
+
+
+@pytest.mark.no_child
+@pytest.mark.parametrize('module_name,function_name', [
+    ('test_application_owned_source_cpu_relay_actual',
+     'test_actual_known_source_cpu_typed_relay_preserves_original_fences_through_final_ack'),
+    ('test_application_cpu_writer_lifetime',
+     'test_actual_original_cpu_epoch_inherits_writer_inode_and_keeps_scope_through_output'),
+    ('test_worker_preflight_writer_lifetime',
+     'test_actual_authenticated_source_preflight_cpu_preserves_guard_through_real_stages'),
+    ('test_application_preflight_child_relay_actual',
+     'test_actual_original_preflight_child_is_enrolled_bound_and_finalized'),
+])
+def test_shared_generated_backend_keeps_exact_consumer_injection_and_observer_scope(module_name, function_name, monkeypatch):
+    import ast,importlib,inspect
+    from backend.tests import test_application_launch_execution as fixtures
+    bridge=sys.modules[__name__]
+    def forbidden(*args,**kwargs):
+        raise AssertionError("Compile contract must never start a child or thread")
+    monkeypatch.setattr(subprocess.Popen,"__init__",forbidden)
+    monkeypatch.setattr(threading.Thread,"start",forbidden)
+
+    def _assigned(tree, name):
+        return next(node.value for node in ast.walk(tree) if isinstance(node, ast.Assign)
+                    and any(isinstance(target, ast.Name) and target.id == name for target in node.targets))
+
+    def _expression(node, scope):
+        # These expressions are the current trusted fixture constructors, not test
+        # backend execution. They only concatenate/encode the actual source bytes.
+        return eval(compile(ast.Expression(node), '<fixture-source-expression>', 'eval'), scope)
+
+    def _service_scopes(source):
+        scopes = []
+        def visit(node, retained):
+            if isinstance(node, ast.With):
+                retained = retained + [ast.unparse(item.context_expr) for item in node.items]
+            if isinstance(node, ast.Call) and isinstance(node.func, ast.Name) and node.func.id == 'backend_execution_service':
+                scopes.append(retained)
+            for child in ast.iter_child_nodes(node):
+                visit(child, retained)
+        visit(ast.parse(source), [])
+        assert len(scopes) == 1
+        return scopes[0]
+
+    def _assert_observer_lifetime(source):
+        tree = ast.parse(source)
+        maintenance = next(node for node in ast.walk(tree) if isinstance(node, ast.With)
+                           and any(ast.unparse(item.context_expr) == 'maintenance_guard(root)' for item in node.items))
+        assert ast.unparse(maintenance.items[-1].context_expr) == 'ExitStack()'
+        owner = ast.unparse(maintenance.items[-1].optional_vars)
+        statements = maintenance.body
+        entered = next(index for index, node in enumerate(statements) if isinstance(node, ast.Expr)
+                       and isinstance(node.value, ast.Call) and ast.unparse(node.value.func) == owner + '.enter_context'
+                       and len(node.value.args) == 1 and isinstance(node.value.args[0], ast.Call)
+                       and ast.unparse(node.value.args[0].func) == 'backend_observer')
+        service = next(index for index, node in enumerate(statements) if isinstance(node, ast.Expr)
+                       and isinstance(node.value, ast.Call) and ast.unparse(node.value.func) == 'backend_execution_service')
+        assert entered < service, 'Original observer must be entered before the service call'
+        assert ast.unparse(statements[service + 1]) == owner + '.close()', 'Normal return must close the observer immediately'
+
+    repository = Path(bridge.__file__).resolve().parents[2]
+    helpers = (bridge._fixture_wait_before_original_deadline,
+               bridge._fixture_validate_recovery_publication,
+               bridge._fixture_original_draining_guard_barrier,
+               bridge._fixture_cpu_completion_profile)
+    scope = dict(vars(bridge), fixtures=fixtures, repository=repository, uncovered=False, damage=None,
+                 scheduling_source=''.join(inspect.getsource(helper) for helper in helpers))
+    raw = _expression(_assigned(ast.parse(inspect.getsource(bridge.managed_stack)), 'backend'), scope)
+    compile(raw, '<original-shared-backend>', 'exec')
+    module = importlib.import_module('backend.tests.' + module_name)
+    consumer = ast.parse(inspect.getsource(getattr(module, function_name)))
+    instrumentation = _expression(_assigned(consumer, 'instrumentation'), scope)
+    needle = _expression(_assigned(consumer, 'needle'), scope)
+    replacement = next(node.value for node in ast.walk(consumer) if isinstance(node, ast.Assign)
+                       and any(ast.unparse(target) == "files['bin/backend_fixture.py']" for target in node.targets))
+    assert raw.count(needle) == 1
+    injected = _expression(replacement, dict(scope, raw=raw, files={'bin/backend_fixture.py': raw},
+                                           needle=needle, instrumentation=instrumentation))
+    compile(injected, '<instrumented-shared-backend-' + module_name + '>', 'exec')
+    assert _service_scopes(injected) == _service_scopes(raw), 'Consumer injection changed original observer lifetime'
+    assert raw.splitlines(keepends=True).count(needle) == 1, 'Consumer anchor must match one complete line'
+    _assert_observer_lifetime(raw)
+    _assert_observer_lifetime(injected)
+
+
+@pytest.mark.no_child
+@pytest.mark.parametrize('case',['both_protocols','missing_preflight','duplicate_preflight'])
+def test_preflight_fixture_diagnostic_selects_only_its_original_protocol_branch(case):
+    from backend.tests.test_application_preflight_child_relay_actual import instrument_original_bridge_refusal
+    fields="                    fields(request, ['schema_version', 'kind', 'action', 'nonce', 'epoch', 'binding_sha256', 'backend_claim_sha256', 'request_id', 'payload']);\n"
+    cpu="                if (request.kind === 'backend_cpu_child_request') {\n"+fields+'                }\n'
+    preflight="                if (request.kind === 'backend_preflight_request') {\n"+fields+'                }\n'
+    raw='        const invalidate = () => {\n        };\n'+cpu
+    if case!='missing_preflight':raw+=preflight
+    if case=='duplicate_preflight':raw+=preflight
+    if case!='both_protocols':
+        with pytest.raises(AssertionError):instrument_original_bridge_refusal(raw.encode())
+        return
+    result=instrument_original_bridge_refusal(raw.encode()).decode()
+    assert result.count(fields)==2 and result.count(cpu)==1
+    branch=result.index("                if (request.kind === 'backend_preflight_request') {")
+    observation=result.index('                    originalRelayDiagnostic={kind:request.kind,action:request.action')
+    validation=result.index(fields,branch)
+    assert branch<observation<validation
+    assert result.count('                    originalRelayDiagnostic={kind:request.kind,action:request.action')==1

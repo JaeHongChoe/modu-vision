@@ -27,6 +27,7 @@ export interface SynchronizedDualViewportProps {
   heatmapOverlayBase64: string | null;
   heatmapLoading: boolean;
   heatmapError?: string | null;
+  heatmapUnavailable?: boolean;
   confidenceThreshold: number;
   scoreSpec?: ScoreSpec | null;
   /** Accepted saved-review verdict supplied by the parent; absent during ordinary preview. */
@@ -45,6 +46,7 @@ export const SynchronizedDualViewport: React.FC<SynchronizedDualViewportProps> =
   heatmapOverlayBase64,
   heatmapLoading,
   heatmapError,
+  heatmapUnavailable,
   confidenceThreshold,
   scoreSpec,
   savedReviewVerdict,
@@ -285,6 +287,9 @@ export const SynchronizedDualViewport: React.FC<SynchronizedDualViewportProps> =
             <span className="w-2 h-2 rounded-full bg-[#EF4444] animate-pulse" />
             <span className="font-bold text-[#EF4444]">{task === 'detection' ? 'DETECTION BOX OVERLAY' : '결함 열지도'}</span>
             {heatmapError && <span role="status">{heatmapError}</span>}
+            {heatmapUnavailable && !heatmapLoading && !heatmapError && !heatmapOverlayBase64 && (
+              <span role="status">현재 기준에서 제공되는 열지도가 없습니다.</span>
+            )}
             {heatmapLoading && <span className="text-[#3B82F6] text-[9px] animate-pulse ml-1">[UPDATING...]</span>}
           </div>
 

@@ -205,7 +205,7 @@ npm.cmd run package:win
 
 출력은 `release/`에 생성됩니다. macOS는 DMG·ZIP, Windows는 NSIS 설정을 사용하며 Linux x64의 AppImage·deb 빌드 경로도 있습니다. 설치본의 백엔드 Python 런타임은 번들에 포함됩니다. 플랫폼별 서명, 설치·제거·복구, 오프라인 준비 절차는 [배포 지원 표](docs/release-platform-matrix.md)를 따릅니다.
 
-macOS 설치본은 앱을 ad-hoc 서명합니다. 내려받은 서명 없는 앱은 Gatekeeper가 손상된 앱으로 막지만, ad-hoc 서명한 앱은 처음 열 때 시스템 설정 › 개인정보 보호 및 보안(macOS 13 이상)의 '그래도 열기'로 열 수 있습니다. 키체인에 이름에 '-'가 든 서명 인증서가 있으면 electron-builder가 그 인증서로 서명하므로, 빌드 뒤 `codesign -dv`로 `Signature=adhoc`인지 확인합니다. `backend_bin`은 검증 기록(`backend-release.json`)의 해시와 맞아야 하므로 다시 서명하지 않습니다. Developer ID로 서명하려면 `npm run package:mac -- -c.mac.identity="<팀 이름> (<팀 ID>)"`로 데스크톱 셸을 서명하고, 백엔드는 인벤토리를 만들기 전에 같은 인증서로 따로 서명해야 합니다.
+macOS 기본 빌더 설정은 `mac.identity: "-"`이며 실제 산출물의 서명 상태는 빌드 환경과 지정한 인증서에 따라 확인해야 합니다. 빌드 뒤 대상 `.app`에서 `codesign --verify --deep --strict`와 `codesign --display --verbose=4`의 검증 결과·서명 종류·TeamIdentifier를 보관하세요. ad-hoc 서명은 배포자 확인이나 공증을 뜻하지 않습니다. 다운로드한 DMG/ZIP의 Gatekeeper 동작과 설치·첫 실행은 대상 macOS에서 별도로 확인해야 합니다. `backend_bin`은 `backend-release.json`의 체크섬과 연결돼 패키징 재서명 대상에서 제외합니다. Developer ID 배포는 셸과 frozen 백엔드를 같은 배포자 신원으로 준비하고, 백엔드 서명 후 inventory/acceptance를 다시 만드는 절차가 필요합니다. 이후 바이트가 바뀌면 기존 검증 기록을 재사용할 수 없습니다. 서명·공증·설치/제거·복구의 최종 확인은 [배포 지원 표](docs/release-platform-matrix.md)를 따릅니다.
 
 ## 라벨링 단축키
 

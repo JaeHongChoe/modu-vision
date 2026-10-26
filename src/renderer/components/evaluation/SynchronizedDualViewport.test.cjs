@@ -89,3 +89,16 @@ test('failed saved heatmap is explicitly unavailable and cannot display prior ov
  assert.match(text(view),/현재 기준의 열지도를 불러오지 못했습니다/);
  assert.equal(h.nodes(view).filter(node=>node.type==='img'&&node.props.alt==='Heatmap').length,0);
 });
+
+test('only settled owned null renders unavailable; initial, pending, error and restored pixels stay distinct',()=>{
+ const h=harness();const text=node=>typeof node==='string'?node:(node?.children||[]).map(text).join('');
+ for(const row of [
+  {heatmapOverlayBase64:null,heatmapUnavailable:false},
+  {heatmapOverlayBase64:null,heatmapUnavailable:true,heatmapLoading:true},
+  {heatmapOverlayBase64:null,heatmapUnavailable:true,heatmapError:'요청 실패'},
+  {heatmapOverlayBase64:'/restored',heatmapUnavailable:true},
+ ])assert.doesNotMatch(text(h.render(row)),/현재 기준에서 제공되는 열지도가 없습니다/);
+ const view=h.render({heatmapOverlayBase64:null,heatmapUnavailable:true});
+ assert.equal(h.nodes(view).filter(n=>n.props.role==='status').map(text).join(''),'현재 기준에서 제공되는 열지도가 없습니다.');
+ assert.equal(h.nodes(view).filter(n=>n.type==='img'&&n.props.alt==='Heatmap').length,0);
+});

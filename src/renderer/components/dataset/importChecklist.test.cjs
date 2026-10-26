@@ -92,3 +92,8 @@ test('a saved split that leaves out newly labeled or adopted images says to appl
  assert.equal(splitMissesLabels({...detection,totalImages:0}),false);
  assert.equal(byId(importChecks({...detection,splitLocked:true}),'split'),undefined);
 });
+
+test('newly labeled saved data directs re-splitting through the Korean action used by both views',()=>{
+ const missing=byId(importChecks({...base,split:{train:0,val:0,test:0}}),'split');
+ assert.equal(missing.action,'apply_split');assert.equal(missing.level,'block');assert.match(missing.text,/이 비율로 나누기/);
+});

@@ -58,8 +58,8 @@ const comparisonTasks = new Set<string>([
 /** Metric keys as a first-time user reads them; unknown keys keep their name. */
 const METRIC_NAMES_KO: Record<string, string> = {
   accuracy: '정확도', precision: '정밀도', recall: '재현율', f1: 'F1', macro_precision: '정밀도 (평균)', macro_recall: '재현율 (평균)',
-  macro_f1: 'F1 (평균)', best_metric: '학습 중 최적 지표', image_auroc: '이미지 AUROC', pixel_auroc: '픽셀 AUROC', map: 'mAP', map50: 'mAP@50',
-  iou: 'IoU', mean_iou: '평균 IoU', dice: 'Dice', escape_rate: '미검률', overkill_rate: '과검률', review_rate: '확인 필요 비율',
+  macro_f1: 'F1 (평균)', best_metric: '학습 중 최적 지표', image_auroc: '이미지 AUROC', pixel_auroc: '픽셀 AUROC', map: 'mAP', map50: 'mAP@0.5', map_50: 'mAP@0.5', map50_95: 'mAP@0.5:0.95', map_50_95: 'mAP@0.5:0.95',
+  iou: 'IoU', miou: '평균 IoU', mean_iou: '평균 IoU', dice: 'Dice', mdice: '평균 Dice', mean_dice: '평균 Dice', escape_rate: '미검률', overkill_rate: '과검률', review_rate: '확인 필요 비율',
 };
 
 export const SampleVerdictBadge: React.FC<{ verdict: SampleVerdict; compact?: boolean }> = ({
@@ -159,6 +159,7 @@ export const EvaluationStudio: React.FC = () => {
     heatmapOverlayBase64,
     heatmapLoading,
     heatmapError,
+    heatmapUnavailable,
     isExportingReport,
     exportedReportPath,
     errorMessage,
@@ -283,6 +284,7 @@ export const EvaluationStudio: React.FC = () => {
   // Helper for technical metric keys
   const getMetricTermKey = (key: string): string => {
     const k = key.toLowerCase();
+    if (k.includes('map_50_95') || k.includes('map50_95')) return 'map_50_95';
     if (k.includes('map_50') || k.includes('map50')) return 'map_50';
     if (k.includes('auroc') || k.includes('auc')) return 'auroc';
     if (k.includes('dice') || k.includes('mdice')) return 'dice';
@@ -297,6 +299,7 @@ export const EvaluationStudio: React.FC = () => {
     let overkills = 0;
     let normalOks = 0;
     let correctNgs = 0;
+    let reviews = 0;
 
     testPredictions.forEach((p) => {
       const v = computeSampleVerdict(p, confidenceThreshold, overkillAnalysis, classSemantics?.roles);
@@ -304,6 +307,7 @@ export const EvaluationStudio: React.FC = () => {
       else if (v === 'OVERKILL') overkills++;
       else if (v === 'CORRECT_OK') normalOks++;
       else if (v === 'CORRECT_NG') correctNgs++;
+      else if (v === 'REVIEW') reviews++;
     });
 
     return {
@@ -312,6 +316,7 @@ export const EvaluationStudio: React.FC = () => {
       overkill: overkills,
       normal: normalOks,
       defect: correctNgs,
+      review: reviews,
     };
   }, [testPredictions, confidenceThreshold, overkillAnalysis, classSemantics]);
   const detectionGrains = useMemo(() => task === 'detection' && testPredictions.length > 0
@@ -327,6 +332,36 @@ export const EvaluationStudio: React.FC = () => {
   const hasNormalSamples = testPredictions.some((p) => isNormalLabel(p.ground_truth, classSemantics?.roles));
   const heldoutAnomalyTest = Boolean(metrics.anomaly_mode && metrics.evaluated_split === 'test');
   const hasCalibrationEvidence = !isLoading && !executionEvidence?.common_cohort && !heldoutAnomalyTest && metrics.score_spec?.domain !== 'distance' && Boolean(jobId && hasDefectSamples && hasNormalSamples);
+  // Explain the existing eligibility guards without changing saved/preview authority.
+  const calibrationUnavailableReason = isLoading
+    ? (language === 'ko' ? '평가 결과를 불러오는 중입니다. 완료 후 계산 가능 여부를 확인하세요.' : 'Evaluation results are loading. Check calibration availability when loading completes.')
+    : executionEvidence?.common_cohort
+    ? (language === 'ko' ? '선택 코호트 평가는 임계값 보정을 지원하지 않습니다.' : 'Selected cohort evaluation does not support threshold calibration.')
+    : heldoutAnomalyTest
+    ? (language === 'ko' ? '이상 탐지 시험 데이터는 고정된 임계값의 평가에만 사용합니다. 이 결과로 저장된 보정값을 바꾸지 않습니다.' : 'Anomaly test data evaluates a fixed threshold. These results do not replace the saved calibration.')
+    : metrics.score_spec?.domain === 'distance'
+    ? (language === 'ko' ? '거리 점수는 저장된 모델 임계값으로 판정합니다. 이 화면의 확률 임계값 보정은 지원하지 않습니다.' : 'Distance scores use the saved model threshold. Probability threshold calibration is not supported here.')
+    : !jobId
+    ? (language === 'ko' ? '평가가 완료된 모델을 먼저 불러오세요.' : 'Load an evaluated model first.')
+    : !hasDefectSamples || !hasNormalSamples
+    ? (language === 'ko' ? 'NG와 OK 검증 예측이 모두 있어야 과검·미검 임계값을 계산하고 적용할 수 있습니다.' : 'Both NG and OK validation predictions are needed to calculate and apply a threshold.')
+    : null;
+  const missedSampleUnavailableReason = isLoading
+    ? (language === 'ko' ? '평가 결과를 불러오는 중입니다.' : 'Evaluation results are loading.')
+    : !jobId
+    ? (language === 'ko' ? '평가 결과 없음' : 'No evaluation result')
+    : !testPredictions.length
+    ? (language === 'ko' ? '검증 예측 없음' : 'No validation predictions')
+    : sampleCounts.review > 0
+    ? (language === 'ko'
+      ? `판정 미확인 ${sampleCounts.review}장 · 점수·예측과 정답 역할을 확인하세요. 미검 수는 판정 가능한 표본에서 확인한 수입니다.`
+      : `${sampleCounts.review} unresolved verdict(s). Check scores, predictions and reference roles. Misses shown cover scored samples only.`)
+    : sampleCounts.escape + sampleCounts.defect === 0
+    ? (sampleCounts.normal + sampleCounts.overkill > 0
+      ? (language === 'ko' ? 'NG 정답 표본 없음' : 'No NG reference samples')
+      : (language === 'ko' ? '정상·불량 정답 역할을 확인하세요.' : 'Check the normal and defect reference roles.'))
+    : null;
+  const hasObservedMisses = Boolean(!isLoading && jobId && sampleCounts.escape > 0);
   const hasReportableResult = Boolean(jobId && Object.keys(metrics).length > 0 && testPredictions.length > 0);
   const reportAvailabilityHint = executionEvidence?.common_cohort
     ? '선택 코호트 보고서 내보내기는 아직 지원되지 않습니다.'
@@ -462,8 +497,11 @@ export const EvaluationStudio: React.FC = () => {
         return (
           <div key={k} className="p-2.5 bg-[#1A212E] rounded-[4px] border border-[#2B3547]">
             <div className="flex items-center justify-between mb-1">
-              <span className="text-[10px] text-slate-400 block uppercase">
-                {language === 'ko' ? (METRIC_NAMES_KO[k] || k.replace(/_/g, ' ')) : k.replace(/_/g, ' ')}
+              <span className="text-[10px] text-slate-400 block">
+                {language === 'ko' ? (METRIC_NAMES_KO[k.toLowerCase()] || k.replace(/_/g, ' '))
+                  : k.toLowerCase().startsWith('map') ? (METRIC_NAMES_KO[k.toLowerCase()] || k)
+                  : k.toLowerCase() === 'miou' || k.toLowerCase() === 'mean_iou' ? 'Mean IoU'
+                  : k.toLowerCase() === 'mdice' || k.toLowerCase() === 'mean_dice' ? 'Mean Dice' : k.replace(/_/g, ' ')}
               </span>
               {termKey && <JargonTooltip termKey={termKey} />}
             </div>
@@ -703,7 +741,9 @@ export const EvaluationStudio: React.FC = () => {
                   <span className="font-bold font-mono tabular-nums text-white">
                     {hasCalibrationEvidence && overkillAnalysis?.optimal_threshold !== undefined
                       ? simpleView ? overkillAnalysis.optimal_threshold.toFixed(2) : `τ* = ${overkillAnalysis.optimal_threshold.toFixed(4)}`
-                      : 'NG·OK 평가 이미지 필요'}
+                      : hasCalibrationEvidence
+                      ? (language === 'ko' ? '아직 계산하지 않음' : 'Not calculated yet')
+                      : (language === 'ko' ? '계산 불가' : 'Unavailable')}
                   </span>
                 </div>
               </div>
@@ -712,6 +752,7 @@ export const EvaluationStudio: React.FC = () => {
                 type="button"
                 onClick={() => calibrateZeroEscape()}
                 disabled={isCalibrating || !hasCalibrationEvidence}
+                title={calibrationUnavailableReason || undefined}
                 className="px-4 py-2 bg-[#0284C7] hover:bg-[#0369A1] active:bg-[#075985] text-white font-bold text-xs rounded-[4px] border border-[#38BDF8]/40 transition-all flex items-center space-x-1.5 cursor-pointer disabled:opacity-50"
               >
                 {isCalibrating ? (
@@ -1008,7 +1049,7 @@ export const EvaluationStudio: React.FC = () => {
                 />
               ) : (
                 <div className="p-3 rounded border border-amber-500/40 bg-amber-950/30 text-xs text-amber-200">
-                  NG와 OK 검증 예측이 모두 있어야 과검·미검 최적 임계값을 계산하고 적용할 수 있습니다.
+                  {calibrationUnavailableReason || (language === 'ko' ? '아직 임계값 분석 결과가 없습니다. 위의 적용 버튼으로 검증 예측을 분석하세요.' : 'No threshold analysis is available yet. Use the apply button above to analyze the validation predictions.')}
                 </div>
               )}
 
@@ -1016,8 +1057,10 @@ export const EvaluationStudio: React.FC = () => {
               <div className="grid grid-cols-2 gap-2 text-xs">
                 <div
                   className={`p-3 rounded-[4px] border ${
-                    sampleCounts.escape > 0
+                    hasObservedMisses
                       ? 'bg-[#450A0A] border-[#EF4444] text-[#FCA5A5]'
+                      : missedSampleUnavailableReason
+                      ? 'bg-[#1A212E] border-[#2B3547] text-slate-300'
                       : 'bg-[#064E3B] border-[#10B981] text-[#6EE7B7]'
                   }`}
                 >
@@ -1026,23 +1069,23 @@ export const EvaluationStudio: React.FC = () => {
                       <span>{language === 'ko' ? '미검 (불량 유출)' : 'Underkill (Escape)'}</span>
                       <JargonTooltip termKey="underkill" />
                     </span>
-                    {sampleCounts.escape > 0 ? (
+                    {hasObservedMisses ? (
                       <AlertTriangle className="w-3.5 h-3.5 text-[#EF4444] animate-pulse" />
-                    ) : (
+                    ) : !missedSampleUnavailableReason && (
                       <CheckCircle2 className="w-3.5 h-3.5 text-[#10B981]" />
                     )}
                   </div>
                   <div className="text-base font-bold font-mono tabular-nums mt-1">
-                    {sampleCounts.escape}건
+                    {missedSampleUnavailableReason && !hasObservedMisses ? '—' : `${sampleCounts.escape}건`}
                   </div>
                   <div className="text-[10px] opacity-75">
-                    {sampleCounts.escape > 0
+                    {missedSampleUnavailableReason || (sampleCounts.escape > 0
                       ? language === 'ko'
-                        ? '⚠️ 즉시 임계값 하향 필요'
-                        : 'Action Required'
+                        ? '놓친 이미지와 라벨을 확인하고, 필요하면 다시 학습·평가하세요.'
+                        : 'Review missed images and labels; retrain and evaluate if needed.'
                       : language === 'ko'
-                      ? '✅ 유출 위험 0%'
-                      : 'Zero Escape Risk'}
+                      ? '현재 평가 표본에서 미검 0건 · 현장 검증은 별도입니다.'
+                      : 'No misses in this evaluation sample; field validation is separate.')}
                   </div>
                 </div>
 
@@ -1316,6 +1359,7 @@ export const EvaluationStudio: React.FC = () => {
                   type="button"
                   onClick={() => calibrateZeroEscape()}
                   disabled={!hasCalibrationEvidence || isCalibrating}
+                  title={calibrationUnavailableReason || undefined}
                   className="px-3 py-1 bg-[#EF4444] hover:bg-[#DC2626] text-white font-bold rounded-[3px] text-xs cursor-pointer shrink-0 transition-all disabled:opacity-50"
                 >
                   검증 임계값 적용
@@ -1331,6 +1375,7 @@ export const EvaluationStudio: React.FC = () => {
               heatmapOverlayBase64={heatmapOverlayBase64}
               heatmapLoading={heatmapLoading}
               heatmapError={savedReview ? heatmapError : null}
+              heatmapUnavailable={savedReview && heatmapUnavailable}
               confidenceThreshold={imageThreshold}
               savedReviewVerdict={savedReview ? selectedVerdict ?? 'REVIEW' : undefined}
               scoreSpec={metrics.score_spec}

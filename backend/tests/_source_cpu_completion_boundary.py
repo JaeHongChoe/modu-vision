@@ -17,6 +17,209 @@ READY = 'source-cpu-completion-ready.json'
 PENDING = 'source-cpu-completion-pending.json'
 
 
+class _CodeStarts:
+    """Own only vacant monitoring slots and these exact Python code starts."""
+    def __init__(self):
+        self.tool = None
+        self.name = 'source-cpu-fixture-' + hex(id(self))
+        self.codes = []
+        monitoring = getattr(sys, 'monitoring', None)
+        if monitoring is None:
+            return
+        for tool in range(5, -1, -1):
+            if monitoring.get_tool(tool) is None:
+                try:
+                    monitoring.use_tool_id(tool, self.name)
+                except ValueError:
+                    continue
+                self.tool = tool
+                break
+
+    def owned(self):
+        return self.tool is not None and sys.monitoring.get_tool(self.tool) == self.name
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, kind, error, traceback):
+        self.close(error)
+
+    def arm(self, codes, callback):
+        assert self.owned()
+        self.codes = list(dict.fromkeys(codes))
+        try:
+            sys.monitoring.register_callback(self.tool, sys.monitoring.events.PY_START, callback)
+            for code in self.codes:
+                sys.monitoring.set_local_events(self.tool, code, sys.monitoring.events.PY_START)
+        except BaseException as error:
+            self.close(error)
+            raise
+
+    def remove(self, code):
+        if self.owned() and code in self.codes:
+            sys.monitoring.set_local_events(self.tool, code, 0)
+            self.codes.remove(code)
+
+    def close(self, primary=None):
+        if not self.owned():
+            return
+        errors = []
+        for operation in [*(lambda code=code: sys.monitoring.set_local_events(self.tool, code, 0)
+                            for code in self.codes),
+                          lambda: sys.monitoring.register_callback(self.tool, sys.monitoring.events.PY_START, None),
+                          lambda: sys.monitoring.free_tool_id(self.tool)]:
+            try:
+                if self.owned(): operation()
+            except BaseException as error:
+                errors.append(error)
+        self.codes.clear()
+        if errors and primary is None:
+            raise errors[0]
+
+
+def _restore_profile(profile, previous, primary=None):
+    try:
+        if sys.getprofile() is profile: sys.setprofile(previous)
+    except BaseException:
+        if primary is None: raise
+
+
+@contextmanager
+def backend_observer(projects, original_profile, factory):
+    """Arm the original profile only inside the selected real validator body.
+
+    Source inventory/copy, cold child imports and receipt checks are ordinary
+    runtime work. A fixture must not install Python callbacks on those frames.
+    Unknown retained profiles keep the original all-event compatibility path.
+    """
+    previous = sys.getprofile()
+    profile = factory(projects, original_profile)
+    boundary = getattr(profile, 'boundary', profile)
+    guard_code = getattr(original_profile, '_fixture_guard_code', None)
+    sparse = (previous is None and hasattr(boundary, 'action')
+              and (original_profile is None or guard_code is not None))
+    monitor = _CodeStarts() if sparse else None
+    if monitor is None or not monitor.owned():
+        sys.setprofile(profile)
+        try:
+            yield
+        finally:
+            _restore_profile(profile, previous, sys.exc_info()[1])
+        return
+    with monitor:
+        from backend.engine import application_launch_handshake as h
+        validator = h._validate_service_action.__code__
+        service = h.backend_execution_service.__code__
+        post_line = completion_post_line(h.backend_execution_service)
+        thread = threading.get_ident()
+
+        def retire():
+            _restore_profile(profile, previous)
+            monitor.remove(validator)
+            if guard_code is None:
+                monitor.close()
+
+        boundary.retire = retire
+        def start(code, offset):
+            if threading.get_ident() != thread:
+                return
+            current = sys.getprofile()
+            if current is profile:
+                return  # The selected genuine validator already owns its profile.
+            if current is not previous:
+                monitor.close()  # Never adopt or replace an external profile.
+                return
+            frame = sys._getframe(1)
+            if code is guard_code:
+                try:
+                    original_profile(frame, 'call', None)
+                except BaseException as error:
+                    if original_profile._fixture_guard_consumed: monitor.close(error)
+                    raise
+                if original_profile._fixture_guard_consumed: monitor.close()
+                return
+            caller = frame.f_back
+            if caller is None or caller.f_code is not service or caller.f_lineno != post_line:
+                return
+            sys.setprofile(profile)
+            try:
+                # PY_START is already inside this frame; CPython's earlier profile
+                # call was not installed. Deliver that one genuine entry explicitly.
+                profile(frame, 'call', None)
+                profile._sparse_entry = frame
+            except BaseException as error:
+                _restore_profile(profile, previous, error)
+                monitor.close(error)
+                raise
+            if boundary.action is not frame and sys.getprofile() is profile:
+                sys.setprofile(previous)
+        codes = [validator] + ([] if guard_code is None else [guard_code])
+        monitor.arm(codes, start)
+        primary = None
+        try:
+            yield
+        except BaseException as error:
+            primary = error
+            raise
+        finally:
+            _restore_profile(profile, previous, primary)
+            monitor.close(primary)
+
+
+@contextmanager
+def controller_dispatch(readiness, codes, *, enabled=True):
+    """Dispatch the same original controller callbacks only at their code starts."""
+    if not enabled or readiness is None or readiness.upstream is not None:
+        yield
+        return
+    monitor = _CodeStarts()
+    if not monitor.owned():
+        yield
+        return
+    with monitor:
+        previous = readiness.upstream
+        active = sys.getprofile()
+        assert active is readiness.installed
+        thread = threading.get_ident()
+        def start(code, offset):
+            nonlocal active
+            if threading.get_ident() != thread or active is None:
+                return
+            if sys.getprofile() is not previous:
+                active = None
+                monitor.close()
+                return
+            frame = sys._getframe(1)
+            callback = active
+            sys.setprofile(callback)
+            try:
+                callback(frame, 'call', None)
+                callback._sparse_entry = frame
+            except BaseException as error:
+                _restore_profile(callback, previous, error)
+                active = None
+                monitor.close(error)
+                raise
+            current = sys.getprofile()
+            if current is readiness.installed:
+                active = current
+                sys.setprofile(previous)
+            else:
+                active = None
+                monitor.close()
+        monitor.arm(codes, start)
+        sys.setprofile(previous)
+        primary = None
+        try:
+            yield
+        except BaseException as error:
+            primary = error
+            raise
+        finally:
+            if active is not None: _restore_profile(active, previous, primary)
+            monitor.close(primary)
+
+
 def read(projects, name):
     raw = (projects / name).read_bytes()
     assert len(raw) <= 4096, 'Fixture boundary observation exceeds its bound'
@@ -107,6 +310,7 @@ def backend_profile(projects, original_profile):
 
     def profile(frame, event, arg):
         nonlocal done
+        if event == 'call' and getattr(profile, '_sparse_entry', None) is frame: return
         if original_profile is not None: original_profile(frame, event, arg)
         # The retained drain guard may deliberately clear profiling itself.
         if sys.getprofile() is not profile.installed or done: return
@@ -135,10 +339,13 @@ def backend_profile(projects, original_profile):
                     'deadline': min(deadline, metadata['deadline']), 'normal_return': True,
                     'time': time.monotonic()})
                 # The outer contention hook shares this one-shot ownership.
-                if sys.getprofile() is profile.installed: sys.setprofile(original_profile)
+                if sys.getprofile() is profile.installed:
+                    if profile.retire is None: sys.setprofile(original_profile)
+                    else: profile.retire()
             profile.action = None
     profile.action = None
     profile.installed = profile
+    profile.retire = None
     return profile
 
 
@@ -172,7 +379,7 @@ def controller_boundary(owner, original_code):
     from backend.engine import application_launch_execution as execution
     projects = owner.root / 'projects'
     if not (projects / CONFIG).exists():
-        yield
+        yield None
         return
     metadata = configuration(projects); thread = threading.get_ident(); previous = sys.getprofile()
     def forward(frame, event, arg):
@@ -195,6 +402,7 @@ def controller_boundary(owner, original_code):
         profile.released = True
 
     def profile(frame, event, arg):
+        if event == 'call' and getattr(profile, '_sparse_entry', None) is frame: return
         forward(frame, event, arg)
         if profile.released or event != 'call' or frame.f_code is not execution.verify_completion.__code__: return
         if threading.get_ident() != thread or frame.f_locals.get('owner') is not owner: return
@@ -214,7 +422,7 @@ def controller_boundary(owner, original_code):
     profile.release = release
     sys.setprofile(profile)
     try:
-        yield
+        yield profile
     finally:
         # CPython clears a throwing profile; preserve its retained upstream,
         # but never revive an upstream callback after an intentional handoff.

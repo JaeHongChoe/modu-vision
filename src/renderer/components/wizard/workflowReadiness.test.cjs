@@ -344,7 +344,7 @@ test('step 4 shows the loaded evaluation as an accuracy range, missed defects an
  // 2 missed defects: the step is looked at before step 5 (5.3-4), the action opens the 미검 tab.
  assert.equal(evaluated.status,'blocked');assert.equal(evaluated.nextAction.label,'틀린 이미지 보기');
  assert.deepEqual([evaluated.nextAction.step,evaluated.nextAction.target],[4,'workflow-missed-defects']);
- assert.equal(evaluated.missingInputs[0],'모델이 시험 이미지의 불량을 놓쳤습니다');assert.match(evaluated.missingInputs[1],/라벨 수정.*판정 기준 점수를 낮추거나.*→ 버튼/);assert.doesNotMatch(evaluated.missingInputs[1],/추천 점수 적용/,'a label shown in the simple view only');
+ assert.equal(evaluated.missingInputs[0],'모델이 시험 이미지의 불량을 놓쳤습니다');assert.match(evaluated.missingInputs[1],/라벨 수정.*다시 학습.*평가.*→ 버튼/);assert.doesNotMatch(evaluated.missingInputs[1],/점수를 낮추|임계값.*하향|추천 점수 적용/,'a label shown in the simple view only');
  assert.deepEqual(evaluated.progress,counts);
  // False alarms alone keep the ready path: the recommended score trades them for no misses, and the line still shows them.
  const alarms=getNextAction({...withModel,evaluation:{...counts,escapes:0}});

@@ -53,6 +53,13 @@ test('project source transport and generation switches abort only the owned expo
 test('response arriving after a generation changes but before rerender is not adopted',async()=>{const h=await setup();try{
  click(h,'라벨 내보내기');h.move({generationOnly:true});h.finish(0);await tick();assert.equal(h.downloads.length,0);h.render();assert.equal(h.requests[0].signal.aborted,true);assert.equal(h.button(cancelName).props.disabled,true);
  }finally{h.unmount();h.restore();}});
+test('a labelset switch aborts its old export and permits a fresh owned export',async()=>{const h=await setup();try{
+ click(h,'라벨 내보내기');h.project.project={...h.project.project,active_labelset_id:'next-labels'};h.render();
+ assert.equal(h.requests[0].signal.aborted,true,'an old-labelset export cannot hold the new labelset busy');
+ await tick();click(h,'라벨 내보내기');assert.equal(h.requests.length,2);
+ h.finish(0);await tick();assert.equal(h.downloads.length,0);
+ h.finish(1);await tick();assert.deepEqual(h.downloads,[{href:'/api/download/owned-1.zip',download:'labelme_annotations.zip'}]);
+ }finally{h.unmount();h.restore();}});
 test('unmount aborts the owned export and late completion performs no component state writes',async()=>{const h=await setup();try{
  click(h,'라벨 내보내기');h.unmount();assert.equal(h.requests[0].signal.aborted,true);h.finish(0);await tick();assert.equal(h.downloads.length,0);assert.equal(h.lateStateWrites(),0);
  }finally{h.restore();}});

@@ -361,7 +361,7 @@ export const useDatasetStore = create<DatasetState>((set, get) => ({
 
   applySplit: async (ratio, valRatio, testRatio = 0) => {
     const authority = readAuthority();
-    if (get().sourceAuthority !== authority) return;
+    if (get().isLoading || get().importError || get().sourceAuthority !== authority) return;
     const requestId = ++latestSplitRequest;
     const { folderPath, datasetKey } = get();
     const current = () => requestId === latestSplitRequest && get().datasetKey === datasetKey
@@ -409,22 +409,22 @@ export const useDatasetStore = create<DatasetState>((set, get) => ({
   },
 
   annotationsChanged: async () => {
+    const { folderPath, datasetKey, sourceAuthority } = get();
     const authority = readAuthority();
-    if (get().sourceAuthority !== authority) return;
-    const currentKey = get().datasetKey;
-    if (currentKey) {
-      set((state) => ({ staleDatasetKeys: [...new Set([...state.staleDatasetKeys, currentKey])] }));
-    }
-    invalidateDownstream();
-    const { folderPath, datasetKey } = get();
-    if (!datasetKey) return;
-    latestImageRequest += 1;
-    // Until the refreshed manifest is read, never show the old split as trainable.
-    set({ split: { train: 0, val: 0, test: 0 }, classSplitCounts: null, splitError: null });
+    if (!datasetKey || sourceAuthority !== authority) return;
     const task = datasetKey.slice(datasetKey.lastIndexOf('\0') + 1) as VisionTask;
     const requestId = ++latestImportRequest;
-    const current = () => requestId === latestImportRequest && get().datasetKey === datasetKey
-      && get().sourceAuthority === authority && readAuthority() === authority;
+    const current = () => requestId === latestImportRequest && get().folderPath === folderPath
+      && get().datasetKey === datasetKey && get().sourceAuthority === sourceAuthority && readAuthority() === authority;
+    latestImageRequest += 1;
+    // Publish the unresolved summary as one transition before synchronous subscribers can act on it.
+    set((state) => ({
+      isLoading: true, importError: null, split: { train: 0, val: 0, test: 0 }, classSplitCounts: null, splitError: null,
+      staleDatasetKeys: [...new Set([...state.staleDatasetKeys, datasetKey])],
+    }));
+    if (!current()) return;
+    invalidateDownstream();
+    if (!current()) return;
     try {
       const res = await api.dataset.import({ folder_path: folderPath, task, validate_images: false });
       if (!current()) return;
@@ -440,12 +440,14 @@ export const useDatasetStore = create<DatasetState>((set, get) => ({
         splitState: res.split_state ?? get().splitState,
         labelsMissing: Boolean(res.labels_missing),
         importError: null,
+        isLoading: false,
         page: 1,
       });
+      if (!current()) return;
       await get().loadImages(1);
     } catch (error) {
       if (current()) {
-        set({ importError: importErrorMessage(error) });
+        set({ isLoading: false, importError: importErrorMessage(error) });
       }
     }
   },
@@ -477,6 +479,7 @@ export const useDatasetStore = create<DatasetState>((set, get) => ({
         ...(res.class_split_counts != null ? { classSplitCounts: res.class_split_counts } : {}),
         page: p,
       });
+      if (!current()) return;
       // A split/label refresh may occur while the gallery is filtered. Obtain
       // its full summary independently so a page can never stand in for a class.
       if (get().classSplitCounts === null && (task === 'classification' || task === 'anomaly')
