@@ -109,6 +109,32 @@ def test_forwarded_headers_do_not_change_valid_request_scope(renderer):
     assert api.scopes == [scope]
 
 
+@pytest.mark.parametrize('metadata', [(), ((b'sec-fetch-site', b'none'),),
+    ((b'sec-fetch-site', b'same-site'),), ((b'sec-fetch-site', b'cross-site'),),
+    ((b'sec-fetch-site', b'same-origin'), (b'sec-fetch-site', b'same-site'))])
+@pytest.mark.parametrize('cookies', [((b'cookie', b'vision_session=synthetic'),),
+    ((b'cookie', b'other=value; vision_session="synthetic"'),),
+    ((b'cookie', b'other=value'), (b'cookie', b'vision_session=synthetic'))])
+def test_cookie_api_without_origin_requires_unambiguous_same_origin_metadata(renderer, metadata, cookies):
+    app, api = app_for(renderer)
+    _, messages = invoke(app, '/api/evaluation/zero-escape-calibrate', extra=(*cookies, *metadata))
+    assert messages[0]['status'] == 403
+    assert api.scopes == []
+
+
+def test_cookie_reads_keep_same_origin_metadata_explicit_origin_and_bearer_paths(renderer):
+    app, api = app_for(renderer)
+    cookie = (b'cookie', b'vision_session=synthetic')
+    for extra, origin in (
+        ((cookie, (b'sec-fetch-site', b'same-origin')), None),
+        ((cookie,), ORIGIN),
+        ((cookie, (b'authorization', b'Bearer synthetic')), None),
+    ):
+        scope, messages = invoke(app, '/api/accounts/me', extra=extra, origin=origin)
+        assert messages[0]['status'] == 401  # synthetic API still owns authentication
+        assert api.scopes[-1] is scope
+
+
 @pytest.mark.parametrize('origin', [None, 'https://foreign.test'])
 def test_websocket_requires_its_exact_origin(renderer, origin):
     app, api = app_for(renderer)
@@ -178,7 +204,8 @@ def test_real_api_cookie_csrf_and_bootstrap_are_not_bypassed(renderer, tmp_path,
     monkeypatch.setenv('MODU_BROWSER_ORIGINS', json.dumps([origin]))
     api = create_app(project_dir=str(tmp_path / 'projects'), shared_auth_dir=str(tmp_path / 'auth'))
     api.state.accounts.bootstrap('synthetic-admin', 'synthetic password 123')
-    client = TestClient(SharedSecurityHeaders(LocalWebApp(api, renderer, origin)), base_url=origin, headers={'Origin': origin})
+    served = SharedSecurityHeaders(LocalWebApp(api, renderer, origin))
+    client = TestClient(served, base_url=origin, headers={'Origin': origin})
     assert client.get('/').status_code == 200
     refused = client.get('/api/context')
     assert refused.status_code == 401
@@ -191,6 +218,11 @@ def test_real_api_cookie_csrf_and_bootstrap_are_not_bypassed(renderer, tmp_path,
     assert accepted.status_code == 200
     assert accepted.headers['x-frame-options'] == 'DENY'
     assert accepted.headers['referrer-policy'] == 'no-referrer'
+    metadata_client = TestClient(served, base_url=origin)
+    metadata_client.cookies.update(client.cookies)
+    for metadata in ({}, {'Sec-Fetch-Site': 'same-site'}, {'Sec-Fetch-Site': 'cross-site'}):
+        assert metadata_client.get('/api/accounts/me', headers=metadata).status_code == 403
+    assert metadata_client.get('/api/accounts/me', headers={'Sec-Fetch-Site': 'same-origin'}).status_code == 200
     assert client.post('/api/accounts/logout').status_code == 403
     assert client.post('/api/accounts/logout', headers={'X-Vision-CSRF': login.json()['csrf_token']}).status_code == 200
 

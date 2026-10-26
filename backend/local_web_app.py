@@ -3,6 +3,7 @@
 No engine import belongs here: the launcher pins storage before creating the API.
 """
 import os
+from http.cookies import CookieError, SimpleCookie
 from pathlib import Path
 import re
 import stat
@@ -112,6 +113,29 @@ class LocalWebApp:
             return
         path = scope['path']
         if path in {'/api', '/health', '/ws'} or path.startswith(('/api/', '/ws/', '/health/')):
+            if scope['type'] == 'http' and (path == '/api' or path.startswith('/api/')) and not origins:
+                authorization = next((value for name, value in scope['headers']
+                                      if name.lower() == b'authorization'), b'')
+                # Cookie GETs may start evaluation or calibration. SameSite
+                # cookies span localhost ports, so require browser-enforced
+                # origin metadata when a trusted Origin is absent. Bearer
+                # callers keep the existing authentication path.
+                if not authorization.removeprefix(b'Bearer '):
+                    browser_cookie = False
+                    for name, value in scope['headers']:
+                        if name.lower() != b'cookie':
+                            continue
+                        cookies = SimpleCookie()
+                        try:
+                            cookies.load(value.decode('latin-1'))
+                        except CookieError:
+                            await _refuse(scope, send, 403)
+                            return
+                        browser_cookie |= bool(cookies.get('vision_session') and cookies['vision_session'].value)
+                    sites = [value for name, value in scope['headers'] if name.lower() == b'sec-fetch-site']
+                    if browser_cookie and sites != [b'same-origin']:
+                        await _refuse(scope, send, 403)
+                        return
             await self.api_app(scope, receive, send)
             return
         if scope['type'] == 'websocket':
