@@ -224,3 +224,18 @@ test('acceptance run base keeps the historical default', () => {
 test('an explicit acceptance run base places new evidence in the requested plan', () => {
     assert.equal(helper.resolveRunBase('/owned/repo', { MV_BROWSER_ACCEPTANCE_BASE: '/owned/integration/private' }), '/owned/integration/private');
 });
+test('supporting cookie readback sends the exact trusted product Origin', () => {
+    const headers = helper.apiReadHeaders('https://localhost:53154', { project_id: 'selected-project' });
+    assert.equal(headers.Origin, 'https://localhost:53154');
+});
+test('supporting cookie readback retains its trusted Origin before project context exists', () => {
+    assert.deepEqual(helper.apiReadHeaders('https://localhost:53154', null), { Origin: 'https://localhost:53154' });
+});
+test('supporting readback preserves the selected project and complete context without mutation', () => {
+    const context = Object.freeze({ project_id: 'selected-project', workspace_id: 'workspace', actor_id: 'owner', extra: 'retained' });
+    const headers = helper.apiReadHeaders('https://localhost:53154', context);
+    assert.equal(headers['X-Vision-Project'], 'selected-project');
+    assert.equal(headers['X-Vision-Context'], '{"project_id":"selected-project","workspace_id":"workspace","actor_id":"owner","extra":"retained"}');
+    assert.deepEqual(context, { project_id: 'selected-project', workspace_id: 'workspace', actor_id: 'owner', extra: 'retained' });
+    assert.equal(headers.Authorization, undefined);
+});

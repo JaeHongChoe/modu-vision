@@ -83,6 +83,10 @@ function resolveRunBase(repo, env = process.env) {
         return path.resolve(env.MV_BROWSER_ACCEPTANCE_BASE);
     return path.join(repo, '.superpowers/sdd/2026-10-26-local-browser-launch/private');
 }
+function apiReadHeaders(origin, context) {
+    // Supporting cookie-jar client only; browser-page metadata is never rewritten.
+    return { Origin: origin, ...(context ? { 'X-Vision-Project': context.project_id, 'X-Vision-Context': JSON.stringify(context) } : {}) };
+}
 // Final success belongs to the body AND every required owned cleanup action.
 async function finalizeRun({ state, browser, server, save, bodySucceeded = false, bodyError }) {
     const errors = [];
@@ -139,7 +143,7 @@ async function finalizeRun({ state, browser, server, save, bodySucceeded = false
     if (errors.length)
         throw new AggregateError(errors, 'Owned cleanup failed: ' + errors.map(error => error.message || String(error)).join('; '));
 }
-module.exports = { snapshot, verifySnapshot, reserveTraining, parseReady, fixtures, releaseUnsentTraining, observeResponse, recordLaunch, reserveArtifact, finalizeRun, validTelemetrySocket, verifyWireResponse, resolveRunBase };
+module.exports = { snapshot, verifySnapshot, reserveTraining, parseReady, fixtures, releaseUnsentTraining, observeResponse, recordLaunch, reserveArtifact, finalizeRun, validTelemetrySocket, verifyWireResponse, resolveRunBase, apiReadHeaders };
 const pause = ms => new Promise(resolve => setTimeout(resolve, ms));
 async function portClosed(port) { return new Promise(resolve => { const socket = net.connect({ host: '127.0.0.1', port }); socket.once('connect', () => { socket.destroy(); resolve(false); }); socket.once('error', () => resolve(true)); }); }
 async function until(predicate, timeout = 30000) { const stop = Date.now() + timeout; while (Date.now() < stop) {
@@ -268,7 +272,7 @@ async function main() {
     };
     const wire = (target, route, method) => observeResponse(target.waitForResponse(r => new URL(r.url()).pathname === route && r.request().method() === method, { timeout: 30000 }));
     const checked = async (response) => { assert.ok(response.ok(), 'HTTP ' + response.status() + ': ' + (await response.text()).slice(0, 1000)); return response.json(); };
-    const api = async (route) => checked(await context.request.get(server.ready.url + route, { headers: apiContext ? { 'X-Vision-Project': apiContext.project_id, 'X-Vision-Context': JSON.stringify(apiContext) } : {} }));
+    const api = async (route) => checked(await context.request.get(server.ready.url + route, { headers: apiReadHeaders(server.ready.url, apiContext) }));
     const stage = (target, index) => target.getByRole('navigation', { name: 'Workflow Stages' }).getByRole('button').nth(index).click();
     const expand = async (target, text) => { const summary = target.locator('summary').filter({ hasText: text }); if (await summary.locator('..').getAttribute('open') === null)
         await summary.click(); };
