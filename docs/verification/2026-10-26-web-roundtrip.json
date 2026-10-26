@@ -1,0 +1,210 @@
+{
+  "schema_version": 1,
+  "verified_at": "2026-10-26T05:33:02.987646+00:00",
+  "base_head": "13040627401db00c196614c707d063600646cd6b",
+  "run_id": "2026-10-26T05-29-46-051Z-9492",
+  "transport": "real Chromium HTTPS same-origin cookie session; isolated synthetic account/backend",
+  "result": {
+    "tests": 3,
+    "passed": 3,
+    "retries": 0
+  },
+  "source_sha256": {
+    "backend/api/routes_project.py": "977913276fea5bec7860eb85c1a4c5bb9dd70361a9d57ac7076f7e981fee1e37",
+    "backend/api/routes_dataset.py": "c70d2649ece6307f8cea87c334f7353a71ede385cbefc86290c56d4d990a2440",
+    "src/renderer/components/dataset/DatasetStudio.tsx": "1bd4a50fa43090f270c817ee24295b47d292adf33c8a53789a7cca112b956258",
+    "src/renderer/components/dataset/DatasetImportPanel.tsx": "e6fc80ca9e25b8ccb3ad72df23e75b1d8adf824276e0e4a11829d5dd0b1ad1ed",
+    "src/renderer/components/dataset/uploadedDatasetSource.ts": "f07ea8a3bd4bd6a09c5e2460a44355a4105ecafd75703e8ca3d13be2a4d65dcf",
+    "src/renderer/components/compute/SharedProjectPanel.tsx": "7c6078a5aac6f3de50313c74ea0715826b6ddcd8d8c619191b61c69441fca72b",
+    "src/renderer/stores/useDatasetStore.ts": "0cc7f95ab30a067586be851a4e11fddf000f5e3a24afc91b71114f41d25a05fb",
+    "src/renderer/services/api.ts": "a1e26efbfa964acf0dfefc7d8f55c867214b62e93eab34823208cdf5280d152d",
+    "src/renderer/services/generated/apiTypes.ts": "a6a32ccc002be3504d42059cfd82f1fcb6b546eaba43c0cfecaa8c499e118e05"
+  },
+  "classification": {
+    "images": 16,
+    "classes": {
+      "OK": 8,
+      "NG": 8
+    },
+    "split": {
+      "train": 10,
+      "val": 4,
+      "test": 2
+    },
+    "actual_ui_class_put": true,
+    "training": {
+      "job_id": "job_1792992615_a9eef9",
+      "model": "resnet18",
+      "epochs": 1,
+      "image_size": 64,
+      "batch_size": 2,
+      "device": "cpu",
+      "max_runtime_s": 60,
+      "completed": true,
+      "weights_sha256": "f37072fd47e89c5e827621c5baffa7500819f7896bbacec160b1a16c560e07ec"
+    },
+    "evaluation": {
+      "evaluation_id": "evaluation_bcc22a5dda044c34b8df34894081ee0e",
+      "job_id": "job_1792992615_a9eef9",
+      "split": "test",
+      "images": 2,
+      "selection_overlap": false,
+      "accuracy": 0.5,
+      "confusion_matrix": [
+        [
+          0,
+          1
+        ],
+        [
+          0,
+          1
+        ]
+      ],
+      "device_selection": "automatic backend resolver",
+      "health_device": "mps"
+    },
+    "preserved_sha256": {
+      "checkpoint_sha256": "d80d18f34d24a393dacba478c429674f950b2f6fd3194fbdec23bfb123629601",
+      "metadata_sha256": "2d7789ee29e2b8437802ff8bae1eea9c07c074f16185c6c2f1eaae9046ed6f7f",
+      "receipt_sha256": "125cac3b852500e08138e437cb874e78bd7288f4a729fa2aa4f71e60e0b9c1bf",
+      "evaluation_sha256": "aa20bc9c8335099ba9ebf78b41ed57b02300ceff7519a880384ccc697cba681e",
+      "history_sha256": "07c7d059824ab14bc4ecd97baf978521b62c4344acbef1cfb5df64bb41589392"
+    },
+    "all_input_image_sha256": [
+      {
+        "relative_path": "OK/ok_0.png",
+        "sha256": "97b9b31ae32e840c54537791138b60b75c0c2c33a3918450a6cb882b9d3deb1a"
+      },
+      {
+        "relative_path": "OK/ok_1.png",
+        "sha256": "6c98c6137b76ac6c74ff60c1287fc66a541edf9f8d44b9ec9e86583ee1d383da"
+      },
+      {
+        "relative_path": "OK/ok_2.png",
+        "sha256": "7796fa18b6376048fd6af48897e64cbb8b3bcaec137e151510d93470f381252c"
+      },
+      {
+        "relative_path": "OK/ok_3.png",
+        "sha256": "5c9e40767cd9def4fefe079fd60865b5246d698a17e9882e181451c48d8ee967"
+      },
+      {
+        "relative_path": "OK/ok_4.png",
+        "sha256": "252e293cdaff0a0bd397cdb60e7bb76bdf0405646ab9ff3f90f8ec8d0f1ee4e6"
+      },
+      {
+        "relative_path": "OK/ok_5.png",
+        "sha256": "bfe9f03801bd1b6b6b408d72c7132227bd88d5f43474a4344b28e63acaa38489"
+      },
+      {
+        "relative_path": "OK/ok_6.png",
+        "sha256": "9a08740d824958aa3e6b726ad0df8612f96c6f57b6b1441df40892ec8966e77f"
+      },
+      {
+        "relative_path": "OK/ok_7.png",
+        "sha256": "0377f8ae8e54ab6cac9856908d0b1c8b0d1147a13a3ee2cc4871df0546f88f2a"
+      },
+      {
+        "relative_path": "NG/ng_0.png",
+        "sha256": "f9e93f2cc1f9c317bde6929ddd2a4572beeba7ac87e82b030f6db58e9e74efcf"
+      },
+      {
+        "relative_path": "NG/ng_1.png",
+        "sha256": "3311766b95e1fa51704574eebef2a0b603c31b778aa07d47fc4589190e676847"
+      },
+      {
+        "relative_path": "NG/ng_2.png",
+        "sha256": "8361c865738bbb3b5ea5421ad3240bb5884ddcd51a82458c1491cdf6c6082f5f"
+      },
+      {
+        "relative_path": "NG/ng_3.png",
+        "sha256": "853db2275d12c63d5435d2ac2a8d95b48db53237bf5130f94b33114234e0cea5"
+      },
+      {
+        "relative_path": "NG/ng_4.png",
+        "sha256": "8002aab3739b0fb25419c41c690bf60271b0d7a5c38b31c042cc33c401cc1aff"
+      },
+      {
+        "relative_path": "NG/ng_5.png",
+        "sha256": "f8ec2114f5e71b765bf994a08fc3cb80ba71775935618a165daa29b94475a4cc"
+      },
+      {
+        "relative_path": "NG/ng_6.png",
+        "sha256": "6140b48715c8f6e42393514b281efabfbff26ccf4f875a2a03938f7118be828d"
+      },
+      {
+        "relative_path": "NG/ng_7.png",
+        "sha256": "3207d855234d44a881fe8cbf767e16493c0ba8a1a1b474c0638d728a77f7965b"
+      }
+    ],
+    "reload_login": true,
+    "backend_restart_new_context_login": true,
+    "post_restart_label_write": true,
+    "retrained_on_reconnect": false
+  },
+  "detection": {
+    "actual_canvas_bbox_save_post": true,
+    "bbox": [
+      32,
+      40,
+      144,
+      168
+    ],
+    "class": "defect",
+    "annotation_sha256": "fa2b7061c401d16f9e40e63ac7024165d6a60c16006b01f6759de2ee6da84831",
+    "image_sha256": "69b8d48d01d207df8ca1d8fd1175900cab9152ec637e66ffa4f22b3a44f42120",
+    "reload_relogin_preserved": true,
+    "model_training": false
+  },
+  "owned_cleanup": [
+    {
+      "case": "browser-upload-lifecycle-e-37e67-citly-adopts-its-own-images-browser",
+      "backend_port_closed": true,
+      "proxy_port_closed": true,
+      "group_alive": false
+    },
+    {
+      "case": "browser-training-reconnect-d106c-relogin-and-backend-restart-browser",
+      "backend_port_closed": true,
+      "proxy_port_closed": true,
+      "group_alive": false
+    },
+    {
+      "case": "browser-upload-annotation--8f045-ox-after-reload-and-relogin-browser",
+      "backend_port_closed": true,
+      "proxy_port_closed": true,
+      "group_alive": false
+    }
+  ],
+  "supporting_checks": {
+    "renderer_passed": 2333,
+    "backend_source_cas_passed": 29,
+    "backend_source_workspace_selection_passed": 22,
+    "backend_raw_archive_import_reopen_status_passed": 45,
+    "typescript": "passed",
+    "generated_api_contract": "passed",
+    "service_plan": "passed",
+    "action_evidence": "passed",
+    "legacy_pinned_browser": {
+      "tests": 9,
+      "passed": 9,
+      "run_id": "2026-10-26T05-31-18-564Z-10095",
+      "mode": "browser with desktop host shim; no model execution; not native acceptance"
+    }
+  },
+  "limits": [
+    "Synthetic functional verification, not field/model-quality acceptance.",
+    "Chromium on macOS arm64; not Safari/Firefox/all-OS/native installer qualification.",
+    "Standard evaluation used automatic device resolution (health: mps), independent of explicit CPU training.",
+    "The owned HTTPS fixture does not proxy WebSockets; telemetry is not qualified and handshake failures are retained.",
+    "Prelogin401, owned-restart503 and teardown connection refusals remain in logs; no page errors.",
+    "Local Python3.13.5/Node26.4.0 and reused ML packages with isolated HTTP dependencies are not the locked hosted CI environment.",
+    "Historical execution receipts and acceptance states were not promoted by current source declaration updates."
+  ],
+  "prior_pr_ci_or_merge_modified": false,
+  "automation_created": false,
+  "new_browser_test_sha256": {
+    "scripts/e2e/browser-upload-lifecycle.spec.ts": "21ac75fed491f175c429e7c3e0acf96db053dceaae5d6574f51a43b5ec236f39",
+    "scripts/e2e/browser-upload-annotation-reconnect.spec.ts": "8218716937a62285861459fbe800a647b936a4ca6528ecbc020d0e329e8e0d8b",
+    "scripts/e2e/browser-training-reconnect.spec.ts": "8bff6f45e6e3968caa36c40062e5254f0de5bbaf175f381be33c01e0952ca518"
+  }
+}

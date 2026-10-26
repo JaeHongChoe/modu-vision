@@ -100,7 +100,7 @@ function fixture({administrator = true, loggedIn = true, refused = ''} = {}) {
     '../../services/hostAdapter': {host},
     '../../stores/useProjectStore': {useProjectStore: store, saveOpenEdits: async () => {}},
     '../../stores/useComputeStore': {resetComputeTransportCache: () => resets.push(client.getProjectContext())},
-    '../../stores/useDatasetStore': {useDatasetStore: {getState: () => ({setFolderPath: () => {}})}},
+    '../../stores/useDatasetStore': {useDatasetStore: Object.assign(selector => selector({isLoading: false, isSplitting: false}), {getState: () => ({setFolderPath: () => {}})})},
     '../../stores/useAnnotationStore': {useAnnotationStore: {getState: () => ({setReviewerName: () => {}, setImages: async () => {}})}},
     '../../services/websocket': {telemetryService: {disconnect: () => {}, connect: async () => {}}},
   }).SharedProjectPanel;

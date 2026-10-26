@@ -24,7 +24,7 @@ function load(filename, mocks) {
   return m.exports;
 }
 
-function harness({ holdSave = false, holdImport = false, holdImages = false, holdSplit = false, withImages = false, importFailure, saveFailure, onInvalidate } = {}) {
+function harness({ holdSave = false, holdImport = false, holdImages = false, holdSplit = false, holdSummary = false, withImages = false, hostKind = 'desktop', importFailure, saveFailure, onInvalidate } = {}) {
   let generation = 0, backend = 'A', port = 8001, cursor = 0;
   let context = {workspace_id: 'workspace', project_id: 'A', actor_id: 'actor', mode: 'local'};
   const project = { task: 'classification', language: 'en', projectDir: '/projects/A', backendPort: port,
@@ -33,16 +33,17 @@ function harness({ holdSave = false, holdImport = false, holdImages = false, hol
     getState: () => state,
     setState: change => Object.assign(state, typeof change === 'function' ? change(state) : change),
   });
-  const projectStore = hook(project), calls = [], pickers = [], saves = [], imports = [], imageReads = [], imageRequests = [], summaries = [], splits = [], slots = [], effects = [];
+  const projectStore = hook(project), calls = [], pickers = [], saves = [], imports = [], imageReads = [], imageRequests = [], summaries = [], summaryReads = [], splits = [], slots = [], effects = [];
   const summary = { total_images: 3, source_images: 3, classes: { OK: 3 }, split: { train: 2, val: 1, test: 0 } };
   const imageResult = folder => ({items: withImages ? [{image_id: 'part', file_name: 'part.png', file_path: `${folder}/part.png`,
     thumbnail_url: `/api/dataset/thumbnail/part.png?file_path=${folder}/part.png`, label: 'OK', split: 'train', width: 24, height: 24}] : [], total: 3});
   const api = {
     project: { update: async data => {
-      calls.push({ kind: 'save', backend, project: project.project.id, folder: data.source_dataset_dir });
-      if (saveFailure) throw saveFailure;
+      calls.push({ kind: 'save', backend, project: project.project.id, folder: data.source_dataset_dir,
+        ...(data.expected_source ? {expected_source: data.expected_source} : {}) });
       const saved = { ...project.project, source_dataset_dir: data.source_dataset_dir };
       if (holdSave) { const pending = deferred(); saves.push(pending); await pending.promise; }
+      if (saveFailure) throw saveFailure;
       return saved;
     } },
     dataset: {
@@ -57,7 +58,7 @@ function harness({ holdSave = false, holdImport = false, holdImages = false, hol
         if (holdImages) {const pending = deferred(); imageRequests.push(pending); return pending.promise;}
         return imageResult(data.folder_path);
       },
-      currentSummary: async data => {summaries.push({backend, ...data}); return summary;},
+      currentSummary: async data => {summaries.push({backend, ...data}); if (holdSummary) {const pending = deferred(); summaryReads.push(pending); return pending.promise;} return summary;},
       split: async data => {
         calls.push({kind: 'split', backend, ...data});
         if (holdSplit) {const pending = deferred(); splits.push(pending); return pending.promise;}
@@ -115,7 +116,7 @@ function harness({ holdSave = false, holdImport = false, holdImages = false, hol
       useDatasetStore: Object.assign(selector => selector ? selector(store.getState()) : store.getState(), {getState: store.getState}) }
     : name === '../common/ScopedDatasetThumbnail' ? scopedThumbnail
     : name === '../../services/api' ? apiModule
-    : name === '../../services/hostAdapter' ? { host: { selectFolder: () => {
+    : name === '../../services/hostAdapter' ? { host: { kind: () => hostKind, selectFolder: () => {
       const pending = deferred(); pickers.push(pending); return pending.promise;
     } }, hostErrorMessage: error => error.message }
     : name === '../runtime/useDeliveryScope' ? { useDeliveryScope: () => ({ key: `${backend}:${project.project.id}` }) }
@@ -142,7 +143,7 @@ function harness({ holdSave = false, holdImport = false, holdImages = false, hol
     } });
     store.setState({ folderPath: `/source/${id}`, datasetKey: `/source/${id}\0classification`, totalImages: 17, isLoading: false });
   };
-  return { store, downstream, api, ready: () => store.setState({sourceAuthority: datasetModule.readDatasetAuthority(), totalImages: 100, classes: {OK: 99, NG: 1}, split: {train: 80, val: 10, test: 10}, splitState: 'saved', labelsMissing: true, classSplitCounts: {OK: {train: 80, val: 10, test: 9}, NG: {train: 0, val: 0, test: 1}}}), project, shared, render, select, pickers, saves, imports, imageReads, imageRequests, imageResult, summaries, splits, summary, calls, move, changeAuthority,
+  return { store, downstream, api, ready: () => store.setState({sourceAuthority: datasetModule.readDatasetAuthority(), totalImages: 100, classes: {OK: 99, NG: 1}, split: {train: 80, val: 10, test: 10}, splitState: 'saved', labelsMissing: true, classSplitCounts: {OK: {train: 80, val: 10, test: 9}, NG: {train: 0, val: 0, test: 1}}}), project, shared, render, select, pickers, saves, imports, imageReads, imageRequests, imageResult, summaries, summaryReads, splits, summary, calls, move, changeAuthority,
     acceptAuthority: () => {generation++; context = {workspace_id: `workspace-${backend}`, project_id: project.project.id, actor_id: 'actor', mode: backend === 'A' ? 'local' : 'team'};},
     browserMarkup: () => {
       const node = nodes(render()).find(node => node.type === browserInput);
@@ -324,6 +325,125 @@ test('a shared session change holds the verified-version dialog, says why, and r
 
 const renderedText=node=>typeof node==='string'||typeof node==='number'?String(node):Array.isArray(node)?node.map(renderedText).join(''):renderedText(node?.props?.children||[]);
 function renderedNodes(node,output=[]){if(Array.isArray(node)){node.forEach(n=>renderedNodes(n,output));return output;}if(node&&typeof node==='object'){output.push(node);renderedNodes(node.props?.children,output);}return output;}
+function uploadedPanel(h) {
+  h.project.project.annotations_dir = '/projects/A/annotations';
+  h.project.project.active_labelset_id = 'default';
+  h.ready();
+  renderedNodes(h.render()).find(node => node.type === 'button' && renderedText(node) === '검증된 데이터 버전').props.onClick();
+  return renderedNodes(h.render()).find(node => node.props?.projectId === 'A' && 'registeredSource' in node.props).props;
+}
+test('explicit ZIP source selection uses the existing import lifecycle with its original source precondition', async () => {
+  const h = harness({hostKind: 'browser', withImages: true}), panel = uploadedPanel(h);
+  assert.deepEqual(h.calls, [], 'opening the panel does not select or import an archive');
+  await panel.onUseUploadedSource('/uploaded/source');
+  assert.equal(h.project.project.source_dataset_dir, '/uploaded/source');
+  assert.equal(h.store.getState().folderPath, '/uploaded/source');
+  assert.deepEqual(h.calls, [
+    {kind: 'import', backend: 'A', project: 'A', folder: '/uploaded/source'},
+    {kind: 'save', backend: 'A', project: 'A', folder: '/uploaded/source', expected_source: {
+      project_id: 'A', source_dataset_dir: '/source/A', task: 'classification', annotations_dir: '/projects/A/annotations', active_labelset_id: 'default',
+    }},
+  ]);
+  assert.equal(renderedNodes(h.render()).some(node => node.props?.projectId === 'A' && 'registeredSource' in node.props), false);
+  h.unmount();
+});
+test('a refused ZIP source write reports failure and reopens the previous source without another write', async () => {
+  const h = harness({hostKind: 'browser', withImages: true, saveFailure: new Error('project.manage refused')}), panel = uploadedPanel(h);
+  await assert.rejects(panel.onUseUploadedSource('/uploaded/source'), /project.manage refused/);
+  assert.equal(h.project.project.source_dataset_dir, '/source/A');
+  assert.equal(h.store.getState().folderPath, '/source/A');
+  assert.deepEqual(h.summaries, [{backend: 'A', folder_path: '/source/A', task: 'classification'}]);
+  assert.equal(h.calls.filter(call => call.kind === 'save').length, 1, 'the restore never writes the old source');
+  assert.equal(h.store.getState().sourceSaveError, null, 'the restored old source has no pending retry of the refused ZIP');
+  h.unmount();
+});
+test('a late ZIP import cannot save or restore over a newly selected project', async () => {
+  const h = harness({hostKind: 'browser', holdImport: true}), panel = uploadedPanel(h);
+  const pending = panel.onUseUploadedSource('/uploaded/source'); await tick();
+  h.move({id: 'B'}); h.imports[0].resolve(h.summary);
+  await assert.rejects(pending, /바뀌었습니다/);
+  assert.equal(h.project.project.id, 'B');
+  assert.equal(h.store.getState().folderPath, '/source/B');
+  assert.equal(h.calls.some(call => call.kind === 'save'), false);
+  assert.deepEqual(h.summaries, []);
+  h.unmount();
+});
+test('a refused ZIP source write restores an empty project without a rollback write', async () => {
+  const h = harness({hostKind: 'browser', saveFailure: new Error('source conflict 409')});
+  h.project.project.source_dataset_dir = null; h.store.getState().setFolderPath('');
+  const panel = uploadedPanel(h);
+  await assert.rejects(panel.onUseUploadedSource('/uploaded/source'), /source conflict 409/);
+  assert.equal(h.project.project.source_dataset_dir, null);
+  assert.equal(h.store.getState().folderPath, '');
+  assert.equal(h.store.getState().hasSelectedFolder, false);
+  assert.deepEqual(h.summaries, []);
+  assert.equal(h.calls.filter(call => call.kind === 'save').length, 1);
+  assert.equal(h.calls.find(call => call.kind === 'save').expected_source.source_dataset_dir, null);
+  h.unmount();
+});
+test('a late ZIP source-save refusal cannot reset a newer project', async () => {
+  const h = harness({hostKind: 'browser', holdSave: true, saveFailure: new Error('project.manage refused')}), panel = uploadedPanel(h);
+  const pending = panel.onUseUploadedSource('/uploaded/source'); await tick();
+  h.move({id: 'B'}); h.saves[0].resolve();
+  await assert.rejects(pending);
+  assert.equal(h.project.project.id, 'B'); assert.equal(h.store.getState().folderPath, '/source/B');
+  assert.deepEqual(h.summaries, []); h.unmount();
+});
+test('a late failed readonly restore cannot clear a newer project', async () => {
+  const h = harness({hostKind: 'browser', holdSummary: true, saveFailure: new Error('project.manage refused')}), panel = uploadedPanel(h);
+  const pending = panel.onUseUploadedSource('/uploaded/source'); await tick();
+  assert.equal(h.summaryReads.length, 1);
+  h.move({id: 'B'}); h.summaryReads[0].reject(new Error('old source unavailable'));
+  await assert.rejects(pending, /project.manage refused/);
+  assert.equal(h.project.project.id, 'B'); assert.equal(h.store.getState().folderPath, '/source/B'); h.unmount();
+});
+test('desktop import panels keep their existing source workflow without a browser-only action', () => {
+  const h = harness(), panel = uploadedPanel(h);
+  assert.equal(panel.onUseUploadedSource, undefined); assert.equal(panel.sourceSelectionScope, undefined); h.unmount();
+});
+for (const viewMode of ['simple', 'full']) {
+  test(`an empty browser project opens ZIP intake in ${viewMode} view`, () => {
+    const h = harness({hostKind: 'browser'});
+    h.project.viewMode = viewMode;
+    h.project.project.source_dataset_dir = null;
+    h.store.setState({folderPath: '', hasSelectedFolder: false, datasetKey: null});
+    const opener = () => renderedNodes(h.render()).find(node => node.type === 'button' && renderedText(node) === '검증된 데이터 버전');
+    assert.equal(opener().props.disabled, false, 'a browser ZIP does not require a registered server folder');
+    assert.match(opener().props.title, /ZIP/);
+    opener().props.onClick();
+    const panel = renderedNodes(h.render()).find(node => node.props?.projectId === 'A' && 'registeredSource' in node.props);
+    assert.ok(panel, 'the existing intake panel opens for the selected project');
+    assert.equal(panel.props.registeredSource, null);
+    assert.equal(panel.props.datasetPath, '');
+    h.unmount();
+  });
+  test(`empty browser ZIP entry retains project and session guards in ${viewMode} view`, () => {
+    for (const blocked of ['missing project', 'different project directory', 'different task', 'project busy', 'loading', 'session changing']) {
+      const h = harness({hostKind: 'browser'});
+      h.project.viewMode = viewMode;
+      h.project.project.source_dataset_dir = null;
+      h.store.setState({folderPath: '', hasSelectedFolder: false, datasetKey: null});
+      if (blocked === 'missing project') h.project.project.id = '';
+      if (blocked === 'different project directory') h.project.projectDir = '/projects/B';
+      if (blocked === 'different task') h.project.project.task = 'segmentation';
+      if (blocked === 'project busy') h.project.isProjectBusy = true;
+      if (blocked === 'loading') h.store.setState({isLoading: true});
+      if (blocked === 'session changing') h.project.sharedSessionChanging = true;
+      const opener = renderedNodes(h.render()).find(node => node.type === 'button' && renderedText(node) === '검증된 데이터 버전');
+      assert.equal(opener.props.disabled, true, blocked);
+      h.unmount();
+    }
+  });
+  test(`empty desktop project still requires its dataset folder in ${viewMode} view`, () => {
+    const h = harness();
+    h.project.viewMode = viewMode;
+    h.project.project.source_dataset_dir = null;
+    h.store.setState({folderPath: '', hasSelectedFolder: false, datasetKey: null});
+    const opener = renderedNodes(h.render()).find(node => node.type === 'button' && renderedText(node) === '검증된 데이터 버전');
+    assert.equal(opener.props.disabled, true);
+    h.unmount();
+  });
+}
 for(const viewMode of ['simple','full'])test('Korean '+viewMode+' split guidance reaches the same actual split action',async()=>{
  const h=harness();h.project.language='ko';h.project.viewMode=viewMode;
  h.store.setState({sourceAuthority:null});const importing=h.store.getState().importFolder('/source/A', 'classification');await importing;
