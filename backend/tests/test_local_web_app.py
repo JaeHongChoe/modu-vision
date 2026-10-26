@@ -171,13 +171,14 @@ def test_head_mime_methods_and_route_fallback(renderer):
     assert missing[0]['status'] == 404
 
 
-def test_real_api_cookie_csrf_and_bootstrap_are_not_bypassed(renderer, tmp_path, monkeypatch):
+@pytest.mark.parametrize('origin', [ORIGIN, 'https://localhost'])
+def test_real_api_cookie_csrf_and_bootstrap_are_not_bypassed(renderer, tmp_path, monkeypatch, origin):
     from backend.main import create_app
     from backend.local_web_app import LocalWebApp
-    monkeypatch.setenv('MODU_BROWSER_ORIGINS', json.dumps([ORIGIN]))
+    monkeypatch.setenv('MODU_BROWSER_ORIGINS', json.dumps([origin]))
     api = create_app(project_dir=str(tmp_path / 'projects'), shared_auth_dir=str(tmp_path / 'auth'))
     api.state.accounts.bootstrap('synthetic-admin', 'synthetic password 123')
-    client = TestClient(LocalWebApp(api, renderer, ORIGIN), base_url=ORIGIN, headers={'Origin': ORIGIN})
+    client = TestClient(LocalWebApp(api, renderer, origin), base_url=origin, headers={'Origin': origin})
     assert client.get('/').status_code == 200
     assert client.get('/api/context').status_code == 401
     assert client.post('/api/accounts/bootstrap', json={'username': 'attacker', 'password': 'synthetic password 456'}).status_code in (401, 403)
@@ -186,3 +187,43 @@ def test_real_api_cookie_csrf_and_bootstrap_are_not_bypassed(renderer, tmp_path,
     assert client.get('/api/accounts/me').status_code == 200
     assert client.post('/api/accounts/logout').status_code == 403
     assert client.post('/api/accounts/logout', headers={'X-Vision-CSRF': login.json()['csrf_token']}).status_code == 200
+
+
+def test_default_https_port_uses_browser_canonical_http_and_wss_authority(renderer):
+    from backend.local_web_app import LocalWebApp
+    api = API()
+    app = LocalWebApp(api, renderer, 'https://localhost')
+    _, response = invoke(app, host=b'localhost')
+    assert response[0]['status'] == 200
+    scope, response = invoke(app, '/api/context', host=b'localhost', origin='https://localhost')
+    assert response[0]['status'] == 401
+    assert api.scopes[-1] is scope
+    scope, response = invoke(app, '/ws/telemetry', kind='websocket', scheme='wss',
+                             host=b'localhost', origin='https://localhost')
+    assert response == [{'type': 'websocket.close', 'code': 4401}]
+    assert api.scopes[-1] is scope
+
+
+@pytest.mark.parametrize('host,origin', [
+    (b'localhost:443', 'https://localhost'),
+    (b'localhost', 'https://localhost:443'),
+    (b'localhost', 'https://localhost:8443'),
+    (b'127.0.0.1', 'https://localhost'),
+    (b'foreign.test', 'https://localhost'),
+    (b'localhost', 'https://foreign.test'),
+])
+def test_canonical_default_port_still_refuses_other_authorities(renderer, host, origin):
+    from backend.local_web_app import LocalWebApp
+    api = API()
+    app = LocalWebApp(api, renderer, 'https://localhost')
+    _, response = invoke(app, '/api/context', host=host, origin=origin)
+    assert response[0]['status'] == 403
+    _, response = invoke(app, '/ws/telemetry', kind='websocket', scheme='wss', host=host, origin=origin)
+    assert response == [{'type': 'websocket.close', 'code': 1008}]
+    assert api.scopes == []
+
+
+def test_noncanonical_explicit_default_port_is_not_a_second_allowed_origin(renderer):
+    from backend.local_web_app import LocalWebApp
+    with pytest.raises(ValueError, match='origin'):
+        LocalWebApp(API(), renderer, 'https://localhost:443')

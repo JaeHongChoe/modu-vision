@@ -62,7 +62,8 @@ def main(argv=None):
         paths = web_paths(args.data_dir)
         configure_environment(paths)  # Must precede every backend engine import.
         with instance_lock(paths), bind_loopback(args.port) as sock:
-            origin = f'https://localhost:{sock.getsockname()[1]}'
+            port = sock.getsockname()[1]
+            origin = 'https://localhost' if port == 443 else f'https://localhost:{port}'
             cert, key = ensure_tls(paths, args.cert_file, args.key_file)
             from backend.engine.shared_accounts import AccountStore
             ensure_first_account(AccountStore(paths.auth / 'accounts.sqlite'), paths.root)

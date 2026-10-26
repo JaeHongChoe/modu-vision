@@ -150,15 +150,16 @@ def certificate_fingerprint(cert_file):
 
 def _health(origin, cert_file, fingerprint):
     authority = urlsplit(origin)
+    port = authority.port if authority.port is not None else 443
     context = ssl.create_default_context(cafile=str(cert_file))
     # A supplied server leaf can be signed by a CA whose chain is not separately
     # installed. Trust only the validated leaf for this local readback.
     if hasattr(ssl, 'VERIFY_X509_PARTIAL_CHAIN'):
         context.verify_flags |= ssl.VERIFY_X509_PARTIAL_CHAIN
-    connection = http.client.HTTPSConnection('127.0.0.1', authority.port, timeout=1, context=context)
+    connection = http.client.HTTPSConnection('127.0.0.1', port, timeout=1, context=context)
     try:
         # Connect to the owned IPv4 socket, verifying the DNS localhost SAN.
-        plain = socket.create_connection(('127.0.0.1', authority.port), timeout=1)
+        plain = socket.create_connection(('127.0.0.1', port), timeout=1)
         try:
             connection.sock = context.wrap_socket(plain, server_hostname='localhost')
         except BaseException:

@@ -51,11 +51,12 @@ class LocalWebApp:
     """ASGI dispatcher; API scopes and lifespan are forwarded without mutation."""
     def __init__(self, api_app, renderer_dir: Path, origin: str):
         parsed = urlsplit(origin)
+        port = parsed.port if parsed.port is not None else 443
+        canonical = 'https://localhost' if port == 443 else f'https://localhost:{port}'
         if (parsed.scheme != 'https' or parsed.hostname != 'localhost' or parsed.username
                 or parsed.password or parsed.path or parsed.query or parsed.fragment
-                or parsed.port is None or not 1 <= parsed.port <= 65535
-                or origin != f'https://localhost:{parsed.port}'):
-            raise ValueError('Expected an exact https://localhost:PORT origin')
+                or not 1 <= port <= 65535 or origin != canonical):
+            raise ValueError('Expected a canonical https://localhost origin (explicit port unless 443)')
         self.api_app = api_app
         self.renderer_dir = Path(renderer_dir).absolute()
         _refuse_links(self.renderer_dir)

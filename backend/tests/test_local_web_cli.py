@@ -498,3 +498,58 @@ finally:
         unrelated.terminate()
         unrelated.wait(timeout=3)
         log.close()
+
+
+@pytest.mark.parametrize('requested,actual,expected', [
+    (443, 443, 'https://localhost'),
+    (0, 443, 'https://localhost'),
+    (8443, 8443, 'https://localhost:8443'),
+    (0, 59123, 'https://localhost:59123'),
+])
+def test_launcher_uses_actual_socket_port_and_canonicalizes_only_https_default(tmp_path, monkeypatch, requested, actual, expected):
+    import backend.web as web
+    import backend.local_web_runtime as runtime
+    import backend.main as engine
+    paths = paths_at(tmp_path, monkeypatch)
+    renderer = paths.root / 'renderer'
+    renderer.mkdir()
+    (renderer / 'index.html').write_text('synthetic browser')
+    class BoundSocket:
+        def __enter__(self): return self
+        def __exit__(self, *args): pass
+        def getsockname(self): return ('127.0.0.1', actual)
+    monkeypatch.setattr(web, 'bind_loopback', lambda port: BoundSocket())
+    monkeypatch.setattr(web, 'ensure_tls', lambda *args: (paths.tls / 'cert.pem', paths.tls / 'key.pem'))
+    monkeypatch.setattr(web, 'ensure_first_account', lambda *args: None)
+    monkeypatch.setattr(runtime, 'build_renderer', lambda paths: renderer)
+    monkeypatch.setattr(engine, 'create_app', lambda **kwargs: object())
+    observed = {}
+    async def no_server(api, output, origin, *args, **kwargs):
+        observed['origin'] = origin
+        observed['backend_origins'] = json.loads(os.environ['MODU_BROWSER_ORIGINS'])
+    monkeypatch.setattr(runtime, 'run_https', no_server)
+    monkeypatch.setenv('MODU_BROWSER_ORIGINS', '[]')
+    assert web.main(['--data-dir', str(paths.root), '--port', str(requested), '--no-open']) == 0
+    assert observed == {'origin': expected, 'backend_origins': [expected]}
+
+
+@pytest.mark.parametrize('origin,expected_port', [
+    ('https://localhost', 443),
+    ('https://localhost:8443', 8443),
+    ('https://localhost:59123', 59123),
+])
+def test_health_probe_defaults_only_missing_https_port_without_a_listener(tmp_path, monkeypatch, origin, expected_port):
+    from backend.local_web_state import ensure_tls
+    from backend.local_web_runtime import _health
+    paths = paths_at(tmp_path, monkeypatch)
+    cert, _ = ensure_tls(paths)
+    observed = []
+    class ConnectObserved(Exception):
+        pass
+    def no_connection(address, *, timeout):
+        observed.append((address, timeout))
+        raise ConnectObserved()
+    monkeypatch.setattr(socket, 'create_connection', no_connection)
+    with pytest.raises(ConnectObserved):
+        _health(origin, cert, 'probe-stops-before-handshake')
+    assert observed == [(('127.0.0.1', expected_port), 1)]
