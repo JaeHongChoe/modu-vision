@@ -44,6 +44,7 @@ from backend.engine.dataset_loaders import (
 )
 from backend.engine.industrial_adapters import inspect_industrial_dataset, find_matching_image, is_valid_labelme_file
 from backend.engine.annotation_storage import dataset_annotation_dir
+from backend.api.shared_authorization import shared_project_file
 from backend.engine.dataset_archive_input import RECEIPT as DATASET_ARCHIVE_RECEIPT
 from backend.engine.source_text import read_source_text
 from backend.engine.synthetic_generator import generate_synthetic_dataset
@@ -1170,23 +1171,31 @@ def list_dataset_images(
     }
 
 
+def _image_candidate(request: Request, image_path: str, file_path: Optional[str]) -> Optional[Path]:
+    """The image a raw or thumbnail read serves. A shared server opens only the authorized selector."""
+    shared = shared_project_file(request, file_path)
+    if shared is not None:
+        return shared
+    if file_path and Path(file_path).is_file():
+        return Path(file_path)
+    if Path(image_path).is_file():
+        return Path(image_path)
+    # Search synthetic datasets or cwd
+    for root in [Path("./datasets"), Path.cwd()]:
+        matches = list(root.rglob(image_path))
+        if matches:
+            return matches[0]
+    return None
+
+
 @router.get("/raw/{image_path:path}")
 def get_raw_image(
     image_path: str,
+    request: Request,
     file_path: Optional[str] = Query(None),
 ):
     """Serves uncompressed raw inspection image directly for pixel-accurate labeling."""
-    candidate_path = None
-    if file_path and Path(file_path).is_file():
-        candidate_path = Path(file_path)
-    elif Path(image_path).is_file():
-        candidate_path = Path(image_path)
-    else:
-        for root in [Path("./datasets"), Path.cwd()]:
-            matches = list(root.rglob(image_path))
-            if matches:
-                candidate_path = matches[0]
-                break
+    candidate_path = _image_candidate(request, image_path, file_path)
 
     if not candidate_path or not candidate_path.exists():
         raise HTTPException(status_code=404, detail="이미지 파일을 찾을 수 없습니다")
@@ -1217,10 +1226,11 @@ def get_raw_image(
         ".tiff": "image/tiff",
     }
     media_type = media_types.get(ext, "application/octet-stream")
+    # Browser cache only: a shared proxy must not hand one member's image to another caller.
     return FileResponse(
         candidate_path,
         media_type=media_type,
-        headers={"Cache-Control": "public, max-age=86400"},
+        headers={"Cache-Control": "private, max-age=86400"},
     )
 
 
@@ -1408,19 +1418,7 @@ def get_thumbnail(
     size: int = Query(128, ge=32, le=4096),
 ):
     """A downsampled thumbnail keyed by the content and decoder it was drawn from; the browser revalidates by ETag."""
-    # Resolve image file location
-    candidate_path = None
-    if file_path and Path(file_path).is_file():
-        candidate_path = Path(file_path)
-    elif Path(image_path).is_file():
-        candidate_path = Path(image_path)
-    else:
-        # Search synthetic datasets or cwd
-        for root in [Path("./datasets"), Path.cwd()]:
-            matches = list(root.rglob(image_path))
-            if matches:
-                candidate_path = matches[0]
-                break
+    candidate_path = _image_candidate(request, image_path, file_path)
 
     if not candidate_path or not candidate_path.exists():
         raise HTTPException(status_code=404, detail="이미지 파일을 찾을 수 없습니다")

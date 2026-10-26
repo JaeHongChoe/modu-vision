@@ -486,6 +486,42 @@ async def _admitted_lifespan(app: FastAPI):
         logger.info("Shutdown cleanup complete.")
 
 
+class SharedSecurityHeaders:
+    """Browser hardening for a shared server's responses: no MIME sniffing, framing or referrer leaks.
+
+    It wraps the whole application where the server starts, outside FastAPI's own middleware stack, whose
+    exact layout the owned-request observers check; refusals from the layers inside carry the headers too."""
+
+    HEADERS = (
+        (b'x-content-type-options', b'nosniff'),
+        (b'x-frame-options', b'DENY'),
+        (b'referrer-policy', b'no-referrer'),
+    )
+    NAMES = frozenset(name for name, _ in HEADERS)
+
+    def __init__(self, app: ASGIApp):
+        self.app = app
+
+    async def __call__(self, scope, receive, send):
+        if scope['type'] != 'http':
+            return await self.app(scope, receive, send)
+
+        async def secured(message):
+            if message['type'] == 'http.response.start':
+                headers = [(name, value) for name, value in message.get('headers', []) if name.lower() not in self.NAMES]
+                # A route's own policy (the report viewer's sandbox) is kept as it is.
+                if not any(name.lower() == b'content-security-policy' for name, _ in headers):
+                    headers.append((b'content-security-policy', b"frame-ancestors 'none'"))
+                message = {**message, 'headers': [*headers, *self.HEADERS]}
+            await send(message)
+        await self.app(scope, receive, secured)
+
+
+def served_app(app: FastAPI):
+    """The ASGI application the server runs: a shared server adds its browser security headers."""
+    return SharedSecurityHeaders(app) if app.state.accounts is not None else app
+
+
 def create_app(project_dir: Optional[str] = None, shared_auth_dir: Optional[str] = None) -> FastAPI:
     from backend.engine.global_store_paths import startup_admission,validate_startup_scopes
     with startup_admission():
@@ -767,7 +803,7 @@ def run_server():
     logger.info("Bound to http://%s:%d (PID %d)", args.host, actual_port, os.getpid())
 
     config = uvicorn.Config(
-        app=app,
+        app=served_app(app),
         log_level=args.log_level.lower(),
         access_log=False,
     )

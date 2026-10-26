@@ -1191,6 +1191,29 @@ def _common_project(request):
     return project
 
 
+_EVALUATION_ROLE_REQUIRED = ('이 프로젝트에서 맡은 역할로는 평가를 실행할 수 없습니다. 저장된 평가 결과가 없거나 지금 모델·데이터와 '
+                             '맞지 않으면 trainer 이상 역할이 평가를 다시 실행해야 합니다.')
+
+
+def _may_evaluate(request):
+    """Running an evaluation is trainer work; other shared members read stored results only."""
+    account=getattr(getattr(request,'state',None),'account_user',None)
+    if account is None:return True
+    from backend.api.routes_project import get_current_project
+    return request.app.state.accounts.project_role(account['id'],get_current_project(request)['id']) in {'owner','reviewer','trainer'}
+
+
+def _evaluation_folder(target_job):
+    """An explicit evaluation folder given as the job; on a shared server only one inside the request's project."""
+    folder=Path(target_job)
+    if not folder.is_dir():return False
+    from backend.engine.annotation_storage import request_project_root,request_shared_scope
+    root=request_project_root()
+    if request_shared_scope() and (root is None or not folder.resolve().is_relative_to(root.resolve())):
+        raise HTTPException(403,'이 프로젝트 밖의 평가 폴더는 쓸 수 없습니다. 이 프로젝트에서 학습을 끝낸 작업을 고르세요.')
+    return True
+
+
 def _common_model(project,job_id):
     if not project or not isinstance(job_id,str) or not is_job_id(job_id):
         raise HTTPException(422,'공통 평가에는 이 프로젝트에서 학습을 끝낸 작업을 지정해야 합니다.')
@@ -1286,8 +1309,11 @@ def run_or_load_evaluation(
     compute_profile_id: Optional[str] = None,
     device: Optional[str] = None,
     project: Optional[dict] = None,
+    compute_allowed: bool = True,
 ) -> Dict[str, Any]:
     if evaluation_dataset_version_id is not None or compute_profile_id is not None or device is not None:
+        if not compute_allowed:
+            raise HTTPException(403, _EVALUATION_ROLE_REQUIRED)
         return _run_common_evaluation(project, job_id, dataset_path, evaluation_dataset_version_id, compute_profile_id, device, force_recompute, source_task)
     job_id_clean = job_id if isinstance(job_id, str) else None
     ds_path_clean = str(dataset_path) if isinstance(dataset_path, (str, Path)) else None
@@ -1378,6 +1404,10 @@ def run_or_load_evaluation(
         except Exception:
             pass
 
+    if not compute_allowed:
+        # A load-only read found no stored result that still matches this model and data.
+        raise HTTPException(403, _EVALUATION_ROLE_REQUIRED)
+
     try:
         if remote_context is not None:
             remote = run_remote_evaluation(remote_context, force_recompute=force_clean)
@@ -1449,17 +1479,22 @@ def get_evaluation_results(
     job_id_clean = job_id if isinstance(job_id, str) else None
     ds_path_clean = str(dataset_path) if isinstance(dataset_path, (str, Path)) else None
     force_clean = bool(force_recompute) if isinstance(force_recompute, bool) else False
+    compute_allowed = _may_evaluate(request)
+    if force_clean and not compute_allowed:
+        raise HTTPException(403, _EVALUATION_ROLE_REQUIRED)
     return run_or_load_evaluation(
         job_id=job_id_clean, dataset_path=ds_path_clean, force_recompute=force_clean,
         source_dataset_path=source_dataset_path, source_task=source_task,
         evaluation_dataset_version_id=evaluation_dataset_version_id, compute_profile_id=compute_profile_id, device=device,
         project=_common_project(request) if evaluation_dataset_version_id is not None or compute_profile_id is not None or device is not None else None,
+        **({} if compute_allowed else {'compute_allowed': False}),
     )
 
 
 @router.get("/heatmap/{image_id:path}")
 def get_defect_heatmap(
     image_id: str,
+    request: Request,
     job_id: Optional[str] = Query(None),
     threshold: Optional[float] = Query(None),
     score_spec: Optional[str] = Query(None),
@@ -1470,7 +1505,8 @@ def get_defect_heatmap(
     Executes model inference on the target image and produces
     the visual overlay heatmap with real-time threshold adjustment.
     """
-    img_file = _find_image_file(image_id, file_path=file_path)
+    from backend.api.shared_authorization import shared_project_file
+    img_file = shared_project_file(request, file_path) or _find_image_file(image_id, file_path=file_path)
     if not img_file or not img_file.is_file():
         raise HTTPException(
             status_code=404,
@@ -1573,6 +1609,7 @@ def get_overkill_underkill_analysis(
     current_threshold: float = Query(0.5),
     source_dataset_path: Optional[str] = None,
     source_task: Optional[str] = None,
+    request: Request = None,
 ):
     """
     Industrial Overkill (과검) vs Underkill (미검) Optimization & Trade-off Curve.
@@ -1591,12 +1628,12 @@ def get_overkill_underkill_analysis(
     source_options = {key: value for key, value in (
         ("source_dataset_path", source_dataset_path), ("source_task", source_task),
     ) if value is not None}
-    if source_options and Path(target_job).is_dir():
+    if source_options and _evaluation_folder(target_job):
         raise HTTPException(422, "기준값 조정에는 학습을 끝낸 작업을 지정해야 합니다. 가져온 평가 폴더로는 할 수 없습니다.")
     eval_payload = None
     # Explicit directory inputs retain their import contract. Normal jobs always
     # use the checkpoint/data binding checks shared with the evaluation screen.
-    if Path(target_job).is_dir():
+    if _evaluation_folder(target_job):
         try:
             with _eval_file_lock:
                 eval_payload = json.loads((Path(target_job) / "eval_results.json").read_text(encoding="utf-8"))
@@ -1605,7 +1642,8 @@ def get_overkill_underkill_analysis(
             eval_payload = None
     if eval_payload is None:
         try:
-            eval_payload = run_or_load_evaluation(job_id=target_job, **source_options)
+            read_only = {} if request is None or _may_evaluate(request) else {'compute_allowed': False}
+            eval_payload = run_or_load_evaluation(job_id=target_job, **source_options, **read_only)
         except (ValueError, OSError) as exc:
             raise HTTPException(422, detail=f"기준값 조정에 쓸 평가 결과가 없습니다: {exc}") from exc
     try:
@@ -1683,7 +1721,7 @@ def run_zero_escape_calibration(
 
     if apply_to_eval_results and target_job:
         from backend.engine.calibration_evidence import validate_calibration_evidence, mark_calibration_evidence
-        if Path(target_job).is_dir():
+        if _evaluation_folder(target_job):
             eval_path = Path(target_job) / "eval_results.json"
         else:
             eval_path = _resolve_job_artifacts(job_id=target_job, **source_options)[0] / "eval_results.json"
@@ -1729,6 +1767,7 @@ def post_zero_escape_calibrate(req: ZeroEscapeCalibrateRequest):
 
 @router.get("/zero-escape-calibrate")
 def get_zero_escape_calibrate_endpoint(
+    request: Request,
     job_id: Optional[str] = Query(None),
     target_max_underkill: int = Query(0, ge=0),
     cost_escape: float = Query(500.0, ge=0.0),
@@ -1738,6 +1777,9 @@ def get_zero_escape_calibrate_endpoint(
     source_dataset_path: Optional[str] = None,
     source_task: Optional[str] = None,
 ):
+    # Calibration rewrites the stored threshold that export reads: the same trainer work as the POST.
+    if not _may_evaluate(request):
+        raise HTTPException(403, _EVALUATION_ROLE_REQUIRED)
     return run_zero_escape_calibration(
         job_id=job_id,
         target_max_underkill=target_max_underkill,
