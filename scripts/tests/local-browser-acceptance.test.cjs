@@ -74,3 +74,8 @@ test('response observation has immediate rejection handling while preserving lat
     await new Promise(resolve => setImmediate(resolve));
     await assert.rejects(observed, /page closed/);
 });
+test('launch provenance appends current source and build hashes without rewriting the first source',()=>{
+    assert.equal(typeof helper.recordLaunch,'function','append-only launch provenance required');
+    const root=fs.mkdtempSync(path.join(os.tmpdir(),'modu-provenance-'));
+    try{const file=path.join(root,'index.html');fs.writeFileSync(file,'first build');const state={source_head:'initial'};helper.recordLaunch(state,{pid:1},[file],'first');fs.writeFileSync(file,'second build');helper.recordLaunch(state,{pid:2},[file],'second');assert.equal(state.source_head,'initial');assert.deepEqual(state.launches.map(row=>row.source_head),['first','second']);assert.notEqual(state.launches[0].renderer[file],state.launches[1].renderer[file]);assert.equal(state.launches[0].ready.pid,1);}finally{fs.rmSync(root,{recursive:true,force:true});}
+});

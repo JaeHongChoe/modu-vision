@@ -19,6 +19,10 @@ catch (error) {
         throw new Error('Training already reserved; resume saved results instead of dispatching again');
     throw error;
 } }
+function recordLaunch(state,ready,files,head){
+    state.launches ||= [];
+    state.launches.push({at:new Date().toISOString(),source_head:head,ready,renderer:snapshot(files)});
+}
 function observeResponse(promise) { promise.catch(() => { }); return promise; }
 function releaseUnsentTraining(file, requests, tasks) {
     assert.equal(readJson(file).status, 'dispatch-intent', 'Only an unsent dispatch intent can be recovered');
@@ -46,7 +50,7 @@ function parseReady(line, root) {
     assert.match(value.certificate_sha256, /^[0-9a-f]{64}$/);
     return value;
 }
-module.exports = { snapshot, verifySnapshot, reserveTraining, parseReady, fixtures, releaseUnsentTraining, observeResponse };
+module.exports = { snapshot, verifySnapshot, reserveTraining, parseReady, fixtures, releaseUnsentTraining, observeResponse, recordLaunch };
 const pause = ms => new Promise(resolve => setTimeout(resolve, ms));
 async function portClosed(port) { return new Promise(resolve => { const socket = net.connect({ host: '127.0.0.1', port }); socket.once('connect', () => { socket.destroy(); resolve(false); }); socket.once('error', () => resolve(true)); }); }
 async function until(predicate, timeout = 30000) { const stop = Date.now() + timeout; while (Date.now() < stop) {
@@ -239,7 +243,9 @@ async function main() {
     try {
         server = await launch(root, resume ? state.initial_ready ? Number(new URL(state.initial_ready.url).port) : 0 : 0, env, run, resume ? 'resume' : 1);
         state.initial_ready ||= server.ready;
-        state.renderer = snapshot([path.join(root, 'renderer/index.html')]);
+        const rendererFiles=()=>[path.join(root,'renderer/index.html'),...fs.readdirSync(path.join(root,'renderer/assets')).map(name=>path.join(root,'renderer/assets',name))];
+        const currentHead=()=>execFileSync('git',['rev-parse','HEAD'],{cwd:repo,encoding:'utf8'}).trim();
+        recordLaunch(state,server.ready,rendererFiles(),currentHead());
         save();
         console.log('PRODUCT_READY=' + server.ready.url);
         // Read-only unauthenticated and hostile boundary probes use the product TLS listener.
@@ -332,18 +338,19 @@ async function main() {
             await expand(page, '다음 학습 배치·로컬 장치 설정');
             await page.getByLabel('다음 학습 배치 크기', { exact: true }).fill('2');
             await page.getByLabel('다음 학습 로컬 장치', { exact: true }).selectOption('cpu');
+            await expand(page, '학습 실행 예산·대기열');
+            await page.getByLabel('학습 시간 제한 (분)', { exact: true }).fill('1');
             const readiness = wire(page, '/api/training-workspace/readiness', 'POST');
             await page.getByRole('button', { name: '로컬 준비 검사', exact: true }).click();
             state.readiness = await checked(await readiness);
             assert.equal(state.readiness.ready, true);
             assert.equal(state.readiness.runtime.device, 'cpu');
             assert.equal(state.readiness.weights.sha256, weightsSha);
-            await expand(page, '학습 실행 예산·대기열');
-            await page.getByLabel('학습 시간 제한 (분)', { exact: true }).fill('1');
             save();
             await expect(page.getByRole('button', { name: '선택 설정으로 학습 시작', exact: true })).toBeEnabled();
             if (resume && fs.existsSync(dispatch))
                 releaseUnsentTraining(dispatch, state.requests, (await api('/api/training-workspace/tasks')).tasks);
+            state.model_source_head=currentHead();state.model_renderer=state.launches.at(-1).renderer;save();
             reserveTraining(dispatch);
             console.log('SINGLE_TRAINING_DISPATCH_RESERVED');
             const started = wire(page, '/api/training/start', 'POST');
@@ -366,7 +373,7 @@ async function main() {
             state.metadataFile = path.join(state.jobDir, 'model_meta.json');
             state.receiptFile = path.join(state.jobDir, 'job_receipt.json');
             await expect.poll(() => fs.existsSync(state.receiptFile) && readJson(state.receiptFile).status).toBe('completed');
-            assert.equal(readJson(state.metadataFile).device, 'cpu');
+            const metadata=readJson(state.metadataFile);assert.equal(metadata.device,'cpu');assert.equal(metadata.backbone,'resnet18');assert.equal(metadata.task,'classification');assert.deepEqual(metadata.training_config,{...metadata.training_config,epochs:1,image_size:64,batch_size:2});assert.deepEqual([...metadata.classes].sort(),['NG','OK']);
             assert.ok(fs.statSync(state.checkpoint).size > 1000000);
             save();
         }
@@ -413,6 +420,7 @@ async function main() {
         await expect.poll(() => initial.closed).toBe(true);
         save();
         server = await launch(root, Number(new URL(previous.url).port), env, run, 2);
+        recordLaunch(state,server.ready,rendererFiles(),currentHead());
         state.restart = { previous, current: server.ready };
         assert.equal(server.ready.url, previous.url);
         assert.notEqual(server.ready.pid, previous.pid);
