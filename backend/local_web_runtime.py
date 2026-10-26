@@ -179,7 +179,11 @@ async def run_https(api, renderer, origin, sock, cert, key, paths, *, no_open, r
     """Serve only the already-owned socket, retaining backend startup/shutdown."""
     import uvicorn
     from backend.local_web_app import LocalWebApp
-    config = uvicorn.Config(LocalWebApp(api, renderer, origin), host='127.0.0.1', port=sock.getsockname()[1],
+    from backend.main import SharedSecurityHeaders
+    # The browser entrypoint serves static files and outer authority refusals as
+    # well as API responses, so apply the shared-server policy to the whole app.
+    app = SharedSecurityHeaders(LocalWebApp(api, renderer, origin))
+    config = uvicorn.Config(app, host='127.0.0.1', port=sock.getsockname()[1],
                             ssl_certfile=str(cert), ssl_keyfile=str(key), proxy_headers=False,
                             forwarded_allow_ips='', access_log=False, lifespan='on',
                             timeout_graceful_shutdown=5, log_level='info')

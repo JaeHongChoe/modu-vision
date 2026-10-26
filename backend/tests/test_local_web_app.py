@@ -173,20 +173,44 @@ def test_head_mime_methods_and_route_fallback(renderer):
 
 @pytest.mark.parametrize('origin', [ORIGIN, 'https://localhost'])
 def test_real_api_cookie_csrf_and_bootstrap_are_not_bypassed(renderer, tmp_path, monkeypatch, origin):
-    from backend.main import create_app
+    from backend.main import create_app, SharedSecurityHeaders
     from backend.local_web_app import LocalWebApp
     monkeypatch.setenv('MODU_BROWSER_ORIGINS', json.dumps([origin]))
     api = create_app(project_dir=str(tmp_path / 'projects'), shared_auth_dir=str(tmp_path / 'auth'))
     api.state.accounts.bootstrap('synthetic-admin', 'synthetic password 123')
-    client = TestClient(LocalWebApp(api, renderer, origin), base_url=origin, headers={'Origin': origin})
+    client = TestClient(SharedSecurityHeaders(LocalWebApp(api, renderer, origin)), base_url=origin, headers={'Origin': origin})
     assert client.get('/').status_code == 200
-    assert client.get('/api/context').status_code == 401
+    refused = client.get('/api/context')
+    assert refused.status_code == 401
+    assert refused.headers['x-frame-options'] == 'DENY'
+    assert refused.headers['content-security-policy'] == "frame-ancestors 'none'"
     assert client.post('/api/accounts/bootstrap', json={'username': 'attacker', 'password': 'synthetic password 456'}).status_code in (401, 403)
     login = client.post('/api/accounts/login', json={'username': 'synthetic-admin', 'password': 'synthetic password 123', 'transport': 'cookie'})
     assert login.status_code == 200
-    assert client.get('/api/accounts/me').status_code == 200
+    accepted = client.get('/api/accounts/me')
+    assert accepted.status_code == 200
+    assert accepted.headers['x-frame-options'] == 'DENY'
+    assert accepted.headers['referrer-policy'] == 'no-referrer'
     assert client.post('/api/accounts/logout').status_code == 403
     assert client.post('/api/accounts/logout', headers={'X-Vision-CSRF': login.json()['csrf_token']}).status_code == 200
+
+
+def test_outer_browser_policy_preserves_inner_report_sandbox(renderer):
+    from backend.main import SharedSecurityHeaders
+    from backend.local_web_app import LocalWebApp
+    policy = b"sandbox; default-src 'none'; img-src data:; style-src 'unsafe-inline'"
+
+    async def report(scope, receive, send):
+        await send({'type': 'http.response.start', 'status': 200,
+                    'headers': [(b'content-security-policy', policy)]})
+        await send({'type': 'http.response.body', 'body': b'<html>synthetic report</html>'})
+
+    app = SharedSecurityHeaders(LocalWebApp(report, renderer, ORIGIN))
+    _, result = invoke(app, '/api/report/view/synthetic')
+    headers = dict(result[0]['headers'])
+    assert headers[b'content-security-policy'] == policy
+    assert headers[b'x-frame-options'] == b'DENY'
+    assert headers[b'x-content-type-options'] == b'nosniff'
 
 
 def test_default_https_port_uses_browser_canonical_http_and_wss_authority(renderer):

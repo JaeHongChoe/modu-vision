@@ -332,6 +332,7 @@ def test_readiness_requires_real_owned_tls_health_and_redacts_secrets(tmp_path, 
     (renderer / 'index.html').write_text('synthetic build')
     api = HealthApp()
     opened = []
+    responses = []
     import webbrowser
     monkeypatch.setattr(webbrowser, 'open', lambda url: opened.append(url))
     import uvicorn
@@ -348,7 +349,22 @@ def test_readiness_requires_real_owned_tls_health_and_redacts_secrets(tmp_path, 
             async def stop_after_ready():
                 while not opened:
                     await asyncio.sleep(.01)
-                servers[0].should_exit = True
+                def probe():
+                    import httpx
+                    import ssl
+                    context = ssl.create_default_context(cafile=str(cert))
+                    with httpx.Client(verify=context, trust_env=False) as client:
+                        for path, headers in (
+                            ('/', {}), ('/health', {}), ('/api/context', {}),
+                            ('/missing.js', {}), ('/', {'Host': 'foreign.invalid'}),
+                            ('/api/context', {'Origin': 'https://foreign.invalid'}),
+                        ):
+                            response = client.get(origin + path, headers=headers)
+                            responses.append((path, response.status_code, dict(response.headers)))
+                try:
+                    await asyncio.to_thread(probe)
+                finally:
+                    servers[0].should_exit = True
             stopper = asyncio.create_task(stop_after_ready())
             try:
                 await run_https(api, renderer, origin, sock, cert, key, paths, no_open=False)
@@ -360,6 +376,12 @@ def test_readiness_requires_real_owned_tls_health_and_redacts_secrets(tmp_path, 
     assert api.started and api.stopped
     assert any(scope['path'] == '/health' and scope['scheme'] == 'https' for scope in api.requests)
     assert opened == [origin]
+    assert [status for _, status, _ in responses] == [200, 200, 200, 404, 403, 403]
+    for path, status, headers in responses:
+        assert headers.get('x-content-type-options') == 'nosniff', (path, status, headers)
+        assert headers.get('x-frame-options') == 'DENY', (path, status, headers)
+        assert headers.get('referrer-policy') == 'no-referrer', (path, status, headers)
+        assert headers.get('content-security-policy') == "frame-ancestors 'none'", (path, status, headers)
     ready_lines = [line for line in capsys.readouterr().out.splitlines() if line.startswith('MODU_WEB_READY=')]
     assert len(ready_lines) == 1
     ready = json.loads(ready_lines[0].split('=', 1)[1])
