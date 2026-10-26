@@ -41,11 +41,11 @@
 - `instance_lock(paths: WebPaths)` context manager: exclusive OS-backed same-root server lock, released on normal/error exit without deleting user data.
 - `ensure_tls(paths: WebPaths, cert_file: Path | None = None, key_file: Path | None = None) -> tuple[Path, Path]`: generate own localhost certificate/key only when both absent; validate SAN, dates, key match/private permissions; existing invalid material fails intact.
 
-- [ ] Write test-first cases for platform path choice, env isolation, competing process lock/reacquire, TLS generation/reuse, partial pair/mismatch/expiry/SAN/key permissions and link refusal.
-- [ ] Run the focused tests and record expected missing-feature RED evidence.
-- [ ] Implement the support module without importing backend.main, changing shared environments or global trust stores. Discover any additional mutable environment defaults with a bounded source read and pin those to the web root.
-- [ ] Run focused tests plus relevant existing account/auth tests; record named failures and distinguish environment problems. Run `git diff --check`.
-- [ ] Self-review, commit only this task's files, and write full RED/GREEN/changes/concerns report to the supplied report path.
+- [x] Write test-first cases for platform path choice, env isolation, competing process lock/reacquire, TLS generation/reuse, partial pair/mismatch/expiry/SAN/key permissions and link refusal.
+- [x] Run the focused tests and record expected missing-feature RED evidence.
+- [x] Implement the support module without importing backend.main, changing shared environments or global trust stores. Discover any additional mutable environment defaults with a bounded source read and pin those to the web root.
+- [x] Run focused tests plus relevant existing account/auth tests; record named failures and distinguish environment problems. Run `git diff --check`.
+- [x] Self-review, commit only this task's files, and write full RED/GREEN/changes/concerns report to the supplied report path.
 
 ### Task 2: Product HTTPS server, first account, launch command and guide
 
@@ -59,12 +59,12 @@
 - Initial account uses hidden terminal password/confirmation plus existing AccountStore bootstrap before serving; existing accounts are preserved. Noninteractive empty first-run refuses with a clear setup command. Do not expose bootstrap via browser.
 - After real owned HTTPS `/health` readiness, output `MODU_WEB_READY=<JSON>` with public `url`, `pid`, `data_dir`, `certificate_file`, `certificate_sha256` only, then optionally open default browser. Never log password, cookie, CSRF or API capability.
 
-- [ ] Write failing tests for unauthenticated static vs guarded API, exact Host/Origin, spoofed forwarded headers, API/WS/lifespan routing, malformed/encoded traversal and linked files, MIME/method refusal, secret/map non-serving.
-- [ ] Write failing CLI/wrapper tests for default/invalid options, terminal bootstrap privacy/refusal/reuse, lock and port conflicts, readiness and owned cleanup, argv/no-shell behavior and help-without-build.
-- [ ] Record RED then implement separate modules and launch command. Pin storage before imports, bind socket before creating origin, preserve backend lifespan and graceful detach. Build into the owned web-root renderer directory only while holding the instance lock; reject linked/escaping build targets before enabling Vite emptyOutDir. A separate `backend/local_web_runtime.py` helper may contain build/readiness orchestration if needed to keep CLI small. Keep product code independent of e2e fixtures.
-- [ ] Write source-environment setup/run/restart/login/certificate fingerprint/error instructions; state browser native capability limits and physical GPU sharing. Include macOS, Linux and Windows command syntax without claiming all OS tested.
-- [ ] Run task tests, relevant original authentication/host tests, e2e types, application typecheck, service/action evidence gates and diff check once. Record exact outputs/named failures; do not weaken assertions or source-pinned history.
-- [ ] Self-review and commit; report exact test evidence and any concerns.
+- [x] Write failing tests for unauthenticated static vs guarded API, exact Host/Origin, spoofed forwarded headers, API/WS/lifespan routing, malformed/encoded traversal and linked files, MIME/method refusal, secret/map non-serving.
+- [x] Write failing CLI/wrapper tests for default/invalid options, terminal bootstrap privacy/refusal/reuse, lock and port conflicts, readiness and owned cleanup, argv/no-shell behavior and help-without-build.
+- [x] Record RED then implement separate modules and launch command. Pin storage before imports, bind socket before creating origin, preserve backend lifespan and graceful detach. Build into the owned web-root renderer directory only while holding the instance lock; reject linked/escaping build targets before enabling Vite emptyOutDir. A separate `backend/local_web_runtime.py` helper may contain build/readiness orchestration if needed to keep CLI small. Keep product code independent of e2e fixtures.
+- [x] Write source-environment setup/run/restart/login/certificate fingerprint/error instructions; state browser native capability limits and physical GPU sharing. Include macOS, Linux and Windows command syntax without claiming all OS tested.
+- [x] Run task tests, relevant original authentication/host tests, e2e types, application typecheck, service/action evidence gates and diff check once. Record exact outputs/named failures; do not weaken assertions or source-pinned history.
+- [x] Self-review and commit; report exact test evidence and any concerns.
 
 ### Task 4: Repair first-project compute hydration found by actual browser acceptance
 
@@ -74,12 +74,12 @@ Inserted before resuming Task 3. Actual acceptance created its first project thr
 
 **Interfaces:** Existing `createProject` handler must retire/refresh compute transport only under a verified newly accepted account/project context and connect telemetry after that canonical context. Consume existing `acceptedSourceScope`, `resetComputeTransportCache`, real project sync and normal host selection; no new public API. Task 3 must be able to start training without relogin/reselect workarounds.
 
-- [ ] Read exact retained failure in this plan's `private/run-2026-10-26T10-04-44-235Z` plus source path from panel to compute load error and training computeReady. Compare working post-login hydration before choosing the minimal source fix.
-- [ ] Write a failing component/store behavior test: no-project shared login leaves a real compute-load refusal; actual create handler accepts new canonical project; accepted refresh triggers actual compute load with new project/actor headers and clears the refusal. Watch RED before product edit.
-- [ ] Cover failed/unaccepted sync and superseded authority: no accepted refresh/protected hydration under another actor/project. Preserve busy/unsaved/source and session-changing guards; never weaken computeReady or swallow current server errors.
-- [ ] Implement only the first-project acceptance refresh/telemetry sequencing needed by this root cause; no generic store/auth refactor.
-- [ ] Run focused new/related shared-session component/store tests, full renderer suite once, app/e2e types and source-evidence gates. If current declarations need a refresh, report the exact flagged field first; never alter historical receipt bytes or assertions.
-- [ ] Self-review, commit only Task4 files and report RED/GREEN/diagnosis/concerns. Root supplies independent task review before Task3 resumes the same retained project/root.
+- [x] Read exact retained failure in this plan's `private/run-2026-10-26T10-04-44-235Z` plus source path from panel to compute load error and training computeReady. Compare working post-login hydration before choosing the minimal source fix.
+- [x] Write a failing component/store behavior test: no-project shared login leaves a real compute-load refusal; actual create handler accepts new canonical project; accepted refresh triggers actual compute load with new project/actor headers and clears the refusal. Watch RED before product edit.
+- [x] Cover failed/unaccepted sync and superseded authority: no accepted refresh/protected hydration under another actor/project. Preserve busy/unsaved/source and session-changing guards; never weaken computeReady or swallow current server errors.
+- [x] Implement only the first-project acceptance refresh/telemetry sequencing needed by this root cause; no generic store/auth refactor.
+- [x] Run focused new/related shared-session component/store tests, full renderer suite once, app/e2e types and source-evidence gates. If current declarations need a refresh, report the exact flagged field first; never alter historical receipt bytes or assertions.
+- [x] Self-review, commit only Task4 files and report RED/GREEN/diagnosis/concerns. Root supplies independent task review before Task3 resumes the same retained project/root.
 
 ### Task 5: Canonical HTTPS default-port handling
 
@@ -89,10 +89,10 @@ Inserted before the single model run after a bounded source/ASGI audit proved th
 
 **Interfaces:** Generated URL/Host/Origin at actual443 must be `https://localhost` / `localhost`; other ports remain explicit. Existing HTTPS account allowlist, exact authority, WSS and TLS fingerprint policies remain unchanged. Health probing defaults a missing HTTPS port to443.
 
-- [ ] Read the bounded `port443-audit.md` proof. Add actual ASGI/browser-canonical HTTP/WSS tests and health default-port behavior test; observe RED before editing.
-- [ ] Normalize only local origin construction/validation and health port fallback. Do not relax Host/Origin or authorize another origin/host.
-- [ ] Run focused app/CLI auth/TLS regressions, diff check and self-review. No privileged port listener, new server/model run, auth-system refactor or dependency change.
-- [ ] Commit only after root grants the git commit baton; independent task review follows. Task3 remains paused until Tasks4/5 are both reviewed, then resumes its retained project with current launch/model provenance.
+- [x] Read the bounded `port443-audit.md` proof. Add actual ASGI/browser-canonical HTTP/WSS tests and health default-port behavior test; observe RED before editing.
+- [x] Normalize only local origin construction/validation and health port fallback. Do not relax Host/Origin or authorize another origin/host.
+- [x] Run focused app/CLI auth/TLS regressions, diff check and self-review. No privileged port listener, new server/model run, auth-system refactor or dependency change.
+- [x] Commit only after root grants the git commit baton; independent task review follows. Task3 remains paused until Tasks4/5 are both reviewed, then resumes its retained project with current launch/model provenance.
 
 ### Task 6: Immediate owned-server restart without waiting for TIME_WAIT
 
@@ -102,11 +102,11 @@ Inserted during Task3 after the single real model and its evaluation completed. 
 
 **Interfaces:** `bind_loopback(port)` still exclusively reserves the IPv4 loopback listener for its owner. On supported POSIX systems allow normal same-port reuse after a prior owned listener's active close; never enable SO_REUSEPORT or allow takeover of an active listener. Keep reservation exclusive through build/startup, including another data-root attempt.
 
-- [ ] Read the actual run5 restart failure and source comparison, then write a deterministic real-socket active-close/TIME_WAIT regression. Observe RED with the current helper.
-- [ ] Implement the smallest supported socket setup before bind. If listen is needed to keep an early port reservation exclusive with reuse enabled, do it without serving any HTTP before app readiness; Uvicorn must still own request handling.
-- [ ] Test immediate same-port rebind, active-listener conflict and duplicate reservation exclusion, loopback-only address and cleanup. Preserve existing error/no-other-process-stop behavior and Windows fail-closed scope; no privileged listener or SO_REUSEPORT.
-- [ ] Run scoped CLI/app/auth/TLS cases and diff check, self-review and commit only owned files. Report exact RED/GREEN plus the actual restart boundary; root independent review follows.
-- [ ] Task3 resumes the same original job/root after review, starts the patched server, observes live WSS, stops it and immediately restarts the same port. No bind-wait workaround or second training.
+- [x] Read the actual run5 restart failure and source comparison, then write a deterministic real-socket active-close/TIME_WAIT regression. Observe RED with the current helper.
+- [x] Implement the smallest supported socket setup before bind. If listen is needed to keep an early port reservation exclusive with reuse enabled, do it without serving any HTTP before app readiness; Uvicorn must still own request handling.
+- [x] Test immediate same-port rebind, active-listener conflict and duplicate reservation exclusion, loopback-only address and cleanup. Preserve existing error/no-other-process-stop behavior and Windows fail-closed scope; no privileged listener or SO_REUSEPORT.
+- [x] Run scoped CLI/app/auth/TLS cases and diff check, self-review and commit only owned files. Report exact RED/GREEN plus the actual restart boundary; root independent review follows.
+- [x] Task3 resumes the same original job/root after review, starts the patched server, observes live WSS, stops it and immediately restarts the same port. No bind-wait workaround or second training.
 
 ### Task 3: Actual launcher browser round trip and closure evidence
 
@@ -117,12 +117,12 @@ Inserted during Task3 after the single real model and its evaluation completed. 
 - Uses actual unshimmed browser and product TLS ASGI server, an isolated synthetic local account/data root and existing cached official `resnet18-f37072fd.pth` (validate SHA, no downloads).
 - Production launcher receives no browser certificate bypass flags. Only the isolated QA browser may trust its generated test certificate.
 
-- [ ] First write a failing integration assertion against the real launcher or its acceptance runner for a saved-record/restart behavior not yet covered; record RED before any acceptance helper implementation.
-- [ ] Add bounded owned-process test setup/teardown and redacted receipts; never read actual user accounts or credentials. Do not use the old browser_team_server proxy or start repeated model runs.
-- [ ] Perform actual browser login and UI project creation, synthetic ZIP upload/adoption/source selection, label save, split, one small real ResNet18 training and held-out evaluation. Confirm saved job/evaluation and hashes after product server restart and a new browser login.
-- [ ] Verify actual same-origin WSS telemetry open/message and reconnection, plus default unauthenticated refusal/Host/Origin behavior against product entrypoint. Close only owned QA processes and confirm ports close.
-- [ ] Run meaningful related regression checks after any new fixes, record saved artifacts vs browser/engine/model/OS boundaries, and publish an accurate compact evidence summary. Preserve prior failure history.
-- [ ] Self-review and commit all task evidence/code, leaving private synthetic data and secrets untracked/ignored. Final independent branch review follows.
+- [x] First write a failing integration assertion against the real launcher or its acceptance runner for a saved-record/restart behavior not yet covered; record RED before any acceptance helper implementation.
+- [x] Add bounded owned-process test setup/teardown and redacted receipts; never read actual user accounts or credentials. Do not use the old browser_team_server proxy or start repeated model runs.
+- [x] Perform actual browser login and UI project creation, synthetic ZIP upload/adoption/source selection, label save, split, one small real ResNet18 training and held-out evaluation. Confirm saved job/evaluation and hashes after product server restart and a new browser login.
+- [x] Verify actual same-origin WSS telemetry open/message and reconnection, plus default unauthenticated refusal/Host/Origin behavior against product entrypoint. Close only owned QA processes and confirm ports close.
+- [x] Run meaningful related regression checks after any new fixes, record saved artifacts vs browser/engine/model/OS boundaries, and publish an accurate compact evidence summary. Preserve prior failure history.
+- [x] Self-review and commit all task evidence/code, leaving private synthetic data and secrets untracked/ignored. Final independent branch review follows.
 
 ## Execution choice and self-review
 
