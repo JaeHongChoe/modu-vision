@@ -1,4 +1,4 @@
-import { setLocalHostTransport, getLocalProjectContext, getHostProjectState, type HostProjectState, type ProjectContext } from './api';
+import { setBrowserSessionTransport, setLocalHostTransport, getLocalProjectContext, getHostProjectState, type HostProjectState, type ProjectContext } from './api';
 import { browserSession, setBrowserHost } from './browserSession';
 import type { AssistantBridge, ElectronAPI } from '../../types/electron';
 
@@ -77,12 +77,15 @@ export class BrowserHost {
   })();this.pending=work;
   try{await work;}finally{if(this.pending===work)this.pending=null;}
  }
- private async call<T>(path:string,body?:unknown,requireTab=true):Promise<T>{
+ private async call<T>(path:string,body?:unknown,requireTab=true,ownerFence?:()=>boolean):Promise<T>{
   if(!this.available()||!this.runtime.session.connection()||requireTab&&!this.tab)throw new Error('로컬 계정 로그인과 보조 프로그램 연결을 확인하세요.');
   const resource=this.resource(),resourceKey=this.resourceKey(),projectAction=/^\/assistant\/(send|imageIntent|beginRun|endRun)$/.test(path),pathAction=/^\/(dialog\/|open$)/.test(path);
   if(pathAction&&!resource.local)throw new Error(this.reason('pickPaths'));
   if(projectAction&&!resource.local&&!resource.remote)throw new Error('현재 원격 프로젝트 연결과 선택을 확인하세요.');
-  const epoch=this.epoch,origin=this.runtime.origin()!,method=body===undefined?'GET':'POST';
+  const epoch=this.epoch,sessionRevision=this.runtime.session.revision?.(),origin=this.runtime.origin()!,method=body===undefined?'GET':'POST';
+  const current=()=>epoch===this.epoch&&!!this.runtime.session.connection()&&sessionRevision===this.runtime.session.revision?.()&&(!(pathAction||projectAction)||resourceKey===this.resourceKey())&&(!ownerFence||ownerFence());
+  const requireCurrent=()=>{if(!current())throw new Error('계정 또는 프로젝트가 바뀌었습니다. 다시 시도하세요.');};
+  requireCurrent();
   const options=this.runtime.session.requestOptions(origin+'/api/local-host'+path,method);
   const headers:Record<string,string>={'Content-Type':'application/json',...options.headers};if(this.tab)headers['X-Vision-Local-Tab']=this.tab;
   if(projectAction&&resource.remote)headers['X-Vision-Remote-Authority']=JSON.stringify(resource.remote);
@@ -91,8 +94,18 @@ export class BrowserHost {
   let response:Response,value:any;
   try{response=await this.runtime.fetch(origin+'/api/local-host'+path,{...options,method,headers,signal:controller.signal,redirect:'error',...(body===undefined?{}:{body:JSON.stringify(body)})});value=await response.json();}
   finally{this.inFlight.delete(controller);}
-  if(epoch!==this.epoch||!this.runtime.session.connection()||((pathAction||projectAction)&&resourceKey!==this.resourceKey()))throw new Error('계정 또는 프로젝트가 바뀌었습니다. 다시 시도하세요.');
-  if(!response.ok){if(response.status===401)this.reset();throw new Error(typeof value.detail==='string'?value.detail:value.detail?.message||value.error?.message||'로컬 기능 요청을 처리하지 못했습니다.');}
+  requireCurrent();
+  if(!response.ok){
+   if(response.status===401){
+    if(projectAction&&resource.remote){
+     // This endpoint checks both local cookie and remote project authority. Verify
+     // the local-only boundary once; never retry the assistant/provider operation.
+     try{await this.call('/capabilities',undefined,false,current);}catch{/* only a definitive local 401 retires the principal */}
+     requireCurrent();
+    }else{this.runtime.session.invalidate?.();this.reset();}
+   }
+   throw new Error(typeof value.detail==='string'?value.detail:value.detail?.message||value.error?.message||'로컬 기능 요청을 처리하지 못했습니다.');
+  }
   return value as T;
  }
  private async approve():Promise<void>{if(this.approved)return;const value=await this.call<{approved:boolean}>('/approve',{});if(value.approved!==true)throw new Error('이 컴퓨터 소유자의 로컬 기능 허용이 필요합니다.');this.approved=true;}
@@ -170,3 +183,6 @@ export const browserHost=new BrowserHost({origin:()=>typeof window!=='undefined'
 setLocalHostTransport({available:()=>browserHost.available(),canProjects:()=>browserHost.can('projects'),requestHeaders:(...args)=>browserHost.requestHeaders(...args),projectChanged:()=>browserHost.projectChanged(),prepareRequest:(...args)=>browserHost.prepareRequest(...args),generation:()=>browserHost.generation(),acceptResponseHeaders:(...args)=>browserHost.acceptResponseHeaders(...args)});
 
 setBrowserHost(browserHost);
+
+setBrowserSessionTransport({authenticated:()=>browserSession.connection()!==null,revision:()=>browserSession.revision(),requestOptions:(...args)=>browserSession.requestOptions(...args),invalidate:()=>browserSession.invalidate()});
+browserSession.subscribe(()=>{if(!browserSession.connection())browserHost.reset();});

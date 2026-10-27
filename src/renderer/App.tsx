@@ -4,6 +4,7 @@
  * Dark Steel Chassis & 1px Precision Hairline Grid Architecture.
  */
 
+import { BrowserSessionGate } from './components/compute/BrowserSessionGate';
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { WorkspaceDialog } from './components/common/WorkspaceDialog';
 import { TaskCenter } from './components/training/TaskCenter';
@@ -46,7 +47,9 @@ const catchUpJobEvents = createCatchUp(jobEventStream, () => useTrainingStore.ge
 // 간단히 보기 menu items use the shared secondary button (the footer's); the 모두 보기 workspace row keeps its own styles.
 const MENU_ITEM='workspace-button justify-start whitespace-nowrap';
 
-export default function App() {
+export default function App(){return <BrowserSessionGate><StudioApp/></BrowserSessionGate>;}
+
+function StudioApp() {
   const { language, activeStep, backendStatus, setBackendStatus, showError, syncCurrentProject, viewMode } = useProjectStore();
   // The step bar marks finished steps from what the stores already hold (no extra request).
   const hasData = useDatasetStore(s => s.hasSelectedFolder);

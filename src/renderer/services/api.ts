@@ -683,6 +683,14 @@ export interface ContextRequestOptions extends RequestInit {
   responseType?: 'json' | 'blob';
 }
 type LocalHostTransport = {available:()=>boolean;canProjects:()=>boolean;requestHeaders:(url:string,method:string,body?:unknown)=>Record<string,string>;projectChanged:()=>void;prepareRequest?:(url?:string,method?:string,body?:unknown)=>Promise<void>;generation:()=>number;acceptResponseHeaders:(path:string,method:string,headers:Headers,body?:unknown)=>void};
+type BrowserSessionTransport={authenticated:()=>boolean;revision:()=>number;requestOptions:(url:string,method:string)=>{credentials?:RequestCredentials;headers?:Record<string,string>};invalidate:()=>void};
+let browserSessionTransport:BrowserSessionTransport|null=null;
+/** The browser entrypoint installs its memory authority; a retained cookie alone cannot hydrate the Studio. */
+export function setBrowserSessionTransport(adapter:BrowserSessionTransport):void {browserSessionTransport=adapter;}
+export class BrowserSessionRequiredError extends Error {
+  readonly status=401;
+  constructor(){super('브라우저를 새로 열었거나 세션이 만료되었습니다. 계정에 다시 로그인하세요.');this.name='BrowserSessionRequiredError';}
+}
 let localHostTransport:LocalHostTransport|null=null;
 /** Browser host registers its own local authority without changing the API transport. */
 export function setLocalHostTransport(adapter:LocalHostTransport):void {localHostTransport=adapter;}
@@ -871,7 +879,13 @@ export async function request<T>(path: string, options: ContextRequestOptions = 
   const base = transport||secureBrowserOrigin()||`http://127.0.0.1:${await getBackendPort()}`;
   let requestPath=path.startsWith('/')?path:`/${path}`;
   const localOrigin=secureBrowserOrigin();
+  const sameOriginBrowser=!!localOrigin&&new URL(base).origin===localOrigin;
+  const browserAccountRequest=sameOriginBrowser&&!!browserSessionTransport&&requestPath.startsWith('/api/')&&requestPath.split('?')[0]!=='/api/accounts/config';
+  const browserRevision=browserSessionTransport?.revision();
+  const requireMemorySession=()=>{if(browserAccountRequest&&(!browserSessionTransport?.authenticated()||browserRevision!==browserSessionTransport.revision()))throw new BrowserSessionRequiredError();};
+  requireMemorySession();
   if(localOrigin===base&&localHostTransport?.prepareRequest)await localHostTransport.prepareRequest(base+requestPath,fetchOptions.method||'GET',fetchOptions.body);
+  requireMemorySession();
   if(localOrigin===base&&localHostTransport?.canProjects()&&/^\/api\/project\/(current|list|create|open|backup|template|restore)$/.test(requestPath))requestPath=requestPath.replace('/api/project/','/api/local-host/projects/');
   if(localOrigin===base&&localSelectionContext&&/^\/api\/local-host\/projects\/(current|create|open|restore|recover)$/.test(requestPath)){
     // The chooser proof belongs to the prior namespace; the new response still remains a discovery candidate.
@@ -880,7 +894,7 @@ export async function request<T>(path: string, options: ContextRequestOptions = 
   }
   const url = `${base}${requestPath}`;
   if(localOrigin===base)for(const [key,value] of Object.entries(localHostTransport?.requestHeaders(url,fetchOptions.method||'GET',fetchOptions.body)||{}))headers.set(key,value);
-  const browserOptions=sessionOptions?.(url,fetchOptions.method||'GET')||{};
+  const browserOptions=sessionOptions?.(url,fetchOptions.method||'GET')??browserSessionTransport?.requestOptions(url,fetchOptions.method||'GET')??{};
   for(const [key,value] of Object.entries(browserOptions.headers||{}))headers.set(key,value);
   const response = await fetch(url, {
     ...browserOptions,
@@ -888,7 +902,9 @@ export async function request<T>(path: string, options: ContextRequestOptions = 
     headers,
   });
 
+  requireMemorySession();
   if (!response.ok) {
+    if(response.status===401&&sameOriginBrowser&&!remoteBase(transport))browserSessionTransport?.invalidate();
     let errorDetail = `HTTP ${response.status} ${response.statusText}`;
     try {
       const errData = await response.json();
@@ -919,8 +935,9 @@ export async function request<T>(path: string, options: ContextRequestOptions = 
     receivedContext={...received};
   }
   if (response.status === 204) return undefined as T;
-  if(responseType==='blob')return response.blob() as Promise<T>;
+  if(responseType==='blob'){const blob=await response.blob();requireMemorySession();return blob as T;}
   const value:T=await response.json();
+  requireMemorySession();
   if(localOrigin===base&&generation===contextGeneration&&transport===sharedBase&&localGeneration===localHostTransport?.generation())localHostTransport?.acceptResponseHeaders(url,fetchOptions.method||'GET',response.headers,value);
   if(receivedContext&&value&&typeof value==='object')contextCandidates.set(value,{context:receivedContext,generation,transport});
   return value;
