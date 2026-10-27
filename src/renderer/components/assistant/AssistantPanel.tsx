@@ -9,6 +9,9 @@ import React, { useEffect, useRef, useState } from 'react';
 import { useAssistantStore, assistantBridge } from '../../stores/useAssistantStore';
 import { ChatgptConnectionSetup } from './ChatgptConnectionSetup';
 import { AssistantRunLog } from './AssistantRunLog';
+import {AssistantTaskPanel} from './AssistantTaskPanel';
+import {useAssistantTaskStore} from '../../stores/useAssistantTaskStore';
+import {taskConnectionKey} from '../../services/assistantTasks/connection';
 
 const ITEM_STYLE: Record<string, string> = {
   person: 'ml-8 rounded bg-slate-800 px-3 py-2 text-slate-100',
@@ -26,6 +29,8 @@ export const AssistantPanel: React.FC = () => {
   const writing = useAssistantStore(state => state.writing);
   const configuring = useAssistantStore(state => state.configuring);
   const pendingWrite = useAssistantStore(state => state.pending);
+  const taskStatus=useAssistantTaskStore(state=>state.task?.status);
+  const taskBusy=useAssistantTaskStore(state=>state.busy);
   const { close, ask, stop, decide, newConversation } = useAssistantStore.getState();
   const [draft, setDraft] = useState('');
   const list = useRef<HTMLOListElement>(null);
@@ -54,11 +59,11 @@ export const AssistantPanel: React.FC = () => {
         <button type="button" className="workspace-button" onClick={close}>닫기</button>
       </header>
       <div className="flex-1 space-y-3 overflow-y-auto px-4 py-3">
-        <p className="text-xs text-slate-300">도우미 없이도 모든 단계를 쓸 수 있습니다. 승인·배포·정답 확정은 사람이 직접 하고, 쓰기 도구는 여기서 확인해야 실행됩니다.</p>
+        <p className="text-xs text-slate-300">도우미 없이도 모든 단계를 쓸 수 있습니다. 작업 계획을 확인하면 도우미가 화면을 조작하며 진행합니다. 승인·배포·정답 확정은 사람이 직접 합니다.</p>
         {!bridge && <p role="alert" className="text-amber-200">이 화면(브라우저)에서는 도우미를 쓸 수 없습니다. 데스크톱 앱에서 여세요.</p>}
         {bridge && (
           // Locked while a confirmed write executes: a receiver change then would end the turn before its outcome is recorded.
-          <fieldset aria-label="도우미 설정" disabled={Boolean(writing)} className="min-w-0 space-y-3">
+          <fieldset aria-label="도우미 설정" disabled={Boolean(writing||taskBusy)} className="min-w-0 space-y-3">
             <ChatgptConnectionSetup />
           </fieldset>
         )}
@@ -70,6 +75,7 @@ export const AssistantPanel: React.FC = () => {
             </li>
           ))}
         </ol>
+        {bridge&&<AssistantTaskPanel ready={ready&&!configuring} blocked={Boolean(busy||writing||pending)} connectionKey={taskConnectionKey(config)}/>}
         {pending && (
           <section role="group" aria-label="쓰기 실행 확인" className="space-y-2 rounded border border-amber-600 bg-amber-950/40 p-3">
             <h3 className="font-semibold text-amber-100">{pending.preview.title} · 확인이 필요합니다</h3>
@@ -85,12 +91,12 @@ export const AssistantPanel: React.FC = () => {
         <textarea aria-label="도우미에게 묻기" rows={3} value={draft} disabled={!ready || Boolean(pending)}
           onChange={event => setDraft(event.target.value)}
           onKeyDown={event => { if (event.key === 'Enter' && !event.shiftKey && !event.nativeEvent.isComposing) { event.preventDefault(); if (!busy) submit(); } }}
-          placeholder={chatgpt&&account?.usagePaused ? 'ChatGPT 사용량을 확인한 뒤 요청 재개를 허용하세요.' : ready ? '예: 왜 학습을 시작할 수 없나요?' : 'ChatGPT 계정을 연결하고 모델을 선택하면 물어볼 수 있습니다.'}
+          placeholder={chatgpt&&account?.usagePaused ? 'ChatGPT 사용량을 확인한 뒤 요청 재개를 허용하세요.' : ready ? '예: 이 자료로 불량 검사 만들어줘' : 'ChatGPT 계정을 연결하고 모델을 선택하면 물어볼 수 있습니다.'}
           className="w-full resize-none rounded border border-slate-600 bg-slate-900 px-2 py-1.5 text-slate-100" />
         <p className="text-xs text-slate-300">ChatGPT 연결은 현재 텍스트 질문만 지원합니다. 이미지 전송은 지원하지 않습니다.</p>
         {writing && <p role="status" className="text-xs text-amber-200">확인한 작업을 실행 중입니다. 결과가 대화와 실행 기록에 남으면 다시 묻거나 설정을 바꿀 수 있습니다.</p>}
         <div className="flex flex-wrap items-center gap-2">
-          <button type="button" className={`workspace-button${chatgpt&&account?.usagePaused?'':' workspace-button--primary'}`} disabled={primary.disabled} onClick={primary.run}>{primary.label}</button>
+          <button type="button" className={`workspace-button${chatgpt&&account?.usagePaused||taskStatus?'':' workspace-button--primary'}`} disabled={primary.disabled} onClick={primary.run}>{primary.label}</button>
           {busy && !pending && !writing && <button type="button" className="workspace-button" onClick={() => void stop()}>멈추기</button>}
           <button type="button" className="workspace-button" disabled={busy || Boolean(pending) || !items.length} onClick={newConversation}>새 대화</button>
         </div>

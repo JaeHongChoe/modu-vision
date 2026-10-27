@@ -34,6 +34,25 @@ test('every tool has exactly one tier and the forbidden list covers §4.5',()=>{
  assert.ok(JSON.stringify(tools.specs()).length<24000,'fits the main process bound');
 });
 
+test('task tools propose plans and read app capabilities without approving or running actions',async()=>{
+ const calls=[],{deps}=fakeDeps({tasks:{isExecuting:()=>false,features:action=>({action}),screen:()=>({step:1}),status:()=>({status:'draft'}),propose:async input=>{calls.push(input);return {status:'draft',execution_requires_person:true};}}});
+ const tools=createAssistantTools(deps);
+ assert.equal(tools.tier('propose_task'),'navigate');assert.equal(tools.tier('approve_task'),null);
+ const answer=await tools.runAutomatic('propose_task',{goal:'자료 나누기',steps:[{action:'save_split',args:{train_percent:80,val_percent:10,test_percent:10},label:'자료 나누기'}]});
+ assert.equal(answer.ok,true);assert.equal(calls.length,1);assert.equal(calls[0].goal,'자료 나누기');
+ await assert.rejects(tools.runAutomatic('propose_task',{goal:'x',binding:'model-controlled',steps:[]}),/계획/);
+ assert.equal(calls.length,1);
+ assert.ok(JSON.stringify(tools.specs()).length<24000,'real task tool schemas stay within provider bound');
+});
+test('an active task fences legacy writes and settings preparation before their side effects',async()=>{
+ const {deps,calls}=fakeDeps({tasks:{isExecuting:()=>true,features:()=>({}),screen:()=>({}),status:()=>({}),propose:async()=>({})}});
+ const tools=createAssistantTools(deps);
+ await assert.rejects(tools.preview('save_split',{train_percent:80,val_percent:10,test_percent:10}),/계획|작업/);
+ await assert.rejects(tools.execute('start_training',{},{confirmed:true,runId:RUN}),/계획|작업/);
+ await assert.rejects(tools.runAutomatic('prefill_split',{train_percent:80}),/계획|작업/);
+ assert.deepEqual(calls,[]);
+});
+
 test('a write tool never runs without the person\'s confirmation and a run id',async()=>{
  const {deps,calls}=fakeDeps();const tools=createAssistantTools(deps);
  for(const confirmation of [undefined,null,{confirmed:false,runId:RUN},{confirmed:true,runId:'run_short'},{confirmed:'yes',runId:RUN}])

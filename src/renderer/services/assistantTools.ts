@@ -13,6 +13,7 @@
  * the registry with fakes; assistantRuntime.ts wires the real stores. */
 import type { AssistSnapshot } from '../stores/assistContext';
 import type { AssistantToolSpec } from '../../types/electron';
+import {ACTION_CATALOG,validateTaskPlan} from './assistantTasks/catalog';
 import { STEP_NAMES, fileName, minimalAssistContext, reducePaths, type AssistantFacts } from './assistantContext';
 
 export type ToolTier = 'read' | 'navigate' | 'write' | 'forbidden';
@@ -37,7 +38,15 @@ export function requireToolCurrent(isCurrent?: ToolCurrent): void {
   if (isCurrent && !isCurrent()) throw new ToolRefusal('context_changed', '프로젝트·원본·라벨 세트 또는 연결이 바뀌었습니다. 현재 화면에서 다시 요청하세요.');
 }
 
+export interface AssistantTaskToolDeps {
+  isExecuting():boolean;
+  features(action?:string):unknown;
+  screen():unknown;
+  status():unknown;
+  propose(input:{goal:string;steps:Array<{action:string;args:Record<string,unknown>;label:string}>}):Promise<unknown>;
+}
 export interface ToolDeps {
+  tasks?:AssistantTaskToolDeps;
   snapshot(): AssistSnapshot | null;
   facts(): AssistantFacts;
   setStep(step: number): Promise<void>;
@@ -98,6 +107,27 @@ function draftModelChoice(models: DraftModel[], requested: unknown): DraftModel 
 export function createAssistantTools(deps: ToolDeps): AssistantToolRegistry {
   const facts = () => deps.facts();
   const definitions: ToolDefinition[] = [
+    ...(deps.tasks?([
+      {name:'read_app_features',tier:'read',description:'이 앱이 지원하는 작업과 사용 방법을 읽습니다. action을 고르면 해당 기능의 정확한 입력과 전제 조건을 읽습니다.',
+        parameters:{type:'object',properties:{action:{type:'string',enum:ACTION_CATALOG.map(row=>row.id)}},additionalProperties:false},
+        run:async(args:Record<string,unknown>)=>ok(deps.tasks!.features(typeof args.action==='string'?args.action:undefined),'앱 기능을 읽었습니다.')},
+      {name:'inspect_app_screen',tier:'read',description:'현재 앱 화면과 가능한 다음 작업을 구조화된 상태로 읽습니다. 화면 픽셀이나 원본 이미지는 전송하지 않습니다.',parameters:NO_ARGS,
+        run:async()=>ok(deps.tasks!.screen(),'현재 화면의 작업 상태를 읽었습니다.')},
+      {name:'read_task_status',tier:'read',description:'현재 위임한 작업의 계획·진행·사람 검토 대기·오류를 읽습니다. 실행·승인하거나 재시도하지 않습니다.',parameters:NO_ARGS,
+        run:async()=>ok(deps.tasks!.status(),'위임 작업 상태를 읽었습니다.')},
+      {name:'propose_task',tier:'navigate',description:'사용자가 맡긴 작업을 여러 단계 실행 계획으로 제시합니다. 기능 목록의 action과 입력만 사용하세요. 계획을 제시한 뒤 사용자가 패널에서 확인할 때까지 실행하지 않습니다.',
+        parameters:{type:'object',properties:{goal:{type:'string',minLength:1,maxLength:4096},steps:{type:'array',minItems:1,maxItems:24,items:{type:'object',properties:{action:{type:'string',enum:ACTION_CATALOG.map(row=>row.id)},args:{type:'object'},label:{type:'string',maxLength:160}},required:['action','args'],additionalProperties:false}}},required:['goal','steps'],additionalProperties:false},
+        run:async(args:Record<string,unknown>)=>{
+          if(Object.keys(args).some(key=>!['goal','steps'].includes(key))||!Array.isArray(args.steps))throw new ToolRefusal('invalid_task_plan','목표와 실행 단계로 작업 계획을 제시하세요.');
+          const steps=args.steps.map((raw:unknown)=>{
+            if(!raw||typeof raw!=='object'||Array.isArray(raw)||Object.keys(raw).some(key=>!['action','args','label'].includes(key)))throw new ToolRefusal('invalid_task_plan','작업 계획의 단계 입력을 확인하세요.');
+            const step=raw as {action:string;args:unknown;label?:string};
+            return {...step,label:step.label||ACTION_CATALOG.find(row=>row.id===step.action)?.title||''};
+          });
+          const plan=validateTaskPlan({goal:args.goal,steps,binding:'local_pending_plan'});
+          return ok(await deps.tasks!.propose({goal:plan.goal,steps:plan.steps}),'실행할 작업 계획을 준비했습니다. 패널에서 확인하세요.');
+        }},
+    ] as ToolDefinition[]):[]),
     // ---- read ----
     { name: 'read_status', tier: 'read', parameters: NO_ARGS,
       description: '지금 단계, 상태, 막힌 이유, 다음 행동 하나, 단계의 진행 숫자, 패널 오류를 읽습니다.',
@@ -281,6 +311,18 @@ export function createAssistantTools(deps: ToolDeps): AssistantToolRegistry {
       description: `${title}: 도우미가 실행하지 않는 일입니다. 요청받으면 이 도구로 "직접 하세요"와 위치를 알립니다.`,
     })),
   ];
+  if(deps.tasks){
+    const idle=()=>{if(deps.tasks!.isExecuting())throw new ToolRefusal('task_running','진행 중인 작업 계획이 있습니다. 일시정지하고 결과를 확인한 뒤 별도 작업을 요청하세요.');};
+    for(const tool of definitions){
+      if(tool.tier==='write'){
+        const preview=tool.preview,execute=tool.execute;
+        if(preview)tool.preview=async(...args)=>{idle();return preview(...args);};
+        if(execute)tool.execute=async(...args)=>{idle();return execute(...args);};
+      }else if(['prefill_split','prefill_training','open_pending_draft'].includes(tool.name)&&tool.run){
+        const run=tool.run;tool.run=async(...args)=>{idle();return run(...args);};
+      }
+    }
+  }
   return new AssistantToolRegistry(definitions);
 }
 

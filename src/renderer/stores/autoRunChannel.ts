@@ -33,3 +33,28 @@ export function subscribeFlowSaved(listener: () => void): () => void {
   flowSavedListeners.add(listener);
   return () => { flowSavedListeners.delete(listener); };
 }
+
+/** Approved tasks use a separate guarded screen entry point so ordinary auto progression stays compatible. */
+export interface TaskAutoRunControl { isCurrent(): boolean; isPaused(): boolean; isAuthorityCurrent?(): boolean; checkpoint?(receipt: Record<string, unknown>): Promise<void> }
+export interface TaskAutoRunResult { error: string | null; receipt?: Record<string, unknown> }
+type TaskHandler = (control: TaskAutoRunControl) => Promise<TaskAutoRunResult>;
+const taskHandlers = new Map<AutoRunKind, TaskHandler>();
+const taskSettings = new Map<AutoRunKind, Record<string, unknown>>();
+export function registerTaskAutoRun(kind: AutoRunKind, handler: TaskHandler, settings?: Record<string, unknown>): () => void {
+  taskHandlers.set(kind, handler);
+  if (settings) taskSettings.set(kind, JSON.parse(JSON.stringify(settings))); else taskSettings.delete(kind);
+  return () => { if (taskHandlers.get(kind) === handler) {taskHandlers.delete(kind); taskSettings.delete(kind);} };
+}
+export async function requestTaskAutoRun(kind: AutoRunKind, control: TaskAutoRunControl): Promise<TaskAutoRunResult> {
+  if (control.isAuthorityCurrent?.() === false || !control.isCurrent()) return {error: '프로젝트·자료·연결 또는 설정이 바뀌었습니다. 현재 작업에서 다시 확인하세요.'};
+  if (control.isPaused()) return {error: '작업 진행을 일시정지했습니다.'};
+  const handler = taskHandlers.get(kind);
+  if (!handler) return {error: kind === 'train' ? '3단계 학습 화면의 설정을 아직 확인하지 못했습니다. 화면을 연 뒤 이어 가세요.' : '6단계 시험 검사 화면을 아직 확인하지 못했습니다. 화면을 연 뒤 이어 가세요.'};
+  return handler(control);
+}
+
+/** Exact mounted-screen settings stay local; callers receive an independent snapshot. */
+export function taskAutoRunSettings(kind: AutoRunKind): Record<string, unknown> | null {
+  const settings = taskSettings.get(kind);
+  return settings ? JSON.parse(JSON.stringify(settings)) as Record<string, unknown> : null;
+}

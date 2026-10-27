@@ -5,7 +5,7 @@ import { inspectionCountKey, startInspectionCountRead, type InspectionCountState
 import type { DatasetStatistics } from '../../services/projectPreferences';
 import { flowExecutionOptions, type FlowExecutionChoice } from '../flowchart/flowExecution';
 import { useComputeStore } from '../../stores/useComputeStore';
-import { registerAutoRun } from '../../stores/autoRunChannel';
+import { registerAutoRun, registerTaskAutoRun, type TaskAutoRunControl, type TaskAutoRunResult } from '../../stores/autoRunChannel';
 import { useDatasetStore } from '../../stores/useDatasetStore';
 import { useFlowchartStore } from '../../stores/useFlowchartStore';
 import { useProjectStore } from '../../stores/useProjectStore';
@@ -265,7 +265,7 @@ export const BatchInspectionPanel: React.FC = () => {
     }
   };
 
-  const handleStart = async () => {
+  const handleStart = async (taskControl?: TaskAutoRunControl): Promise<TaskAutoRunResult | undefined> => {
     const startedSource = currentBatchSource();
     const startedHistory = currentHistoryContext();
     if (!isBatchSourceReady(startedSource) || !savedFlow || isRunning || !executionReady || !project) return;
@@ -274,8 +274,13 @@ export const BatchInspectionPanel: React.FC = () => {
       compute_profile_id: execution.computeProfileId, project_id: project.id };
     const sourceFolder = startedSource.folderPath;
     const sourceTask = startedSource.task;
-    const selectedScope = scope;
-    const currentSource = () => isBatchSourceCurrent(currentBatchSource(), startedSource);
+    const selectedScope = taskControl ? 'test' : scope;
+    const selectedAuthority = apiCountScope();
+    const currentSource = () => isBatchSourceCurrent(currentBatchSource(), startedSource)
+      && (!taskControl || (taskControl.isAuthorityCurrent?.() !== false && taskControl.isCurrent() && apiCountScope() === selectedAuthority));
+    if (taskControl && (!currentSource() || taskControl.isPaused())) return {error: '시험 검사 시작 전에 프로젝트·자료가 바뀌었거나 작업을 일시정지했습니다.'};
+    let taskReceipt: Record<string, unknown> | undefined = taskControl ? {not_started: true} : undefined;
+    const interrupted = (): TaskAutoRunResult | undefined => taskControl ? {error: '시험 검사 작업 대상이 바뀌었습니다. 현재 화면에서 다시 확인하세요.', ...(taskReceipt ? {receipt: taskReceipt} : {})} : undefined;
     const operation = ++activeBatchOperation;
     ownedOperationRef.current = operation;
     let runGuard: ReturnType<typeof createInspectionRunExitGuard> | null = null;
@@ -292,18 +297,18 @@ export const BatchInspectionPanel: React.FC = () => {
     try {
       const { pipelines } = await api.flowchart.listPipelines(sourceFolder);
       const currentActive = activeSavedVersion(pipelines);
-      if (!currentSource()) return;
+      if (!currentSource()) return interrupted();
       if (currentActive?.version_id !== savedFlow.version.version_id) {
         throw new Error('활성 검사 플로우가 바뀌었습니다. 6단계를 다시 열어 저장 버전을 확인하세요.');
       }
       const currentPipeline = await api.flowchart.getPipelineVersion(currentActive.version_id);
       const currentIdentity = await savedFlowIdentity(currentActive, currentPipeline);
-      if (!currentSource()) return;
+      if (!currentSource()) return interrupted();
       if (currentIdentity.pipelineHash !== savedFlow.identity.pipelineHash) {
         throw new Error('저장 버전의 그래프가 변경되었습니다. 6단계를 다시 열어 확인하세요.');
       }
       const baseUrl = await getApiBaseUrl();
-      if (!currentSource() || stopReasonRef.current || operation !== activeBatchOperation) return;
+      if (!currentSource() || stopReasonRef.current || operation !== activeBatchOperation) return interrupted();
       runGuard = createInspectionRunExitGuard((runId) => {
         void stopInspectionRunKeepalive(runId, baseUrl).catch(() => {
           // A backend restart also marks an abandoned running run as stopped.
@@ -315,11 +320,12 @@ export const BatchInspectionPanel: React.FC = () => {
         pipeline: savedFlow.pipeline,
         onRunCreated: (runId) => {
           createdRunId = runId;
+          taskReceipt = {not_started: false, run_id: runId, scope: selectedScope, saved_version_id: savedFlow.version.version_id, execution_config: executionConfig};
           runGuard?.created(runId);
         },
         stopReason: () => currentSource() ? stopReasonRef.current : 'source_changed',
         onUpdate: (next) => {
-          if (!currentSource()) return;
+          if (!currentSource()) return interrupted();
           setReport(next);
           setSelectedPath((current) => current || next.rows.find((row) =>
             row.state === 'OK' || row.state === 'NG' || row.state === 'REVIEW' || row.state === 'error'
@@ -333,10 +339,16 @@ export const BatchInspectionPanel: React.FC = () => {
         run: api.flowchart.run,
         executeRow: api.inspections.executeRow,
         createRun: async (pending, pipeline) => {
+          if (taskControl && (!currentSource() || taskControl.isPaused())) throw new Error('시험 검사 생성 전에 작업 대상이 바뀌었거나 일시정지했습니다.');
+          taskReceipt = undefined; // A lost create response is ambiguous, never 'not started'.
           const created = await api.inspections.createRun(pending, pipeline, executionConfig);
           pending.saved_version_id = created.saved_version_id;
           pending.pipeline_hash = created.pipeline_hash;
           pending.model_sha256 = created.model_sha256;
+          createdRunId = created.run_id;
+          taskReceipt = {not_started: false, run_id: created.run_id, scope: selectedScope, saved_version_id: created.saved_version_id,
+            source_dataset_path: sourceFolder, task: sourceTask, project_id: project.id, execution_config: executionConfig};
+          await taskControl?.checkpoint?.(taskReceipt);
           return created.run_id;
         },
         recordRow: (runId, row) => api.inspections.recordRow(runId, row),
@@ -344,8 +356,9 @@ export const BatchInspectionPanel: React.FC = () => {
       });
       if (currentSource()) {
         const persisted = finished.run_id ? await api.inspections.getRun(finished.run_id) : finished;
-        if (!currentSource()) return;
+        if (!currentSource()) return interrupted();
         setReport(persisted);
+        if (persisted.run_id) taskReceipt = {...taskReceipt, run_id: persisted.run_id, scope: persisted.scope, status: persisted.status, saved_version_id: persisted.saved_version_id, samples: persisted.rows.length};
         await refreshHistory(startedHistory);
         setReviewQueueRevision((value) => value + 1);
       }
@@ -363,6 +376,7 @@ export const BatchInspectionPanel: React.FC = () => {
         useInspectionRunStore.getState().setRunning(false);
       }
     }
+    return {error: lastRunError.current, ...(taskReceipt ? {receipt: taskReceipt} : {})};
   };
 
   // 원클릭 자동 진행 presses this panel's own '검사 시작' with the scope and run location shown here.
@@ -372,6 +386,18 @@ export const BatchInspectionPanel: React.FC = () => {
     await handleStart();
     return lastRunError.current;
   }), [isRunning, sourceReady, savedFlow, savedFlowLoading, executionReady, project, scope, executionChoice, selectedProfileId]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => registerTaskAutoRun('inspect', async control => {
+    if (isRunning) return {error: '검사가 이미 진행 중입니다. 끝난 뒤 이어 가세요.'};
+    if (!sourceReady || !savedFlow || savedFlowLoading || !executionReady || !project || hasUnsavedDraft)
+      return {error: '6단계의 저장한 검사 흐름·실행 위치를 확인하고 편집을 먼저 저장하세요.'};
+    // A task names held-out test images even when an earlier history row left the manual picker on all/val/train.
+    setScope('test');
+    const result = await handleStart(control);
+    if (result?.receipt?.not_started === true) return result;
+    if (!result?.receipt?.run_id) throw new Error(result?.error || '시험 검사 실행 기록 ID를 확인하지 못했습니다. 같은 검사를 다시 시작하지 말고 6단계 기록을 확인하세요.');
+    return result;
+  }), [isRunning, sourceReady, savedFlow, savedFlowLoading, executionReady, project, hasUnsavedDraft, executionChoice, selectedProfileId, errorScope]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const rows = report?.rows ?? [];
   const summary = summarizeBatch(rows);
@@ -518,7 +544,7 @@ export const BatchInspectionPanel: React.FC = () => {
           </select>
           <button
             type="button"
-            onClick={handleStart}
+            onClick={() => void handleStart()}
             disabled={!sourceReady || !savedFlow || savedFlowLoading || !executionReady || !project || isRunning}
             className="flex items-center gap-1.5 rounded border border-cyan-600 bg-cyan-900/50 px-3 py-1.5 text-xs font-semibold text-cyan-100 hover:bg-cyan-800/60 disabled:cursor-not-allowed disabled:opacity-50"
           >

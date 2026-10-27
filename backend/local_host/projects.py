@@ -113,6 +113,34 @@ class LocalProjectRegistry:
             db.execute('INSERT INTO locations VALUES(:registration_id,:workspace_id,:project_id,:permission_key,:path,:revision,:identity)', row)
         return self.public(row, account)
 
+    def response_registration(self, app, request, project, *, required=False):
+        """Read existing response metadata without registering, granting, or selecting a location."""
+        path = str(Path(project['project_dir']).resolve())
+        with self.db() as db:
+            row = db.execute('SELECT * FROM locations WHERE path=?', (path,)).fetchone()
+        if row is None:
+            if required: raise HTTPException(409, 'Selected local project registration is unavailable')
+            return None
+        row = dict(row)
+        account = _fresh_authority(app, request, row['permission_key'], action='project.manage')
+        context = getattr(request.state, 'local_project_context', None) or getattr(request.state, 'project_context', None)
+        scoped = getattr(request.state, 'scoped_project', None)
+        expected = ProjectContext(workspace_id=row['workspace_id'], project_id=row['project_id'],
+                                  actor_id=account['id'], mode='team')
+        if (context != expected or getattr(request.state, 'account_project_key', None) != row['permission_key']
+                or project['id'] != row['project_id'] or scoped is None or scoped['id'] != project['id']
+                or str(Path(scoped['project_dir']).resolve()) != path):
+            raise HTTPException(403, 'Updated project does not match its authenticated local registration')
+        try:
+            selected = app.state.accounts.registered_project_for(account['id'], row['permission_key'])
+            if str(Path(selected['path']).resolve()) != path or json.loads(row['identity']) != _identity(path):
+                raise HTTPException(409, 'Registered project location ownership changed')
+        except ValueError as exc:
+            raise HTTPException(403, 'Current registered project membership required') from exc
+        except OSError as exc:
+            raise HTTPException(409, 'Registered project location is unavailable') from exc
+        return self.public(row, account)
+
     @staticmethod
     def public(row, account):
         return {**{key: value for key, value in row.items() if key != 'identity'}, 'context': ProjectContext(workspace_id=row['workspace_id'], project_id=row['project_id'],

@@ -135,7 +135,8 @@ class ProjectMaintenanceMiddleware:
         try:return await self._dispatch(scope,receive,send)
         finally:_HELD.reset(token)
     async def _dispatch(self,scope,receive,send):
-        if scope['type']!='http' or scope.get('method') not in {'POST','PUT','PATCH','DELETE'} or scope.get('path') in self.CONTROL_PATHS:
+        from backend.engine.assistant_tasks import is_task_preparation
+        if scope['type']!='http' or is_task_preparation(scope.get('path', ''), scope.get('method')) or scope.get('method') not in {'POST','PUT','PATCH','DELETE'} or scope.get('path') in self.CONTROL_PATHS:
             return await self.app(scope,receive,send)
         project=scope.get('state',{}).get('scoped_project') or getattr(self.project_app.state,'current_project',None)
         if not project:return await self.app(scope,receive,send)

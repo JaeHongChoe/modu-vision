@@ -20,6 +20,7 @@ import { useDatasetStore } from './useDatasetStore';
 import { useTrainingStore } from './useTrainingStore';
 import { subscribeProjectContext } from '../services/api';
 import { host } from '../services/hostAdapter';
+import {assistantTaskTools,configureTaskConnection,notifyTaskConnectionChange,useAssistantTaskStore} from './useAssistantTaskStore';
 
 export interface AssistantChatItem { id: number; kind: 'person' | 'assistant' | 'tool' | 'notice' | 'error'; text: string; detail?: string; ok?: boolean; code?: AssistantError['code'] }
 export interface AssistantImageOffer { grantId: string; message: string; providerLabel: string; question: string; binding: string; imageIdentity: string }
@@ -105,7 +106,7 @@ export const useAssistantStore = create<AssistantState>((set, get) => {
     if (!bridge) return null;
     if (!conversation) {
       conversation = new AssistantConversation({
-        bridge, tools: createRuntimeTools(), context: assistantContext,
+        bridge, tools: createRuntimeTools(assistantTaskTools), context: assistantContext,
         scope: () => assistantScope(get().config), projectScope: assistantProjectScope,
         writeBinding: readWriteBinding,
         log: entry => assistantLog.append(entry), provider: () => get().config?.active ?? null,
@@ -123,7 +124,7 @@ export const useAssistantStore = create<AssistantState>((set, get) => {
   };
   /** Receiver changes wait for an executing confirmed write, so its outcome reaches the run log first (the panel disables them). */
   const writeRunning = (): boolean => {
-    if (!conversation?.writing) return false;
+    if (!conversation?.writing&&!useAssistantTaskStore.getState().busy) return false;
     set({ configError: '확인한 작업을 실행하는 중이라 설정을 바꾸지 않았습니다. 실행이 끝난 뒤 다시 바꾸세요.' });
     return true;
   };
@@ -244,6 +245,11 @@ export const useAssistantStore = create<AssistantState>((set, get) => {
   };
 });
 
+configureTaskConnection(()=>{
+  const state=useAssistantStore.getState();
+  return {config:state.config,configuring:state.configuring,busy:state.busy,writing:state.writing,pending:state.pending};
+});
+
 /** Reset immediately on accepted project/transport changes, including A → B → A. */
 let observedScope = assistantScope(useAssistantStore.getState().config);
 let observedImage = assistantImageBinding(observedScope);
@@ -278,6 +284,7 @@ useAnnotationStore.subscribe(observeAuthority);
 useDatasetStore.subscribe(observeAuthority);
 useTrainingStore.subscribe(observeAuthority);
 useAssistantStore.subscribe(state => {
+  notifyTaskConnectionChange();
   const next = assistantScope(state.config);
   if (next !== observedScope) observeAuthority();
 });

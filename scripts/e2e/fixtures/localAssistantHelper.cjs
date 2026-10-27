@@ -29,6 +29,20 @@ function controlledProvider(record=()=>{}){
    if(latest?.type==='function_call_output')return text('제어된 도우미 완료');
    const question=String(latest?.content||'');
    if(question.includes('CANCEL_FIXTURE'))return new Promise((resolve,reject)=>{const cancel=()=>{record({kind:'provider_cancelled'});reject(new DOMException('Cancelled','AbortError'));};if(init.signal?.aborted)cancel();else init.signal.addEventListener('abort',cancel,{once:true});});
+   const taskPlan=question.includes('TASK_PLAN_FIXTURE'),taskImport=question.includes('TASK_IMPORT_FIXTURE');
+   if(taskPlan||taskImport){
+    const steps=taskImport?[
+     {action:'configure_training',args:{preset:'fast',device:'cpu',batch_size:8},label:'이어갈 CPU · 배치 8 설정 준비'},
+     {action:'import_dataset',args:{},label:'직접 고른 합성 자료 가져오기'},
+     {action:'save_split',args:{train_percent:60,val_percent:20,test_percent:20},label:'학습 60% · 검증 20% · 시험 20% 저장'},
+     {action:'open_step',args:{step:1},label:'저장한 자료 화면 열기'},
+    ]:[
+     {action:'save_split',args:{train_percent:70,val_percent:20,test_percent:10},label:'학습 70% · 검증 20% · 시험 10% 저장'},
+     {action:'configure_training',args:{preset:'fast',device:'cpu',batch_size:8},label:'CPU · 빠르게 · 배치 8 준비'},
+     {action:'open_step',args:{step:3},label:'준비한 학습 화면 열기'},
+    ];
+    return output([{type:'function_call',namespace:'modu_vision',name:'propose_task',call_id:'call_fixture_'+ ++seq,arguments:JSON.stringify({goal:taskImport?'합성 자료 가져오기와 분할 준비':'합성 자료 분할과 학습 설정 준비',steps})}]);
+   }
    const write=question.includes('WRITE_FIXTURE'),read=question.includes('READ_FIXTURE');
    if(!write&&!read)throw Error('Unscripted provider operation refused');
    return output([{type:'function_call',namespace:'modu_vision',name:write?'save_split':'read_dataset_summary',call_id:'call_fixture_'+ ++seq,arguments:JSON.stringify(write?{train_percent:70,val_percent:20,test_percent:10}:{})}]);
@@ -47,8 +61,18 @@ function controlledProvider(record=()=>{}){
 }
 function createHelper({stateDirectory,origin,record=()=>{}}){
  const provider=controlledProvider(record),key=crypto.randomBytes(32),encryptor={isAvailable:()=>true,encrypt(plain){const iv=crypto.randomBytes(12),cipher=crypto.createCipheriv('aes-256-gcm',key,iv),body=Buffer.concat([cipher.update(plain),cipher.final()]);return Buffer.concat([iv,body,cipher.getAuthTag()]);},decrypt(raw){const decipher=crypto.createDecipheriv('aes-256-gcm',key,raw.subarray(0,12));decipher.setAuthTag(raw.subarray(-16));return Buffer.concat([decipher.update(raw.subarray(12,-16)),decipher.final()]).toString();}};
+ const choose=async options=>{
+  // Only the task-agent spec can arm this one-shot generated native selection. Existing fixtures still cancel.
+  const selection=path.join(stateDirectory,'controlled-task-folder.json');
+  if(options.title!=='학습 자료 폴더 선택'||!fs.existsSync(selection)){record({kind:'controlled_native_choice',selected:false});return{canceled:true,filePaths:[]};}
+  const value=JSON.parse(fs.readFileSync(selection,'utf8')),root=fs.realpathSync(path.dirname(stateDirectory));
+  if(typeof value.folder!=='string')throw Error('Controlled task folder is missing');
+  const folder=fs.realpathSync(value.folder);
+  if(!folder.startsWith(root+path.sep)||!fs.statSync(folder).isDirectory())throw Error('Controlled task folder must belong to the owned workspace');
+  fs.unlinkSync(selection);record({kind:'controlled_native_choice',selected:true});return{canceled:false,filePaths:[folder]};
+ };
  const {LocalHostService}=load(path.resolve(__dirname,'../../../src/main/localHost/service.ts'));
- const service=new LocalHostService({stateDirectory,origin,encryptor,fetchImpl:provider.fetchImpl,native:{approve:async()=>{record({kind:'controlled_native_approval'});return true;},choose:async()=>({canceled:true,filePaths:[]}),openPath:async()=>{throw Error('No native path action in assistant fixture');},openExternal:provider.openExternal},distribution:{appVersion:'0.1.0',packaged:false,appPath:stateDirectory,executablePath:path.join(stateDirectory,'never-executed'),platform:process.platform,arch:process.arch,runner:async()=>{throw Error('No OS runner in assistant fixture');}}});
+ const service=new LocalHostService({stateDirectory,origin,encryptor,fetchImpl:provider.fetchImpl,native:{approve:async()=>{record({kind:'controlled_native_approval'});return true;},choose,openPath:async()=>{throw Error('No native path action in assistant fixture');},openExternal:provider.openExternal},distribution:{appVersion:'0.1.0',packaged:false,appPath:stateDirectory,executablePath:path.join(stateDirectory,'never-executed'),platform:process.platform,arch:process.arch,runner:async()=>{throw Error('No OS runner in assistant fixture');}}});
  return {handle:async request=>{record({kind:'host',method:request.method,actor_id:request.actor_id,tab_sha256:crypto.createHash('sha256').update(request.tab_id).digest('hex'),...(request.args?.projectAuthority?{project_authority:request.args.projectAuthority}:{}),...(request.method==='assistant.beginRun'?{run_id:request.args.runId,tool:request.args.tool}:{})});return service.handle(request);},dispose:()=>service.dispose()};
 }
 function assertPrivateEvidencePolicy(trace){if(trace!=='off')throw Error('Assistant cookie/provider fixture requires trace off before authentication');}

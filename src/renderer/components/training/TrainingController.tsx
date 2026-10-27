@@ -20,7 +20,7 @@ import { useProjectStore } from '../../stores/useProjectStore';
 import { readDatasetAuthority, useDatasetStore } from '../../stores/useDatasetStore';
 import { useTrainingStore } from '../../stores/useTrainingStore';
 import { useComputeStore } from '../../stores/useComputeStore';
-import { registerAutoRun } from '../../stores/autoRunChannel';
+import { registerAutoRun, registerTaskAutoRun } from '../../stores/autoRunChannel';
 import { registerPanelError } from '../../stores/assistContext';
 import { useScopedError } from '../common/useScopedError';
 import { OperatorGuidanceBanner } from '../common/OperatorGuidanceBanner';
@@ -55,7 +55,7 @@ import {JobProgressView} from './JobProgressView';
 import {useSelectedCoreJob} from './useSelectedCoreJob';
 import {OperationsObservabilityPanel} from '../runtime/OperationsObservabilityPanel';
 import {classGaps, classStartBlocker, SPLIT_MISSES_LABELS_TEXT, splitMissesLabels} from '../dataset/importChecklist';
-import { describeTrainingSummary, publishTrainingSummary, trainingSummaryScope } from './trainingStartSummary';
+import { describeTrainingSummary, currentTrainingSummary, publishTrainingSummary, trainingSummaryScope } from './trainingStartSummary';
 
 export const TrainingController: React.FC = () => {
   const [scheduling, setScheduling] = useState({...defaultTrainingScheduling});
@@ -249,14 +249,18 @@ export const TrainingController: React.FC = () => {
     return () => { valid = false; };
   }, [errorScope, sourceReady, folderPath, task, preset, selectedProfileId, warmStartSupported, projectDir, project?.active_labelset_id, selectedBackbone, completedJobId, parentQueryKey, modelOptionsError]);
 
-  const startSummary = describeTrainingSummary({task, model: selectedBackbone, checkpoint: pretrainedCheckpoint,
-    warmStartJobId: warmParentId, resume: resumeState, options: modelOptions});
+  const executionSettings = {task, preset, dataset_path: folderPath,
+    config_overrides: {...modelOptions, ...((resumeState ? Number(resumeState.recipe.batch_size) : nextBatchSize) ? {batch_size: resumeState ? Number(resumeState.recipe.batch_size) : nextBatchSize} : {})},
+    ...(!selectedProfileId ? {device: resumeState?.device || nextDevice || 'auto'} : {}), compute_profile_id: selectedProfileId || null,
+    ...(resumeState ? {} : warmParentId ? {warm_start_job_id: warmParentId} : {}), ...schedulingOptions};
+  const startSummary = {...describeTrainingSummary({task, model: selectedBackbone, checkpoint: pretrainedCheckpoint,
+    warmStartJobId: warmParentId, resume: resumeState, options: modelOptions}), executionSettings};
   const startSummaryKey = JSON.stringify(startSummary);
   useEffect(() => { setSummarySettingsScope(summaryResetScope); }, [summaryResetScope]);
   useEffect(() => {
-    if (!sourceReady || isProjectBusy || isLoading || importError || summarySettingsScope !== summaryResetScope) return;
+    if (selectedFamily !== task || !sourceReady || isProjectBusy || isLoading || importError || summarySettingsScope !== summaryResetScope) return;
     return publishTrainingSummary(startSummaryScope, startSummary);
-  }, [startSummaryScope, startSummaryKey, sourceReady, isProjectBusy, isLoading, importError, summarySettingsScope, summaryResetScope]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [startSummaryScope, startSummaryKey, sourceReady, isProjectBusy, isLoading, importError, summarySettingsScope, summaryResetScope, selectedFamily, task]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     void recoverActiveJob(sourceReady && !isLoading && !importError && project && projectDir ? {
@@ -315,6 +319,29 @@ export const TrainingController: React.FC = () => {
     } catch (error) { return error instanceof Error ? error.message : '학습 시작에 실패했습니다.'; }
     return useTrainingStore.getState().startError || null;
   }), [isTraining, canStart, startBlocker, folderPath, task, warmParentId, resumeState, JSON.stringify(modelOptions), JSON.stringify(schedulingOptions)]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Task dispatch uses this screen's exact guarded invocation; the provider cannot supply model options or a checkpoint.
+  useEffect(() => {
+    const authority = readDatasetAuthority();
+    return registerTaskAutoRun('train', async control => {
+      if (!control.isCurrent() || authority !== readDatasetAuthority()) return {error: '학습 설정을 확인하는 동안 프로젝트·자료가 바뀌었습니다.'};
+      if (control.isPaused()) return {error: '작업 진행을 일시정지했습니다.'};
+      if (selectedFamily !== task) return {error: '현재 전문 모델 화면의 설정은 작업 도우미 시작 경로에서 지원하지 않습니다. 3단계에서 기본 작업 모델을 선택한 뒤 이어 가세요.'};
+      if (isTraining) return {error: '학습이 이미 진행 중입니다. 현재 작업의 완료를 확인하세요.'};
+      if (!canStart || useProjectStore.getState().isProjectBusy) return {error: startBlocker || '3단계 화면의 학습 준비 안내를 확인하세요.'};
+      const published = currentTrainingSummary(startSummaryScope);
+      if (!published?.executionSettings || JSON.stringify(published.executionSettings) !== JSON.stringify(executionSettings))
+        return {error: '현재 화면의 학습 설정을 아직 확인하지 못했습니다. 3단계를 연 뒤 이어 가세요.'};
+      const settings = JSON.parse(JSON.stringify(published.executionSettings)) as Record<string, unknown>;
+      if (resumeState) setNextSettings({batchSize: Number(resumeState.recipe.batch_size) || undefined, device: resumeState.device});
+      // These are the same arguments as the ordinary screen start immediately above.
+      await startTraining(folderPath, task, resumeState ? undefined : warmParentId || undefined, modelOptions, schedulingOptions);
+      if (authority !== readDatasetAuthority()) throw new Error('학습 시작 뒤 프로젝트·자료가 바뀌었습니다. 시작 요청을 다시 보내지 말고 작업 기록을 확인하세요.');
+      const started = useTrainingStore.getState();
+      if (!started.jobId) throw new Error(started.startError || '학습 시작 요청의 작업 ID를 확인하지 못했습니다. 작업 기록을 먼저 확인하세요.');
+      return {error: null, receipt: {job_id: started.jobId, settings, started: true}};
+    }, executionSettings);
+  }, [isTraining, canStart, startBlocker, startSummaryScope, startSummaryKey, selectedFamily, folderPath, task, warmParentId, resumeState, JSON.stringify(modelOptions), JSON.stringify(schedulingOptions)]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleAbort = async () => {
     await stopTraining();
