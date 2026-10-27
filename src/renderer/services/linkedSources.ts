@@ -14,8 +14,8 @@ export class LinkedSourceClient {
  private plans=new Map<string,Binding>();private copies=new Map<string,Binding>();
  constructor(private readonly runtime:Runtime){}
  available():boolean{return this.runtime.available();}
- private capture(scope:LinkedSourceScope,current:()=>boolean):Binding {
-  if(!this.available()||!current()||contextKey(this.runtime.context())!==contextKey(scope.context)||!scope.expectedSource.source_dataset_dir)
+ private capture(scope:LinkedSourceScope,current:()=>boolean,requireAvailable=true):Binding {
+  if((requireAvailable&&!this.available())||!current()||contextKey(this.runtime.context())!==contextKey(scope.context)||!scope.expectedSource.source_dataset_dir)
    throw new Error('현재 로컬 프로젝트의 등록 원본과 계정 연결을 확인하세요.');
   return {scope:scopeKey(scope),generation:this.runtime.generation()};
  }
@@ -28,7 +28,9 @@ export class LinkedSourceClient {
   this.check(scope,binding,current);const value=await this.runtime.request<T>('/api/local-host/linked-sources/'+action,{method:'POST',body:JSON.stringify(body),projectContext:{...scope.context}});this.check(scope,binding,current);return value;
  }
  async preview(scope:LinkedSourceScope,current:()=>boolean):Promise<LinkedSourcePlan>{
-  const binding=this.capture(scope,current);await this.runtime.prepare();this.check(scope,binding,current);
+  // Pin authority before the await; readiness may require a fresh native tab.
+  // Preparation cannot change this binding, and the ready capability is still required before HTTP.
+  const binding=this.capture(scope,current,false);await this.runtime.prepare();this.check(scope,binding,current);
   const value=await this.post<LinkedSourcePlan>('preview',{expected_source:{...scope.expectedSource}},scope,binding,current);
   if(typeof value.plan_id!=='string'||! /^[A-Za-z0-9_-]{20,128}$/.test(value.plan_id)||!sha(value.plan_sha256)||value.source!==scope.expectedSource.source_dataset_dir||!counts(value)
    ||!Array.isArray(value.targets)||!value.targets.length||value.targets.length>32||value.targets.some(target=>typeof target?.link!=='string'||typeof target.path!=='string'||!target.path.startsWith('/')||!['file','directory'].includes(target.kind)))
