@@ -1471,6 +1471,26 @@
       "retained_spec_commit": "e30f2caf2150bb9105d7e3aa0bca53dbc4b10e54",
       "current_test_source_sha256": "e7be431c12347d3c14584ca0f5d3280a32468656d0140e1ec58cf41e8cf17b2c",
       "reason": "Foundation labeling with the approved official SAM2/Grounding DINO models: phrases read as the model's dot-separated English queries, per-phrase classes, unlabeled-only phrase drafts for an empty project, SAM2 entry in focus mode, batch thread roots, cached model hashes, read-only suggestion listing kept 2026-10-24: the candidate-created notice assertion now matches the shorter Korean UI wording; retained original test bytes and original execution receipt stay unchanged. This does not claim a new execution of the owned full lifecycle."
+    },
+    {
+      "receipt": "2026-10-09-dataset-source-empty-9b248a6-browser.json",
+      "receipt_sha256": "603352e407d68652e8bdeba6ed226b10e9b7ea313a5f3518accbade5356869ee",
+      "execution_source_sha": "9b248a69afd787cd9f2e39524e9458936185b15f",
+      "test": "scripts/e2e/dataset-source-empty-controls.spec.ts::source-less classification project keeps readiness and grouped split controls unavailable after reload",
+      "recorded_test_source_sha256": "f211c2ed28f55351691517c550b99bd4bb4719d785562435eea8cf3099f464a1",
+      "retained_spec_commit": "9b248a69afd787cd9f2e39524e9458936185b15f",
+      "current_test_source_sha256": "935d606b17ed5176acedd478719e1d020ff47f64a31bddf6025604608406f636",
+      "reason": "2026-10-28 empty Task Center response contract alignment: the current source-empty case expects the exact empty-string response envelope, while the persisted project source remains null. Readiness/grouped-split refusal, 422 responses, original-tree/state preservation, request clocks and zero retries remain unchanged. The retained ancestor test blob and exact historical receipt stay unchanged. This declaration supplies no new historical GUI, native, human or model-quality credit; the current browser case is verified separately and no current Electron run is claimed."
+    },
+    {
+      "receipt": "2026-10-09-dataset-source-empty-9b248a6-electron.json",
+      "receipt_sha256": "79abd059b8a975b567e93bdff3a432b1aa2b9c6e3f6f150e449685c6bb7bc33f",
+      "execution_source_sha": "9b248a69afd787cd9f2e39524e9458936185b15f",
+      "test": "scripts/e2e/dataset-source-empty-controls.spec.ts::source Electron no selected original keeps readiness and grouped split controls unavailable after reload",
+      "recorded_test_source_sha256": "f211c2ed28f55351691517c550b99bd4bb4719d785562435eea8cf3099f464a1",
+      "retained_spec_commit": "9b248a69afd787cd9f2e39524e9458936185b15f",
+      "current_test_source_sha256": "935d606b17ed5176acedd478719e1d020ff47f64a31bddf6025604608406f636",
+      "reason": "2026-10-28 empty Task Center response contract alignment: the current source-empty case expects the exact empty-string response envelope, while the persisted project source remains null. Readiness/grouped-split refusal, 422 responses, original-tree/state preservation, request clocks and zero retries remain unchanged. The retained ancestor test blob and exact historical receipt stay unchanged. This declaration supplies no new historical GUI, native, human or model-quality credit; the current browser case is verified separately and no current Electron run is claimed."
     }
   ]
 }
