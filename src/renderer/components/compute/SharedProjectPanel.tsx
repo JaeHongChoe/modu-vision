@@ -1,7 +1,7 @@
-import React,{useEffect,useState} from 'react';
+import React,{useEffect,useState,useSyncExternalStore} from 'react';
 import {Users,LogIn,LogOut} from 'lucide-react';
 import {api,request,setSharedApiBase,setProjectContext,getApiPersistenceIdentity,getProjectContext,getProjectContextGeneration,type ProjectContext} from '../../services/api';
-import {useProjectStore,saveOpenEdits} from '../../stores/useProjectStore';
+import {useProjectStore,saveOpenEdits,projectSwitchRefusal,subscribeProjectSwitchRefusal} from '../../stores/useProjectStore';
 import {resetComputeTransportCache} from '../../stores/useComputeStore';
 import {useDatasetStore} from '../../stores/useDatasetStore';
 import {useAnnotationStore} from '../../stores/useAnnotationStore';
@@ -61,6 +61,7 @@ export const SharedProjectPanel:React.FC<{localAuthenticationOnly?:boolean;onAut
   const visibleProject=useProjectStore(state=>state.project);
   const projectBusy=useProjectStore(state=>state.isProjectBusy);
   const dataBusy=useDatasetStore(state=>state.isLoading||state.isSplitting);
+  const switchRefusal=useSyncExternalStore(subscribeProjectSwitchRefusal,projectSwitchRefusal,projectSwitchRefusal);
   const sourceScope=acceptedSourceScope(connection);
   useEffect(()=>{
     setSourceConfirmation(null);
@@ -117,7 +118,7 @@ export const SharedProjectPanel:React.FC<{localAuthenticationOnly?:boolean;onAut
     // newly created project and its account authority are accepted together.
     resetComputeTransportCache();await telemetryService.connect();};
   const updateSource=async()=>{assertProjectIdle();const scope=acceptedSourceScope(connection);if(!scope||sourceDraft.scope!==scope)throw new Error('공유 프로젝트 선택을 완료한 뒤 원본 경로를 다시 확인하세요.');if(!confirmationKey||sourceConfirmation!==confirmationKey)throw new Error('현재 서버와 프로젝트에 이 원본 경로를 공유할지 확인하세요.');await api.project.update({source_dataset_dir:sourceDraft.value});setSourceConfirmation(null);await useProjectStore.getState().syncCurrentProject();};
-  const changing=busy||(!localAuthenticationOnly&&(projectBusy||dataBusy));
+  const changing=busy||(!localAuthenticationOnly&&(projectBusy||dataBusy||switchRefusal!==null));
   const sourceReady=!!sourceScope&&sourceDraft.scope===sourceScope;
   const input='min-w-0 rounded border border-slate-600 bg-slate-950 px-2 py-1.5 text-xs text-slate-200';
   return <details className="mt-3 rounded-lg border border-slate-700 bg-[#142131] p-3" open={!!connection||localAuthenticationOnly}><summary className="flex cursor-pointer items-center gap-2 text-xs font-semibold text-cyan-200"><Users className="h-4 w-4"/>{localAuthenticationOnly?'이 브라우저의 계정':'공동 작업 서버'}{connection&&<span className="ml-auto text-[10px] text-emerald-300">{connection.user.username}</span>}</summary>

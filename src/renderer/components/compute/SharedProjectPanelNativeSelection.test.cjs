@@ -16,11 +16,11 @@ async function fixture(run,{selectedKey='local_restored_membership',catalogChang
  global.fetch=async(url,options={})=>{const route=new URL(url).pathname;calls.push({route,options});if(route==='/api/accounts/login')return Response.json({expires_at:Date.now()/1000+3600,csrf_token:'fixture_csrf_abcdefghijklmnopqrstuvwxyz',user:{id:actor,username:'owner',administrator:true}});if(route==='/api/local-host/capabilities')return Response.json({capabilities:{projects:true,pickPaths:true}});if(route==='/api/local-host/session'&&failAdmission)return Response.json({detail:'Native admission unavailable'},{status:503});if(route==='/api/local-host/session')return Response.json({tab_id:'native-tab-'+ ++tabs});if(route==='/api/local-host/session/dispose')return Response.json({disposed:true});if(route==='/api/accounts/me')return Response.json({user:{id:actor,username:'owner',administrator:true},workspace_id:'default-workspace',projects:[{id:logical,path:original.project_dir,role:'owner'},{id:'local_restored_membership',path:project.project_dir,role:'owner'}],selected_project_id:selectedKey});if(route==='/api/accounts/users')return Response.json({users:[]});if(route==='/api/accounts/select-project'){assert.deepEqual(JSON.parse(options.body),{project_id:selectedKey});return Response.json({selected_project_id:selectedKey});}if(route==='/api/local-host/projects/current'){if(refuseCurrent)return Response.json({detail:'Project membership required'},{status:403});if(admissionFailureAfterCurrent)failAdmission=true;return Response.json(currentOriginal?original:project,{headers:{'X-Vision-Context':JSON.stringify(currentOriginal?original.context:context)}});}if(route==='/api/project/list')return Response.json({projects:[original]});if(route==='/api/local-host/projects/list')return catalogFailure?Response.json({detail:'Registration catalog unavailable'},{status:500}):Response.json({projects:catalog});assert.fail('Unexpected request '+route);};
  const api=load(path.join(root,'services/api.ts'));load(path.join(root,'services/browserHost.ts'));const host=load(path.join(root,'services/hostAdapter.ts')).host,realStore=load(path.join(root,'stores/useProjectStore.ts')),projectStore=realStore.useProjectStore;if(preseedCatalog)projectStore.setState({recentProjects:catalog});
  const values=[null,origin,'owner','fixture password',[],'',[],'','','','viewer','',{value:'',scope:null},false,''];let cursor=0;
- const react={createElement:(type,props,...children)=>({type,props:{...props,children}}),useEffect(){},useState:initial=>{const index=cursor++;if(values[index]===undefined)values[index]=initial;return[values[index],value=>values[index]=typeof value==='function'?value(values[index]):value];}};
+ const react={createElement:(type,props,...children)=>({type,props:{...props,children}}),useEffect(){},useSyncExternalStore:(_subscribe,getSnapshot)=>getSnapshot(),useState:initial=>{const index=cursor++;if(values[index]===undefined)values[index]=initial;return[values[index],value=>values[index]=typeof value==='function'?value(values[index]):value];}};
  const hook=Object.assign(selector=>selector(projectStore.getState()),{getState:projectStore.getState,setState:projectStore.setState});
  const Panel=load(path.join(root,'components/compute/SharedProjectPanel.tsx'),{react:{__esModule:true,default:react,...react},'lucide-react':{Users:'icon',LogIn:'icon',LogOut:'icon'},'../../stores/useProjectStore':{...realStore,useProjectStore:hook}}).SharedProjectPanel;
  let authenticated=0;const render=(localAuthenticationOnly=true)=>{cursor=0;return Panel({localAuthenticationOnly,onAuthenticated:()=>authenticated++});};
- try{nodes(render()).find(node=>node.type==='button'&&node.props.children.includes('연결·로그인')).props.onClick();for(let i=0;i<100&&(i===0||values[13]);i++)await tick();await run({api,host,projectStore,calls,context,project,original,values,render,failCatalog:()=>catalogFailure=true,activate:async()=>{nodes(render(false)).find(node=>node.props?.['aria-label']==='공동 작업 프로젝트').props.onChange({target:{value:selectedKey}});for(let i=0;i<100&&(i===0||values[13]);i++)await tick();},authenticated:()=>authenticated});}finally{global.window=previous.window;global.fetch=previous.fetch;if(storageDescriptor)Object.defineProperty(global,'localStorage',storageDescriptor);else delete global.localStorage;}
+ try{nodes(render()).find(node=>node.type==='button'&&node.props.children.includes('연결·로그인')).props.onClick();for(let i=0;i<100&&(i===0||values[13]);i++)await tick();await run({api,host,projectStore,flow,calls,context,project,original,values,render,failCatalog:()=>catalogFailure=true,activate:async()=>{nodes(render(false)).find(node=>node.props?.['aria-label']==='공동 작업 프로젝트').props.onChange({target:{value:selectedKey}});for(let i=0;i<100&&(i===0||values[13]);i++)await tick();},authenticated:()=>authenticated});}finally{global.window=previous.window;global.fetch=previous.fetch;if(storageDescriptor)Object.defineProperty(global,'localStorage',storageDescriptor);else delete global.localStorage;}
 }
 test('ordinary native browser login accepts the selected membership alias only in its registered restored workspace',()=>fixture(async f=>{assert.equal(f.projectStore.getState().projectError,null);assert.equal(f.projectStore.getState().project.registration_id,'restored-registration');assert.deepEqual(f.api.getProjectContext(),f.context);assert.equal(f.authenticated(),1,'a verified restored registration must complete the login gate');assert.equal(f.values[14],'');assert.equal((await f.host.shared.connection()).project_id,'local_restored_membership','account membership selection remains its own exact key');assert.equal(f.calls.filter(row=>row.route==='/api/accounts/select-project').length,1);}));
 
@@ -37,3 +37,43 @@ test('failed fresh catalog discovery cannot reuse the previous session registrat
 test('native activation refuses a failed fresh catalog instead of preserving prior registration readiness',()=>fixture(async f=>{assert.equal(f.authenticated(),1);f.failCatalog();await f.activate();assert.match(f.values[14],/Registration catalog unavailable/);assert.deepEqual(f.projectStore.getState().recentProjects,[]);},{selectedKey:'same-manifest',currentOriginal:true}));
 
 test('native registration cannot use direct-ID legacy readiness after new-tab admission fails during catalog hydration',()=>fixture(async f=>{assert.equal(f.authenticated(),0);assert.match(f.values[14],/공유 프로젝트 선택/);assert.equal(f.host.localBrowser(),false);},{selectedKey:'same-manifest',currentOriginal:true,admissionFailureAfterCurrent:true}));
+
+for(const phase of ['isLoading','isSaving']){
+ test(`shared project controls wait while the current flow ${phase} and release after it settles`,()=>fixture(async f=>{
+  assert.equal(f.authenticated(),1);
+  const input=nodes(f.render(false)).find(node=>node.props?.['aria-label']==='공유 프로젝트 이름');
+  input.props.onChange({target:{value:'Next inspection project'}});
+  const controls=()=>{
+   const tree=nodes(f.render(false));
+   return [tree.find(node=>node.props?.['aria-label']==='공동 작업 프로젝트'),
+    tree.find(node=>node.props?.['aria-label']==='공동 작업 서버 연결 해제'),
+    tree.find(node=>node.type==='button'&&node.props.children.includes('만들기'))];
+  };
+  for(const control of controls())assert.equal(control.props.disabled,false,'the accepted idle project can change');
+  f.flow.setState({[phase]:true});
+  for(const control of controls())assert.equal(control.props.disabled,true,'do not offer a change that saveOpenEdits must refuse');
+  f.flow.setState({[phase]:false});
+  for(const control of controls())assert.equal(control.props.disabled,false,'settled flow reads release the same controls');
+  const before=f.calls.filter(call=>call.route==='/api/accounts/select-project').length;
+  await f.activate();
+  assert.equal(f.values[14],'');
+  assert.equal(f.calls.filter(call=>call.route==='/api/accounts/select-project').length,before+1);
+  assert.deepEqual(f.api.getProjectContext(),f.context);
+ }));
+ test(`the real save guard still refuses a forced project change during flow ${phase} before any selection request`,()=>fixture(async f=>{
+  f.flow.setState({[phase]:true});
+  const before=f.calls.length,context=f.api.getProjectContext(),project=f.projectStore.getState().project;
+  await f.activate();
+  assert.match(f.values[14],/플로우를 불러오거나 저장하는 중/);
+  assert.equal(f.calls.length,before,'refusal precedes every network mutation and discovery');
+  assert.deepEqual(f.api.getProjectContext(),context);
+  assert.equal(f.projectStore.getState().project,project);
+ }));
+ test(`the refresh login form remains available with stale flow ${phase} state`,()=>fixture(async f=>{
+  f.flow.setState({[phase]:true});
+  let tree=nodes(f.render(true));
+  tree.find(node=>node.props?.['aria-label']==='공유 계정 비밀번호').props.onChange({target:{value:'fixture password'}});
+  tree=nodes(f.render(true));
+  assert.equal(tree.find(node=>node.type==='button'&&node.props.children.includes('연결·로그인')).props.disabled,false);
+ }));
+}

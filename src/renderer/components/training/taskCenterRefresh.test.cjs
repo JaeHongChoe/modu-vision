@@ -1,9 +1,9 @@
 const test=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path'),Module=require('node:module'),ts=require('typescript');
 function load(file,mocks={}){const name=path.join(__dirname,file),m=new Module(name,module);m.filename=name;m.paths=Module._nodeModulePaths(__dirname);m.require=ref=>ref in mocks?mocks[ref]:['./jobProgress','./taskCenterModel','./taskHandoff'].includes(ref)?load(ref+'.ts'):require(ref);m._compile(ts.transpileModule(fs.readFileSync(name,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022,jsx:ts.JsxEmit.ReactJSX}}).outputText,name);return m.exports;}
 const flush=()=>new Promise(setImmediate);
-function harness(){
+function harness(source='/source'){
  let cursor=0,tree;const slots=[],effects=[],cleanup=[],pending=[],timers=new Map(),listeners=new Set();let nextTimer=0;
- const state={projectDir:'/project',project:{id:'p',source_dataset_dir:'/source',active_labelset_id:'default'},isProjectBusy:false};
+ const state={projectDir:'/project',project:{id:'p',source_dataset_dir:source,active_labelset_id:'default'},isProjectBusy:false};
  const compute={transportRevision:0,profiles:[],selectedProfileId:null};
  const react={useState:initial=>{const i=cursor++;if(!(i in slots))slots[i]=typeof initial==='function'?initial():initial;return[slots[i],v=>slots[i]=typeof v==='function'?v(slots[i]):v];},useRef:initial=>{const i=cursor++;if(!(i in slots))slots[i]={current:initial};return slots[i];},useEffect:(fn,deps)=>{const i=cursor++;if(!slots[i]||deps.some((v,j)=>v!==slots[i][j])){slots[i]=deps;effects.push(()=>{cleanup[i]?.();cleanup[i]=fn();});}}};
  const jsx=(type,props)=>({type,props:props||{},children:[props?.children].flat()});
@@ -27,6 +27,18 @@ test('scope A to B to A rejects old completion and queues one current scope read
 test('closing rejects old completion; reopen reads after old request releases',async()=>{const h=harness();try{h.toggle(false);h.render();h.pending[0].resolve(h.reply());await flush();h.render();assert.doesNotMatch(h.text(),/마지막 응답 확인/);assert.equal(h.pending.length,1);h.toggle(true);h.render();assert.equal(h.pending.length,2);}finally{h.dispose();}});
 test('unmount drops queued refresh and stale completion',async()=>{const h=harness();try{h.event();h.unmount();h.pending[0].resolve(h.reply());await flush();assert.equal(h.pending.length,1);h.render();assert.doesNotMatch(h.text(),/마지막 응답 확인/);}finally{h.dispose();}});
 test('failed read releases the gate, displays error and later poll recovers',async()=>{const h=harness();try{h.poll();assert.equal(h.pending.length,1);h.pending[0].reject(Error('fixture failed read'));await flush();h.render();assert.match(h.text(),/fixture failed read/);h.poll();assert.equal(h.pending.length,2);h.pending[1].resolve(h.reply());await flush();h.render();assert.match(h.text(),/현재 프로젝트 1개/);assert.doesNotMatch(h.text(),/fixture failed read/);}finally{h.dispose();}});
+test('no-dataset inventory accepts an empty source but still refuses foreign or malformed provenance',async()=>{
+ const h=harness(null),valid={...h.reply('unused',''),tasks:[]};
+ const refusal=/현재 프로젝트 작업 응답과 출처가 다릅니다/;
+ try{
+  h.pending[0].resolve(valid);await flush();h.render();
+  assert.match(h.text(),/마지막 응답 확인/);assert.doesNotMatch(h.text(),refusal);
+  for(const invalid of [{...valid,source_dataset_path:'/foreign'},{...valid,labelset_id:'foreign'},{...valid,source_dataset_path:null}]){
+   h.poll();h.pending.at(-1).resolve(invalid);await flush();h.render();assert.match(h.text(),refusal);
+  }
+  h.poll();h.pending.at(-1).resolve(valid);await flush();h.render();assert.doesNotMatch(h.text(),refusal);
+ }finally{h.dispose();}
+});
 test('same open details toggle and stable scope rerenders do not restart polling',()=>{const h=harness();try{for(let i=0;i<4;i++){h.toggle(true);h.state.project={...h.state.project};h.render();}assert.equal(h.pending.length,1);}finally{h.dispose();}});
 
 test('task center offers the same local patch job observation with a local label',async()=>{

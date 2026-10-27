@@ -249,7 +249,8 @@ def tasks(request:Request):
         errors.append({'kind': 'data_operations', 'message': str(exc)})
     try:reservations=[{k:v for k,v in row.items() if k!='owner'} for row in shared_leases().list() if row.get('project_id')==project['id'] or any((item.get('job_id') or item.get('search_id'))==row['job_id'] for item in rows)]
     except (ValueError,OSError,sqlite3.Error) as exc:reservations=None;errors.append({'kind':'reservations','message':str(exc)})
-    return {'tasks':rows,'reservations':reservations,'errors':errors,'source_dataset_path':source,'labelset_id':labelset}
+    # The inventory envelope uses an empty string for no dataset; the stored source and row filters stay unchanged.
+    return {'tasks':rows,'reservations':reservations,'errors':errors,'source_dataset_path':'' if source is None else source,'labelset_id':labelset}
 
 
 class WeightImportRequest(ReadinessRequest):
