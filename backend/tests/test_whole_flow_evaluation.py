@@ -424,3 +424,128 @@ def test_flow_evaluation_route_preserves_whole_flow_review_and_unknown_contract(
     assert queue['items'][0]['origin_evidence']['node_evidence']
     from backend.api.routes_data_workbench import _validate_origin
     assert _validate_origin(project,Path(project['source_dataset_dir']),queue)['id']==queue['id']
+
+
+# Large whole-flow HTTP receipts retain authoritative evidence on disk.
+import copy
+import hashlib
+
+import httpx
+from fastapi import FastAPI
+
+
+@pytest.fixture
+def receipt():
+    row = {
+        'relative_path': 'defect.png', 'truth': 'UNKNOWN', 'decision': 'OK',
+        'truth_reason': 'explicit_truth_missing', 'execution_status': 'success',
+        'node_evidence': [{'node_id': 'inspect', 'status': 'passed',
+                           'branch_verdict': 'OK', 'selected_edge_ids': ['inspect-output'],
+                           'artifacts': [{'image': 'image-bytes-' * 20000}]}],
+        'roi_evidence': [{'bbox': [0, 0, 1184, 1184], 'defect_score': 0.29,
+                          'segmentation_classes': [{'class_id': 1, 'area_px': 0,
+                              'probability': {'dtype': 'float32', 'shape': [1184, 1184],
+                                              'encoding': 'zlib_base64', 'data': 'probability-' * 30000}}]}],
+    }
+    return {'evaluation_id': 'eval_' + '1' * 32, 'version_id': '2' * 32,
+            'cohort_id': 'cohort_' + '3' * 32, 'record_sha256': 'a' * 64,
+            'coverage': {'total': 1, 'known': 0, 'unknown': 1},
+            'confusion': {'NG': {'OK': 0}}, 'metrics': {'escape_rate': None},
+            'validity': {'valid': True, 'reasons': []}, 'records': [row],
+            'unknown_truth': [row], 'escapes': [], 'overkills': [], 'errors': []}
+
+
+@pytest.mark.parametrize('method', ['POST', 'GET'])
+def test_http_read_and_run_compact_pixels_without_mutating_saved_receipt(receipt, monkeypatch, tmp_path, method):
+    import asyncio
+    from backend.api import routes_flow_evaluation as routes
+
+    saved = tmp_path / 'record.json'
+    saved.write_text(json.dumps(receipt))
+    before = saved.read_bytes()
+    original = copy.deepcopy(receipt)
+    app = FastAPI()
+    app.include_router(routes.router)
+    monkeypatch.setattr(routes, 'get_current_project', lambda request: {'project_dir': str(tmp_path)})
+    monkeypatch.setattr(routes.flow_evaluation, 'evaluate_flow', lambda *a, **k: receipt)
+    monkeypatch.setattr(routes.flow_evaluation, 'read_evaluation', lambda *a, **k: receipt)
+
+    async def run():
+        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url='http://test') as client:
+            if method == 'POST':
+                return await client.post('/api/flow-evaluations', json={
+                    'version_id': receipt['version_id'], 'cohort_id': receipt['cohort_id']})
+            return await client.get('/api/flow-evaluations/' + receipt['evaluation_id'])
+
+    response = asyncio.run(run())
+    assert response.status_code == 200
+    assert len(response.content) < 16000, 'HTTP must not embed dense pixels from saved evidence'
+    view = response.json()
+    assert view['record_sha256'] == receipt['record_sha256']
+    for field in ('evaluation_id', 'version_id', 'cohort_id', 'coverage', 'confusion', 'metrics', 'validity'):
+        assert view[field] == receipt[field]
+    row = view['records'][0]
+    assert row['truth'] == 'UNKNOWN' and row['truth_reason'] == 'explicit_truth_missing'
+    assert row['node_evidence'][0]['selected_edge_ids'] == ['inspect-output']
+    assert row['roi_evidence'][0]['bbox'] == [0, 0, 1184, 1184]
+    assert row['roi_evidence'][0]['defect_score'] == 0.29
+    ref = row['roi_evidence'][0]['segmentation_classes'][0]['probability']['data']
+    value = receipt['records'][0]['roi_evidence'][0]['segmentation_classes'][0]['probability']['data']
+    encoded = json.dumps(value, ensure_ascii=False, sort_keys=True, separators=(',', ':')).encode()
+    assert ref == {'kind': 'stored_evaluation_value',
+                   'json_pointer': '/records/0/roi_evidence/0/segmentation_classes/0/probability/data',
+                   'json_bytes': len(encoded), 'json_sha256': hashlib.sha256(encoded).hexdigest()}
+    assert view['response_projection']['stored_record_sha256'] == receipt['record_sha256']
+    assert view['response_projection']['referenced_values'] == 4
+    assert saved.read_bytes() == before and receipt == original
+
+
+def test_compact_projection_handles_dense_numeric_maps_and_escaped_pointer():
+    from backend.engine.flow_evaluation_response import evaluation_response
+    dense = [[0.123456] * 400 for _ in range(400)]
+    original = {'record_sha256': 'b' * 64, 'records': [{'roi_evidence': [{'a/b~c': {
+        'anomaly_values': dense, 'probability': [0.123456] * 20000,
+        'bbox': [0, 0, 400, 400], 'defect_area_px': 42}}]}]}
+    projected = evaluation_response(original)
+    roi = projected['records'][0]['roi_evidence'][0]['a/b~c']
+    assert roi['anomaly_values']['json_pointer'].endswith('/a~1b~0c/anomaly_values')
+    assert roi['probability']['json_bytes'] > 65536
+    assert roi['bbox'] == [0, 0, 400, 400] and roi['defect_area_px'] == 42
+    assert original['records'][0]['roi_evidence'][0]['a/b~c']['anomaly_values'] is dense
+    assert len(json.dumps(projected)) < 2000
+
+
+def test_small_evidence_and_invalidity_are_unchanged():
+    from backend.engine.flow_evaluation_response import evaluation_response
+    value = {'record_sha256': 'a' * 64, 'records': [{'mask': 'small', 'probability': [0.1, 0.2]}],
+             'validity': {'valid': False, 'reasons': ['source_changed']}}
+    assert evaluation_response(value) == value
+
+
+def test_display_projection_keeps_typed_text_and_routing_arrays():
+    from backend.engine.flow_evaluation_response import evaluation_response
+    value = {'record_sha256': 'a' * 64, 'records': [{'rejection_reason': 'reason' * 20000,
+        'node_evidence': [{'selected_edge_ids': ['edge'] * 2000, 'skip_reason': 'reason' * 20000}]}]}
+    assert evaluation_response(value) == value
+
+
+@pytest.mark.parametrize('method', ['POST', 'GET'])
+def test_display_projection_does_not_hide_server_refusals(monkeypatch, tmp_path, method):
+    import asyncio
+    from backend.api import routes_flow_evaluation as routes
+    app = FastAPI()
+    app.include_router(routes.router)
+    monkeypatch.setattr(routes, 'get_current_project', lambda request: {'project_dir': str(tmp_path)})
+    def refuse(*args, **kwargs):
+        raise ValueError('saved_graph_changed')
+    monkeypatch.setattr(routes.flow_evaluation, 'evaluate_flow', refuse)
+    monkeypatch.setattr(routes.flow_evaluation, 'read_evaluation', refuse)
+    async def run():
+        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url='http://test') as client:
+            if method == 'POST':
+                return await client.post('/api/flow-evaluations', json={
+                    'version_id': '2' * 32, 'cohort_id': 'cohort_' + '3' * 32})
+            return await client.get('/api/flow-evaluations/eval_' + '1' * 32)
+    response = asyncio.run(run())
+    assert response.status_code == 409
+    assert response.json() == {'detail': 'saved_graph_changed'}
