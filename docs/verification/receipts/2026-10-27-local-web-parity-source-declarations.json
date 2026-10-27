@@ -1,0 +1,138 @@
+{
+  "schema": "modu-vision.action-fix-source-declarations/v1",
+  "scope": "Current localhost web parity source declarations only; all historical execution receipts and scenario states are unchanged",
+  "source_declaration_only": true,
+  "historical_acceptance_rebound": false,
+  "historical_receipts_modified": false,
+  "new_GUI_executions": [],
+  "newly_verified_scenarios": [],
+  "parent_completion_credit": false,
+  "whole_current_GUI_suite_pending": true,
+  "current_source_table_changes": [
+    {
+      "source": "src/renderer/components/runtime/ProductDeliveryWorkspace.tsx",
+      "previous_declaration_sha256": "8323b2de60c928431997a8ec2262372f7768da519198d95f53c4daab68500b5c",
+      "current_declaration_sha256": "86be90dc03431ccfaf1b2f5216cc2f6dd07c9d43c821fa98998311e0f63d074a"
+    },
+    {
+      "source": "src/renderer/components/wizard/ProjectWorkspaceDialog.tsx",
+      "previous_declaration_sha256": "88ba7b15e572c194ca4176b53a25ce7f1b50b81ab51e9cfe35bc8db4b2296b46",
+      "current_declaration_sha256": "3b7214e2beb4c34b41a7f8d6d63c03d477f456237c30192753f1d1b1b692de7f"
+    },
+    {
+      "source": "src/renderer/components/common/ImagePickerModal.tsx",
+      "previous_declaration_sha256": "0a1a2bf0169bc5bfb57093348aab1fde2f7b654fd2e3bc7bef49368f73dd8fec",
+      "current_declaration_sha256": "169020303e9b7a1de70cc483d3a19a7881bbb84b22ed73e87053f06e9af7f72f"
+    },
+    {
+      "source": "src/renderer/components/dataset/DatasetWorkflowPanel.tsx",
+      "previous_declaration_sha256": "3c740fece10eb4515a236844020578d88cb202a106b6f93b36bc3ce07c386186",
+      "current_declaration_sha256": "e1b99742a1d4c16c43379fe3b83b9044bc6bb6cf44c2e666392803820c3b3bdc"
+    },
+    {
+      "source": "src/renderer/components/dataset/ExternalMaskExchangePanel.tsx",
+      "previous_declaration_sha256": "6a5d0fd5e8b57d05ae7e91b47ba447eac694a5f7c37509da9d2fbe8d7924f7a4",
+      "current_declaration_sha256": "1fc8c44d4fae23f18a00529c42b2380cdb28d68f5b55866a5b17fbd7b2e4867b"
+    },
+    {
+      "source": "src/renderer/components/training/TaskCenter.tsx",
+      "previous_declaration_sha256": "5bdf6719c5857d609adff29ce3e745ff4b9b59935ac726ca6cfb4ac4e85e623d",
+      "current_declaration_sha256": "083bdcce7138d0b9f28313d590e88678a7d983fbc0ef547d05896e4c193b41ad"
+    },
+    {
+      "source": "src/renderer/components/labeling/CandidateProviderControls.tsx",
+      "previous_declaration_sha256": "589b6ecfbdf34b903b13b005ecedc6687d07efe5a97f9a15f13134c1c6bc3e6d",
+      "current_declaration_sha256": "63f86ef7ef8239d30eefdb35c89d85a448ed0abc9be5a864902e3d3807ee85fa"
+    },
+    {
+      "source": "src/renderer/components/wizard/WizardHeader.tsx",
+      "previous_declaration_sha256": "189b746f6edb03c70fcf61d192b85f7a5b83441dcf45d14d4d9b73c8041d2444",
+      "current_declaration_sha256": "5e986fcc5a24f47adc1036793d5e833b95da7d6c2e43c899c5d3a463199829f4"
+    },
+    {
+      "source": "src/renderer/components/dataset/DatasetStudio.tsx",
+      "previous_declaration_sha256": "1bd4a50fa43090f270c817ee24295b47d292adf33c8a53789a7cca112b956258",
+      "current_declaration_sha256": "817ef5143b7bfa835bf45e7f4fbd281a613fd8d0a5a99709a7a68f7f6316879a"
+    },
+    {
+      "source": "src/renderer/components/runtime/RuntimePackPanel.tsx",
+      "previous_declaration_sha256": "4161e79ae817d605a06f3ecba75c3cb80dd8666387421d68f313c9af4b6f2644",
+      "current_declaration_sha256": "3a8796d3740ad710eb2c1285ad8448940fcdbdf014408c1daf4bab594ba45805"
+    }
+  ],
+  "affected_source_action_accounting": [
+    {
+      "source": "src/renderer/components/runtime/ProductDeliveryWorkspace.tsx",
+      "actions": 3,
+      "retained_historical_verified_dimensions": 17,
+      "state_changes": 0,
+      "current_GUI_execution_requalified": false
+    },
+    {
+      "source": "src/renderer/components/wizard/ProjectWorkspaceDialog.tsx",
+      "actions": 2,
+      "retained_historical_verified_dimensions": 14,
+      "state_changes": 0,
+      "current_GUI_execution_requalified": false
+    },
+    {
+      "source": "src/renderer/components/common/ImagePickerModal.tsx",
+      "actions": 4,
+      "retained_historical_verified_dimensions": 27,
+      "state_changes": 0,
+      "current_GUI_execution_requalified": false
+    },
+    {
+      "source": "src/renderer/components/dataset/DatasetWorkflowPanel.tsx",
+      "actions": 6,
+      "retained_historical_verified_dimensions": 40,
+      "state_changes": 0,
+      "current_GUI_execution_requalified": false
+    },
+    {
+      "source": "src/renderer/components/dataset/ExternalMaskExchangePanel.tsx",
+      "actions": 5,
+      "retained_historical_verified_dimensions": 29,
+      "state_changes": 0,
+      "current_GUI_execution_requalified": false
+    },
+    {
+      "source": "src/renderer/components/training/TaskCenter.tsx",
+      "actions": 1,
+      "retained_historical_verified_dimensions": 6,
+      "state_changes": 0,
+      "current_GUI_execution_requalified": false
+    },
+    {
+      "source": "src/renderer/components/labeling/CandidateProviderControls.tsx",
+      "actions": 8,
+      "retained_historical_verified_dimensions": 11,
+      "state_changes": 0,
+      "current_GUI_execution_requalified": false
+    },
+    {
+      "source": "src/renderer/components/wizard/WizardHeader.tsx",
+      "actions": 1,
+      "retained_historical_verified_dimensions": 2,
+      "state_changes": 0,
+      "current_GUI_execution_requalified": false
+    },
+    {
+      "source": "src/renderer/components/dataset/DatasetStudio.tsx",
+      "actions": 2,
+      "retained_historical_verified_dimensions": 14,
+      "state_changes": 0,
+      "current_GUI_execution_requalified": false
+    },
+    {
+      "source": "src/renderer/components/runtime/RuntimePackPanel.tsx",
+      "actions": 1,
+      "retained_historical_verified_dimensions": 7,
+      "state_changes": 0,
+      "current_GUI_execution_requalified": false
+    }
+  ],
+  "unchanged_action_records_sha256": "e4ac0d9e1c9ab8a9160fd888fdda64288aa9a9e74da384fec5d1b4bafc6d8876",
+  "before_registry_sha256": "1a58001ddecdfa927b4eb8b5331796b768a4f3b98fcb6f53775603bd18bd5e7d",
+  "after_registry_sha256": "ab8cc6e2aca46bfe92a915d42f3fcdd4b0b50f30683579c5b28cee36a4465486"
+}

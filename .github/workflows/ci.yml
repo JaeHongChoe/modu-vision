@@ -69,6 +69,24 @@ jobs:
           MV_CI_RECORD_DIR: ${{ runner.temp }}/modu-ci-manifests
         run: >-
           python -m pytest -q --junitxml="$MV_CI_RECORD_DIR/ci-pytest.xml"
+          backend/tests/test_local_web_app.py
+          backend/tests/test_local_web_cli.py
+          backend/tests/test_local_web_state.py
+          backend/tests/test_local_web_projects.py
+          backend/tests/test_local_web_backup_restore.py
+          backend/tests/test_local_host_client.py
+          backend/tests/test_local_host_body_limit.py
+          backend/tests/test_local_host_grants.py
+          backend/tests/test_local_host_launcher.py
+          backend/tests/test_local_host_routes.py
+          backend/tests/test_local_host_revocation.py
+          backend/tests/test_local_host_staging.py
+          backend/tests/test_local_host_selection_identity.py
+          backend/tests/test_local_host_snapshot_writer.py
+          backend/tests/test_local_host_service_gate.py
+          backend/tests/test_local_host_remote.py
+          backend/tests/test_local_host_remote_assistant.py
+          backend/tests/test_local_host_linked_sources.py
           backend/tests/test_flow_class_save_validation.py
           backend/tests/test_detection_object_rules.py
           backend/tests/test_source_mask_annotations.py

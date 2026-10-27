@@ -1,6 +1,6 @@
 # Local Web Desktop Parity Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [x]`) syntax for tracking.
 
 **Goal:** Implement the approved localhost browser/native-helper design and verify every desktop feature or its identical prerequisite refusal without desktop shims.
 
@@ -41,11 +41,11 @@
 
 **Interfaces:** Consume helper protocol and local-project resolver; produce controller/hooks/explicit HTTP contract above.
 
-- [ ] Write failing tests for framing/correlation/EOF/timeouts, unauthenticated/CSRF/foreign-origin access, wrong actor/tab/project, single-use selected path and replaced link/secret path.
-- [ ] Run `python -m pytest backend/tests/test_local_host_client.py backend/tests/test_local_host_grants.py backend/tests/test_local_host_routes.py -q`, observe meaningful missing-feature RED.
-- [ ] Implement owned helper build/spawn/close, bounded line protocol, route authority and path grant store. Only `backend.web` installs capabilities; generic shared app remains unchanged.
-- [ ] Run new tests plus `test_local_web_app.py`, `test_local_web_cli.py`, `test_local_web_state.py`; expect no failures. Record raw logs.
-- [ ] Commit this task's owned files only after integration checks.
+- [x] Write failing tests for framing/correlation/EOF/timeouts, unauthenticated/CSRF/foreign-origin access, wrong actor/tab/project, single-use selected path and replaced link/secret path.
+- [x] Run `python -m pytest backend/tests/test_local_host_client.py backend/tests/test_local_host_grants.py backend/tests/test_local_host_routes.py -q`, observe meaningful missing-feature RED.
+- [x] Implement owned helper build/spawn/close, bounded line protocol, route authority and path grant store. Only `backend.web` installs capabilities; generic shared app remains unchanged.
+- [x] Run new tests plus `test_local_web_app.py`, `test_local_web_cli.py`, `test_local_web_state.py`; expect no failures. Record raw logs.
+- [x] Commit this task's owned files only after integration checks.
 
 ### Task 2: Native helper, actor-owned assistant and deployment operations
 
@@ -53,10 +53,10 @@
 
 **Interfaces:** Consume/produce framed helper protocol from contract. Export `LocalHostService` with injected native adapters for real-code unit tests; entry injects Electron dialog/shell/safeStorage and existing services.
 
-- [ ] Write and run failing tests for unknown methods/invalid identities, per-session/tab isolation, actual native adapter cancellation, no plaintext storage, stale/disposed responses and bounded input.
-- [ ] Implement native owner approval and folder/file/open operations, actor credential ownership with tab selection/cancel separation, all existing AssistantBridge actions and updates allowlist. Reuse existing SIWC/keyStore/service/distribution/portable checks rather than bypassing them.
-- [ ] Run `node --test src/main/localHost/*.test.cjs` and existing assistant/native-open/distribution/portable tests appropriate to touched code; expect PASS. Run main typecheck.
-- [ ] Root reviews diff, then commits only these files.
+- [x] Write and run failing tests for unknown methods/invalid identities, per-session/tab isolation, actual native adapter cancellation, no plaintext storage, stale/disposed responses and bounded input.
+- [x] Implement native owner approval and folder/file/open operations, actor credential ownership with tab selection/cancel separation, all existing AssistantBridge actions and updates allowlist. Reuse existing SIWC/keyStore/service/distribution/portable checks rather than bypassing them.
+- [x] Run `node --test src/main/localHost/*.test.cjs` and existing assistant/native-open/distribution/portable tests appropriate to touched code; expect PASS. Run main typecheck.
+- [x] Root reviews diff, then commits only these files.
 
 ### Task 3: Account-scoped registration identity, project open/backup/restore
 
@@ -64,11 +64,11 @@
 
 **Interfaces:** Produce `LocalProjectRegistry(root)`, `install_local_projects(app,registry)` and router factory; use controller `check_path`/`commit_grants` hooks. Declare exact integration signatures in report before root wiring.
 
-- [ ] Reproduce current account project/open refusal and backup destination contradiction; add RED tests for permitted local operation and unchanged ordinary shared denial.
-- [ ] Implement additive registration/location IDs with original default selection compatibility, namespace-aware authorization/ref/job lookups, project create/open/import and durable backup/export/restore operations.
-- [ ] Pin original/restored same-ID locations to distinct canonical workspace contexts; test two tabs, owner/membership revocation, stale expected source, journalled publish/register failure and restart recovery. No identity rewrite, overwrite or permanent deletion.
-- [ ] Test APIs through real FastAPI/AccountStore/temp files; run relevant shared-account/context/archive/restore suites. Expect PASS; report pre-existing failures separately.
-- [ ] Root reviews and commits only this stream.
+- [x] Reproduce current account project/open refusal and backup destination contradiction; add RED tests for permitted local operation and unchanged ordinary shared denial.
+- [x] Implement additive registration/location IDs with original default selection compatibility, namespace-aware authorization/ref/job lookups, project create/open/import and durable backup/export/restore operations.
+- [x] Pin original/restored same-ID locations to distinct canonical workspace contexts; test two tabs, owner/membership revocation, stale expected source, journalled publish/register failure and restart recovery. No identity rewrite, overwrite or permanent deletion.
+- [x] Test APIs through real FastAPI/AccountStore/temp files; run relevant shared-account/context/archive/restore suites. Expect PASS; report pre-existing failures separately.
+- [x] Root reviews and commits only this stream.
 
 ### Task 4: Browser capability adapter and all native-feature consumers
 
@@ -76,11 +76,11 @@
 
 **Interfaces:** Consume explicit HTTP contract; export browserHost/requestHeaders contract above. Preserve `window.api` absence and browser origin routing.
 
-- [ ] Add RED tests showing current browser refusal, real request payloads/CSRF/tab/grant scoping, stale logout/project response cancellation and browser report bytes/download.
-- [ ] Implement capability handshake and host adapter; add picker purpose at each consumer. Project operations use native local endpoints instead of shared-denied generic routes; labels/masks/model imports and report downloads/view use supported feature endpoints. Preserve typed/upload fallbacks.
-- [ ] Wire assistant/update bridges without constructing fake Electron API. Use server-provided capability/refusal reasons. Add one-shot run attribution header to the actual confirmed write only.
-- [ ] Run focused renderer tests, complete renderer suite and renderer/main/e2e typecheck after integration. Expect PASS; no source-text mirror tests.
-- [ ] Root reviews and commits only these files.
+- [x] Add RED tests showing current browser refusal, real request payloads/CSRF/tab/grant scoping, stale logout/project response cancellation and browser report bytes/download.
+- [x] Implement capability handshake and host adapter; add picker purpose at each consumer. Project operations use native local endpoints instead of shared-denied generic routes; labels/masks/model imports and report downloads/view use supported feature endpoints. Preserve typed/upload fallbacks.
+- [x] Wire assistant/update bridges without constructing fake Electron API. Use server-provided capability/refusal reasons. Add one-shot run attribution header to the actual confirmed write only.
+- [x] Run focused renderer tests, complete renderer suite and renderer/main/e2e typecheck after integration. Expect PASS; no source-text mirror tests.
+- [x] Root reviews and commits only these files.
 
 ### Task 5: Remote authority proxy, lifecycle and deployment integration (root)
 
@@ -88,11 +88,11 @@
 
 **Interfaces:** Bound connection key = local session/tab + remote origin/account/epoch; remote context is separate payload/header construction and never local host authority.
 
-- [ ] Add RED tests for remote login token leakage, local cookie/upstream Set-Cookie forwarding, arbitrary URL/redirect, local expiry, two tabs, WSS switch and stale response.
-- [ ] Implement dedicated remote login/logout and allowlisted bounded HTTP/WSS relays; keep credentials server-side and remote authorization on remote server. Invalidate local session connections without cancelling other tabs.
-- [ ] Integrate native helper startup readiness, owned shutdown/crash reports, operation receipt recovery, distribution/portable/OS-service host approval conditions.
-- [ ] Run remote/host/shared regression tests and actual owned helper lifecycle smoke; preserve active user services.
-- [ ] Commit integrated root changes after all stream tests pass.
+- [x] Add RED tests for remote login token leakage, local cookie/upstream Set-Cookie forwarding, arbitrary URL/redirect, local expiry, two tabs, WSS switch and stale response.
+- [x] Implement dedicated remote login/logout and allowlisted bounded HTTP/WSS relays; keep credentials server-side and remote authorization on remote server. Invalidate local session connections without cancelling other tabs.
+- [x] Integrate native helper startup readiness, owned shutdown/crash reports, operation receipt recovery, distribution/portable/OS-service host approval conditions.
+- [x] Run remote/host/shared regression tests and actual owned helper lifecycle smoke; preserve active user services.
+- [x] Commit integrated root changes after all stream tests pass.
 
 ### Task 6: Complete parity matrix, actual localhost QA, docs and independent review
 
@@ -100,9 +100,9 @@
 
 **Interfaces:** Consume all implemented features. No fake preload/desktop shim counts as product browser evidence.
 
-- [ ] Turn all 26 audit rows and design feature rows into checked cases with actual result/artifact or same prerequisite refusal, and explicitly pending user-assisted evidence.
+- [x] Turn all 26 audit rows and design feature rows into checked cases with actual result/artifact or same prerequisite refusal, and explicitly pending user-assisted evidence.
 - [ ] Run actual isolated HTTPS launcher/account/project and native chooser flow, uploads/folder and labels/masks, backup→same-ID restore→separate reopening, HTML/JSON download/view and reconnect.
-- [ ] Run one small synthetic CPU training/evaluation with cached approved weights, saved flow/inspection and reload/restart readback. Do not start duplicate active jobs or send actual assistant/provider requests.
+- [x] Run one small synthetic CPU training/evaluation with cached approved weights, saved flow/inspection and reload/restart readback. Do not start duplicate active jobs or send actual assistant/provider requests.
 - [ ] Use fake provider at network dependency boundary for actual browser assistant setup/models/read/write-preview/cancel/confirm/log; test account/tab/remote isolation and secrets nonexposure.
 - [ ] Run full relevant renderer/main/backend/browser regression, source pins and independent task/whole-branch review. Fix material findings with RED→GREEN, retain failures and missing real-account/device/public-release acceptance honestly.
 - [ ] Update actual documentation and completion ledger. Create a reviewable feature PR when code is validated, attach it, and keep exact-head CI separate from local pass. No automatic main merge/deploy from this design approval.

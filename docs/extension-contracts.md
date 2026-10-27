@@ -9,9 +9,10 @@ administrator is provisioned in the terminal through AccountStore before serving
 See [local browser setup](local-browser.md) for certificate, data and OS limits.
 A manually hosted shared server instead configures `--shared-auth-dir` and the
 exact `MODU_BROWSER_ORIGINS` before startup, and provisions administration outside
-the browser with its server process capability. A browser cannot bootstrap administration or
-open another server's account session. Cross-origin account connections use the
-desktop client instead.
+the browser with its server process capability. A browser cannot bootstrap administration.
+The localhost launcher additionally owns a windowless native helper and a remote-connection
+broker. Dedicated broker login keeps upstream credentials in server memory; generic
+shared-server installations do not gain this capability.
 
 The browser logs in with `transport: cookie`. The session cookie is Secure,
 HttpOnly and SameSite=Strict. The password and CSRF proof are not persisted by
@@ -26,10 +27,30 @@ server-side refusals; the browser cannot grant itself permissions.
 | --- | --- | --- |
 | Authorized project and saved-flow view | Same-origin HTTPS account session | Main-process account session |
 | ZIP upload and artifact download | Browser file selection and downloads | Same API contract |
-| Server-side source path | Explicit server path; cannot access browser PC folders | Explicit path or native picker |
-| Local file/folder opening | Unavailable, with an explanation | Native bridge |
-| Desktop updates and OS service registration | Unavailable | Separate authorized native operation |
+| Server-side source path | Localhost native chooser stages a project-owned copy; typed path requires explicit project-member sharing | Explicit path or native picker |
+| Local file/folder opening | Approved localhost helper; current authorized project only | Native bridge |
+| Desktop updates and OS service registration | Localhost helper and existing OS/signature/admin/owner checks | Separate authorized native operation |
 | Telemetry | Launcher forwards `/ws/` directly to the authenticated ASGI app over WSS | Native authenticated connection |
+
+Local host HTTP calls require the exact HTTPS origin, a valid HttpOnly account cookie,
+CSRF for unsafe methods and a server-issued tab. Native approval is separate from account
+login. Selected paths are short-lived, one-use and bound to actor/session/tab/workspace/
+project/role/membership revision/labelset plus file identity and a fixed operation. Standard
+shared-server external-path denials remain in place. No browser-supplied shell, arbitrary RPC
+method or browser preload shim is accepted.
+
+Restored projects retain manifest/model/labelset IDs. A distinct registration/workspace key
+separates copies and their account memberships, jobs and artifacts. Logical-ID queries use
+one validated location key for both permission checks and row access; exact registration
+queries cannot borrow another location's authority. Registration inode checks precede legacy
+normalization. Backup/restore receipts preserve published output after an interrupted reply;
+recovery never blindly repeats a filesystem publication.
+
+Remote HTTP/assets/WSS use an opaque connection reference bound to local session/tab,
+upstream origin/account and an authority epoch. This reference is not a bearer capability.
+Local cookies/CSRF and upstream Set-Cookie are not relayed. Current remote context headers
+are distinct from local native context. Login/context/logout/revocation reserve the new epoch
+before awaiting cleanup, and only admitted WSS streams release their owned capacity slot.
 
 For an empty browser project, open **검증된 데이터 버전** in Step 1, choose a
 ZIP and use **ZIP 올리고 검증**. Validation and **이 버전 채택** publish the
