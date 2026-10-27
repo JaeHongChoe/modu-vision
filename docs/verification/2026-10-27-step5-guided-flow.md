@@ -4,7 +4,7 @@ Scope: UI preparation over the existing flow editor; stacked on task-assistant P
 
 ## Local results
 
-- Renderer/main suite: **2,649 PASS / 1 explicit opt-in SKIP**, zero failures; log `/private/tmp/modu-step5-renderer-final.log`.
+- Renderer/main suite after the coverage follow-up: **2,651 PASS / 1 explicit opt-in SKIP**, zero failures; log `/private/tmp/modu-step5-coverage-renderer.log`. The original guide implementation had2,649 PASS /1SKIP.
 - Main/renderer/e2e typechecks and final build pass. Existing Vite >500kB chunk warning remains.
 - E2E harness: **67 PASS**. CI structure: **29 PASS**. Service-plan and action-evidence integrity gates pass. Only the current FlowchartStudio owner SHA declaration was refreshed; historical GUI receipts, spec source identities and scenario records are unchanged.
 - New behavior coverage includes earliest prerequisite, edited/stale saved evaluation, actual Studio advanced roundtrip and retired project callbacks, numeric score/count summaries, missing-model recipe preview, and access to unknown partial-run refresh/stop controls while preparation is locked. Tests were observed failing before the relevant implementations/fixes.
@@ -26,6 +26,14 @@ Expert-control run1 failed initial exact path checks under macOS's lexical `/var
 The screenshot is synthetic, taken from the actual browser renderer; it is not evidence of a real model evaluation or installed Electron update. Original manifest/screenshot/source hashes are listed in the companion evidence JSON. Their pre-publication source identity remains base e6f5fa5e plus working-tree edits, not hosted exact-head CI.
 
 ## Remaining qualification
+
+### Coverage follow-up
+
+The user's omission check found two presentation gaps: a valid saved evaluation can have zero confirmed truths, and learned enhancement preprocess nodes were absent from the model summary. Both are fixed. The guide now uses the existing evaluation panel's positive-confirmed-truth prerequisite for its completed status and next action, in addition to current version/hash/validity. Learned enhancement and rotation bindings are both summarized, including missing bindings. Backend execution, truth declaration and approval policies are unchanged.
+
+New tests were observed failing before the fixes; final related policy/Studio tests35PASS, full renderer2,651PASS/1SKIP, types/build/source gates pass, and scoped independent review is clean. On the new build the original browser case passed in run6 and the added valid-but-all-UNKNOWN enhancement case passed in run7, with no real model/truth/provider writes. The latter explicitly reads a controlled valid receipt with known0/unknown2, confirms the truth-review controls remain, and verifies returning to preparation offers evaluation rather than completion. The initial new fixture used an invalid image→enhancement link; the production graph guard correctly refused it. Only the fixture payload changed to its canonical ROI edge; that failure is preserved.
+
+![Controlled zero-truth coverage check](assets/step5-guided-flow/coverage-truth.png)
 
 The deterministic UI static auditor reports121 findings both on base e6f5fa5e and the changed tree, with **zero newly introduced findings** (comparison `/private/tmp/modu-step5-ui-static-comparison.json`). Existing whole-application accessibility/design ownership findings remain; this change does not certify WCAG compliance.
 

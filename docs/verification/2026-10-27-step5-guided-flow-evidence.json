@@ -10,7 +10,7 @@
   "manifest": "/private/var/folders/qr/0bv7k88d4d5_xgnf7ftxkhbm0000gn/T/modu-vision-e2e/step5-guided-preparation-20261027-review-5/results/step5-guided-preparation-g-1dbb2-tion-prerequisites-readable-browser/harness-manifest.json",
   "manifest_sha256": "62361fe2d7a91825baf0626a389534125b2d7d6155e6cc527e6552cf0af4daa1",
   "local_checks": {
-    "renderer_pass": 2649,
+    "renderer_pass": 2651,
     "renderer_skip": 1,
     "renderer_fail": 0,
     "harness_pass": 67,
@@ -86,5 +86,36 @@
       "test": "flow-readonly-control-preflights.spec.ts › F064 empty inspector search partial-run input and unsent typed connection cancellation preserve saved originals",
       "status": "passed"
     }
-  ]
+  ],
+  "coverage_followup": {
+    "confirmed_truth_zero_stays_pending": true,
+    "learned_enhancement_summarized": true,
+    "ui_cases": [
+      {
+        "manifest": "/private/var/folders/qr/0bv7k88d4d5_xgnf7ftxkhbm0000gn/T/modu-vision-e2e/step5-guided-preparation-20261027-review-6/results/step5-guided-preparation-g-1dbb2-tion-prerequisites-readable-browser/harness-manifest.json",
+        "sha256": "4ebbc93f545d430c76b41e019f80738236667096bcc975e9645a329369538245",
+        "test": "step5-guided-preparation.spec.ts › guided Step 5 preserves advanced edits and makes evaluation prerequisites readable",
+        "status": "passed",
+        "source": {
+          "commit": "ccd2a8ec2930766d5784f503964160bedcb2d237",
+          "dirty": true
+        }
+      },
+      {
+        "manifest": "/private/var/folders/qr/0bv7k88d4d5_xgnf7ftxkhbm0000gn/T/modu-vision-e2e/step5-guided-preparation-20261027-review-7/results/step5-guided-preparation-a-050c5-d-enhancement-model-visible-browser/harness-manifest.json",
+        "sha256": "ea6f5ac92deb5eb62be038e1381a89cab8a1bf5d89c965f8ff542d780c2b9a31",
+        "test": "step5-guided-preparation.spec.ts › all-unknown saved evaluation keeps truth review required and enhancement model visible",
+        "status": "passed",
+        "source": {
+          "commit": "ccd2a8ec2930766d5784f503964160bedcb2d237",
+          "dirty": true
+        }
+      }
+    ],
+    "screenshot": {
+      "path": "/private/var/folders/qr/0bv7k88d4d5_xgnf7ftxkhbm0000gn/T/modu-vision-e2e/step5-guided-preparation-20261027-review-7/results/step5-guided-preparation-a-050c5-d-enhancement-model-visible-browser/07-unknown-truth-guide-stays-at-evaluation.png",
+      "sha256": "bc8a064986aafe15f7e56fa82c1a90e7bce9a03e885dd28008ca20588f35df2d"
+    },
+    "provider_model_truth_writes": 0
+  }
 }

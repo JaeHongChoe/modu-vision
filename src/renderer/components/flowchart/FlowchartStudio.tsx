@@ -50,7 +50,7 @@ import { ModelThresholdHint } from './ModelThresholdHint';
 import { OperatorGuidanceBanner } from '../common/OperatorGuidanceBanner';
 import {FlowEditorWorkspace, flowWorkspaceIdentity, type FlowWorkspaceTab} from './FlowEditorWorkspace';
 import {FlowPreparationPanel} from './FlowPreparationPanel';
-import {flowPreparationNext, flowPreparationSummary} from './flowPreparation';
+import {flowPreparationNext, flowPreparationSummary, hasReviewedFlowEvaluation} from './flowPreparation';
 import {FlowRecipeDialog} from './FlowRecipeDialog';
 import {createFlowRecipe, FLOW_RECIPES, type FlowRecipeKind} from './flowRecipes';
 import type {FlowEvaluation} from '../../services/flowEvaluation';
@@ -1121,9 +1121,10 @@ export const FlowchartStudio: React.FC = () => {
   const preparation = flowPreparationSummary(pipeline);
   const preparationBusy = isSaving || isRunning || isVerifyingAction || Boolean(isProjectBusy);
   const preparationLoading = isLoading || flowOpening || datasetIsLoading;
+  const preparationEvaluationReady = hasReviewedFlowEvaluation(currentEvaluation,evaluationReceipt?.coverage.known??0);
   const preparationNext = flowPreparationNext({loading:preparationLoading,busy:preparationBusy,
     hasPipeline:Boolean(pipeline),modelBlocked:modelCheck.status==='blocked',needsModel,graphError,
-    canSave:canVerifyGraph,exactSaved,evaluationCurrent:currentEvaluation});
+    canSave:canVerifyGraph,exactSaved,evaluationCurrent:preparationEvaluationReady});
   // A retained click may belong to a retired project or graph. The existing effect owners verify again too.
   const preparationScope = scopeKey, preparationGraph = pipeline;
   const preparationCurrent = () => {
@@ -1146,9 +1147,10 @@ export const FlowchartStudio: React.FC = () => {
     <div className="min-h-0 flex-1 flex flex-col h-full bg-[#0B0E14] text-[#E2E8F0] overflow-y-auto overflow-x-hidden select-none">
       {/* Every other step opens with its plain page header in the simple view; step 5 now does too. */}
       {simpleView && <OperatorGuidanceBanner step={5} />}
-      {guidedView&&<FlowPreparationPanel area={activeTab} {...preparation} exactSaved={exactSaved} evaluationCurrent={currentEvaluation}
+      {guidedView&&<FlowPreparationPanel area={activeTab} {...preparation} exactSaved={exactSaved} evaluationCurrent={preparationEvaluationReady}
         busy={preparationBusy} loading={preparationLoading}
-        problem={modelCheck.status==='blocked'?modelCheckMessage:graphError||actionValidationError||undefined}
+        problem={modelCheck.status==='blocked'?modelCheckMessage:graphError||actionValidationError
+          ||(currentEvaluation&&!preparationEvaluationReady?'확정된 정답이 없습니다. 평가 화면에서 시험 이미지의 정답을 검토하세요.':undefined)}
         next={{label:preparationNext.label,disabled:preparationNext.disabled,onClick:prepareNext}}
         onAdvanced={openAdvanced} onPrepare={()=>{if(preparationCurrent())setActiveTab('edit');}}
         onBasicRecipe={()=>{if(preparationCurrent())handleSingleModel();}}

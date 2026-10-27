@@ -11,7 +11,7 @@ Alternatives considered: merely folding more graph controls retains the original
 ## Behavior
 
 - Simple view starts with a Korean preparation panel. Advanced edit is explicitly reachable and returning preserves graph/selection/unsaved edits. Opening either view never saves, evaluates, approves or calls GPT.
-- Show linked model labels/task, judgment rules, draft/saved status and current saved-version evaluation status. Derive the latter from existing exact version + graph hash + validity checks. A single-image run is never full-flow evaluation evidence.
+- Show linked model labels/task, including learned enhancement/rotation preprocess models, judgment rules, draft/saved status and current saved-version evaluation status. Derive the latter from existing exact version + graph hash + validity checks and require at least one confirmed truth, matching the existing evaluation panel. A valid receipt with zero confirmed truths stays in truth review. A single-image run is never full-flow evaluation evidence.
 - If no bound model, offer the current single-model recipe dialog; an invalid/custom graph routes to advanced editing rather than replacing it. Saving invokes the existing verification and reason dialog.
 - The primary follows the earliest prerequisite. Busy/loading states prevent mutation, and current saved evaluation offers navigation to Step 6 without implying human approval or deployment. Model-quality acceptance and all backend/export guards remain unchanged.
 - Evaluation explains Step 4 evaluates the model while Step 5 evaluates the saved complete inspection flow. Simple-mode actions use 시험 이미지 rather than 코호트. Advanced pickers and history remain reachable.

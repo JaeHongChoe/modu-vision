@@ -35,3 +35,23 @@ test('the criterion summary distinguishes actual numeric score and defect count 
  const changed=m.exports.flowPreparationSummary(graph).rules;
  assert.match(changed[0],/0.9/);assert.match(changed[1],/0개/);assert.notDeepEqual(changed,rows);
 });
+
+test('a valid saved version with no confirmed truth is not ready to leave preparation',()=>{
+ assert.equal(m.exports.hasReviewedFlowEvaluation(true,0),false);
+ assert.equal(m.exports.hasReviewedFlowEvaluation(false,19),false);
+ assert.equal(m.exports.hasReviewedFlowEvaluation(true,1),true);
+ assert.equal(m.exports.hasReviewedFlowEvaluation(true,NaN),false);
+ const next=m.exports.flowPreparationNext({...base,exactSaved:true,evaluationCurrent:m.exports.hasReviewedFlowEvaluation(true,0)});
+ assert.equal(next.action,'evaluate');
+});
+
+test('learned enhancement and rotation models remain visible alongside inspection models',()=>{
+ const graph={nodes:[{data:{node_type:'preprocess',label:'영상 개선',params:{operation:'enhancement'}}},
+  {data:{node_type:'preprocess',label:'회전 보정',params:{operation:'learned_rotation'},model_job_id:'rotation_job'}},
+  {data:{node_type:'inspection',label:'분류',task:'classification',model_job_id:'classifier_job'}},
+  {data:{node_type:'preprocess',label:'밝기',params:{operation:'brightness'}}}]};
+ const result=m.exports.flowPreparationSummary(graph);
+ assert.equal(result.models.length,3);
+ assert.deepEqual(result.models[0],{label:'영상 개선',task:'학습형 영상 개선',jobId:undefined});
+ assert.equal(result.models[1].task,'회전 보정');
+});

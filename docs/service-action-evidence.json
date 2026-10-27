@@ -3,7 +3,7 @@
   "kind": "curated_action_evidence_not_complete_feature_acceptance",
   "sources": {
     "src/renderer/components/flowchart/FlowWorkspacePanel.tsx": "6e7c74ae465e6a426601de756a91a9966615195f52c1e6aa9e4691b187baa8bf",
-    "src/renderer/components/flowchart/FlowchartStudio.tsx": "1a5c0f37dd636062a223fd3548df064afba785dba272537265df39f0a76b8c39",
+    "src/renderer/components/flowchart/FlowchartStudio.tsx": "b564b9f38776361efb9c458e0e39480123058ac19c01babef10ee49327734a3e",
     "src/renderer/components/flowchart/FlowDraftControls.tsx": "fe003c308ecd62b03aea4106e86d446b7a71d008ba0486b36132e6a1b39eb02b",
     "src/renderer/components/labeling/TeamDataPanel.tsx": "1842118458c0e0c5fe5bbadae383d7d80c805c49b7146d49e1ee394688d6577a",
     "src/renderer/components/labeling/LabelingToolbar.tsx": "8345e80148b919dbd2dcff6bd1876cbc069d82230108b966b49a52f4d5125ab5",

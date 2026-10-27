@@ -1,6 +1,6 @@
 # Step 5 Guided Preparation Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [x]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Make the default Step 5 a short guided inspection preparation sequence while retaining advanced graph editing and evidence gates.
 
@@ -52,4 +52,11 @@
 - [x] Use owned synthetic UI fixture for guided → advanced → guided, save/evaluation prerequisite states, narrow light/dark and keyboard. No real model/provider requests.
 - [x] Independent review of whole diff; fix concrete findings and verify scope.
 - [x] Update DESIGN.md/UX-CONTRACT.md and Korean usage/verification notes with observed limits.
-- [ ] Commit/push only intended files and open/attach a draft PR based on feat/task-performing-assistant-20261027. Read back exact head/base/body and report hosted CI separately.
+- [x] Commit/push only intended files and open/attach a draft PR based on feat/task-performing-assistant-20261027. Read back exact head/base/body and report hosted CI separately.
+
+### Coverage follow-up requested by user
+
+- [x] Test and fix the guide treating a valid receipt with zero confirmed truths as ready; keep the existing truth-review prerequisite.
+- [x] Test and include learned enhancement/rotation preprocess model bindings in the summary.
+- [x] Scoped independent review of both fixes; no backend policy change.
+- [x] Verify the zero-truth/enhancement path in the owned browser and publish the follow-up to PR20 (publication readback retained in the private progress checkpoint).
