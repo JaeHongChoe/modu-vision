@@ -105,7 +105,7 @@ async function scenario(outcome = 'success') {
     'viewer', '', {value: '', scope: null}, false, ''];
   let cursor = 0;
   const react = {createElement: (type, props, ...children) => ({type, props: {...props, children}}),
-    useEffect() {}, useState: initial => {
+    useEffect() {}, useSyncExternalStore: (_subscribe,getSnapshot)=>getSnapshot(), useState: initial => {
       const index = cursor++; if (values[index] === undefined) values[index] = initial;
       return [values[index], value => {values[index] = typeof value === 'function' ? value(values[index]) : value;
         if (index === 13 && values[index] === false) completed?.();}];
