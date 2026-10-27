@@ -1,0 +1,147 @@
+{
+  "schema": "modu-vision.historical-gui-current-test-declarations/v1",
+  "scope": "Existing historical declaration current-test hashes and reasons only; no new execution credit or historical rebinding",
+  "before_history_sha256": "fc4343a3347953421123c99d9d83bdb03c9ce0b42fa4d29d8d4c34988e71c495",
+  "after_history_sha256": "7069853ad44352304a9b0192cb7ebada6ffa1331f197c5a3a4938dd4351c532c",
+  "changed_declarations": [
+    {
+      "receipt": "2026-10-12-app-f030-root570-browser-empty.json",
+      "test": "scripts/e2e/ocr-empty-workbench-controls.spec.ts::OCR empty truth prepared input completed job and model selection preserve originals through reopen",
+      "previous_current_test_source_sha256": "c3638e8e96b37d375b8e84a0d7e83e08a3c2c6ee748efaf1299640808eee0706",
+      "current_test_source_sha256": "d78ab60402409425e32e202f35f1abfea1884719a6178841aa7aaef6cf20b8aa",
+      "retained_spec_commit": "9a18c088eda03610546190b64c32a5bf129737af",
+      "recorded_test_source_sha256": "238bb9d59cc8cb998f222e4ec38a9aeb87d0b86f35eb3e44c7d7a01f54757b62"
+    },
+    {
+      "receipt": "2026-10-12-app-f030-root570-browser-invalid.json",
+      "test": "scripts/e2e/ocr-empty-workbench-controls.spec.ts::OCR invalid numeric training preflight with valid saved truth preserves whole originals through reopen",
+      "previous_current_test_source_sha256": "c3638e8e96b37d375b8e84a0d7e83e08a3c2c6ee748efaf1299640808eee0706",
+      "current_test_source_sha256": "d78ab60402409425e32e202f35f1abfea1884719a6178841aa7aaef6cf20b8aa",
+      "retained_spec_commit": "9a18c088eda03610546190b64c32a5bf129737af",
+      "recorded_test_source_sha256": "238bb9d59cc8cb998f222e4ec38a9aeb87d0b86f35eb3e44c7d7a01f54757b62"
+    },
+    {
+      "receipt": "2026-10-12-app-f030-root570-electron-empty.json",
+      "test": "scripts/e2e/ocr-empty-workbench-controls.spec.ts::native OCR empty truth prepared input completed job and model selection preserve originals through reopen",
+      "previous_current_test_source_sha256": "c3638e8e96b37d375b8e84a0d7e83e08a3c2c6ee748efaf1299640808eee0706",
+      "current_test_source_sha256": "d78ab60402409425e32e202f35f1abfea1884719a6178841aa7aaef6cf20b8aa",
+      "retained_spec_commit": "9a18c088eda03610546190b64c32a5bf129737af",
+      "recorded_test_source_sha256": "238bb9d59cc8cb998f222e4ec38a9aeb87d0b86f35eb3e44c7d7a01f54757b62"
+    },
+    {
+      "receipt": "2026-10-12-app-f030-root570-electron-invalid.json",
+      "test": "scripts/e2e/ocr-empty-workbench-controls.spec.ts::native OCR invalid numeric training preflight with valid saved truth preserves whole originals through reopen",
+      "previous_current_test_source_sha256": "c3638e8e96b37d375b8e84a0d7e83e08a3c2c6ee748efaf1299640808eee0706",
+      "current_test_source_sha256": "d78ab60402409425e32e202f35f1abfea1884719a6178841aa7aaef6cf20b8aa",
+      "retained_spec_commit": "9a18c088eda03610546190b64c32a5bf129737af",
+      "recorded_test_source_sha256": "238bb9d59cc8cb998f222e4ec38a9aeb87d0b86f35eb3e44c7d7a01f54757b62"
+    },
+    {
+      "receipt": "2026-10-12-app-f030-root572-browser-handoff.json",
+      "test": "scripts/e2e/ocr-prepared-unsent-handoff.spec.ts::OCR unsent alphabet draft and saved alphabet split handoff preserve whole originals",
+      "previous_current_test_source_sha256": "4ba8ede49349ddddb859d4e542280081b89ca36ef2f37a04c7a209e9527a1eb4",
+      "current_test_source_sha256": "02997823ea31c42e06d1a5e99c5b3ce5a3edbd14f71760f60777f03fd2459ba1",
+      "retained_spec_commit": "9a18c088eda03610546190b64c32a5bf129737af",
+      "recorded_test_source_sha256": "47d0083f0980707408476282bd8f72bea3b472b3138b2c39560180f4fdc99368"
+    },
+    {
+      "receipt": "2026-10-12-app-f030-root572-electron-handoff.json",
+      "test": "scripts/e2e/ocr-prepared-unsent-handoff.spec.ts::native OCR unsent alphabet draft and saved alphabet split handoff preserve whole originals",
+      "previous_current_test_source_sha256": "4ba8ede49349ddddb859d4e542280081b89ca36ef2f37a04c7a209e9527a1eb4",
+      "current_test_source_sha256": "02997823ea31c42e06d1a5e99c5b3ce5a3edbd14f71760f60777f03fd2459ba1",
+      "retained_spec_commit": "9a18c088eda03610546190b64c32a5bf129737af",
+      "recorded_test_source_sha256": "47d0083f0980707408476282bd8f72bea3b472b3138b2c39560180f4fdc99368"
+    },
+    {
+      "receipt": "2026-10-12-app-f064-root575-browser-controls.json",
+      "test": "scripts/e2e/flow-readonly-control-preflights.spec.ts::F064 empty inspector search partial-run input and unsent typed connection cancellation preserve saved originals",
+      "previous_current_test_source_sha256": "e7f58477caa2d1a22543fa2642e18747586ccffe9b5c9e8d233d4cfc9b1e6134",
+      "current_test_source_sha256": "cb6c453a429bfdf087e9241fbd25e07768fa399d06dcddfb9f5ba2c3f20b11a1",
+      "retained_spec_commit": "9a18c088eda03610546190b64c32a5bf129737af",
+      "recorded_test_source_sha256": "ac2e7d606ea8f74110ee82831972c866381c54a02a9172c203b41ade1897fed6"
+    },
+    {
+      "receipt": "2026-10-12-app-f064-root575-electron-controls.json",
+      "test": "scripts/e2e/flow-readonly-control-preflights.spec.ts::native F064 empty inspector search partial-run input and unsent typed connection cancellation preserve saved originals",
+      "previous_current_test_source_sha256": "e7f58477caa2d1a22543fa2642e18747586ccffe9b5c9e8d233d4cfc9b1e6134",
+      "current_test_source_sha256": "cb6c453a429bfdf087e9241fbd25e07768fa399d06dcddfb9f5ba2c3f20b11a1",
+      "retained_spec_commit": "9a18c088eda03610546190b64c32a5bf129737af",
+      "recorded_test_source_sha256": "ac2e7d606ea8f74110ee82831972c866381c54a02a9172c203b41ade1897fed6"
+    },
+    {
+      "receipt": "2026-10-12-app-f064-root576-browser-limits.json",
+      "test": "scripts/e2e/flow-node-limit-preflights.spec.ts::F064 ninth fixed ROI and inspection node keyboard additions fail before graph or saved draft writes",
+      "previous_current_test_source_sha256": "2387962999b0ead6a71c3d2fccb12f7f1f00968171f5f0cd51a1d7ed939135d9",
+      "current_test_source_sha256": "8e819bd8b6b8c080acb6d07194efba07438e8a9a51fb2f6a8245cdfd70d470d9",
+      "retained_spec_commit": "9a18c088eda03610546190b64c32a5bf129737af",
+      "recorded_test_source_sha256": "6236bb318378715ae00131829ee56497e1eeb75c7f7a2bb3a9664c8fa386dfa8"
+    },
+    {
+      "receipt": "2026-10-12-app-f064-root576-electron-limits.json",
+      "test": "scripts/e2e/flow-node-limit-preflights.spec.ts::native F064 ninth fixed ROI and inspection node keyboard additions fail before graph or saved draft writes",
+      "previous_current_test_source_sha256": "2387962999b0ead6a71c3d2fccb12f7f1f00968171f5f0cd51a1d7ed939135d9",
+      "current_test_source_sha256": "8e819bd8b6b8c080acb6d07194efba07438e8a9a51fb2f6a8245cdfd70d470d9",
+      "retained_spec_commit": "9a18c088eda03610546190b64c32a5bf129737af",
+      "recorded_test_source_sha256": "6236bb318378715ae00131829ee56497e1eeb75c7f7a2bb3a9664c8fa386dfa8"
+    },
+    {
+      "receipt": "2026-10-12-app-f064-root578-browser-refusals.json",
+      "test": "scripts/e2e/flow-existing-refusal-controls.spec.ts::F064 empty model history mapping and keyboard layout connection deletion refusals preserve saved originals",
+      "previous_current_test_source_sha256": "d84ed7e2c4294161517785f08a6f7fd02b131a03d97cae87654c50df433163c1",
+      "current_test_source_sha256": "d9e058e9ba95812a0c9e315ae2e602499cad0fb49ac192099523483a32631d4e",
+      "retained_spec_commit": "9a18c088eda03610546190b64c32a5bf129737af",
+      "recorded_test_source_sha256": "90d100eab9cccde0a6992e91da468aed4ece7eaaa44ffbad2d9cbd924a9ca244"
+    },
+    {
+      "receipt": "2026-10-12-app-f064-root578-electron-refusals.json",
+      "test": "scripts/e2e/flow-existing-refusal-controls.spec.ts::native F064 empty model history mapping and keyboard layout connection deletion refusals preserve saved originals",
+      "previous_current_test_source_sha256": "d84ed7e2c4294161517785f08a6f7fd02b131a03d97cae87654c50df433163c1",
+      "current_test_source_sha256": "d9e058e9ba95812a0c9e315ae2e602499cad0fb49ac192099523483a32631d4e",
+      "retained_spec_commit": "9a18c088eda03610546190b64c32a5bf129737af",
+      "recorded_test_source_sha256": "90d100eab9cccde0a6992e91da468aed4ece7eaaa44ffbad2d9cbd924a9ca244"
+    },
+    {
+      "receipt": "2026-10-12-app-f064-root580-browser-reopen.json",
+      "test": "scripts/e2e/flow-model-less-reopen-controls.spec.ts::F064 model-less inspection ROI and typed connection drafts reopen with exact saved graphs",
+      "previous_current_test_source_sha256": "ca5fc6c0a202f4a84724c1f23d51fd28cfd65a1f582cecfe8abf26c0bc6149ef",
+      "current_test_source_sha256": "d64cdb469fa776ed1d0fdb5a92d041f3adecbc7154982033e9db1930dffcbe91",
+      "retained_spec_commit": "9a18c088eda03610546190b64c32a5bf129737af",
+      "recorded_test_source_sha256": "2055dacdc591178b81ebef1dc85598d2b0cc322ddc49c509e5635a724cefe3b0"
+    },
+    {
+      "receipt": "2026-10-12-app-f064-root580-electron-reopen.json",
+      "test": "scripts/e2e/flow-model-less-reopen-controls.spec.ts::native F064 model-less inspection ROI and typed connection drafts reopen with exact saved graphs",
+      "previous_current_test_source_sha256": "ca5fc6c0a202f4a84724c1f23d51fd28cfd65a1f582cecfe8abf26c0bc6149ef",
+      "current_test_source_sha256": "d64cdb469fa776ed1d0fdb5a92d041f3adecbc7154982033e9db1930dffcbe91",
+      "retained_spec_commit": "9a18c088eda03610546190b64c32a5bf129737af",
+      "recorded_test_source_sha256": "2055dacdc591178b81ebef1dc85598d2b0cc322ddc49c509e5635a724cefe3b0"
+    },
+    {
+      "receipt": "2026-10-12-app-label-mask-root581-browser-empty.json",
+      "test": "scripts/e2e/label-mask-empty-preflights.spec.ts::label and mask empty chooser preview and apply preflights preserve originals",
+      "previous_current_test_source_sha256": "d73668f836a17da10faa7d30aeaf28873cbfa925b8788ac816507e4e7b27d4b6",
+      "current_test_source_sha256": "5369cc79d1a76a5fe174843eb0c61be1c7767d9ed425acfaaa918da47c632178",
+      "retained_spec_commit": "9a18c088eda03610546190b64c32a5bf129737af",
+      "recorded_test_source_sha256": "b3c7c07af92471aefb2b236e9552987bea28e1a089d8c7415be007dcaf08ebbd"
+    },
+    {
+      "receipt": "2026-10-12-app-label-mask-root581-electron-empty.json",
+      "test": "scripts/e2e/label-mask-empty-preflights.spec.ts::native label and mask empty chooser preview and apply preflights preserve originals",
+      "previous_current_test_source_sha256": "d73668f836a17da10faa7d30aeaf28873cbfa925b8788ac816507e4e7b27d4b6",
+      "current_test_source_sha256": "5369cc79d1a76a5fe174843eb0c61be1c7767d9ed425acfaaa918da47c632178",
+      "retained_spec_commit": "9a18c088eda03610546190b64c32a5bf129737af",
+      "recorded_test_source_sha256": "b3c7c07af92471aefb2b236e9552987bea28e1a089d8c7415be007dcaf08ebbd"
+    },
+    {
+      "receipt": "2026-10-18-mask-source-choice-empty-browser.json",
+      "test": "scripts/e2e/mask-source-choice-empty.spec.ts::empty mask source choice stays local through actual checkbox changes without a chosen bundle or preview",
+      "previous_current_test_source_sha256": "ff608576967ab69b76b63040b50bf04da0f1d67c660dcbaede5086a0bfb8e25a",
+      "current_test_source_sha256": "e90ffcb0a29fa8c7df9aa39b0afaed9cf1b51c98bd810dc375d961f23b338c35",
+      "retained_spec_commit": "d45817a83d72793570f888a6fff4701fbddced7f",
+      "recorded_test_source_sha256": "61b879742a7ef7c2207734fc17d34c68dfc430049a61a0ccf1b5d657bbaaa49e"
+    }
+  ],
+  "unchanged_action_registry_sha256": "ab8cc6e2aca46bfe92a915d42f3fcdd4b0b50f30683579c5b28cee36a4465486",
+  "all_receipt_hashes_recorded_test_shas_execution_sources_and_retained_ancestor_blobs_unchanged": true,
+  "prior_gate_failure_log": "final-action-evidence.log"
+}

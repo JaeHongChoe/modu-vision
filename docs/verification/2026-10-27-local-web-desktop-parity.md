@@ -3,6 +3,31 @@
 상태: 개발 통합 검증 중. 구현·검사·실제 API·브라우저 UI·설치형 수락을 구분한다.
 이 문서는 최종 통과 선언이나 병합·배포 승인 기록이 아니다.
 
+## 최신 체크포인트
+
+제품 소스는 `0a9bbfc6`의 등록 위치 결합 수정까지, 검증 fixture는 `e88f1b3b`까지
+반영했다. 아래 시점별 기록의 대기 문구보다 이 요약이 최신 상태다.
+
+- 전체 renderer/main: **2,499 PASS / 명시 opt-in SKIP 1 / FAIL 0**.
+- 웹·보조 프로그램·마스크 복원 19개 backend 모듈: **352 PASS**.
+- 기존 선택자를 유지하고 공급자 fixture 검사를 덧붙인 E2E 하네스: **67 PASS**.
+  renderer/main/e2e 타입 검사와 build가 통과했다.
+- 복원본 로그인은 membership key를 계정 선택에 그대로 쓰면서, 서버가 검증한
+  registration/workspace/actor/team/logical ID/경로 전체를 대조한다. 새 조합 18개와
+  trace 정책 3개를 독립 실행해 21개가 통과했다. stale catalog/다른 같은-ID 위치/
+  권한 거절/네이티브 준비 실패에서 ID-only legacy로 내려가지 않는다.
+- 도우미 AP1은 해당 시험의 raw trace를 인증 전부터 끄고 실제 trace 옵션을 검사해
+  해소했다. 의도적인 인증 전 실패에서도 ZIP trace와 helper ledger가 없었다.
+  새 실제 브라우저 사례도 통과했으며, 원래 실패 trace는 SHA 그대로 private 권한에 보존했다.
+- 59443만 새 소스로 재실행해 서버 PID 26728/helper PID 26772 준비 상태와 저장한
+  프로젝트·모델·평가·흐름·검사 ID 및 원본/모델/split SHA를 재확인했다.
+  추가 학습·평가·검사 dispatch는 0회다. 소스 2,212개·빌드 58개 해시를 보존했다.
+- 실제 새 위치 마스크 복원/재로그인 수락은 **대기**다. 로컬 browser 제어가 설정상
+  enabled인데도 Work 비활성 응답을 반환해 UI 제어가 차단됐다. 도구 연결 1회 재초기화도
+  같은 응답이었다. 사용자 설정을 변경하거나 차단을 우회하지 않았다.
+- 현재 head의 hosted fast/full/gate 결과는 별도 기록한다. PR18은 draft이며 main 병합·
+  배포·사용자 앱 재패키징은 하지 않았다. 소스·모의·실제 API·실제 화면·현장 수락은 구분한다.
+
 ## 범위와 보존
 
 현재 macOS 앱과 같은 엔진·네이티브 서비스를 localhost 브라우저에서 사용한다.
@@ -45,10 +70,31 @@
   평가·흐름·검사 ID가 유지됨을 대조했다. 추가 학습 POST와 검사 실행은 모두 0회다.
   최종 소스 1,725개와 컴파일 산출물 58개의 해시 목록을 격리 QA 기록으로 남겼다.
 - 소유자 네이티브 허용 전 폴더 선택은 실제 403이었다. 허용 상태나 path grant를
-  검사 코드가 주입하지 않았다. 실제 사용자 브라우저·네이티브 승인 수락은 별도다.
+  검사 코드가 주입하지 않았다.
 - 실제 일반 브라우저는 검증용 인증서의 `NET::ERR_CERT_AUTHORITY_INVALID` 경고에서
-  멈췄다. 사용자에게 직접 확인을 요청했으며, 인증서 검사를 끄거나 경고를 대신
-  통과하지 않았다. 이후 네이티브 승인·chooser·화면 수락은 사용자 확인 대기다.
+  멈췄다. 이후 사용자가 인증서 경고와 네이티브 소유자 허용을 직접 확인했다.
+  인증서 검사를 끄거나 승인 상태를 주입하지 않았다.
+- 기존 검증용 서버의 실제 브라우저에서 분류 합성 이미지 40장을 네이티브 폴더 창으로
+  선택했다. 프로젝트 사본의 OK 20장·NG 20장과 원본 이미지 40개의 바이트·SHA가
+  같았다. 선택 취소 전후 사본·원본 보존, 클래스 저장과 새 로그인 뒤 재독을 확인했다.
+- 같은 실제 브라우저에서 LabelMe·COCO·YOLO 각각의 native 폴더 선택, 미리보기·적용,
+  ZIP 내보내기를 수행했다. 저장한 이미지 3장·라벨 4개와 내보낸 ZIP의 좌표,
+  native class ID 3/7 및 색상 `#ef4444`/`#22d3ee`가 fixture와 같았다.
+  ZIP CRC·파일 SHA·이전 버전 backup을 읽어 대조했고 원본·기존 학습 모델은 보존됐다.
+  근거는 QA의 `native-ui-labelme-artifact-readback.md`,
+  `native-ui-coco-artifact-readback.md`, `native-ui-yolo-artifact-readback.md`다.
+- COCO의 기본 충돌 중지 동작도 실제 UI에서 확인했다. 거절 뒤 기존 LabelMe 라벨·
+  metadata·이전 버전 SHA가 유지됐고 새 적용 버전은 생기지 않았다. 선택 동작으로
+  만들어진 COCO 입력 사본은 적용 라벨과 구분했다. 원래 거절 기록은
+  `qa/native-ui-coco-conflict-stop-readback.md`에 보존했다.
+- 인증 수정 전 네이티브 창의 AX 조작 timeout과 당시 상태를
+  `qa/auth-restart-before.json`에 보존했다. timeout을 선택·수락 성공으로 세지 않는다.
+- 이전 검증용 서버 PID 95425와 helper PID 95454의 종료를 확인한 뒤 소유한
+  59443 실행기만 `82e0c338`로 다시 빌드·실행했다. 이 커밋의 새 로그인 화면·
+  새로고침·프로젝트 생성·native 선택 실사용 수락은 아직 진행 중이다.
+
+위 실제 native UI 결과는 로그인 수정 전 소스의 증거다. `82e0c338`의 실제 화면
+수락으로 소급하지 않는다. 마스크와 백업/복원 UI 수락도 아직 완료로 기록하지 않는다.
 
 이 합성 자료의 실행 성공은 현장 정답·모델 품질·사람 수락을 뜻하지 않는다.
 
@@ -56,14 +102,14 @@
 
 | 대조 항목 | 구현 경로 | 현재 근거 / 남은 확인 |
 | --- | --- | --- |
-| 네이티브 폴더·파일 선택 | 고정 HTTP→private RPC→기존 Electron dialog | native adapter·권한·취소 회귀, 실제 사용자 chooser 수락 별도 |
+| 네이티브 폴더·파일 선택 | 고정 HTTP→private RPC→기존 Electron dialog | 사용자 native 허용, 실제 40장 폴더 선택·취소 확인; 새 인증 수정 후 재확인 진행 중 |
 | 프로젝트 생성·열기·최근 | 계정별 등록과 위치 검증 | 실제 managed 생성/재접속, 외부 경로·역할 거절 및 등록 회귀 |
 | 프로젝트 백업 | durable backup와 ZIP/hash/영수증 | 실제 파일 단위 회귀; 네이티브 위치 선택 수락 별도 |
 | 프로젝트 복원 | 새 위치·같은 manifest ID·새 registration/workspace | 실제 archive/namespace/restart 회귀, 원본 보존 |
 | 데이터 폴더·ZIP | immutable project staging 또는 chunk upload | 실제 40장 ZIP·SHA·명시 채택·source CAS; 선택 원본 교체 경합 B1 독립 재검토 통과 |
 | 링크 자료 | 명시 대상 계획/네이티브 확인 후 사본 | 구현·대상 검토·메타데이터 한도 및 공통 writer B2 독립 재검토 통과, 실제 native 수락 별도 |
 | 작업 센터 백업 복원 | 검증된 backup job→새 네이티브 위치 | 구현·독립 재검토 완료; 원본 membership·게시 전 inventory·legacy 정규화 유지, 실제 native 위치 선택 수락 별도 |
-| LabelMe/COCO/YOLO | 프로젝트 사본→기존 preview/apply | picker/반입 계약 회귀; 실제 사용자 UI 수락 별도 |
+| LabelMe/COCO/YOLO | 프로젝트 사본→기존 preview/apply | 실제 UI 선택·적용·ZIP 내보내기, 3장/4라벨 좌표·ID·palette·SHA 대조; COCO 충돌 중지 보존 |
 | 픽셀 마스크 | 프로젝트 사본→기존 mask preview/apply/export | 입력 grant·크기/class 계약 회귀; 실제 사용자 UI 수락 별도 |
 | 검사 이미지 | chooser 또는 기존 library/typed path | 프로젝트 입력 사본과 선택 권한 회귀 |
 | SAM2/DINO | 모델 폴더 사본·기존 검증 | 의존성/hash/권한 조건 유지; 실제 추가 모델 실행 안 함 |
@@ -80,7 +126,7 @@
 | SSH compute·예약 | 기존 HTTP 엔진·작업 소유/권한 | 기존 회귀, 실제 SSH/GPU 실행 안 함 |
 | OS 서비스 관리 | 기존 admin+owner 및 local native 허용 | 승인 전 side effect 거절 회귀, 실제 등록 안 함 |
 | 외부 링크 | 기존 브라우저 새 탭 / desktop shell | 기존 허용 scheme·opener 격리 회귀 |
-| 계정 로그인 | HTTPS cookie·Origin·CSRF | 실제 로컬 합성 계정, no browser bearer, revoke 회귀 |
+| 계정 로그인 | HTTPS cookie·Origin·CSRF·명시 재로그인 gate | 기존 실제 로컬 합성 계정; 새 reload gate 130개 및 독립 16개 통과, 최신 실제 화면 수락 진행 중 |
 | 학습·평가·흐름·검사 | 동일 기존 HTTP 엔진 | 위 실제 합성 학습 1회·평가·흐름·검사·저장 증거 |
 
 ## 독립 검토와 실패 보존
@@ -100,7 +146,7 @@
   legacy 정규화 시점과 복원 모델 조회를 수정·재검토했다. 같은 프로젝트 ID의 원본과
   복원본을 별도 등록 위치·권한·저장 결과로 유지한다.
 - 링크 사본의 확인 전 파일 내용 읽기, 영수증 hardlink 덮어쓰기, 빈 폴더로 우회하는
-  메타데이터 한도를 수정·재검토했다. 이 검토 완료가 아래 B2를 해소하지는 않는다.
+  메타데이터 한도를 수정·재검토했다. 아래 B2의 별도 재현·수정·재검토와 구분한다.
 - 기존 CLI 준비 mock 네 건은 새 helper build/serve 경계에 맞췄다. 새 구조의 실제
   Electron loader 문제는 별도로 재현하고 수정했으며 fixture 수정으로 숨기지 않았다.
 - 첫 평가 API probe는 legacy standard endpoint에 `device=cpu`를 넣어 별도 common
@@ -125,6 +171,16 @@
   해당 모듈로 한정했다. 제품 코드와 기존 재시도·대기·실패·정리 단언은 유지했다.
   파일 전체 18개, 동시성 재현 포함 6개와 독립 검토 13개가 통과했고,
   잘못된 재시도 한도·지연 누락·비-Windows 재시도 변형은 모두 실패로 잡았다.
+- 실제 새로고침 뒤 쿠키는 남지만 메모리의 CSRF proof가 없어 프로젝트 GET만
+  성공하고 생성은 거절되며 native 찾기가 비활성화되는 문제를 확인했다.
+  `82e0c338`은 기존 재로그인 정책대로 로그인 전 작업 화면·데이터 요청을 막고,
+  정상 로그인·프로젝트 확인 후 화면을 연다. 비밀번호·CSRF·세션 토큰을 저장하거나
+  backend 인증을 완화하지 않았다.
+- 그 수정의 독립 검토에서 원격 도우미 401이 로컬 principal까지 지우는 RA1을
+  재현했다. 원격 오류 뒤 로컬 인증을 한 번 확인하고, 확정된 로컬 401만 로그인을
+  해제하도록 수정했다. 원래 RED probe는 보존했고 수정 뒤 같은 probe와 독립
+  인증 검사 16개가 통과했다. 로컬 200·network/5xx, 새 계정·다른 remote로 바뀐
+  늦은 응답을 구분하며 도우미 요청·쓰기를 재전송하지 않는다.
 
 ## 현재 통합 검사 결과
 
@@ -132,20 +188,24 @@
 
 | 검사 | 현재 결과 | 근거와 범위 |
 | --- | --- | --- |
-| 전체 renderer/main | 2,438 PASS, 1 명시 opt-in SKIP, 실패 0 | `integrated-renderer-main-2.log`; 총 2,439개 |
-| 실제 컴파일 Electron 진입점 | 별도 1/1 PASS | `final-actual-electron.log`; ready·실제 PID·세션 폐기·EOF 종료·BrowserWindow 0개, 실제 계정/chooser 수락 아님 |
-| renderer/main/E2E 타입 검사·빌드 | PASS | 로컬 통합 검사이며 hosted CI 결과 아님 |
+| `82e0c338` 전체 renderer/main | 2,458 PASS, 1 명시 opt-in SKIP, 실패 0 | `reload-auth-final-renderer.log`; 총 2,459개, 이전 2,438 PASS 기록도 보존 |
+| 실제 컴파일 Electron 진입점 | 이전 소스에서 별도 1/1 PASS | `final-actual-electron.log`; ready·실제 PID·세션 폐기·EOF 종료·BrowserWindow 0개, 최신 UI 수락으로 소급하지 않음 |
+| `82e0c338` renderer/main/E2E 타입 검사·빌드 | PASS | `reload-auth-final*`와 현재 타입 검사 기록; 로컬 검사이며 hosted CI 결과 아님 |
+| reload 인증 수정·독립 재검토 | focused 130 PASS·독립 16 PASS | 실제 모듈 경계의 retained cookie·CSRF·만료·계정/remote 교체·RA1 회귀, 실제 UI와 별도 |
 | E2E 시험 도구 | 64/64 PASS | `final-e2e-harness.log`; 실제 사용자 브라우저 수락을 뜻하지 않음 |
 | 최신 local-web/host 통합 | 340/340 PASS | `final-host-current.log`, 62.96초; B1/B2 보완 후 18개 명시 시험 파일 |
 | service plan 검사 | PASS | 현재 정적 계약 검사 |
 | action evidence 검사 | PASS | 아래의 source 선언 갱신 범위만 반영 |
-| CI 명시 CPU 회귀 목록 | 진행 중 | 최종 성공으로 기록하지 않음; B1/B2 이전 시작 목록이며 최신 보완은 위 340개로 별도 확인 |
+| 현재 커밋의 hosted fast/full | `82e0c338` 전체 회귀 미기동 | `664b2239` fast 11/11·local-browser 1/1 성공은 이전 head 결과; `1ac335f6` full `40443762321`도 보존하며 현재 소스 통과로 쓰지 않음 |
 
 `docs/service-action-evidence.json`은 현재 TSX 소스 10개의 `sources` 해시 선언만
 갱신했다. 기존 action 기록·상태·과거 영수증은 바꾸지 않았다. 과거 verified 1,014개와
 pending 435개는 그대로이며, 이번 갱신으로 새로 accepted 처리한 기능은 0개다.
 [선언 변경 영수증](receipts/2026-10-27-local-web-parity-source-declarations.json)은
 소스 선언과 과거 수락 증거를 구분하는 기록이며, 새 UI 수락 증거가 아니다.
+이후 `82e0c338` 인증 수정에서는 선언된 소스 55개의 SHA가 모두 유지됐다.
+따라서 registry·위 선언 영수증을 다시 쓰지 않았다. 이번 실제 UI QA와 과거 action
+수락 상태 역시 자동으로 합치거나 새 accepted 상태로 바꾸지 않는다.
 
 최종 renderer/native 구성 검토에서는 새 중대 결함을 찾지 못했다. 백엔드 최종 검토는
 동시 외부 파일 교체에서 다음 두 결함을 독립 재현하고 수정·재검토했다.
@@ -166,12 +226,71 @@ pending 435개는 그대로이며, 이번 갱신으로 새로 accepted 처리한
 
 ## 최종 검사와 수락 경계
 
-남은 확인은 전체 CPU 회귀 완료, 일반 브라우저의 인증서·네이티브 승인·chooser 수락,
-feature PR과 정확한 head의
-hosted CI 기록이다. 링크/작업 센터 복원의 앞선 개별 검토는 완료됐지만 이 남은
-통합·수락 확인을 대신하지 않는다.
+남은 확인은 마스크·백업/복원 실제 UI, `82e0c338`의 최초 로그인·새로고침 재로그인·
+저장 프로젝트 재독·managed 생성·native 찾기 실사용 수락과 정확한 최종 head의
+hosted CI다. 사용자 인증서·native 허용과 앞선 native 자료/라벨 교환 결과는 위처럼
+별도로 확인했다. 링크/작업 센터 복원의 개별 검토나 이전 head CI를 이 남은
+통합·수락 확인으로 확대하지 않는다.
 Linux 런타임은 미검증이고 Windows 실행기는 기존 TLS private-key ACL 미지원으로
 명시 거절한다. 모델·실장비·모든 OS·공개 서명/공증·실제 계정/플랜 수락을 확대 주장하지 않는다.
 
 이 문서는 해당 커밋 시점의 기록이다. 후속 정확-head CI 상태는
 [PR #18](https://github.com/JaeHongChoe/modu-vision/pull/18)에서 별도로 확인한다.
+
+
+## 추가 통합 확인과 보존한 실패
+
+- 로그인 수정 후 `82e0c338` 실제 브라우저에서 managed 프로젝트를 생성했다.
+  CSRF 오류 없이 새 manifest가 저장됐으며, 기본 프로젝트와 다른 작업 자료는 남겼다.
+- 픽셀 마스크 2장·brush 라벨 4개를 실제 네이티브 폴더 창으로 반입해 저장하고,
+  원본 포함 ZIP을 내려받았다. ID 0/3/7·색·클래스별 픽셀·내부 구멍과 원본 SHA를
+  대조했다. 21개 payload 파일이 든 78,851-byte 백업의 모든 항목 SHA와 ZIP CRC도 확인했다.
+- 첫 실제 복원은 파일 바이트와 별도 등록은 보존했으나 `mask_file`에 이전 dataset scope가
+  남았다. 라벨 목록이 보이는 것만으로 mask raster 수락이라고 하지 않는다. 완료 수가
+  0/2였던 실제 실패 복원본은 25개 파일을 그대로 보존했다. `7e214133`의 수정은 게시 전
+  editable overlay와 관리된 Studio 버전 사본의 정확한 소유 경로만 옮긴다. 원본·mask
+  픽셀·모델·immutable package와 승인 정책은 유지한다. 관련 71개 및 마지막 35개,
+  독립 9개가 통과했으며 새 위치에서 실제 재복원 확인은 아직 진행 중이다.
+- `7e214133`로 검증용 서버만 재시작해 서버 PID 19908/helper PID 19964를 읽었다.
+  기존 학습·평가·흐름·검사 ID와 원본·모델·분할 SHA는 유지됐고 추가 실행은 없었다.
+  그 뒤의 실제 재로그인에서 복원본의 membership key와 logical project ID를
+  혼동하는 오류를 발견했다. 원래 거절 화면과 정상 서버 context를 보존했으며 수정 중이다.
+- `82e0c338`의 실제 평가 화면에서 HTML 24,315 bytes와 JSON 36,265 bytes를
+  다운로드해 서버 파일과 byte/SHA가 같음을 확인했다. HTML은 이전 API probe와
+  출력 옵션이 다르므로 이전 7,612-byte artifact와 같은 파일이라고 하지 않는다.
+  추가 학습·평가·검사 실행은 없다. HTML 미리보기 수락과도 구분한다.
+- `1ac335f6` 전체 회귀의 browser job은 335개 통과·2개 skip·14개 실패였다.
+  8개 spec의 9개 사례는 바뀐 소스 지문에서 멈췄다. 현재 실행용 SHA 20개만 갱신하고
+  기존 단언·시간 제한·원본 보존·요청 기록 검사는 유지했다. 새 실행 9개가 통과했다.
+  과거 실행 영수증이나 실패 결과를 새 해시로 바꾸지 않았다.
+- 다른 두 실패는 일반 HTTPS 공유 서버에 native `/session` POST를 반복하던 문제였다.
+  읽기 전용 capabilities 확인 후 지원되는 경우에만 tab을 생성하고, origin·로그인 세대별
+  실패 탐색을 제한했다. 실제 모듈 RED와 경합을 수정한 129개 및 독립 50개가 통과했다.
+  도우미 원격 401을 로컬 만료로 오인하지 않는 기존 검사는 유지한다.
+- 나머지 세 사례의 옛 안내 문구·초기 프로젝트/source 준비 조건을 보완했다.
+  단계 이동 두 사례는 현재 소스로 통과했지만, 이를 입증되지 않은 제품 경합 원인 해결로
+  확대하지 않는다. 새 로그인 절차의 비학습 브라우저 사례 7개가 통과했고 exact wire,
+  비밀값 비저장, 계정·프로젝트 권한 및 원본 보존 검사는 그대로다.
+- 현재 backend 19개 모듈은 352개 통과했다. Node 통합 중간 실행은 2,471개 통과·
+  1개 실패·명시 opt-in skip 1개였다. 실패는 linked-source가 tab 준비보다 먼저 준비 여부를
+  검사한 실제 모듈 조합 문제다. 준비 전 scope/generation 고정과 준비 후 전체 권한 검사를
+  유지한 수정의 17개 및 독립 17개가 통과했으며, 마지막 통합 재실행은 별도로 기록한다.
+- 실제 브라우저에서 native ChatGPT 설정 화면이 열렸다. 실제 계정의 약관·전송 동의는
+  선택하지 않았고 로그인·외부 요청도 하지 않았다. 별도 fixture의 실제 HTTPS renderer→
+  controller→private stdio→LocalHostService/SIWC/store 경로에서는 공급자 네트워크와
+  native I/O만 모의했다. 읽기·미리보기·거절 뒤 쓰기 0회, 확인 후 분할 1회·run/context/log,
+  취소·계정/탭 격리와 원본 20개 보존을 확인했다. 모의 공급자의 성공은 실제 공급자·OS·
+  원격 브라우저 수락이 아니다. 실패 trace에 합성 cookie/CSRF가 남은 AP1을 확인해 원본을
+  private 권한으로 보존했으며, CI 전에 이 사례의 안전한 trace 정책을 보완 중이다.
+
+현재 미완료: 새 위치 실제 mask 복원·재로그인 화면 수락과 최종 head의 hosted fast/full/gate.
+등록키 결합·AP1 수정 및 마지막 로컬 통합 검사는 위 최신 체크포인트에서 완료했다. 완료한 학습·모델 실행을 반복하거나
+사용자 앱·8443·자동화·main을 변경하지 않는다.
+
+
+기록 무결성 검사에서, 현재 실행용 source pin이 바뀐 8개 GUI spec에 대한 과거 선언이
+예전 파일 SHA를 가리키는 오류도 보존했다. 기존 이력 147행 중 17행의
+`current_test_source_sha256`과 사유만 갱신했다. 원래 receipt 147개의 바이트,
+execution source/recorded test SHA/retained ancestor spec과 action registry는 그대로다.
+독립 기계 대조를 통과했고, 무결성 gate는 1,014개 historical verified/435개 pending/
+accepted 0을 유지했다. 현재 실행의 통과를 과거 실행이나 사람 수락으로 재귀속하지 않았다.
