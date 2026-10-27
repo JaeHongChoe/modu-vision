@@ -23,6 +23,10 @@ class LocalProjectRegistry:
                     project_id TEXT NOT NULL, permission_key TEXT NOT NULL UNIQUE,
                     path TEXT NOT NULL UNIQUE, revision INTEGER NOT NULL, identity TEXT NOT NULL,
                     UNIQUE(workspace_id, project_id));
+                CREATE TABLE IF NOT EXISTS backup_restore_requests(
+                    actor_id TEXT NOT NULL, request_key TEXT NOT NULL, scope TEXT NOT NULL,
+                    spec TEXT NOT NULL, operation_id TEXT NOT NULL UNIQUE,
+                    PRIMARY KEY(actor_id,request_key));
                 CREATE TABLE IF NOT EXISTS operations(
                     id TEXT PRIMARY KEY, actor_id TEXT NOT NULL, kind TEXT NOT NULL,
                     phase TEXT NOT NULL, payload TEXT NOT NULL);
@@ -379,27 +383,42 @@ def local_projects_router(app, registry):
                 'archive_path': str(target), 'archive_sha256': result['sha256'], 'file_count': result['count'],
                 'total_bytes': sum(row['size'] for row in inventory['files']), 'operation_id': operation, 'backup_status': 'archive_verified'}
 
-    @router.post('/restore')
-    def restore(body: Restore, request: Request):
-        controller = host(request, 'restore')
+    def perform_restore(request, archive, target, digest, operation, *, extra=None, recheck=None):
         account = _fresh_authority(app, request)
-        archive = Path(body.archive_path).expanduser().resolve()
-        target = Path(body.target_dir).expanduser().resolve()
-        controller.require_grants(request, [('archive_path', body.archive_path), ('target_dir', body.target_dir)])
-        digest = _digest_file(archive)
-        if body.expected_archive_sha256 and body.expected_archive_sha256 != digest:
-            raise HTTPException(409, 'Archive changed since preview')
-        operation = uuid.uuid4().hex
+        if recheck:recheck()
+        if extra and extra.get('parent_identity') != _identity(target.parent):
+            raise HTTPException(409, 'Restore parent ownership changed')
         stage = target.parent / ('.' + target.name + '.local-restore-' + operation)
-        payload = {'archive': str(archive), 'archive_sha256': digest, 'target': str(target), 'stage': str(stage), 'parent_identity': _identity(target.parent), **binding(request)}
+        payload = {'archive': str(archive), 'archive_sha256': digest, 'target': str(target), 'stage': str(stage),
+                   'parent_identity': _identity(target.parent), **binding(request), **(extra or {})}
         _journal(registry, operation, account, 'restore', 'accepted', payload)
 
         def before_publish(staging, destination):
             _fresh_authority(app, request)
+            if recheck:recheck()
             if _identity(destination.parent) != payload['parent_identity']:
                 raise HTTPException(409, 'Restore parent ownership changed')
             if _digest_file(archive) != digest:
                 raise HTTPException(409, 'Archive changed since selection')
+            if payload.get('backup_scope'):
+                from backend.engine.data_restore_job import inventory
+                from backend.engine.migration_guard import maintenance_guard
+                from backend.engine.project_migration import normalize_legacy_manifest
+                from backend.engine.project_labelsets import load_labelsets, labelset_root
+                from backend.api.routes_project import _write_json
+                # Prepare activation before sealing publication, without rebinding
+                # the archive's final-target paths to the temporary staging path.
+                with maintenance_guard(staging):
+                    manifest = staging / 'project.json'
+                    ProjectConfigResponse.model_validate_json(manifest.read_text())
+                    normalize_legacy_manifest(staging)
+                    active = load_labelsets(staging)['active_id']
+                    project = ProjectConfigResponse.model_validate_json(manifest.read_text()).model_dump()
+                    annotations = str(labelset_root(destination, active))
+                    if project['annotations_dir'] != annotations:
+                        project.update(annotations_dir=annotations, active_labelset_id=active)
+                        _write_json(manifest, project)
+                payload['restored_inventory'] = inventory(staging)
             payload.update(target_identity=_identity(staging), manifest_sha256=_digest_file(staging / 'project.json'), project_id=json.loads((staging / 'project.json').read_text())['id'])
             _journal(registry, operation, account, 'restore', 'publishing', payload)
 
@@ -410,14 +429,108 @@ def local_projects_router(app, registry):
         try:
             restore_archive(archive, target, staging_dir=stage, before_publish=before_publish,
                             publish=publish, retain_staging=True)
+            if recheck:recheck()
+            if payload.get('backup_scope'):
+                verify_published(request, {'kind': 'restore', 'phase': 'published', 'payload': payload})
             project = _load_project(target)
             payload['manifest_sha256'] = _digest_file(target / 'project.json')
+            if payload.get('backup_scope'):
+                verify_published(request, {'kind': 'restore', 'phase': 'published', 'payload': payload})
             _journal(registry, operation, account, 'restore', 'published', payload)
             registration = registry.register(app, _fresh_authority(app, request), project)
-            _journal(registry, operation, account, 'restore', 'completed', {**payload, 'registration': registration})
-            return response(project, registration, operation)
+            payload['registration'] = registration
+            _journal(registry, operation, account, 'restore', 'completed', payload)
+            return project, registration, payload
         except ArchiveError as exc:
             raise HTTPException(exc.status_code, str(exc)) from exc
+
+    @router.post('/restore')
+    def restore(body: Restore, request: Request):
+        controller = host(request, 'restore')
+        archive = Path(body.archive_path).expanduser().resolve()
+        target = Path(body.target_dir).expanduser().resolve()
+        controller.require_grants(request, [('archive_path', body.archive_path), ('target_dir', body.target_dir)])
+        digest = _digest_file(archive)
+        if body.expected_archive_sha256 and body.expected_archive_sha256 != digest:
+            raise HTTPException(409, 'Archive changed since preview')
+        operation = uuid.uuid4().hex
+        project, registration, _ = perform_restore(request, archive, target, digest, operation)
+        return response(project, registration, operation)
+
+    class BackupRestore(BaseModel):
+        model_config = ConfigDict(extra='forbid', strict=True)
+        target_dir: str = Field(min_length=1, max_length=4096)
+        expected_archive_sha256: str = Field(pattern='^[0-9a-f]{64}$')
+
+    @router.post('/backups/{backup_id}/restore')
+    def restore_verified_backup(backup_id: str, body: BackupRestore, request: Request):
+        from backend.api.routes_dataset_imports import _backup_jobs, _IDEMPOTENCY_KEY
+        controller = host(request, 'restore-backup')
+        account, original, permission_key, context = selected(request, write=True)
+        project_key = app.state.context_registry.project_key(context)
+        authority = controller.authorize(request, 'projects.restore-backup', project=True)
+        request_key = request.headers.get('idempotency-key', '')
+        if not _IDEMPOTENCY_KEY.fullmatch(request_key):
+            raise HTTPException(422, 'A valid Idempotency-Key is required')
+        target = Path(body.target_dir).expanduser().resolve()
+        scope = {**binding(request), 'workspace_id': context.workspace_id, 'project_key': project_key,
+                 'context': context.model_dump(), 'permission_key': permission_key, 'role': authority['role'],
+                 'labelset_id': original.get('active_labelset_id', 'default'),
+                 'permission_revision': authority.get('permission_revision')}
+        spec = {'backup_id': backup_id, 'target': str(target), 'archive_sha256': body.expected_archive_sha256}
+        scope_json, spec_json = json.dumps(scope, sort_keys=True), json.dumps(spec, sort_keys=True)
+
+        def source():
+            _fresh_authority(app, request, permission_key)
+            controller.recheck(request, 'projects.restore-backup', authority, project=True)
+            current = registry.resolve_request(request, account)
+            if (current['context'] != context or current['project'].get('active_labelset_id', 'default') != scope['labelset_id']):
+                raise HTTPException(409, 'Backup restore project authority changed')
+            try:view = _backup_jobs().view(backup_id, project_key, account['id'])
+            except KeyError:raise HTTPException(404, 'Backup not found in this account and project') from None
+            if not view['downloadable'] or view['result_ref']['sha256'] != body.expected_archive_sha256:
+                raise HTTPException(409, 'Verified backup is missing, expired or changed')
+            return Path(view['result_ref']['path'])
+
+        archive = source()
+        def replay(row):
+            if row['scope'] != scope_json or row['spec'] != spec_json:
+                raise HTTPException(409, 'Restore request belongs to another tab, scope or target')
+            operation = owned_operation(request, row['operation_id'])
+            if operation['phase'] != 'completed':
+                raise HTTPException(409, 'recovery_required: restore request already exists; inspect its receipt')
+            verify_published(request, operation)
+            payload = operation['payload']
+            return backup_restore_result(row['operation_id'], payload, True)
+
+        with registry.db() as db:
+            previous = db.execute('SELECT * FROM backup_restore_requests WHERE actor_id=? AND request_key=?',
+                                  (account['id'], request_key)).fetchone()
+        if previous:return replay(previous)
+        if target.exists():raise HTTPException(409, 'Restore requires a fresh target')
+        parent_identity = _identity(target.parent)
+        controller.require_grants(request, [('target_dir', body.target_dir)], original)
+        operation = uuid.uuid4().hex
+        with registry.db() as db:
+            db.execute('BEGIN IMMEDIATE')
+            previous = db.execute('SELECT * FROM backup_restore_requests WHERE actor_id=? AND request_key=?',
+                                  (account['id'], request_key)).fetchone()
+            if previous:
+                raise HTTPException(409, 'recovery_required: restore request already reserved')
+            db.execute('INSERT INTO backup_restore_requests VALUES(?,?,?,?,?)',
+                       (account['id'], request_key, scope_json, spec_json, operation))
+        extra = {'backup_id': backup_id, 'backup_scope': scope, 'parent_identity': parent_identity}
+        _journal(registry, operation, account, 'restore', 'accepted', {'target': str(target), **binding(request), **extra})
+        _, _, payload = perform_restore(request, archive, target, body.expected_archive_sha256, operation,
+                                         extra=extra, recheck=source)
+        return backup_restore_result(operation, payload, False)
+
+    def backup_restore_result(operation, payload, replay):
+        registration = payload['registration']
+        return {'state': 'completed', 'autoactivated': False, 'operation_id': operation, 'idempotent_replay': replay,
+                'project_id': registration['project_id'], 'project_dir': registration['path'],
+                'registration_id': registration['registration_id'], 'workspace_id': registration['workspace_id'],
+                'context': registration['context']}
 
     def owned_operation(request, operation_id):
         account = _fresh_authority(app, request)
@@ -427,8 +540,44 @@ def local_projects_router(app, registry):
             raise HTTPException(404, 'Operation not found')
         return {**dict(row), 'payload': json.loads(row['payload'])}
 
+    def verify_backup_source(request, payload):
+        # A journal's source authority is immutable. Caller-selected headers may
+        # refer to another project (or none), and cannot substitute for it.
+        if not payload.get('backup_id') and not payload.get('backup_scope'):
+            return
+        from backend.api.routes_dataset_imports import _backup_jobs
+        scope = payload.get('backup_scope') or {}
+        account = _fresh_authority(app, request)
+        try:
+            context = ProjectContext(**scope['context'])
+            permission_key = scope['permission_key']
+        except (KeyError, TypeError, ValueError) as exc:
+            raise HTTPException(409, 'recovery_required: captured backup authority is incomplete') from exc
+        if context.actor_id != account['id'] or context.mode != 'team':
+            raise HTTPException(403, 'Captured backup actor is not authorized')
+        project, current_key, current_context = registry.resolve(app, account, context)
+        decision = app.state.accounts.authorize(account['id'], 'project.manage', permission_key,
+            session_token=request.state.account_session_token, scoped=False)
+        if not decision.allowed or decision.role != 'owner':
+            raise HTTPException(403, 'Current backup source owner permission required')
+        if (current_key != permission_key or current_context != context or scope.get('role') != decision.role
+                or scope.get('workspace_id') != context.workspace_id
+                or scope.get('project_key') != app.state.context_registry.project_key(context)
+                or scope.get('permission_revision') != decision.membership_revision
+                or scope.get('labelset_id') != project.get('active_labelset_id', 'default')):
+            raise HTTPException(409, 'recovery_required: captured backup source authority changed')
+        try:
+            view = _backup_jobs().view(payload['backup_id'], scope['project_key'], account['id'])
+        except KeyError:
+            raise HTTPException(409, 'recovery_required: captured source backup is unavailable') from None
+        result = view.get('result_ref') or {}
+        if (not view.get('downloadable') or result.get('sha256') != payload.get('archive_sha256')
+                or result.get('path') != payload.get('archive')):
+            raise HTTPException(409, 'recovery_required: captured source backup changed')
+
     def verify_published(request, operation):
         payload = operation['payload']
+        verify_backup_source(request, payload)
         if operation['kind'] not in {'restore', 'create'} or operation['phase'] not in {'published', 'completed'}:
             raise HTTPException(409, 'recovery_required: publication is uncertain; manual review required')
         target = Path(payload['target'])
@@ -442,6 +591,14 @@ def local_projects_router(app, registry):
                 raise ValueError('manifest identity changed')
         except (OSError, ValueError) as exc:
             raise HTTPException(409, 'recovery_required: published target identity changed; manual review required') from exc
+        if payload.get('backup_scope'):
+            from backend.engine.data_restore_job import inventory
+            from backend.engine.dataset_import_job import ImportNotAcceptable
+            try:
+                if inventory(target) != payload.get('restored_inventory'):
+                    raise ValueError('inventory changed or absent')
+            except (OSError, ValueError, ImportNotAcceptable) as exc:
+                raise HTTPException(409, 'recovery_required: restored output changed') from exc
         with registry.db() as db:
             row = db.execute('SELECT permission_key FROM locations WHERE path=?', (str(target),)).fetchone()
         if row:
@@ -497,6 +654,8 @@ def local_projects_router(app, registry):
         account = _fresh_authority(app, request)
         verify_published(request, operation)
         project = _load_project(target)
+        if operation['payload'].get('backup_scope'):
+            verify_published(request, operation)
         registration = registry.register(app, account, project)
         payload = adopted_payload(request, operation['payload'])
         payload.update(registration=registration, manifest_sha256=_digest_file(target / 'project.json'))
@@ -538,8 +697,28 @@ def local_projects_router(app, registry):
         target = verify_published(request, operation)
         account = _fresh_authority(app, request)
         project = _load_project(target)
+        if operation['payload'].get('backup_scope'):
+            verify_published(request, operation)
         registration = registry.register(app, account, project)
         _journal(registry, operation_id, account, operation['kind'], 'completed', {**payload, 'registration': registration})
         return response(project, registration, operation_id)
 
     return router
+
+
+def native_backup_view(request, view):
+    """Advertise the host-only restore entry point without changing team job policy."""
+    app = request.app
+    if getattr(app.state, 'local_host', None) is None or getattr(app.state, 'local_projects', None) is None:
+        return view
+    account = getattr(request.state, 'account_user', None)
+    if not account:return view
+    try:
+        resolved = app.state.local_projects.resolve_request(request, account)
+        decision = app.state.accounts.authorize(account['id'], 'project.manage', resolved['membership_key'],
+            session_token=request.state.account_session_token, scoped=False)
+        allowed = decision.allowed and decision.role == 'owner' and bool(view.get('downloadable'))
+    except (HTTPException, ValueError, OSError):allowed = False
+    return {**view, 'native_restore': allowed,
+            'capabilities': {**view.get('capabilities', {}), 'restore': allowed},
+            'restore_reason': 'Choose a native folder and explicitly restore this verified backup; the current project remains selected' if allowed else view.get('restore_reason', '')}

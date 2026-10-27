@@ -238,6 +238,9 @@ def tasks(request:Request):
             if record['project_key'] != project_key or record['actor_id'] != context.actor_id or record['kind'] not in ('dataset_import', 'project_backup', 'project_restore'):
                 continue
             view = _jobs(request).view(record['id'], project_key) if record['kind'] == 'dataset_import' else (_restore_jobs() if record['kind']=='project_restore' else _backup_jobs()).view(record['id'], project_key, context.actor_id)
+            if record['kind']=='project_backup':
+                from backend.local_host.projects import native_backup_view
+                view=native_backup_view(request,view)
             operation = view.get('operation', view)
             rows.append({**view, 'kind': record['kind'], 'status': view['state'], 'task': record['kind'],
                 'scope_kind': 'project', 'source_dataset_path': source, 'phase': (view.get('progress') or {}).get('phase', view['state']),
