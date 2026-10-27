@@ -8,6 +8,8 @@ import {assistantRuns} from './runHeader';
 import {SiwcStore} from './siwcStore';
 import {SiwcConnection} from './siwcConnection';
 
+let activeService:AssistantService|undefined;
+export async function disposeAssistantHandlers():Promise<void> {await activeService?.dispose();}
 export function registerAssistantHandlers(authorize:(event:IpcMainInvokeEvent)=>void):AssistantService {
   const directory = path.join(app.getPath('userData'), 'assistant'), encryptor = electronEncryptor(safeStorage);
   const chatgpt = new SiwcConnection({store: new SiwcStore(path.join(directory, 'chatgpt'), encryptor,{canRecover:()=>app.hasSingleInstanceLock()}),
@@ -33,6 +35,7 @@ export function registerAssistantHandlers(authorize:(event:IpcMainInvokeEvent)=>
   handle('assistant:chatgpt-account', id => service.chatgptSelectAccount(id));
   handle('assistant:chatgpt-model', (id, model) => service.chatgptSelectModel(id, model));
   handle('assistant:chatgpt-signout', id => service.chatgptSignOut(id));
-  app.once('will-quit', () => service.dispose());
+  activeService=service;
+  app.once('will-quit', () => {void service.dispose().catch(()=>undefined);});
   return service;
 }

@@ -32,17 +32,20 @@ interface AssistantState {
   toggle: () => void;
   config: AssistantConfigState | null;
   configError: string | null;
+  /** Read display only; retiring it never cancels the underlying protected-storage operation. */
+  configReadStatus: 'idle' | 'waiting' | 'unverified';
   items: AssistantChatItem[];
   busy: boolean;
   /** A confirmed write is executing: no stop and no settings change until its outcome is recorded. */
   writing: boolean;
-  /** A settings call is in flight: questions wait (the panel keeps the typed text) until it returns. */
+  /** A settings mutation or bounded config display wait is active; typed questions stay in the panel. */
   configuring: boolean;
   pending: PendingWrite | null;
   imageOffer: AssistantImageOffer | null;
   runs: RunRecord[] | null;
   runsError: string | null;
-  loadConfig: () => Promise<void>;
+  loadConfig: (options?: { explicit?: boolean }) => Promise<void>;
+  stopConfigLoad: () => void;
   saveProvider: (input: AssistantProviderInput) => Promise<boolean>;
   removeKey: (provider: AssistantProviderId) => Promise<void>;
   removeProvider: (provider: AssistantProviderId) => Promise<void>;
@@ -81,6 +84,9 @@ let imageRevision = 0;
 let writeRevision = 0;
 const readImageBinding = () => JSON.stringify([imageRevision, assistantImageBinding(assistantScope(useAssistantStore.getState().config))]);
 const readWriteBinding = () => JSON.stringify([writeRevision, assistantWriteBinding(assistantScope(useAssistantStore.getState().config))]);
+const CONFIG_WAIT_MS = 15_000;
+const CONFIG_UNVERIFIED = '연결 상태가 아직 확인되지 않았습니다. 운영체제의 보호 요청이 있다면 확인한 뒤 다시 확인하세요.';
+const HELD_FOR_UNVERIFIED = '연결 상태가 확인되지 않아 보내지 않았습니다. 연결 상태를 다시 확인한 뒤 보내세요.';
 const HELD_FOR_SETTINGS = '도우미 설정을 확인하는 중이라 아직 보내지 않았습니다. 설정이 끝난 뒤 다시 보내세요.';
 
 export const useAssistantStore = create<AssistantState>((set, get) => {
@@ -114,12 +120,74 @@ export const useAssistantStore = create<AssistantState>((set, get) => {
     }
     return conversation;
   };
-  const configCall = async (run: (bridge: AssistantBridge) => Promise<AssistantConfigState>): Promise<boolean> => {
+  // One native read and one replaceable display waiter. A stopped/expired waiter does not
+  // attach another Promise subscriber or remove the underlying request's single-flight fence.
+  let configMutation = 0;
+  let configRead: { mutation: number } | null = null;
+  let configWait: { request: number; promise: Promise<void>; resolve: () => void; timer: ReturnType<typeof setTimeout> } | null = null;
+  const finishConfigWait = (result: { config: AssistantConfigState } | { error: string }): void => {
+    const wait = configWait;
+    if (!wait) return;
+    configWait = null;
+    clearTimeout(wait.timer);
+    if (wait.request === configRequest) {
+      if ('config' in result) set({ config: result.config, configError: null, configReadStatus: 'idle', configuring: false });
+      else set({ configError: result.error, configReadStatus: 'unverified', configuring: false });
+    }
+    wait.resolve();
+  };
+  const retireConfigWait = (): void => {
+    if (!configWait) return;
+    finishConfigWait({ error: CONFIG_UNVERIFIED });
+    configRequest++;
+  };
+  const configUnverified = (): boolean => {
+    if (get().configReadStatus !== 'unverified') return false;
+    set({ configError: CONFIG_UNVERIFIED });
+    return true;
+  };
+  const loadConfig = (options?: { explicit?: boolean }): Promise<void> => {
+    // Existing login-status polling must not restart a timed-out/stopped display.
+    if (get().configReadStatus === 'unverified' && !options?.explicit) return Promise.resolve();
+    if (configWait) return configWait.promise;
+    if (get().configuring) return Promise.resolve(); // A settings mutation owns its result.
+    const bridge = assistantBridge();
+    if (!bridge) {
+      set({ configReadStatus: 'unverified', configError: '이 화면에서는 도우미를 쓸 수 없습니다. 데스크톱 앱에서 여세요.' });
+      return Promise.resolve();
+    }
+    let resolve!: () => void;
+    const promise = new Promise<void>(done => { resolve = done; });
+    configWait = { request: ++configRequest, promise, resolve, timer: setTimeout(() => {
+      finishConfigWait({ error: `15초 동안 연결 상태를 확인하지 못했습니다. ${CONFIG_UNVERIFIED}` });
+      configRequest++;
+    }, CONFIG_WAIT_MS) };
+    set({ configuring: true, configReadStatus: 'waiting', configError: null });
+    if (!configRead) {
+      const read = { mutation: configMutation };
+      configRead = read;
+      const settle = (result: { config: AssistantConfigState } | { error: string }) => {
+        if (configRead !== read) return;
+        configRead = null;
+        // An old snapshot must never replace a subsequent account/model mutation.
+        finishConfigWait(read.mutation === configMutation ? result : { error: CONFIG_UNVERIFIED });
+      };
+      try {
+        void bridge.getState().then(config => settle({ config }), cause => settle({ error: `${message(cause)} ${CONFIG_UNVERIFIED}` }));
+      } catch (cause) { settle({ error: `${message(cause)} ${CONFIG_UNVERIFIED}` }); }
+    }
+    return promise;
+  };
+  const configCall = async (run: (bridge: AssistantBridge) => Promise<AssistantConfigState>, allowUnverified = false): Promise<boolean> => {
+    if (!allowUnverified && configUnverified()) return false;
+    retireConfigWait();
+    configMutation++;
+    const wasUnverified = get().configReadStatus === 'unverified';
     const bridge = assistantBridge();
     if (!bridge) { set({ configError: '이 화면에서는 도우미를 쓸 수 없습니다. 데스크톱 앱에서 여세요.' }); return false; }
-    const request = ++configRequest; set({ configuring: true });
+    const request = ++configRequest; set({ configuring: true, configReadStatus: 'idle' });
     try { const config = await run(bridge); if (request !== configRequest) return false; set({ config, configError: null }); return true; }
-    catch (cause) { if (request === configRequest) set({ configError: message(cause) }); return false; }
+    catch (cause) { if (request === configRequest) set({ configError: message(cause), configReadStatus: wasUnverified ? 'unverified' : 'idle' }); return false; }
     finally { if (request === configRequest) set({ configuring: false }); }
   };
   /** Receiver changes wait for an executing confirmed write, so its outcome reaches the run log first (the panel disables them). */
@@ -128,21 +196,22 @@ export const useAssistantStore = create<AssistantState>((set, get) => {
     set({ configError: '확인한 작업을 실행하는 중이라 설정을 바꾸지 않았습니다. 실행이 끝난 뒤 다시 바꾸세요.' });
     return true;
   };
-  const chatgptCall = async (run: (connection: NonNullable<AssistantBridge['chatgpt']>) => Promise<AssistantConfigState>) => {
-    if (writeRunning()) return false;
+  const chatgptCall = async (run: (connection: NonNullable<AssistantBridge['chatgpt']>) => Promise<AssistantConfigState>, allowUnverified = false) => {
+    if (writeRunning() || (!allowUnverified && configUnverified())) return false;
     invalidateAssistant();
     return configCall(bridge => {
       if (!bridge.chatgpt) throw new Error('이 앱에서는 ChatGPT 연결을 지원하지 않습니다. 최신 데스크톱 앱에서 다시 여세요.');
       return run(bridge.chatgpt);
-    });
+    }, allowUnverified);
   };
   return {
     isOpen: false,
-    open: () => { set({ isOpen: true }); if (!get().config) void get().loadConfig(); },
-    close: () => set({ isOpen: false }),
+    open: () => { set({ isOpen: true }); if (!get().config || get().configReadStatus === 'unverified') void get().loadConfig({ explicit: true }); },
+    close: () => { retireConfigWait(); set({ isOpen: false }); },
     toggle: () => (get().isOpen ? get().close() : get().open()),
     config: null,
     configError: null,
+    configReadStatus: 'idle',
     items: [],
     busy: false,
     writing: false,
@@ -151,20 +220,22 @@ export const useAssistantStore = create<AssistantState>((set, get) => {
     imageOffer: null,
     runs: null,
     runsError: null,
-    loadConfig: async () => { await configCall(bridge => bridge.getState()); },
-    saveProvider: async input => { if (writeRunning()) return false; invalidateAssistant(); return configCall(bridge => bridge.saveProvider(input)); },
-    removeKey: async provider => { if (writeRunning()) return; invalidateAssistant(); await configCall(bridge => bridge.removeKey(provider)); },
-    removeProvider: async provider => { if (writeRunning()) return; invalidateAssistant(); await configCall(bridge => bridge.removeProvider(provider)); },
-    setActive: async provider => { if (writeRunning()) return; invalidateAssistant(); await configCall(bridge => bridge.setActive(provider)); },
+    loadConfig,
+    stopConfigLoad: retireConfigWait,
+    saveProvider: async input => { if (writeRunning() || configUnverified()) return false; invalidateAssistant(); return configCall(bridge => bridge.saveProvider(input)); },
+    removeKey: async provider => { if (writeRunning() || configUnverified()) return; invalidateAssistant(); await configCall(bridge => bridge.removeKey(provider)); },
+    removeProvider: async provider => { if (writeRunning() || configUnverified()) return; invalidateAssistant(); await configCall(bridge => bridge.removeProvider(provider)); },
+    setActive: async provider => { if (writeRunning() || configUnverified()) return; invalidateAssistant(); await configCall(bridge => bridge.setActive(provider)); },
     beginChatgpt: input => chatgptCall(connection => connection.begin(input)),
     acknowledgeChatgptPlanUsage: recordId => configCall(bridge => {if(!bridge.chatgpt)throw new Error('ChatGPT 연결 설정을 확인하세요.');return bridge.chatgpt.acknowledgePlanUsage(recordId);}),
     resumeChatgptUsage: recordId => chatgptCall(connection => connection.resumeUsage(recordId)),
     recoverChatgpt: input => chatgptCall(connection => connection.recover(input)),
-    cancelChatgpt: () => chatgptCall(connection => connection.cancel()),
+    cancelChatgpt: () => chatgptCall(connection => connection.cancel(), true),
     selectChatgptAccount: recordId => chatgptCall(connection => connection.selectAccount(recordId)),
     selectChatgptModel: (recordId, model) => chatgptCall(connection => connection.selectModel(recordId, model)),
     signOutChatgpt: recordId => chatgptCall(connection => connection.signOut(recordId)),
     listModels: async provider => {
+      if (configUnverified()) return { code: 'no_provider', reason: CONFIG_UNVERIFIED, action: '연결 상태를 다시 확인하세요.' };
       const bridge = assistantBridge();
       if (!bridge) return { code: 'no_provider', reason: '이 화면에서는 도우미를 쓸 수 없습니다.', action: '데스크톱 앱에서 여세요.' };
       const result = await bridge.listModels(provider);
@@ -173,6 +244,7 @@ export const useAssistantStore = create<AssistantState>((set, get) => {
     ask: async text => {
       const active = session();
       if (!active || !text.trim() || active.busy || active.pending) return;
+      if (get().configReadStatus === 'unverified') { add({ kind: 'notice', text: HELD_FOR_UNVERIFIED }); return; }
       if (get().configuring) { add({ kind: 'notice', text: HELD_FOR_SETTINGS }); return; }
       add({ kind: 'person', text: text.trim() });
       await active.ask(text);
@@ -182,6 +254,7 @@ export const useAssistantStore = create<AssistantState>((set, get) => {
     offerImage: async question => {
       const bridge = assistantBridge();
       if (!bridge || !question.trim()) return;
+      if (get().configReadStatus === 'unverified') { add({ kind: 'notice', text: HELD_FOR_UNVERIFIED }); return; }
       if (get().configuring) { add({ kind: 'notice', text: HELD_FOR_SETTINGS }); return; }
       if (get().config?.active === 'chatgpt') {
         set({ imageOffer: null });
@@ -209,6 +282,7 @@ export const useAssistantStore = create<AssistantState>((set, get) => {
       // Only this action, after the person read the offer and pressed send, reads the image and lets it leave.
       const offer = get().imageOffer;
       // The shown offer (and its question) stays while settings load; a changed receiver drops it through its binding.
+      if (offer && get().configReadStatus === 'unverified') { add({ kind: 'notice', text: HELD_FOR_UNVERIFIED }); return; }
       if (offer && get().configuring) { add({ kind: 'notice', text: HELD_FOR_SETTINGS }); return; }
       set({ imageOffer: null });
       const version = ++imageOfferVersion;
@@ -247,7 +321,7 @@ export const useAssistantStore = create<AssistantState>((set, get) => {
 
 configureTaskConnection(()=>{
   const state=useAssistantStore.getState();
-  return {config:state.config,configuring:state.configuring,busy:state.busy,writing:state.writing,pending:state.pending};
+  return {config:state.config,configuring:state.configuring||state.configReadStatus==='unverified',busy:state.busy,writing:state.writing,pending:state.pending};
 });
 
 /** Reset immediately on accepted project/transport changes, including A → B → A. */

@@ -11,7 +11,7 @@ export function runProtocol(input:Readable,output:Writable,service:Pick<LocalHos
  const decoder=new FrameDecoder(limits.maxBytes),pending=new Set<string>();let closed=false,ordinaryPending=0,controlPending=0;
  // A bounded reserved lane keeps revocation reachable while ordinary dialogs/provider calls are saturated.
  const controls=new Set(['session.dispose','session.disposeAll','assistant.cancel','assistant.retireProject','assistant.chatgpt.cancel','assistant.chatgpt.signOut','assistant.removeKey','assistant.removeProvider','assistant.endRun']);
- const close=(cause?:HostError)=>{if(closed)return;closed=true;input.removeListener('data',data);service.dispose();onClose(cause);};
+ const close=(cause?:HostError)=>{if(closed)return;closed=true;input.removeListener('data',data);void Promise.resolve(service.dispose()).then(()=>onClose(cause),()=>onClose(cause??new HostError('operation_refused')));};
  const reply=(value:HostResponse)=>{if(closed)return;let line=JSON.stringify(value);if(Buffer.byteLength(line)>(limits.maxOutputBytes??MAX_FRAME_BYTES))line=JSON.stringify({id:value.id,ok:false,error:{code:'response_too_large',message:'response_too_large'}});output.write(line+'\n');};
  const dispatch=(request:HostRequest)=>{const id=typeof request?.id==='string'&&/^[A-Za-z0-9_-]{1,200}$/.test(request.id)?request.id:'invalid';
   if(pending.has(id)){reply({id,ok:false,error:{code:'duplicate_request',message:'duplicate_request'}});return;}
@@ -49,7 +49,7 @@ export async function main(argv:string[]=process.argv.slice(2)):Promise<void> {
     buttons:['취소','검토한 대상 복사'],defaultId:0,cancelId:0,noLink:true});return result.response===1;},
    choose:options=>dialog.showOpenDialog(options),openPath:value=>shell.openPath(value),openExternal:value=>shell.openExternal(value)}});
  const stop=runProtocol(process.stdin,process.stdout,service,cause=>{if(cause)console.error(`Local host protocol stopped: ${cause.code}`);app.quit();});
- app.once('before-quit',()=>{stop();service.dispose();});process.once('SIGTERM',()=>app.quit());process.once('SIGINT',()=>app.quit());
+ let quitSettled=false;app.on('before-quit',event=>{if(quitSettled)return;event.preventDefault();stop();void service.dispose().then(()=>{quitSettled=true;app.quit();},()=>{quitSettled=true;app.quit();});});process.once('SIGTERM',()=>app.quit());process.once('SIGINT',()=>app.quit());
  // Native adapters have been bound after app readiness. The parent verifies a framed round trip before server READY.
  process.stdout.write(JSON.stringify({event:'ready',protocol:1,platform:process.platform,pid:process.pid})+'\n');
 }

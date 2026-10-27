@@ -6,6 +6,7 @@ import {AssistantKeyStore,type KeyEncryptor} from '../assistant/keyStore';
 import {AssistantService} from '../assistant/service';
 import {SiwcStore} from '../assistant/siwcStore';
 import {SiwcConnection,SiwcCredentialOwner} from '../assistant/siwcConnection';
+import {validateBaseUrl} from '../assistant/providers';
 import {AssistantRunRegistry} from '../assistant/runHeader';
 import {DistributionManager,type DistributionOptions} from '../distributionStatus';
 import {PortableUpdateManager,validatedCanaryPins} from '../portableUpdate';
@@ -22,7 +23,7 @@ export interface NativeAdapters {
 }
 export interface LocalHostOptions {stateDirectory:string;origin:string;native:NativeAdapters;encryptor:KeyEncryptor;
  distribution:Omit<DistributionOptions,'userDataPath'>;fetchImpl?:typeof fetch;protectedPaths?:string[];canRecover?:()=>boolean}
-type Actor={directory:string;keys:AssistantKeyStore;siwc:SiwcStore;credentialOwner:SiwcCredentialOwner};
+type Actor={directory:string;keys:AssistantKeyStore;siwc:SiwcStore;credentialOwner:SiwcCredentialOwner;apiBindings:Map<string,string>};
 type ProjectBinding={epoch:number;scope:string};
 type ProjectRow={actor:string;session:string;tab:string;epoch:number;scope:string|null};
 const PROJECT_ASSISTANT_METHODS=new Set(['assistant.send','assistant.imageIntent','assistant.beginRun','assistant.endRun']);
@@ -46,7 +47,7 @@ export class LocalHostService {
  }
  private secureDirectory(directory:string):void {prepareStateDirectory(directory);}
  private actor(id:string):Actor {let a=this.actors.get(id);if(!a){const directory=path.join(this.options.stateDirectory,'actors',hash(id));this.secureDirectory(directory);
-  a={directory,keys:new AssistantKeyStore(path.join(directory,'api'),this.options.encryptor),siwc:new SiwcStore(path.join(directory,'chatgpt'),this.options.encryptor,{canRecover:this.options.canRecover}),credentialOwner:new SiwcCredentialOwner()};this.actors.set(id,a);}return a;}
+  a={directory,keys:new AssistantKeyStore(path.join(directory,'api'),this.options.encryptor),siwc:new SiwcStore(path.join(directory,'chatgpt'),this.options.encryptor,{canRecover:this.options.canRecover}),credentialOwner:new SiwcCredentialOwner(),apiBindings:new Map()};this.actors.set(id,a);}return a;}
  private key(r:HostRequest):string{return JSON.stringify([r.actor_id,r.session_id,r.tab_id]);}
  private sessionKey(r:HostRequest):string{return JSON.stringify([r.actor_id,r.session_id]);}
  private live(r:HostRequest,tab?:Tab):void {if(this.closed||tab?.disposed||this.disposedSessions.has(this.sessionKey(r))||this.disposedTabs.has(this.key(r)))throw new HostError('session_disposed');}
@@ -73,7 +74,7 @@ export class LocalHostService {
   return result;
  }
  private async choose(r:HostRequest,t:Tab,options:OpenDialogOptions):Promise<string|null>{const value=await this.options.native.choose(options);this.live(r,t);if(value.canceled||!value.filePaths[0])return null;return this.allowedPath(value.filePaths[0]);}
- private retire(tab:Tab){tab.disposed=true;tab.assistant.dispose();}
+ private retire(tab:Tab){tab.disposed=true;void tab.assistant.dispose().catch(()=>undefined);}
  async handle(raw:unknown):Promise<HostResponse>{const id=typeof (raw as any)?.id==='string'&&/^[A-Za-z0-9_-]{1,200}$/.test((raw as any).id)?(raw as any).id:'invalid';
   try {if(Buffer.byteLength(JSON.stringify(raw))>MAX_FRAME_BYTES)throw new HostError('frame_too_large');const r=parseRequest(raw);
    if(r.method==='session.dispose'||r.method==='session.disposeAll'){for(const [key,row]of this.projectRows)if(row.actor===r.actor_id&&row.session===r.session_id&&(r.method==='session.disposeAll'||row.tab===r.tab_id))this.projectRows.delete(key);if(r.method==='session.disposeAll')this.disposedSessions.add(this.sessionKey(r));else this.disposedTabs.add(this.key(r));for(const [key,t]of this.tabs)if(t.actor===r.actor_id&&t.session===r.session_id&&(r.method==='session.disposeAll'||t.id===r.tab_id)){this.retire(t);this.tabs.delete(key);}return {id,ok:true,result:true};}
@@ -142,10 +143,12 @@ export class LocalHostService {
    case 'host.approveLinkedSource':return this.approveLinkedSource(r,t);
    case 'dialog.folder':return this.choose(r,t,this.dialogOptions('folder',a));case 'dialog.file':return this.choose(r,t,this.dialogOptions('file',a));
    case 'shell.open':{const value=a.path??a.target;let target=classifyOpenTarget(value);if(target.kind==='rejected')return false;if(target.kind==='url'){await this.options.native.openExternal(target.url);return true;}this.allowedPath(target.path);return (await this.options.native.openPath(target.path))==='';}
-   case 'assistant.getState':return s.state();case 'assistant.saveProvider':{const actor=this.actor(r.actor_id),before=actor.keys.config(a.input?.provider),result=s.save(a.input),after=actor.keys.config(a.input.provider);
-    if(a.input.key||before&&after&&JSON.stringify({...before,model:''})!==JSON.stringify({...after,model:''}))this.credentialsChanged(r.actor_id);return result;}
-   case 'assistant.removeKey':{const result=s.removeKey(a.provider);this.credentialsChanged(r.actor_id);return result;}
-   case 'assistant.removeProvider':{const result=s.removeProvider(a.provider);this.credentialsChanged(r.actor_id);return result;}case 'assistant.setActive':return s.setActive(a.provider);case 'assistant.listModels':return s.listModels(a.provider);case 'assistant.send':return s.send(a.input);case 'assistant.cancel':return s.cancel(a.requestId);case 'assistant.imageIntent':return s.imageIntent(a.input);case 'assistant.beginRun':return t.runs.arm(a.runId,a.tool);case 'assistant.endRun':return t.runs.disarm(a.runId);
+   case 'assistant.getState':return s.state();case 'assistant.saveProvider':{const actor=this.actor(r.actor_id),input=a.input;
+    const binding=JSON.stringify([validateBaseUrl(input.baseUrl),input.provider==='anthropic'?null:input.format==='responses'?'responses':'chat',input.supportsImages===true]);
+    if(input.key||actor.apiBindings.get(input.provider)!==binding)this.credentialsChanged(r.actor_id);
+    const result=await s.save(input);actor.apiBindings.set(input.provider,binding);return result;}
+   case 'assistant.removeKey':{this.credentialsChanged(r.actor_id);return s.removeKey(a.provider);}
+   case 'assistant.removeProvider':{this.credentialsChanged(r.actor_id);return s.removeProvider(a.provider);}case 'assistant.setActive':return s.setActive(a.provider);case 'assistant.listModels':return s.listModels(a.provider);case 'assistant.send':return s.send(a.input);case 'assistant.cancel':return s.cancel(a.requestId);case 'assistant.imageIntent':return s.imageIntent(a.input);case 'assistant.beginRun':return t.runs.arm(a.runId,a.tool);case 'assistant.endRun':return t.runs.disarm(a.runId);
    case 'assistant.chatgpt.begin':return s.chatgptBegin(a.input);case 'assistant.chatgpt.acknowledgePlanUsage':return s.chatgptAcknowledgePlanUsage(a.recordId);case 'assistant.chatgpt.resumeUsage':return s.chatgptResumeUsage(a.recordId);case 'assistant.chatgpt.recover':return s.chatgptRecover(a.input);case 'assistant.chatgpt.cancel':return s.chatgptCancel();case 'assistant.chatgpt.selectAccount':return s.chatgptSelectAccount(a.recordId);case 'assistant.chatgpt.selectModel':return s.chatgptSelectModel(a.recordId,a.model);case 'assistant.chatgpt.signOut':return s.chatgptSignOut(a.recordId);
    case 'updates.status':return d.status();case 'updates.configure':return d.configure(a.configuration);case 'updates.check':return d.check();case 'updates.download':return d.download();
    case 'updates.verifyOffline':{if(!d.options.packaged)throw Error('Offline release handoff requires the packaged application and its provisioned publisher authority');const file=await this.choose(r,t,{title:'서명된 오프라인 릴리스 목록 선택',properties:['openFile'],filters:[{name:'Release manifest',extensions:['json']}]});return file?d.verifyOffline(file):null;}
@@ -155,5 +158,7 @@ export class LocalHostService {
    default:throw new HostError('unknown_method');
   }
  }
- dispose():void {if(this.closed)return;this.closed=true;this.projectRows.clear();for(const t of this.tabs.values())this.retire(t);this.tabs.clear();for(const a of this.actors.values())a.credentialOwner.dispose(a.siwc);this.actors.clear();}
+ private closing:Promise<void>|undefined;
+ dispose():Promise<void> {if(this.closing)return this.closing;this.closed=true;this.projectRows.clear();for(const t of this.tabs.values())this.retire(t);this.tabs.clear();
+  const work=[...this.actors.values()].map(a=>{void a.keys.close().catch(()=>undefined);return a.credentialOwner.dispose(a.siwc);});this.actors.clear();return this.closing=Promise.allSettled(work).then(()=>undefined);}
 }

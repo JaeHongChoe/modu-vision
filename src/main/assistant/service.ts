@@ -11,7 +11,7 @@ import type {
   AssistantApiKeyProviderId, AssistantChatgptState, AssistantConfigState, AssistantError, AssistantImageGrant, AssistantMessage, AssistantModelList, AssistantProviderId,
   AssistantProviderInput, AssistantSendInput, AssistantSendResult, AssistantToolSpec,
 } from '../../types/electron';
-import {AssistantKeyStore} from './keyStore';
+import {AssistantKeyStore, type MaybePromise} from './keyStore';
 import {ProviderError, assistantError, complete, listModels, providerLabel, type Completion, type ImagePart, type ProviderConfig} from './providers';
 import {redactOutgoingText, redactOutgoingValue} from './redact';
 
@@ -86,27 +86,28 @@ export function sanitizedTools(tools:unknown):AssistantToolSpec[] {
 
 /** Separate main-only connection: no credential accessor is part of the service contract. */
 export interface AssistantChatgptConnection {
-  state():AssistantChatgptState; authority():string;
+  state():MaybePromise<AssistantChatgptState>; authority():MaybePromise<string>;
   begin(input:{termsAccepted:true;recordId?:string;label?:string;enablePlanUsage?:true}):Promise<AssistantChatgptState>;
   cancel():unknown; selectAccount(id:string|null):unknown; selectModel(id:string,model:string):unknown;
   acknowledgePlanUsage(id:string):unknown;resumeUsage(id:string):unknown;
   recover(input:{ticket:string;confirmed:true}):unknown;
   signOut(id:string):Promise<unknown>; dispose():unknown;
   /** Called only after a login was saved and activated. */
-  onConnected?(listener:(recordId:string)=>void):unknown;
+  onConnected?(listener:(recordId:string)=>MaybePromise<void>):unknown;
   listModels():Promise<{id:string;label:string}[]>;
   complete(input:{system:string;messages:AssistantMessage[];tools:AssistantToolSpec[];signal?:AbortSignal;timeoutMs?:number}):Promise<Completion>;
 }
-export interface AssistantServiceOptions {store:Pick<AssistantKeyStore,'state'|'save'|'removeKey'|'removeProvider'|'setActive'|'recipient'|'setRecipient'|'config'|'key'>;chatgpt?:AssistantChatgptConnection;fetchImpl?:typeof fetch;now?:()=>number;timeoutMs?:number}
+export interface AssistantServiceOptions {store:Pick<AssistantKeyStore,'state'|'save'|'removeKey'|'removeProvider'|'setActive'|'recipient'|'setRecipient'|'config'|'key'|'credentials'> & {close?:()=>MaybePromise<void>};chatgpt?:AssistantChatgptConnection;fetchImpl?:typeof fetch;now?:()=>number;timeoutMs?:number}
 
 export class AssistantService {
   private readonly running = new Map<string, AbortController>();
   private generation=0;
+  private disposed=false;
   private readonly grants = new Map<string, {receiver:string;imageIdentity:string;expires:number}>();
   /** The person's explicit recipient choice is persisted (store.recipient), so a failed login or a restart cannot change it.
    *  A started login is not a choice: only a saved, activated connection replaces an API choice. */
   constructor(private readonly options:AssistantServiceOptions) {
-    options.chatgpt?.onConnected?.(() => {this.retire();this.options.store.setRecipient('chatgpt');});
+    options.chatgpt?.onConnected?.(async () => {this.retire();(await this.options.store.setRecipient('chatgpt'));});
   }
 
   private receiver(config:ProviderConfig):string {return JSON.stringify([config.provider,config.baseUrl,config.model,config.format,config.supportsImages]);}
@@ -114,25 +115,27 @@ export class AssistantService {
   private now():number {return this.options.now ? this.options.now() : Date.now();}
 
   /** Settings calls throw a plain Error whose message is the Korean reason and action, for the panel to show. */
-  private settings<T>(action:()=>T):T {
-    try {return action();}
+  private async settings<T>(action:()=>MaybePromise<T>):Promise<T> {
+    try {return await action();}
     catch (cause) {
       if (cause instanceof ProviderError) throw new Error(`${cause.detail.reason} ${cause.detail.action}`);
       throw cause;
     }
   }
-  state():AssistantConfigState {
-    return this.settings(() => {
-      const state = this.options.store.state(), connection = this.options.chatgpt;
-      if (!connection) return state;
+  private assertCurrent(generation:number):void {if(this.disposed||generation!==this.generation)throw new ProviderError(assistantError('cancelled'));}
+  async state():Promise<AssistantConfigState> {
+    const generation=this.generation;
+    return this.settings(async () => {
+      const state = (await this.options.store.state()), connection = this.options.chatgpt;
+      this.assertCurrent(generation);if (!connection) return state;
       let chatgpt:AssistantChatgptState;
-      try {chatgpt = {...connection.state(), authority: connection.authority()};}
+      try {chatgpt = {...(await connection.state()), authority: (await connection.authority())};}
       catch {chatgpt = {accounts: [], active: null, encryptionAvailable: state.encryptionAvailable, status: 'error',
         error: {code: 'storage_unavailable', reason: 'ChatGPT 보호 저장소를 열지 못했습니다.', action: '다른 앱 인스턴스와 OS 보호 저장소를 확인하세요. API 키 방식은 계속 쓸 수 있습니다.'}};}
-      const account = chatgpt.accounts.find(item => item.recordId === chatgpt.active), recipient = this.options.store.recipient();
+      this.assertCurrent(generation);const account = chatgpt.accounts.find(item => item.recordId === chatgpt.active), recipient = (await this.options.store.recipient());
       // Settings saved before the choice was persisted: an active account was the choice; an unreadable store still fails closed.
-      if (!recipient && account) try {this.options.store.setRecipient('chatgpt');} catch {/* read again on the next call */}
-      const selected = recipient ? recipient === 'chatgpt' : Boolean(account) || chatgpt.status === 'error' || !chatgpt.encryptionAvailable;
+      this.assertCurrent(generation);if (!recipient && account) try {(await this.options.store.setRecipient('chatgpt'));} catch {/* read again on the next call */}
+      this.assertCurrent(generation);const selected = recipient ? recipient === 'chatgpt' : Boolean(account) || chatgpt.status === 'error' || !chatgpt.encryptionAvailable;
       return {...state, chatgpt, ...(selected ? {active: 'chatgpt' as const, providers: [...state.providers,
         ...(account ? [
         {provider: 'chatgpt' as const, baseUrl: 'https://api.openai.com/v1', model: account.model, format: 'responses' as const,
@@ -143,31 +146,36 @@ export class AssistantService {
   private retire():void {this.generation++;this.grants.clear();for (const controller of this.running.values()) controller.abort();}
   /** A credential owner may revoke grants and sends in sibling web tabs without changing their selections. */
   invalidateAuthority():void {this.retire();}
-  private chooseApiRecipient():void {
-    this.options.store.setRecipient('api');
+  private async chooseApiRecipient():Promise<void> {
+    (await this.options.store.setRecipient('api'));
     // The explicit API choice remains usable even when the separate OAuth store is locked or unavailable.
-    try {this.options.chatgpt?.selectAccount(null);} catch {this.options.chatgpt?.cancel();}
+    try {await this.options.chatgpt?.selectAccount(null);} catch {await this.options.chatgpt?.cancel();}
   }
-  save(input:AssistantProviderInput):AssistantConfigState {return this.settings(() => {this.retire();this.options.store.save(input);if (input.activate !== false) this.chooseApiRecipient();return this.state();});}
-  removeKey(provider:AssistantProviderId):AssistantConfigState {return this.settings(() => {this.retire();if (provider !== 'chatgpt') this.options.store.removeKey(provider);return this.state();});}
-  removeProvider(provider:AssistantProviderId):AssistantConfigState {return this.settings(() => {this.retire();if (provider !== 'chatgpt') this.options.store.removeProvider(provider);return this.state();});}
-  setActive(provider:AssistantProviderId):AssistantConfigState {return this.settings(() => {this.retire();if (provider !== 'chatgpt') {this.options.store.setActive(provider);this.chooseApiRecipient();}else {const connection=this.connection(),id=connection.state().active;if (!id) throw new Error('먼저 ChatGPT 계정을 직접 선택하세요.');connection.selectAccount(id);this.options.store.setRecipient('chatgpt');}return this.state();});}
+  async save(input:AssistantProviderInput):Promise<AssistantConfigState> {return this.settings(async () => {this.retire();(await this.options.store.save(input));if (input.activate !== false) (await this.chooseApiRecipient());return (await this.state());});}
+  async removeKey(provider:AssistantProviderId):Promise<AssistantConfigState> {return this.settings(async () => {this.retire();if (provider !== 'chatgpt') (await this.options.store.removeKey(provider));return (await this.state());});}
+  async removeProvider(provider:AssistantProviderId):Promise<AssistantConfigState> {return this.settings(async () => {this.retire();if (provider !== 'chatgpt') (await this.options.store.removeProvider(provider));return (await this.state());});}
+  async setActive(provider:AssistantProviderId):Promise<AssistantConfigState> {return this.settings(async () => {this.retire();if (provider !== 'chatgpt') {(await this.options.store.setActive(provider));(await this.chooseApiRecipient());}else {const connection=this.connection(),id=(await connection.state()).active;if (!id) throw new Error('먼저 ChatGPT 계정을 직접 선택하세요.');(await connection.selectAccount(id));(await this.options.store.setRecipient('chatgpt'));}return (await this.state());});}
   private connection():AssistantChatgptConnection {if (!this.options.chatgpt) throw new Error('이 앱 버전에서는 ChatGPT 연결을 쓸 수 없습니다.');return this.options.chatgpt;}
-  async chatgptBegin(input:{termsAccepted:true;recordId?:string;label?:string;enablePlanUsage?:true}):Promise<AssistantConfigState> {this.retire();await this.connection().begin(input);return this.state();}
-  async chatgptAcknowledgePlanUsage(id:string):Promise<AssistantConfigState> {await this.connection().acknowledgePlanUsage(id);return this.state();}
-  async chatgptResumeUsage(id:string):Promise<AssistantConfigState> {this.retire();await this.connection().resumeUsage(id);return this.state();}
-  async chatgptRecover(input:{ticket:string;confirmed:true}):Promise<AssistantConfigState> {await this.connection().recover(input);this.retire();return this.state();}
-  async chatgptCancel():Promise<AssistantConfigState> {this.retire();await this.connection().cancel();return this.state();}
-  async chatgptSelectAccount(id:string|null):Promise<AssistantConfigState> {this.retire();await this.connection().selectAccount(id);this.options.store.setRecipient(id === null ? 'api' : 'chatgpt');return this.state();}
-  async chatgptSelectModel(id:string,model:string):Promise<AssistantConfigState> {this.retire();await this.connection().selectModel(id,model);this.options.store.setRecipient('chatgpt');return this.state();}
-  async chatgptSignOut(id:string):Promise<AssistantConfigState> {this.retire();await this.connection().signOut(id);return this.state();}
-  dispose():void {this.retire();this.options.chatgpt?.dispose();}
+  async chatgptBegin(input:{termsAccepted:true;recordId?:string;label?:string;enablePlanUsage?:true}):Promise<AssistantConfigState> {this.retire();await this.connection().begin(input);return (await this.state());}
+  async chatgptAcknowledgePlanUsage(id:string):Promise<AssistantConfigState> {await this.connection().acknowledgePlanUsage(id);return (await this.state());}
+  async chatgptResumeUsage(id:string):Promise<AssistantConfigState> {this.retire();await this.connection().resumeUsage(id);return (await this.state());}
+  async chatgptRecover(input:{ticket:string;confirmed:true}):Promise<AssistantConfigState> {await this.connection().recover(input);this.retire();return (await this.state());}
+  async chatgptCancel():Promise<AssistantConfigState> {this.retire();await this.connection().cancel();return (await this.state());}
+  async chatgptSelectAccount(id:string|null):Promise<AssistantConfigState> {this.retire();await this.connection().selectAccount(id);(await this.options.store.setRecipient(id === null ? 'api' : 'chatgpt'));return (await this.state());}
+  async chatgptSelectModel(id:string,model:string):Promise<AssistantConfigState> {this.retire();await this.connection().selectModel(id,model);(await this.options.store.setRecipient('chatgpt'));return (await this.state());}
+  async chatgptSignOut(id:string):Promise<AssistantConfigState> {this.retire();await this.connection().signOut(id);return (await this.state());}
+  private closing:Promise<void>|undefined;
+  dispose():Promise<void> {if(this.closing)return this.closing;this.disposed=true;this.retire();
+    // Both owners are invalidated before yielding; no late callback may survive shutdown.
+    const keyClose=this.options.store.close?.(),connectionClose=this.options.chatgpt?.dispose();
+    return this.closing=Promise.allSettled([keyClose,connectionClose]).then(()=>undefined);
+  }
 
   /** The configuration and key for one call; a key is optional only for a server on this computer. */
-  private credentials(provider?:AssistantApiKeyProviderId|null):{config:ProviderConfig;key:string|null} {
-    const config = this.options.store.config(provider);
-    if (!config) throw new ProviderError(assistantError('no_provider'));
-    const key = this.options.store.key(config.provider);
+  private async credentials(provider?:AssistantApiKeyProviderId|null):Promise<{config:ProviderConfig;key:string|null}> {
+    const snapshot = await this.options.store.credentials(provider);
+    if (!snapshot) throw new ProviderError(assistantError('no_provider'));
+    const {config,key}=snapshot;
     const local = /^http:\/\/(127\.0\.0\.1|localhost|\[::1\])(:|\/|$)/.test(config.baseUrl);
     if (!key && !local) throw new ProviderError(assistantError('no_key'));
     return {config, key};
@@ -178,21 +186,23 @@ export class AssistantService {
     try {
       let models:{id:string;label:string}[];
       if (provider === 'chatgpt') models=await this.connection().listModels();
-      else {const {config, key} = this.credentials(provider);models=await listModels(config, key, {fetchImpl: this.options.fetchImpl});}
+      else {const {config, key} = (await this.credentials(provider));if(this.disposed||generation!==this.generation)throw new ProviderError(assistantError('cancelled'));models=await listModels(config, key, {fetchImpl: this.options.fetchImpl});}
       if(generation!==this.generation)throw new ProviderError(assistantError('cancelled'));
       return {ok:true,models};
     } catch (cause) {return {ok: false, error: toError(cause)};}
   }
 
   /** Step one of an image question: the panel shows `message` and sends the image only after the person confirms. */
-  imageIntent(input:{fileName?:unknown;imageIdentity?:unknown}):AssistantImageGrant {
+  async imageIntent(input:{fileName?:unknown;imageIdentity?:unknown}):Promise<AssistantImageGrant> {
+    const generation=this.generation;
     try {
-      if (this.state().active === 'chatgpt') throw new ProviderError(assistantError('image_refused', {reason: 'ChatGPT 연결은 현재 텍스트 질문만 지원합니다.', action: '이미지 질문은 이미지 지원 API 키 공급자를 선택하고 전송을 확인하세요.'}));
-      const config = this.options.store.config();
+      if ((await this.state()).active === 'chatgpt') throw new ProviderError(assistantError('image_refused', {reason: 'ChatGPT 연결은 현재 텍스트 질문만 지원합니다.', action: '이미지 질문은 이미지 지원 API 키 공급자를 선택하고 전송을 확인하세요.'}));
+      const config = (await this.options.store.config());
       if (!config) throw new ProviderError(assistantError('no_provider'));
       if (!config.supportsImages) throw new ProviderError(assistantError('image_refused', {detail: 'model_not_marked_for_images'}));
       if (typeof input?.imageIdentity !== 'string' || !/^[a-f0-9]{64}$/.test(input.imageIdentity))
         throw new ProviderError(assistantError('image_refused', {detail: 'image_identity_required'}));
+      if(this.disposed||generation!==this.generation)throw new ProviderError(assistantError('cancelled'));
       const now = this.now();
       for (const [id, grant] of this.grants) if (grant.expires <= now) this.grants.delete(id);
       const grantId = `img_${crypto.randomBytes(12).toString('hex')}`;
@@ -227,17 +237,18 @@ export class AssistantService {
       const messages = sanitizedMessages(input.messages);
       const tools = sanitizedTools(input.tools ?? []);
       const system = systemPrompt(input.context);
-      const state = this.state();
+      const state = (await this.state());if(controller.signal.aborted||this.disposed)throw new ProviderError(assistantError('cancelled'));
       if (state.active === 'chatgpt') {
         const receiver = state.providers.find(item => item.provider === 'chatgpt');
         if (!receiver?.ready) throw new ProviderError(assistantError('no_provider', {reason: 'ChatGPT 플랜 사용과 모델 선택이 아직 준비되지 않았습니다.', action: '도우미 설정에서 로그인·플랜 동의와 모델 선택을 확인하세요.'}));
         if (input.image !== undefined) throw new ProviderError(assistantError('image_refused'));
-        const connection = this.connection(), authority = connection.authority();
+        const connection = this.connection(), authority = (await connection.authority());
+        if(controller.signal.aborted||this.disposed)throw new ProviderError(assistantError('cancelled'));
         const result = await connection.complete({system, messages, tools, signal: controller.signal, timeoutMs: this.options.timeoutMs});
-        if (controller.signal.aborted || authority !== connection.authority()) throw new ProviderError(assistantError('cancelled'));
+        if (controller.signal.aborted || authority !== (await connection.authority())) throw new ProviderError(assistantError('cancelled'));
         return {ok: true, ...result};
       }
-      const {config, key} = this.credentials();
+      const {config, key} = (await this.credentials());if(controller.signal.aborted||this.disposed)throw new ProviderError(assistantError('cancelled'));
       const image = input.image !== undefined ? this.takeImage(input.image, config) : undefined;
       if (image && messages[messages.length - 1]?.role !== 'user') throw new ProviderError(assistantError('image_refused', {detail: 'image_needs_question'}));
       const result = await complete({config, key, system, messages, tools, image, signal: controller.signal,

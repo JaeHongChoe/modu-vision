@@ -16,14 +16,22 @@ import type {
 } from '../../types/electron';
 import {ProviderError, assistantError, providerLabel, validateBaseUrl, type ProviderConfig} from './providers';
 
-export interface KeyEncryptor {isAvailable():boolean;encrypt(plain:string):Buffer;decrypt(cipher:Buffer):string}
+export type MaybePromise<T> = T | Promise<T>;
+export interface KeyEncryptor {isAvailable():MaybePromise<boolean>;encrypt(plain:string):MaybePromise<Buffer>;decrypt(cipher:Buffer):MaybePromise<string>}
 
 /** The subset of Electron's safeStorage this module uses (kept structural so this file never imports electron). */
 export interface SafeStorageLike {
   isEncryptionAvailable():boolean;encryptString(plain:string):Buffer;decryptString(cipher:Buffer):string;
   getSelectedStorageBackend?():string;
+  isAsyncEncryptionAvailable?():Promise<boolean>;encryptStringAsync?(plain:string):Promise<Buffer>;
+  decryptStringAsync?(cipher:Buffer):Promise<{result:string;shouldReEncrypt:boolean}>;
 }
 export function electronEncryptor(storage:SafeStorageLike, platform:string=process.platform):KeyEncryptor {
+  if (platform === 'darwin') return {
+    isAvailable: async () => !!(storage.isAsyncEncryptionAvailable && storage.encryptStringAsync && storage.decryptStringAsync) && await storage.isAsyncEncryptionAvailable(),
+    encrypt: async plain => {if (!storage.encryptStringAsync) throw new ProviderError(assistantError('storage_unavailable'));return storage.encryptStringAsync(plain);},
+    decrypt: async cipher => {if (!storage.decryptStringAsync) throw new ProviderError(assistantError('storage_unavailable'));return (await storage.decryptStringAsync(cipher)).result;},
+  };
   return {
     isAvailable: () => storage.isEncryptionAvailable()
       && !(platform === 'linux' && storage.getSelectedStorageBackend?.() === 'basic_text'),
@@ -54,6 +62,14 @@ function validKey(value:unknown):string {
 }
 
 export class AssistantKeyStore {
+  private pending:Promise<unknown> = Promise.resolve();
+  private closed = false;
+  private check(current?:()=>boolean):void {if(this.closed||(current&&!current())) throw new ProviderError(assistantError('cancelled'));}
+  private transaction<T>(run:()=>Promise<T>):Promise<T> {
+    const result = this.pending.then(async () => {this.check();const value=await run();this.check();return value;});
+    this.pending=result.catch(()=>undefined);return result;
+  }
+  close():Promise<void> {this.closed=true;return Promise.resolve();}
   constructor(private readonly directory:string, private readonly encryptor:KeyEncryptor) {}
 
   get file():string {return path.join(this.directory, FILE);}
@@ -77,7 +93,8 @@ export class AssistantKeyStore {
   }
 
   /** Temporary file created owner-only, flushed, then renamed over the old one: a crash leaves the old or the new file. */
-  private write(data:StoredFile):void {
+  private write(data:StoredFile,current?:()=>boolean):void {
+    this.check(current);
     fs.mkdirSync(this.directory, {recursive: true, mode: 0o700});
     try {fs.chmodSync(this.directory, 0o700);} catch {/* Windows ACLs: the folder inherits the user's profile */}
     const temporary = path.join(this.directory, `.${FILE}.${process.pid}.${crypto.randomBytes(6).toString('hex')}.tmp`);
@@ -100,13 +117,15 @@ export class AssistantKeyStore {
       hasKey: typeof entry.key === 'string' && entry.key.length > 0, supportsImages: entry.supportsImages === true, label: providerLabel(entry)};
   }
 
-  state():AssistantConfigState {
+  private async stateInternal():Promise<AssistantConfigState> {
     const data = this.read();
     return {providers: PROVIDERS.flatMap(id => data.providers[id] ? [this.publicEntry(data.providers[id]!)] : []),
-      active: data.active, encryptionAvailable: this.encryptor.isAvailable()};
+      active: data.active, encryptionAvailable: (await this.encryptor.isAvailable())};
   }
+  state(): Promise<AssistantConfigState> {return this.transaction(() => this.stateInternal());}
 
-  save(input:AssistantProviderInput):AssistantConfigState {
+  private async saveInternal(input:AssistantProviderInput, current?:()=>boolean):Promise<AssistantConfigState> {
+    if(current&&!current())throw new ProviderError(assistantError('cancelled'));
     if (!input || !isProvider(input.provider)) throw new Error('공급자를 고르세요.');
     const baseUrl = validateBaseUrl(input.baseUrl);
     const model = validModel(input.model);
@@ -116,62 +135,86 @@ export class AssistantKeyStore {
     let key = previous?.key;
     if (input.key !== undefined && input.key !== '') {
       const plain = validKey(input.key);
-      if (!this.encryptor.isAvailable()) throw new ProviderError(assistantError('storage_unavailable'));
-      key = this.encryptor.encrypt(plain).toString('base64');
+      if (!(await this.encryptor.isAvailable())) throw new ProviderError(assistantError('storage_unavailable'));
+      this.check();if(current&&!current())throw new ProviderError(assistantError('cancelled'));
+      const encrypted = await this.encryptor.encrypt(plain);this.check();if(current&&!current())throw new ProviderError(assistantError('cancelled'));
+      key = encrypted.toString('base64');
     }
     // A key belongs to the address it was entered for: moving the base URL to another host drops it.
-    if (previous?.key && input.key === undefined && previous.baseUrl && new URL(previous.baseUrl).origin !== new URL(baseUrl).origin) key = undefined;
+    if (previous?.key && (input.key === undefined || input.key === '') && previous.baseUrl && new URL(previous.baseUrl).origin !== new URL(baseUrl).origin) key = undefined;
     data.providers[input.provider] = {provider: input.provider, baseUrl, model, format, supportsImages: input.supportsImages === true,
       ...(key ? {key} : {}), updatedAt: new Date().toISOString()};
     if (input.activate !== false) data.active = input.provider;
-    this.write(data);
-    return this.state();
+    if(current&&!current())throw new ProviderError(assistantError('cancelled'));this.write(data);
+    return (await this.stateInternal());
   }
+  save(input:AssistantProviderInput, current?:()=>boolean): Promise<AssistantConfigState> {return this.transaction(() => this.saveInternal(input,current));}
 
-  removeKey(provider:AssistantProviderId):AssistantConfigState {
-    const data = this.read();
+  private async removeKeyInternal(provider:AssistantProviderId,current?:()=>boolean):Promise<AssistantConfigState> {
+    this.check(current);const data = this.read();
     const entry = isProvider(provider) ? data.providers[provider] : undefined;
-    if (entry?.key) {delete entry.key;entry.updatedAt = new Date().toISOString();this.write(data);}
-    return this.state();
+    if (entry?.key) {delete entry.key;entry.updatedAt = new Date().toISOString();this.write(data,current);}
+    return (await this.stateInternal());
   }
+  removeKey(provider:AssistantProviderId,current?:()=>boolean): Promise<AssistantConfigState> {return this.transaction(() => this.removeKeyInternal(provider,current));}
 
-  removeProvider(provider:AssistantProviderId):AssistantConfigState {
-    const data = this.read();
+  private async removeProviderInternal(provider:AssistantProviderId,current?:()=>boolean):Promise<AssistantConfigState> {
+    this.check(current);const data = this.read();
     if (isProvider(provider) && data.providers[provider]) {
       delete data.providers[provider];
       if (data.active === provider) data.active = PROVIDERS.find(id => data.providers[id]) || null;
-      this.write(data);
+      this.write(data,current);
     }
-    return this.state();
+    return (await this.stateInternal());
   }
+  removeProvider(provider:AssistantProviderId,current?:()=>boolean): Promise<AssistantConfigState> {return this.transaction(() => this.removeProviderInternal(provider,current));}
 
-  setActive(provider:AssistantProviderId):AssistantConfigState {
+  private async setActiveInternal(provider:AssistantProviderId):Promise<AssistantConfigState> {
     const data = this.read();
     if (!isProvider(provider) || !data.providers[provider]) throw new Error('먼저 이 공급자를 설정하세요.');
     data.active = provider;this.write(data);
-    return this.state();
+    return (await this.stateInternal());
   }
+  setActive(provider:AssistantProviderId): Promise<AssistantConfigState> {return this.transaction(() => this.setActiveInternal(provider));}
 
-  recipient():AssistantRecipient|null {return this.read().recipient ?? null;}
+  private async recipientInternal():Promise<AssistantRecipient|null> {return this.read().recipient ?? null;}
+  recipient(): Promise<AssistantRecipient|null> {return this.transaction(() => this.recipientInternal());}
 
-  setRecipient(recipient:AssistantRecipient):void {
+  private async setRecipientInternal(recipient:AssistantRecipient):Promise<void> {
     const data = this.read();
     if (data.recipient !== recipient) {data.recipient = recipient;this.write(data);}
   }
+  setRecipient(recipient:AssistantRecipient): Promise<void> {return this.transaction(() => this.setRecipientInternal(recipient));}
 
-  config(provider?:AssistantProviderId|null):ProviderConfig|null {
+  private async configInternal(provider?:AssistantProviderId|null):Promise<ProviderConfig|null> {
     const data = this.read();
     const id = provider ?? data.active;
     const entry = id ? data.providers[id] : undefined;
-    return entry ? {provider: entry.provider, baseUrl: entry.baseUrl, model: entry.model, format: entry.format, supportsImages: entry.supportsImages === true} : null;
+    return entry ? this.configuration(entry) : null;
   }
+  config(provider?:AssistantProviderId|null): Promise<ProviderConfig|null> {return this.transaction(() => this.configInternal(provider));}
 
-  /** The decrypted key for one call; main-process only and never cached. */
-  key(provider:AssistantProviderId):string|null {
-    const entry = this.read().providers[provider];
-    if (!entry?.key) return null;
-    if (!this.encryptor.isAvailable()) throw new ProviderError(assistantError('storage_unavailable'));
-    try {return this.encryptor.decrypt(Buffer.from(entry.key, 'base64'));}
-    catch {throw new ProviderError(assistantError('storage_unavailable', {detail: 'decrypt_failed'}));}
+  private configuration(entry:StoredEntry):ProviderConfig {
+    return {provider:entry.provider,baseUrl:entry.baseUrl,model:entry.model,format:entry.format,supportsImages:entry.supportsImages===true};
   }
+  credentials(provider?:AssistantProviderId|null):Promise<{config:ProviderConfig;key:string|null}|null> {
+    return this.transaction(async () => {
+      // Read exactly one file version. Config and ciphertext stay bound even across an external atomic replacement.
+      const data=this.read(),id=provider??data.active,entry=id?data.providers[id]:undefined;
+      if(!entry)return null;const config=this.configuration(entry),key=await this.decryptEntry(entry);this.check();return {config,key};
+    });
+  }
+  /** The decrypted key for one call; main-process only and never cached. */
+  private async decryptEntry(entry:StoredEntry|undefined):Promise<string|null> {
+    if(!entry?.key)return null;
+    if(!await this.encryptor.isAvailable())throw new ProviderError(assistantError('storage_unavailable'));this.check();
+    let key:string;
+    try {key=await this.encryptor.decrypt(Buffer.from(entry.key,'base64'));}
+    catch {throw new ProviderError(assistantError('storage_unavailable',{detail:'decrypt_failed'}));}
+    this.check();return key;
+  }
+  private async keyInternal(provider:AssistantProviderId):Promise<string|null> {return this.decryptEntry(this.read().providers[provider]);}
+
+  key(provider:AssistantProviderId): Promise<string|null> {return this.transaction(() => this.keyInternal(provider));}
+
 }
