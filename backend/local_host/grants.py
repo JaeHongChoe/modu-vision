@@ -1,6 +1,7 @@
 """Short-lived path selections bound to authenticated operations and file identities."""
 from pathlib import Path
 import os
+import re
 import secrets
 import stat
 import threading
@@ -27,7 +28,7 @@ PURPOSES = {
 
 
 def _scope(authority):
-    return tuple(authority.get(key) for key in ('actor_id', 'session_id', 'tab_id', 'workspace_id', 'project_id','role','permission_revision'))
+    return tuple(authority.get(key) for key in ('actor_id', 'session_id', 'tab_id', 'workspace_id', 'project_id','role','permission_revision','labelset_id'))
 
 
 def literal_path(value):
@@ -99,7 +100,9 @@ class PathGrants:
                 row = self._current(authority, token)
                 if not row: continue
                 fields, routes = PURPOSES[row['purpose']]
-                if field not in fields or endpoint not in routes: continue
+                backup_restore=(row['purpose']=='project-restore-target' and
+                    re.fullmatch(r'/api/local-host/projects/backups/[A-Za-z0-9_-]{1,128}/restore',endpoint) is not None)
+                if field not in fields or not (endpoint in routes or backup_restore): continue
                 exact = candidate == row['path']
                 # The restore chooser selects a parent, while the fresh target
                 # is one named child. It does not grant the entire subtree.

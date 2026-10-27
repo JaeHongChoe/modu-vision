@@ -108,3 +108,20 @@ def test_process_status_distinguishes_live_server_native_child_and_dead_helper(t
     assert client.get('/api/local-host/status',headers={'Origin':'https://evil.test'}).status_code==403
     client.cookies.clear()
     assert client.get('/api/local-host/status').status_code==401
+
+
+def test_labelset_changed_during_native_selection_cannot_target_the_new_labelset(tmp_path):
+    app,client,controller,helper,session,headers=setup(tmp_path)
+    labelset=['original'];workspace=tmp_path/'project';workspace.mkdir()
+    class Registry:
+        def resolve_request(self,request,account):
+            return {'project':{'id':'project','project_dir':str(workspace),'active_labelset_id':labelset[0]},
+                    'role':'owner','context':{'workspace_id':'workspace','project_id':'project'}}
+    app.state.local_projects=Registry()
+    tab=client.post('/api/local-host/session',headers=headers).json()['tab_id']
+    h={**headers,'X-Vision-Local-Tab':tab,'X-Vision-Project':'project'}
+    client.post('/api/local-host/approve',headers=h,json={})
+    helper.on_pick=lambda:labelset.__setitem__(0,'different')
+    assert client.post('/api/local-host/dialog/folder',headers=h,json={'purpose':'label-import'}).status_code==409
+    assert not controller.grants.rows
+    assert not (workspace/'.local-host-imports').exists()

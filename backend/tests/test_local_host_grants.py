@@ -66,3 +66,14 @@ def test_unselected_sibling_and_wrong_operation_are_denied(tmp_path):
     assert grants.validate(AUTH, [chosen['grant_id']], str(two), 'folder_path', '/api/dataset/import') is None
     assert grants.validate(AUTH, [chosen['grant_id']], str(one), 'folder_path', '/api/dataset/import') == chosen['grant_id']
     assert grants.validate(AUTH, [chosen['grant_id']], str(one), 'destination_dir', '/api/project/backup') is None
+
+
+def test_backup_restore_route_matches_only_the_selected_parent_and_named_fresh_child(tmp_path):
+    from backend.local_host.grants import PathGrants
+    grants=PathGrants();parent=tmp_path/'destination';parent.mkdir()
+    chosen=grants.issue(AUTH,parent,'project-restore-target','directory');tokens=[chosen['grant_id']]
+    route='/api/local-host/projects/backups/backup_123/restore'
+    assert grants.validate(AUTH,tokens,str(parent/'restored-project'),'target_dir',route)==chosen['grant_id']
+    assert grants.validate(AUTH,tokens,str(parent/'other'),'target_dir',route) is None
+    assert grants.validate(AUTH,tokens,str(parent/'restored-project'),'target_dir',route+'/extra') is None
+    assert grants.validate(AUTH,tokens,str(parent/'restored-project'),'target_dir','/api/local-host/projects/backups/../restore') is None

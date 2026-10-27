@@ -293,3 +293,50 @@ def test_websocket_opened_after_connection_switch_is_closed_before_delivery(tmp_
         newer=login(c,h,'https://newer.test');assert newer.status_code==200
         release.set();pending.result(timeout=2)
     assert closed.is_set() and list(ctl.remote.connections)==[newer.json()['remote_id']]
+
+
+def test_refused_websockets_preserve_capacity_until_an_admitted_socket_closes(tmp_path):
+    from contextlib import ExitStack,asynccontextmanager
+    from starlette.websockets import WebSocketDisconnect
+    app,c,ctl,session,tab,calls=fixture(tmp_path);h=tab();rid=login(c,h).json()['remote_id'];row=ctl.remote.connections[rid]
+    class Socket:
+        def __init__(self):self.queue=asyncio.Queue()
+        async def send(self,value):await self.queue.put(value)
+        async def recv(self):return await self.queue.get()
+        async def close(self,code=1008):pass
+    @asynccontextmanager
+    async def connect(url,headers):yield Socket()
+    ctl.remote.connect_socket=connect
+    url=f'wss://localhost:8443/api/local-host/remote/{rid}/ws/telemetry?local_tab='+h['X-Vision-Local-Tab']
+    with c,ExitStack() as stack:
+        contexts=[stack.enter_context(ExitStack()) for _ in range(4)]
+        sockets=[context.enter_context(c.websocket_connect(url)) for context in contexts]
+        assert row.active==4
+        for _ in range(3):
+            with pytest.raises(WebSocketDisconnect):
+                with c.websocket_connect(url):pass
+            assert row.active==4
+            for sock in sockets:sock.send_text('still-open');assert sock.receive_text()=='still-open'
+        contexts[0].close()
+        assert row.active==3
+        replacement=stack.enter_context(c.websocket_connect(url))
+        replacement.send_text('replacement');assert replacement.receive_text()=='replacement'
+        assert row.active==4
+        with pytest.raises(WebSocketDisconnect):
+            with c.websocket_connect(url):pass
+        assert row.active==4
+    assert row.active==0
+
+
+def test_upstream_websocket_failure_releases_its_own_acquired_slot(tmp_path):
+    from contextlib import asynccontextmanager
+    from starlette.websockets import WebSocketDisconnect
+    app,c,ctl,session,tab,calls=fixture(tmp_path);h=tab();rid=login(c,h).json()['remote_id'];row=ctl.remote.connections[rid]
+    @asynccontextmanager
+    async def failed(url,headers):
+        raise OSError('controlled upstream connection failure')
+        yield
+    ctl.remote.connect_socket=failed
+    with pytest.raises(WebSocketDisconnect):
+        with c.websocket_connect(f'wss://localhost:8443/api/local-host/remote/{rid}/ws/telemetry?local_tab='+h['X-Vision-Local-Tab']):pass
+    assert row.active==0

@@ -274,7 +274,7 @@ class RemoteSessions:
             yield socket
 
     async def socket(self, websocket: WebSocket, connection_id: str, path: str):
-        tasks=[];row=None;upstream=None
+        tasks=[];row=None;upstream=None;acquired_slot=False
         try:
             if websocket.url.scheme!='wss' or websocket.headers.get('origin')!=self.controller.origin:
                 raise HTTPException(403,'WebSocket origin is not authorized')
@@ -284,7 +284,7 @@ class RemoteSessions:
             request=Request(scope);row=self.get(request,connection_id,'socket')
             path=allowed_path('/ws/'+path,'/ws/')
             if row.active>=4:raise HTTPException(429,'Too many remote streams')
-            row.active+=1
+            row.active+=1;acquired_slot=True
             context=self.remote_context(row,websocket.query_params.get('project_context'))
             query=[(k,v) for k,v in websocket.query_params.multi_items() if k not in {'local_tab','project_context'}]
             if context:query.append(('project_context',json.dumps(context)))
@@ -321,7 +321,7 @@ class RemoteSessions:
                 except asyncio.CancelledError:pass
             if row:
                 row.streams.discard(websocket);row.streams.discard(upstream)
-                if row.active:row.active-=1
+                if acquired_slot:row.active-=1
             try:await websocket.close(code=1008)
             except Exception:pass
 

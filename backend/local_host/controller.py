@@ -13,7 +13,7 @@ from .grants import PathGrants, PURPOSES, literal_path
 
 STAGED_PURPOSES = {'dataset-source', 'label-import', 'mask-import', 'model-directory', 'pretrained-weights',
                    'runtime-source', 'runtime-inventory', 'inspection-image'}
-_AUTH_KEYS = ('actor_id', 'session_id', 'tab_id', 'workspace_id', 'project_id','role','permission_revision')
+_AUTH_KEYS = ('actor_id', 'session_id', 'tab_id', 'workspace_id', 'project_id','role','permission_revision','labelset_id')
 
 
 class LocalHostController:
@@ -125,7 +125,8 @@ class LocalHostController:
         return {'actor_id':account['id'],'session_id':session,'tab_id':tab_id,
                 'workspace_id':workspace,'project_id':value['id'] if value else None,
                 'account':account,'project':value,'role':resolved.get('role') if resolved else None,
-                'permission_revision':permission_revision}
+                'permission_revision':permission_revision,
+                'labelset_id':value.get('active_labelset_id','default') if value else None}
 
     def recheck(self, request, action, previous, *, project=False):
         current = self.authorize(request, action, project=project)
