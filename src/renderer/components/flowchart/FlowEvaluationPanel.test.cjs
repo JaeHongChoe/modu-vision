@@ -189,15 +189,15 @@ const run = known => ({evaluation_id: 'evaluation_auto', created_at: '2000-01-03
 for (const [name, config, expected] of [
   ['with no cohort the test images are frozen first', {}, '시험 이미지 묶음 고정'],
   ['a cohort whose last run had no confirmed truth asks for the truth next', {cohorts: [cohortRow], history: [run(0)]}, '라벨을 정답으로 확정'],
-  ['a fresh cohort is evaluated next', {cohorts: [cohortRow], history: []}, '선택 코호트 평가'],
-  ['a run whose truth changed is evaluated again', {cohorts: [cohortRow], history: [{...run(6), validity: {valid: false}}]}, '선택 코호트 평가'],
+  ['a fresh cohort is evaluated next', {cohorts: [cohortRow], history: []}, '시험 이미지로 검사 확인'],
+  ['a run whose truth changed is evaluated again', {cohorts: [cohortRow], history: [{...run(6), validity: {valid: false}}]}, '시험 이미지로 검사 확인'],
   ['a valid run on confirmed truth leaves the next step to the footer', {cohorts: [cohortRow], history: [run(6)]}, null],
 ]) {
   test(`simple view: ${name}`, async () => {
     const f = fixture({...config, graph: pipeline({bound: true}), simple: true}); try {
       await f.settle();
       assert.deepEqual(primaries(f.tree()), expected ? [expected] : []);
-      if (!expected) assert.ok(elements(f.tree()).some(node => node.type === 'button' && text(node).trim() === '선택 코호트 평가'), 'evaluating again stays one press away');
+      if (!expected) assert.ok(elements(f.tree()).some(node => node.type === 'button' && text(node).trim() === '시험 이미지로 검사 확인'), 'evaluating again stays one press away');
       const nodes = elements(f.tree());
       const folded = nodes.find(node => node.type === 'details' && text(node.props.children[0]).startsWith('자세히'));
       assert.ok(folded, 'the expert pickers sit behind one 자세히 line');
@@ -217,5 +217,18 @@ test('the full view keeps its pickers in the open and evaluation as its one main
     await f.settle();
     assert.deepEqual(primaries(f.tree()), ['선택 코호트 평가']);
     assert.ok(!elements(f.tree()).some(node => node.type === 'details' && text(node.props.children[0]).startsWith('자세히')));
+  } finally {f.close();}
+});
+
+test('simple evaluation explains model versus saved-flow checks without expert words in the main action', async () => {
+  const f = fixture({graph: pipeline({bound: true}), cohorts: [cohortRow], history: [], simple: true});
+  try {
+    await f.settle();
+    const visibleCopy = text(f.tree());
+    assert.match(visibleCopy, /4단계에서는 모델 자체의 성능/);
+    assert.match(visibleCopy, /저장한 전처리·모델·판정 규칙/);
+    assert.match(visibleCopy, /정답 확정과 최종 승인은 사람이 직접/);
+    assert.deepEqual(primaries(f.tree()), ['시험 이미지로 검사 확인']);
+    assert.doesNotMatch(primaries(f.tree()).join(' '), /코호트/);
   } finally {f.close();}
 });

@@ -49,6 +49,8 @@ import { WorkflowImpactPanel } from '../common/WorkflowImpactPanel';
 import { ModelThresholdHint } from './ModelThresholdHint';
 import { OperatorGuidanceBanner } from '../common/OperatorGuidanceBanner';
 import {FlowEditorWorkspace, flowWorkspaceIdentity, type FlowWorkspaceTab} from './FlowEditorWorkspace';
+import {FlowPreparationPanel} from './FlowPreparationPanel';
+import {flowPreparationNext, flowPreparationSummary, hasReviewedFlowEvaluation} from './flowPreparation';
 import {FlowRecipeDialog} from './FlowRecipeDialog';
 import {createFlowRecipe, FLOW_RECIPES, type FlowRecipeKind} from './flowRecipes';
 import type {FlowEvaluation} from '../../services/flowEvaluation';
@@ -136,10 +138,22 @@ function datasetImageReference(imagePath: string) {
 // 그래프와 실행 근거는 저장소에 두고, 탭·대화상자·확대 배율 등 화면에서만 필요한 상태는 여기서 관리한다.
 export const FlowchartStudio: React.FC = () => {
   const { language, task, setStep, isProjectBusy } = useProjectStore();
-  // The simple view folds the flow information, the inspection-image bar, node search and the node palette. Only an
-  // explicit 'simple' folds: a caller without a view mode (the studio's own structure tests) keeps every row open.
+  // Simple view starts with inspection preparation. Advanced editing preserves this same mounted graph and stores.
   const simpleView = useProjectStore((state) => state.viewMode) === 'simple';
   const [paletteOpen, setPaletteOpen] = useState(false);
+  const [advancedEditing, setAdvancedEditing] = useState(false);
+  const guidedView = simpleView && !advancedEditing;
+  const viewFocus = useRef<'prepare'|'advanced'|null>(null);
+  useEffect(()=>{
+    const destination=viewFocus.current;if(!destination)return;
+    viewFocus.current=null;
+    const frame=window.requestAnimationFrame(()=>{
+      const element=destination==='advanced'?document.getElementById('flow-area-edit')
+        :document.querySelector<HTMLElement>('[aria-label="검사 준비"]');
+      element?.focus();
+    });
+    return()=>window.cancelAnimationFrame(frame);
+  },[guidedView]);
   const { jobId: trainedJobId, status: trainingStatus, isCurrentData } = useTrainingStore();
   const evaluatedJobId = useEvaluationStore((state) => state.jobId);
   const allowLatestRecovery = useEvaluationStore((state) => state.allowLatestRecovery);
@@ -305,7 +319,7 @@ export const FlowchartStudio: React.FC = () => {
   } | null>(null);
 
   useLayoutEffect(() => {
-    if (activeTab !== 'edit' || !canvasRef.current) return;
+    if (activeTab !== 'edit' || guidedView || !canvasRef.current) return;
     const canvas = canvasRef.current;
     const measure = () => {
       const rect = canvas.getBoundingClientRect();
@@ -319,7 +333,7 @@ export const FlowchartStudio: React.FC = () => {
     const observer = new ResizeObserver(measure);
     observer.observe(canvas);
     return () => observer.disconnect();
-  }, [activeTab]);
+  }, [activeTab, guidedView]);
 
   // A flow 자동 진행 saved elsewhere: read the versions again so the new active version is the selected one, and check the
   // shown flow's models again (the check that ran before the save saw the old model and would keep its warning up).
@@ -442,7 +456,7 @@ export const FlowchartStudio: React.FC = () => {
   useEffect(() => { setActionValidationError(null); }, [pipeline]);
 
   useEffect(() => {
-    if (activeTab !== 'edit') return;
+    if (activeTab !== 'edit' || guidedView) return;
     const onHistoryKeyDown = (event: KeyboardEvent) => {
       if (isLoading || editHeldBySave || isRunning || isVerifyingAction || !(event.metaKey || event.ctrlKey) || event.altKey) return;
       const target = event.target as HTMLElement | null;
@@ -459,7 +473,7 @@ export const FlowchartStudio: React.FC = () => {
     };
     window.addEventListener('keydown', onHistoryKeyDown);
     return () => window.removeEventListener('keydown', onHistoryKeyDown);
-  }, [activeTab, isLoading, editHeldBySave, isRunning, isVerifyingAction, canUndo, canRedo, undo, redo]);
+  }, [activeTab, guidedView, isLoading, editHeldBySave, isRunning, isVerifyingAction, canUndo, canRedo, undo, redo]);
 
   const applyHistoryAction = (action: 'undo' | 'redo') => {
     if (action === 'undo') undo(); else redo();
@@ -564,7 +578,7 @@ export const FlowchartStudio: React.FC = () => {
   const approvalRequest=useRef(0);
   const semanticKey=flowSemanticKey(pipeline);
   useEffect(()=>()=>{recipeToken.current++;approvalRequest.current++;changeRequest.current++;},[]);
-  useEffect(()=>{setActiveTab('edit');recipeToken.current++;setRecipe(null);setEvaluationReceipt(null);},[scopeKey]);
+  useEffect(()=>{viewFocus.current=null;setAdvancedEditing(false);setActiveTab('edit');recipeToken.current++;setRecipe(null);setEvaluationReceipt(null);},[scopeKey]);
   useEffect(()=>{changeRequest.current++;setChangeDialog(null);setActionValidationError(null);setIsVerifyingAction(false);},[scopeKey,contextRevision]);
   useEffect(()=>{approvalRequest.current++;setApproval(null);setApprovalError('');setApprovalBusy(false);},[scopeKey,selectedVersionId,semanticKey]);
   const closeRecipe=()=>{recipeToken.current++;setRecipe(null);};
@@ -1104,13 +1118,57 @@ export const FlowchartStudio: React.FC = () => {
       </div>
   );
 
+  const preparation = flowPreparationSummary(pipeline);
+  const preparationBusy = isSaving || isRunning || isVerifyingAction || Boolean(isProjectBusy);
+  const preparationLoading = isLoading || flowOpening || datasetIsLoading;
+  const preparationEvaluationReady = hasReviewedFlowEvaluation(currentEvaluation,evaluationReceipt?.coverage.known??0);
+  const preparationNext = flowPreparationNext({loading:preparationLoading,busy:preparationBusy,
+    hasPipeline:Boolean(pipeline),modelBlocked:modelCheck.status==='blocked',needsModel,graphError,
+    canSave:canVerifyGraph,exactSaved,evaluationCurrent:preparationEvaluationReady});
+  // A retained click may belong to a retired project or graph. The existing effect owners verify again too.
+  const preparationScope = scopeKey, preparationGraph = pipeline;
+  const preparationCurrent = () => {
+    const live=useFlowchartStore.getState();
+    return recipeScope()===preparationScope && live.pipeline===preparationGraph
+      && !live.isSaving && !live.isRunning && !live.isLoading && !useProjectStore.getState().isProjectBusy
+      && !preparationLoading && !isVerifyingAction;
+  };
+  const openAdvanced = () => {if(preparationCurrent()){viewFocus.current='advanced';setAdvancedEditing(true);setActiveTab('edit');}};
+  const prepareNext = () => {
+    if(!preparationCurrent()||preparationNext.disabled)return;
+    if(preparationNext.action==='review-model'){setStep(4);return;}
+    if(preparationNext.action==='edit'){openAdvanced();return;}
+    if(preparationNext.action==='save'){void handleSave();return;}
+    if(preparationNext.action==='evaluate'){setActiveTab('evaluate');return;}
+    if(preparationNext.action==='inspect')setStep(6);
+  };
+
   return (
     <div className="min-h-0 flex-1 flex flex-col h-full bg-[#0B0E14] text-[#E2E8F0] overflow-y-auto overflow-x-hidden select-none">
       {/* Every other step opens with its plain page header in the simple view; step 5 now does too. */}
       {simpleView && <OperatorGuidanceBanner step={5} />}
-      <FlowEditorWorkspace area={activeTab} onAreaChange={setActiveTab} identity={identity} compact={simpleView}/>
+      {guidedView&&<FlowPreparationPanel area={activeTab} {...preparation} exactSaved={exactSaved} evaluationCurrent={preparationEvaluationReady}
+        busy={preparationBusy} loading={preparationLoading}
+        problem={modelCheck.status==='blocked'?modelCheckMessage:graphError||actionValidationError
+          ||(currentEvaluation&&!preparationEvaluationReady?'확정된 정답이 없습니다. 평가 화면에서 시험 이미지의 정답을 검토하세요.':undefined)}
+        next={{label:preparationNext.label,disabled:preparationNext.disabled,onClick:prepareNext}}
+        onAdvanced={openAdvanced} onPrepare={()=>{if(preparationCurrent())setActiveTab('edit');}}
+        onBasicRecipe={()=>{if(preparationCurrent())handleSingleModel();}}
+        onEvaluate={()=>{if(preparationCurrent()&&exactSaved)setActiveTab('evaluate');}}
+        onReviewModel={()=>{if(preparationCurrent())setStep(4);}}/>}
+      {guidedView&&isRunning&&<div className="shrink-0 px-4 pb-3">
+        <button type="button" className="workspace-button" disabled={false} onClick={()=>{
+          if(recipeScope()===preparationScope&&useFlowchartStore.getState().isRunning)setActiveTab('test');
+        }}>진행 중 검사 상태 확인</button>
+      </div>}
+      {simpleView&&advancedEditing&&<div className="shrink-0 flex flex-wrap items-center gap-3 border-b border-[var(--workspace-border)] p-3 text-sm">
+        <button type="button" className="workspace-button" disabled={preparationBusy||preparationLoading}
+          onClick={()=>{if(preparationCurrent()){viewFocus.current='prepare';setAdvancedEditing(false);setActiveTab('edit');}}}>검사 준비로 돌아가기</button>
+        <span className="text-[var(--workspace-muted)]">고급 편집 · 모델 연결·분기·여러 모델의 검사 순서를 수정합니다.</span>
+      </div>}
+      <div hidden={guidedView} style={{display:guidedView?'none':'contents'}}><FlowEditorWorkspace area={activeTab} onAreaChange={setActiveTab} identity={identity} compact={simpleView}/></div>
       {/* Top Flowchart Toolbar (Dark Steel Panel) */}
-      <div className="shrink-0 min-h-14 bg-[#131822] border-b border-[#2B3547] px-4 py-2 flex flex-wrap items-center justify-between gap-x-4 gap-y-2 text-xs">
+      <div hidden={guidedView} style={{display:guidedView?'none':undefined}} className="shrink-0 min-h-14 bg-[#131822] border-b border-[#2B3547] px-4 py-2 flex flex-wrap items-center justify-between gap-x-4 gap-y-2 text-xs">
         <div className="flex min-w-0 items-center gap-3">
           <div className="w-8 h-8 shrink-0 rounded-md bg-cyan-950/40 border border-cyan-800/70 flex items-center justify-center">
             <GitFork className="w-4 h-4 text-cyan-300" />
@@ -1169,7 +1227,7 @@ export const FlowchartStudio: React.FC = () => {
         </div>
       </div>
 
-      <div hidden={activeTab!=='edit'}>
+      <div hidden={activeTab!=='edit'||guidedView} style={{display:guidedView?'none':undefined}}>
       <details className="shrink-0 border-b border-slate-700 bg-[#101722] text-xs"><summary className="cursor-pointer px-4 py-1 text-slate-400">빠른 노드 추가·연결·실행 자원</summary>
       {pipeline && <div className="shrink-0 border-b border-slate-700 px-4 py-2"><FlowResourcesEditor pipeline={pipeline} onChange={replacePipeline} disabled={isRunning||editHeldBySave||isLoading}/></div>}
 
@@ -1388,7 +1446,7 @@ export const FlowchartStudio: React.FC = () => {
           <span>연결을 완성하면 저장·실행할 수 있습니다: {graphError}</span>
           {graphIssue && <button type="button" className="shrink-0 rounded border border-amber-600 px-2 py-1 hover:bg-amber-900/60"
             onClick={() => {
-              setActiveTab('edit');
+              setAdvancedEditing(true);setActiveTab('edit');
               if (graphIssue.kind === 'edge') {
                 if (pipeline) setSelectedEdgeSelection(selectFlowEdge(pipeline, graphIssue.id));
                 selectNode(null);
@@ -1440,7 +1498,7 @@ export const FlowchartStudio: React.FC = () => {
       )}
 
       {/* Target Image Selector Bar (inside the flow information fold in the simple view's edit tab) */}
-      {!(simpleView && activeTab === 'edit') && targetImageBar}
+      {(!guidedView||activeTab==='test') && !(simpleView && activeTab === 'edit') && targetImageBar}
 
       {/* Error Notice */}
       {errorMessage && (
@@ -1466,7 +1524,7 @@ export const FlowchartStudio: React.FC = () => {
       )}
 
       {/* Main Flow Canvas or Results View */}
-      <section role="tabpanel" id="flow-panel-edit" aria-labelledby="flow-area-edit" hidden={activeTab!=='edit'} className={activeTab==='edit'?'flex min-h-[240px] flex-1 shrink-0 flex-col overflow-hidden':undefined}>
+      <section role="tabpanel" id="flow-panel-edit" aria-labelledby="flow-area-edit" hidden={activeTab!=='edit'||guidedView} style={{display:guidedView?'none':undefined}} className={activeTab==='edit'?'flex min-h-[240px] flex-1 shrink-0 flex-col overflow-hidden':undefined}>
         {simpleView ? <details className="shrink-0 border-b border-slate-700 bg-[#101722] text-xs"><summary className="cursor-pointer px-3 py-1.5 text-slate-400">노드 찾기·전체 보기</summary>
           <FlowGraphNavigator key={`${scopeKey}:${pipeline?.id}`} nodes={positionedNodes} viewport={displayViewport}
           canvasRef={canvasRef} selectedNodeId={selectedNodeId} disabled={dragViewport!==null||isRoiEditing||isLoading}
@@ -2045,11 +2103,11 @@ export const FlowchartStudio: React.FC = () => {
           {executionResult?.crops.some(crop=>crop.score_spec) && <div className="px-5 py-2 text-xs text-cyan-200" aria-label="실행 점수 기준">
             {Array.from(new Set(executionResult.crops.filter(crop=>crop.score_spec).map(crop=>`${crop.score_spec!.unit} · 임계값 ${crop.score_spec!.threshold}${crop.score_basis==='saved_model_calibration_legacy_flow'?' · 기존 플로우에 저장된 모델 보정값 적용':''}`))).join(' / ')}
           </div>}
-          <IntermediateCropDrawer onSelectNode={id=>{selectNode(id);setActiveTab('edit');}} />
+          <IntermediateCropDrawer onSelectNode={id=>{selectNode(id);setAdvancedEditing(true);setActiveTab('edit');}} />
         </div>
       </section>
 
-      <FlowWorkspacePanel area={activeTab} versions={savedVersions} models={modelCatalog} onOpenImage={()=>setActiveTab('edit')}/>
+      <div hidden={guidedView} style={{display:guidedView?'none':undefined}}><FlowWorkspacePanel area={activeTab} versions={savedVersions} models={modelCatalog} onOpenImage={()=>{setAdvancedEditing(true);setActiveTab('edit');}}/></div>
       <div hidden={activeTab!=='release'}><WorkflowImpactPanel /></div>
       <section role="tabpanel" id="flow-panel-evaluate" aria-labelledby="flow-area-evaluate" hidden={activeTab!=='evaluate'}>
       <FlowEvaluationPanel embedded simple={simpleView} visible={activeTab==='evaluate'} onEvidence={setEvaluationReceipt} sourceDatasetPath={folderPath} savedVersionId={selectedVersionId || null}
@@ -2068,7 +2126,7 @@ export const FlowchartStudio: React.FC = () => {
         {approvalError&&<p role="alert" className="text-amber-200">{approvalError}</p>}
         {currentApproval&&<details><summary className="cursor-pointer text-cyan-300">승인 조회 응답 · 모델/체크포인트/revision</summary><pre className="max-h-64 overflow-auto whitespace-pre-wrap break-all text-xs">{JSON.stringify(currentApproval,null,2)}</pre></details>}
         <FlowPreflightPanel versionId={exactSaved ? selectedVersionId || null : null} recipeTask={selectedSaved?.recipe_task ?? null}
-          sourceDatasetPath={folderPath} pipeline={pipeline} onSelectNode={nodeId => { selectNode(nodeId); setActiveTab('edit'); }} />
+          sourceDatasetPath={folderPath} pipeline={pipeline} onSelectNode={nodeId => { selectNode(nodeId);setAdvancedEditing(true);setActiveTab('edit'); }} />
         <p className="text-slate-400">배포: 대상 적용 응답 확인 필요. 다음 화면에서 패키지 생성·동등성 검증·대상 상태를 확인하세요.</p>
         <button data-primary-action="true" className="workspace-button workspace-button--primary" disabled={!exactSaved||isSaving||isRunning} aria-describedby={!exactSaved||isSaving||isRunning?'flow-release-reason':undefined} onClick={()=>setStep(6)}>패키지·배포로 이동</button>
         {(!exactSaved||isSaving||isRunning)&&<p id="flow-release-reason" className="text-amber-200">{isSaving||isRunning?'저장·실행이 끝난 뒤 이동하세요.':'저장된 버전을 연 상태에서만 패키지·배포로 이동합니다.'}</p>}

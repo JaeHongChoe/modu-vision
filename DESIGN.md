@@ -215,6 +215,12 @@ create additional execution authority. Its existing validator permits 1–24 ste
 and rejects oversized plans. This records the current catalog, not a new UI or
 permission policy.
 
+### Step 5 guided preparation
+
+The simple view starts with an ordered inspection preparation surface: connected models, judgment rules, saved flow, saved-version evaluation and the next inspection step. `FlowPreparationPanel` uses the same workspace records, buttons, semantic text/status tokens and native focus behavior as the task card. Technical job IDs live behind a closed disclosure; numeric score/count criteria remain readable in the main summary. The full graph is retained as advanced editing, with the existing model and rule owners.
+
+Switching views changes presentation only and preserves the mounted graph, unsaved edits and stored evidence. Returning focuses the preparation section; entering advanced editing focuses its edit tab. Busy preparation blocks mutations while a separate read-only status action preserves access to an ongoing inspection's recovery controls. The simple evaluation surface uses plain 시험 이미지 wording and explains why model evaluation and complete-flow evaluation differ. This is not a new palette, global layout migration or approval policy.
+
 ### Forms and overlays
 
 `WorkspaceDialog` is the canonical existing workspace dialog primitive; it owns focus entry, Tab containment, Escape and focus restoration. The assistant is a persistent non-modal sidebar and must not trap focus. The task card creates no form, select, native alert, confirmation or dialog.

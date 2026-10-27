@@ -21,7 +21,7 @@ const deferred = () => {let resolve; const promise = new Promise(done => {resolv
 function load(filename, mocks = {}, fallback) {
   const m = new Module(filename, module); m.filename = filename; m.paths = Module._nodeModulePaths(path.dirname(filename));
   const original = m.require.bind(m);
-  m.require = key => Object.hasOwn(mocks, key) ? mocks[key] : fallback ? fallback(key) : original(key);
+  m.require = key => key === './flowPreparation' ? load(path.join(__dirname,'flowPreparation.ts')) : Object.hasOwn(mocks, key) ? mocks[key] : fallback ? fallback(key) : original(key);
   m._compile(ts.transpileModule(fs.readFileSync(filename, 'utf8'), {compilerOptions: {
     module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, jsx: ts.JsxEmit.ReactJSX,
   }}).outputText, filename);

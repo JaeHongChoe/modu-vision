@@ -12,7 +12,7 @@ function load(file, mocks = {}, fallback) {
   const m = new Module(file, module);
   m.filename = file; m.paths = Module._nodeModulePaths(path.dirname(file));
   const original = m.require.bind(m);
-  m.require = key => Object.hasOwn(mocks, key) ? mocks[key] : fallback ? fallback(key) : original(key);
+  m.require = key => key === './flowPreparation' ? load(path.join(__dirname,'flowPreparation.ts')) : Object.hasOwn(mocks, key) ? mocks[key] : fallback ? fallback(key) : original(key);
   m._compile(ts.transpileModule(fs.readFileSync(file, 'utf8'), {compilerOptions: {
     jsx: ts.JsxEmit.ReactJSX, module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022,
   }}).outputText, file);
@@ -49,10 +49,10 @@ const walk = node => !node || typeof node !== 'object' ? []
 const text = node => typeof node === 'string' ? node : Array.isArray(node)
   ? node.map(text).join('') : node?.props?.children ? text(node.props.children) : '';
 
-function fixture(t, supplier) {
+function fixture(t, supplier, options = {}) {
   const api = load(path.join(renderer, 'services/api.ts'));
   api.setProjectContext(CONTEXT);
-  const project = {language: 'ko', task: 'anomaly', projectDir: '/workspace/a', project: {
+  const project = {language: 'ko', task: 'anomaly', viewMode: options.simple ? 'simple' : undefined, projectDir: '/workspace/a', project: {
     id: 'a', project_dir: '/workspace/a', active_labelset_id: 'default', source_dataset_dir: '/workspace/a/source',
   }};
   const hook = get => Object.assign(selector => selector ? selector(get()) : get(), {getState: get});
@@ -106,7 +106,7 @@ function fixture(t, supplier) {
     })},
   }, () => new Proxy({}, {get: () => component})).FlowchartStudio;
   const render = () => {stateIndex = 0; refIndex = 0; return studio();};
-  walk(render()).find(node => node.type === 'FlowEditorWorkspace').props.onAreaChange('test');
+  if(options.startAtTest!==false)walk(render()).find(node => node.type === 'FlowEditorWorkspace').props.onAreaChange('test');
   const buttons = () => {
     const panel = walk(render()).find(node => node.props.id === 'flow-panel-test');
     assert.equal(panel.props.hidden, false);
@@ -122,10 +122,24 @@ function fixture(t, supplier) {
     assert.equal(store.getState().isRunning, true);
     assert.equal(store.getState().executionResult, null);
   };
-  return {api, project, store, calls, resetInput, unknown, button, buttons};
+  return {api, project, store, calls, resetInput, unknown, button, buttons, render};
 }
 const cancels = calls => calls.filter(row => row.pathname.endsWith('/cancel'));
 const reads = calls => calls.filter(row => row.method === 'GET');
+
+test('guided re-entry into an uncertain running flow keeps explicit status and stop controls reachable',async t=>{
+ const h=fixture(t,row=>row.pathname.endsWith('/prepare')?response(snapshot())
+  :row.pathname.endsWith('/run')?response({detail:'Controlled original Run503'},503):response(snapshot()),{simple:true,startAtTest:false});
+ await h.unknown();const before=h.calls.length;
+ assert.equal(walk(h.render()).find(node=>node.props.id==='flow-panel-test').props.hidden,true);
+ const view=walk(h.render()).find(node=>node.type==='button'&&text(node)==='진행 중 검사 상태 확인');
+ assert.ok(view,'read-only run navigation remains available even while preparation is locked');
+ assert.equal(view.props.disabled,false);view.props.onClick();
+ assert.equal(h.calls.length,before,'opening status never cancels or restarts a job');
+ assert.equal(h.button('중단 상태 확인').props.disabled,false);
+ assert.equal(h.button('부분 실행 중단').props.disabled,false);
+ assert.equal(cancels(h.calls).length,0);
+});
 
 test('unknown prepared run keeps read-only refresh and explicit cancel waits for matching terminal receipt', async t => {
   const terminal = deferred(); let cancelled = false;
