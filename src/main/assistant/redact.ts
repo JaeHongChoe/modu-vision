@@ -13,6 +13,10 @@ const basename = (value: string): string => {
 // Order matters: file URLs keep their file name, other URLs lose everything; paths are reduced before addresses so a
 // Windows drive letter is never read as a host.
 const RULES: Array<[RegExp, (match: string, ...groups: string[]) => string]> = [
+  [/(\b(?:authorization|proxy-authorization|set-cookie|cookie)["']?\s*[:=]\s*)("(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'|[^\r\n]*(?:\r?\n[ \t]+[^\r\n]*)*)/gi,
+    (_m, prefix, value) => prefix + (value.startsWith('"') ? '"[가림]"' : value.startsWith("'") ? "'[가림]'" : /^Bearer\s+/i.test(value) ? 'Bearer [가림]' : '[가림]')],
+  [/(\b(?:api[_-]?key|access[_-]?token|refresh[_-]?token|token|password|passwd|secret|csrf)["']?\s*[:=]\s*)("(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'|[^\s,;}]+)/gi,
+    (_m, prefix, value) => prefix + (value.startsWith('"') ? '"[가림]"' : value.startsWith("'") ? "'[가림]'" : '[가림]')],
   [/\bfile:\/\/[^\s"'<>)]*/gi, match => basename(decodeURIComponentSafe(match.replace(/^file:\/\/[^/]*/i, '')))],
   [/\b[a-z][a-z0-9+.-]*:\/\/[^\s"'<>)]*/gi, () => '[주소]'],
   [/(^|[\s"'(\[=:,])([A-Za-z]:[\\/][^\s"'<>|?*]*)/g, (_m, lead, value) => lead + basename(value)],
@@ -33,6 +37,11 @@ function decodeURIComponentSafe(value: string): string {
 
 export function redactOutgoingText(value: string): string {
   let text = String(value ?? '');
+  // Tool results are serialized JSON. Redact their values structurally before touching embedded error text,
+  // so quoted assignments inside a message cannot corrupt the surrounding JSON or hide a second cookie.
+  if (/^\s*[\[{]/.test(text)) {
+    try {return JSON.stringify(redactOutgoingValue(JSON.parse(text)));} catch { /* ordinary non-JSON text */ }
+  }
   for (const [pattern, replace] of RULES) text = text.replace(pattern, replace as (substring: string, ...args: string[]) => string);
   return text;
 }
@@ -43,7 +52,8 @@ export function redactOutgoingValue<T>(value: T): T {
   if (Array.isArray(value)) return value.map(item => redactOutgoingValue(item)) as T;
   if (value && typeof value === 'object') {
     return Object.fromEntries(Object.entries(value as Record<string, unknown>)
-      .map(([key, item]) => [key, redactOutgoingValue(item)])) as T;
+      .map(([key, item]) => [key, /^(?:authorization|proxy-authorization|cookie|set-cookie|api[_-]?key|access[_-]?token|refresh[_-]?token|token|password|passwd|secret|csrf)$/i.test(key)
+        ? '[가림]' : redactOutgoingValue(item)])) as T;
   }
   return value;
 }

@@ -11,6 +11,7 @@
 import type { AssistantBridge, AssistantError, AssistantImageInput, AssistantMessage, AssistantProviderId, AssistantToolCall } from '../../types/electron';
 import { argumentSummary, canonicalJson, randomHex, sha256Hex, trimConversation } from './assistantContext';
 import { ToolRefusal, type AssistantToolRegistry, type ToolOutcome, type ToolPreview, type ToolTier } from './assistantTools';
+import {diagnosticError} from './assistantDiagnostics';
 import type { RunEntry } from './assistantLog';
 
 export type SessionEvent =
@@ -44,7 +45,11 @@ class StaleTurn extends Error {}
 const MAX_PROVIDER_CALLS = 6;
 const MAX_TOOL_RESULT_CHARS = 4_000;
 const newRunId = () => `run_${randomHex(12)}`;
-const clipResult = (text: string) => (text.length > MAX_TOOL_RESULT_CHARS ? `${text.slice(0, MAX_TOOL_RESULT_CHARS - 1)}…` : text);
+/** A too-large result is explicitly omitted, never cut inside JSON. Normal tools bound their own DTOs. */
+const boundedResult = (text:string,tool:string) => text.length<=MAX_TOOL_RESULT_CHARS?text:JSON.stringify({
+  truncated:true,tool,reason:'tool_result_too_large',
+  next_action:'진단은 read_app_diagnostics의 section을 골라 작게 다시 읽으세요. 작업 상태는 read_task_status로 확인하세요. 생략된 결과를 추측하지 마세요.',
+});
 
 export class AssistantConversation {
   /** Finished turns, as sent to the provider (images replaced by a note). */
@@ -202,7 +207,7 @@ export class AssistantConversation {
   }
 
   private answer(call: AssistantToolCall, outcome: ToolOutcome) {
-    this.current.push({ role: 'tool', toolCallId: call.id, name: call.name, content: clipResult(outcome.content), ...(outcome.ok ? {} : { isError: true }) });
+    this.current.push({ role: 'tool', toolCallId: call.id, name: call.name, content: boundedResult(outcome.content,call.name), ...(outcome.ok ? {} : { isError: true }) });
   }
 
   /** Runs the queued calls of one assistant turn; true when a write waits for the person. */
@@ -308,6 +313,6 @@ export class AssistantConversation {
 
 function refused(cause: unknown): ToolOutcome {
   if (cause instanceof ToolRefusal) return { ok: false, errorCode: cause.code, content: cause.message, summary: cause.message };
-  const message = cause instanceof Error ? cause.message : String(cause);
-  return { ok: false, errorCode: 'tool_error', content: `도구 실행 중 오류: ${message.slice(0, 400)}`, summary: `오류: ${message.slice(0, 160)}` };
+  const error=diagnosticError(cause);
+  return {ok:false,errorCode:'tool_error',content:JSON.stringify({error,evidence:'untrusted_error',retry_policy:'verify_existing_result_before_retry'}),summary:`오류: ${error.message.slice(0,160)}`};
 }

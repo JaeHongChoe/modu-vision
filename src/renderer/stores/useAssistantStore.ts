@@ -106,7 +106,7 @@ export const useAssistantStore = create<AssistantState>((set, get) => {
     if (!bridge) return null;
     if (!conversation) {
       conversation = new AssistantConversation({
-        bridge, tools: createRuntimeTools(assistantTaskTools), context: assistantContext,
+        bridge, tools: createRuntimeTools(assistantTaskTools), context: () => assistantContext(assistantTaskTools.cachedStatus()),
         scope: () => assistantScope(get().config), projectScope: assistantProjectScope,
         writeBinding: readWriteBinding,
         log: entry => assistantLog.append(entry), provider: () => get().config?.active ?? null,

@@ -9,7 +9,7 @@ const cache=new Map();
 const {AssistantConversation}=load(path.join(__dirname,'assistantSession.ts'),cache);
 const {createAssistantTools}=load(path.join(__dirname,'assistantTools.ts'),cache);
 
-function harness(replies,{contexts}={}){
+function harness(replies,{contexts,toolDeps={}}={}){
  const sent=[],logged=[],events=[],runs=[],executed=[];let contextCount=0;const authority={scope:'project-a',project:'project-a',write:'image-a:revision-1'};
  const deps={snapshot:()=>({stage:3,status:'ready',blocker:null,nextAction:{label:'학습 시작',step:3},progress:null,errors:[]}),
   facts:()=>({task:'classification',view:'simple',shared:false,images:20,unlabeled:0,classes:{OK:10,NG:10},split:{train:14,val:4,test:2},splitState:'saved',trainingStatus:'idle',currentImage:null}),
@@ -19,12 +19,42 @@ function harness(replies,{contexts}={}){
   training:()=>({isTraining:false,status:'idle',preset:'balanced',computeOnServer:false,folderReady:true}),startTraining:async()=>{executed.push(['startTraining']);return {jobId:'job_1'};}};
  const bridge={send:async input=>{sent.push(JSON.parse(JSON.stringify(input)));const reply=replies.shift();return typeof reply==='function'?reply(input):(reply??answer('끝'));},
   cancel:async()=>true,beginRun:async(runId,tool)=>{runs.push(['begin',runId,tool]);return true;},endRun:async runId=>{runs.push(['end',runId]);}};
+ Object.assign(deps,toolDeps);
  const tools=createAssistantTools(deps);const conversation=new AssistantConversation({bridge,tools,context:()=>contexts?contexts[contextCount++]:{step:3},
   scope:()=>authority.scope,projectScope:()=>authority.project,writeBinding:()=>authority.write,log:async entry=>{logged.push(entry);},provider:()=>'anthropic'},event=>events.push(event));
  return {conversation,sent,logged,events,runs,executed,authority,bridge,deps,tools};
 }
 const call=(id,name,args={})=>({id,name,arguments:args});
 const answer=(text,toolCalls=[])=>({ok:true,text,toolCalls,stop:toolCalls.length?'tool':'end'});
+
+test('diagnosis passes the observed error and saved job to the provider before a replacement draft, with zero app effects',async()=>{
+ let proposed=0;
+ const toolDeps={diagnostics:async()=>({section:'requests',partial:true,errors:[{code:'invalid_json',message:'Unexpected end of JSON input',status:200}]}),tasks:{isExecuting:()=>false,features:()=>({}),screen:()=>({}),status:async()=>({fresh:true,revision:9,status:'waiting_human',job_id:'job_existing'}),propose:async()=>{proposed++;return{status:'draft',execution_requires_person:true};}}};
+ const h=harness([answer('',[call('d1','read_app_diagnostics',{section:'requests'}),call('d2','read_task_status')]),input=>{
+   const results=input.messages.filter(m=>m.role==='tool').map(m=>JSON.parse(m.content));
+   assert.equal(results[0].errors[0].code,'invalid_json');assert.equal(results[1].job_id,'job_existing');
+   return answer('기존 작업 결과를 먼저 확인했습니다.',[call('d3','propose_task',{goal:'상태를 확인합니다',steps:[{action:'open_step',args:{step:5}}]})]);
+ },answer('수정 계획을 준비했습니다. 확인 후 진행합니다.')],{toolDeps});
+ assert.equal(h.sent.length,0);await h.conversation.ask('왜 실패했어? 확인하고 계획을 고쳐줘');
+ assert.equal(h.sent.length,3);assert.equal(proposed,1);assert.deepEqual(h.executed,[]);assert.deepEqual(h.runs,[]);
+ assert.ok(h.events.some(row=>row.kind==='assistant'&&row.text==='수정 계획을 준비했습니다. 확인 후 진행합니다.'));assert.ok(!h.events.some(row=>row.kind==='error'));
+});
+
+test('structured errors retain code/status/message and oversized JSON becomes a valid explicit omission',async()=>{
+ const h=harness([answer('',[call('d1','read_app_diagnostics')]),input=>{
+   const row=JSON.parse(input.messages.find(m=>m.role==='tool').content);
+   assert.equal(row.error.code,'stale_revision');assert.equal(row.error.status,409);assert.match(row.error.message,/저장 버전/);
+   assert.ok(!JSON.stringify(row).includes('[object Object]'));return answer('저장 버전을 확인하세요.');
+ }],{toolDeps:{diagnostics:async()=>{throw {code:'stale_revision',status:409,message:'저장 버전이 바뀌었습니다.'};}}});
+ await h.conversation.ask('이 오류는 뭐야?');
+ assert.ok(h.events.some(row=>row.kind==='assistant'&&row.text==='저장 버전을 확인하세요.'));assert.ok(!h.events.some(row=>row.kind==='error'));
+ const large=harness([answer('',[call('long','read_task_status')]),input=>{
+   const text=input.messages.find(m=>m.role==='tool').content,body=JSON.parse(text);
+   assert.ok(text.length<=4000);assert.equal(body.truncated,true);assert.equal(body.tool,'read_task_status');return answer('더 작은 범위를 확인해야 합니다.');
+ }],{toolDeps:{tasks:{isExecuting:()=>false,features:()=>({}),screen:()=>({}),status:async()=>({steps:Array.from({length:24},()=>({error:'x'.repeat(500)}))}),propose:async()=>({})}}});
+ await large.conversation.ask('작업 결과 확인');
+ assert.ok(large.events.some(row=>row.kind==='assistant'&&row.text==='더 작은 범위를 확인해야 합니다.'));assert.ok(!large.events.some(row=>row.kind==='error'));
+});
 
 test('read tools run at once, every call is logged, and the answer finishes the turn',async()=>{
  const h=harness([answer('',[call('c1','read_status'),call('c2','read_dataset_summary')]),answer('3단계에서 학습을 시작하면 됩니다.')]);

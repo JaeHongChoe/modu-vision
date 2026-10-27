@@ -8,6 +8,16 @@ const snapshot={scope:JSON.stringify(['/Users/kim/projects/line-3','proj-1','/Vo
  progress:{epoch:0,totalEpochs:30,etaSeconds:null,completed:false},errors:[{source:'공동 작업 서버',text:'https://team.example.com 연결 실패, 담당 kim@example.com'}]};
 const facts={task:'classification',view:'simple',shared:true,images:120,unlabeled:0,classes:{OK:80,NG:40},split:{train:84,val:24,test:12},splitState:'saved',trainingStatus:'idle',currentImage:'/Volumes/NAS/lot-7/OK/ok_017.png'};
 
+test('explicit question context includes scoped diagnostics and execution feedback within its total budget',()=>{
+ const diagnostics={observed_at:'now',errors:[{code:'invalid_json',message:'Unexpected end of JSON input'}]};
+ const execution={status:'waiting_human',revision:8,current_step_id:'step_2',fresh:false};
+ const value=context.withAssistantObservations(context.minimalAssistContext(snapshot,facts),diagnostics,execution);
+ assert.deepEqual(value.diagnostics,diagnostics);assert.deepEqual(value.execution,execution);
+ const large=context.withAssistantObservations({...value,progress:'x'.repeat(18000),classes:Object.fromEntries(Array.from({length:300},(_,i)=>['c'+i,'x'.repeat(500)]))},diagnostics,execution);
+ assert.ok(JSON.stringify(large).length<=11000);assert.equal(large.execution.revision,8);assert.equal(large.diagnostics.errors[0].code,'invalid_json');
+ assert.equal(large.context_truncated,true);
+});
+
 test('the minimal context drops the scope, reduces paths to file names and hides addresses and names',()=>{
  const value=context.minimalAssistContext(snapshot,facts),text=JSON.stringify(value);
  for(const secret of ['/Users/kim','/Volumes/NAS','line-3','proj-1','team.example.com','kim@example.com','workflow-data','scope'])assert.ok(!text.includes(secret),secret);

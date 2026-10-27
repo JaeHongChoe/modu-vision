@@ -855,7 +855,40 @@ export class ProjectContextRequiredError extends Error {
   constructor() {super('공유 프로젝트 선택을 완료한 뒤 다시 확인하세요.'); this.name = 'ProjectContextRequiredError';}
 }
 
+export interface ApiRequestFailure {scope: string; path: string; cause: unknown}
+const requestFailureListeners = new Set<(failure: ApiRequestFailure) => void>();
+const diagnosticAdapters = new WeakMap<object, number>();
+let diagnosticAdapterSequence = 0;
+function diagnosticAdapterId(value: object | null | undefined): number | null {
+  if (!value) return null;
+  if (!diagnosticAdapters.has(value)) diagnosticAdapters.set(value, ++diagnosticAdapterSequence);
+  return diagnosticAdapters.get(value)!;
+}
+/** Local-only failure namespace. Never send it to a provider or persist it. */
+export function getApiDiagnosticScope(): string {
+  return JSON.stringify([contextGeneration, boundProjectContext, sharedBase,
+    diagnosticAdapterId(localHostTransport), localHostTransport?.generation(),
+    diagnosticAdapterId(browserSessionTransport), browserSessionTransport?.revision(),
+    diagnosticAdapterId(browserRequestOptions), diagnosticAdapterId(remoteTransport), remoteTransport?.connection()?.authority_epoch]);
+}
+export function subscribeApiRequestFailures(listener: (failure: ApiRequestFailure) => void): () => void {
+  requestFailureListeners.add(listener); return () => {requestFailureListeners.delete(listener);};
+}
+/** Observation must never change the original request's result or thrown object. */
 export async function request<T>(path: string, options: ContextRequestOptions = {}): Promise<T> {
+  let scope: string | null = null;
+  try {scope = getApiDiagnosticScope();} catch { /* observation cannot reject a request */ }
+  try {return await requestOwned<T>(path, options);}
+  catch (cause) {
+    try {
+      if (scope !== null && scope === getApiDiagnosticScope()) for (const listener of requestFailureListeners) {
+        try {listener({scope, path, cause});} catch { /* diagnostics cannot mask an application failure */ }
+      }
+    } catch { /* authority observation cannot mask the original failure */ }
+    throw cause;
+  }
+}
+async function requestOwned<T>(path: string, options: ContextRequestOptions = {}): Promise<T> {
   const {projectContext,responseType='json',...fetchOptions}=options;
   const selecting=['/api/project/current','/api/project/create','/api/project/open','/api/project/restore','/api/local-host/projects/select','/api/local-host/projects/recover'].includes(path)
     && projectContext===undefined;

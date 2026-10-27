@@ -33,6 +33,7 @@ function fixture(t){
    refreshContext(){}
    blocksOtherWrites(){return false;}
    summary(){return{loaded:!!this.state.task,status:this.state.task?.status};}
+   async observe(){const saved=await this.deps.client.get(this.state.task.id);return{loaded:true,fresh:true,status:saved.status,revision:saved.revision};}
  }
  const filename=path.join(__dirname,'useAssistantTaskStore.ts'),m=new Module(filename,module);m.filename=filename;m.paths=Module._nodeModulePaths(path.dirname(filename));const originalRequire=m.require.bind(m);
  const mocks={
@@ -63,6 +64,10 @@ test('automatic writer ownership defers waiting-job polling and releasing it per
 test('polling errors become visible and stop scheduling while completed jobs also retire the timer',async t=>{const f=fixture(t);await f.restore();f.setMode('throw');await f.fireAndFlush();assert.match(f.store.getState().error,/controlled ledger polling failure/);assert.equal(f.timers.size,0);assert.equal(f.calls.provider,0);f.setMode('completed');await f.restore();assert.equal(f.timers.size,1);await f.fireAndFlush();assert.equal(f.store.getState().task.status,'completed');assert.equal(f.timers.size,0);assert.equal(f.calls.executes,0);});
 test('account change cancels a queued poll and a late deferred callback cannot resurrect it',async t=>{const f=fixture(t);await f.restore();f.config.account='account-b';f.config.generation++;f.exported.notifyTaskConnectionChange();assert.equal(f.calls.invalidations,1);assert.equal(f.timers.size,0);assert.equal(f.store.getState().task,null);assert.equal(f.calls.polls,0);f.config.account='account-a';f.config.generation++;f.exported.notifyTaskConnectionChange();await f.restore();f.setMode('deferred');f.fire();await flush();assert.equal(f.calls.polls,1);assert.equal(f.timers.size,0);f.config.account='account-c';f.config.generation++;f.exported.notifyTaskConnectionChange();f.releaseDeferred();await flush();assert.equal(f.timers.size,0);assert.equal(f.store.getState().task,null);assert.equal(f.calls.provider,0);assert.equal(f.calls.executes,0);});
 test('unready connection stops background scheduling without contacting a provider for verification',async t=>{const f=fixture(t);await f.restore();f.config.ready=false;await f.fireAndFlush();assert.equal(f.calls.polls,1);assert.equal(f.calls.reads,0);assert.equal(f.timers.size,0);assert.equal(f.calls.provider,0);assert.equal(f.calls.executes,0);});
+test('model status observation leaves the job poll and reconciliation untouched while cached context needs no read',async t=>{
+ const f=fixture(t);await f.restore();assert.equal(typeof f.exported.assistantTaskTools.cachedStatus,'function');assert.equal(f.exported.assistantTaskTools.cachedStatus().status,'waiting_job');assert.equal(f.calls.reads,0);
+ const value=await f.exported.assistantTaskTools.status();assert.equal(value.fresh,true);assert.equal(value.revision,3);assert.equal(f.calls.reads,1);assert.equal(f.calls.reconciles,0);assert.equal(f.calls.provider,0);assert.equal(f.calls.executes,0);assert.equal(f.timers.size,1);
+});
 test('a late error from a previous account cannot appear in the newly selected account',async t=>{
  const f=fixture(t);await f.restore();let reject;
  f.controller().pollWaiting=()=>new Promise((_resolve,fail)=>{reject=fail;});

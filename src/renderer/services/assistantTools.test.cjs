@@ -53,6 +53,26 @@ test('an active task fences legacy writes and settings preparation before their 
  assert.deepEqual(calls,[]);
 });
 
+test('diagnostics are read-only, awaited, and accept only a registered section',async()=>{
+ const sections=[];const {deps,calls}=fakeDeps({diagnostics:async section=>{sections.push(section);return {observed_at:'now',section,errors:[{code:'invalid_json',message:'Unexpected end of JSON input'}]};}});
+ const tools=createAssistantTools(deps);
+ assert.equal(tools.tier('read_app_diagnostics'),'read');
+ const result=await tools.runAutomatic('read_app_diagnostics',{section:'requests'});
+ assert.equal(JSON.parse(result.content).errors[0].code,'invalid_json');
+ assert.deepEqual(sections,['requests']);assert.deepEqual(calls,[]);
+ await assert.rejects(tools.runAutomatic('read_app_diagnostics',{section:'shell'}),/section|진단/);
+ await assert.rejects(tools.runAutomatic('read_app_diagnostics',{path:'/private/log'}),/진단|인자/);
+ deps.diagnostics=async(section,offset)=>({section,offset});
+ assert.equal(JSON.parse((await tools.runAutomatic('read_app_diagnostics',{section:'requests',offset:8})).content).offset,8);
+ for(const offset of [-1,1.5,10001,'8'])await assert.rejects(tools.runAutomatic('read_app_diagnostics',{section:'requests',offset}),/offset|진단|인자/);
+});
+
+test('task status awaits the GET-only observation rather than serializing a Promise',async()=>{
+ const {deps}=fakeDeps({tasks:{isExecuting:()=>false,features:()=>({}),screen:()=>({}),status:async()=>({revision:7,fresh:true,current_step_id:'step_2',status:'waiting_human'}),propose:async()=>({})}});
+ const value=JSON.parse((await createAssistantTools(deps).runAutomatic('read_task_status',{})).content);
+ assert.equal(value.revision,7);assert.equal(value.fresh,true);assert.equal(value.current_step_id,'step_2');
+});
+
 test('a write tool never runs without the person\'s confirmation and a run id',async()=>{
  const {deps,calls}=fakeDeps();const tools=createAssistantTools(deps);
  for(const confirmation of [undefined,null,{confirmed:false,runId:RUN},{confirmed:true,runId:'run_short'},{confirmed:'yes',runId:RUN}])

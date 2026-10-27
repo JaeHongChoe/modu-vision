@@ -3,6 +3,23 @@ const test=require('node:test'),assert=require('node:assert/strict'),fs=require(
 function load(file){const m=new Module(file,module);m.filename=file;m.paths=Module._nodeModulePaths(path.dirname(file));m._compile(ts.transpileModule(fs.readFileSync(file,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText,file);return m.exports;}
 const {AssistantRunRegistry}=load(path.join(__dirname,'runHeader.ts'));
 const {redactOutgoingText,redactOutgoingValue}=load(path.join(__dirname,'redact.ts'));
+
+test('short credential assignments in error text are redacted without breaking a JSON tool result',()=>{
+ const message='backend returned {"password":"tiny-secret","access_token":"abc"}';
+ const encoded=JSON.stringify({error:{message},code:'ERR_001'}),safe=redactOutgoingText(encoded);
+ assert.doesNotMatch(safe,/tiny-secret|\\"abc\\"/);assert.doesNotThrow(()=>JSON.parse(safe));
+ assert.doesNotMatch(redactOutgoingText('password=short api_key=small cookie=sid123'),/short|small|sid123/);
+});
+test('complete Cookie and Digest header values are withheld in outgoing nested JSON and text',()=>{
+ const values=['Cookie: first=synthetic-one; second=synthetic-two','Set-Cookie: first=synthetic-one; Path=/; second=synthetic-two','"Authorization": "Digest username=synthetic-user, nonce=synthetic-nonce"'];
+ for(const message of values){
+   const safe=redactOutgoingText(JSON.stringify({error:{message}}));assert.doesNotThrow(()=>JSON.parse(safe));
+   assert.doesNotMatch(safe,/synthetic-one|synthetic-two|synthetic-user|synthetic-nonce/);
+   assert.doesNotMatch(redactOutgoingText(message),/synthetic-one|synthetic-two|synthetic-user|synthetic-nonce/);
+ }
+ const value=redactOutgoingValue({Cookie:'first=synthetic-one; second=synthetic-two',nested:{access_token:'tiny-secret'}});
+ assert.doesNotMatch(JSON.stringify(value),/synthetic-one|synthetic-two|tiny-secret/);
+});
 const RUN='run_'+'ab'.repeat(12);
 
 test('only the armed tool\'s own write carries the run id, and only until it ends or expires',()=>{

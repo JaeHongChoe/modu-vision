@@ -8,18 +8,24 @@ function harness(){
  const config={active:'openai-compatible',providers:[{provider:'openai-compatible',baseUrl:'http://localhost:123/v1',model:'m',format:'chat',supportsImages:true}]};
  const bridge={getState:async()=>config,saveProvider:async input=>({...config,providers:[input]}),imageIntent:async input=>delayedIntent?delayedIntent(input):({ok:true,grantId:'g',message:'확인',providerLabel:'local'}),
   send:async input=>{sent.push(input);return {ok:true,text:'답',toolCalls:[]};},cancel:async id=>{cancelled.push(id);return true;},beginRun:async()=>true,endRun:async()=>{}};
- const stubs={zustand:{create},'./useAssistantTaskStore':{useAssistantTaskStore:{getState:()=>({busy:false})},assistantTaskTools:{isExecuting:()=>false},configureTaskConnection:()=>{},notifyTaskConnectionChange:()=>{}},'./useAnnotationStore':{useAnnotationStore:annotation},'./useProjectStore':{useProjectStore:project},'./useComputeStore':{useComputeStore:compute},'./useDatasetStore':{useDatasetStore:dataset},'./useTrainingStore':{useTrainingStore:training},
+ const stubs={zustand:{create},'./useAssistantTaskStore':{useAssistantTaskStore:{getState:()=>({busy:false})},assistantTaskTools:{isExecuting:()=>false,cachedStatus:()=>({status:'waiting_human',revision:7})},configureTaskConnection:()=>{},notifyTaskConnectionChange:()=>{}},'./useAnnotationStore':{useAnnotationStore:annotation},'./useProjectStore':{useProjectStore:project},'./useComputeStore':{useComputeStore:compute},'./useDatasetStore':{useDatasetStore:dataset},'./useTrainingStore':{useTrainingStore:training},
   '../stores/useAnnotationStore':{useAnnotationStore:annotation},'../stores/useProjectStore':{useProjectStore:project},'../stores/useComputeStore':{useComputeStore:compute},'../stores/useDatasetStore':{useDatasetStore:dataset},'../stores/useTrainingStore':{useTrainingStore:training},
   '../services/api':{getApiPersistenceIdentity:()=> 'local',getProjectContextGeneration:()=>generation,subscribeProjectContext:fn=>{contextListeners.push(fn);return()=>{};}},
   './api':{getApiPersistenceIdentity:()=> 'local',getProjectContextGeneration:()=>generation,subscribeProjectContext:fn=>{contextListeners.push(fn);return()=>{};}},
   '../services/hostAdapter':{host:{assistant:()=>bridge}},'../services/assistantLog':{assistantLog:{append:async entry=>{logged.push(entry);},list:async()=>({runs:[]})}},
-  '../services/assistantRuntime':{assistantContext:()=>({step:2}),createRuntimeTools:()=>tools,currentImageForQuestion:async()=>{imageReads++;if(delayedRead)return delayedRead();return {mediaType:'image/png',base64:'AAAA'};}},
+  '../services/assistantRuntime':{assistantContext:execution=>({step:2,execution}),createRuntimeTools:()=>tools,currentImageForQuestion:async()=>{imageReads++;if(delayedRead)return delayedRead();return {mediaType:'image/png',base64:'AAAA'};}},
   '../stores/workflowEvidence':{workflowEvidenceRevision:()=>0},'./workflowEvidence':{workflowEvidenceRevision:()=>0}};
  const cache=new Map();function load(file){if(cache.has(file))return cache.get(file).exports;const m=new Module(file,module);m.filename=file;m.paths=Module._nodeModulePaths(path.dirname(file));cache.set(file,m);const orig=m.require.bind(m);m.require=n=>{if(stubs[n])return stubs[n];if(n.startsWith('.')){const target=path.resolve(path.dirname(file),n)+'.ts';if(fs.existsSync(target))return load(target);}return orig(n);};m._compile(ts.transpileModule(fs.readFileSync(file,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText,file);return m.exports;}
  const store=load(path.join(__dirname,'useAssistantStore.ts')).useAssistantStore;
  return {store,project,annotation,compute,dataset,training,sent,cancelled,executed,logged,tools,config,bridge,reads:()=>imageReads,setRead:fn=>delayedRead=fn,setIntent:fn=>delayedIntent=fn,changeAuthority:()=>{generation++;contextListeners.forEach(fn=>fn());}};
 }
 const deferred=()=>{let resolve;return {promise:new Promise(r=>resolve=r),resolve:v=>resolve(v)};};
+test('the next explicit question receives cached task feedback without a separate provider send',async()=>{
+ const h=harness();await h.store.getState().loadConfig();assert.equal(h.sent.length,0);
+ await h.store.getState().ask('현재 작업의 오류를 확인해줘');
+ assert.equal(h.sent.length,1);assert.equal(h.sent[0].context.execution.revision,7);assert.equal(h.sent[0].context.execution.status,'waiting_human');
+ assert.deepEqual(h.executed,[]);
+});
 test('changing the selected image invalidates the shown offer before any pixels are read',async()=>{
  const h=harness();await h.store.getState().loadConfig();await h.store.getState().offerImage('확인');
  h.annotation.setState({currentImage:{file_path:'/a/b.png',file_name:'b.png',image_id:'b'}});
