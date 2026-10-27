@@ -303,3 +303,152 @@ def test_frozen_inspection_execution_and_hardware_evidence_survive_two_restores(
         saved = client.get(f'/api/inspections/runs/{row[0]}')
         assert saved.status_code == 200, saved.text
         assert saved.json()['execution_config'] == config
+
+
+@pytest.mark.parametrize('alternate_labelset', [False, True])
+def test_brush_mask_scope_paths_survive_staged_restore_and_repeated_archive(tmp_path, alternate_labelset):
+    """Real saved sparse masks remain readable; embedded brush labels alone are insufficient."""
+    import base64
+    import io
+    import numpy as np
+    from backend.engine.project_archive import restore_archive
+    from backend.engine.annotation_storage import set_request_annotation_root, reset_request_annotation_root
+    from backend.engine.dataset_summary import dataset_summary
+    from backend.engine.grouped_dataset_views import ManifestSegmentationDataset
+    app = create_app(project_dir=str(tmp_path / 'projects'))
+    client = TestClient(app, headers={'X-Vision-Token': app.state.api_token})
+    project = client.post('/api/project/create', json={'name': 'Sparse mask archive', 'task': 'segmentation'}).json()
+    original_project = Path(project['project_dir'])
+    source = tmp_path / 'original-source'
+    images = [source / 'part.png', source / 'nested' / 'part.png']
+    for image in images:
+        image.parent.mkdir(parents=True, exist_ok=True)
+        Image.new('RGB', (32, 32), 'white').save(image)
+    assert client.put('/api/project/update', json={'source_dataset_dir': str(source)}).status_code == 200
+    set_id = 'default'
+    if alternate_labelset:
+        set_id = client.post('/api/project/labelsets', json={'name': 'Sparse alternate'}).json()['id']
+        assert client.put('/api/project/labelsets/' + set_id + '/activate').status_code == 200
+    annotation_root = labelset_root(original_project, set_id)
+    expected = np.zeros((32, 32), dtype=np.uint8)
+    expected[2:14, 2:14] = 3; expected[5:9, 5:9] = 0
+    expected[18:29, 19:30] = 7
+    brushes = []
+    for identifier, name in ((3, 'Scratch'), (7, 'Dent')):
+        rgba = np.zeros((32, 32, 4), dtype=np.uint8); rgba[expected == identifier] = [255, 100, 0, 255]
+        stream = io.BytesIO(); Image.fromarray(rgba).save(stream, format='PNG')
+        brushes.append({'id': str(identifier), 'type': 'brush_mask', 'label': name, 'category_id': identifier,
+            'mask_rle': 'data:image/png;base64,' + base64.b64encode(stream.getvalue()).decode()})
+    palette = [{'id': 0, 'name': 'background', 'color': '#000000'},
+        {'id': 3, 'name': 'Scratch', 'color': '#ff0000'}, {'id': 7, 'name': 'Dent', 'color': '#00ff00'}]
+    original_rows = {}; source_bytes = {}; mask_bytes = {}; annotation_values = {}; original_json = {}
+    for image in images:
+        saved = client.post('/api/annotations/save', json={'image_id': image.stem, 'image_path': str(image),
+            'image_width': 32, 'image_height': 32, 'annotations': brushes, 'mask_classes': palette})
+        assert saved.status_code == 200 and saved.json()['mask_generated'], saved.text
+        relative = image.relative_to(source)
+        overlay = dataset_annotation_dir(image.parent, annotation_root, use_scope=False)
+        annotation = overlay / 'part.json'; value = json.loads(annotation.read_text())
+        original_rows[relative] = metadata_for_path(original_project, source, image, annotation_root)
+        source_bytes[relative] = image.read_bytes(); mask_bytes[relative] = Path(value['mask_file']).read_bytes()
+        annotation_values[relative] = value; original_json[relative] = annotation.read_bytes()
+        assert np.array_equal(np.asarray(Image.open(value['mask_file'])), expected)
+    # Customer JSON and an immutable package must not be swept into path repair.
+    customer = source / 'customer.json'; customer.write_text(json.dumps({'mask_file': annotation_values[Path('part.png')]['mask_file']}))
+    immutable = original_project / 'models' / 'immutable-package'; immutable.mkdir()
+    protected = json.dumps({'mask_file': annotation_values[Path('part.png')]['mask_file']}).encode()
+    (immutable / 'record.json').write_bytes(protected)
+    (immutable / 'manifest.json').write_text(json.dumps({'pipeline_id': 'fixture-package',
+        'files': [{'path': 'record.json', 'sha256': hashlib.sha256(protected).hexdigest()}]}))
+    customer_bytes = customer.read_bytes()
+    version = client.post('/api/dataset/versions', json={'name': 'Frozen sparse masks'})
+    assert version.status_code == 200, version.text
+    version_id = version.json()['id']
+    original_version = original_project / 'versions' / version_id
+    version_bytes = {path.relative_to(original_version): path.read_bytes() for path in original_version.rglob('*') if path.is_file()}
+    current_source = source
+    for round_no in (1, 2):
+        archived = client.post('/api/project/backup', json={'destination_dir': str(tmp_path / 'backups')})
+        assert archived.status_code == 200, archived.text
+        target = tmp_path / f'restored-masks-{round_no}'
+        target_annotations = labelset_root(target, set_id)
+        def before_publish(staging, destination):
+            assert not destination.exists()
+            rebound_source = Path(json.loads((staging / 'project.json').read_text())['source_dataset_dir'])
+            for relative in source_bytes:
+                overlay = dataset_annotation_dir((rebound_source / relative).parent, target_annotations, use_scope=False)
+                stored = staging / (overlay / 'part.json').relative_to(target)
+                declared = Path(json.loads(stored.read_text())['mask_file'])
+                assert declared == overlay / 'masks' / 'part.png'
+                assert (staging / declared.relative_to(target)).read_bytes() == mask_bytes[relative]
+        restore_archive(Path(archived.json()['archive_path']), target, before_publish=before_publish)
+        opened = client.post('/api/project/open', json={'project_dir': str(target)})
+        assert opened.status_code == 200, opened.text
+        assert opened.json()['id'] == project['id'] and opened.json()['active_labelset_id'] == set_id
+        current_source = Path(opened.json()['source_dataset_dir'])
+        token = set_request_annotation_root(target_annotations)
+        try:
+            summary = dataset_summary(current_source, 'segmentation')
+            assert summary['labeling']['labeled']['count'] == 2 and summary['labeling']['unlabeled']['count'] == 0
+            dataset = ManifestSegmentationDataset(current_source, [current_source / relative for relative in source_bytes])
+            for index, relative in enumerate(source_bytes):
+                image = current_source / relative
+                value = client.get('/api/annotations/part', params={'file_path': str(image)}).json()
+                assert value['annotations'] == annotation_values[relative]['annotations']
+                assert value['mask_classes'] == annotation_values[relative]['mask_classes']
+                assert Path(value['mask_file']).read_bytes() == mask_bytes[relative]
+                assert np.array_equal(dataset[index][1].numpy(), expected)
+                row = metadata_for_path(target, current_source, image, target_annotations)
+                for key in ('image_uuid', 'revision', 'content_version', 'workflow_state'):
+                    assert row[key] == original_rows[relative][key]
+                overlay = dataset_annotation_dir(image.parent, target_annotations, use_scope=False)
+                assert row['annotation_hash'] == hashlib.sha256((overlay / 'part.json').read_bytes()).hexdigest()
+                assert row['mask_hash'] == hashlib.sha256(mask_bytes[relative]).hexdigest()
+                assert image.read_bytes() == source_bytes[relative]
+        finally:reset_request_annotation_root(token)
+        assert (current_source / 'customer.json').read_bytes() == customer_bytes
+        assert (target / 'models/immutable-package/record.json').read_bytes() == protected
+        verified = client.get('/api/dataset/versions/' + version_id + '/verify')
+        assert verified.status_code == 200, verified.text
+        assert verified.json()['status'] == 'verified' and verified.json()['editable_changed_files'] == [], verified.text
+    for relative, raw in source_bytes.items():
+        assert (source / relative).read_bytes() == raw
+        original_overlay = dataset_annotation_dir((source / relative).parent, annotation_root, use_scope=False)
+        assert (original_overlay / 'part.json').read_bytes() == original_json[relative]
+    assert {path.relative_to(original_version): path.read_bytes() for path in original_version.rglob('*') if path.is_file()} == version_bytes
+
+
+def test_archive_mask_rebind_does_not_retarget_foreign_scopes_or_arbitrary_json(tmp_path):
+    from backend.engine.project_archive import create_archive, restore_archive
+    app = create_app(project_dir=str(tmp_path / 'projects'))
+    client = TestClient(app, headers={'X-Vision-Token': app.state.api_token})
+    project = client.post('/api/project/create', json={'name': 'Mask pointer bounds', 'task': 'segmentation'}).json()
+    root = Path(project['project_dir']); source = tmp_path / 'source'
+    for image in (source / 'one.png', source / 'nested' / 'two.png'):
+        image.parent.mkdir(parents=True, exist_ok=True); Image.new('RGB', (8, 8)).save(image)
+    assert client.put('/api/project/update', json={'source_dataset_dir': str(source)}).status_code == 200
+    project = client.get('/api/project/current').json()
+    overlay = dataset_annotation_dir(source, root / 'annotations', use_scope=False); overlay.mkdir(parents=True)
+    nested = dataset_annotation_dir(source / 'nested', root / 'annotations', use_scope=False)
+    own = str(overlay / 'masks/one.png')
+    pointers = {
+        'relative': str((overlay / 'masks/one.png').relative_to(root)),
+        'foreign': str(tmp_path / 'external' / overlay.name / 'masks/one.png'),
+        'other_labelset': str(root / 'labelsets/ls_ffffffffffff/annotations/by_dataset' / overlay.name / 'masks/one.png'),
+        'other_source_scope': str(nested / 'masks/two.png'),
+    }
+    for name, pointer in pointers.items():
+        (overlay / (name + '.json')).write_text(json.dumps({'mask_file': pointer, 'note': overlay.name,
+            'nested_metadata': {'mask_file': own}}))
+    report = root / 'reports' / 'unrelated.json'; report.write_text(json.dumps({'mask_file': own}))
+    archive = create_archive(project, tmp_path / 'backups')
+    target = tmp_path / 'restored'; restore_archive(Path(archive['archive_path']), target)
+    relocated = json.loads((target / 'project.json').read_text())
+    new_overlay = dataset_annotation_dir(Path(relocated['source_dataset_dir']), target / 'annotations', use_scope=False)
+    for name, pointer in pointers.items():
+        value = json.loads((new_overlay / (name + '.json')).read_text())
+        expected = str(target) + pointer[len(str(root)):] if pointer.startswith(str(root) + '/') else pointer
+        assert value['mask_file'] == expected
+        assert value['note'] == overlay.name
+        assert value['nested_metadata']['mask_file'] == str(target / Path(own).relative_to(root))
+    assert json.loads((target / 'reports/unrelated.json').read_text())['mask_file'] == str(target / Path(own).relative_to(root))
