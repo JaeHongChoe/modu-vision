@@ -26,6 +26,40 @@ function controlledProvider(record=()=>{}){
    if(url.endsWith('/models')){record({kind:'provider',route});return Response.json({models:[{slug:'fixture-model',display_name:'Controlled fixture model',visibility:'list'}]});}
    const body=JSON.parse(init.body),items=body.input,latest=items.at(-1);record({kind:'provider',route,model:body.model,image:false});
    if(body.model!=='fixture-model'||body.store!==false||body.stream!==true||JSON.stringify(items).includes('input_image'))throw Error('Controlled request shape refused');
+   const diagnosticQuestion=[...items].reverse().find(row=>row.role==='user'&&String(row.content||'').includes('DIAGNOSTICS_FIXTURE'));
+   if(diagnosticQuestion){
+    const seed=String(diagnosticQuestion.content).includes('DIAGNOSTICS_FIXTURE_SEED');
+    if(seed){
+     if(latest?.type==='function_call_output')return text('진단용 계획만 준비했습니다. 아직 승인하거나 실행하지 않았습니다.');
+     return output([{type:'function_call',namespace:'modu_vision',name:'propose_task',call_id:'diag_seed_'+ ++seq,
+      arguments:JSON.stringify({goal:'진단용 미승인 작업',steps:[{action:'open_step',args:{step:4},label:'사람 확인 후 평가 화면 열기'}]})}]);
+    }
+    if(latest?.type!=='function_call_output')return output([
+     ...['requests','dataset','jobs'].map(section=>({type:'function_call',namespace:'modu_vision',name:'read_app_diagnostics',call_id:'diag_'+section+'_'+ ++seq,arguments:JSON.stringify({section})})),
+     {type:'function_call',namespace:'modu_vision',name:'read_task_status',call_id:'diag_task_'+ ++seq,arguments:'{}'},
+    ]);
+    if(String(latest.call_id).startsWith('diag_fix_plan_'))return text('409 충돌과 빈 JSON 응답을 확인했고, 저장된 작업은 미승인 상태입니다. 새 확인 계획을 제시했습니다. 승인 전에는 자료 변경이나 재실행을 하지 않습니다.');
+    const replies=items.filter(row=>row.type==='function_call_output'&&/^diag_(requests|dataset|jobs|task)_/.test(String(row.call_id))).slice(-4);
+    if(replies.length!==4)throw Error('Diagnostics fixture requires all four read outputs');
+    const values=replies.map(row=>{if(typeof row.output!=='string'||row.output.length>=4000)throw Error('Diagnostics fixture requires bounded JSON');return JSON.parse(row.output);});
+    const bySection=section=>values.find(row=>row.section===section),requests=bySection('requests'),data=bySection('dataset'),jobs=bySection('jobs'),task=values.find(row=>Object.hasOwn(row,'task_id'));
+    const rows=requests?.requests||[],privacyClean=!['fixture-diagnostics-secret','diagnostics-private.invalid','diagnostics-private@example.invalid','10.77.88.99','/Users/diagnostics-private'].some(value=>JSON.stringify(items).includes(value));
+    const safeId=value=>typeof value==='string'&&/^[A-Za-z0-9_-]{1,100}$/.test(value)?value:null;
+    record({kind:'diagnostics_feedback',tool_names:['read_app_diagnostics:requests','read_app_diagnostics:dataset','read_app_diagnostics:jobs','read_task_status'],
+     saw_http_409:rows.some(row=>row.status===409&&row.code==='dataset.SPLIT_CONFLICT'),saw_json_failure:rows.some(row=>row.kind==='json'),
+     request_statuses:rows.slice(-8).map(row=>({kind:safeId(row.kind),status:Number.isInteger(row.status)?row.status:null,code:safeId(String(row.code||'').replaceAll('.','_'))})),
+     dataset_state:safeId(data?.data?.state),job_snapshot_state:safeId(jobs?.state),jobs_count:Array.isArray(jobs?.jobs)?jobs.jobs.length:null,
+     task:task?{task_id:safeId(task.task_id),revision:Number.isSafeInteger(task.revision)?task.revision:null,
+      status:['draft','ready','running','waiting_human','waiting_job','paused','failed','completed','cancelled'].includes(task.status)?task.status:null,
+      fresh:task.fresh===true,source:['ledger','cache'].includes(task.source)?task.source:null,current_context_matches:task.current_context_matches===true,
+      steps_omitted:Number.isSafeInteger(task.steps_omitted)?task.steps_omitted:null}:null,
+     output_lengths:replies.map(row=>row.output.length),privacy_clean:privacyClean});
+    if(!privacyClean)throw Error('Unsafe fixture diagnostic output');
+    if(!rows.some(row=>row.status===409)||!rows.some(row=>row.kind==='json')||!task?.fresh||task.source!=='ledger'||jobs?.state!=='observed')throw Error('Diagnostics fixture did not receive expected current read evidence');
+    return output([{type:'message',role:'assistant',content:[{type:'output_text',text:'자료 분할의 409 충돌과 빈 JSON 응답을 읽었습니다. 저장된 작업은 아직 미승인 상태라 실행되지 않았습니다.'}]},
+     {type:'function_call',namespace:'modu_vision',name:'propose_task',call_id:'diag_fix_plan_'+ ++seq,
+      arguments:JSON.stringify({goal:'자료 오류 확인 계획',steps:[{action:'open_step',args:{step:1},label:'분할 오류와 자료 상태를 사람이 확인'}]})}]);
+   }
    if(latest?.type==='function_call_output')return text('제어된 도우미 완료');
    const question=String(latest?.content||'');
    if(question.includes('CANCEL_FIXTURE'))return new Promise((resolve,reject)=>{const cancel=()=>{record({kind:'provider_cancelled'});reject(new DOMException('Cancelled','AbortError'));};if(init.signal?.aborted)cancel();else init.signal.addEventListener('abort',cancel,{once:true});});

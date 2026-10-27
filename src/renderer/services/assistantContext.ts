@@ -69,6 +69,22 @@ export function minimalAssistContext(snapshot: AssistSnapshot | null, facts: Ass
   };
 }
 
+/** Observations come from allowlisted projections, never raw stores. Budget the complete question before IPC.
+ * Keep error/task evidence ahead of optional class counts and progress; details can be reread through tools. */
+export function withAssistantObservations(base:Record<string,unknown>,diagnostics:Record<string,unknown>,execution?:Record<string,unknown>):Record<string,unknown> {
+  const bounded=(value:Record<string,unknown>,limit:number,tool:string)=>JSON.stringify(value).length<=limit?value
+    :{available:false,truncated:true,next_read:tool};
+  const observations={diagnostics:bounded(diagnostics,2000,'read_app_diagnostics'),
+    ...(execution?{execution:bounded(execution,3400,'read_task_status')}:{})};
+  let value:Record<string,unknown>={...base,...observations};
+  if(JSON.stringify(value).length<=11000)return value;
+  value={...value,classes:{},classes_truncated:true,progress:null,context_truncated:true};
+  if(JSON.stringify(value).length<=11000)return value;
+  return {step:base.step??null,status:base.status??'unknown',task:base.task??null,
+    blocker:typeof base.blocker==='string'?clip(reducePaths(base.blocker),300):null,
+    ...observations,context_truncated:true,next_read:'inspect_app_screen'};
+}
+
 /** The question text of a person message; earlier images are named, never resent. */
 const questionOf = (message: AssistantMessage) => (message.role === 'user' ? message.text : '');
 

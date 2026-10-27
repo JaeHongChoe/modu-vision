@@ -103,7 +103,8 @@ export const assistantTaskTools={
       task_execution:'현재 macOS/Linux 로컬 실행을 검증하며, 지원하지 않는 실행 환경은 서버가 명시적으로 거절합니다.'};
   },
   screen:()=>inspectTaskScreen(),
-  status:()=>controller.summary(),
+  status:async()=>controller.observe(),
+  cachedStatus:()=>controller.summary(),
   propose:async(input:unknown)=>{
     await controller.propose(input);
     const summary=controller.summary();

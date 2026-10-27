@@ -18,13 +18,22 @@ import { focusWorkflowTarget, type WorkflowStep } from '../../components/wizard/
 import { applyAppSplit, evaluateAppModel, evaluateSavedFlow, saveSingleModelFlow } from './appActions';
 import { taskActionCatalog as pureTaskActionCatalog, validateTaskAction } from './catalog';
 import type { TaskActionResult, TaskStep, TaskControl } from './types';
+import {diagnosticError, diagnosticText} from '../assistantDiagnostics';
 
 type Control = TaskControl;
-const message = (cause: unknown) => cause instanceof Error ? cause.message : typeof cause === 'string' ? cause : '작업 결과를 확인하지 못했습니다. 현재 화면의 안내를 확인하세요.';
+const message = (cause: unknown) => diagnosticError(cause).message;
 const human = (text: string, receipt?: Record<string, unknown>): TaskActionResult => ({kind: 'waiting_human', message: text, receipt: receipt ? {not_started: false, ...receipt} : {not_started: true}});
 const uncertain = (text = '실행 결과를 저장 기록에서 확인해야 합니다. 확인 전 같은 작업을 다시 실행하지 않습니다.', receipt?: Record<string, unknown>): TaskActionResult => ({kind: 'needs_reconciliation', message: text, receipt: {...receipt, not_started: false}});
 const completed = (receipt: Record<string, unknown>): TaskActionResult => ({kind: 'completed', receipt: {...receipt, not_started: false}});
 const jobs = new Set(['queued','preparing','transferring','running','stopping','syncing','cancelling']);
+/** Existing result reads only. Keep diagnostic samples separate from authority/identity evidence. */
+function resultDiagnostics(source: string, errors: unknown[] = [], reasons: unknown[] = [], nextAction?: unknown) {
+  return {source, errors: errors.filter(value => value !== null && value !== undefined && value !== '').slice(0, 3).map(value => {
+    const safe = diagnosticError(value); return {...safe, message: diagnosticText(safe.message, 240) || '작업 오류를 확인하세요.'};
+  }), reasons: reasons.slice(0, 3).map(value => diagnosticText(value, 160)).filter((value): value is string => Boolean(value)),
+  next_action: diagnosticText(nextAction, 200)};
+}
+const diagnosticMessage = (detail: ReturnType<typeof resultDiagnostics>, fallback: string) => detail.errors[0]?.message || detail.reasons[0] || fallback;
 function actorAuthority() {
   const context = getProjectContext();
   return JSON.stringify([getApiPersistenceIdentity(), context?.workspace_id ?? null, context?.actor_id ?? null, context?.mode ?? null]);
@@ -337,14 +346,15 @@ export async function executeTaskAction(step: TaskStep, control: Control): Promi
       }); check(false);
       if (!matchesScope(cohort.scope) || !matchesScope(evaluated.scope) || evaluated.version_id !== versionId || evaluated.cohort_id !== cohort.cohort_id)
         return uncertain('평가가 현재 원본·라벨 세트·저장 버전과 일치하지 않습니다.');
+      const detail = resultDiagnostics('flow_evaluation', evaluated.errors?.map(row => row.error), evaluated.validity.reasons);
       const receipt = {...localScopeReceipt(), version_id: versionId, cohort_id: cohort.cohort_id, evaluation_id: evaluated.evaluation_id,
         known: evaluated.coverage.known, unknown: evaluated.coverage.unknown, samples: evaluated.coverage.total, record_sha256: evaluated.record_sha256, input_sha256: evaluated.input_sha256,
         graph_sha256: evaluated.graph_sha256, model_sha256: evaluated.model_sha256, truth_sha256: evaluated.truth_sha256,
-        truth_review_required: !evaluated.coverage.known || Boolean(evaluated.coverage.unknown)};
+        truth_review_required: !evaluated.coverage.known || Boolean(evaluated.coverage.unknown), diagnostics: detail};
       bumpWorkflowEvidence();
       if (!evaluated.coverage.known || evaluated.coverage.unknown) return human('시험 이미지의 정답을 사람이 확인해야 합니다. 5단계에서 UNKNOWN 정답을 확인한 뒤 이어 가세요.', receipt);
-      if (evaluated.status !== 'completed' || evaluated.errors?.length) return human('검사 흐름 평가에 실행 오류·실패가 있습니다. 5단계 결과를 확인하세요.', receipt);
-      if (!evaluated.validity.valid) return human('검사 흐름 평가의 유효성 조건을 확인해야 합니다. 5단계의 평가 안내를 확인하세요.', receipt);
+      if (evaluated.status !== 'completed' || evaluated.errors?.length) return human(`검사 흐름 평가 오류: ${diagnosticMessage(detail, '실행 오류·실패가 있습니다. 5단계 결과를 확인하세요.')}`, receipt);
+      if (!evaluated.validity.valid) return human(`검사 흐름 평가 확인: ${diagnosticMessage(detail, '유효성 조건을 5단계에서 확인하세요.')}`, receipt);
       return completed(receipt);
     }
     if (step.action === 'inspect_test') {
@@ -373,9 +383,10 @@ async function reconcileInspection(receipt: Record<string, unknown>, check: (bef
   if (run.run_id !== receipt.run_id || run.scope !== 'test' || run.task !== state.task || (run.canonical_source_folder || run.source_folder) !== data.folderPath
     || run.saved_version_id !== useFlowchartStore.getState().baseVersionId) return uncertain('저장된 검사가 현재 원본·시험 분할·검사 흐름 버전과 일치하지 않습니다.', receipt);
   const result = {...localScopeReceipt(), ...receipt, run_id: run.run_id, scope: run.scope, status: run.status, saved_version_id: run.saved_version_id, samples: run.rows.length,
-    errors: run.rows.filter(row => row.state === 'error').length};
+    errors: run.rows.filter(row => row.state === 'error').length,
+    diagnostics: resultDiagnostics('inspection', run.rows.filter(row => row.state === 'error').slice(0, 3).map(row => row.error))};
   if (run.status === 'running') return {kind: 'waiting_job', receipt: result, message: '저장된 시험 검사가 아직 진행 중입니다.'};
-  if (run.status !== 'completed' || result.errors) return human('시험 검사에서 멈춤·오류가 있습니다. 6단계 결과를 확인하세요.', result);
+  if (run.status !== 'completed' || result.errors) return human(`시험 검사 오류: ${diagnosticMessage(result.diagnostics, '멈춤·오류가 있습니다. 6단계 결과를 확인하세요.')}`, result);
   return completed(result);
 }
 /** A human truth change is a new evaluation input. Only explicit human resume, current byte/model/graph
@@ -388,6 +399,8 @@ async function reconcileFlowEvaluation(step: TaskStep, control: Control, check: 
   const original = await flowEvaluation.read(String(receipt.evaluation_id)); check(false);
   if (original.evaluation_id !== receipt.evaluation_id || original.version_id !== receipt.version_id || original.cohort_id !== receipt.cohort_id
     || !matchesScope(original.scope)) return uncertain('저장된 검사 흐름 평가의 입력이 현재 작업과 다릅니다.', receipt);
+  const originalDiagnostics = resultDiagnostics('flow_evaluation', original.errors?.map(row => row.error), original.validity.reasons);
+  receipt.diagnostics = originalDiagnostics;
   for (const key of ['input_sha256','graph_sha256','model_sha256','truth_sha256','record_sha256'] as const)
     if (receipt[key] === undefined && original[key] !== undefined) receipt[key] = original[key];
   if (receipt.truth_review_required === undefined) receipt.truth_review_required = !original.coverage.known || Boolean(original.coverage.unknown);
@@ -395,11 +408,13 @@ async function reconcileFlowEvaluation(step: TaskStep, control: Control, check: 
   const matchingResult = (result: FlowEvaluation) => matchesScope(result.scope) && result.version_id === receipt.version_id
     && result.input_sha256 === receipt.input_sha256 && result.graph_sha256 === receipt.graph_sha256 && result.model_sha256 === receipt.model_sha256;
   const finish = async (result: FlowEvaluation): Promise<TaskActionResult> => {
+    if (matchingResult(result)) latest = {...latest, diagnostics: resultDiagnostics('flow_evaluation', result.errors?.map(row => row.error), result.validity.reasons)};
     if (!matchingResult(result) || result.status !== 'completed' || result.errors?.length || !result.validity.valid || !result.coverage.known || result.coverage.unknown)
       return uncertain('정답 확인 뒤 평가의 원본·모델·규칙 또는 유효성이 요청과 다릅니다.', latest);
     recomputation = {...recomputation, phase: 'evaluated', new_evaluation_id: result.evaluation_id, known: result.coverage.known, unknown: result.coverage.unknown,
       record_sha256: result.record_sha256};
-    latest = {...receipt, not_started: false, recomputation};
+    latest = {...receipt, not_started: false, recomputation,
+      diagnostics: resultDiagnostics('flow_evaluation', result.errors?.map(row => row.error), result.validity.reasons)};
     await control.checkpoint?.(latest);
     return completed(latest);
   };
@@ -423,7 +438,7 @@ async function reconcileFlowEvaluation(step: TaskStep, control: Control, check: 
     }
     if (original.status === 'completed' && !original.errors?.length && original.validity.valid && original.coverage.known && !original.coverage.unknown) return completed(latest);
     if (step.status !== 'waiting_human' || receipt.truth_review_required !== true)
-      return human('5단계에서 시험 이미지 정답과 평가 유효성을 확인하세요.', receipt);
+      return human(diagnosticMessage(originalDiagnostics, '5단계에서 시험 이미지 정답과 평가 유효성을 확인하세요.'), receipt);
     if (!control.checkpoint) return human('정답 확인 뒤 자동 재평가의 저장 기록을 만들 수 없습니다. 5단계에서 평가를 다시 실행하고 기록을 확인하세요.', receipt);
     if (!matchingResult(original) || !original.validity.reasons?.length
       || original.validity.reasons.some(reason => !reason.startsWith('truth_or_source_changed:'))
@@ -490,15 +505,17 @@ export async function reconcileTaskAction(step: TaskStep, control: Control): Pro
       const job = await api.training.getStatus(receipt.job_id); check(false);
       if ((job.compute_profile_id ?? null) !== ((receipt.settings as Record<string, unknown> | undefined)?.compute_profile_id ?? useComputeStore.getState().selectedProfileId ?? null) || job.job_id !== receipt.job_id || (job.task && job.task !== useProjectStore.getState().task)
         || (job.dataset_path && job.dataset_path !== useDatasetStore.getState().folderPath)) return uncertain('저장된 학습 작업의 원본·종류가 현재 작업과 다릅니다.', receipt);
-      const latest = {...receipt, not_started: false, status: job.status};
+      const detail = resultDiagnostics('training', [job.error || job.result?.error], [job.observation?.cause, job.wait_reason], job.observation?.next_action);
+      const latest = {...receipt, not_started: false, status: job.status, diagnostics: detail};
       if (job.status === 'completed') return completed(latest);
       if (jobs.has(job.status)) return {kind: 'waiting_job', receipt: latest, message: '학습 완료 기록을 기다리고 있습니다.'};
-      return human('학습이 완료되지 않았습니다. 3단계에서 중단·오류 상태를 확인하세요.', latest);
+      return human(`학습 ${job.status}: ${diagnosticMessage(detail, '완료되지 않았습니다. 3단계에서 중단·오류 상태를 확인하세요.')}`, latest);
     }
     if (step.action === 'generate_label_drafts' && typeof receipt.batch_id === 'string') {
       const batch = receipt.mode === 'phrase' ? await foundationLabelingApi.batch(receipt.batch_id) : await api.labelSuggestions.getBatch(receipt.batch_id); check(false);
       if (batch.id !== receipt.batch_id) return uncertain('초안 작업 ID가 저장 기록과 다릅니다.', receipt);
-      const latest = {...receipt, not_started: false, status: batch.status, total: batch.total, adopted: false};
+      const detail = resultDiagnostics('label_drafts', [batch.error, ...(batch.entries || []).filter(row => row.error).slice(0, 3).map(row => row.error)]);
+      const latest = {...receipt, not_started: false, status: batch.status, total: batch.total, processed: batch.processed, generated: batch.generated, failed: batch.failed, adopted: false, diagnostics: detail};
       if (jobs.has(batch.status)) return {kind: 'waiting_job', receipt: latest, message: '초안 생성을 기다리고 있습니다.'};
       if (batch.status === 'completed' && step.status === 'waiting_human') {
         const entries = batch.entries || [], generated = batch.generated;
@@ -512,7 +529,7 @@ export async function reconcileTaskAction(step: TaskStep, control: Control): Pro
             rejected: reviewed.filter(row => row.status === 'rejected').length, human_review_verified: true, adopted: false});
         }
       }
-      bumpWorkflowEvidence(); return human(batch.status === 'completed' ? '초안을 만들었습니다. 2단계에서 사람이 보고 채택·검수한 뒤 이어 가세요.' : '초안 작업이 멈췄습니다. 2단계에서 작업 기록을 확인하세요.', latest);
+      bumpWorkflowEvidence(); return human(batch.status === 'completed' ? '초안을 만들었습니다. 2단계에서 사람이 보고 채택·검수한 뒤 이어 가세요.' : `초안 작업 오류: ${diagnosticMessage(detail, '작업이 멈췄습니다. 2단계에서 작업 기록을 확인하세요.')}`, latest);
     }
     if (step.action === 'inspect_test' && typeof receipt.run_id === 'string') return reconcileInspection(receipt, check);
     if (step.action === 'evaluate_flow' && typeof receipt.evaluation_id !== 'string' && typeof receipt.cohort_id === 'string' && typeof receipt.version_id === 'string') {

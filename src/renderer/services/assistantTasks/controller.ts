@@ -1,7 +1,7 @@
 /** UI-owned task orchestration; the model can propose, never approve a plan. */
-import {ACTION_CATALOG, validateTaskPlan} from './catalog';
+import {validateTaskPlan} from './catalog';
 import {AssistantTaskRunner, type TaskRunnerDeps} from './runner';
-import {reducePaths} from '../assistantContext';
+import {taskFeedback} from './feedback';
 import {acquireExecutionLease,releaseExecutionLease} from './executionLease';
 import type {AssistantTaskClient} from './client';
 import type {AssistantTask, TaskActionResult, TaskControl, TaskStep} from './types';
@@ -229,11 +229,32 @@ export class AssistantTaskController {
   invalidateConnection(){this.version++;void this.runner?.pause().catch(()=>undefined);this.set({task:null,loading:false,error:null});}
 
   summary():Record<string,unknown>{
-    const task=this.state.task;if(!task)return {loaded:false,hint:'작업을 요청하면 실행할 계획을 제시합니다.'};
-    return {loaded:true,task_id:task.id,goal:reducePaths(task.goal).slice(0,300),status:task.status,
-      message:task.message?reducePaths(task.message).slice(0,400):null,
-      steps:task.steps.map(step=>({action:step.action,label:ACTION_CATALOG.find(row=>row.id===step.action)?.title??'작업',status:step.status,
-        ...(step.error?{error:reducePaths(step.error).slice(0,160)}:{})})),
-      execution_requires_person:task.status==='draft',current_context_matches:task.binding===this.binding()};
+    return taskFeedback(this.state.task,{contextMatches:!this.state.task||this.state.task.binding===this.binding(),controllerError:this.state.error});
+  }
+
+  /** A model observation is GET-only, even when a saved step could be resumed. Never changes execution state. */
+  async observe():Promise<Record<string,unknown>>{
+    const task=this.state.task,authority=this.authority(),binding=this.binding(),generation=this.deps.generation?.();
+    const current=()=>authority()&&binding===this.binding()&&Object.is(generation,this.deps.generation?.())&&this.state.task?.id===task?.id;
+    const changed=()=>taskFeedback(null,{contextMatches:false});
+    if(!authority())return changed();
+    if(!task)return this.summary();
+    try{
+      const saved=await this.deps.client.get(task.id);
+      if(!current())return changed();
+      if(!saved||saved.schema_version!==1||saved.id!==task.id||!Number.isInteger(saved.revision)||saved.revision<1
+        ||!['draft','ready','running','waiting_human','waiting_job','paused','needs_reconciliation','failed','completed'].includes(saved.status)
+        ||!Array.isArray(saved.steps)||saved.steps.some(step=>!step||typeof step.id!=='string'||!step.id
+          ||!['pending','running','waiting_human','waiting_job','completed','failed','uncertain'].includes(step.status)
+          ||(step.receipt!==null&&(typeof step.receipt!=='object'||Array.isArray(step.receipt)))))
+        throw new Error('작업의 저장 응답 형식이나 식별자를 확인하지 못했습니다.');
+      validateTaskPlan({goal:saved.goal,binding:saved.binding,steps:saved.steps.map(({action,args,label})=>({action,args,label}))});
+      if(saved.revision<(this.state.task?.revision??task.revision))throw new Error('조회 중 작업 기록이 갱신됐습니다. 현재 캐시를 표시하며 다시 읽어 확인하세요.');
+      return taskFeedback(saved,{contextMatches:saved.binding===this.binding(),controllerError:this.state.error,fresh:true,source:'ledger'});
+    }catch(cause){
+      if(!current())return changed();
+      const cached=this.state.task;
+      return taskFeedback(cached,{contextMatches:cached?.binding===this.binding(),controllerError:this.state.error,readError:cause});
+    }
   }
 }

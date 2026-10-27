@@ -5,7 +5,7 @@ function fixture(){
  let connection='account-model-1',ready=true,runtime='project1',resolve,executions=0;const calls=[],states=[];
  let task={schema_version:1,id:ID,revision:1,status:'draft',goal:'자료 확인',binding:'',plan_sha256:'a'.repeat(64),approval:null,current_step_id:null,message:null,created_at:'now',updated_at:'now',steps:[{id:'step_1',action:'open_step',args:{step:1},label:'자료 확인',status:'pending',attempt_id:null,receipt:null,error:null}]};
  const clone=x=>JSON.parse(JSON.stringify(x));
- const client={list:async()=>[clone(task)],get:async()=>clone(task),create:async plan=>{calls.push(['create',plan]);task={...task,...plan};return clone(task);},event:async(id,event)=>{calls.push(['event',event]);assert.equal(event.expected_revision,task.revision);task={...task,revision:task.revision+1};if(event.type==='approve'){task.status='ready';task.approval={binding:task.binding,plan_sha256:task.plan_sha256,confirmed_at:'now'};}return clone(task);}};
+ const client={list:async()=>[clone(task)],get:async()=>clone(task),create:async plan=>{calls.push(['create',plan]);task={...task,...plan,steps:plan.steps.map((step,index)=>({id:'step_'+(index+1),status:'pending',attempt_id:null,receipt:null,error:null,...step}))};return clone(task);},event:async(id,event)=>{calls.push(['event',event]);assert.equal(event.expected_revision,task.revision);task={...task,revision:task.revision+1};if(event.type==='approve'){task.status='ready';task.approval={binding:task.binding,plan_sha256:task.plan_sha256,confirmed_at:'now'};}return clone(task);}};
  const deps={client,binding:()=>runtime,connection:()=>connection,ready:()=>ready,mayStart:()=>true,onChange:state=>states.push(state),
   execute:async()=>({kind:'completed',receipt:{opened:true}}),reconcile:async()=>({kind:'needs_reconciliation',message:'확인 필요'}),
   runnerFactory:runner=>({run:async value=>{executions++;return new Promise(r=>{resolve=async()=>{const outcome=await runner.execute(value.steps[0],{isCurrent:()=>true,isPaused:()=>false});r({...value,status:'completed',message:outcome.kind});};});},pause:async()=>null})};
@@ -111,4 +111,25 @@ test('later saved observations may retain an existing claim without consuming it
  const task={schema_version:1,id:ID,revision:3,status:'needs_reconciliation',goal:'확인',binding:JSON.stringify(['p','c']),plan_sha256:'a'.repeat(64),approval:null,current_step_id:'step_1',created_at:'now',updated_at:'now',steps:[step]};
  const c=new Controller({client:{list:async()=>[task],get:async()=>structuredClone(task),event:async(_id,e)=>{events++;step.receipt=e.receipt;task.revision++;return structuredClone(task);}},binding:()=> 'p',connection:()=> 'c',ready:()=>true,mayStart:()=>true,execute:async()=>({kind:'completed'}),reconcile:async(_step,control)=>{await control.checkpoint({...receipt,recomputation:{phase:'verified'}});continued++;return{kind:'needs_reconciliation'};},onChange:()=>{},runnerFactory:deps=>({pause:async()=>null,run:async t=>{await deps.reconcile(t.steps[0],{isCurrent:()=>true,isPaused:()=>false});return t;}})});
  await c.restore();await c.resume();assert.equal(continued,1);assert.equal(events,1);assert.equal(c.state.error,null);
+});
+test('task observation reads fresh durable results without changing execution state or dispatching',async()=>{
+ const f=fixture();await f.c.propose(proposal);const before=structuredClone(f.c.state),version=f.c.version,calls=f.calls.length;f.task.revision=4;f.task.status='completed';f.task.steps[0].status='completed';f.task.steps[0].receipt={job_id:'job_observed'};
+ assert.equal(typeof f.c.observe,'function');const result=await f.c.observe();assert.equal(result.fresh,true);assert.equal(result.source,'ledger');assert.equal(result.revision,4);assert.equal(result.steps[0].result.job_id,'job_observed');assert.deepEqual(f.c.state,before);assert.equal(f.c.version,version);assert.equal(f.calls.length,calls);assert.equal(f.executions,0);
+});
+test('failed task observation explicitly marks its cached result stale and preserves the exact sanitized failure',async()=>{
+ const f=fixture();await f.c.propose(proposal);f.client.get=async()=>{throw Object.assign(Error('HTTP 409 ledger conflict at /private/plan.json'),{status:409,code:'conflict'});};
+ assert.equal(typeof f.c.observe,'function');const result=await f.c.observe();assert.equal(result.fresh,false);assert.equal(result.source,'cache');assert.equal(result.revision,1);assert.match(result.read_error.message,/ledger conflict/);assert.equal(result.read_error.status,409);assert.doesNotMatch(JSON.stringify(result),/\/private/);assert.equal(f.executions,0);
+});
+for(const kind of ['runtime','connection','controller'])test(`late task observation cannot survive a ${kind} authority change`,async()=>{
+ const f=fixture();await f.c.propose(proposal);let runtimeGeneration=1,connectionGeneration=1,release;f.deps.generation=()=>runtimeGeneration;f.deps.connectionGeneration=()=>connectionGeneration;
+ const original=f.client.get;f.client.get=()=>new Promise(resolve=>{release=resolve;});assert.equal(typeof f.c.observe,'function');const pending=f.c.observe();
+ if(kind==='runtime')runtimeGeneration=3;else if(kind==='connection')connectionGeneration=3;else f.c.invalidateConnection();release({...await original(ID),revision:9,message:'old account failure'});
+ const result=await pending;assert.equal(result.fresh,false);assert.equal(result.loaded,false);assert.doesNotMatch(JSON.stringify(result),/old account|task_aaaa/);assert.equal(f.executions,0);
+});
+test('an older in-flight ledger snapshot cannot supersede newer cached task evidence',async()=>{
+ const f=fixture();await f.c.propose(proposal);let release;f.client.get=()=>new Promise(resolve=>{release=resolve;});const old=structuredClone(f.c.state.task),pending=f.c.observe();
+ f.c.state.task={...f.c.state.task,revision:8,status:'completed'};release(old);const result=await pending;assert.equal(result.fresh,false);assert.equal(result.revision,8);assert.equal(result.status,'completed');assert.equal(f.executions,0);
+});
+for(const malformed of [null,{}, {id:'task_'+'b'.repeat(32)}, {revision:0}, {steps:null}, {status:'made_up'}])test(`malformed ledger observation is stale cache rather than execution evidence ${JSON.stringify(malformed)}`,async()=>{
+ const f=fixture();await f.c.propose(proposal);const before=structuredClone(f.c.state);f.client.get=async()=>malformed&&Object.keys(malformed).length?{...f.task,...malformed}:malformed;const result=await f.c.observe();assert.equal(result.fresh,false);assert.equal(result.revision,1);assert.equal(result.status,'draft');assert.ok(result.read_error);assert.deepEqual(f.c.state,before);assert.equal(f.executions,0);
 });

@@ -12,7 +12,8 @@ import { draftReviewScope, useDraftReviewStore } from '../stores/useDraftReviewS
 import { bumpWorkflowEvidence } from '../stores/workflowEvidence';
 import { focusWorkflowTarget, type WorkflowStep } from '../components/wizard/workflowReadiness';
 import { api, getApiPersistenceIdentity, getProjectContextGeneration, getProjectContext, request, type LabelSuggestion } from './api';
-import { fileName, minimalAssistContext, type AssistantFacts } from './assistantContext';
+import { fileName, minimalAssistContext, withAssistantObservations, type AssistantFacts } from './assistantContext';
+import {appDiagnosticSummary,readAppDiagnostics} from './assistantDiagnosticsRuntime';
 import { createAssistantTools, requireToolCurrent, ToolRefusal, type DraftQueueOrder, type ImageChoice, type ToolCurrent, type ToolDeps, type AssistantTaskToolDeps } from './assistantTools';
 import { orderDrafts, topConfidence } from '../components/labeling/draftReview';
 import { evaluationGuidance, preparationEvidence } from './assistantGuidance';
@@ -29,7 +30,8 @@ export function assistantFacts(): AssistantFacts {
   };
 }
 
-export const assistantContext = () => minimalAssistContext(currentAssistContext(), assistantFacts());
+export const assistantContext = (execution?:Record<string,unknown>) => withAssistantObservations(
+  minimalAssistContext(currentAssistContext(),assistantFacts()),appDiagnosticSummary(),execution);
 
 const imageChoice = (image: { file_path: string; label?: string | null; folder_label?: string | null; class_source?: string | null }): ImageChoice => ({
   path: image.file_path, name: fileName(image.file_path), currentClass: image.label ?? null,
@@ -80,6 +82,7 @@ async function pendingRows(order: DraftQueueOrder, isCurrent?: ToolCurrent) {
 }
 
 export const runtimeToolDeps: ToolDeps = {
+  diagnostics:readAppDiagnostics,
   snapshot: currentAssistContext,
   facts: assistantFacts,
   setStep: step => useProjectStore.getState().setStep(step as WorkflowStep),
