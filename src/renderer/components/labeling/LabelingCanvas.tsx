@@ -555,6 +555,9 @@ export const LabelingCanvas: React.FC = () => {
       baseImageRef.current = img;
       const w = img.naturalWidth || 512;
       const h = img.naturalHeight || 512;
+      // A focus-layout resize can arrive before passive effects publish these dimensions.
+      // Keep its Fit ownership check on this decoded image, rather than the previous 512px placeholder.
+      imgDimensionsRef.current = { width: w, height: h };
       setImgDimensions({ width: w, height: h });
       setImageDimensions({ width: w, height: h });
 

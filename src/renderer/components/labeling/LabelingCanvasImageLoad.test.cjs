@@ -134,8 +134,11 @@ function fixture() {
     render();
     return images.at(-1);
   }
-  const complete = (image, width = 64, height = 64, retained = image.onload) => {
-    assert.equal(typeof retained, 'function'); image.naturalWidth = width; image.naturalHeight = height; retained(); render();
+  const resize = (width, height, settle = true) => {
+    Object.assign(rect, {width, height}); listeners.get('resize')?.(); if (settle) render();
+  };
+  const complete = (image, width = 64, height = 64, retained = image.onload, beforeRender) => {
+    assert.equal(typeof retained, 'function'); image.naturalWidth = width; image.naturalHeight = height; retained(); beforeRender?.(); render();
   };
   const observation = () => ({dimensions: structuredClone(dimensions), transforms: structuredClone(transforms),
     baseImages: draws.filter(row => row.canvas === 'base').map(row => row.image),
@@ -150,7 +153,7 @@ function fixture() {
   }
   render();
   return {images, annotation, project, foundation, math, dimensions, transforms, draws, sourceAssignments, warnings,
-    render, select, complete, observation, unmount, close, maskPlane: () => [...canvases[1].content].sort()};
+    render, select, complete, resize, observation, unmount, close, maskPlane: () => [...canvases[1].content].sort()};
 }
 
 test('current raw image commits its natural dimensions, fitted view and actual base draw without another load', () => {
@@ -161,6 +164,16 @@ test('current raw image commits its natural dimensions, fitted view and actual b
     assert.deepEqual(f.transforms.at(-1), f.math.calculateFitToScreen(1120, 446, 64, 48));
     assert.equal(f.draws.filter(row => row.canvas === 'base').at(-1).image, image);
     assert.equal(f.images.length, 1);
+  } finally { f.close(); }
+});
+
+test('a decoded image follows a focus resize before React publishes its new dimensions', () => {
+  const f = fixture(); try {
+    f.resize(1120, 246);
+    // Image decoding and the focus layout's resize can run in the same frame, before passive effects.
+    f.complete(f.images[0], 256, 256, undefined, () => f.resize(1120, 374, false));
+    assert.deepEqual(f.annotation.viewTransform, {scale: 1.2109375, offsetX: 405, offsetY: 32});
+    assert.equal(f.images.length, 1, 'A resize refits the decoded image without another request');
   } finally { f.close(); }
 });
 
