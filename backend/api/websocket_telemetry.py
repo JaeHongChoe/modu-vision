@@ -487,7 +487,9 @@ class TelemetryBroadcaster:
             store=scope['app'].state.accounts
             user=store.authenticate(state['account_session_token'])
             project=state['scoped_project']
-            if not store.project_role(user['id'],project['id']):return False
+            role=(store.project_role_exact(user['id'],state['account_project_key']) if 'account_project_key' in state
+                  else store.project_role(user['id'],project['id']))
+            if not role:return False
             if payload.get('event',payload.get('type'))=='hardware_stats':return True
             data=payload.get('data',payload)
             job_id=data.get('job_id')

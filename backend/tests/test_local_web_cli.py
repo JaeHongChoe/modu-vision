@@ -610,6 +610,7 @@ finally:
 def test_launcher_uses_actual_socket_port_and_canonicalizes_only_https_default(tmp_path, monkeypatch, requested, actual, expected):
     import backend.web as web
     import backend.local_web_runtime as runtime
+    import backend.local_host.launcher as native_launcher
     import backend.main as engine
     paths = paths_at(tmp_path, monkeypatch)
     renderer = paths.root / 'renderer'
@@ -623,12 +624,13 @@ def test_launcher_uses_actual_socket_port_and_canonicalizes_only_https_default(t
     monkeypatch.setattr(web, 'ensure_tls', lambda *args: (paths.tls / 'cert.pem', paths.tls / 'key.pem'))
     monkeypatch.setattr(web, 'ensure_first_account', lambda *args: None)
     monkeypatch.setattr(runtime, 'build_renderer', lambda paths: renderer)
+    monkeypatch.setattr(runtime, 'build_local_helper', lambda paths: paths.root / 'native-helper/main/localHost/entry.js')
     monkeypatch.setattr(engine, 'create_app', lambda **kwargs: object())
     observed = {}
     async def no_server(api, output, origin, *args, **kwargs):
         observed['origin'] = origin
         observed['backend_origins'] = json.loads(os.environ['MODU_BROWSER_ORIGINS'])
-    monkeypatch.setattr(runtime, 'run_https', no_server)
+    monkeypatch.setattr(native_launcher, 'serve_with_local_host', no_server)
     monkeypatch.setenv('MODU_BROWSER_ORIGINS', '[]')
     assert web.main(['--data-dir', str(paths.root), '--port', str(requested), '--no-open']) == 0
     assert observed == {'origin': expected, 'backend_origins': [expected]}

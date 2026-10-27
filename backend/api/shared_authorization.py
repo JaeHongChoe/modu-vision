@@ -88,22 +88,30 @@ class SharedAuthorizationMiddleware:
             except ValueError:return await reject(401,'Account session expired or unavailable')
         state=scope.setdefault('state',{});state['account_user']=account
         state['account_session_token']=token
-        if path.startswith('/api/accounts/'):
+        if path.startswith('/api/accounts/') or (path.startswith('/api/local-host/') and getattr(self.project_app.state,'local_host',None) is not None):
             return await self.app(scope,receive,send)
         try:
             from backend.contracts.context import declared_context
             declared=declared_context(headers,query_string=scope.get('query_string') if scope['type']=='websocket' else None)
-            if declared and (declared.actor_id!=account['id'] or declared.mode!='team'
-                             or declared.workspace_id!=self.project_app.state.context_registry.workspace_id):
-                return await reject(403,'Explicit context does not match the authenticated account workspace')
-            # Electron's legacy selected-project header may change while a
-            # captured request is pending. The explicit contract is authoritative.
-            selected=store.project_for(account['id'],declared.project_id if declared else headers.get('x-vision-project'))
-            if selected:
-                from backend.api.routes_project import _load_project
-                project=_load_project(Path(selected['path']));role=store.project_role(account['id'],project['id'])
-                state['scoped_project']=project
-            else:project=None;role=None
+            local_projects=getattr(self.project_app.state,'local_projects',None)
+            if local_projects is not None:
+                project,permission_key,local_context=local_projects.resolve(self.project_app,account,declared,headers.get('x-vision-project'))
+                role=store.project_role_exact(account['id'],permission_key) if project else None
+                if project:
+                    state['scoped_project']=project
+                    state['account_project_key']=permission_key
+                    state['local_project_context']=local_context
+            else:
+                if declared and (declared.actor_id!=account['id'] or declared.mode!='team'
+                                 or declared.workspace_id!=self.project_app.state.context_registry.workspace_id):
+                    return await reject(403,'Explicit context does not match the authenticated account workspace')
+                selected=store.project_for(account['id'],declared.project_id if declared else headers.get('x-vision-project'))
+                if selected:
+                    from backend.api.routes_project import _load_project
+                    project=_load_project(Path(selected['path']));role=store.project_role(account['id'],project['id'])
+                    state['scoped_project']=project
+                    permission_key=project['id']
+                else:project=None;role=None;permission_key=None
         except HTTPException as exc:return await reject(exc.status_code,exc.detail)
         except (ValueError,OSError):return await reject(403,'Project permission required')
         if path=='/api/project/create':
@@ -161,14 +169,14 @@ class SharedAuthorizationMiddleware:
             library_read=method=='POST' and path=='/api/dataset/library/resolve'  # reads saved selections: any member
             allowed=emergency_rollback or library_read or artifact_reference or artifact_upload or team_allowed or delivery_allowed or (labeling and role in {'labeler','trainer','reviewer'}) or ((training or flow) and role in {'trainer','reviewer'}) or (review and role=='reviewer') or (compute_jobs and role in {'labeler','trainer','reviewer'})
             if not allowed:
-                denied=store.authorize(account['id'],permission_action(path,method),project['id'],session_token=token)
+                denied=store.authorize(account['id'],permission_action(path,method),permission_key,session_token=token,scoped=False)
                 if denied.allowed:denied=replace(denied,allowed=False,reason='route_policy_required')
                 store.record_decision(denied)
                 return await reject(403,'This project role cannot perform the requested action')
         # Recheck session and membership after routing policy. This contract
         # deliberately does not claim resource revision verification: artifact,
         # job and release owners retain their existing authoritative checks.
-        decision=store.authorize(account['id'],permission_action(path,method),project['id'],session_token=token)
+        decision=store.authorize(account['id'],permission_action(path,method),permission_key,session_token=token,scoped=False)
         if not decision.allowed or decision.role!=role:
             if decision.allowed:decision=replace(decision,allowed=False,reason='permission_changed')
             store.record_decision(decision)
@@ -201,7 +209,10 @@ class SharedAuthorizationMiddleware:
                     if relative.is_absolute() or '..' in relative.parts or not project.get('source_dataset_dir'):raise ValueError('Example path is outside the project source')
                     candidate=(Path(project['source_dataset_dir'])/relative).resolve()
                 else:candidate=Path(value).expanduser().resolve()
-                if not any(candidate.is_relative_to(root) for root in roots):raise ValueError('File selector is outside the authorized project')
+                if not any(candidate.is_relative_to(root) for root in roots):
+                    host=getattr(self.project_app.state,'local_host',None)
+                    if host is None or not host.check_path(scope,key,value,project):
+                        raise ValueError('File selector is outside the authorized project')
         try:
             for key,values in parse_qs(scope.get('query_string',b'').decode()).items():
                 for value in values:check_paths(value,key)
@@ -241,7 +252,12 @@ class SharedAuthorizationMiddleware:
                     if not used:used=True;return {'type':'http.request','body':body,'more_body':False}
                     return await original_receive()
                 receive=replay
+        except HTTPException as exc:return await reject(exc.status_code,exc.detail)
         except (ValueError,TypeError,UnicodeError):return await reject(403,'Request data is outside this project or invalid')
+        host=getattr(self.project_app.state,'local_host',None)
+        if host is not None:
+            try:host.commit_grants(scope)
+            except HTTPException as exc:return await reject(exc.status_code,exc.detail)
         # Passive data witness only after every original auth/path/CSRF check.
         from backend.engine.original_shared_required_flow import original_shared_flow_continuation
         with original_shared_flow_continuation(self,scope):

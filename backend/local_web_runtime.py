@@ -20,10 +20,10 @@ from backend.local_web_state import _refuse_links
 ROOT = Path(__file__).resolve().parents[1]
 
 
-def _validate_build_target(output, root):
+def _validate_build_target(output, root, *, expected_name='renderer'):
     _refuse_links(root)
     _refuse_links(output)
-    if output.parent.resolve() != root.resolve() or output.name != 'renderer':
+    if output.parent.resolve() != root.resolve() or output.name != expected_name:
         raise ValueError('Renderer output must stay in its web data directory')
     if not output.exists():
         return
@@ -140,6 +140,25 @@ def build_renderer(paths):
     if not (output / 'index.html').is_file():
         raise RuntimeError('Renderer build did not produce index.html; server was not started')
     return output
+
+
+def build_local_helper(paths):
+    """Compile the same reviewed main-process services in a private web output."""
+    output = paths.root / 'native-helper'
+    _validate_build_target(output, paths.root, expected_name='native-helper')
+    node = shutil.which('node')
+    compiler = ROOT / 'node_modules/typescript/bin/tsc'
+    electron = ROOT / 'node_modules/electron/cli.js'
+    if node is None or not compiler.is_file() or not electron.is_file():
+        raise RuntimeError('Local host requires existing Electron and TypeScript dependencies; run the documented npm ci setup')
+    output.mkdir(mode=0o700, exist_ok=True)
+    status = _run_renderer_builder([node, str(compiler), '--project', str(ROOT/'build/tsconfig.node.json'),
+        '--outDir', str(output), '--tsBuildInfoFile', str(output/'compiler.tsbuildinfo')])
+    if status: raise RuntimeError(f'Local host build failed (exit {status}); server was not started')
+    _validate_build_target(output, paths.root, expected_name='native-helper')
+    entry = output / 'main/localHost/entry.js'
+    if not entry.is_file(): raise RuntimeError('Local host build did not produce its native entrypoint')
+    return entry
 
 
 def certificate_fingerprint(cert_file):

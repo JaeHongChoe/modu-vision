@@ -126,6 +126,7 @@ class AccountStore:
         with self._db() as db:db.execute('DELETE FROM sessions WHERE token_hash=?',(hashlib.sha256(token.encode()).hexdigest(),))
 
     def register_project(self,identifier,path,owner):
+        identifier=self._project_key(identifier)
         path=str(Path(path).resolve())
         with self._db() as db:
             existing=db.execute('SELECT path FROM projects WHERE id=?',(identifier,)).fetchone()
@@ -144,11 +145,28 @@ class AccountStore:
         row=db.execute('SELECT role FROM members JOIN projects ON projects.id=members.project_id WHERE user_id=? AND project_id=?',(user_id,project_id)).fetchone()
         return row['role'] if row else None
 
+    def _project_key(self,identifier):
+        """Resolve a caller's logical identity once, before permission and row access."""
+        resolver=getattr(self,'local_permission_resolver',None)
+        return resolver(identifier) if resolver else identifier
+
+    def project_role_exact(self,user_id,project_id):
+        """A server-resolved registration key must never inherit another location's role."""
+        with self._db() as db:return self._role(db,user_id,project_id)
+
+    def registered_project_for(self,user_id,project_id):
+        """Read one exact server registration, with permission checked on that same key."""
+        with self._db() as db:
+            if self._role(db,user_id,project_id) is None:raise ValueError('Project permission required')
+            return dict(db.execute('SELECT * FROM projects WHERE id=?',(project_id,)).fetchone())
+
     @observe_original_UI_global_project_role
     def project_role(self,user_id,project_id):
+        project_id=self._project_key(project_id)
         with self._db() as db:return self._role(db,user_id,project_id)
 
     def set_membership(self,project_id,user_id,role,actor,*,session_token=None):
+        project_id=self._project_key(project_id)
         if role not in ROLES:raise ValueError('Unknown project role')
         # Preserve the existing public preflight; authority is checked again in
         # the mutation transaction, so an in-flight demotion cannot grant access.
@@ -164,25 +182,34 @@ class AccountStore:
             self._audit(db,actor,'membership.change',project_id,'allowed',user_id=user_id,role=role,revision=revision,previous_effective_role=previous,current_effective_role=role)
 
     def select_project(self,user_id,project_id):
+        project_id=self._project_key(project_id)
         if self.project_role(user_id,project_id) is None:raise ValueError('Project permission required')
         with self._db() as db:db.execute('INSERT OR REPLACE INTO selections VALUES(?,?)',(user_id,project_id))
 
     def project_for(self,user_id,project_id=None):
+        if project_id is not None:project_id=self._project_key(project_id)
         if project_id is None:
             with self._db() as db:
                 selected=db.execute('SELECT project_id FROM selections WHERE user_id=?',(user_id,)).fetchone()
             project_id=selected['project_id'] if selected else None
         if project_id is None:return None
+        if getattr(self,'local_permission_resolver',None):
+            return self.registered_project_for(user_id,project_id)
         if self.project_role(user_id,project_id) is None:raise ValueError('Project permission required')
         with self._db() as db:return dict(db.execute('SELECT * FROM projects WHERE id=?',(project_id,)).fetchone())
 
     @observe_original_UI_global_projects_for
     def projects_for(self,user_id):
+        if getattr(self,'local_permission_resolver',None):
+            with self._db() as db:
+                rows=[dict(r) for r in db.execute('SELECT * FROM projects ORDER BY id')]
+                return [{**row,'role':role} for row in rows if (role:=self._role(db,user_id,row['id']))]
         with self._db() as db:rows=[dict(r) for r in db.execute('SELECT * FROM projects ORDER BY id')]
         return [{**r,'role':self.project_role(user_id,r['id'])} for r in rows if self.project_role(user_id,r['id'])]
 
     def project_members(self,project_id,actor):
         """Only project members may read its assignable identities and roles."""
+        project_id=self._project_key(project_id)
         if self.project_role(actor,project_id) is None:raise ValueError('Project permission required')
         with self._db() as db:
             rows=db.execute('SELECT users.id,users.username,members.role FROM members JOIN users ON users.id=members.user_id WHERE members.project_id=? AND users.disabled=0 ORDER BY users.username',(project_id,)).fetchall()
@@ -288,6 +315,7 @@ class AccountStore:
             if count<=1:raise ValueError('The last enabled project owner cannot be removed')
 
     def remove_membership(self,project_id,user_id,actor,*,session_token=None):
+        project_id=self._project_key(project_id)
         with self._db() as db:
             self._require_owner(db,actor,project_id,'membership.remove',session_token)
             previous=self._role(db,user_id,project_id)
@@ -323,6 +351,7 @@ class AccountStore:
 
     def enroll_administrator(self,project_id,actor,reason,*,session_token=None):
         """Explicit recovery/enrollment, visible in the project's scoped audit."""
+        project_id=self._project_key(project_id)
         if not isinstance(reason,str) or not 8<=len(reason.strip())<=1000:raise ValueError('Enrollment requires a reason')
         with self._db() as db:
             self._require_admin(db,actor,'membership.enroll',session_token)
@@ -334,17 +363,19 @@ class AccountStore:
             self._audit(db,actor,'membership.enroll',project_id,'allowed',reason=reason.strip(),revision=revision,previous_effective_role=previous,current_effective_role='owner')
 
     def audit_events(self,project,actor,after=0,limit=100,*,session_token=None):
+        project=self._project_key(project)
         with self._db() as db:
             self._require_owner(db,actor,project,'audit.read',session_token)
             rows=db.execute('SELECT * FROM permission_audit WHERE project_id=? AND seq>? ORDER BY seq LIMIT ?',(project,after,min(max(limit,1),200))).fetchall()
             return [{**dict(row),'details':json.loads(row['details'])} for row in rows]
 
-    def authorize(self,actor,action,project,resource_revision=None,*,session_token=None,revision_lookup=None):
+    def authorize(self,actor,action,project,resource_revision=None,*,session_token=None,revision_lookup=None,scoped=True):
         """Fresh decision; resource verification requires a trusted route lookup.
 
         Middleware never labels an echoed HTTP revision as verified. Resource
         owners supply their real lookup, or retain their existing peer checks.
         """
+        if scoped:project=self._project_key(project)
         with self._db() as db:
             role=self._role(db,actor,project)
             revision=db.execute('SELECT revision FROM member_revisions WHERE project_id=? AND user_id=?',(project,actor)).fetchone()

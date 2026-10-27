@@ -138,7 +138,7 @@ class ProjectContextMiddleware:
 
     async def __call__(self, scope, receive, send):
         path = scope.get('path', '')
-        if scope['type'] not in {'http', 'websocket'} or path == '/health' or path.startswith('/api/accounts/') or scope.get('method') == 'OPTIONS':
+        if scope['type'] not in {'http', 'websocket'} or path == '/health' or path.startswith('/api/accounts/') or (path.startswith('/api/local-host/') and getattr(self.project_app.state,'local_host',None) is not None) or scope.get('method') == 'OPTIONS':
             return await self.app(scope, receive, send)
         scope.setdefault('app', self.project_app)
         state = scope.setdefault('state', {})
@@ -153,7 +153,8 @@ class ProjectContextMiddleware:
         try:
             headers = Headers(scope=scope)
             explicit = declared_context(headers, query_string=scope.get('query_string') if scope['type']=='websocket' else None)
-            if explicit and ((account and explicit.workspace_id != registry.workspace_id)
+            validated_local=state.get('local_project_context')
+            if explicit and ((account and explicit.workspace_id != registry.workspace_id and explicit != validated_local)
                              or explicit.actor_id != (account['id'] if account else registry.local_actor_id)
                              or explicit.mode != ('team' if account else 'local')):
                 raise HTTPException(403, 'Explicit context does not match the authenticated workspace actor')
@@ -166,7 +167,7 @@ class ProjectContextMiddleware:
                     raise HTTPException(403, 'Explicit context project is not authorized')
                 registry.register_project(project)
                 state['scoped_project'] = project
-                state['project_context'] = registry.context(project, account)
+                state['project_context'] = validated_local or registry.context(project, account)
                 if explicit and explicit.workspace_id != state['project_context'].workspace_id:
                     raise HTTPException(403, 'Explicit workspace context does not identify this project location')
         except HTTPException as exc:
@@ -348,7 +349,7 @@ class ProjectStorageScopeMiddleware:
 
     @observe_storage_scope
     async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
-        if scope["type"] != "http" or scope.get('path','').startswith('/api/accounts/') or scope.get("path") in {
+        if scope["type"] != "http" or scope.get('path','').startswith('/api/accounts/') or (scope.get('path','').startswith('/api/local-host/') and getattr(self.project_app.state,'local_host',None) is not None) or scope.get("path") in {
             "/health", "/api/project/create", "/api/project/open",
             "/api/project/compatibility/preview", "/api/project/compatibility/apply",
             "/api/project/compatibility/recover", "/api/project/compatibility/global-preview",
