@@ -9,6 +9,40 @@ from backend.engine.job_store import JobStore
 from backend.api import routes_training
 
 
+@pytest.mark.parametrize('source_kind',['unset','empty','path'])
+def test_inventory_source_envelope_matches_renderer_without_changing_project(tmp_path,monkeypatch,source_kind):
+    monkeypatch.setenv('VISION_AI_STUDIO_USER_DATA_DIR',str(tmp_path/'userData'))
+    app=create_app(project_dir=str(tmp_path/'projects'))
+    client=TestClient(app,headers={'X-Vision-Token':app.state.api_token})
+    created=client.post('/api/project/create',json={'name':'Empty task center','task':'classification'})
+    assert created.status_code==200,created.text
+    project=created.json()
+    assert project['source_dataset_dir'] is None
+    expected_source=''
+    stored_source=None
+    if source_kind!='unset':
+        if source_kind=='path':
+            source=tmp_path/'local source 한글';source.mkdir()
+            expected_source=str(source.resolve())
+        stored_source=expected_source
+        updated=client.put('/api/project/update',json={'source_dataset_dir':expected_source})
+        assert updated.status_code==200,updated.text
+    manifest=Path(project['project_dir'])/'project.json'
+    before=manifest.read_bytes()
+
+    response=client.get('/api/training-workspace/tasks')
+    assert response.status_code==200,response.text
+    inventory=response.json()
+    assert inventory['source_dataset_path']==expected_source
+    assert inventory['labelset_id']=='default'
+    assert inventory['tasks']==[] and inventory['errors']==[] and inventory['reservations']==[]
+    current=client.get('/api/project/current')
+    assert current.status_code==200,current.text
+    assert current.json()['id']==project['id']
+    assert current.json()['source_dataset_dir']==stored_source
+    assert manifest.read_bytes()==before
+
+
 @pytest.mark.parametrize('task',['classification','segmentation','detection','anomaly','patch_classification'])
 def test_common_inventory_reopens_ledger_only_failure_without_new_execution(tmp_path,monkeypatch,task):
     monkeypatch.setenv('VISION_AI_STUDIO_USER_DATA_DIR',str(tmp_path/'userData'))
