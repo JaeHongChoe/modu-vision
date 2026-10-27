@@ -16,6 +16,121 @@ from backend.engine.dataset_fingerprint import fingerprint_dataset
 from backend.main import create_app
 
 
+@pytest.fixture
+def comparison_inventory(tmp_path):
+    from backend.engine import annotation_storage
+    project = tmp_path / 'project'
+    project.mkdir()
+    source = tmp_path / 'source'
+    expected = []
+    for index in reversed(range(512)):
+        label = 'OK' if index % 2 == 0 else 'NG'
+        image = source / 'test' / label / f'part-{index:04}.png'
+        image.parent.mkdir(parents=True, exist_ok=True)
+        Image.new('RGB', (8, 8), (index % 255, index // 255, 33)).save(image)
+        expected.append({'image_id': image.stem, 'file_name': image.name, 'file_path': str(image),
+                         'image_sha256': hashlib.sha256(image.read_bytes()).hexdigest(),
+                         'ground_truth_label': label, 'ground_truth_verdict': label})
+    annotations = project / 'annotations'
+    annotations.mkdir()
+    (project / 'project.json').write_text(json.dumps({'source_dataset_dir': str(source),
+                                                    'active_labelset_id': 'default'}))
+    project_token = annotation_storage.set_request_project_root(project)
+    annotation_token = annotation_storage.set_request_annotation_root(annotations)
+    try:
+        yield source, sorted(expected, key=lambda item: item['file_path'])
+    finally:
+        annotation_storage.reset_request_annotation_root(annotation_token)
+        annotation_storage.reset_request_project_root(project_token)
+
+
+def test_comparison_full_inventory_observation_builds_once_and_retains_all512_rows(comparison_inventory, monkeypatch):
+    from backend.api.routes_model_comparisons import _test_images
+    from backend.engine import dataset_metadata, dataset_summary
+    source, expected = comparison_inventory
+    original_metadata, original_summary = dataset_metadata.list_metadata, dataset_summary.dataset_summary
+    reads = {'metadata': 0, 'summary': 0}
+
+    def metadata(*args, **kwargs):
+        reads['metadata'] += 1
+        return original_metadata(*args, **kwargs)
+
+    def summary(*args, **kwargs):
+        reads['summary'] += 1
+        return original_summary(*args, **kwargs)
+
+    monkeypatch.setattr(dataset_metadata, 'list_metadata', metadata)
+    monkeypatch.setattr(dataset_summary, 'dataset_summary', summary)
+    images, total = _test_images(source, 'classification', None)
+    assert total == 512 and images == expected
+    assert reads == {'metadata': 1, 'summary': 1}, 'Full comparison must not rebuild the inventory for each500-row page'
+
+
+@pytest.mark.parametrize('maximum,selected', [(3, 3), (500, 500), (501, 500)])
+def test_comparison_bounded_inventory_keeps_existing_selection_limit(comparison_inventory, maximum, selected):
+    from backend.api.routes_model_comparisons import _test_images
+    source, expected = comparison_inventory
+    images, total = _test_images(source, 'classification', maximum)
+    assert total == 512 and images == expected[:selected]
+
+
+def test_comparison_full_inventory_observation_is_fresh_on_each_request(comparison_inventory):
+    from backend.api.routes_model_comparisons import _test_images
+    source, expected = comparison_inventory
+    images, total = _test_images(source, 'classification', None)
+    assert total == 512 and images == expected
+    changed = Path(expected[-1]['file_path'])
+    Image.new('RGB', (8, 8), 'pink').save(changed)
+    changed_digest = hashlib.sha256(changed.read_bytes()).hexdigest()
+    assert changed_digest != expected[-1]['image_sha256']
+    images, total = _test_images(source, 'classification', None)
+    assert total == 512 and images == [*expected[:-1], {**expected[-1], 'image_sha256': changed_digest}]
+
+
+def test_comparison_full_inventory_still_decodes_images_after_first500(comparison_inventory):
+    from fastapi import HTTPException
+    from backend.api.routes_model_comparisons import _test_images
+    source, expected = comparison_inventory
+    Path(expected[-1]['file_path']).write_bytes(b'not an image')
+    with pytest.raises(HTTPException) as error:
+        _test_images(source, 'classification', None)
+    assert error.value.status_code == 422 and Path(expected[-1]['file_path']).name in error.value.detail
+
+
+def test_comparison_full_inventory_refuses_incomplete_observation(comparison_inventory, monkeypatch):
+    from fastapi import HTTPException
+    from backend.api.routes_model_comparisons import _test_images
+    source, _ = comparison_inventory
+    original = routes_dataset.list_dataset_images
+
+    def truncated(**kwargs):
+        page = original(**kwargs)
+        assert page['total'] == len(page['items']) == 512
+        return {**page, 'items': page['items'][:-1]}
+
+    monkeypatch.setattr(routes_dataset, 'list_dataset_images', truncated)
+    with pytest.raises(HTTPException) as error:
+        _test_images(source, 'classification', None)
+    assert error.value.status_code == 409
+
+
+def test_comparison_internal_full_inventory_preserves_public_HTTP500_limit(comparison_inventory):
+    from fastapi import FastAPI
+    source, expected = comparison_inventory
+    app = FastAPI()
+    app.include_router(routes_dataset.router)
+    with TestClient(app) as client:
+        params = {'folder_path': str(source), 'task': 'classification', 'split': 'test'}
+        response = client.get('/api/dataset/images', params={**params, 'limit': 500})
+        assert response.status_code == 200, response.text
+        page = response.json()
+        assert page['total'] == 512 and page['limit'] == 500 and page['offset'] == 0
+        assert [item['file_path'] for item in page['items']] == [item['file_path'] for item in expected[:500]]
+        response = client.get('/api/dataset/images', params={**params, 'limit': 501})
+        assert response.status_code == 422
+        assert any(item['loc'] == ['query', 'limit'] for item in response.json()['detail'])
+
+
 def _truth_snapshot_fixture(tmp_path, count):
     from backend.engine import dataset_metadata as dm, image_truth
     source = tmp_path / 'source'
