@@ -21,6 +21,9 @@ function load(filename, mocks = {}) {
 }
 const services = path.resolve(__dirname, '../../services');
 const hostModule = load(path.join(services, 'hostAdapter.ts'), {
+  './linkedSources': load(path.join(services, 'linkedSources.ts')),
+  './browserRemote': load(path.join(services, 'browserRemote.ts')),
+  './api': load(path.join(services, 'api.ts')),
   './browserSession': load(path.join(services, 'browserSession.ts')),
 });
 const componentFile = path.join(__dirname, 'BrowserFolderPathInput.tsx');
@@ -91,3 +94,5 @@ test('path submit still trims input, ignores blanks and busy repeats, then relea
   await submit(); assert.deepEqual(calls, ['/backend/inspection']);
   release(); await request; assert.equal(input(tree()).props.disabled, false);
 }));
+
+test('typed local source registration waits for the person to confirm project-member sharing',()=>withWindow({confirm:()=>false},async()=>{const slots=[];let cursor=0;const calls=[];const hooks={useId:()=> 'source-help',useState(value){const i=cursor++;if(!(i in slots))slots[i]=value;return[slots[i],next=>slots[i]=next];}};const {BrowserFolderPathInput}=load(componentFile,{react:hooks,'../../services/hostAdapter':{host:{kind:()=> 'browser',can:()=>true,localBrowser:()=>true}}});const tree=()=>{cursor=0;return BrowserFolderPathInput({onImport:async folder=>calls.push(folder)});};const all=node=>Array.isArray(node)?node.flatMap(all):node&&typeof node==='object'?[node,...all(node.props?.children)]:[];all(tree()).find(node=>node.type==='input').props.onChange({target:{value:'/backend/source'}});await tree().props.onSubmit({preventDefault(){}});assert.deepEqual(calls,[]);window.confirm=()=>true;await tree().props.onSubmit({preventDefault(){}});assert.deepEqual(calls,['/backend/source']);}));

@@ -18,7 +18,7 @@ const rows=[
   {kind:'ocr',job_id:'ocr-stuck',task:'ocr',status:'stopping',cancel_supported:false,source_dataset_path:'/source',training_provenance:{labelset_id:'default'}},
 ];
 const jobEventListeners=[];let taskReads=0;
-async function renderCenter(){
+async function renderCenter(config={}){
   let cursor=0;const slots=[],effects=[];const state={projectDir:'/project',project:{id:'p',source_dataset_dir:'/source',active_labelset_id:'default'},task:'detection',isProjectBusy:false,setStep:async()=>{},setTask:async()=>({ok:true})};
   const useProjectStore=Object.assign(sel=>sel?sel(state):state,{getState:()=>state});
   const react={useState:initial=>{const i=cursor++;if(!(i in slots))slots[i]=typeof initial==='function'?initial():initial;return[slots[i],v=>slots[i]=typeof v==='function'?v(slots[i]):v];},
@@ -27,7 +27,8 @@ async function renderCenter(){
   const jsx=(type,props)=>({type,props:props||{},children:[props?.children].flat().filter(child=>child!==undefined&&child!==null&&child!==false)});
   const m=load('TaskCenter.tsx',{react,'react/jsx-runtime':{jsx,jsxs:jsx},'lucide-react':{},
     '../../services/jobEventFeed':{onJobEventChanges:listener=>{jobEventListeners.push(listener);return()=>{jobEventListeners.splice(jobEventListeners.indexOf(listener),1);};}},
-    '../../services/api':{getProjectContextGeneration:()=>0,subscribeProjectContext:()=>()=>{},getApiPersistenceIdentity:()=>'local',request:async(path,options)=>{requests.push(path);requestCalls.push({path,options});taskReads+=1;return {tasks:rows,reservations:[],errors:[],source_dataset_path:'/source',labelset_id:'default'};}},
+    '../../services/api':{getProjectContextGeneration:()=>0,subscribeProjectContext:()=>()=>{},getApiPersistenceIdentity:()=>'local',request:async(path,options)=>{requests.push(path);requestCalls.push({path,options});taskReads+=1;if(path.startsWith('/api/local-host/projects/backups/'))return config.restore?config.restore():{state:'completed',autoactivated:false,project_dir:'/picked/restored-project',operation_id:'receipt'};return {tasks:rows.map(row=>row.job_id==='verified'&&config.native?{...row,native_restore:true}:row),reservations:[],errors:[],source_dataset_path:'/source',labelset_id:'default'};}},
+    '../../services/hostAdapter':{host:{selectFolder:config.pick||(async()=>'/picked')}},
     '../../stores/useProjectStore':{useProjectStore},'../../stores/useComputeStore':{useComputeStore:Object.assign(sel=>sel({transportRevision:0,profiles:[],selectedProfileId:null}),{getState:()=>({transportRevision:0,selectedProfileId:null})})},
     './ProgramWorkbenchControls':{programInput:'',programButton:''}});
   const render=()=>{cursor=0;const tree=m.TaskCenter({initialOpen:true});effects.splice(0).forEach(fn=>fn());return tree;};
@@ -36,7 +37,7 @@ async function renderCenter(){
   render();await new Promise(setImmediate);
   const open=key=>{nodesOf(render()).find(n=>n.props['aria-label']==='저장 작업 다시 열기').props.onChange({target:{value:key}});const tree=render();return {text:text(tree),statusText:text(nodesOf(tree).find(n=>n.props.role==='status')),nodes:nodesOf(tree)};};
   open.current=()=>{const tree=render();return{text:text(tree),nodes:nodesOf(tree)};};
-  return open;
+  open.state=state;return open;
 }
 
 test('S2-09: the task center gives the family next action only to a model family job, never to a labeling batch',async()=>{
@@ -130,5 +131,36 @@ test('comparison family filtering selects the matching existing comparison row',
   const open=await renderCenter();const current=open('ocr:local:ocr-lost');
   current.nodes.find(n=>n.props['aria-label']==='작업 모델 종류').props.onChange({target:{value:'classification'}});
   const filtered=open.current();assert.equal(filtered.nodes.find(n=>n.props['aria-label']==='저장 작업 다시 열기').props.value,'model_comparison:local:compare-owned');
+ }finally{global.localStorage=oldStorage;global.setInterval=oldInterval;}
+});
+
+test('native Task Center restore chooses a parent then waits for explicit restore and keeps the current project',async()=>{
+ const oldStorage=global.localStorage,oldInterval=global.setInterval;global.localStorage=memory();global.setInterval=()=>0;
+ try {
+  let picks=0;const before=requestCalls.length;const open=await renderCenter({native:true,pick:async options=>{assert.equal(options.purpose,'project-restore-target');picks++;return '/picked';}});
+  let view=open('project_backup:local:verified');const picker=view.nodes.find(n=>n.type==='button'&&n.children.includes('복원 상위 폴더 선택'));
+  assert(picker);await picker.props.onClick();await new Promise(setImmediate);view=open.current();
+  assert.equal(picks,1);assert.equal(requestCalls.slice(before).filter(c=>c.path.includes('/backups/verified/restore')).length,0);
+  assert.equal(view.nodes.find(n=>n.props['aria-label']==='새 복원 폴더').props.value,'/picked/restored-project');
+  await view.nodes.find(n=>n.type==='button'&&n.children.includes('새 폴더에 복원')).props.onClick();await new Promise(setImmediate);view=open.current();
+  const restore=requestCalls.slice(before).find(c=>c.path==='/api/local-host/projects/backups/verified/restore');assert(restore);
+  assert.deepEqual(JSON.parse(restore.options.body),{target_dir:'/picked/restored-project',expected_archive_sha256:'a'.repeat(64)});
+  assert(restore.options.headers['Idempotency-Key']);assert.match(view.text,/복원 완료.*\/picked\/restored-project/);
+  assert.equal(open.state.projectDir,'/project');assert.equal(open.state.project.source_dataset_dir,'/source');
+ }finally{global.localStorage=oldStorage;global.setInterval=oldInterval;}
+});
+
+test('native restore drops late chooser and completion after the project scope changes',async()=>{
+ const oldStorage=global.localStorage,oldInterval=global.setInterval;global.localStorage=memory();global.setInterval=()=>0;
+ try {
+  let release;const open=await renderCenter({native:true,pick:()=>new Promise(resolve=>release=resolve)});
+  let view=open('project_backup:local:verified');view.nodes.find(n=>n.type==='button'&&n.children.includes('복원 상위 폴더 선택')).props.onClick();
+  open.state.projectDir='/different';open.current();release('/old');await new Promise(setImmediate);
+  assert.doesNotMatch(open.current().text,/\/old/);
+  let complete;const active=await renderCenter({native:true,restore:()=>new Promise(resolve=>complete=resolve)});
+  view=active('project_backup:local:verified');await view.nodes.find(n=>n.type==='button'&&n.children.includes('복원 상위 폴더 선택')).props.onClick();await new Promise(setImmediate);
+  view=active.current();view.nodes.find(n=>n.type==='button'&&n.children.includes('새 폴더에 복원')).props.onClick();await new Promise(setImmediate);
+  active.state.projectDir='/different';active.current();complete({state:'completed',project_dir:'/old-result',autoactivated:false});await new Promise(setImmediate);
+  assert.doesNotMatch(active.current().text,/복원 완료|old-result/);
  }finally{global.localStorage=oldStorage;global.setInterval=oldInterval;}
 });

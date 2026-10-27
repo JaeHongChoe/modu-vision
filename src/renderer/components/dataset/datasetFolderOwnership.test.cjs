@@ -98,6 +98,9 @@ function harness({ holdSave = false, holdImport = false, holdImages = false, hol
   helpers['../../stores/assistContext'] = shared;
   const services = path.resolve(__dirname, '../../services');
   const browserHost = load(path.join(services, 'hostAdapter.ts'), {
+    './linkedSources': load(path.join(services, 'linkedSources.ts'), {}),
+    './browserRemote': load(path.join(services, 'browserRemote.ts'), {}),
+    './api': load(path.join(services, 'api.ts'), {}),
     './browserSession': load(path.join(services, 'browserSession.ts'), {}),
   });
   const browserInput = load(path.join(__dirname, 'BrowserFolderPathInput.tsx'), {

@@ -12,13 +12,16 @@
 export interface BrowserBackendStatus {
   port: number | null;
   healthy: boolean;
-  pid: null;
+  pid: number | null;
+  helper?: {pid:number|null;state:'ready'|'unavailable'};
   device?: string;
   deviceName?: string;
 }
 
 export interface HealthReading {
   healthy: boolean;
+  pid?: number | null;
+  helper?: {pid:number|null;state:'ready'|'unavailable'};
   device?: string;
   deviceName?: string;
 }
@@ -69,7 +72,8 @@ export function startBrowserHealthProbe({
   let retryDelay = initialDelayMs;
 
   const same = (a: BrowserBackendStatus | null, b: BrowserBackendStatus) =>
-    a !== null && a.healthy === b.healthy && a.port === b.port && a.device === b.device && a.deviceName === b.deviceName;
+    a !== null && a.healthy === b.healthy && a.port === b.port && a.pid === b.pid && a.device === b.device && a.deviceName === b.deviceName
+      && a.helper?.pid===b.helper?.pid && a.helper?.state===b.helper?.state;
 
   const read = async (): Promise<BrowserBackendStatus> => {
     const current = new AbortController();
@@ -78,7 +82,8 @@ export function startBrowserHealthProbe({
     try {
       const reading = await check(current.signal);
       if (!reading.healthy) throw new Error('backend reported unhealthy');
-      return { port: await port(), healthy: true, pid: null, device: reading.device, deviceName: reading.deviceName };
+      return { port: await port(), healthy: true, pid: reading.pid??null, device: reading.device, deviceName: reading.deviceName,
+        ...(reading.helper?{helper:reading.helper}:{}) };
     } finally {
       disarm();
       if (controller === current) controller = null;

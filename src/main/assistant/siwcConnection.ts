@@ -70,6 +70,18 @@ export function siwcConnectionError(error:unknown):AssistantError {
   return error instanceof SiwcProtocolError&&error.diagnostics?{...result,diagnostics:{...error.diagnostics}}:result;
 }
 
+/** A web actor owns rotating credentials; tab connections own selections, listeners and cancellation.
+ * Desktop connections retain their original private owner when this optional boundary is absent. */
+export class SiwcCredentialOwner {
+  readonly sessions=new Map<string,Session>();readonly blocked=new Set<string>();readonly unsafeCredentials=new Set<string>();closed=false;revision=0;
+  dispose(store:SiwcConnectionStore):void {
+    if(this.closed)return;this.closed=true;let safe=true;
+    for(const [id,session] of this.sessions)if(session.refresh)this.unsafeCredentials.add(id);
+    for(const id of this.unsafeCredentials)try{store.clearCredentials(id);}catch{safe=false;}
+    this.sessions.clear();if(safe)store.close?.();
+  }
+}
+
 export class SiwcConnection {
   private readonly store:SiwcConnectionStore;
   private readonly fetchImpl:typeof fetch;
@@ -93,8 +105,10 @@ export class SiwcConnection {
   private replayReceipts=new Map<string,string>();
   private discovered:Discovery|null=null;
   private jwks:{keys:JsonWebKey[]}|null=null;
-  constructor(private readonly deps:{store:SiwcConnectionStore;openExternal:(url:string)=>Promise<unknown>|unknown;fetchImpl?:typeof fetch;now?:()=>number;timeoutMs?:number;attemptTimeoutMs?:number}) {
-    this.store=deps.store;this.fetchImpl=deps.fetchImpl||fetch;this.now=deps.now||Date.now;
+  constructor(private readonly deps:{store:SiwcConnectionStore;openExternal:(url:string)=>Promise<unknown>|unknown;fetchImpl?:typeof fetch;now?:()=>number;timeoutMs?:number;attemptTimeoutMs?:number;credentialOwner?:SiwcCredentialOwner}) {
+    this.store=deps.store;
+    if(deps.credentialOwner){this.sessions=deps.credentialOwner.sessions;this.blocked=deps.credentialOwner.blocked;this.unsafeCredentials=deps.credentialOwner.unsafeCredentials;}
+    this.fetchImpl=deps.fetchImpl||fetch;this.now=deps.now||Date.now;
     this.timeoutMs=deps.timeoutMs??15000;this.attemptTimeoutMs=deps.attemptTimeoutMs??300000;
     if (!Number.isInteger(this.timeoutMs)||this.timeoutMs<1||this.timeoutMs>120000||!Number.isInteger(this.attemptTimeoutMs)||this.attemptTimeoutMs<1||this.attemptTimeoutMs>300000) throw new Error('Invalid SIWC timeout');
   }
@@ -107,7 +121,7 @@ export class SiwcConnection {
   /** The only signal that may make ChatGPT the chosen recipient: a login that was saved and activated (never a start or a failure). */
   onConnected(listener:(recordId:string)=>void):()=>void {this.connected.add(listener);return ()=>{this.connected.delete(listener);};}
   /** Opaque recipient binding; no user identity, token or stable subject appears in this value. */
-  authority():string {const state=this.state(),active=state.accounts.find(a=>a.recordId===state.active);return `${this.revision}:${state.active||''}:${active?.model||''}:${active?.signedIn===true}`;}
+  authority():string {const state=this.state(),active=state.accounts.find(a=>a.recordId===state.active);return `${this.deps.credentialOwner?`${this.deps.credentialOwner.revision}.${this.revision}`:this.revision}:${state.active||''}:${active?.model||''}:${active?.signedIn===true}`;}
   private assertOpen() {if(this.disposed)throw protocol('cancelled');}
   private stopRequests() {for(const operation of this.operations)operation.abort();this.operations.clear();}
   private closeAttempt() {const attempt=this.attempt;this.attempt=null;if(!attempt)return;clearTimeout(attempt.timer);attempt.controller.abort();attempt.server.close();attempt.server.closeIdleConnections();}
@@ -165,12 +179,14 @@ export class SiwcConnection {
     const registration=input.recordId?this.store.registration(input.recordId):null;if(input.recordId&&!registration)throw new ProviderError(assistantError('invalid_input'));
     if(input.enablePlanUsage!==undefined&&(input.enablePlanUsage!==true||!input.recordId||this.store.state().accounts.find(a=>a.recordId===input.recordId)?.planUsageEnabled!==false))throw new ProviderError(assistantError('invalid_input'));
     const label=input.label?.trim();if(label!==undefined&&(!label||label.length>100))throw new ProviderError(assistantError('invalid_input'));
-    this.invalidate();const generation=this.generation;this.status='waiting';
+    this.invalidate();const generation=this.generation,ownerRevision=this.deps.credentialOwner?.revision;
+    const ownerCurrent=()=>!this.deps.credentialOwner||!this.deps.credentialOwner.closed&&this.deps.credentialOwner.revision===ownerRevision;
+    this.status='waiting';
     let server:Server|undefined;
     try {
       server=http.createServer();server.maxHeadersCount=20;server.requestTimeout=5000;server.headersTimeout=5000;server.keepAliveTimeout=1000;
       await new Promise<void>((resolve,reject)=>{const error=()=>reject(protocol('listener_failed'));server!.once('error',error);server!.listen(0,'127.0.0.1',()=>{server!.off('error',error);resolve();});});
-      if(this.disposed||generation!==this.generation){server.close();throw protocol('cancelled');}
+      if(this.disposed||generation!==this.generation||!ownerCurrent()){server.close();throw protocol('cancelled');}
       const address=server.address();if(!address||typeof address==='string')throw protocol('listener_failed');const redirectUri=`http://127.0.0.1:${address.port}/auth/callback`;
       const auth=createAuthorizationAttempt({hostId:this.store.hostId(),appName:'Modu Vision',redirectUri,clientId:registration?.clientId,promptConsent:input.enablePlanUsage===true,now:this.now});
       const controller=new AbortController();const timer=setTimeout(()=>{if(this.attempt?.generation===generation){this.closeAttempt();this.failure(protocol('attempt_expired'));}},this.attemptTimeoutMs);timer.unref?.();
@@ -178,54 +194,63 @@ export class SiwcConnection {
       server.on('request',(req,res)=>{res.setHeader('Content-Type','text/html; charset=utf-8');res.setHeader('Cache-Control','no-store');res.setHeader('Content-Security-Policy',"default-src 'none'; frame-ancestors 'none'");res.setHeader('Referrer-Policy','no-referrer');
         if(req.method!=='GET'||req.headers.host!==`127.0.0.1:${address.port}`||!req.url||req.url.length>12288||!req.url.startsWith('/auth/callback?')){res.statusCode=404;res.end('요청을 찾을 수 없습니다.');return;}
         if(this.attempt?.generation!==generation||this.status!=='waiting'){res.statusCode=410;res.end('연결 시도가 끝났습니다. 앱으로 돌아가세요.');return;}
-        this.status='exchanging';void (async()=>{try {const grant=auth.acceptCallback(redirectUri+req.url!.slice('/auth/callback'.length));
+        this.status='exchanging';void (async()=>{try {if(!ownerCurrent())throw protocol('cancelled');const grant=auth.acceptCallback(redirectUri+req.url!.slice('/auth/callback'.length));
           const tokens=await this.operation(async signal=>{await this.discovery(signal);const [reply,jwks]=await Promise.all([this.form({url:TOKEN,form:grant.form,signal}),this.keys(signal,true)]);if(reply.status!==200)throw this.httpError(reply.status,reply.body);
             return acceptAuthorizationTokens(reply.body,{clientId:grant.clientId,nonce:grant.nonce,jwks,nowMs:this.now(),...(registration?{expectedSubject:registration.subject}:{})});},{signal:controller.signal});
-          if(this.disposed||this.attempt?.generation!==generation||controller.signal.aborted)throw protocol('cancelled');
+          if(this.disposed||this.attempt?.generation!==generation||controller.signal.aborted||!ownerCurrent())throw protocol('cancelled');
           if(registration&&(tokens.issuer!==registration.issuer||tokens.subject!==registration.subject||tokens.clientId!==registration.clientId))throw protocol('identity_mismatch');
-          const saved=this.store.save(tokens,{...(input.recordId?{recordId:input.recordId}:{}),...(label?{label}:{}),activate:true});this.sessions.delete(saved.recordId);this.blocked.delete(saved.recordId);this.unsafeCredentials.delete(saved.recordId);this.listed.delete(saved.recordId);this.revision++;this.status='connected';this.error=undefined;
+          const saved=this.store.save(tokens,{...(input.recordId?{recordId:input.recordId}:{}),...(label?{label}:{}),activate:true});this.sessions.delete(saved.recordId);this.blocked.delete(saved.recordId);this.unsafeCredentials.delete(saved.recordId);this.listed.delete(saved.recordId);this.revision++;if(this.deps.credentialOwner)this.deps.credentialOwner.revision++;this.status='connected';this.error=undefined;
           res.statusCode=200;res.end('ChatGPT 연결을 확인했습니다. 이 창을 닫고 Modu Vision으로 돌아가세요.');this.closeAttempt();
           for(const listener of this.connected){try{listener(saved.recordId);}catch{/* the saved login stands; the recipient choice is read again on the next state */}}
         }catch(error){if(generation===this.generation&&!this.disposed){this.failure(error);this.closeAttempt();}res.statusCode=400;res.end('ChatGPT 연결을 완료하지 못했습니다. 앱에서 연결 상태를 확인하세요.');}})();
       });
       const authUrl=new URL(auth.authorizationUrl),hint=input.recordId?this.store.credentials(input.recordId)?.idToken:null;if(hint)authUrl.searchParams.set('id_token_hint',hint);
-      await this.deps.openExternal(authUrl.href);if(this.disposed||generation!==this.generation)throw protocol('cancelled');return this.state();
+      await this.deps.openExternal(authUrl.href);if(this.disposed||generation!==this.generation||!ownerCurrent())throw protocol('cancelled');return this.state();
     }catch(error){server?.close();if(generation===this.generation&&!this.disposed){this.closeAttempt();this.failure(error);}throw new ProviderError(siwcConnectionError(error));}
   }
   cancel():SiwcConnectionState {this.invalidate();this.status='idle';return this.state();}
   selectAccount(id:string|null):SiwcConnectionState {this.assertOpen();if(id!==null&&(!validRecord(id)||!this.store.registration(id)))throw new ProviderError(assistantError('invalid_input'));this.invalidate();this.store.setActive(id);this.status='idle';return this.state();}
   selectModel(recordId:string,model:string):SiwcConnectionState {this.assertOpen();if(!validRecord(recordId)||!this.store.registration(recordId)||!validModel(model)||!this.listed.get(recordId)?.has(model))throw new ProviderError(siwcConnectionError(protocol('model_not_listed')));this.invalidate();this.store.setModel(recordId,model);this.status='idle';return this.state();}
   acknowledgePlanUsage(recordId:string):SiwcConnectionState {const account=this.account();if(account.recordId!==recordId)throw new ProviderError(assistantError('invalid_input'));this.store.acknowledgePlanUsage(recordId);return this.state();}
-  resumeUsage(recordId:string):SiwcConnectionState {const account=this.account();if(account.recordId!==recordId||!account.usagePaused)throw new ProviderError(assistantError('invalid_input'));this.invalidate();this.store.setUsagePaused(recordId,false);this.status='idle';return this.state();}
+  resumeUsage(recordId:string):SiwcConnectionState {const account=this.account();if(account.recordId!==recordId||!account.usagePaused)throw new ProviderError(assistantError('invalid_input'));this.invalidate();this.store.setUsagePaused(recordId,false);if(this.deps.credentialOwner)this.deps.credentialOwner.revision++;this.status='idle';return this.state();}
   recover(input:{ticket:string;confirmed:true}):SiwcConnectionState {
     this.assertOpen();if(input?.confirmed!==true||typeof input.ticket!=='string'||!/^[a-f0-9]{64}$/.test(input.ticket)||!this.store.recover)throw new ProviderError(siwcConnectionError(protocol('recovery_confirmation_required')));
     const recovery=this.store.recoveryStatus?.();if(!recovery?.available||recovery.ticket!==input.ticket)throw new ProviderError(siwcConnectionError(protocol('recovery_unavailable')));
     this.invalidate();this.sessions.clear();this.listed.clear();this.blocked.clear();
-    try{this.store.recover(input);this.unsafeCredentials.clear();this.status='idle';return this.state();}catch(error){this.failure(error);throw new ProviderError(siwcConnectionError(error));}
+    try{this.store.recover(input);if(this.deps.credentialOwner)this.deps.credentialOwner.revision++;this.unsafeCredentials.clear();this.status='idle';return this.state();}catch(error){this.failure(error);throw new ProviderError(siwcConnectionError(error));}
   }
   private account(requireModel=false):Account {this.assertOpen();const state=this.store.state(),account=state.accounts.find(a=>a.recordId===state.active);
     if(!account)throw protocol('no_account');if(!account.signedIn||this.blocked.has(account.recordId))throw protocol('reconnect_required','sign_in');
     if(!account.planUsageEnabled)throw protocol('plan_scope_missing');if(requireModel&&account.usagePaused)throw protocol('usage_paused');if(requireModel&&!validModel(account.model))throw protocol('model_required');return account;}
   private async access(recordId:string,signal:AbortSignal,timeoutMs:number):Promise<SiwcTokens> {
-    if(this.blocked.has(recordId))throw protocol('reconnect_required','sign_in');const tokens=this.store.credentials(recordId);if(!tokens)throw protocol('signed_out','sign_in');
+    const ownerRevision=this.deps.credentialOwner?.revision;
+    const ownerCurrent=()=>!this.deps.credentialOwner||!this.deps.credentialOwner.closed&&this.deps.credentialOwner.revision===ownerRevision;
+    if(this.blocked.has(recordId))throw protocol('reconnect_required','sign_in');let tokens=this.store.credentials(recordId);if(!tokens)throw protocol('signed_out','sign_in');
     if(!tokens.planUsageEnabled)throw protocol('plan_scope_missing');if(tokens.expiresAt>this.now()+30000)return tokens;
     let session=this.sessions.get(recordId);
-    if(!session){const jwks=await this.keys(signal);if(signal.aborted)throw protocol('cancelled');
+    if(!session){const jwks=await this.keys(signal);
+      // Discovery awaits before a refresh session exists: revocation must fence this window too.
+      if(signal.aborted||!ownerCurrent()||this.blocked.has(recordId))throw protocol('cancelled');
+      tokens=this.store.credentials(recordId);if(!tokens)throw protocol('cancelled');
+      if(!tokens.planUsageEnabled)throw protocol('plan_scope_missing');if(tokens.expiresAt>this.now()+30000)return tokens;
       // Another concurrent caller may already own the same rotating refresh.
       session=this.sessions.get(recordId);if(!session){const transport=async(request:Parameters<typeof this.form>[0])=>{const response=await this.form(request),token=obj(response.body).id_token;
           // A decoded header only selects a trusted-key reload; it never establishes identity or bypasses signature verification.
           if(response.status===200&&typeof token==='string'&&token.length<=65536){let kid:unknown;try{const segment=token.split('.')[0];if(segment.length<=4096)kid=obj(JSON.parse(Buffer.from(segment,'base64url').toString('utf8'))).kid;}catch{}
             if(typeof kid==='string'&&kid.length<=200&&!jwks.keys.some(key=>key.kid===kid)){const fresh=await this.keys(request.signal,true);jwks.keys=fresh.keys;}}
           return response;};session={value:new SiwcTokenSession(tokens,{transport,jwks,now:this.now}),refresh:null};this.sessions.set(recordId,session);}}
-    const owned=session;
+    if(!ownerCurrent()||this.blocked.has(recordId))throw protocol('cancelled');
+    const owned=session,credentialFingerprint=createHash('sha256').update(JSON.stringify(tokens)).digest('hex');
     if(!owned.refresh){owned.refresh=(async()=>{try {const next=await owned.value.refresh({timeoutMs});
-        if(this.disposed||this.sessions.get(recordId)!==owned)throw protocol('cancelled');
+        if((this.deps.credentialOwner?this.deps.credentialOwner.closed:this.disposed)||!ownerCurrent()||this.blocked.has(recordId)||this.sessions.get(recordId)!==owned)throw protocol('cancelled');
+        const current=this.store.credentials(recordId);
+        if(!current||createHash('sha256').update(JSON.stringify(current)).digest('hex')!==credentialFingerprint)throw protocol('cancelled');
         // Persist the replacement before any caller receives its access token. An inactive account stays inactive.
-        this.store.save(next,{recordId,activate:false});if(!next.planUsageEnabled)this.revision++;return next;
+        this.store.save(next,{recordId,activate:false});if(!next.planUsageEnabled){this.revision++;if(this.deps.credentialOwner)this.deps.credentialOwner.revision++;}return next;
       }catch(error){if(this.sessions.get(recordId)===owned){
           const terminal=new Set(['invalid_grant','invalid_refresh_token','token_expired','refresh_token_expired','refresh_token_invalidated','refresh_token_reused']);
           if(error instanceof SiwcProtocolError&&error.status!==undefined&&error.status!==200&&!terminal.has(error.code)){this.sessions.delete(recordId);throw error;}
-          this.blocked.add(recordId);this.revision++;this.listed.delete(recordId);
+          this.blocked.add(recordId);this.revision++;if(this.deps.credentialOwner)this.deps.credentialOwner.revision++;this.listed.delete(recordId);
           // An uncertain network outcome may have rotated remotely. Never retry the retained refresh after restart.
           this.unsafeCredentials.add(recordId);
           try{this.store.clearCredentials(recordId);this.unsafeCredentials.delete(recordId);}catch{throw protocol('storage_failed');}}
@@ -265,11 +290,11 @@ export class SiwcConnection {
         this.receipt(result.replay,binding);
         return {text:result.text,toolCalls:result.toolCalls,replay:result.replay,stop:result.toolCalls.length?'tool':'end'};
       },{signal:input.signal,timeoutMs});
-    }catch(error){if(accountId&&error instanceof SiwcProtocolError&&error.code==='subscription_sharing_usage_limit_exceeded'){this.store.setUsagePaused(accountId,true);this.stopRequests();}throw new ProviderError({...siwcConnectionError(error),...(responseId?{requestId:responseId}:{})});}
+    }catch(error){if(accountId&&error instanceof SiwcProtocolError&&error.code==='subscription_sharing_usage_limit_exceeded'){this.store.setUsagePaused(accountId,true);if(this.deps.credentialOwner)this.deps.credentialOwner.revision++;this.stopRequests();}throw new ProviderError({...siwcConnectionError(error),...(responseId?{requestId:responseId}:{})});}
   }
   async signOut(recordId:string):Promise<SiwcConnectionState> {
     this.assertOpen();if(!validRecord(recordId)||!this.store.registration(recordId))throw new ProviderError(assistantError('invalid_input'));
-    this.invalidate();const generation=this.generation;this.status='idle';this.blocked.add(recordId);this.listed.delete(recordId);
+    this.invalidate();if(this.deps.credentialOwner)this.deps.credentialOwner.revision++;const generation=this.generation;this.status='idle';this.blocked.add(recordId);this.listed.delete(recordId);
     const saved=this.store.credentials(recordId),existing=this.sessions.get(recordId);this.unsafeCredentials.add(recordId);this.sessions.delete(recordId);
     // Clear disk first; neither a late callback nor a rotating token can rehydrate this record.
     try{this.store.clearCredentials(recordId);this.unsafeCredentials.delete(recordId);}catch(error){this.failure(error);throw new ProviderError(siwcConnectionError(error));}
@@ -281,6 +306,7 @@ export class SiwcConnection {
   }
   dispose():void {
     if(this.disposed)return;
+    if(this.deps.credentialOwner){this.invalidate();this.disposed=true;this.listed.clear();return;}
     let safeToRelease=true;
     try {
       this.invalidate();

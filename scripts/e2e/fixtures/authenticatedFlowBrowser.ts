@@ -2,6 +2,7 @@ import type {Page} from '@playwright/test';
 import path from 'node:path';
 import {expect,type Workspace,type Evidence} from './test';
 import {browserTeamServer} from './browser_team_server';
+import {expectBrowserLoginGate,openBrowserServerManagement} from './browserGateLogin';
 import {handoffWithin,type HandoffApi} from './remaining-project-handoff';
 
 export type FlowNavigation=(project:{id:string;name:string})=>Promise<void>;
@@ -81,20 +82,13 @@ export async function authenticatedFlowBrowser(inputs:Inputs,
     };
     const logins:Array<{actor_id:string;project_id:string;cookie_session:true;actual_UI_login:true}>=[];
     const navigate:FlowNavigation=async project=>{
-      const restoringCookie=(await page.context().cookies(server.origin)).some(cookie=>cookie.name==='vision_session');
       await page.goto(server.origin);
-      // An existing cookie starts an ordinary saved-source restore on reload.
-      // Wait for its real gallery before login/project switching: saveOpenEdits
-      // correctly refuses switching while that dataset operation is active.
-      await page.getByRole('navigation',{name:'Workflow Stages'}).getByRole('button').nth(0).click();
+      await expectBrowserLoginGate(page,server.origin);
+      // No saved-source restore runs on an ambient cookie before the normal gate login.
       const datasetReady=async()=>{
         await expect(page.getByRole('button',{name:/ 라벨링에서 열기$/}).first()).toBeVisible({timeout:10_000});
         await expect(page.getByRole('button',{name:'데이터셋 폴더 열기',exact:true})).toBeEnabled({timeout:10_000});
       };
-      if(restoringCookie)await datasetReady();
-      await page.getByRole('button',{name:'서버 관리',exact:true}).click();
-      await page.getByText('공동 작업 서버',{exact:true}).click();
-      await page.getByLabel('공동 작업 서버 주소').fill(server.origin);
       await page.getByLabel('공유 계정 이름',{exact:true}).fill(username);
       await page.getByLabel('공유 계정 비밀번호',{exact:true}).fill(password);
       const waiting=page.waitForResponse(response=>new URL(response.url()).origin===server.origin
@@ -103,6 +97,9 @@ export async function authenticatedFlowBrowser(inputs:Inputs,
       const response=await waiting;expect(response.status()).toBe(200);const session=await response.json();
       expect(session.user.id).toBe(owner.user.id);expect(session.token).toBeUndefined();
       evidence.redact(session.csrf_token);
+      await expect(page.getByRole('main',{name:'브라우저 계정 로그인',exact:true})).toHaveCount(0);
+      await page.getByRole('navigation',{name:'Workflow Stages'}).getByRole('button').nth(0).click();
+      await openBrowserServerManagement(page);
       const select=page.getByLabel('공동 작업 프로젝트',{exact:true});
       await expect(select.locator('option[value="'+project.id+'"]')).toHaveCount(1);
       await expect(select).toBeEnabled();

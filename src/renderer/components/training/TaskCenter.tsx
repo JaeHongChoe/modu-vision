@@ -1,4 +1,5 @@
 import {useEffect,useRef,useState} from 'react';
+import {host} from '../../services/hostAdapter';
 import {onJobEventChanges} from '../../services/jobEventFeed';
 import {RefreshCw,Square,ListChecks} from 'lucide-react';
 import {request,getApiPersistenceIdentity,getProjectContextGeneration,subscribeProjectContext} from '../../services/api';
@@ -21,7 +22,7 @@ export function TaskCenter({initialOpen=false,onNavigate}:{initialOpen?:boolean;
   const scope=JSON.stringify([stableScope,transport,contextEpoch,authorityGeneration]);const current=useRef(scope);current.current=scope;
   const same=()=>current.current===scope&&getProjectContextGeneration()===authorityGeneration&&getApiPersistenceIdentity()===identity&&taskHandoffContextScope({...useProjectStore.getState(),...useComputeStore.getState(),apiTransportIdentity:getApiPersistenceIdentity()})===taskHandoffContextScope({projectDir,project,transportRevision:transport,selectedProfileId:selectedTarget,apiTransportIdentity:identity});
   useEffect(()=>subscribeProjectContext(()=>setContextEpoch(getProjectContextGeneration())),[]);
-  const [familyFilter,setFamilyFilter]=useState('all');const [restoreTarget,setRestoreTarget]=useState('');
+  const [familyFilter,setFamilyFilter]=useState('all');const [restoreTarget,setRestoreTarget]=useState('');const [restoreNotice,setRestoreNotice]=useState('');
   const [opened,setOpened]=useState(initialOpen);
   const generation=useRef(0);const reading=useRef(false);const followUp=useRef(false);const observing=useRef(false);
   const latestRefresh=useRef<()=>Promise<void>>(async()=>{});const [rows,setRows]=useState<TaskRow[]>([]);const [leases,setLeases]=useState<Reservation[]|null>(null);const [selected,setSelected]=useState('');const [error,setError]=useState('');const [checked,setChecked]=useState<number|null>(null);const [busy,setBusy]=useState(false);
@@ -64,6 +65,9 @@ export function TaskCenter({initialOpen=false,onNavigate}:{initialOpen?:boolean;
   useEffect(()=>{if(selected&&visibleRows.some(row=>row.key===selected))taskSelection(localStorage,stableScope,selected);},[selected,scope,visibleRows]);
   const filteredRows=familyFilter==='all'?visibleRows:visibleRows.filter(row=>(row.kind==='model_comparison'?row.task:taskDestination(row).family)===familyFilter);
   const job=filteredRows.find(row=>row.key===selected);const lifecycle=job?taskLifecycle(job,leases):null;
+  const restoreSelection=useRef(selected);restoreSelection.current=selected;
+  const restoreCurrent=()=>same()&&observing.current&&restoreSelection.current===selected;
+  useEffect(()=>{setRestoreTarget('');setRestoreNotice('');},[selected,scope]);
   const contextScope=taskHandoffContextScope({projectDir,project,transportRevision:transport,selectedProfileId:selectedTarget,apiTransportIdentity:getApiPersistenceIdentity()});
   const navigationIsCurrent=()=>same()&&taskHandoffContextScope({...useProjectStore.getState(),...useComputeStore.getState(),apiTransportIdentity:getApiPersistenceIdentity()})===contextScope;
   const navigate=async()=>{
@@ -122,17 +126,31 @@ export function TaskCenter({initialOpen=false,onNavigate}:{initialOpen?:boolean;
     }catch(cause){if(same())setError(cause instanceof Error?cause.message:String(cause));}
     finally{if(same())setBusy(false);}
   };
+  const chooseRestoreTarget=async()=>{
+    if(!job?.raw.native_restore||busy||!restoreCurrent())return;setBusy(true);setError('');
+    try{
+      const parent=await host.selectFolder({purpose:'project-restore-target',title:'백업을 복원할 새 폴더의 상위 폴더'});
+      if(parent&&restoreCurrent()){setRestoreTarget(parent.replace(/[\\/]+$/,'')+'/restored-project');setRestoreNotice('');}
+    }catch(cause){if(restoreCurrent())setError(cause instanceof Error?cause.message:String(cause));}
+    finally{if(restoreCurrent())setBusy(false);}
+  };
   const startRestore=async()=>{
-    if(!job||job.kind!=='project_backup'||busy||!restoreTarget.trim()||!job.raw.capabilities?.restore||!same())return;
-    setBusy(true);setError('');
+    if(!job||job.kind!=='project_backup'||busy||!restoreTarget.trim()||!job.raw.capabilities?.restore||!restoreCurrent())return;
+    setBusy(true);setError('');setRestoreNotice('');
     const sha=job.raw.data_operation?.result_ref?.sha256;
     const key=`vision-restore-request:${stableScope}:${job.id}:${restoreTarget.trim()}:${sha}`;
     const id=localStorage.getItem(key)||crypto.randomUUID();localStorage.setItem(key,id);
     try{
-      await request(`/api/dataset/operations/backups/${encodeURIComponent(job.id)}/restore`,{method:'POST',headers:{'Idempotency-Key':id},body:JSON.stringify({target_dir:restoreTarget.trim(),expected_archive_sha256:sha})});
-      localStorage.removeItem(key);if(same())await refresh();
-    }catch(cause){if(same())setError(cause instanceof Error?cause.message:String(cause));}
-    finally{if(same())setBusy(false);}
+      const path=job.raw.native_restore?`/api/local-host/projects/backups/${encodeURIComponent(job.id)}/restore`:`/api/dataset/operations/backups/${encodeURIComponent(job.id)}/restore`;
+      const result=await request<{state?:string;project_dir?:string;autoactivated?:boolean}>(path,{method:'POST',headers:{'Idempotency-Key':id},body:JSON.stringify({target_dir:restoreTarget.trim(),expected_archive_sha256:sha})});
+      if(!restoreCurrent())return;
+      if(job.raw.native_restore){
+        if(result.state!=='completed'||!result.project_dir||result.autoactivated!==false)throw new Error('복원 결과를 확인할 수 없습니다. 복구 기록을 확인하세요.');
+        setRestoreNotice(`복원 완료: ${result.project_dir} · 현재 프로젝트는 그대로 유지됩니다.`);
+      }
+      localStorage.removeItem(key);await refresh();
+    }catch(cause){if(restoreCurrent())setError(cause instanceof Error?cause.message:String(cause));}
+    finally{if(restoreCurrent())setBusy(false);}
   };
   const startBackup=async()=>{
     if(busy||!same())return;setBusy(true);setError('');
@@ -146,7 +164,7 @@ export function TaskCenter({initialOpen=false,onNavigate}:{initialOpen?:boolean;
   return <details open={opened} onToggle={event=>setOpened(event.currentTarget.open)} className="rounded-xl border border-slate-600 bg-[#101A28] p-4 text-sm text-slate-200"><summary className="cursor-pointer font-semibold"><ListChecks className="mr-2 inline h-4 w-4 text-cyan-300" />작업 센터 · 현재 프로젝트 {visibleRows.length}개</summary><div className="mt-4 space-y-3">
     <p className="text-slate-300">가져오기·백업·학습·모델 비교·라벨링·검사·내보내기·최적화 기록을 같은 작업 ID로 다시 확인합니다. 취소 요청 후 실행 종료와 예약 반환을 확인하세요.</p>
     <button type="button" className={programButton} disabled={busy} onClick={()=>void startBackup()}>검증된 프로젝트 백업 만들기</button>
-    <label className="block">작업 모델 종류<select aria-label="작업 모델 종류" value={familyFilter} onChange={event=>{const family=event.target.value;setFamilyFilter(family);setSelected(visibleRows.find(row=>family==='all'||(row.kind==='model_comparison'?row.task:taskDestination(row).family)===family)?.key||'');}} className={programInput}><option value="all">전체 작업</option>{modelFamilies.map(family=><option key={family} value={family}>{familyLabels[family]}</option>)}</select></label><div className="flex gap-3"><select aria-label="저장 작업 다시 열기" value={selected} onChange={event=>setSelected(event.target.value)} className={programInput}><option value="">저장된 작업 선택</option>{filteredRows.map((row,index)=><option key={row.key} value={row.key}>작업 {index+1} · {row.kind==='model_comparison'?'모델 비교 · ':''}{familyLabels[taskDestination(row).family||row.task]||row.task}{row.totalEpochs?` · Epoch ${row.epoch}/${row.totalEpochs}`:''} · {jobProgress(row.raw).label} · {row.transport==='local'?'이 컴퓨터':profiles.find(profile=>profile.id===row.transport)?.name || '서버'}</option>)}</select><button type="button" className={programButton} disabled={busy} onClick={()=>void refresh()}><RefreshCw className="mr-1 inline h-3 w-3" />같은 작업 확인</button></div>
+    <label className="block">작업 모델 종류<select aria-label="작업 모델 종류" disabled={busy} value={familyFilter} onChange={event=>{const family=event.target.value;setFamilyFilter(family);setSelected(visibleRows.find(row=>family==='all'||(row.kind==='model_comparison'?row.task:taskDestination(row).family)===family)?.key||'');}} className={programInput}><option value="all">전체 작업</option>{modelFamilies.map(family=><option key={family} value={family}>{familyLabels[family]}</option>)}</select></label><div className="flex gap-3"><select aria-label="저장 작업 다시 열기" disabled={busy} value={selected} onChange={event=>setSelected(event.target.value)} className={programInput}><option value="">저장된 작업 선택</option>{filteredRows.map((row,index)=><option key={row.key} value={row.key}>작업 {index+1} · {row.kind==='model_comparison'?'모델 비교 · ':''}{familyLabels[taskDestination(row).family||row.task]||row.task}{row.totalEpochs?` · Epoch ${row.epoch}/${row.totalEpochs}`:''} · {jobProgress(row.raw).label} · {row.transport==='local'?'이 컴퓨터':profiles.find(profile=>profile.id===row.transport)?.name || '서버'}</option>)}</select><button type="button" className={programButton} disabled={busy} onClick={()=>void refresh()}><RefreshCw className="mr-1 inline h-3 w-3" />같은 작업 확인</button></div>
     {job&&lifecycle&&<div role="status" className="rounded border border-slate-600 p-3"><strong>{jobProgress(job.raw).label}</strong><p className="mt-2">{job.kind==='model_comparison'?'모델 비교 · ':''}{familyLabels[taskDestination(job).family||job.task]||job.task} · {job.transport==='local'?'이 컴퓨터':profiles.find(row=>row.id===job.transport)?.name || '저장 서버'} · {job.kind==='model_comparison'?`${job.raw.completed_images??0}/${job.raw.total_images||'?'}장`:`Epoch ${job.epoch}/${job.totalEpochs||'미기록'}`}</p>{!observationSummary(job)&&<p className="mt-1">취소: {lifecycle.cancellation==='requested'?'요청 접수':lifecycle.cancellation==='acknowledged'?'종료 응답 확인':'요청 없음'} · 실행 종료: {lifecycle.termination==='confirmed'?'확인':lifecycle.termination==='unconfirmed'?'미확인':'진행 중'} · {resourceLabels[lifecycle.resource]}</p>}
       {/* the family workbenches' next action fits only a model family's job (not a labeling batch, an optimization or an export) */}
       {!observationSummary(job)&&taskDestination(job).family&&jobProgress(job.raw).nextAction&&<p className="mt-2 text-amber-200">다음 행동: {jobProgress(job.raw).nextAction}</p>}
@@ -164,7 +182,7 @@ export function TaskCenter({initialOpen=false,onNavigate}:{initialOpen?:boolean;
           <button type="button" className={programButton} disabled={busy||releaseReason.trim().length<3} onClick={()=>void releaseReservation(lease)}>해제 확정</button>
           <button type="button" className={programButton} disabled={busy} onClick={()=>setReleaseReason(null)}>취소</button></div>}
       </div>;})()}
-      {job.raw.data_operation&&<div className="mt-3 text-xs text-slate-300"><p>진행 단위: {job.raw.data_operation.progress_unit} · 시도: {job.raw.data_operation.attempt} · {job.raw.data_operation.result_ref?`검증 ${job.raw.data_operation.result_ref.count}개 · SHA-256 ${job.raw.data_operation.result_ref.sha256}`:'결과 검증 대기'}</p>{job.raw.data_operation.expires_at&&<p>결과 만료: {new Date(job.raw.data_operation.expires_at*1000).toLocaleString()}</p>}<p>{job.raw.restore_reason}</p>{job.kind==='project_restore'&&<p>복원 폴더: {job.raw.target_dir} · 자동 활성화하지 않습니다 · {job.raw.result_available?'검증된 새 복원 결과':'완료·해시·만료 확인 필요'}</p>}{job.kind==='project_backup'&&job.raw.capabilities?.restore&&<div><label>새 복원 폴더<input aria-label="새 복원 폴더" className={programInput} value={restoreTarget} onChange={event=>setRestoreTarget(event.target.value)} placeholder="기존 부모 안의 새 폴더 절대 경로" /></label><button type="button" className={programButton} disabled={busy||!restoreTarget.trim()} onClick={()=>void startRestore()}>새 폴더에 복원</button><p>원본은 유지하며 복원 프로젝트를 자동 활성화하지 않습니다.</p></div>}{job.raw.resumable&&<button type="button" className={programButton} disabled={busy} onClick={()=>void dataAction('resume')}>같은 작업 재개</button>}{job.kind==='project_backup'&&<button type="button" className={programButton} disabled={busy||!job.raw.downloadable} onClick={()=>void dataAction('download')}>{job.raw.downloadable?'검증된 백업 저장':'백업 결과 사용 불가'}</button>}</div>}
+      {job.raw.data_operation&&<div className="mt-3 text-xs text-slate-300"><p>진행 단위: {job.raw.data_operation.progress_unit} · 시도: {job.raw.data_operation.attempt} · {job.raw.data_operation.result_ref?`검증 ${job.raw.data_operation.result_ref.count}개 · SHA-256 ${job.raw.data_operation.result_ref.sha256}`:'결과 검증 대기'}</p>{job.raw.data_operation.expires_at&&<p>결과 만료: {new Date(job.raw.data_operation.expires_at*1000).toLocaleString()}</p>}<p>{job.raw.restore_reason}</p>{job.kind==='project_restore'&&<p>복원 폴더: {job.raw.target_dir} · 자동 활성화하지 않습니다 · {job.raw.result_available?'검증된 새 복원 결과':'완료·해시·만료 확인 필요'}</p>}{job.kind==='project_backup'&&job.raw.capabilities?.restore&&<div><label>새 복원 폴더<input aria-label="새 복원 폴더" className={programInput} value={restoreTarget} readOnly={Boolean(job.raw.native_restore)} onChange={event=>setRestoreTarget(event.target.value)} placeholder="기존 부모 안의 새 폴더 절대 경로" /></label>{job.raw.native_restore&&<button type="button" className={programButton} disabled={busy} onClick={()=>void chooseRestoreTarget()}>복원 상위 폴더 선택</button>}<button type="button" className={programButton} disabled={busy||!restoreTarget.trim()} onClick={()=>void startRestore()}>새 폴더에 복원</button><p>원본은 유지하며 복원 프로젝트를 자동 활성화하지 않습니다.</p>{restoreNotice&&<p role="status">{restoreNotice}</p>}</div>}{job.raw.resumable&&<button type="button" className={programButton} disabled={busy} onClick={()=>void dataAction('resume')}>같은 작업 재개</button>}{job.kind==='project_backup'&&<button type="button" className={programButton} disabled={busy||!job.raw.downloadable} onClick={()=>void dataAction('download')}>{job.raw.downloadable?'검증된 백업 저장':'백업 결과 사용 불가'}</button>}</div>}
       <div className="mt-3 flex flex-wrap gap-2">{job.raw.cancel_supported!==false&&(jobProgress(job.raw).canCancel||jobProgress(job.raw).stopping)&&<button type="button" disabled={busy||jobProgress(job.raw).stopping} onClick={()=>void control('cancel')} className={programButton}><Square className="mr-1 inline h-3 w-3" />{jobProgress(job.raw).stopping?'종료 확인 중':'취소 요청'}</button>}{jobProgress(job.raw).canReconnect&&job.kind==='training'&&<button type="button" className={programButton} disabled={busy} onClick={()=>void control('reconnect')}>{jobProgress(job.raw).server?'같은 서버 작업 재연결':'같은 로컬 작업 재연결'}</button>}<button type="button" disabled={busy||isProjectBusy} onClick={()=>navigate()} className={programButton}>{['dataset_import','project_backup','project_restore'].includes(job.kind)?'데이터 화면':job.kind==='model_comparison'?'비교 작업·결과 열기':job.kind==='inspection'?'검사 기록 화면':job.task==='labeling'?'라벨 검토 화면':['optimization','export'].includes(job.kind)?'패키지·배포 화면':job.status==='completed'?'완료 후보 평가로 이동':'학습 화면으로 이동'}</button></div>
       <details className="mt-3 text-slate-400"><summary className="cursor-pointer">작업 식별자·저장 근거</summary><p className="mt-2 break-all">{job.key}</p><p className="break-all">출처: {job.source} · 정답 버전: {job.labelset || '작업 기록에 없음 · 프로젝트 범위'}</p></details></div>}
     {checked&&<p className="text-slate-400">마지막 응답 확인: {new Date(checked).toLocaleTimeString()}</p>}{error&&<p role="alert" className="rounded bg-rose-950/30 p-3 text-rose-200">{error}</p>}

@@ -64,6 +64,18 @@ test('a healthy backend is reported once with its port and device, then kept on 
   probe.stop();
 });
 
+test('authenticated process readings preserve actual PIDs and report helper loss separately from server health',async()=>{
+ const probe=harness([{...ok(),pid:1200,helper:{pid:1201,state:'ready'}},{...ok(),pid:1200,helper:{pid:null,state:'unavailable'}}]);
+ await settle();
+ assert.equal(probe.statuses[0].pid,1200);
+ assert.deepEqual(probe.statuses[0].helper,{pid:1201,state:'ready'});
+ await probe.tick();
+ assert.equal(probe.statuses.length,2);
+ assert.equal(probe.statuses[1].healthy,true);
+ assert.equal(probe.statuses[1].helper.state,'unavailable');
+ probe.stop();
+});
+
 test('an unreachable backend is retried with a bounded backoff until it answers', async () => {
   const probe = harness([DOWN, { healthy: false }, DOWN, DOWN, DOWN, DOWN, ok()]);
   await settle();

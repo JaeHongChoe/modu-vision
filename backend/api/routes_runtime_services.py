@@ -35,6 +35,9 @@ def host_manager(request):
     account=getattr(request.state,'account_user',None)
     if account and not account['administrator']:
         raise HTTPException(403,'Only a server administrator who owns this project can change startup registration on the server host')
+    local_host=getattr(request.app.state,'local_host',None)
+    if local_host is not None:
+        local_host.authorize(request,'service.install',project=True)
     return service
 
 def execute(action):

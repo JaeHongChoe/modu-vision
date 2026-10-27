@@ -92,10 +92,11 @@ export interface AssistantChatgptConnection {
   listModels():Promise<{id:string;label:string}[]>;
   complete(input:{system:string;messages:AssistantMessage[];tools:AssistantToolSpec[];signal?:AbortSignal;timeoutMs?:number}):Promise<Completion>;
 }
-export interface AssistantServiceOptions {store:AssistantKeyStore;chatgpt?:AssistantChatgptConnection;fetchImpl?:typeof fetch;now?:()=>number;timeoutMs?:number}
+export interface AssistantServiceOptions {store:Pick<AssistantKeyStore,'state'|'save'|'removeKey'|'removeProvider'|'setActive'|'recipient'|'setRecipient'|'config'|'key'>;chatgpt?:AssistantChatgptConnection;fetchImpl?:typeof fetch;now?:()=>number;timeoutMs?:number}
 
 export class AssistantService {
   private readonly running = new Map<string, AbortController>();
+  private generation=0;
   private readonly grants = new Map<string, {receiver:string;imageIdentity:string;expires:number}>();
   /** The person's explicit recipient choice is persisted (store.recipient), so a failed login or a restart cannot change it.
    *  A started login is not a choice: only a saved, activated connection replaces an API choice. */
@@ -134,7 +135,9 @@ export class AssistantService {
           ready: account.signedIn && account.planUsageEnabled && !account.usagePaused && Boolean(account.model) && chatgpt.status !== 'waiting' && chatgpt.status !== 'exchanging' && chatgpt.status !== 'error', connectionAuthority: chatgpt.authority}] : [])]} : {})};
     });
   }
-  private retire():void {this.grants.clear();for (const controller of this.running.values()) controller.abort();}
+  private retire():void {this.generation++;this.grants.clear();for (const controller of this.running.values()) controller.abort();}
+  /** A credential owner may revoke grants and sends in sibling web tabs without changing their selections. */
+  invalidateAuthority():void {this.retire();}
   private chooseApiRecipient():void {
     this.options.store.setRecipient('api');
     // The explicit API choice remains usable even when the separate OAuth store is locked or unavailable.
@@ -166,10 +169,13 @@ export class AssistantService {
   }
 
   async listModels(provider:AssistantProviderId):Promise<AssistantModelList> {
+    const generation=this.generation;
     try {
-      if (provider === 'chatgpt') return {ok: true, models: await this.connection().listModels()};
-      const {config, key} = this.credentials(provider);
-      return {ok: true, models: await listModels(config, key, {fetchImpl: this.options.fetchImpl})};
+      let models:{id:string;label:string}[];
+      if (provider === 'chatgpt') models=await this.connection().listModels();
+      else {const {config, key} = this.credentials(provider);models=await listModels(config, key, {fetchImpl: this.options.fetchImpl});}
+      if(generation!==this.generation)throw new ProviderError(assistantError('cancelled'));
+      return {ok:true,models};
     } catch (cause) {return {ok: false, error: toError(cause)};}
   }
 
@@ -231,6 +237,7 @@ export class AssistantService {
       if (image && messages[messages.length - 1]?.role !== 'user') throw new ProviderError(assistantError('image_refused', {detail: 'image_needs_question'}));
       const result = await complete({config, key, system, messages, tools, image, signal: controller.signal,
         timeoutMs: this.options.timeoutMs, fetchImpl: this.options.fetchImpl});
+      if (controller.signal.aborted) throw new ProviderError(assistantError('cancelled'));
       return {ok: true, text: result.text, toolCalls: result.toolCalls, stop: result.stop,
         ...(result.replay !== undefined ? {replay: result.replay} : {}), ...(result.requestId ? {requestId: result.requestId} : {})};
     } catch (cause) {

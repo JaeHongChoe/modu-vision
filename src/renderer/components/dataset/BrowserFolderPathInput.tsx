@@ -1,8 +1,7 @@
 import React, { useId, useState } from 'react';
 import { host } from '../../services/hostAdapter';
 
-/** A browser has no native folder dialog. Typing the folder path the backend can read (a path on the machine that runs
- * the backend, or a mounted share) is the way in; the desktop app keeps its picker and never shows this. */
+/** Typed backend paths remain available beside a negotiated native chooser. */
 export const BrowserFolderPathInput: React.FC<{ disabled?: boolean; onImport: (folder: string) => Promise<void> }> = ({ disabled = false, onImport }) => {
   const [value, setValue] = useState('');
   const [busy, setBusy] = useState(false);
@@ -12,6 +11,7 @@ export const BrowserFolderPathInput: React.FC<{ disabled?: boolean; onImport: (f
     event.preventDefault();
     const folder = value.trim();
     if (!folder || busy) return;
+    if(host.localBrowser?.()&&!window.confirm('입력한 원본 폴더를 프로젝트에 연결하면 같은 프로젝트의 멤버도 읽을 수 있습니다. 원본 폴더 연결을 진행할까요?'))return;
     setBusy(true);
     try { await onImport(folder); } finally { setBusy(false); }
   };
@@ -28,7 +28,7 @@ export const BrowserFolderPathInput: React.FC<{ disabled?: boolean; onImport: (f
         </button>
       </div>
       <p id={helpId} className="whitespace-normal break-words text-slate-400">
-        브라우저에서는 폴더 선택 창을 열 수 없습니다. 백엔드가 읽을 수 있는 폴더 경로(서버의 폴더 또는 연결된 공유 폴더)를 입력하세요.
+        {host.can('pickPaths')?'폴더 선택 버튼으로 자료를 프로젝트에 복사하거나, 백엔드가 읽을 수 있는 경로를 직접 입력하세요. 직접 연결한 원본 폴더는 프로젝트 멤버와 공유됩니다.':'브라우저에서는 폴더 선택 창을 열 수 없습니다. 백엔드가 읽을 수 있는 폴더 경로(서버의 폴더 또는 연결된 공유 폴더)를 입력하세요.'}
       </p>
     </form>
   );

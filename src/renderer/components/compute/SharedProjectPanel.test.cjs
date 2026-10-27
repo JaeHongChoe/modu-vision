@@ -1,6 +1,6 @@
 const test=require('node:test');const assert=require('node:assert/strict');const fs=require('node:fs');const path=require('node:path');const Module=require('node:module');const ts=require('typescript');
 const tick=()=>new Promise(resolve=>setImmediate(resolve));
-function hostAdapterModule(name='hostAdapter.ts'){const file=path.join(__dirname,'..','..','services',name);const m=new Module(file,module);m.filename=file;m.paths=Module._nodeModulePaths(path.dirname(file));const original=m.require.bind(m);m.require=key=>key==='./browserSession'?hostAdapterModule('browserSession.ts'):original(key);m._compile(ts.transpileModule(fs.readFileSync(file,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText,file);return m.exports;}
+function hostAdapterModule(name='hostAdapter.ts'){const file=path.join(__dirname,'..','..','services',name);const m=new Module(file,module);m.filename=file;m.paths=Module._nodeModulePaths(path.dirname(file));const original=m.require.bind(m);m.require=key=>key.startsWith('./')&&fs.existsSync(path.join(path.dirname(file),key+'.ts'))?hostAdapterModule(key.slice(2)+'.ts'):original(key);m._compile(ts.transpileModule(fs.readFileSync(file,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText,file);return m.exports;}
 function load(filename,mocks){const m=new Module(filename,module);m.filename=filename;m.paths=Module._nodeModulePaths(path.dirname(filename));const original=m.require.bind(m);m.require=name=>name in mocks?mocks[name]:name==='../../services/hostAdapter'?hostAdapterModule():original(name);m._compile(ts.transpileModule(fs.readFileSync(filename,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022,jsx:ts.JsxEmit.React,esModuleInterop:true}}).outputText,filename);return m.exports;}
 function nodes(tree){if(!tree||typeof tree!=='object')return [];return [tree,...[].concat(tree.props?.children||[]).flatMap(nodes)];}
 function datasetHook(state={isLoading:false,isSplitting:false,setFolderPath(){}}){return Object.assign(selector=>selector(state),{getState:()=>state});}
@@ -16,7 +16,7 @@ for(const operation of ['activate','login','disconnect','login_inventory_failure
   const unsubscribe=store.subscribe((state,previous)=>{if(state.transportRevision!==previous.transportRevision)void state.load();});
   const connected={server_url:'https://old.example',project_id:'old-project',user:{id:'user',username:'tester',administrator:false},expires_at:1};
   const values=[isLogin?null:connected,'https://new.example','tester','private-test-password',[],isLogin?'':'old-project',[], '', '', '', 'viewer', '', {value:'',scope:null}, false, ''];let cursor=0;
-  const react={createElement:(type,props,...children)=>({type,props:{...props,children}}),useEffect:()=>{},useState:initial=>{const index=cursor++;if(values[index]===undefined)values[index]=initial;return [values[index],value=>{values[index]=typeof value==='function'?value(values[index]):value;}];}};
+  const react={createElement:(type,props,...children)=>({type,props:{...props,children}}),useEffect:()=>{},useSyncExternalStore:(_subscribe,getSnapshot)=>getSnapshot(),useState:initial=>{const index=cursor++;if(values[index]===undefined)values[index]=initial;return [values[index],value=>{values[index]=typeof value==='function'?value(values[index]):value;}];}};
   const switchCommit=()=>new Promise(resolve=>{commit=()=>{server='new';resolve({...connected,server_url:'https://new.example',project_id:'new-project'});};});
   const project={source_dataset_dir:'/fixture',id:'new-project'};
   const projectState={project,isProjectBusy:false,syncCurrentProject:async()=>{}};
@@ -27,7 +27,7 @@ for(const operation of ['activate','login','disconnect','login_inventory_failure
     react:{__esModule:true,default:react,...react},
     'lucide-react':{Users:'icon',LogIn:'icon',LogOut:'icon'},
     '../../services/api':{api,request,setSharedApiBase:()=>{},setProjectContext:()=>{},getProjectContext:()=>({workspace_id:'fixture',project_id:project.id,actor_id:'user',mode:'team'}),getProjectContextGeneration:()=>0,getApiPersistenceIdentity:()=>`shared:https://${server}.example`},
-    '../../stores/useProjectStore':{useProjectStore:projectStore,saveOpenEdits:async()=>{}},
+    '../../stores/useProjectStore':{projectSwitchRefusal:()=>null,subscribeProjectSwitchRefusal:()=>()=>{},useProjectStore:projectStore,saveOpenEdits:async()=>{}},
     '../../stores/useComputeStore':compute,
     '../../stores/useDatasetStore':{useDatasetStore:datasetHook()},
     '../../stores/useAnnotationStore':{useAnnotationStore:{getState:()=>({setReviewerName:()=>{},setImages:async()=>{}})}},
@@ -54,13 +54,13 @@ for(const flag of ['isLoading','isSplitting'])for(const loggedIn of [false,true]
   const project={project:{id:'p',project_dir:'/owned/p',source_dataset_dir:'/owned/source'},isProjectBusy:false};
   const dataset={isLoading:false,isSplitting:false,setFolderPath(){}};
   const values=[loggedIn?connection:null,connection.server_url,'owner','controlled-password',[],'p',[],'','','','viewer','',{value:'',scope:null},false,''];let cursor=0;
-  const react={createElement:(type,props,...children)=>({type,props:{...props,children}}),useEffect:()=>{},useState:initial=>{
+  const react={createElement:(type,props,...children)=>({type,props:{...props,children}}),useEffect:()=>{},useSyncExternalStore:(_subscribe,getSnapshot)=>getSnapshot(),useState:initial=>{
     const index=cursor++;if(values[index]===undefined)values[index]=initial;return[values[index],value=>{values[index]=value;}];
   }};
   const Panel=load(path.resolve(__dirname,'SharedProjectPanel.tsx'),{
     react:{__esModule:true,default:react,...react},'lucide-react':{Users:'icon',LogIn:'icon',LogOut:'icon'},
     '../../services/api':{api:{},request:async()=>{},setSharedApiBase(){},setProjectContext(){},getApiPersistenceIdentity:()=> 'shared:https://owned.example',getProjectContextGeneration:()=>0,getProjectContext:()=>({workspace_id:'w',project_id:'p',actor_id:'owner',mode:'team'})},
-    '../../stores/useProjectStore':{useProjectStore:Object.assign(selector=>selector(project),{getState:()=>project}),saveOpenEdits:async()=>{}},
+    '../../stores/useProjectStore':{projectSwitchRefusal:()=>null,subscribeProjectSwitchRefusal:()=>()=>{},useProjectStore:Object.assign(selector=>selector(project),{getState:()=>project}),saveOpenEdits:async()=>{}},
     '../../stores/useComputeStore':{resetComputeTransportCache(){}},
     '../../stores/useDatasetStore':{useDatasetStore:datasetHook(dataset)},
     '../../stores/useAnnotationStore':{useAnnotationStore:{getState:()=>({})}},
@@ -99,7 +99,7 @@ for(const outcome of ['success','auth_failure','inventory_failure','select_failu
   let complete;
   const completed=new Promise(resolve=>{complete=resolve;});
   const values=[null,connection.server_url,'tester','private-test-password',[],'',[],'','','','viewer','',{value:'',scope:null},false,''];let cursor=0;
-  const react={createElement:(type,props,...children)=>({type,props:{...props,children}}),useEffect:()=>{},useState:initial=>{
+  const react={createElement:(type,props,...children)=>({type,props:{...props,children}}),useEffect:()=>{},useSyncExternalStore:(_subscribe,getSnapshot)=>getSnapshot(),useState:initial=>{
     const index=cursor++;if(values[index]===undefined)values[index]=initial;
     return [values[index],value=>{values[index]=typeof value==='function'?value(values[index]):value;if(index===13&&values[index]===false)complete();}];
   }};
@@ -125,20 +125,22 @@ for(const outcome of ['success','auth_failure','inventory_failure','select_failu
     const panel=load(path.resolve(__dirname,'SharedProjectPanel.tsx'),{
       react:{__esModule:true,default:react,...react},'lucide-react':{Users:'icon',LogIn:'icon',LogOut:'icon'},
       '../../services/api':{...apiModule,request},
-      '../../stores/useProjectStore':{useProjectStore:projectStore,saveOpenEdits:async()=>{}},
+      '../../stores/useProjectStore':{projectSwitchRefusal:()=>null,subscribeProjectSwitchRefusal:()=>()=>{},useProjectStore:projectStore,saveOpenEdits:async()=>{}},
       '../../stores/useComputeStore':{resetComputeTransportCache:()=>{}},
       '../../stores/useDatasetStore':{useDatasetStore:datasetHook()},
       '../../stores/useAnnotationStore':{useAnnotationStore:{getState:()=>({setReviewerName:()=>{},setImages:async()=>{}})}},
       '../../services/websocket':{telemetryService},
       '../../services/hostAdapter':{host:{kind:()=>'desktop',shared:{login:()=>loginResult,select:async()=>({...connection,project_id:newContext.project_id})}}},
     }).SharedProjectPanel;
-    nodes(panel()).find(n=>n.type==='button'&&n.props.children.includes('연결·로그인')).props.onClick();
+    let ready=0;
+    nodes(panel({onAuthenticated:()=>ready++})).find(n=>n.type==='button'&&n.props.children.includes('연결·로그인')).props.onClick();
     await tick();
     assert.equal(oldSocket.readyState,FakeSocket.OPEN,'authentication has not succeeded: the prior stream remains available');
     assert.equal(oldSocket.closeCount,0);
     if(outcome==='auth_failure')rejectLogin(new Error('Authentication refused'));
     else resolveLogin(connection);
     await completed;
+    assert.equal(ready,['success','no_project'].includes(outcome)?1:0,'the login gate opens only after a complete successful login');
     if(outcome==='auth_failure'){
       assert.equal(sockets.length,1);assert.equal(oldSocket.closeCount,0);assert.equal(telemetryService.getStatus(),true);
       assert.deepEqual(apiModule.getProjectContext(),oldContext);assert.match(values[14],/Authentication refused/);
@@ -176,7 +178,7 @@ for(const operation of ['login','activate','disconnect','login_sync_failure'])te
   }};
   const projectStore=Object.assign(selector=>selector(projectState),{getState:()=>projectState,setState:value=>Object.assign(projectState,value)});
   const values=[isLogin?null:{...connection,project_id:'old-project'},connection.server_url,'tester','private-test-password',[],isLogin?'':'old-project',[],'','','','viewer','',{value:'',scope:null},false,''];let cursor=0;
-  const react={createElement:(type,props,...children)=>({type,props:{...props,children}}),useEffect:()=>{},useState:initial=>{
+  const react={createElement:(type,props,...children)=>({type,props:{...props,children}}),useEffect:()=>{},useSyncExternalStore:(_subscribe,getSnapshot)=>getSnapshot(),useState:initial=>{
     const index=cursor++;if(values[index]===undefined)values[index]=initial;
     return [values[index],value=>{values[index]=typeof value==='function'?value(values[index]):value;if(index===13&&values[index]===false)complete();}];
   }};
@@ -184,7 +186,7 @@ for(const operation of ['login','activate','disconnect','login_sync_failure'])te
   const panel=load(path.resolve(__dirname,'SharedProjectPanel.tsx'),{
     react:{__esModule:true,default:react,...react},'lucide-react':{Users:'icon',LogIn:'icon',LogOut:'icon'},
     '../../services/api':{api:{},request,setSharedApiBase:()=>{},setProjectContext:()=>{},getProjectContext:()=>context,getProjectContextGeneration:()=>0,getApiPersistenceIdentity:()=>'shared:https://new.example'},
-    '../../stores/useProjectStore':{useProjectStore:projectStore,saveOpenEdits:async()=>{}},
+    '../../stores/useProjectStore':{projectSwitchRefusal:()=>null,subscribeProjectSwitchRefusal:()=>()=>{},useProjectStore:projectStore,saveOpenEdits:async()=>{}},
     '../../stores/useComputeStore':{resetComputeTransportCache:()=>seen.push(['step views remounted',projectState.sharedSessionChanging])},
     '../../stores/useDatasetStore':{useDatasetStore:datasetHook()},
     '../../stores/useAnnotationStore':{useAnnotationStore:{getState:()=>({setReviewerName:()=>{},setImages:async()=>{}})}},
@@ -205,3 +207,5 @@ for(const operation of ['login','activate','disconnect','login_sync_failure'])te
   if(operation==='login_sync_failure')assert.match(values[14],/synchronization refused/);
   else{assert.equal(values[14],'');assert.equal(seen.at(-1)[0],'telemetry connected');}
 });
+
+test('reload login fixes the current HTTPS origin and authenticates before any stale project save',async()=>{const previous=global.window;global.window={location:{origin:'https://localhost:8443'}};const values=[null,'https://other.invalid','fixture','fixture password',[],'',[],'','','','viewer','',{value:'',scope:null},false,''];let cursor=0,ready=0,complete;const done=new Promise(resolve=>complete=resolve),calls=[];const react={createElement:(type,props,...children)=>({type,props:{...props,children}}),useEffect(){},useSyncExternalStore:(_subscribe,getSnapshot)=>getSnapshot(),useState(initial){const i=cursor++;if(values[i]===undefined)values[i]=initial;return[values[i],value=>{values[i]=typeof value==='function'?value(values[i]):value;if(i===13&&values[i]===false)complete();}];}};const state={project:null,isProjectBusy:false};const host={kind:()=> 'browser',can:()=>true,shared:{login:async input=>{calls.push(['login',input.server_url]);return{server_url:'https://localhost:8443',expires_at:2000000000,user:{id:'actor',username:'fixture',administrator:false}};},requestOptions:()=>({credentials:'same-origin'})}};const Panel=load(path.join(__dirname,'SharedProjectPanel.tsx'),{react:{__esModule:true,default:react,...react},'lucide-react':{Users:'icon',LogIn:'icon',LogOut:'icon'},'../../services/hostAdapter':{host},'../../services/api':{api:{},request:async()=>{calls.push(['inventory']);return{projects:[],selected_project_id:null};},setSharedApiBase:()=>calls.push(['transport']),setProjectContext(){},getApiPersistenceIdentity:()=> 'shared:https://localhost:8443',getProjectContextGeneration:()=>0,getProjectContext:()=>null},'../../stores/useProjectStore':{projectSwitchRefusal:()=>null,subscribeProjectSwitchRefusal:()=>()=>{},useProjectStore:Object.assign(selector=>selector(state),{getState:()=>state,setState:value=>Object.assign(state,value)}),saveOpenEdits:async()=>assert.fail('re-login cannot save with a missing CSRF proof')},'../../stores/useComputeStore':{resetComputeTransportCache(){}},'../../stores/useDatasetStore':{useDatasetStore:datasetHook()},'../../stores/useAnnotationStore':{useAnnotationStore:{getState:()=>({setReviewerName(){},setImages:async()=>{}})}},'../../services/websocket':{telemetryService:{disconnect(){},connect:async()=>{}}}}).SharedProjectPanel;try{const tree=Panel({localAuthenticationOnly:true,onAuthenticated:()=>ready++}),all=nodes(tree),address=all.find(node=>node.props?.['aria-label']==='공동 작업 서버 주소');assert.equal(address.props.value,'https://localhost:8443');assert.equal(address.props.disabled,true);all.find(node=>node.type==='button'&&node.props.children.includes('연결·로그인')).props.onClick();await done;assert.equal(ready,1);assert.deepEqual(calls,[['login','https://localhost:8443'],['transport'],['inventory']]);}finally{global.window=previous;}});

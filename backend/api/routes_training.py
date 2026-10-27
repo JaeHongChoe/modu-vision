@@ -2398,6 +2398,10 @@ def get_training_status(job_id: Optional[str] = Query(None), request: Request = 
     """Retrieves current training status and progress for polling fallbacks."""
     if job_id:
         record = training_job_manager.get_job(job_id)
+        if not _record_in_request_project(record, request):
+            # A restored copy preserves job IDs, but owns a separate model root.
+            # A live original record must not shadow its verified local receipt.
+            record = None
         if record is None and request is not None:
             record = _completed_receipt_record(job_id, request)
         if record is None:

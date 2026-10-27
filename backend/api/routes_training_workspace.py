@@ -238,6 +238,9 @@ def tasks(request:Request):
             if record['project_key'] != project_key or record['actor_id'] != context.actor_id or record['kind'] not in ('dataset_import', 'project_backup', 'project_restore'):
                 continue
             view = _jobs(request).view(record['id'], project_key) if record['kind'] == 'dataset_import' else (_restore_jobs() if record['kind']=='project_restore' else _backup_jobs()).view(record['id'], project_key, context.actor_id)
+            if record['kind']=='project_backup':
+                from backend.local_host.projects import native_backup_view
+                view=native_backup_view(request,view)
             operation = view.get('operation', view)
             rows.append({**view, 'kind': record['kind'], 'status': view['state'], 'task': record['kind'],
                 'scope_kind': 'project', 'source_dataset_path': source, 'phase': (view.get('progress') or {}).get('phase', view['state']),
@@ -246,7 +249,8 @@ def tasks(request:Request):
         errors.append({'kind': 'data_operations', 'message': str(exc)})
     try:reservations=[{k:v for k,v in row.items() if k!='owner'} for row in shared_leases().list() if row.get('project_id')==project['id'] or any((item.get('job_id') or item.get('search_id'))==row['job_id'] for item in rows)]
     except (ValueError,OSError,sqlite3.Error) as exc:reservations=None;errors.append({'kind':'reservations','message':str(exc)})
-    return {'tasks':rows,'reservations':reservations,'errors':errors,'source_dataset_path':source,'labelset_id':labelset}
+    # The inventory envelope uses an empty string for no dataset; the stored source and row filters stay unchanged.
+    return {'tasks':rows,'reservations':reservations,'errors':errors,'source_dataset_path':'' if source is None else source,'labelset_id':labelset}
 
 
 class WeightImportRequest(ReadinessRequest):

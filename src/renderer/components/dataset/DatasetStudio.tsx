@@ -303,9 +303,9 @@ export const DatasetStudio: React.FC = () => {
     setImageOpenError(null);
     let folder: string | null;
     try {
-      folder = await host.selectFolder({ title: 'Select Industrial Dataset' });
+      folder = await host.selectFolder({ purpose: 'dataset-source', title: 'Select Industrial Dataset' });
     } catch (error) {
-      // A browser has no folder dialog: say so instead of doing nothing.
+      // Preserve the host refusal reason and the typed/upload fallback.
       if (isCurrent()) setImageOpenError(hostErrorMessage(error, '폴더 선택 창을 열 수 없습니다.'));
       return;
     }
@@ -430,7 +430,7 @@ export const DatasetStudio: React.FC = () => {
 
   return (
     <div className="flex-1 flex flex-col h-full bg-[#0B0E14] text-slate-100 overflow-hidden">
-      <OperatorGuidanceBanner step={1} />
+      <OperatorGuidanceBanner step={1} />{host.localBrowser?.()&&<p className="mt-2 text-xs text-slate-400">선택한 반입 자료는 프로젝트 작업 폴더에 검증·복사합니다. 원본은 그대로 보관합니다.</p>}
       {/* The focus view folds these three panels (DATASET_HELPER_PANELS, in this order). The step title above, the
           alert and session rows and the toolbar below never fold. */}
       {!focus && <>

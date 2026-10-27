@@ -264,6 +264,33 @@ def test_cpu_and_browser_ci_have_independent_original_bounds_and_complete_comman
         'backend/tests/test_runtime_spawn_diagnostic.py',
     )
     command = cpu_step['run']
+    local_host_controls = (
+        'backend/tests/test_local_web_app.py',
+        'backend/tests/test_local_web_cli.py',
+        'backend/tests/test_local_web_state.py',
+        'backend/tests/test_local_web_projects.py',
+        'backend/tests/test_local_web_backup_restore.py',
+        'backend/tests/test_local_host_client.py',
+        'backend/tests/test_local_host_body_limit.py',
+        'backend/tests/test_local_host_grants.py',
+        'backend/tests/test_local_host_launcher.py',
+        'backend/tests/test_local_host_routes.py',
+        'backend/tests/test_local_host_revocation.py',
+        'backend/tests/test_local_host_staging.py',
+        'backend/tests/test_local_host_selection_identity.py',
+        'backend/tests/test_local_host_snapshot_writer.py',
+        'backend/tests/test_local_host_service_gate.py',
+        'backend/tests/test_local_host_remote.py',
+        'backend/tests/test_local_host_remote_assistant.py',
+        'backend/tests/test_local_host_linked_sources.py',
+    )
+    local_host_insertion = ' '.join(local_host_controls) + ' '
+    original_first_selector = 'backend/tests/test_flow_class_save_validation.py '
+    assert command.count(local_host_insertion + original_first_selector) == 1, 'Reviewed localhost controls must precede the original selection exactly once in order'
+    assert all(command.split().count(reference) == 1 for reference in local_host_controls), 'Every localhost control must execute exactly once'
+    # Remove only the reviewed additive block. All historical command hashes,
+    # selector ordering, lane separation and bounds below remain unchanged.
+    command = command.replace(local_host_insertion + original_first_selector, original_first_selector, 1)
     # Exactly these three saved-mask regressions were added after the preserved
     # command below. Verify their single ordered insertion before checking every
     # previous selector and bound against the existing historical hashes.

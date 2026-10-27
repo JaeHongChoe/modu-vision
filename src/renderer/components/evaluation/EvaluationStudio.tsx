@@ -32,7 +32,7 @@ import {
   isNormalLabel,
 } from '../../stores/useEvaluationStore';
 import { api, resolveApiUrl, getApiPersistenceIdentity, getProjectContextGeneration, type DatasetVersionSummary, type ModelComparisonModel } from '../../services/api';
-import { host } from '../../services/hostAdapter';
+import { downloadBrowserReport, reportPreviewDocument, host } from '../../services/hostAdapter';
 import { OperatorGuidanceBanner } from '../common/OperatorGuidanceBanner';
 import { JargonTooltip } from '../common/JargonTooltip';
 import { GuardrailBanner } from '../common/GuardrailBanner';
@@ -162,6 +162,7 @@ export const EvaluationStudio: React.FC = () => {
     heatmapUnavailable,
     isExportingReport,
     exportedReportPath,
+    exportedReportContent,
     errorMessage,
     overkillAnalysis,
     sampleFilter,
@@ -260,18 +261,20 @@ export const EvaluationStudio: React.FC = () => {
     try {
       const filePath = await exportReport('html');
       if(scopeRef.current!==expected || getProjectContextGeneration()!==generation)return;
-      // The desktop app opens the saved report; a browser cannot open a file on the backend's computer, so it says where it is.
-      if (host.can('openPaths')) await host.openPath(filePath);
-      else setReportError(`HTML 보고서를 저장했습니다: ${filePath}. 브라우저에서는 이 파일을 열 수 없습니다.`);
+      if (host.kind() === 'browser') downloadBrowserReport({file_path:filePath,format:'html',content:useEvaluationStore.getState().exportedReportContent});
+      else if (host.can('openPaths')) await host.openPath(filePath);
     } catch (error) {
       setReportError(error instanceof Error ? error.message : 'HTML 보고서 내보내기 실패');
     }
   };
 
   const handleExportJson = async () => {
+    const expected=scope, generation=getProjectContextGeneration();
     setReportError(null);
     try {
-      await exportReport('json');
+      const filePath=await exportReport('json');
+      if(scopeRef.current!==expected||getProjectContextGeneration()!==generation)return;
+      if(host.kind()==='browser')downloadBrowserReport({file_path:filePath,format:'json',content:useEvaluationStore.getState().exportedReportContent});
     } catch (error) {
       setReportError(error instanceof Error ? error.message : 'JSON 보고서 내보내기 실패');
     }
@@ -614,6 +617,7 @@ export const EvaluationStudio: React.FC = () => {
       </div>
 
       {exportedReportPath && <p className="mx-6 mb-3 break-all text-xs text-emerald-300">보고서 저장 완료: {exportedReportPath}</p>}
+      {host.kind()==='browser' && exportedReportContent && exportedReportPath?.endsWith('.html') && <iframe title="HTML 보고서 미리보기" sandbox="" referrerPolicy="no-referrer" srcDoc={reportPreviewDocument(exportedReportContent)} className="mx-6 mb-4 min-h-96 w-[calc(100%-3rem)] rounded border border-slate-600 bg-white" />}
       {(errorMessage || reportError) && (
         <div role="alert" className="mx-6 mt-3 rounded border border-amber-600 bg-amber-950/40 p-2 text-xs text-amber-200">
           {reportError || errorMessage}

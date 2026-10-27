@@ -8,6 +8,7 @@ from pydantic import BaseModel, ConfigDict, Field, StrictBool
 from backend.api.routes_project import get_current_project
 from backend.api.routes_image_truth import execute, require_role
 from backend.engine import flow_evaluation
+from backend.engine.flow_evaluation_response import evaluation_response
 from backend.engine import whole_flow_approval
 from backend.api.shared_authorization import request_actor
 
@@ -183,7 +184,7 @@ def evaluate(body: EvaluationRequest, request: Request):
         # Measurement nodes find the project's spatial calibrations by reference (E03).
         with calibration_scope(project_calibration_store(project).load):
             return flow_evaluation.evaluate_flow(project, **body.model_dump())
-    return execute(run)
+    return evaluation_response(execute(run))
 
 
 @router.get('')
@@ -194,7 +195,7 @@ def history(request: Request):
 
 @router.get('/{evaluation_id}')
 def evaluation(evaluation_id: str, request: Request):
-    return execute(lambda: flow_evaluation.read_evaluation(get_current_project(request), evaluation_id))
+    return evaluation_response(execute(lambda: flow_evaluation.read_evaluation(get_current_project(request), evaluation_id)))
 
 
 @router.post('/{evaluation_id}/review-queue')

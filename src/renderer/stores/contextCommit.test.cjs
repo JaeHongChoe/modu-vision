@@ -139,3 +139,7 @@ test('edits made while an open, create or restore request is in flight refuse th
     assert.match(store.getState().projectError || '', /새 편집/);
   }
 });
+
+test('reopening a recent native registration passes its location identity through the normal edit-save lifecycle',async()=>{const world=harness(),calls=[];world.setProjectApi({open:async(...args)=>{calls.push(args);return {...second,registration_id:'restored-registration',workspace_id:'restored-workspace'};}});assert.equal(await world.store.getState().openProject(second.project_dir,'restored-registration'),true);assert.deepEqual(calls,[[second.project_dir,'restored-registration']]);assert.equal(world.store.getState().project.registration_id,'restored-registration');});
+
+test('explicit native receipt recovery uses normal saved-edit refusal and accepts only the recovered location',async()=>{const f=harness(),calls=[];assert.equal(typeof f.store.getState().recoverProject,'function');f.setProjectApi({recover:async(...args)=>{calls.push(args);return {...second,registration_id:'recovered-location'};}});assert.equal(await f.store.getState().recoverProject('operation-1','/published/target'),true);assert.deepEqual(calls,[['operation-1','/published/target']]);assert.equal(f.store.getState().project.registration_id,'recovered-location');const dirty=harness({dirty:true});let writes=0;dirty.setProjectApi({recover:async()=>{writes++;return second;}});assert.equal(await dirty.store.getState().recoverProject('operation-1','/published/target'),false);assert.equal(writes,0);});

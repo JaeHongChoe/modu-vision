@@ -87,6 +87,7 @@ def test_flow_package_contains_saved_graph_and_checksum_bound_model(tmp_path: Pa
 def test_package_publication_waits_out_windows_readers_but_refuses_persistent_errors(
         tmp_path, monkeypatch, windows, busy_calls, expected_calls):
     from backend.remote import file_replace
+    from types import SimpleNamespace
     checkpoint = _checkpoint(tmp_path)
     real_rename = os.rename
     attempts, sleeps = [], []
@@ -97,7 +98,8 @@ def test_package_publication_waits_out_windows_readers_but_refuses_persistent_er
         return real_rename(source, target)
     monkeypatch.setattr(file_replace, '_WINDOWS', windows)
     monkeypatch.setattr(file_replace, 'ATTEMPTS', 4)
-    monkeypatch.setattr(file_replace.time, 'sleep', sleeps.append)
+    # Bind only this module's clock; unrelated polling keeps stdlib time.sleep.
+    monkeypatch.setattr(file_replace, 'time', SimpleNamespace(sleep=sleeps.append))
     monkeypatch.setattr(os, 'rename', busy_reader)
     kwargs = dict(pipeline=get_single_detection_flowchart(job_id='job_detector'),
                   checkpoints={'job_detector': checkpoint}, output_base_dir=tmp_path/'exports', package_name='reader_flow')

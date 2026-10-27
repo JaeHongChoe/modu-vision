@@ -1,3 +1,4 @@
+import type { BrowserHost } from './browserHost';
 import type { SharedConnection } from '../../types/electron';
 
 /** A same-origin browser client uses the server's HttpOnly cookie. Only the
@@ -6,6 +7,12 @@ import type { SharedConnection } from '../../types/electron';
 export class BrowserSession {
   private current: (SharedConnection & { csrf: string }) | null = null;
   private generation = 0;
+  revision():number {return this.generation;}
+  private readonly listeners=new Set<()=>void>();
+  subscribe=(listener:()=>void):(()=>void)=>{this.listeners.add(listener);return()=>{this.listeners.delete(listener);};};
+  private notify():void {for(const listener of this.listeners)listener();}
+  /** Retire only renderer authority; a missing/expired proof requires explicit re-login. */
+  invalidate():void {this.generation++;this.current=null;this.notify();}
   constructor(private readonly runtime: {
     origin: () => string | null;
     fetch: typeof fetch;
@@ -20,7 +27,7 @@ export class BrowserSession {
 
   connection(): SharedConnection | null {
     if (!this.current || this.current.expires_at <= this.runtime.now()) {
-      this.current = null;
+      if(this.current)this.invalidate();
       return null;
     }
     const { csrf: _csrf, ...publicValue } = this.current;
@@ -45,22 +52,24 @@ export class BrowserSession {
       throw new Error('계정 이름과 12자 이상의 비밀번호를 확인하세요.');
     const epoch = ++this.generation;
     this.current = null;
-    const response = await this.runtime.fetch(url.origin + '/api/accounts/login', {
-      method: 'POST', credentials: 'same-origin', redirect: 'error', signal: AbortSignal.timeout(15000),
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ username: input.username, password: input.password, transport: 'cookie' }),
-    });
-    const value = await response.json();
-    if (epoch !== this.generation) throw new Error('연결 상태가 바뀌었습니다. 다시 로그인하세요.');
-    if (!response.ok) throw new Error(typeof value.detail === 'string' ? value.detail : '공유 서버 로그인에 실패했습니다.');
-    if ('token' in value || !Number.isFinite(value.expires_at) || value.expires_at <= this.runtime.now()
-      || typeof value.csrf_token !== 'string' || !/^[A-Za-z0-9_-]{20,256}$/.test(value.csrf_token)
-      || typeof value.user?.id !== 'string' || !/^[A-Za-z0-9_-]{1,128}$/.test(value.user.id)
-      || typeof value.user.username !== 'string' || typeof value.user.administrator !== 'boolean' && ![0, 1].includes(value.user.administrator))
-      throw new Error('서버가 유효한 브라우저 세션을 반환하지 않았습니다.');
-    this.current = { server_url: url.origin, expires_at: value.expires_at,
-      user: { id: value.user.id, username: value.user.username, administrator: value.user.administrator }, csrf: value.csrf_token };
-    return this.connection()!;
+    try {
+      const response = await this.runtime.fetch(url.origin + '/api/accounts/login', {
+        method: 'POST', credentials: 'same-origin', redirect: 'error', signal: AbortSignal.timeout(15000),
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username: input.username, password: input.password, transport: 'cookie' }),
+      });
+      const value = await response.json();
+      if (epoch !== this.generation) throw new Error('연결 상태가 바뀌었습니다. 다시 로그인하세요.');
+      if (!response.ok) throw new Error(typeof value.detail === 'string' ? value.detail : '공유 서버 로그인에 실패했습니다.');
+      if ('token' in value || !Number.isFinite(value.expires_at) || value.expires_at <= this.runtime.now()
+        || typeof value.csrf_token !== 'string' || !/^[A-Za-z0-9_-]{20,256}$/.test(value.csrf_token)
+        || typeof value.user?.id !== 'string' || !/^[A-Za-z0-9_-]{1,128}$/.test(value.user.id)
+        || typeof value.user.username !== 'string' || typeof value.user.administrator !== 'boolean' && ![0, 1].includes(value.user.administrator))
+        throw new Error('서버가 유효한 브라우저 세션을 반환하지 않았습니다.');
+      this.current = { server_url: url.origin, expires_at: value.expires_at,
+        user: { id: value.user.id, username: value.user.username, administrator: value.user.administrator }, csrf: value.csrf_token };
+      return this.connection()!;
+    } finally {if(epoch===this.generation)this.notify();}
   }
 
   select(projectId: string): SharedConnection {
@@ -73,7 +82,7 @@ export class BrowserSession {
   async disconnect(): Promise<void> {
     const previous = this.current;
     this.generation++;
-    this.current = null;
+    this.current = null;this.notify();
     if (!previous) return;
     const response = await this.runtime.fetch(previous.server_url + '/api/accounts/logout', {
       method: 'POST', credentials: 'same-origin', redirect: 'error', signal: AbortSignal.timeout(5000),
@@ -87,3 +96,7 @@ export const browserSession = new BrowserSession({
   origin: () => typeof window !== 'undefined' && !window.api ? window.location?.origin ?? null : null,
   fetch: (...args) => fetch(...args), now: () => Date.now() / 1000,
 });
+
+/** Registered by the browser entrypoint; desktop and isolated consumers keep their existing host boundary. */
+export let localBrowserHost:BrowserHost|null=null;
+export function setBrowserHost(adapter:BrowserHost):void {localBrowserHost=adapter;}

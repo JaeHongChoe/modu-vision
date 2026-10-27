@@ -2,6 +2,8 @@ import React, { useEffect, useRef, useState } from 'react';
 import { CheckCircle2, FileArchive, ListChecks, Play, RefreshCw, ShieldCheck, Square, X } from 'lucide-react';
 import { api, request, type ProjectConfig, type DatasetDuplicateGroup, type DatasetImportView, type DatasetRevisionImage, type DatasetRevisionRow } from '../../services/api';
 import type { VisionTask } from '../../types';
+import {host} from '../../services/hostAdapter';
+import type {LinkedSourcePlan,LinkedSourceSnapshot} from '../../services/linkedSources';
 import { uploadArchive, type ArchiveProgress } from '../../services/archiveUpload';
 import { acceptBlocker, annotationSummary, archiveProgressText, clearImportKey, importSourceText, duplicateSummary, importEnded, importHeadline, importKeyFor, importProgress, revisionJobLabel, sourceMismatchNotice } from './datasetImportView';
 import { datasetImportError as message } from './datasetImportError';
@@ -29,6 +31,9 @@ export const DatasetImportPanel: React.FC<Props> = ({ projectId, datasetPath, re
   const [policy, setPolicy] = useState<'exclude' | 'reject'>('exclude');
   const [verify, setVerify] = useState(false);
   const [followLinks, setFollowLinks] = useState(false);
+  const [linkedPlan,setLinkedPlan]=useState<LinkedSourcePlan|null>(null);
+  const [linkedCopy,setLinkedCopy]=useState<LinkedSourceSnapshot|null>(null);
+  const [linkedNotice,setLinkedNotice]=useState<string|null>(null);
   const [job, setJob] = useState<DatasetImportView | null>(null);
   const [revisions, setRevisions] = useState<DatasetRevisionRow[]>([]);
   const [activeRevision, setActiveRevision] = useState<string | null>(null);
@@ -48,6 +53,10 @@ export const DatasetImportPanel: React.FC<Props> = ({ projectId, datasetPath, re
   const latestSourceInputs = useRef('');
   // One key per intended import: a retried request (lost response, second click, reopened panel) returns the same job.
   const settingsKey = `${projectId}|${registeredSource || ''}|${task}|${policy}|${verify}|${followLinks}`;
+
+  useEffect(()=>{sourceAction.current++;setLinkedPlan(null);setLinkedCopy(null);setLinkedNotice(null);
+    setBusy(value=>value?.startsWith('linked-')?null:value);
+  },[projectId,registeredSource,datasetPath,task]);
 
   const loadRevisions = async () => {
     const listed = await api.datasetImports.revisions();
@@ -132,7 +141,7 @@ export const DatasetImportPanel: React.FC<Props> = ({ projectId, datasetPath, re
     if (busy || !registeredSource) return;
     setBusy('start'); setError(null); setConfirming(false);
     try {
-      const view = await api.datasetImports.start({ task, invalid_policy: policy, verify, follow_links: followLinks },
+      const view = await api.datasetImports.start({ task, invalid_policy: policy, verify, follow_links: host.kind()==='desktop'&&followLinks },
         importKeyFor(settingsKey, newKey));
       clearImportKey(settingsKey);
       writeLastJob(projectId, view.job_id);
@@ -203,6 +212,28 @@ export const DatasetImportPanel: React.FC<Props> = ({ projectId, datasetPath, re
     }
   };
 
+  const linkedAction=async(kind:'preview'|'copy'|'use')=>{
+    if(busy||!sourceSelectionScope||!onUseUploadedSource)return;
+    const scope=sourceSelectionScope();if(!scope||scope.source!==registeredSource)return;
+    const action=++sourceAction.current,inputs=latestSourceInputs.current;
+    const current=()=>mounted.current&&action===sourceAction.current&&inputs===latestSourceInputs.current&&sourceSelectionScope()?.key===scope.key;
+    setBusy('linked-'+kind);setError(null);setLinkedNotice(null);
+    try{
+      if(kind==='preview'){
+        const plan=await host.linkedSources.preview(scope,current);
+        if(current()){setLinkedPlan(plan);setLinkedCopy(null);}
+      }else if(kind==='copy'&&linkedPlan){
+        const plan=linkedPlan;setLinkedPlan(null); // A delivered native consent request is never retried.
+        const copy=await host.linkedSources.materialize(scope,plan,current);
+        if(current()){setLinkedCopy(copy);if(!copy)setLinkedNotice('링크 대상 확인을 취소했습니다.');}
+      }else if(kind==='use'&&linkedCopy){
+        await host.linkedSources.useCopy(scope,linkedCopy,current,onUseUploadedSource);
+        if(current()){setFollowLinks(false);setLinkedCopy(null);setLinkedNotice('복사본을 원본으로 선택했습니다. 전체 검증을 직접 실행하세요.');}
+      }
+    }catch(caught){if(mounted.current&&action===sourceAction.current&&sourceSelectionScope()?.ownerKey===scope.ownerKey)setError(message(caught));}
+    finally{if(mounted.current&&action===sourceAction.current)setBusy(null);}
+  };
+
   const progress = importProgress(job);
   const running = Boolean(job && !importEnded(job));
   return (
@@ -225,12 +256,28 @@ export const DatasetImportPanel: React.FC<Props> = ({ projectId, datasetPath, re
               <div className="break-all font-mono text-[10px] leading-5 text-slate-300">{registeredSource || '등록되지 않음'}</div>
             </div>
             {sourceMismatchNotice(datasetPath, registeredSource) && <div role="status" className="rounded-md border border-amber-600/50 bg-amber-950/30 p-2 text-[11px] leading-5 text-amber-200">{sourceMismatchNotice(datasetPath, registeredSource)}</div>}
+            {host.linkedSources.available()&&<section aria-label="링크 자료 복사" className="space-y-2 rounded-lg border border-[#344963] bg-[#18283B] p-3">
+              <h3 className="text-sm font-semibold text-white">링크 자료를 프로젝트 복사본으로</h3>
+              <p className="text-[11px] leading-5 text-slate-400">프로젝트 소유자가 등록 원본의 링크 대상을 검토하고 이 PC에서 허용하면 읽기 전용 복사본을 만듭니다. 최대 파일 10,000개·4 GiB·링크 32개·깊이 24단계·폴더와 링크 대상을 포함한 노드 25,000개·검토 정보 8 MiB를 지원합니다. 다른 프로젝트 멤버도 복사한 내용을 읽을 수 있습니다. 복사본 사용과 전체 검증은 각각 직접 선택합니다.</p>
+              <button type="button" className="workspace-button w-full" disabled={Boolean(busy)||running||!registeredSource||!sourceSelectionScope||!onUseUploadedSource} onClick={()=>void linkedAction('preview')}>링크 대상 검토</button>
+              {linkedPlan&&<div className="space-y-2 text-[11px] text-slate-300">
+                <div>{linkedPlan.file_count.toLocaleString()}개 파일 · {(linkedPlan.total_bytes/(1024*1024)).toFixed(1)} MB</div>
+                <ul>{linkedPlan.targets.map(target=><li key={target.link} className="break-all py-1"><b>{target.link}</b> → {target.path}</li>)}</ul>
+                <div className="break-all font-mono text-[10px] text-slate-400">SHA-256 {linkedPlan.plan_sha256}</div>
+                <button type="button" className="workspace-button w-full" disabled={Boolean(busy)||running} onClick={()=>void linkedAction('copy')}>대상 확인하고 복사본 만들기</button>
+                <button type="button" className="workspace-button w-full" disabled={Boolean(busy)} onClick={()=>{sourceAction.current++;setLinkedPlan(null);}}>검토 취소</button>
+              </div>}
+              {linkedCopy&&<div className="space-y-2 text-[11px] text-slate-300"><div>{linkedCopy.file_count.toLocaleString()}개 파일 복사 완료</div><div className="break-all font-mono text-[10px]">{linkedCopy.source}</div>
+                <button type="button" className="workspace-button workspace-button--primary w-full" disabled={Boolean(busy)||running} onClick={()=>void linkedAction('use')}>이 복사본으로 작업 시작</button>
+              </div>}
+              {linkedNotice&&<div role="status" className="text-[11px] leading-5 text-sky-200">{linkedNotice}</div>}
+            </section>}
             <fieldset className="space-y-2" disabled={running || Boolean(busy)}>
               <legend className="mb-1 text-sm font-semibold text-white">손상 이미지 처리</legend>
               <label className="flex items-start gap-2 text-xs leading-5 text-slate-300"><input type="radio" name="invalid-policy" checked={policy === 'exclude'} onChange={() => setPolicy('exclude')} className="mt-1" /><span><b className="text-slate-100">제외하고 기록</b> · 손상 이미지는 학습에서 빠지고 목록이 남습니다.</span></label>
               <label className="flex items-start gap-2 text-xs leading-5 text-slate-300"><input type="radio" name="invalid-policy" checked={policy === 'reject'} onChange={() => setPolicy('reject')} className="mt-1" /><span><b className="text-slate-100">하나라도 있으면 거부</b> · 버전은 기록되지만 채택할 수 없습니다.</span></label>
               <label className="flex items-start gap-2 pt-2 text-xs leading-5 text-slate-300"><input type="checkbox" checked={verify} onChange={(event) => setVerify(event.target.checked)} className="mt-1" /><span>바뀌지 않은 파일도 모두 다시 읽기</span></label>
-              <label className="flex items-start gap-2 text-xs leading-5 text-slate-300"><input type="checkbox" checked={followLinks} onChange={(event) => setFollowLinks(event.target.checked)} className="mt-1" /><span>폴더 바로가기(링크)도 따라가기 · 이 PC의 원본에서만 허용됩니다</span></label>
+              {host.kind()==='desktop'&&<label className="flex items-start gap-2 text-xs leading-5 text-slate-300"><input type="checkbox" checked={followLinks} onChange={(event) => setFollowLinks(event.target.checked)} className="mt-1" /><span>폴더 바로가기(링크)도 따라가기 · 이 PC의 원본에서만 허용됩니다</span></label>}
             </fieldset>
             <div className="flex gap-2">
               <button type="button" className="workspace-button workspace-button--primary flex-1" onClick={() => void start()} disabled={!registeredSource || running || Boolean(busy)}><Play className="h-4 w-4" />{busy === 'start' ? '요청 중...' : '전체 검증 실행'}</button>

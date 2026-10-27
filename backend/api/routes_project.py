@@ -114,6 +114,9 @@ def _activate_project_locked(request: Request, project: Dict[str, Any]) -> Dict[
         migrate_legacy_split_manifest(project)
     except (OSError, ValueError) as exc:
         raise HTTPException(422,detail=f'프로젝트를 열지 못했습니다. 예전 분할 기록을 옮기는 중 문제가 생겼습니다: {exc}') from exc
+    if account and accounts and getattr(request.state,'local_project_creation',False):
+        request.state.scoped_project=project
+        return project
     if account and accounts:
         accounts.register_project(project['id'],project['project_dir'],account['id'])
         request.state.scoped_project=project
@@ -512,7 +515,12 @@ def update_project(req: ProjectUpdateRequest, request: Request):
 def list_projects(request: Request):
     account=getattr(request.state,'account_user',None)
     if account:
-        return {'projects':[_load_project(Path(row['path'])) for row in request.app.state.accounts.projects_for(account['id'])]}
+        projects=[]
+        local_registry=getattr(request.app.state,'local_projects',None)
+        for row in request.app.state.accounts.projects_for(account['id']):
+            if local_registry is not None:local_registry.authorize_location(request.app,account,row['path'])
+            projects.append(_load_project(Path(row['path'])))
+        return {'projects':projects}
     return {"projects": _load_history(request)}
 
 

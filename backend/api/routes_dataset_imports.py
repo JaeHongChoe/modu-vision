@@ -20,6 +20,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from backend.engine.dataset_import_job import KIND as IMPORT_KIND, DatasetImportJobs, ImportNotAcceptable, ImportSpec
 from backend.engine.dataset_index import DatasetIndex, RevisionNotActivatable, StaleActiveRevision, index_path
 from backend.engine.job_store import JobConflict, StaleRevision, ledger
+from backend.local_host.projects import native_backup_view
 
 router = APIRouter(prefix="/api/dataset", tags=["Dataset imports"])
 _IDEMPOTENCY_KEY = re.compile(r"^[A-Za-z0-9_.:-]{1,128}$")
@@ -324,14 +325,14 @@ def submit_backup(request: Request):
         raise HTTPException(409, str(exc)) from exc
     if ref.created:
         jobs.start(ref.id)
-    return {**jobs.view(ref.id, project_key, context.actor_id), 'idempotent_replay': not ref.created}
+    return {**native_backup_view(request, jobs.view(ref.id, project_key, context.actor_id)), 'idempotent_replay': not ref.created}
 
 
 @router.get('/operations/backups/{job_id}')
 def get_backup(job_id: str, request: Request):
     context, project_key, _project = _scope(request)
     try:
-        return _backup_jobs().view(job_id, project_key, context.actor_id)
+        return native_backup_view(request, _backup_jobs().view(job_id, project_key, context.actor_id))
     except KeyError:
         raise HTTPException(404, 'Backup not found') from None
 
@@ -348,7 +349,7 @@ def resume_backup(job_id: str, request: Request):
         raise HTTPException(409, str(exc)) from exc
     if ref.state == 'accepted':
         jobs.start(ref.id)
-    return jobs.view(job_id, project_key, context.actor_id)
+    return native_backup_view(request, jobs.view(job_id, project_key, context.actor_id))
 
 
 @router.post('/operations/backups/{job_id}/cancel')

@@ -1,13 +1,13 @@
-/** S1-10: the host features the renderer needs, separated by host.
- *
- *  The desktop app reaches native dialogs, the operating system's file browser and the shared-server session through
- *  the preload bridge. A plain browser has no native dialogs or OS file browser:
- *  picking a path and opening a local folder or file refuse with an explicit message
- *  instead of silently doing nothing, while links open in a new tab and files are uploaded and downloaded the same way
- *  on both hosts (archive uploads and anchor downloads). HTTPS browsers use same-origin HttpOnly account cookies.
+/** Host features use the desktop preload or the authenticated localhost helper.
+ * A browser keeps its cookie/CSRF transport and negotiates native capabilities;
+ * other browser hosts retain typed-path and upload/download fallbacks.
  * Components ask this module, never the bridge itself.
  */
-import { browserSession } from './browserSession';
+import type { FolderOptions, FileOptions } from './browserHost';
+import { BrowserRemote } from './browserRemote';
+import { setRemoteTransport,request,getProjectContext,getProjectContextGeneration } from './api';
+import {LinkedSourceClient} from './linkedSources';
+import { browserSession, localBrowserHost as browserHost } from './browserSession';
 import type { ElectronAPI, SharedConnection } from '../../types/electron';
 
 export type HostKind = 'desktop' | 'browser';
@@ -38,14 +38,27 @@ function required<K extends keyof ElectronAPI>(capability: HostCapability, metho
   return value as NonNullable<ElectronAPI[K]>;
 }
 
+const browserRemote=new BrowserRemote({origin:()=>typeof window!=='undefined'&&!window.api?window.location?.origin??null:null,session:browserSession,host:()=>browserHost,fetch:(...args)=>fetch(...args),now:()=>Date.now()/1000});
+setRemoteTransport(browserRemote);
+const linkedSources=new LinkedSourceClient({
+ available:()=>!bridge()&&!browserRemote.connection()&&!!browserHost?.available()&&!!browserHost.can('projects'),
+ prepare:async()=>{if(!browserHost)throw new Error('로컬 보조 프로그램 연결을 확인하세요.');await browserHost.prepareRemote();},
+ context:getProjectContext,generation:()=>`${getProjectContextGeneration()}:${browserHost?.generation()??0}`,request,
+});
+
 export const host = {
+  linkedSources,
+  localBrowser(): boolean { return !bridge() && !!browserHost?.available() && !!browserHost?.can('projects'); },
+
+  unavailableReason(capability: HostCapability): string { return !bridge() && browserHost?.available() && capability !== 'sharedSessions' ? browserHost.reason(capability) : UNAVAILABLE[capability]; },
+
   kind(): HostKind {
     return bridge() ? 'desktop' : 'browser';
   },
 
   can(capability: HostCapability): boolean {
     const api = bridge();
-    if (!api) return capability === 'sharedSessions' && browserSession.available();
+    if (!api) return capability === 'sharedSessions' ? browserSession.available() : browserHost?.can(capability) ?? false;
     switch (capability) {
       case 'pickPaths': return typeof api.selectFolder === 'function' && typeof api.selectFile === 'function';
       case 'openPaths': return typeof api.openExternal === 'function';
@@ -54,23 +67,26 @@ export const host = {
     }
   },
 
-  /** The assistant's main-process bridge (provider keys and calls stay in the main process); null in a browser or an
-   *  older desktop build, where every step of the app works the same without it. */
+  /** Provider credentials and requests stay in the native service on either supported host. */
   assistant(): NonNullable<ElectronAPI['assistant']> | null {
-    return bridge()?.assistant ?? null;
+    return bridge()?.assistant ?? browserHost?.assistant() ?? null;
   },
 
   // Every host call is async, so a missing feature always arrives as a rejected promise (never a synchronous throw that
   // a caller's .catch would not see).
 
   /** A folder path chosen in the native dialog; null when the user cancels. */
-  async selectFolder(options?: { title?: string; defaultPath?: string }): Promise<string | null> {
-    return required('pickPaths', 'selectFolder')(options);
+  async selectFolder(options?: FolderOptions): Promise<string | null> {
+    if (!bridge() && browserHost?.available()) return browserHost.selectFolder(options);
+    const nativeOptions=options?(({purpose:_purpose,...rest})=>rest)(options):undefined;
+    return required('pickPaths', 'selectFolder')(nativeOptions);
   },
 
   /** A file path chosen in the native dialog; null when the user cancels. */
-  async selectFile(options?: Parameters<ElectronAPI['selectFile']>[0]): Promise<string | null> {
-    return required('pickPaths', 'selectFile')(options);
+  async selectFile(options?: FileOptions): Promise<string | null> {
+    if (!bridge() && browserHost?.available()) return browserHost.selectFile(options);
+    const nativeOptions=options?(({purpose:_purpose,...rest})=>rest)(options):undefined;
+    return required('pickPaths', 'selectFile')(nativeOptions);
   },
 
   /** Open a web link: through the desktop shell, or in a new browser tab without access to this page. */
@@ -81,45 +97,52 @@ export const host = {
     return window.open(url, '_blank', 'noopener,noreferrer') !== null;
   },
 
-  /** Open a local folder or file in the operating system's file browser (desktop only). */
+  /** Open a local folder or file in the operating system's file browser (when the current host supports it). */
   async openPath(path: string): Promise<boolean> {
+    if (!bridge() && browserHost?.available()) return browserHost.openPath(path);
     return required('openPaths', 'openExternal')(path);
   },
 
-  /** The desktop app's release channel and manual update delivery (desktop only). */
+  /** The desktop app's release channel and manual update delivery (when the current host supports it). */
   updates: {
-    status: async () => required('updates', 'getDistributionStatus')(),
-    configure: async (configuration: Parameters<ElectronAPI['configureUpdateChannel']>[0]) => required('updates', 'configureUpdateChannel')(configuration),
-    check: async () => required('updates', 'checkForUpdate')(),
-    download: async () => required('updates', 'downloadUpdate')(),
-    verifyOffline: async () => required('updates', 'verifyOfflineUpdate')(),
-    selectPortableHome: async () => required('updates', 'selectPortableUpdateHome')(),
-    inspectPortable: async () => required('updates', 'inspectPortableUpdate')(),
-    previewPortable: async (channel:'stable'|'beta',canary:Parameters<ElectronAPI['previewPortableUpdate']>[1]) => required('updates', 'previewPortableUpdate')(channel,canary),
-    applyPortable: async (id:string) => required('updates', 'applyPortableUpdate')(id),
-    recoverPortable: async (action:Parameters<ElectronAPI['recoverPortableUpdate']>[0],expected:Parameters<ElectronAPI['recoverPortableUpdate']>[1]) => required('updates', 'recoverPortableUpdate')(action,expected),
-    launchPortable: async (expected:Parameters<ElectronAPI['launchPortableUpdate']>[0]) => required('updates', 'launchPortableUpdate')(expected),
-    inspectPortableLaunch: async (expected:Parameters<ElectronAPI['inspectPortableLaunch']>[0]) => required('updates', 'inspectPortableLaunch')(expected),
+    status: async () => (!bridge() && browserHost?.available() ? browserHost.update('status', []) : required('updates', 'getDistributionStatus')()),
+    configure: async (configuration: Parameters<ElectronAPI['configureUpdateChannel']>[0]) => (!bridge() && browserHost?.available() ? browserHost.update('configure', [configuration]) : required('updates', 'configureUpdateChannel')(configuration)),
+    check: async () => (!bridge() && browserHost?.available() ? browserHost.update('check', []) : required('updates', 'checkForUpdate')()),
+    download: async () => (!bridge() && browserHost?.available() ? browserHost.update('download', []) : required('updates', 'downloadUpdate')()),
+    verifyOffline: async () => (!bridge() && browserHost?.available() ? browserHost.update('verifyOffline', []) : required('updates', 'verifyOfflineUpdate')()),
+    selectPortableHome: async () => (!bridge() && browserHost?.available() ? browserHost.update('selectPortableHome', []) : required('updates', 'selectPortableUpdateHome')()),
+    inspectPortable: async () => (!bridge() && browserHost?.available() ? browserHost.update('inspectPortable', []) : required('updates', 'inspectPortableUpdate')()),
+    previewPortable: async (channel:'stable'|'beta',canary:Parameters<ElectronAPI['previewPortableUpdate']>[1]) => (!bridge() && browserHost?.available() ? browserHost.update('previewPortable', [channel,canary]) : required('updates', 'previewPortableUpdate')(channel,canary)),
+    applyPortable: async (id:string) => (!bridge() && browserHost?.available() ? browserHost.update('applyPortable', [id]) : required('updates', 'applyPortableUpdate')(id)),
+    recoverPortable: async (action:Parameters<ElectronAPI['recoverPortableUpdate']>[0],expected:Parameters<ElectronAPI['recoverPortableUpdate']>[1]) => (!bridge() && browserHost?.available() ? browserHost.update('recoverPortable', [action,expected]) : required('updates', 'recoverPortableUpdate')(action,expected)),
+    launchPortable: async (expected:Parameters<ElectronAPI['launchPortableUpdate']>[0]) => (!bridge() && browserHost?.available() ? browserHost.update('launchPortable', [expected]) : required('updates', 'launchPortableUpdate')(expected)),
+    inspectPortableLaunch: async (expected:Parameters<ElectronAPI['inspectPortableLaunch']>[0]) => (!bridge() && browserHost?.available() ? browserHost.update('inspectPortableLaunch', [expected]) : required('updates', 'inspectPortableLaunch')(expected)),
   },
 
   shared: {
-    requestOptions: (url: string, method: string) => browserSession.requestOptions(url, method),
+    requestOptions: (url: string, method: string) => browserRemote.selection()?browserRemote.requestOptions(url,method):browserSession.requestOptions(url, method),
     async connection(): Promise<SharedConnection | null> {
       const api = bridge();
-      return api?.getSharedConnection ? api.getSharedConnection() : browserSession.connection();
+      if (api?.getSharedConnection) return api.getSharedConnection();
+      const connection = browserRemote.selection()??browserSession.connection();
+      if (connection && browserHost?.available()) await browserHost?.initialize().catch(() => undefined);
+      return connection;
     },
     async login(input: { server_url: string; username: string; password: string }): Promise<SharedConnection> {
-      if (!bridge() && browserSession.available()) return browserSession.login(input);
+      if (!bridge() && browserSession.available() && new URL(input.server_url).origin!==window.location.origin) return browserRemote.login(input);
+      if (!bridge() && browserSession.available()) { await browserRemote.disconnect(); browserHost?.reset(); const connection = await browserSession.login(input); await browserHost?.initialize().catch(() => undefined); return connection; }
       return required('sharedSessions', 'loginSharedServer')(input);
     },
     async select(projectId: string): Promise<SharedConnection> {
-      if (!bridge() && browserSession.available()) return browserSession.select(projectId);
+      if (!bridge() && browserRemote.selection()) return browserRemote.select(projectId);
+      if (!bridge() && browserSession.available()) { browserHost?.projectChanged(); return browserSession.select(projectId); }
       return required('sharedSessions', 'selectSharedProject')(projectId);
     },
     async disconnect(): Promise<void> {
       const api = bridge();
       if (api?.disconnectSharedServer) await api.disconnectSharedServer();
-      else if (!api) await browserSession.disconnect();
+      else if (!api && browserRemote.selection()) { await browserRemote.disconnect(); }
+      else if (!api) { await browserHost?.dispose().catch(() => undefined); await browserSession.disconnect(); }
     },
   },
 };
@@ -128,4 +151,20 @@ export const host = {
 export function hostErrorMessage(error: unknown, fallback: string): string {
   if (error instanceof HostUnavailable) return error.message;
   return error instanceof Error && error.message ? error.message : fallback;
+}
+
+/** Reports carry their own bytes; a server filesystem path is never a browser download URL. */
+export function downloadBrowserReport(report:{file_path:string;format:'html'|'json';content?:string|null}):void {
+  if(typeof report.content!=='string')throw new Error('보고서 내용을 받지 못했습니다. 다시 내보내세요.');
+  const blob=new Blob([report.content],{type:report.format==='html'?'text/html;charset=utf-8':'application/json;charset=utf-8'});
+  const url=URL.createObjectURL(blob),anchor=document.createElement('a');
+  anchor.href=url;
+  anchor.download=(report.file_path.split(/[\\/]/).pop()||`report.${report.format}`).replace(/[\x00-\x1f<>:"|?*]/g,'_');
+  document.body.appendChild(anchor);
+  try{anchor.click();}finally{anchor.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);}
+}
+
+/** Preview content remains an opaque-origin document with no scripts, network or parent access. */
+export function reportPreviewDocument(content:string):string {
+  return '<meta http-equiv="Content-Security-Policy" content="default-src &apos;none&apos;; img-src data:; style-src &apos;unsafe-inline&apos;; form-action &apos;none&apos;; base-uri &apos;none&apos;">'+content;
 }

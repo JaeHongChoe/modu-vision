@@ -27,7 +27,7 @@ export function RuntimePackPanel(){
   finally{if(same(started))setBusy(false);}
  };
  const pick=(kind:'source'|'inventory')=>void act(async started=>{
-  const value=kind==='source'?await host.selectFolder({title:'프로젝트 안의 런타임 팩 payload 폴더',defaultPath:projectDir||undefined}):await host.selectFile({title:'런타임 팩 inventory JSON',filters:[{name:'JSON',extensions:['json']}]});
+  const value=kind==='source'?await host.selectFolder({purpose:'runtime-source',title:'프로젝트 안의 런타임 팩 payload 폴더',defaultPath:projectDir||undefined}):await host.selectFile({purpose:'runtime-inventory',title:'런타임 팩 inventory JSON',filters:[{name:'JSON',extensions:['json']}]});
   if(value&&same(started))(kind==='source'?setSource:setDocument)(value);
  });
  const install=()=>void act(async started=>{
@@ -39,7 +39,7 @@ export function RuntimePackPanel(){
   setNotice(`${row.id} ${row.version} · 검증한 파일 보관 완료 · 실행 환경 활성화 전`);
  });
  return <fieldset aria-label="선택형 런타임 팩" className="rounded border border-slate-700 p-3">
-  <legend>선택형 런타임 팩</legend>
+  <legend>선택형 런타임 팩</legend>{host.localBrowser?.()&&<p className="mt-2 text-xs text-slate-400">선택한 반입 자료는 프로젝트 작업 폴더에 검증·복사합니다. 원본은 그대로 보관합니다.</p>}
   <p className="my-2 text-slate-400">현재 프로젝트 폴더 안에 payload와 inventory JSON을 준비하세요. 출처에서 별도로 확인한 SHA-256을 입력하면 파일을 검사한 뒤 프로젝트에 보관합니다. 공유 서버에서는 서버의 프로젝트 경로를 사용하세요.</p>
   <div className="space-y-3">
    <label className="block">팩 payload 폴더<input aria-label="런타임 팩 payload 폴더" disabled={busy} value={source} onChange={e=>setSource(e.target.value)} className={input}/></label>

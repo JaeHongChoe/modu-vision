@@ -43,7 +43,8 @@ function markup(focus = false, {reviewOpen = false, draftWide = false} = {}) {
     useAssistantStore: {useAssistantStore: store({isOpen: false})},
     firstRunStore: {useFirstRunStore: store({open: false})},
   };
-  const allowed = new Set(['App', 'WizardHeader', 'WizardFooter', 'LabelingTool', 'LabelingStudio', 'LabelingToolbar', 'LabelSetBar',
+  // Keep the real root auth boundary: browserSession recognizes the desktop window.api host seeded below.
+  const allowed = new Set(['App', 'BrowserSessionGate', 'browserSession', 'WizardHeader', 'WizardFooter', 'LabelingTool', 'LabelingStudio', 'LabelingToolbar', 'LabelSetBar',
     'TeamDataPanel', 'ImageReviewPanel', 'ClassificationClassPicker', 'CategorySelector', 'DraftReviewQueue', 'ModelAssistPanel',
     'ImageFilmstrip', 'DerivedImagePanel', 'SavedReviewQueuePanel', 'WorkflowImpactPanel', 'AsyncAction',
     'labelingLayout', 'convertedAnnotation', 'coordinateMath', 'draftReview', 'popoverRoom', 'imageReadCustody',

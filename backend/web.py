@@ -75,8 +75,9 @@ def main(argv=None):
             cert, key = ensure_tls(paths, args.cert_file, args.key_file)
             from backend.engine.shared_accounts import AccountStore
             ensure_first_account(AccountStore(paths.auth / 'accounts.sqlite'), paths.root)
-            from backend.local_web_runtime import build_renderer, run_https
+            from backend.local_web_runtime import build_renderer, build_local_helper
             renderer = build_renderer(paths)
+            helper_entry = build_local_helper(paths)
             import json
             os.environ['MODU_BROWSER_ORIGINS'] = json.dumps([origin])
             # Discard a desktop supervisor's capability; keep the freshly
@@ -84,7 +85,9 @@ def main(argv=None):
             os.environ.pop('VISION_AI_STUDIO_API_TOKEN', None)
             from backend.main import create_app
             api = create_app(project_dir=str(paths.projects), shared_auth_dir=str(paths.auth))
-            asyncio.run(run_https(api, renderer, origin, sock, cert, key, paths, no_open=args.no_open))
+            from backend.local_host.launcher import serve_with_local_host
+            asyncio.run(serve_with_local_host(api, renderer, origin, sock, cert, key, paths,
+                                             helper_entry, no_open=args.no_open))
         return 0
     except KeyboardInterrupt:
         return 130

@@ -9,6 +9,10 @@ async function exercise(page:Page,workspace:Workspace,evidence:Evidence,api:Api,
   const catalog=await api('/api/models/capabilities'),matrix=await api('/api/model-execution/capabilities');
   expect(catalog.families).toHaveLength(10);expect(Object.keys(matrix.families)).toHaveLength(10);
   if(url)await page.goto(url);else await page.reload();
+  // The catalogue case starts only after the ordinary project/source hydration.
+  // A focused stage button alone does not establish that this initial adoption finished.
+  await expect(page.getByTitle('프로젝트 관리',{exact:true})).toContainText('Execution support catalog control');
+  await expect(page.getByRole('button',{name:'데이터셋 폴더 열기',exact:true})).toBeEnabled();
   await page.getByRole('navigation',{name:'Workflow Stages'}).getByRole('button').nth(2).click();
   const hub=page.getByRole('region',{name:'모델 학습 허브'});
   let projectTask='classification';

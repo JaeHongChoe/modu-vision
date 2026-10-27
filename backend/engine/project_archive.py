@@ -333,8 +333,34 @@ def _rebind_evaluation(value: dict, old_project: Path, target: Path,
     return updated
 
 
+def _rebind_overlay_mask(value: Any, annotation: Path, staging: Path, target: Path,
+                         scopes: dict[str, str]) -> Any:
+    """Move only a saved raster pointer in its own relocated editable overlay."""
+    if not isinstance(value, dict) or not isinstance(value.get("mask_file"), str):
+        return value
+    parts = annotation.relative_to(staging).parts
+    if len(parts) == 4 and parts[:2] == ("annotations", "by_dataset"):
+        root = Path("annotations")
+    elif (len(parts) == 6 and parts[0] == "labelsets" and parts[2:4] == ("annotations", "by_dataset")
+          and re.fullmatch(r"ls_[0-9a-f]{12}", parts[1])):
+        root = Path(*parts[:3])
+    else:
+        return value
+    try:
+        pointer = Path(value["mask_file"]).relative_to(target / root / "by_dataset")
+    except ValueError:
+        return value
+    # Do not rewrite other scopes, relative paths, hash substrings or arbitrary
+    # JSON fields. The annotation itself has already moved to its new scope.
+    if (len(pointer.parts) != 3 or pointer.parts[1] != "masks"
+            or scopes.get(pointer.parts[0]) != annotation.parent.name):
+        return value
+    return {**value, "mask_file": str(target / root / "by_dataset" / annotation.parent.name / "masks" / pointer.name)}
+
+
 def _rebind_json_records(staging: Path, old_project: Path, target: Path,
-                         old_source: Path | None, new_source: Path | None) -> None:
+                         old_source: Path | None, new_source: Path | None,
+                         scopes: dict[str, str]) -> None:
     source_roots = _restored_source_roots(staging)
     immutable_roots = _immutable_package_roots(staging)
     annotation_hashes: dict[str, str] = {}
@@ -354,6 +380,7 @@ def _rebind_json_records(staging: Path, old_project: Path, target: Path,
             updated = _rebind_evaluation(value, old_project, target, old_source, new_source)
         else:
             updated = _rebind_value(value, old_project, target, old_source, new_source)
+            updated = _rebind_overlay_mask(updated, path, staging, target, scopes)
         if updated != value:
             previous_hash = _digest_file(path)
             path.write_text(json.dumps(updated, ensure_ascii=False, indent=2), encoding="utf-8")
@@ -466,6 +493,10 @@ def _rebind_versions(staging: Path, old_project: Path, target: Path,
                     except ValueError:
                         continue
                     updated = _rebind_value(value, old_project, target, old_source, new_source)
+                    if origin in {"studio", "studio_scoped"} and isinstance(row.get("source_path"), str):
+                        editable = Path(row["source_path"])
+                        if editable.is_relative_to(target):
+                            updated = _rebind_overlay_mask(updated, staging / editable.relative_to(target), staging, target, scopes)
                     if updated != value:
                         snapshot.write_text(json.dumps(updated, ensure_ascii=False, indent=2), encoding="utf-8")
                     if origin in {"studio", "studio_scoped"} and "metadata" not in Path(backup).parts:
@@ -938,7 +969,7 @@ def _restore_archive(archive_path: Path, target_dir: Path, *, staging_dir: Path 
             project_path.write_text(json.dumps(project, ensure_ascii=False, indent=2), encoding="utf-8")
             scopes = _scope_replacements(expected, old_source, new_source)
             _rebind_dataset_state(staging, old_source, new_source, scopes)
-            _rebind_json_records(staging, old_project, target_dir, old_source, new_source)
+            _rebind_json_records(staging, old_project, target_dir, old_source, new_source, scopes)
             version_digests = _rebind_versions(staging, old_project, target_dir, old_source, new_source, scopes)
             _rebind_inspection_history(staging, old_project, target_dir, old_source, new_source)
             _rebind_deployments(staging, old_source, new_source)
