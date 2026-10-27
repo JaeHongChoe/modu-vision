@@ -179,12 +179,14 @@ export class SiwcConnection {
     const registration=input.recordId?this.store.registration(input.recordId):null;if(input.recordId&&!registration)throw new ProviderError(assistantError('invalid_input'));
     if(input.enablePlanUsage!==undefined&&(input.enablePlanUsage!==true||!input.recordId||this.store.state().accounts.find(a=>a.recordId===input.recordId)?.planUsageEnabled!==false))throw new ProviderError(assistantError('invalid_input'));
     const label=input.label?.trim();if(label!==undefined&&(!label||label.length>100))throw new ProviderError(assistantError('invalid_input'));
-    this.invalidate();const generation=this.generation;this.status='waiting';
+    this.invalidate();const generation=this.generation,ownerRevision=this.deps.credentialOwner?.revision;
+    const ownerCurrent=()=>!this.deps.credentialOwner||!this.deps.credentialOwner.closed&&this.deps.credentialOwner.revision===ownerRevision;
+    this.status='waiting';
     let server:Server|undefined;
     try {
       server=http.createServer();server.maxHeadersCount=20;server.requestTimeout=5000;server.headersTimeout=5000;server.keepAliveTimeout=1000;
       await new Promise<void>((resolve,reject)=>{const error=()=>reject(protocol('listener_failed'));server!.once('error',error);server!.listen(0,'127.0.0.1',()=>{server!.off('error',error);resolve();});});
-      if(this.disposed||generation!==this.generation){server.close();throw protocol('cancelled');}
+      if(this.disposed||generation!==this.generation||!ownerCurrent()){server.close();throw protocol('cancelled');}
       const address=server.address();if(!address||typeof address==='string')throw protocol('listener_failed');const redirectUri=`http://127.0.0.1:${address.port}/auth/callback`;
       const auth=createAuthorizationAttempt({hostId:this.store.hostId(),appName:'Modu Vision',redirectUri,clientId:registration?.clientId,promptConsent:input.enablePlanUsage===true,now:this.now});
       const controller=new AbortController();const timer=setTimeout(()=>{if(this.attempt?.generation===generation){this.closeAttempt();this.failure(protocol('attempt_expired'));}},this.attemptTimeoutMs);timer.unref?.();
@@ -192,10 +194,10 @@ export class SiwcConnection {
       server.on('request',(req,res)=>{res.setHeader('Content-Type','text/html; charset=utf-8');res.setHeader('Cache-Control','no-store');res.setHeader('Content-Security-Policy',"default-src 'none'; frame-ancestors 'none'");res.setHeader('Referrer-Policy','no-referrer');
         if(req.method!=='GET'||req.headers.host!==`127.0.0.1:${address.port}`||!req.url||req.url.length>12288||!req.url.startsWith('/auth/callback?')){res.statusCode=404;res.end('요청을 찾을 수 없습니다.');return;}
         if(this.attempt?.generation!==generation||this.status!=='waiting'){res.statusCode=410;res.end('연결 시도가 끝났습니다. 앱으로 돌아가세요.');return;}
-        this.status='exchanging';void (async()=>{try {const grant=auth.acceptCallback(redirectUri+req.url!.slice('/auth/callback'.length));
+        this.status='exchanging';void (async()=>{try {if(!ownerCurrent())throw protocol('cancelled');const grant=auth.acceptCallback(redirectUri+req.url!.slice('/auth/callback'.length));
           const tokens=await this.operation(async signal=>{await this.discovery(signal);const [reply,jwks]=await Promise.all([this.form({url:TOKEN,form:grant.form,signal}),this.keys(signal,true)]);if(reply.status!==200)throw this.httpError(reply.status,reply.body);
             return acceptAuthorizationTokens(reply.body,{clientId:grant.clientId,nonce:grant.nonce,jwks,nowMs:this.now(),...(registration?{expectedSubject:registration.subject}:{})});},{signal:controller.signal});
-          if(this.disposed||this.attempt?.generation!==generation||controller.signal.aborted)throw protocol('cancelled');
+          if(this.disposed||this.attempt?.generation!==generation||controller.signal.aborted||!ownerCurrent())throw protocol('cancelled');
           if(registration&&(tokens.issuer!==registration.issuer||tokens.subject!==registration.subject||tokens.clientId!==registration.clientId))throw protocol('identity_mismatch');
           const saved=this.store.save(tokens,{...(input.recordId?{recordId:input.recordId}:{}),...(label?{label}:{}),activate:true});this.sessions.delete(saved.recordId);this.blocked.delete(saved.recordId);this.unsafeCredentials.delete(saved.recordId);this.listed.delete(saved.recordId);this.revision++;if(this.deps.credentialOwner)this.deps.credentialOwner.revision++;this.status='connected';this.error=undefined;
           res.statusCode=200;res.end('ChatGPT 연결을 확인했습니다. 이 창을 닫고 Modu Vision으로 돌아가세요.');this.closeAttempt();
@@ -203,7 +205,7 @@ export class SiwcConnection {
         }catch(error){if(generation===this.generation&&!this.disposed){this.failure(error);this.closeAttempt();}res.statusCode=400;res.end('ChatGPT 연결을 완료하지 못했습니다. 앱에서 연결 상태를 확인하세요.');}})();
       });
       const authUrl=new URL(auth.authorizationUrl),hint=input.recordId?this.store.credentials(input.recordId)?.idToken:null;if(hint)authUrl.searchParams.set('id_token_hint',hint);
-      await this.deps.openExternal(authUrl.href);if(this.disposed||generation!==this.generation)throw protocol('cancelled');return this.state();
+      await this.deps.openExternal(authUrl.href);if(this.disposed||generation!==this.generation||!ownerCurrent())throw protocol('cancelled');return this.state();
     }catch(error){server?.close();if(generation===this.generation&&!this.disposed){this.closeAttempt();this.failure(error);}throw new ProviderError(siwcConnectionError(error));}
   }
   cancel():SiwcConnectionState {this.invalidate();this.status='idle';return this.state();}
@@ -221,19 +223,28 @@ export class SiwcConnection {
     if(!account)throw protocol('no_account');if(!account.signedIn||this.blocked.has(account.recordId))throw protocol('reconnect_required','sign_in');
     if(!account.planUsageEnabled)throw protocol('plan_scope_missing');if(requireModel&&account.usagePaused)throw protocol('usage_paused');if(requireModel&&!validModel(account.model))throw protocol('model_required');return account;}
   private async access(recordId:string,signal:AbortSignal,timeoutMs:number):Promise<SiwcTokens> {
-    if(this.blocked.has(recordId))throw protocol('reconnect_required','sign_in');const tokens=this.store.credentials(recordId);if(!tokens)throw protocol('signed_out','sign_in');
+    const ownerRevision=this.deps.credentialOwner?.revision;
+    const ownerCurrent=()=>!this.deps.credentialOwner||!this.deps.credentialOwner.closed&&this.deps.credentialOwner.revision===ownerRevision;
+    if(this.blocked.has(recordId))throw protocol('reconnect_required','sign_in');let tokens=this.store.credentials(recordId);if(!tokens)throw protocol('signed_out','sign_in');
     if(!tokens.planUsageEnabled)throw protocol('plan_scope_missing');if(tokens.expiresAt>this.now()+30000)return tokens;
     let session=this.sessions.get(recordId);
-    if(!session){const jwks=await this.keys(signal);if(signal.aborted)throw protocol('cancelled');
+    if(!session){const jwks=await this.keys(signal);
+      // Discovery awaits before a refresh session exists: revocation must fence this window too.
+      if(signal.aborted||!ownerCurrent()||this.blocked.has(recordId))throw protocol('cancelled');
+      tokens=this.store.credentials(recordId);if(!tokens)throw protocol('cancelled');
+      if(!tokens.planUsageEnabled)throw protocol('plan_scope_missing');if(tokens.expiresAt>this.now()+30000)return tokens;
       // Another concurrent caller may already own the same rotating refresh.
       session=this.sessions.get(recordId);if(!session){const transport=async(request:Parameters<typeof this.form>[0])=>{const response=await this.form(request),token=obj(response.body).id_token;
           // A decoded header only selects a trusted-key reload; it never establishes identity or bypasses signature verification.
           if(response.status===200&&typeof token==='string'&&token.length<=65536){let kid:unknown;try{const segment=token.split('.')[0];if(segment.length<=4096)kid=obj(JSON.parse(Buffer.from(segment,'base64url').toString('utf8'))).kid;}catch{}
             if(typeof kid==='string'&&kid.length<=200&&!jwks.keys.some(key=>key.kid===kid)){const fresh=await this.keys(request.signal,true);jwks.keys=fresh.keys;}}
           return response;};session={value:new SiwcTokenSession(tokens,{transport,jwks,now:this.now}),refresh:null};this.sessions.set(recordId,session);}}
-    const owned=session;
+    if(!ownerCurrent()||this.blocked.has(recordId))throw protocol('cancelled');
+    const owned=session,credentialFingerprint=createHash('sha256').update(JSON.stringify(tokens)).digest('hex');
     if(!owned.refresh){owned.refresh=(async()=>{try {const next=await owned.value.refresh({timeoutMs});
-        if((this.deps.credentialOwner?this.deps.credentialOwner.closed:this.disposed)||this.sessions.get(recordId)!==owned)throw protocol('cancelled');
+        if((this.deps.credentialOwner?this.deps.credentialOwner.closed:this.disposed)||!ownerCurrent()||this.blocked.has(recordId)||this.sessions.get(recordId)!==owned)throw protocol('cancelled');
+        const current=this.store.credentials(recordId);
+        if(!current||createHash('sha256').update(JSON.stringify(current)).digest('hex')!==credentialFingerprint)throw protocol('cancelled');
         // Persist the replacement before any caller receives its access token. An inactive account stays inactive.
         this.store.save(next,{recordId,activate:false});if(!next.planUsageEnabled){this.revision++;if(this.deps.credentialOwner)this.deps.credentialOwner.revision++;}return next;
       }catch(error){if(this.sessions.get(recordId)===owned){

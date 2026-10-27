@@ -20,3 +20,31 @@ test('actor signout invalidates another tab authority even after the same creden
  const sa=tabSiwcStore(store),sb=tabSiwcStore(store);sa.setActive(account.recordId);sb.setActive(account.recordId);sa.setModel(account.recordId,'fixture-model');sb.setModel(account.recordId,'fixture-model');const make=s=>new SiwcConnection({store:s,credentialOwner:shared,now:()=>now,fetchImpl,openExternal:url=>{auth=new URL(url);}}),ca=make(sa),cb=make(sb);t.after(()=>{ca.dispose();cb.dispose();});
  const authority=ca.authority();await cb.signOut(account.recordId);await cb.begin({termsAccepted:true,recordId:account.recordId});const callback=new URL(auth.searchParams.get('redirect_uri'));callback.search=new URLSearchParams({state:auth.searchParams.get('state'),code:'fixture-code',client_id:client});assert.equal((await fetch(callback)).status,200);assert.equal(cb.state().accounts[0].signedIn,true);assert.notEqual(ca.authority(),authority,'an old response/replay binding cannot revive when signedIn becomes true again');
 });
+
+function revocationFixture(t,{expired=false,gateJwks=false,gateToken=false}={}){
+ const dir=fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(),'host-revocation-'))),directory=path.join(dir,'actor'),store=new SiwcStore(directory,enc),shared=new SiwcCredentialOwner();
+ const now=1792800000000,issuer='https://auth.openai.com',client='oaiapp_revocation_fixture',pair=crypto.generateKeyPairSync('rsa',{modulusLength:2048}),jwk={...pair.publicKey.export({format:'jwk'}),kid:'fixture',alg:'RS256',use:'sig'};
+ const jwt=nonce=>{const header=Buffer.from(JSON.stringify({alg:'RS256',kid:'fixture'})).toString('base64url'),body=Buffer.from(JSON.stringify({iss:issuer,aud:client,sub:'fixture-subject',iat:now/1000,exp:now/1000+3600,...(nonce?{nonce}:{})})).toString('base64url'),message=header+'.'+body;return message+'.'+crypto.sign('sha256',Buffer.from(message),pair.privateKey).toString('base64url');};
+ const account=store.save({issuer,subject:'fixture-subject',clientId:client,accessToken:'fixture-old-access',refreshToken:'fixture-old-refresh',idToken:jwt(),scopes:['chatgpt.tokens.use.direct'],expiresAt:now+(expired?1:3600000),planUsageEnabled:true},{activate:false});
+ let auth,refreshCalls=0,jwksSeen,tokenSeen,releaseJwks,releaseToken,firstJwks=true;const jwksStarted=new Promise(r=>jwksSeen=r),tokenStarted=new Promise(r=>tokenSeen=r),jwksWait=new Promise(r=>releaseJwks=r),tokenWait=new Promise(r=>releaseToken=r);
+ const fetchImpl=async(url,init)=>{if(url.endsWith('/.well-known/openid-configuration'))return Response.json({issuer,authorization_endpoint:issuer+'/api/accounts/authorize',token_endpoint:issuer+'/api/accounts/oauth/token',jwks_uri:issuer+'/jwks'});
+  if(url.endsWith('/jwks')){if(gateJwks&&firstJwks){firstJwks=false;jwksSeen();await jwksWait;}return Response.json({keys:[jwk]});}
+  if(url.endsWith('/oauth/token')){const refreshing=new URLSearchParams(init.body).get('grant_type')==='refresh_token',nonce=refreshing?undefined:auth.searchParams.get('nonce');if(refreshing)refreshCalls++;if(gateToken){tokenSeen();await tokenWait;}return Response.json({access_token:'fixture-new-access',refresh_token:'fixture-new-refresh',id_token:jwt(nonce),token_type:'Bearer',expires_in:3600,scope:'openid chatgpt.tokens.use.direct'});}
+  if(url.endsWith('/responses'))return new Response('event: response.completed\ndata: '+JSON.stringify({type:'response.completed',response:{status:'completed',output:[{type:'message',role:'assistant',content:[{type:'output_text',text:'fixture reply'}]}]}})+'\n\n',{headers:{'content-type':'text/event-stream'}});throw Error('Unexpected fixture URL');};
+ const make=()=>{const s=tabSiwcStore(store);s.setActive(account.recordId);s.setModel(account.recordId,'fixture-model');return new SiwcConnection({store:s,credentialOwner:shared,fetchImpl,now:()=>now,openExternal:url=>{auth=new URL(url);}});},ca=make(),cb=make();
+ t.after(()=>{releaseJwks();releaseToken();ca.dispose();cb.dispose();shared.dispose(store);fs.rmSync(dir,{recursive:true,force:true});});
+ return {ca,cb,store,shared,directory,account,jwksStarted,tokenStarted,releaseJwks,releaseToken,refreshCalls:()=>refreshCalls,callback:()=>{const callback=new URL(auth.searchParams.get('redirect_uri'));callback.search=new URLSearchParams({state:auth.searchParams.get('state'),code:'fixture-code',client_id:client});return fetch(callback);}};
+}
+for(const stage of ['before-callback','during-exchange'])test(`sibling signout fences an older OAuth attempt ${stage} and permits a fresh explicit begin`,async t=>{
+ const f=revocationFixture(t,{gateToken:stage==='during-exchange'});await f.cb.begin({termsAccepted:true,recordId:f.account.recordId});let pending;
+ if(stage==='during-exchange'){pending=f.callback();await f.tokenStarted;}
+ await f.ca.signOut(f.account.recordId);assert.equal(f.store.credentials(f.account.recordId),null);
+ if(stage==='before-callback')pending=f.callback();else f.releaseToken();
+ assert.equal((await pending).status,400,'the old callback must be refused before saving credentials');assert.equal(f.store.credentials(f.account.recordId),null);
+ await f.cb.begin({termsAccepted:true,recordId:f.account.recordId});assert.equal((await f.callback()).status,200);assert.equal(f.store.credentials(f.account.recordId).refreshToken,'fixture-new-refresh');
+});
+test('sibling signout during pre-session JWKS discovery cannot create or persist a stale refresh',async t=>{
+ const f=revocationFixture(t,{expired:true,gateJwks:true}),pending=f.ca.complete({system:'fixture',messages:[{role:'user',text:'fixture'}],tools:[]}),failed=assert.rejects(pending,e=>e.detail?.code==='cancelled');await f.jwksStarted;
+ await f.cb.signOut(f.account.recordId);assert.equal(f.store.credentials(f.account.recordId),null);f.releaseJwks();await failed;assert.equal(f.refreshCalls(),0,'a revoked token must never reach the refresh endpoint');assert.equal(f.store.credentials(f.account.recordId),null);
+ f.ca.dispose();f.cb.dispose();f.shared.dispose(f.store);const reopened=new SiwcStore(f.directory,enc);try{assert.equal(reopened.credentials(f.account.recordId),null);}finally{reopened.close();}
+});

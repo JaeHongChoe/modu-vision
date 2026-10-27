@@ -2,19 +2,24 @@
 import path from 'node:path';
 import {Console} from 'node:console';
 import type {Readable,Writable} from 'node:stream';
-import {FrameDecoder,HostError,MAX_FRAME_BYTES,type HostRequest,type HostResponse} from './protocol';
+import {FrameDecoder,HostError,MAX_FRAME_BYTES,parseRequest,type HostRequest,type HostResponse} from './protocol';
 import {LocalHostService,prepareStateDirectory} from './service';
 import {electronEncryptor} from '../assistant/keyStore';
 
 export function runProtocol(input:Readable,output:Writable,service:Pick<LocalHostService,'handle'|'dispose'>,onClose:(cause?:HostError)=>void,
- limits:{maxBytes?:number;maxOutputBytes?:number;maxConcurrent?:number}={}):()=>void {
- const decoder=new FrameDecoder(limits.maxBytes),pending=new Set<string>();let closed=false;
+ limits:{maxBytes?:number;maxOutputBytes?:number;maxConcurrent?:number;maxControlConcurrent?:number}={}):()=>void {
+ const decoder=new FrameDecoder(limits.maxBytes),pending=new Set<string>();let closed=false,ordinaryPending=0,controlPending=0;
+ // A bounded reserved lane keeps revocation reachable while ordinary dialogs/provider calls are saturated.
+ const controls=new Set(['session.dispose','session.disposeAll','assistant.cancel','assistant.chatgpt.cancel','assistant.chatgpt.signOut','assistant.removeKey','assistant.removeProvider','assistant.endRun']);
  const close=(cause?:HostError)=>{if(closed)return;closed=true;input.removeListener('data',data);service.dispose();onClose(cause);};
  const reply=(value:HostResponse)=>{if(closed)return;let line=JSON.stringify(value);if(Buffer.byteLength(line)>(limits.maxOutputBytes??MAX_FRAME_BYTES))line=JSON.stringify({id:value.id,ok:false,error:{code:'response_too_large',message:'response_too_large'}});output.write(line+'\n');};
  const dispatch=(request:HostRequest)=>{const id=typeof request?.id==='string'&&/^[A-Za-z0-9_-]{1,200}$/.test(request.id)?request.id:'invalid';
   if(pending.has(id)){reply({id,ok:false,error:{code:'duplicate_request',message:'duplicate_request'}});return;}
-  if(pending.size>=(limits.maxConcurrent??16)){reply({id,ok:false,error:{code:'too_many_requests',message:'too_many_requests'}});return;}
-  pending.add(id);void service.handle(request).then(reply,()=>reply({id,ok:false,error:{code:'operation_refused',message:'operation_refused'}})).finally(()=>pending.delete(id));
+  const control=controls.has(request?.method);
+  if(control)try{parseRequest(request);}catch(cause){const code=cause instanceof HostError?cause.code:'invalid_request';reply({id,ok:false,error:{code,message:code}});return;}
+  if(control?controlPending>=(limits.maxControlConcurrent??8):ordinaryPending>=(limits.maxConcurrent??16)){reply({id,ok:false,error:{code:'too_many_requests',message:'too_many_requests'}});return;}
+  pending.add(id);if(control)controlPending++;else ordinaryPending++;
+  void service.handle(request).then(reply,()=>reply({id,ok:false,error:{code:'operation_refused',message:'operation_refused'}})).finally(()=>{pending.delete(id);if(control)controlPending--;else ordinaryPending--;});
  };
  const data=(chunk:Buffer|string)=>{try{for(const request of decoder.push(Buffer.isBuffer(chunk)?chunk:Buffer.from(chunk)))dispatch(request);}catch(cause){close(cause instanceof HostError?cause:new HostError('invalid_request'));}};
  input.on('data',data);input.once('end',()=>{try{decoder.finish();close();}catch(cause){close(cause as HostError);}});input.once('error',()=>close(new HostError('input_closed')));output.once('error',()=>close(new HostError('output_closed')));return ()=>close();

@@ -22,7 +22,7 @@ export interface LocalHostOptions {stateDirectory:string;origin:string;native:Na
 type Actor={directory:string;keys:AssistantKeyStore;siwc:SiwcStore;credentialOwner:SiwcCredentialOwner};
 type Tab={actor:string;session:string;id:string;disposed:boolean;assistant:AssistantService;runs:AssistantRunRegistry;distribution:DistributionManager;portable:PortableUpdateManager};
 const hash=(value:string)=>crypto.createHash('sha256').update(value).digest('hex');
-const within=(p:string,root:string)=>p===root||p.startsWith(root+path.sep);
+const within=(p:string,root:string)=>{const relative=path.relative(root,p);return relative===''||relative!=='..'&&!relative.startsWith('..'+path.sep)&&!path.isAbsolute(relative);};
 export function prepareStateDirectory(directory:string):void {
   const absolute=path.resolve(directory);let current=path.parse(absolute).root;
   for(const part of absolute.slice(current.length).split(path.sep).filter(Boolean)){current=path.join(current,part);try{const s=fs.lstatSync(current);if(!s.isDirectory()||s.isSymbolicLink())throw new HostError('unsafe_storage');}catch(e){if((e as NodeJS.ErrnoException).code!=='ENOENT')throw e;fs.mkdirSync(current,{mode:0o700});}}
