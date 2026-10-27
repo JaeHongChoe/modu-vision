@@ -93,21 +93,42 @@ class SnapshotWriter:
             self.destination_fd=self.directory(self.identifier,parent_fd)
             os.mkdir('payload',0o700,dir_fd=self.destination_fd);self.payload_fd=self.directory('payload',self.destination_fd)
             self.payload=project/container/self.identifier/'payload'
+            self.directory_identities={():tuple(_identity_info(os.fstat(self.payload_fd))[:3])}
+            self.file_identities={};self.children={():set()}
         except BaseException: self.close();raise
 
     def directory(self, name, parent=None):
         fd=os.open(name,os.O_RDONLY|os.O_DIRECTORY|os.O_NOFOLLOW,dir_fd=parent);self.fds.append(fd);return fd
+
+    def _check_directory(self, fd, key, parent, name):
+        expected=self.directory_identities[key]
+        if tuple(_identity_info(os.fstat(fd))[:3])!=expected or tuple(_identity_info(os.stat(name,dir_fd=parent,follow_symlinks=False))[:3])!=expected:
+            raise ValueError('Snapshot directory changed')
 
     def output(self, relative):
         parts=Path(relative).parts
         if not parts or Path(relative).is_absolute() or any(p in {'','..','.'} for p in parts): raise ValueError('Invalid snapshot path')
         parent=self.payload_fd;opened=[]
         try:
-            for part in parts[:-1]:
-                try:os.mkdir(part,0o700,dir_fd=parent)
-                except FileExistsError:pass
-                parent=os.open(part,os.O_RDONLY|os.O_DIRECTORY|os.O_NOFOLLOW,dir_fd=parent);opened.append(parent)
-            return os.open(parts[-1],os.O_WRONLY|os.O_CREAT|os.O_EXCL|os.O_NOFOLLOW,0o600,dir_fd=parent)
+            self._check_directory(parent,(),self.destination_fd,'payload')
+            for index,part in enumerate(parts[:-1]):
+                key=parts[:index+1]
+                created=key not in self.directory_identities
+                if created:
+                    try:os.mkdir(part,0o700,dir_fd=parent)
+                    except FileExistsError:raise ValueError('Unowned snapshot directory') from None
+                child=os.open(part,os.O_RDONLY|os.O_DIRECTORY|os.O_NOFOLLOW,dir_fd=parent);opened.append(child)
+                if created:
+                    self.directory_identities[key]=tuple(_identity_info(os.fstat(child))[:3]);self.children[key]=set()
+                    self.children[key[:-1]].add(part)
+                self._check_directory(child,key,parent,part);parent=child
+            fd=os.open(parts[-1],os.O_WRONLY|os.O_CREAT|os.O_EXCL|os.O_NOFOLLOW,0o600,dir_fd=parent)
+            try:
+                expected=tuple(_identity_info(os.fstat(fd))[:3])
+                info=os.stat(parts[-1],dir_fd=parent,follow_symlinks=False)
+                if info.st_nlink!=1 or tuple(_identity_info(info)[:3])!=expected:raise ValueError('Snapshot output changed')
+                self.file_identities[parts]=expected;self.children[parts[:-1]].add(parts[-1]);return fd
+            except BaseException:os.close(fd);raise
         finally:
             for fd in reversed(opened):os.close(fd)
 
@@ -133,16 +154,29 @@ class SnapshotWriter:
         # receipt as evidence. The failure path publishes a separate failed one.
 
     def freeze(self):
-        def walk(fd):
-            for name in os.listdir(fd):
-                info=os.stat(name,dir_fd=fd,follow_symlinks=False)
-                if stat.S_ISDIR(info.st_mode):
-                    child=os.open(name,os.O_RDONLY|os.O_DIRECTORY|os.O_NOFOLLOW,dir_fd=fd)
-                    try:walk(child)
-                    finally:os.close(child)
-                elif not stat.S_ISREG(info.st_mode) or info.st_nlink!=1:raise ValueError('Snapshot changed')
+        def walk(fd,key,parent,name):
+            self._check_directory(fd,key,parent,name);seen=set();expected=self.children[key]
+            # Only recorded children can be inspected; stop at the first extra
+            # or repeated name instead of collecting an arbitrary directory.
+            with os.scandir(fd) as entries:
+                for entry in entries:
+                    child_name=entry.name
+                    if child_name not in expected or child_name in seen:raise ValueError('Snapshot inventory changed')
+                    seen.add(child_name);child_key=key+(child_name,)
+                    info=os.stat(child_name,dir_fd=fd,follow_symlinks=False)
+                    observed=tuple(_identity_info(info)[:3])
+                    if child_key in self.directory_identities:
+                        if observed!=self.directory_identities[child_key]:raise ValueError('Snapshot directory changed')
+                        child=os.open(child_name,os.O_RDONLY|os.O_DIRECTORY|os.O_NOFOLLOW,dir_fd=fd)
+                        try:walk(child,child_key,fd,child_name)
+                        finally:os.close(child)
+                    elif not stat.S_ISREG(info.st_mode) or info.st_nlink!=1 or observed!=self.file_identities[child_key]:
+                        raise ValueError('Snapshot output changed')
+            if seen!=expected:raise ValueError('Snapshot inventory changed')
+            self._check_directory(fd,key,parent,name)
             os.fchmod(fd,0o500);os.fsync(fd)
-        walk(self.payload_fd)
+            self._check_directory(fd,key,parent,name)
+        walk(self.payload_fd,(),self.destination_fd,'payload')
         if _identity(literal_path(self.project))[:3]!=self.project_identity or _identity(literal_path(self.payload))[:3]!=_identity_info(os.fstat(self.payload_fd))[:3]:
             raise ValueError('Snapshot location changed')
 

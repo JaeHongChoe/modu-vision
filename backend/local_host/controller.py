@@ -314,18 +314,25 @@ class LocalHostController:
         authority, selected = await self.invoke(request,'dialog.'+kind,'dialog.'+kind,options,project=needs_project)
         if selected is None: return {'path':None}
         try:
-            selection = self.grants.issue(authority,selected,purpose,'directory' if kind=='folder' else 'file')
-            if purpose in STAGED_PURPOSES:
-                allowed = {'owner','reviewer','trainer','labeler'} if purpose in {'label-import','mask-import'} else {'owner','reviewer','trainer'}
-                if authority.get('role') not in allowed: raise HTTPException(403,'Project role cannot import this input')
-                from .staging import stage_selection
-                import asyncio
-                staged = await asyncio.to_thread(stage_selection,Path(selection['path']),
-                    Path(authority['project']['project_dir']),purpose,protected_roots=self.protected)
+            if purpose not in STAGED_PURPOSES:
+                return self.grants.issue(authority,selected,purpose,'directory' if kind=='folder' else 'file')
+            allowed = {'owner','reviewer','trainer','labeler'} if purpose in {'label-import','mask-import'} else {'owner','reviewer','trainer'}
+            if authority.get('role') not in allowed: raise HTTPException(403,'Project role cannot import this input')
+            from .staging import SourceSelection, stage_selection
+            import asyncio
+            # Pin the selection before one-use consent consumption. The worker
+            # owns its own no-follow descriptor and must match this identity;
+            # request cancellation cannot close a worker-owned source descriptor.
+            with SourceSelection(selected) as source:
+                selection = self.grants.issue(authority,source.path,purpose,'directory' if kind=='folder' else 'file')
                 self.recheck(request,'dialog.'+kind,authority,project=True)
                 self.grants.consume(authority,[selection['grant_id']])
+                source.check_current()
+                staged = await asyncio.to_thread(stage_selection,source.path,
+                    Path(authority['project']['project_dir']),purpose,protected_roots=self.protected,
+                    expected_source_identity=source.identity)
+                self.recheck(request,'dialog.'+kind,authority,project=True)
                 return {**self.grants.issue(authority,staged,purpose,'directory' if staged.is_dir() else 'file'),'staged':True}
-            return selection
         except (ValueError,OSError) as error: raise HTTPException(422,str(error)[:500]) from None
 
     async def open(self, request, path):
