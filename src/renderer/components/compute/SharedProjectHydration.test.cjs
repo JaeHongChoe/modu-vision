@@ -68,7 +68,7 @@ async function scenario(outcome) {
   const done = new Promise(resolve => {completed = resolve;});
   const values = [null, connection.server_url, 'tester', 'fixture-password-123', [], '', [], '', '', '', 'viewer', '', {value: '', scope: null}, false, ''];
   let cursor = 0;
-  const react = {createElement: (type, props, ...children) => ({type, props: {...props, children}}), useEffect: () => {}, useState: initial => {
+  const react = {createElement: (type, props, ...children) => ({type, props: {...props, children}}), useEffect: () => {}, useSyncExternalStore: (_subscribe,getSnapshot)=>getSnapshot(), useState: initial => {
     const index = cursor++; if (values[index] === undefined) values[index] = initial;
     return [values[index], value => {values[index] = typeof value === 'function' ? value(values[index]) : value; if (index === 13 && value === false) completed();}];
   }};
@@ -76,7 +76,7 @@ async function scenario(outcome) {
     const panel = load('SharedProjectPanel.tsx', {
       react: {__esModule: true, default: react, ...react}, 'lucide-react': {Users: 'icon', LogIn: 'icon', LogOut: 'icon'},
       '../../services/api': api, '../../stores/useComputeStore': compute,
-      '../../stores/useProjectStore': {useProjectStore: store, saveOpenEdits: async () => {}},
+      '../../stores/useProjectStore': {projectSwitchRefusal:()=>null,subscribeProjectSwitchRefusal:()=>()=>{},useProjectStore: store, saveOpenEdits: async () => {}},
       '../../stores/useDatasetStore': {useDatasetStore: Object.assign(selector => selector({isLoading: false, isSplitting: false}), {getState: () => ({setFolderPath() {}})})},
       '../../stores/useAnnotationStore': {useAnnotationStore: {getState: () => ({setReviewerName() {}, setImages: async () => {}})}},
       '../../services/websocket': {telemetryService: {disconnect() {}, connect: async () => {}}},

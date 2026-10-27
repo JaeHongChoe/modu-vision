@@ -185,18 +185,17 @@ def _ground_truth_verdict(label: Any) -> str | None:
 def _test_images(source: Path, task: Task, maximum: int | None) -> tuple[list[dict[str, Any]], int]:
     if task == "patch_classification":
         return _patch_test_images(source, maximum or 2**31)
+    # Internal full comparisons already read every authorized test image. Build
+    # that inventory once; the public gallery retains its own 500-row Query cap.
     page = routes_dataset.list_dataset_images(
-        folder_path=str(source), task=task, limit=min(maximum or 500, 500), offset=0, split="test", class_name=None,
+        folder_path=str(source), task=task, limit=2**31 if maximum is None else min(maximum or 500, 500), offset=0, split="test", class_name=None,
     )
     total = int(page["total"])
     if total == 0:
         raise HTTPException(status_code=422, detail="비교할 test 이미지가 없습니다. 1단계에서 test 분할을 저장해 주세요.")
     images = list(page["items"])
-    if maximum is None:
-        while len(images) < total:
-            more = routes_dataset.list_dataset_images(folder_path=str(source), task=task, limit=500, offset=len(images), split="test", class_name=None)
-            if not more["items"]: raise HTTPException(409, "시험 이미지를 고르는 동안 테스트 이미지 목록이 바뀌었습니다. 다시 시도하세요.")
-            images.extend(more["items"])
+    if maximum is None and len(images) != total:
+        raise HTTPException(409, "시험 이미지를 고르는 동안 테스트 이미지 목록이 바뀌었습니다. 다시 시도하세요.")
     images = sorted(images, key=lambda item: item["file_path"])
     selected: list[dict[str, Any]] = []
     for item in images:

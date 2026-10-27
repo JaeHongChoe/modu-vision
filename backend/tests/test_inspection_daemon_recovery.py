@@ -15,6 +15,7 @@ import socket
 import sqlite3
 import threading
 import time
+from types import SimpleNamespace
 import uuid
 
 import httpx
@@ -25,9 +26,209 @@ import psutil
 from backend.engine.flow_package import build_flow_package
 from backend.engine.flowchart_engine import get_single_segmentation_flowchart
 from backend.engine import runtime_deadline
-from backend.engine.runtime_process_control import process_identity, owned_inspection_process
+from backend.engine.runtime_process_control import process_identity, owned_inspection_process, _runtime_spawn_diagnostic
 from backend.engine.service_bootstrap import runtime_command, runtime_cwd
 from backend.tests.runtime_release_fixture import real_classification_checkpoints
+
+
+_identity_now = time.monotonic
+_IDENTITY_NOTE = 'Original daemon identity failure observations: '
+
+
+def _identity_for_daemon_test(process, state, case_deadline):
+    try:
+        return process_identity(process, state)
+    except ValueError as original:
+        try:
+            _add_identity_failure_note(process, state, case_deadline, original)
+        except BaseException:
+            pass  # Even a failed observer must preserve the original refusal.
+        raise
+
+
+def _add_identity_failure_note(process, state, case_deadline, original):
+    """At most four failure-only observations; no sleep, retry or authority."""
+    started = _identity_now()
+    stop = min(case_deadline, started + .2)
+    note = {'schema': 'modu-vision.daemon-identity-failure-observations/v1',
+            'non_atomic': True, 'ownership_verified': False,
+            'sample_budget_ms': 200, 'samples': []}
+    baseline = getattr(original, 'runtime_spawn_diagnostic', {}).get('process', {}).get('birth')
+    if type(baseline) not in (int, float) or not 0 < baseline < float('inf'):
+        note['unavailable'] = 'original_birth_unavailable'
+    else:
+        def within(read):
+            if _identity_now() >= stop:
+                raise psutil.TimeoutExpired(.2)
+            return read()
+        for _ in range(4):
+            if _identity_now() >= stop:
+                break
+            sample = {'at_monotonic': _identity_now()}
+            note['samples'].append(sample)
+            try:
+                polled = within(process.poll)
+                if polled is not None:
+                    sample['original_poll_exit_code'] = polled if type(polled) is int else 'unavailable'
+                    break
+                owner = within(lambda: psutil.Process(process.pid))
+                birth = within(owner.create_time)
+                if birth != baseline:
+                    sample['unavailable'] = 'original_birth_changed'
+                    break
+                arguments = within(owner.cmdline)
+                # The production projection hashes command vectors and maps
+                # observation exceptions to fixed reason codes. Proxy methods
+                # check this frame before each additional OS read.
+                bounded_owner = SimpleNamespace(
+                    create_time=lambda: within(owner.create_time),
+                    status=lambda: within(owner.status))
+                bounded_process = SimpleNamespace(
+                    pid=process.pid, args=process.args, poll=lambda: within(process.poll))
+                observed = _runtime_spawn_diagnostic(bounded_process, bounded_owner, arguments, state)
+                for key in ('expected', 'observed'):
+                    sample[key] = {name: item for name, item in observed[key].items()
+                                   if name in ('argc', 'sha256', 'entry', 'state_flag_count',
+                                               'state_matches', 'unavailable')}
+                sample['process'] = observed['process']
+            except (psutil.Error, OSError) as error:
+                sample['unavailable'] = ('deadline' if isinstance(error, psutil.TimeoutExpired)
+                                         else 'process_observation_unavailable')
+                break
+    note['sampling_budget_exhausted'] = _identity_now() >= stop
+    encoded = _IDENTITY_NOTE + json.dumps(note, ensure_ascii=True, allow_nan=False, separators=(',', ':'))
+    if len(encoded.encode('utf-8')) <= 4096:
+        original.add_note(encoded)
+
+
+@pytest.fixture
+def identity_observation_case(monkeypatch, tmp_path):
+    counts = {'process': 0, 'birth': 0, 'cmdline': 0, 'status': 0, 'poll': 0}
+    state = tmp_path / 'PRIVATE-STATE'
+    command = ['python', '-m', 'backend.engine.inspection_service', '--state-dir', str(state),
+               '--token-file', 'PRIVATE-TOKEN-PATH', '--package', 'PRIVATE-MODEL-PATH']
+    value = {'command': command, 'birth': 42.5, 'status': 'running', 'poll': None, 'now': 0.0}
+    error = ValueError('Spawned runtime command differs from its owned state')
+    error.runtime_spawn_diagnostic = {'process': {'birth': 42.5}}
+    error.add_note('Original diagnostic note retained')
+    def read(key):
+        counts[key] += 1
+        return value[{'cmdline': 'command'}.get(key, key)]
+    owner = SimpleNamespace(pid=733, create_time=lambda: read('birth'),
+                            cmdline=lambda: read('cmdline'), status=lambda: read('status'))
+    process = SimpleNamespace(pid=733, args=command, poll=lambda: read('poll'))
+    def lookup(pid):
+        counts['process'] += 1
+        assert pid == process.pid
+        return owner
+    def refuse(*args):
+        raise error
+    monkeypatch.setitem(globals(), 'process_identity', refuse)
+    # Keep doubles in this test module; other CI workers can be observing their
+    # own real processes at the same time.
+    monkeypatch.setitem(globals(), 'psutil', SimpleNamespace(
+        Process=lookup, Error=psutil.Error, TimeoutExpired=psutil.TimeoutExpired))
+    monkeypatch.setitem(globals(), '_identity_now', lambda: value['now'])
+    return SimpleNamespace(process=process, owner=owner, state=state, error=error,
+                           value=value, counts=counts)
+
+
+def _added_identity_note(error):
+    notes = [n for n in error.__notes__ if n.startswith(_IDENTITY_NOTE)]
+    assert len(notes) == 1
+    assert len(notes[0].encode('utf-8')) <= 4096
+    return json.loads(notes[0][len(_IDENTITY_NOTE):])
+
+
+def test_identity_failure_observation_preserves_refusal_and_redacts_argv(identity_observation_case):
+    o = identity_observation_case
+    with pytest.raises(ValueError) as caught:
+        _identity_for_daemon_test(o.process, o.state, 10.0)
+    assert caught.value is o.error and o.error.__notes__[0] == 'Original diagnostic note retained'
+    note = _added_identity_note(o.error)
+    assert note['non_atomic'] is True and note['ownership_verified'] is False
+    assert 1 <= len(note['samples']) <= 4
+    retained = json.dumps(note)
+    for private in [str(o.state), 'PRIVATE-TOKEN-PATH', 'PRIVATE-MODEL-PATH']:
+        assert private not in retained
+    assert o.counts['cmdline'] <= 4
+
+
+def test_identity_failure_observation_expired_case_budget_reads_no_process(identity_observation_case):
+    o = identity_observation_case
+    with pytest.raises(ValueError) as caught:
+        _identity_for_daemon_test(o.process, o.state, 0.0)
+    assert caught.value is o.error
+    assert _added_identity_note(o.error)['samples'] == []
+    assert not any(o.counts.values())
+
+
+@pytest.mark.parametrize('case_deadline,crossed', [(10.0, .201), (.05, .051)])
+def test_identity_failure_observation_stops_new_reads_at_its_frame(identity_observation_case, case_deadline, crossed):
+    o = identity_observation_case
+    def command_crosses_budget():
+        o.counts['cmdline'] += 1
+        o.value['now'] = crossed
+        return o.value['command']
+    o.owner.cmdline = command_crosses_budget
+    with pytest.raises(ValueError) as caught:
+        _identity_for_daemon_test(o.process, o.state, case_deadline)
+    assert caught.value is o.error
+    note = _added_identity_note(o.error)
+    assert note['sampling_budget_exhausted'] is True and len(note['samples']) == 1
+    assert o.counts == {'process': 1, 'birth': 1, 'cmdline': 1, 'status': 0, 'poll': 1}
+
+
+def test_identity_failure_observation_unknown_original_birth_reads_no_process(identity_observation_case):
+    o = identity_observation_case
+    o.error.runtime_spawn_diagnostic = {'process': {'birth': {'unavailable': 'AccessDenied'}}}
+    with pytest.raises(ValueError) as caught:
+        _identity_for_daemon_test(o.process, o.state, 10.0)
+    assert caught.value is o.error
+    note = _added_identity_note(o.error)
+    assert note['samples'] == [] and note['unavailable'] == 'original_birth_unavailable'
+    assert not any(o.counts.values())
+
+
+def test_identity_failure_observation_large_vectors_remain_bounded(identity_observation_case):
+    o = identity_observation_case
+    o.process.args = ['PRIVATE-ARGV'] * 65
+    with pytest.raises(ValueError) as caught:
+        _identity_for_daemon_test(o.process, o.state, 10.0)
+    assert caught.value is o.error
+    note = _added_identity_note(o.error)
+    assert note['samples'][0]['expected'] == {'unavailable': 'command_bounds', 'argc': 65}
+    assert 'PRIVATE' not in json.dumps(note)
+
+
+@pytest.mark.parametrize('boundary', ['exit', 'birth'])
+def test_identity_failure_observation_stops_before_reading_another_command(identity_observation_case, boundary):
+    o = identity_observation_case
+    o.value['poll' if boundary == 'exit' else 'birth'] = 0 if boundary == 'exit' else 43.0
+    with pytest.raises(ValueError) as caught:
+        _identity_for_daemon_test(o.process, o.state, 10.0)
+    assert caught.value is o.error
+    assert len(_added_identity_note(o.error)['samples']) == 1
+    assert o.counts['cmdline'] == 0
+
+
+def test_identity_failure_observation_failure_cannot_replace_original_error(identity_observation_case, monkeypatch):
+    o = identity_observation_case
+    def unavailable(*args):
+        raise SystemExit('PRIVATE-OBSERVER-ERROR')
+    monkeypatch.setitem(globals(), '_runtime_spawn_diagnostic', unavailable)
+    with pytest.raises(ValueError) as caught:
+        _identity_for_daemon_test(o.process, o.state, 10.0)
+    assert caught.value is o.error
+    assert o.error.__notes__ == ['Original diagnostic note retained']
+
+
+def test_identity_failure_observation_never_reads_on_success(identity_observation_case, monkeypatch):
+    o = identity_observation_case
+    identity = {'pid': 733, 'process_created_at': 42.5, 'process_command_sha256': '0' * 64}
+    monkeypatch.setitem(globals(), 'process_identity', lambda *_: identity)
+    assert _identity_for_daemon_test(o.process, o.state, 10.0) is identity
+    assert not any(o.counts.values())
 
 
 def _sha(path):
@@ -240,7 +441,7 @@ def test_owned_real_cpu_daemon_restarts_committed_inbox_result_and_replays_outbo
         thread.start()
         assert launch_event.wait(min(10, max(0, case_deadline - time.monotonic())))
         process = handles[index]
-        identity = process_identity(process, state)
+        identity = _identity_for_daemon_test(process, state, case_deadline)
         owner = owned_inspection_process(identity, state)
         assert owner is not None and owner.pid == process.pid
         assert owner.ppid() == os.getpid() and owner.cmdline() == command

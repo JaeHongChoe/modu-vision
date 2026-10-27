@@ -72,6 +72,7 @@ async function harness({ connected = true, additive = true } = {}) {
     useRef(initial) { const i = cursor++; if (!hooks[i]) hooks[i] = { current: initial }; return hooks[i]; },
     useEffect(fn, deps) { const i = cursor++; if (!hooks[i] || !same(hooks[i].deps, deps)) {
       const previous = hooks[i]; hooks[i] = { deps }; effects.push(() => { previous?.cleanup?.(); hooks[i].cleanup = fn(); }); } },
+    useSyncExternalStore: (_subscribe,getSnapshot)=>getSnapshot(),
     useMemo(fn, deps) { const i = cursor++; if (!hooks[i] || !same(hooks[i].deps, deps)) hooks[i] = { deps, value: fn() }; return hooks[i].value; },
   };
   const jsx = (type, props) => ({ type, props: props || {} });
@@ -92,7 +93,7 @@ async function harness({ connected = true, additive = true } = {}) {
         if (endpoint === '/api/accounts/select-project') { calls.push('select-api'); backend = JSON.parse(options.body).project_id === second.id ? second : first; }
         return endpoint === '/api/accounts/me' ? { projects: [first, second].map(p => ({ id: p.id, path: p.project_dir, role: 'owner' })), selected_project_id: backend.id } : { users: [] };
       } },
-    '../../stores/useProjectStore': { useProjectStore: facade, saveOpenEdits: projectModule.saveOpenEdits },
+    '../../stores/useProjectStore': { ...projectModule, useProjectStore: facade },
     '../../stores/useComputeStore': { resetComputeTransportCache() {} },
     '../../stores/useDatasetStore': { useDatasetStore: dataset }, '../../stores/useAnnotationStore': { useAnnotationStore: annotation },
     '../../services/websocket': { telemetryService: { disconnect() {}, connect: async () => {} } },

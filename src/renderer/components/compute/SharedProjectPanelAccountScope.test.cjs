@@ -66,6 +66,7 @@ function fixture({administrator = true, loggedIn = true, refused = ''} = {}) {
   let cursor = 0;
   const react = {createElement: (type, props, ...children) => ({type, props: {...props, children}}),
     useEffect: (callback, dependencies) => effects.push({callback, dependencies}),
+    useSyncExternalStore: (_subscribe,getSnapshot)=>getSnapshot(),
     useState: initial => {
       const index = cursor++;
       if (values[index] === undefined) values[index] = initial;
@@ -99,7 +100,7 @@ function fixture({administrator = true, loggedIn = true, refused = ''} = {}) {
     'lucide-react': {Users: 'icon', LogIn: 'icon', LogOut: 'icon'},
     '../../services/api': client,
     '../../services/hostAdapter': {host},
-    '../../stores/useProjectStore': {useProjectStore: store, saveOpenEdits: async () => {}},
+    '../../stores/useProjectStore': {projectSwitchRefusal:()=>null,subscribeProjectSwitchRefusal:()=>()=>{},useProjectStore: store, saveOpenEdits: async () => {}},
     '../../stores/useComputeStore': {resetComputeTransportCache: () => resets.push(client.getProjectContext())},
     '../../stores/useDatasetStore': {useDatasetStore: Object.assign(selector => selector({isLoading: false, isSplitting: false}), {getState: () => ({setFolderPath: () => {}})})},
     '../../stores/useAnnotationStore': {useAnnotationStore: {getState: () => ({setReviewerName: () => {}, setImages: async () => {}})}},
