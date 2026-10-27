@@ -1,0 +1,132 @@
+{
+  "schema": "modu-vision.pr19-browser-ci-fix-source-delta/v1",
+  "scope": "Current source declaration delta and new narrow local checks; retained historical scenarios are not requalified.",
+  "base_commit": "e6f5fa5e257807af70b9d0e06d90cd8f332e889f",
+  "local_working_tree_checks": true,
+  "source_declaration_only": true,
+  "current_source_table_changes": [
+    {
+      "path": "docs/service-action-evidence.json",
+      "field": "sources.src/renderer/components/labeling/LabelingCanvas.tsx",
+      "original_sha256": "9cece178836e58b80b0fa940d3f13f33dbdee453ecbd1791e6459e9cc12bc67e",
+      "current_sha256": "5fe8e368fbb4ed43e48229d0dac634aa68cea937be2c44fa716c785470efb469"
+    }
+  ],
+  "historical_records": {
+    "old_manifest_sha256": "8dbad60f2daf8416ce2908affdfae77b6ad1725118a5b88694765edce6f53f3a",
+    "records_suffix_sha256": "12c49d882deb97b9bc52642f4f6ca83dfd4abe2af1718eaac846b17939a4dbfd",
+    "records_byte_identical": true,
+    "historical_receipts_modified": false,
+    "historical_capture_sources_rebound": false,
+    "new_historical_scenario_credit": 0,
+    "accepted_features": 0,
+    "verified_scenarios": 1014,
+    "pending_scenarios": 435
+  },
+  "changed_source_bytes": [
+    {
+      "path": "src/renderer/components/labeling/LabelingCanvas.tsx",
+      "previous_sha256": "9cece178836e58b80b0fa940d3f13f33dbdee453ecbd1791e6459e9cc12bc67e",
+      "current_sha256": "5fe8e368fbb4ed43e48229d0dac634aa68cea937be2c44fa716c785470efb469"
+    },
+    {
+      "path": "src/renderer/components/labeling/LabelingCanvasImageLoad.test.cjs",
+      "previous_sha256": "19c59b7063a3fdad94a006f4c3d2f6f9347a43ce91db631e2c00fac437981f39",
+      "current_sha256": "dcc77ce2d86cf091c6010ab60c364dfeac67cd1d36837c2675a24c6d289c7d99"
+    },
+    {
+      "path": "scripts/e2e/fixtures/savedEvaluationThresholdOwnership.ts",
+      "previous_sha256": "899bacbad44f4de535d94429593fd127601deace972328667a603aeed6624e18",
+      "current_sha256": "11c4491386a50146932c91f699b7c0f535f148e904b39a9d4c10786afabdd437"
+    }
+  ],
+  "retained_remote_failure": {
+    "run_id": 40511127003,
+    "head": "e6f5fa5e257807af70b9d0e06d90cd8f332e889f",
+    "browser_job_id": 122213026387,
+    "browser_result": {
+      "passed": 349,
+      "skipped": 2,
+      "failed": 2
+    },
+    "upload_failure": "Fit remained at 71% instead of greater than 100 within the original 20 second bound.",
+    "threshold_failure": "All scenario and original-file assertions completed; the passive response drain then consumed the original 240 second test limit.",
+    "artifact_id": 12742001931,
+    "artifact_bytes": 546501284,
+    "artifact_sha256": "b195514f29725fe421a466c5755658f3f936c0b2fd4c0665631d7c7e790fb7b0"
+  },
+  "onload_race_regression": {
+    "test": "src/renderer/components/labeling/LabelingCanvasImageLoad.test.cjs::a decoded image follows a focus resize before React publishes its new dimensions",
+    "red_observed": {
+      "pass": 17,
+      "fail": 1,
+      "actual_scale": 0.7109375,
+      "actual_offset_x": 469,
+      "expected_scale": 1.2109375,
+      "expected_offset_x": 405
+    },
+    "green_component_and_layout": {
+      "passed": 24,
+      "failed": 0
+    },
+    "method": "Actual component callbacks and coordinate helpers; controlled Image/React/DOM resize scheduling. Not a browser-pixel claim."
+  },
+  "new_browser_receipts": [
+    {
+      "spec": "scripts/e2e/browser-upload-annotation-reconnect.spec.ts",
+      "private_receipt": "<private-qa-root>/2026-10-27T14-46-16-187Z-95442/results/browser-upload-annotation--8f045-ox-after-reload-and-relogin-browser/harness-manifest.json",
+      "receipt_sha256": "90a58de04379187b7e7e5c9f0f74f5db01ebc8a8625713db9b0db3f79dda69c4",
+      "recorded_base_commit": "e6f5fa5e257807af70b9d0e06d90cd8f332e889f",
+      "recorded_dirty": true,
+      "screenshot_count": 2
+    },
+    {
+      "spec": "scripts/e2e/saved-evaluation-threshold-ownership.spec.ts",
+      "private_receipt": "<private-qa-root>/2026-10-27T14-46-16-187Z-95442/results/saved-evaluation-threshold-ef8b0--failure-and-late-responses-browser/harness-manifest.json",
+      "receipt_sha256": "ab26d2f7f501c228ed042b53cf3b886703851609cab1503646a5f837747fb712",
+      "recorded_base_commit": "e6f5fa5e257807af70b9d0e06d90cd8f332e889f",
+      "recorded_dirty": true,
+      "screenshot_count": 10
+    }
+  ],
+  "browser_report": {
+    "private_report": "<private-qa-root>/2026-10-27T14-46-16-187Z-95442/report.json",
+    "sha256": "c018e77efa7d293d0c5325e52b3e6037e34af5cab5cfd81690b99bff120f494c",
+    "expected": 2,
+    "unexpected": 0,
+    "skipped": 0,
+    "flaky": 0,
+    "duration_ms": 40859.386
+  },
+  "passive_observation_boundary": {
+    "previous_wait": "Unbounded completion/body waits for abandoned background responses.",
+    "new_wait": "Existing 10 second deadline applied to passive completion and body observation; incomplete samples remain completed:false with their phase.",
+    "owned_response_body_and_rgba_assertions_unchanged": true,
+    "completed_owned_heatmap_bodies": 10,
+    "decoded_rgba_checks": 7,
+    "captures": 11,
+    "forbidden_requests": [],
+    "uncompleted_thumbnail_samples": 2,
+    "proof_sha256": "8e04416ec865576fcc48f0473fde61b085b7480dd3da2df8d407d3c2b92a03fa"
+  },
+  "local_checks": {
+    "renderer": {
+      "passed": 2628,
+      "failed": 0,
+      "skipped": 1,
+      "skip": "compiled Electron file entry fixture remains unselected in renderer unit mode"
+    },
+    "renderer_typecheck": "passed",
+    "e2e_typecheck": "passed",
+    "service_plan_source_gate": "passed",
+    "action_evidence_source_gate": "passed after the current LabelingCanvas source declaration refresh"
+  },
+  "limits": {
+    "whole_current_gui_suite_pass_claimed": false,
+    "new_exact_head_full_regression_pending": true,
+    "installed_app_or_web_updated_by_this_change": false,
+    "real_provider_or_model_requests": 0,
+    "training_or_field_quality_acceptance": false,
+    "historical_receipts_not_reused_as_new_source_proof": true
+  }
+}
