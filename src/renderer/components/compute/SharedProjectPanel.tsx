@@ -1,6 +1,6 @@
 import React,{useEffect,useState} from 'react';
 import {Users,LogIn,LogOut} from 'lucide-react';
-import {api,request,setSharedApiBase,setProjectContext,getApiPersistenceIdentity,getProjectContext,getProjectContextGeneration} from '../../services/api';
+import {api,request,setSharedApiBase,setProjectContext,getApiPersistenceIdentity,getProjectContext,getProjectContextGeneration,type ProjectContext} from '../../services/api';
 import {useProjectStore,saveOpenEdits} from '../../stores/useProjectStore';
 import {resetComputeTransportCache} from '../../stores/useComputeStore';
 import {useDatasetStore} from '../../stores/useDatasetStore';
@@ -28,14 +28,33 @@ async function changingSession(action:()=>Promise<void>):Promise<void>{
   sessionChanges+=1;useProjectStore.setState({sharedSessionChanging:true});
   try{await action();}finally{sessionChanges-=1;if(!sessionChanges)useProjectStore.setState({sharedSessionChanging:false});}
 }
+/** Account project keys select membership; manifest IDs identify data inside a workspace.
+ * A native registration proves their relation, including restored copies with the same manifest ID. */
+type NativeRegistration={id:string;project_dir:string;permission_key?:string;project_id?:string;path?:string;registration_id?:string;workspace_id?:string;context?:ProjectContext};
 function acceptedSourceScope(connection:SharedConnection|null):string|null {
-  const state=useProjectStore.getState(),context=getProjectContext();
-  if(!connection?.project_id||state.isProjectBusy||state.project?.id!==connection.project_id
-    ||context?.mode!=='team'||context.project_id!==connection.project_id||context.actor_id!==connection.user.id)return null;
+  const state=useProjectStore.getState(),context=getProjectContext(),project=state.project;
+  if(!connection?.project_id||state.isProjectBusy||!project
+    ||context?.mode!=='team'||context.project_id!==project.id||context.actor_id!==connection.user.id)return null;
   const url=new URL(connection.server_url);
   const transport=`shared:${url.origin}${url.pathname.replace(/\/+$/,'')}`;
   if(getApiPersistenceIdentity()!==transport)return null;
-  return JSON.stringify([transport,context.workspace_id,context.project_id,context.actor_id,state.project.project_dir]);
+  const native=host.kind()==='browser'&&!connection.remote_id&&url.origin===window.location.origin
+    &&Boolean(project.registration_id||project.workspace_id||host.localBrowser?.());
+  if(native){
+    if(!host.localBrowser?.()||!project.registration_id||project.workspace_id!==context.workspace_id)return null;
+    const registered=(state.recentProjects as NativeRegistration[]).some(row=>row.permission_key===connection.project_id
+      &&row.id===project.id&&row.project_id===project.id&&row.registration_id===project.registration_id
+      &&row.workspace_id===context.workspace_id&&row.path===project.project_dir&&row.project_dir===project.project_dir
+      &&row.context?.workspace_id===context.workspace_id&&row.context.project_id===context.project_id
+      &&row.context.actor_id===context.actor_id&&row.context.mode===context.mode);
+    if(!registered)return null;
+  }else if(project.id!==connection.project_id)return null;
+  return JSON.stringify([transport,context.workspace_id,context.project_id,context.actor_id,project.project_dir,connection.project_id,project.registration_id??null]);
+}
+async function syncSharedProject():Promise<void>{
+  // A failed list read must not validate the prior account/session's catalog.
+  useProjectStore.setState({recentProjects:[]});
+  await useProjectStore.getState().syncCurrentProject();
 }
 export const SharedProjectPanel:React.FC<{localAuthenticationOnly?:boolean;onAuthenticated?:()=>void}>=({localAuthenticationOnly=false,onAuthenticated}={})=>{
   const [connection,setConnection]=useState<SharedConnection|null>(null),[server,setServer]=useState(host.kind()==='browser'&&host.can('sharedSessions')?window.location.origin:''),[username,setUsername]=useState(''),[password,setPassword]=useState(''),[projects,setProjects]=useState<SharedProject[]>([]),[selection,setSelection]=useState(''),[users,setUsers]=useState<SharedUser[]>([]),[newUser,setNewUser]=useState(''),[newPassword,setNewPassword]=useState(''),[member,setMember]=useState(''),[role,setRole]=useState('viewer'),[name,setName]=useState(''),[sourceDraft,setSourceDraft]=useState<SourceDraft>(emptySource),[busy,setBusy]=useState(false),[error,setError]=useState('');
@@ -53,7 +72,7 @@ export const SharedProjectPanel:React.FC<{localAuthenticationOnly?:boolean;onAut
   const confirmationKey=sourceScope?JSON.stringify([sourceScope,sourceDraft.value]):null;
   const run=async(action:()=>Promise<void>)=>{setBusy(true);setError('');try{await action();}catch(e){setError(e instanceof Error?e.message:String(e));}finally{setBusy(false);}};
   const refresh=async()=>{const result=await request<{projects:SharedProject[];selected_project_id:string|null}>('/api/accounts/me',{projectContext:null});setProjects(result.projects);if(connection?.user.administrator)setUsers((await request<{users:SharedUser[]}>('/api/accounts/users',{projectContext:null})).users);return result;};
-  const activate=async(id:string)=>{assertProjectIdle();await saveOpenEdits();assertProjectIdle();setSourceDraft(emptySource);await request('/api/accounts/select-project',{projectContext:null,method:'POST',body:JSON.stringify({project_id:id})});assertProjectIdle();const selected=await host.shared.select(id);setSharedApiBase(selected.transport_url??selected.server_url,host.shared.requestOptions);setProjectContext(null);resetComputeTransportCache();setConnection(selected);setSelection(id);telemetryService.disconnect();assertProjectIdle();await useProjectStore.getState().syncCurrentProject();await telemetryService.connect();};
+  const activate=async(id:string)=>{assertProjectIdle();await saveOpenEdits();assertProjectIdle();setSourceDraft(emptySource);await request('/api/accounts/select-project',{projectContext:null,method:'POST',body:JSON.stringify({project_id:id})});assertProjectIdle();const selected=await host.shared.select(id);setSharedApiBase(selected.transport_url??selected.server_url,host.shared.requestOptions);setProjectContext(null);resetComputeTransportCache();setConnection(selected);setSelection(id);telemetryService.disconnect();assertProjectIdle();await syncSharedProject();if(host.kind()==='browser'&&!selected.remote_id&&!acceptedSourceScope(selected))throw new Error(useProjectStore.getState().projectError||'공유 프로젝트 선택을 완료하지 못했습니다. 현재 프로젝트를 다시 확인하세요.');await telemetryService.connect();};
   useEffect(()=>{let current=true;host.shared.connection().then(async value=>{if(!current||!value)return;setConnection(value);setSharedApiBase(value.transport_url??value.server_url,host.shared.requestOptions);setSelection(value.project_id||'');setServer(value.server_url);const result=await request<{projects:SharedProject[]}>('/api/accounts/me',{projectContext:null});if(current)setProjects(result.projects);if(value.user.administrator){const accounts=await request<{users:SharedUser[]}>('/api/accounts/users',{projectContext:null});if(current)setUsers(accounts.users);}}).catch(e=>{if(current)setError(String(e));});return()=>{current=false;};},[]);
   const login=async()=>{if(!localAuthenticationOnly){assertProjectIdle();await saveOpenEdits({allowCleanDisconnect:host.kind()==='browser'&&!connection});assertProjectIdle();}setSourceDraft(emptySource);const value=await host.shared.login({server_url:localAuthenticationOnly?window.location.origin:server,username,password});telemetryService.disconnect();if(value.remote_id)setSharedApiBase(value.transport_url??value.server_url,host.shared.requestOptions);setProjectContext(null);setPassword('');setConnection(value);setSharedApiBase(value.transport_url??value.server_url,host.shared.requestOptions);resetComputeTransportCache();useAnnotationStore.getState().setReviewerName(value.user.username);
     const transport=getApiPersistenceIdentity(),generation=getProjectContextGeneration();
@@ -64,7 +83,7 @@ export const SharedProjectPanel:React.FC<{localAuthenticationOnly?:boolean;onAut
     const id=result.selected_project_id||result.projects[0]?.id;
     if(id){assertProjectIdle();await request('/api/accounts/select-project',{projectContext:null,method:'POST',body:JSON.stringify({project_id:id})});if(!current())throw changed();assertProjectIdle();const selected=await host.shared.select(id);
       if(!current()||selected.server_url!==value.server_url||selected.user.id!==value.user.id||selected.project_id!==id)throw changed();
-      setSharedApiBase(selected.transport_url??selected.server_url,host.shared.requestOptions);setProjectContext(null);setConnection(selected);setSelection(id);assertProjectIdle();await useProjectStore.getState().syncCurrentProject();
+      setSharedApiBase(selected.transport_url??selected.server_url,host.shared.requestOptions);setProjectContext(null);setConnection(selected);setSelection(id);assertProjectIdle();await syncSharedProject();
       if(!acceptedSourceScope(selected))throw new Error(useProjectStore.getState().projectError||'공유 프로젝트 선택을 완료하지 못했습니다. 현재 프로젝트를 다시 확인하세요.');
       // The immediate reset already retired old targets. Refresh this accepted
       // project now, including a re-login whose project ID did not change.
@@ -91,7 +110,7 @@ export const SharedProjectPanel:React.FC<{localAuthenticationOnly?:boolean;onAut
     const project=await api.project.create({name,task:newTask});if(!current())throw changed();setName('');await refresh();if(!current())throw changed();
     assertProjectIdle();const selected=await host.shared.select(project.id);
     if(!current()||!value||selected.server_url!==value.server_url||selected.user.id!==value.user.id||selected.project_id!==project.id)throw changed();
-    setSharedApiBase(selected.transport_url??selected.server_url,host.shared.requestOptions);setProjectContext(null);setConnection(selected);setSelection(project.id);telemetryService.disconnect();assertProjectIdle();await useProjectStore.getState().syncCurrentProject();
+    setSharedApiBase(selected.transport_url??selected.server_url,host.shared.requestOptions);setProjectContext(null);setConnection(selected);setSelection(project.id);telemetryService.disconnect();assertProjectIdle();await syncSharedProject();
     const state=useProjectStore.getState();
     if(state.projectError||!acceptedSourceScope(selected))throw new Error(state.projectError||'공유 프로젝트 선택을 완료하지 못했습니다. 현재 프로젝트를 다시 확인하세요.');
     // A first-project login had no context to load. Refresh only after this
