@@ -561,22 +561,34 @@ def test_a_job_file_read_during_a_replacement_on_windows_is_read_again(tmp_path,
     target = tmp_path / 'status.json'
     target.write_text('{"status": "running"}', encoding='utf-8')
     real_read, reads = Path.read_text, []
+    unrelated_target = tmp_path / 'unrelated.json'
+    unrelated_target.write_text('{"unrelated": true}', encoding='utf-8')
+    unrelated_reads = []
+
+    def read_unrelated_between_attempts(_seconds):
+        # Interleave another status read before success without depending on thread scheduling.
+        if len(reads) == 2:
+            unrelated_reads.append(json.loads(unrelated_target.read_text(encoding='utf-8')))
 
     def busy_twice(self, *args, **kwargs):
+        if self != target:
+            return real_read(self, *args, **kwargs)
         reads.append(self)
         if len(reads) <= 2:
             raise PermissionError(13, 'Access is denied')
         return real_read(self, *args, **kwargs)
 
     monkeypatch.setattr(file_replace, '_WINDOWS', True)
-    monkeypatch.setattr(file_replace, 'time', SimpleNamespace(sleep=lambda seconds: None))
+    monkeypatch.setattr(file_replace, 'time', SimpleNamespace(sleep=read_unrelated_between_attempts))
     monkeypatch.setattr(Path, 'read_text', busy_twice)
     assert json.loads(file_replace.read_text(target)) == {'status': 'running'} and len(reads) == 3
     # the worker's cancel watch reads its cancel file through the same retry
     from backend.engine import local_training_worker
-    (tmp_path / 'local_cancel.json').write_text(json.dumps({'job_id': 'job_watch'}), encoding='utf-8')
+    target = tmp_path / 'local_cancel.json'
+    target.write_text(json.dumps({'job_id': 'job_watch'}), encoding='utf-8')
     reads.clear()
     assert local_training_worker._cancelled(tmp_path, 'job_watch') is True and len(reads) == 3
+    assert unrelated_reads == [{'unrelated': True}, {'unrelated': True}]
 
 
 @pytest.mark.skipif(os.name != 'nt', reason='Windows file sharing semantics')
