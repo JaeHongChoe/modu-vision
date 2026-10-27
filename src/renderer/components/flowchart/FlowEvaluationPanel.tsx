@@ -132,6 +132,7 @@ export function FlowEvaluationPanel({sourceDatasetPath='',savedVersionId,context
   const main=(action:typeof next)=>simple?{className:`workspace-button${next===action?' workspace-button--primary':''}`,'data-primary-action':next===action||undefined}:{className:button};
   const freeze=()=>void run(async current=>{const value=await flowEvaluation.freeze(version,cohortName);if(current()){setCohorts(previous=>[value,...previous]);setCohort(value.cohort_id);setNotice(`저장된 시험 분할 ${value.count}개를 고정했습니다.`);}});
   // The folder labels become the cohort's reviewed truth in one step; the reviewer's name goes on every declaration.
+  const evaluationActionLabel=simple?'시험 이미지로 검사 확인':embedded?'선택 코호트 평가':'전체 흐름 평가 실행';
   const confirmRow=cohort&&scope&&scope.task!=='mixed'&&<div className="flex flex-wrap items-center gap-2 rounded border border-slate-700 bg-[#0F1826] p-2">
       <span className="text-slate-200">{scope.task==='detection'?'시험 묶음 이미지의 라벨(불량 상자는 NG, 정상 표시는 OK, 라벨 없음은 미확인)을':'시험 묶음의 폴더 라벨(OK/NG)을'} 정답으로 확정하려면 검토자 이름을 적고 누르세요.</span>
       <label>검토자<input aria-label="정답 일괄 확정 검토자" value={reviewer} onChange={e=>setReviewer(e.target.value)} className={`${field} ml-2 w-32`}/></label>
@@ -142,7 +143,7 @@ export function FlowEvaluationPanel({sourceDatasetPath='',savedVersionId,context
         const refrozen=value.declared>0?await flowEvaluation.freeze(version,`${(cohortName.trim()||'시험 묶음')} · 정답 확정`):null;
         if(!current())return;
         if(refrozen){setCohorts(previous=>[refrozen,...previous]);setCohort(refrozen.cohort_id);}
-        setNotice(`정답 확정 ${value.declared}개 · 이미 같음 ${value.kept}개 · ${scope?.task==='detection'?'라벨이 없어':'폴더에 클래스 이름이 없어'} 미확인 ${value.skipped}개.${refrozen?` 확정한 정답으로 시험 묶음을 다시 고정했습니다(${refrozen.count}장).`:''} 이제 "선택 코호트 평가"를 누르면 미검·과검이 계산됩니다.`);
+        setNotice(`정답 확정 ${value.declared}개 · 이미 같음 ${value.kept}개 · ${scope?.task==='detection'?'라벨이 없어':'폴더에 클래스 이름이 없어'} 미확인 ${value.skipped}개.${refrozen?` 확정한 정답으로 시험 묶음을 다시 고정했습니다(${refrozen.count}장).`:''} 이제 "${evaluationActionLabel}"를 누르면 미검·과검이 계산됩니다.`);
       })}>라벨을 정답으로 확정</button>
     </div>;
   const openImage=async(imagePath:string)=>{
@@ -160,12 +161,13 @@ export function FlowEvaluationPanel({sourceDatasetPath='',savedVersionId,context
     {open&&<div className={embedded?"space-y-4 p-4":"absolute bottom-full inset-x-2 z-[90] max-h-[80vh] space-y-4 overflow-y-auto rounded border border-slate-600 bg-[#151D2A] p-4 shadow-2xl"}>
       <div className="flex items-center justify-between"><h3 className="font-semibold text-slate-100">{simple?'시험 이미지로 흐름 평가':'저장된 흐름 × 고정 시험 코호트'}</h3>{!embedded&&<button onClick={()=>setOpen(false)} className={button}>닫기</button>}</div>
       {simple?<>
+        <p className="text-sm text-[var(--workspace-muted)]">4단계에서는 모델 자체의 성능을 확인합니다. 여기서는 저장한 전처리·모델·판정 규칙을 함께 시험해 검사 흐름을 확인합니다. 정답 확정과 최종 승인은 사람이 직접 검토합니다.</p>
         <Explain className="text-slate-400" text="저장한 흐름을 고정한 시험 이미지에 CPU로 실행해 미검·과검을 셉니다. 정답이 확인되지 않은 이미지는 집계에서 빠지고, 원본이나 라벨이 바뀌면 이전 결과는 다시 평가해야 합니다."/>
         {!versions.length&&!busy&&<p className="text-amber-200">실행 가능한 흐름을 먼저 저장하세요.</p>}
         {scopePrerequisite&&<p role="status" className="text-amber-200">{scopePrerequisite}</p>}
         {next==='freeze'&&scope&&<div className="flex flex-wrap items-center gap-2"><button {...main('freeze')} disabled={busy||!version||!cohortName.trim()} onClick={freeze}>시험 이미지 묶음 고정</button><span className="text-slate-400">저장된 시험 분할을 그대로 고정합니다. 학습·검증과 같은 이미지는 거부합니다.</span></div>}
         {next==='confirm'&&confirmRow}
-        {cohort&&<div className="flex flex-wrap items-center gap-2"><button disabled={busy||!version||!cohort||!scope} {...(simple?main('evaluate'):{className:`${button} ${embedded?"bg-cyan-800 text-white":""}`,'data-primary-action':embedded||undefined})} onClick={()=>void run(async current=>{const requested=version;const value=await flowEvaluation.run(requested,cohort);bumpWorkflowEvidence();const rows=await refreshHistory();if(!current())return;setHistory(rows);if(selectedVersion.current===requested){setResult(value);setEvidence(null);}else setNotice(`버전 ${requested}의 평가가 끝났습니다. 평가 이력에서 열 수 있습니다.`);})}>{embedded?'선택 코호트 평가':'전체 흐름 평가 실행'}</button>{chosen&&<span className="text-slate-400">시험 묶음 {chosen.name} · {chosen.count}장</span>}</div>}
+        {cohort&&<div className="flex flex-wrap items-center gap-2"><button disabled={busy||!version||!cohort||!scope} {...(simple?main('evaluate'):{className:`${button} ${embedded?"bg-cyan-800 text-white":""}`,'data-primary-action':embedded||undefined})} onClick={()=>void run(async current=>{const requested=version;const value=await flowEvaluation.run(requested,cohort);bumpWorkflowEvidence();const rows=await refreshHistory();if(!current())return;setHistory(rows);if(selectedVersion.current===requested){setResult(value);setEvidence(null);}else setNotice(`버전 ${requested}의 평가가 끝났습니다. 평가 이력에서 열 수 있습니다.`);})}>{evaluationActionLabel}</button>{chosen&&<span className="text-slate-400">시험 묶음 {chosen.name} · {chosen.count}장</span>}</div>}
         <details><summary className="cursor-pointer text-slate-300">자세히 · 흐름 버전·시험 묶음·정답·평가 이력</summary><div className="mt-2 space-y-3">
           {next!=='confirm'&&confirmRow}
           <div className="flex flex-wrap items-end gap-2"><label>저장된 흐름 버전<select aria-label="전체 흐름 평가 버전" value={version} disabled={busy} onChange={e=>{setVersion(e.target.value);setCohort('');}} className={`${field} ml-2 max-w-80`}><option value="">저장된 버전 선택</option>{versions.map(row=><option key={row.version_id} value={row.version_id}>{row.name} · {row.saved_at} · {row.version_id.slice(0,8)}</option>)}</select></label>

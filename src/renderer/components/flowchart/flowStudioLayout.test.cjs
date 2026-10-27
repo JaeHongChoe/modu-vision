@@ -1,4 +1,5 @@
 const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path'),Module=require('node:module'),ts=require('typescript'),test=require('node:test');
+function preparationPolicy(){const file=path.join(__dirname,'flowPreparation.ts'),loaded=new Module(file,module);loaded._compile(ts.transpileModule(fs.readFileSync(file,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText,file);return loaded.exports;}
 
 // Render the real editor structure without executing its network effects. The
 // regression is its flex/overflow contract, not graph or training behavior.
@@ -17,7 +18,7 @@ function editor(project={},flowState={}){
   '../../stores/useFlowchartStore':{useFlowchartStore:flow,flowSemanticKey:()=>'',isExecutionResultCurrent:()=>true},'../../stores/useDatasetStore':{useDatasetStore:store({folderPath:'/source',datasetKey:'/source\0segmentation',hasSelectedFolder:true})},'../../stores/useProjectStore':{useProjectStore:store({language:'ko',task:'segmentation',...project})},'../../stores/useEvaluationStore':{useEvaluationStore:store({})},'../../stores/useTrainingStore':{useTrainingStore:store({})},'../../stores/useComputeStore':{useComputeStore:store({profiles:[],selectedProfileId:null,isLoaded:true})},'../../services/api':{getProjectContext:()=>null,getProjectContextGeneration:()=>0,getApiPersistenceIdentity:()=> 'local'},
   './FlowEditorWorkspace':{FlowEditorWorkspace:component,flowWorkspaceIdentity:()=>({exactSaved:false,evaluationCurrent:false,approval:'미조회',models:[],revision:0,draft:''})},'./flowRecipes':{FLOW_RECIPES:[{id:'single',title:'단일 모델 검사',description:'원본 → 모델'}],createFlowRecipe:()=>null},
   './flowchartViewport':{computeFlowchartViewport:()=>({scale:1,contentWidth:800,contentHeight:240,offsetX:0,offsetY:0,layerWidth:800,layerHeight:240}),readableFlowScale:value=>value},'./flowchartStartup':{getFlowchartModelTask:()=>null},'./flowchartGraph':{nodeClassChoices:()=>[],validateFlowchartGraph:()=>null,locateFlowIssue:()=>null,flowIssuesByTarget:()=>({nodes:new Map(),edges:new Map()})},'./flowHandoff':{flowRecipeLabel:()=> '검사'},'./flowExecution':{}};
- const name=path.join(__dirname,'FlowchartStudio.tsx'),m=new Module(name,module);m.filename=name;m.paths=Module._nodeModulePaths(__dirname);m.require=ref=>mocks[ref]??new Proxy({}, {get:()=>component});m._compile(ts.transpileModule(fs.readFileSync(name,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022,jsx:ts.JsxEmit.ReactJSX}}).outputText,name);return m.exports.FlowchartStudio();
+ const name=path.join(__dirname,'FlowchartStudio.tsx'),m=new Module(name,module);m.filename=name;m.paths=Module._nodeModulePaths(__dirname);m.require=ref=>ref==='./flowPreparation'?preparationPolicy():mocks[ref]??new Proxy({}, {get:()=>component});m._compile(ts.transpileModule(fs.readFileSync(name,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022,jsx:ts.JsxEmit.ReactJSX}}).outputText,name);return m.exports.FlowchartStudio();
  }finally{
   if(previousStorage)Object.defineProperty(globalThis,'localStorage',previousStorage);
   else delete globalThis.localStorage;
@@ -97,4 +98,16 @@ test('a draft save keeps undo, redo and flow layout usable, so a click during th
  for(const [name,button] of Object.entries(draft)){assert.ok(button,`${name} is rendered`);assert.equal(button.props.disabled,false,`${name} stays usable while a draft save runs`);}
  const version=controls(editor({},{canUndo:true,canRedo:true,isSaving:true,isDraftSaving:false}));
  for(const [name,button] of Object.entries(version))assert.equal(button.props.disabled,true,`${name} waits for a version save`);
+});
+
+test('simple Step 5 starts with preparation instead of graph editing; full view retains its editor',()=>{
+ const all=node=>[node,...children(node).flatMap(all)];
+ const simple=editor({viewMode:'simple'}),nodes=all(simple);
+ const preparation=nodes.find(node=>node.props?.next&&node.props?.onPrepare&&node.props?.onAdvanced);
+ assert.ok(preparation,'simple view offers a guarded preparation surface');
+ assert.equal(preparation.props.area,'edit');assert.equal(preparation.props.loading,true);
+ assert.equal(nodes.find(node=>node.props.id==='flow-panel-edit').props.hidden,true,'ports and canvas are not the default');
+ const full=all(editor({viewMode:'full'}));
+ assert.ok(!full.some(node=>node.props?.next&&node.props?.onPrepare));
+ assert.equal(full.find(node=>node.props.id==='flow-panel-edit').props.hidden,false);
 });

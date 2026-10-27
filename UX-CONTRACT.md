@@ -36,6 +36,14 @@ Only capabilities touched by the assistant task card are resolved here. Existing
 
 The task card owns no table selection, select/listbox, date picker, search, CRUD form, toast, clipboard or upload interaction. It must not create local equivalents of existing owners when those capabilities are added later.
 
+## Step 5 preparation contract
+
+`FlowPreparationPanel` owns only the ordered read-only summary and navigation affordances. `FlowchartStudio` supplies live graph, model check, exact saved-version/evaluation state and guarded callbacks. `flowPreparationNext` selects the earliest prerequisite; `flowWorkspaceIdentity` remains the canonical saved-graph/hash/validity check. Recipe adoption, save/reason dialogs, truth declaration, approval and execution retain their existing owners.
+
+Simple view defaults to preparation. Advanced editing and the full view retain every graph control. Going back preserves unsaved work, hidden graph history shortcuts do not run from preparation, and view changes perform no writes. A running or uncertain partial run always has an explicit read-only status route to the existing refresh/stop controls. Human cancellation remains separate from viewing status.
+
+The existing flow version/cohort/model selectors remain native selects: OS-owned popup geometry and locale are accepted for these advanced controls. This change adds no selector, upload, toast or custom modal. Shared buttons, status text, ordered list semantics and the shared light adapter are canonical; the preparation surface has one primary action. Truth confirmation and operational acceptance remain explicit human decisions.
+
 ## Component behavior
 
 - Native buttons expose a written action and standard Enter/Space behavior. Shared CSS owns hover, focus and disabled appearance. Disabled callback guards prevent direct invocation from dispatching.

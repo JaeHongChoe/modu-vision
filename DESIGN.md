@@ -135,6 +135,12 @@ Use verbs matching the actual operation: plan confirmation, saved-result check, 
 - Don't make pause look like training cancellation or imply that it cancels a job already started.
 - Don't replace a saved-result check with a conversational success claim.
 
+### Step 5 guided preparation
+
+The simple view starts with an ordered inspection preparation surface: connected models, judgment rules, saved flow, saved-version evaluation and the next inspection step. `FlowPreparationPanel` uses the same workspace records, buttons, semantic text/status tokens and native focus behavior as the task card. Technical job IDs live behind a closed disclosure; numeric score/count criteria remain readable in the main summary. The full graph is retained as advanced editing, with the existing model and rule owners.
+
+Switching views changes presentation only and preserves the mounted graph, unsaved edits and stored evidence. Returning focuses the preparation section; entering advanced editing focuses its edit tab. Busy preparation blocks mutations while a separate read-only status action preserves access to an ongoing inspection's recovery controls. The simple evaluation surface uses plain 시험 이미지 wording and explains why model evaluation and complete-flow evaluation differ. This is not a new palette, global layout migration or approval policy.
+
 ## Migration notes
 
 This contract documents the existing runtime and the assistant slice. It is not a whole-application accessibility or visual certification. The legacy scrollbar baseline is WebKit-specific and has hard-coded colors; standards-based scrollbar properties and a complete forced-colors scrollbar recipe remain a global follow-up outside this feature. Legacy studio utility colors and generated light-theme rules remain owned by their existing files; do not spread those duplicates into new workspace components.

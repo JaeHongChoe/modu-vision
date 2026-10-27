@@ -60,7 +60,7 @@ const UI_SOURCE={
  "scripts/e2e/fixtures/flow_template_control.py": "81f4a1844d05021d6c4c668627a732120c11aa20e45294ba55da0bfca410572a",
  "scripts/e2e/fixtures/flow_large_dag_control.py": "6434d381ed45d68922c058544d0b515caa3d19d93d88c90028a3463a9903d871",
  "scripts/e2e/qa/appFlow.ts": "4eed3e5dad1d9d65a6b19fc9bb51a1f9b0e23911a39e7f255220bec0ce37fea2",
- "src/renderer/components/flowchart/FlowchartStudio.tsx": "e7625af70ed352df22770a6efda444bfa811729e18fab4f81674635f1df78b64",
+ "src/renderer/components/flowchart/FlowchartStudio.tsx": "1a5c0f37dd636062a223fd3548df064afba785dba272537265df39f0a76b8c39",
  "src/renderer/components/flowchart/FlowEditorWorkspace.tsx": "e58f0b7a62572516d9ea04cbb45dafdfb104e805753e9f13a3c8f67c88210ee7",
  "src/renderer/components/flowchart/FlowDraftControls.tsx": "fe003c308ecd62b03aea4106e86d446b7a71d008ba0486b36132e6a1b39eb02b",
  "src/renderer/components/flowchart/FlowGraphNavigator.tsx": "656832c214f41742d5bc0f66c9f8983c5fb6892cfaf3b42b48ee353f282da20a",
@@ -256,6 +256,8 @@ async function flowReadonlyExercise(page:Page,w:Workspace,e:Evidence,api:FlowApi
  page.on('request',observe);
  try{
   if(url)await page.goto(url);else await page.reload();await expect(page.getByTitle('프로젝트 관리',{exact:true})).toContainText(project.name);
+  // Expert-control regression: choose the existing full view through its ordinary UI, before the baseline.
+  const showEverything=page.getByRole('button',{name:'모두 보기',exact:true});if(await showEverything.isVisible())await showEverything.click();await expect(page.getByRole('button',{name:'간단히 보기',exact:true})).toBeVisible();
   await settle();const current=await readReply('/api/project/current');const rawContext=current.reply.headers['x-vision-context'];expect(rawContext).toBeDefined();expect(JSON.parse(rawContext)).toEqual(transport);contexts.set(project.id,transport);
   await galleryReadsSettled(page);await page.getByRole('navigation',{name:'Workflow Stages'}).getByRole('button').nth(4).click();await page.getByRole('tab',{name:'편집',exact:true}).click();
   await expect(page.getByRole('heading',{name:'검사 플로우 편집기',exact:true})).toBeVisible();await expect(page.locator('[data-flow-node-id]')).toHaveCount(4);expect(await rendered()).toEqual(expectedView);await clean();

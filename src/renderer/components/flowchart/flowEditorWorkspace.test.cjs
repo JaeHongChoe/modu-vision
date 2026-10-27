@@ -1,4 +1,5 @@
 const test=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path'),Module=require('node:module'),ts=require('typescript');
+function preparationPolicy(){const file=path.join(__dirname,'flowPreparation.ts'),loaded=new Module(file,module);loaded._compile(ts.transpileModule(fs.readFileSync(file,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText,file);return loaded.exports;}
 function render(props){const name=path.join(__dirname,'FlowEditorWorkspace.tsx'),m=new Module(name,module);m.filename=name;m.paths=Module._nodeModulePaths(__dirname);const jsx=(type,props)=>({type,props:props||{}});m.require=ref=>ref==='react/jsx-runtime'?{jsx,jsxs:jsx}:ref==='react'?{}:require(ref);m._compile(ts.transpileModule(fs.readFileSync(name,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022,jsx:ts.JsxEmit.ReactJSX}}).outputText,name);return m.exports.FlowEditorWorkspace(props);}
 function workspaceModule(){const name=path.join(__dirname,'FlowEditorWorkspace.tsx'),m=new Module(name,module);m.filename=name;m.paths=Module._nodeModulePaths(__dirname);const jsx=(type,props)=>({type,props:props||{}});m.require=ref=>ref==='react/jsx-runtime'?{jsx,jsxs:jsx}:ref==='react'?{}:require(ref);m._compile(ts.transpileModule(fs.readFileSync(name,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022,jsx:ts.JsxEmit.ReactJSX}}).outputText,name);return m.exports;}
 const walk=n=>!n||typeof n!=='object'?[]:[n,...[n.props?.children].flat(Infinity).flatMap(walk)];
@@ -7,13 +8,13 @@ test('identity separates next image from recorded image and never promotes evalu
 
 // Exercise the mounted Studio's actual adoption callbacks. Effects are skipped so
 // only the explicitly invoked model verification transport is substituted.
-function studioHarness(realStore=null){
+function studioHarness(realStore=null,projectOverrides={}){
  const previousStorage=Object.getOwnPropertyDescriptor(globalThis,'localStorage');Object.defineProperty(globalThis,'localStorage',{configurable:true,value:{getItem:()=>null}});
  const values=[],refs=[];let stateIndex=0,refIndex=0,generation=1,resolveVerify,rejectVerify,templateRequests=0,activeVersion='active-v1',activeRequests=0;const changes=[];
  const original={id:'original',name:'Existing saved flow',nodes:[{id:'original',position:{x:0,y:0},data:{node_type:'input',label:'Original'}}],edges:[]};
  const flowState={baseVersionId:null,setBaseVersionId:value=>flowState.baseVersionId=value,pipeline:original,pipelineDirty:false,pipelineIsDraft:false,flowIdentity:{semantic_revision:1},executionChoiceOverride:'local_cpu',replacePipeline:(value,newBasis)=>{changes.push(value);flowState.pipeline=value;if(newBasis)flowState.baseVersionId=newBasis.baseVersionId;},selectNode(){}};
  let unsubscribe=()=>{};if(realStore){realStore.setState({pipeline:original,cleanPipeline:original,baseVersionId:null});Object.assign(flowState,realStore.getState());unsubscribe=realStore.subscribe(state=>Object.assign(flowState,state));}
- const project={language:'ko',task:'anomaly',projectDir:'/project',project:{id:'project',active_labelset_id:'labels'}};
+ const project={language:'ko',task:'anomaly',projectDir:'/project',project:{id:'project',active_labelset_id:'labels'},...projectOverrides};
  const store=value=>Object.assign(selector=>selector?selector(value):value,{getState:()=>value});
  const component=()=>null,jsx=(type,props)=>({type,props:props||{}});
  const mocks={react:{useState:initial=>{const i=stateIndex++;if(!(i in values))values[i]=typeof initial==='function'?initial():initial;return [values[i],next=>{values[i]=typeof next==='function'?next(values[i]):next;}];},useRef:initial=>{const i=refIndex++;return refs[i]||(refs[i]={current:initial});},useEffect(){},useLayoutEffect(){}},'react/jsx-runtime':{jsx,jsxs:jsx},'lucide-react':new Proxy({},{get:()=>component}),
@@ -22,7 +23,7 @@ function studioHarness(realStore=null){
  './flowchartViewport':{computeFlowchartViewport:()=>({scale:1,contentWidth:800,contentHeight:240}),readableFlowScale:value=>value},'./flowchartStartup':{getFlowchartModelTask:()=>null,getFlowchartModelReferences:p=>p.nodes.filter(n=>n.data.model_job_id).map(n=>({job_id:n.data.model_job_id,task:n.data.task}))},'./flowchartGraph':{nodeClassChoices:()=>[],validateFlowchartGraph:()=>null,locateFlowIssue:()=>null,flowIssuesByTarget:()=>({nodes:new Map(),edges:new Map()})},'./flowHandoff':{flowRecipeLabel:()=> '검사'},'./flowExecution':{},'./FlowRecipeDialog':{FlowRecipeDialog:'RecipeDialog'},'./modelFlowHandoff':{readModelFlowHandoff:()=>null},
  './flowRecipes':{FLOW_RECIPES:[],createFlowRecipe:()=>({id:'preview',name:'Recipe',nodes:[{id:'inspect',position:{x:0,y:0},data:{node_type:'inspection',task:'anomaly',label:'Model'}}],edges:[]})},
  './FlowEditorWorkspace':workspaceModule()};
- const name=path.join(__dirname,'FlowchartStudio.tsx'),m=new Module(name,module);m.filename=name;m.paths=Module._nodeModulePaths(__dirname);m.require=ref=>mocks[ref]??new Proxy({},{get:()=>component});m._compile(ts.transpileModule(fs.readFileSync(name,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022,jsx:ts.JsxEmit.ReactJSX}}).outputText,name);
+ const name=path.join(__dirname,'FlowchartStudio.tsx'),m=new Module(name,module);m.filename=name;m.paths=Module._nodeModulePaths(__dirname);m.require=ref=>ref==='./flowPreparation'?preparationPolicy():mocks[ref]??new Proxy({},{get:()=>component});m._compile(ts.transpileModule(fs.readFileSync(name,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022,jsx:ts.JsxEmit.ReactJSX}}).outputText,name);
  const render=()=>{stateIndex=0;refIndex=0;return m.exports.FlowchartStudio();};
  const text=n=>typeof n==='string'?n:Array.isArray(n)?n.map(text).join(''):text(n?.props?.children||'');
  // The flow finished opening: its model check (and the completed model's binding) ended, so recipes may open.
@@ -141,4 +142,27 @@ test('compact keeps the identity lines behind one closed line that still names t
  assert.match(compact,/"type":"details"/);assert.match(compact,/흐름 정보 · 편집 r/);assert.match(compact,/플로우 식별 정보/);
  const open=JSON.stringify(render({area:'edit',onAreaChange(){},identity}));
  assert.doesNotMatch(open,/흐름 정보 · 편집 r/);assert.match(open,/플로우 식별 정보/);
+});
+
+test('guided advanced roundtrip preserves the exact unsaved graph and never saves or replaces it',()=>{
+ const h=studioHarness(null,{viewMode:'simple'});try{
+  h.opened();h.flowState.pipelineDirty=true;
+  const preparation=()=>walk(h.render()).find(n=>n.props?.next&&n.props?.onPrepare);
+  assert.ok(preparation());preparation().props.onAdvanced();
+  assert.equal(walk(h.render()).find(n=>n.props.id==='flow-panel-edit').props.hidden,false);
+  const back=walk(h.render()).find(n=>n.type==='button'&&n.props.children==='검사 준비로 돌아가기');
+  assert.ok(back);back.props.onClick();assert.ok(preparation());
+  assert.equal(h.flowState.pipeline,h.original);assert.equal(h.flowState.pipelineDirty,true);assert.equal(h.changes.length,0);
+ }finally{h.cleanup();}
+});
+
+test('a retained preparation callback cannot reopen editing after project authority changes or work starts',()=>{
+ for(const retire of [h=>h.switchGeneration(),h=>{h.flowState.isRunning=true;}]){
+  const h=studioHarness(null,{viewMode:'simple'});try{
+   h.opened();const prep=walk(h.render()).find(n=>n.props?.next&&n.props?.onPrepare);
+   retire(h);prep.props.onAdvanced();
+   assert.equal(walk(h.render()).find(n=>n.props.id==='flow-panel-edit').props.hidden,true);
+   assert.equal(h.changes.length,0);
+  }finally{h.cleanup();}
+ }
 });

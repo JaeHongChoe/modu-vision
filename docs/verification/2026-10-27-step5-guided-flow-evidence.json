@@ -1,0 +1,90 @@
+{
+  "date": "2026-10-27",
+  "scope": "step5_guided_preparation_controlled_metadata_browser_qa",
+  "source_at_ui_run": {
+    "commit": "e6f5fa5e257807af70b9d0e06d90cd8f332e889f",
+    "dirty": true
+  },
+  "run_id": "step5-guided-preparation-20261027-review-5",
+  "ui_result": "1/1 PASS",
+  "manifest": "/private/var/folders/qr/0bv7k88d4d5_xgnf7ftxkhbm0000gn/T/modu-vision-e2e/step5-guided-preparation-20261027-review-5/results/step5-guided-preparation-g-1dbb2-tion-prerequisites-readable-browser/harness-manifest.json",
+  "manifest_sha256": "62361fe2d7a91825baf0626a389534125b2d7d6155e6cc527e6552cf0af4daa1",
+  "local_checks": {
+    "renderer_pass": 2649,
+    "renderer_skip": 1,
+    "renderer_fail": 0,
+    "harness_pass": 67,
+    "ci_structure_pass": 29,
+    "typechecks": "PASS",
+    "build": "PASS",
+    "service_plan_gate": "PASS",
+    "action_evidence_gate": "PASS",
+    "expert_browser_pass": 4
+  },
+  "files": [
+    {
+      "path": "/private/var/folders/qr/0bv7k88d4d5_xgnf7ftxkhbm0000gn/T/modu-vision-e2e/step5-guided-preparation-20261027-review-5/results/step5-guided-preparation-g-1dbb2-tion-prerequisites-readable-browser/01-guided-preparation.png",
+      "sha256": "7a57a3b737c08b2c364b91ab44693a2b5303fcaa205b5042f924a7d747fbcea7",
+      "bytes": 123140
+    },
+    {
+      "path": "/private/var/folders/qr/0bv7k88d4d5_xgnf7ftxkhbm0000gn/T/modu-vision-e2e/step5-guided-preparation-20261027-review-5/results/step5-guided-preparation-g-1dbb2-tion-prerequisites-readable-browser/02-evaluation-prerequisite-no-run.png",
+      "sha256": "e3df4fb4f4ea7b416c03b43175504241a839dab34dd50a95d6bdf2a99fe4d0fb",
+      "bytes": 137440
+    },
+    {
+      "path": "/private/var/folders/qr/0bv7k88d4d5_xgnf7ftxkhbm0000gn/T/modu-vision-e2e/step5-guided-preparation-20261027-review-5/results/step5-guided-preparation-g-1dbb2-tion-prerequisites-readable-browser/03-guided-return-preserves-unsaved-custom-graph.png",
+      "sha256": "8619fde2723037f7ebbb177cb1780601bc685e0e9b2d9760cf051b076f4e76bb",
+      "bytes": 125043
+    },
+    {
+      "path": "/private/var/folders/qr/0bv7k88d4d5_xgnf7ftxkhbm0000gn/T/modu-vision-e2e/step5-guided-preparation-20261027-review-5/results/step5-guided-preparation-g-1dbb2-tion-prerequisites-readable-browser/04-guided-390-dark.png",
+      "sha256": "f78476fb9488d63620305a61267843a66ed0d39e13816cb7e0c074c415500e4f",
+      "bytes": 53557
+    },
+    {
+      "path": "/private/var/folders/qr/0bv7k88d4d5_xgnf7ftxkhbm0000gn/T/modu-vision-e2e/step5-guided-preparation-20261027-review-5/results/step5-guided-preparation-g-1dbb2-tion-prerequisites-readable-browser/04-guided-390-light.png",
+      "sha256": "6469b598ef8d0c0a03fc93cb6052a16cbc8e90dd2c870b9a7a466f0699910a1f",
+      "bytes": 68684
+    }
+  ],
+  "limits": [
+    "controlled model metadata, no real model or provider execution",
+    "browser run, not installed Electron packaging",
+    "static audit121 existing findings,0 new",
+    "legacy footer crowded at390px",
+    "hosted full regression and main merge not claimed"
+  ],
+  "preservation": {
+    "primary_handoff_sha256": "ce3c140f38bff2927ecc713691dfb8ddf902ec7e20a159bf581f3c3b45c56021",
+    "historical_receipts": "unchanged",
+    "installed_app_and_real_servers": "not_updated_or_restarted",
+    "automation": "none_created_or_resumed"
+  },
+  "expert_control_browser_regressions": [
+    {
+      "path": "/private/tmp/modu-vision-e2e/step5-expert-controls-20261027-2/results/flow-model-less-reopen-con-c446f-pen-with-exact-saved-graphs-browser/harness-manifest.json",
+      "sha256": "09845c16134a6b7c6ea1e9780bad3bb3b6927cad808d3f7478cdd81b65cf1922",
+      "test": "flow-model-less-reopen-controls.spec.ts › F064 model-less inspection ROI and typed connection drafts reopen with exact saved graphs",
+      "status": "passed"
+    },
+    {
+      "path": "/private/tmp/modu-vision-e2e/step5-expert-controls-20261027-3/results/flow-existing-refusal-cont-3ac42-ls-preserve-saved-originals-browser/harness-manifest.json",
+      "sha256": "868fa71f7ab2e0692c72b5113eb80d2901548886099ae07957d1f837adbaecd9",
+      "test": "flow-existing-refusal-controls.spec.ts › F064 empty model history mapping and keyboard layout connection deletion refusals preserve saved originals",
+      "status": "passed"
+    },
+    {
+      "path": "/private/tmp/modu-vision-e2e/step5-expert-controls-20261027-3/results/flow-node-limit-preflights-44e3d-graph-or-saved-draft-writes-browser/harness-manifest.json",
+      "sha256": "16743a0b3cf10784b9aff73f1535d38957e7a0a8e87f5717daa6eadb4e0b087e",
+      "test": "flow-node-limit-preflights.spec.ts › F064 ninth fixed ROI and inspection node keyboard additions fail before graph or saved draft writes",
+      "status": "passed"
+    },
+    {
+      "path": "/private/tmp/modu-vision-e2e/step5-expert-controls-20261027-3/results/flow-readonly-control-pref-a9169-on-preserve-saved-originals-browser/harness-manifest.json",
+      "sha256": "ef0eda64567643c9ee8dbcbd54ed3cf4412d3c313ec21037ea4243ee59ff9b8e",
+      "test": "flow-readonly-control-preflights.spec.ts › F064 empty inspector search partial-run input and unsent typed connection cancellation preserve saved originals",
+      "status": "passed"
+    }
+  ]
+}
