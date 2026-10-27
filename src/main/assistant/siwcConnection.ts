@@ -12,6 +12,7 @@ import {acceptAuthorizationTokens, buildSiwcTextRequest, createAuthorizationAtte
 const AUTH = 'https://auth.openai.com', API = 'https://api.openai.com/v1';
 const DISCOVERY = `${AUTH}/.well-known/openid-configuration`, TOKEN = `${AUTH}/api/accounts/oauth/token`;
 const MODEL_CATALOG_MAX_BYTES = 2 * 1024 * 1024;
+const TEXT_COMPLETION_TIMEOUT_MS = 90_000;
 type Account = {recordId:string;label:string;model:string;signedIn:boolean;planUsageEnabled:boolean;planUsageAcknowledged?:boolean;usagePaused?:boolean};
 export interface SiwcConnectionStore {
   state():{accounts:Account[];active:string|null;encryptionAvailable:boolean};
@@ -271,13 +272,16 @@ export class SiwcConnection {
   }
   async complete(input:{system:string;messages:AssistantMessage[];tools:AssistantToolSpec[];signal?:AbortSignal;timeoutMs?:number}):Promise<Completion> {
     let responseId:string|undefined,accountId:string|undefined;
-    try {if(obj(input).image!==undefined)throw new ProviderError(assistantError('image_refused'));const account=this.account(true),binding=this.authority(),timeoutMs=input.timeoutMs??this.timeoutMs;
+    try {if(obj(input).image!==undefined)throw new ProviderError(assistantError('image_refused'));const account=this.account(true),binding=this.authority(),timeoutMs=input.timeoutMs??this.deps.timeoutMs??TEXT_COMPLETION_TIMEOUT_MS;
+      const accessTimeoutMs=Math.min(timeoutMs,this.timeoutMs);
       accountId=account.recordId;const history:unknown[]=[];
       for(const message of input.messages){if(message.role==='user')history.push({role:'user',content:message.text});else if(message.role==='tool')history.push({type:'function_call_output',call_id:message.toolCallId,output:message.content});
         else if(message.replay!==undefined){if(this.replayReceipts.get(this.replayFingerprint(message.replay))!==binding)throw protocol('invalid_input');history.push(...structuredClone(message.replay as unknown[]));}
         else {if(message.text)history.push({role:'assistant',content:message.text});for(const call of message.toolCalls||[])history.push({type:'function_call',namespace:'modu_vision',name:call.name,call_id:call.id,arguments:JSON.stringify(call.arguments)});}}
       const body=buildSiwcTextRequest({model:account.model,instructions:input.system,input:history,tools:input.tools});
-      return await this.operation(async signal=>{const token=await this.access(account.recordId,signal,timeoutMs);if(signal.aborted||this.authority()!==binding)throw protocol('cancelled');
+      return await this.operation(async signal=>{
+        const token=await this.operation(accessSignal=>this.access(account.recordId,accessSignal,accessTimeoutMs),{signal,timeoutMs:accessTimeoutMs});
+        if(signal.aborted||this.authority()!==binding)throw protocol('cancelled');
         const response=await this.request(`${API}/responses`,{method:'POST',headers:{Accept:'text/event-stream','Content-Type':'application/json',Authorization:`Bearer ${token.accessToken}`},body:JSON.stringify(body)},signal);
         responseId=requestId(response);
         if(response.status!==200)throw this.httpError(response.status,await this.json(response,signal));

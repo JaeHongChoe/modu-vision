@@ -24,10 +24,63 @@ function setup(options={}){const calls=[],opened=[],s=options.store||store();let
   if(String(url)===ISSUER+'/oauth/revoke')return new Response('',{status:200});
   if(String(url)===API+'/models')return Response.json({models:[{slug:'test-model',display_name:'Test',visibility:'list'},{slug:'hidden-model',visibility:'hidden'}]});
   if(String(url)===API+'/responses')return completed();throw Error('Unexpected test URL');};
- const C=load().SiwcConnection,c=new C({store:s,fetchImpl,now:()=>NOW,attemptTimeoutMs:1000,timeoutMs:500,openExternal:async url=>{opened.push(url);auth=new URL(url);if(options.opener)await options.opener(url);}});
+ const C=load().SiwcConnection,c=new C({store:s,fetchImpl,now:()=>NOW,attemptTimeoutMs:1000,timeoutMs:500,...options.connectionOptions,openExternal:async url=>{opened.push(url);auth=new URL(url);if(options.opener)await options.opener(url);}});
  return {c,s,calls,opened,auth:()=>auth,callback:async(extra={})=>{const u=new URL(auth.searchParams.get('redirect_uri'));u.search=new URLSearchParams({state:auth.searchParams.get('state'),code:'fake-code',client_id:CLIENT,...extra});return fetch(u);}};
 }
 async function settled(c){for(let n=0;n<50;n++){if(!['waiting','exchanging'].includes(c.state().status))return c.state();await new Promise(r=>setTimeout(r,5));}throw Error('callback did not settle');}
+function timedConnection(t,options={}){
+ t.mock.timers.enable({apis:['setTimeout']});
+ const f=setup({...options,connectionOptions:{timeoutMs:undefined,...options.connectionOptions}});t.after(()=>f.c.dispose());return f;
+}
+const textRequest={system:'안내',messages:[{role:'user',text:'진단 결과'}],tools:[]};
+const nextTurn=()=>new Promise(resolve=>setImmediate(resolve));
+function observe(promise){let value={state:'pending'};const settled=promise.then(result=>value={state:'completed',result},error=>value={state:error.detail?.code||'unexpected_error'});return{value:()=>value,settled};}
+
+test('default text completion accepts terminal SSE after the 15 second control deadline',async t=>{
+ let controller,started;const ready=new Promise(resolve=>{started=resolve;}),frame=new TextEncoder().encode(await completed().text());
+ const response=new Response(new ReadableStream({start(value){controller=value;},pull(){started();return new Promise(()=>{});}},{highWaterMark:0}),{headers:{'Content-Type':'text/event-stream'}});
+ const f=timedConnection(t,{store:store(credentials()),fetchOverride:async url=>url.endsWith('/responses')?response:null});
+ t.after(()=>{try{controller.close();}catch{}});const observed=observe(f.c.complete(textRequest));await ready;
+ t.mock.timers.tick(16000);await nextTurn();assert.equal(observed.value().state,'pending');
+ controller.enqueue(frame);controller.close();await observed.settled;assert.equal(observed.value().state,'completed');assert.equal(observed.value().result.text,'완료');
+});
+
+test('default text completion still aborts a transport that ignores cancellation at 90 seconds',async t=>{
+ let started,release,signal;const ready=new Promise(resolve=>{started=resolve;});
+ const f=timedConnection(t,{store:store(credentials()),fetchOverride:async(url,init)=>url.endsWith('/responses')?new Promise(resolve=>{release=resolve;signal=init.signal;started();}):null});
+ const observed=observe(f.c.complete(textRequest));await ready;t.mock.timers.tick(89999);await nextTurn();assert.equal(observed.value().state,'pending');
+ t.mock.timers.tick(1);await observed.settled;assert.equal(observed.value().state,'timeout');assert.equal(signal.aborted,true);
+ release(completed());await nextTurn();assert.equal(observed.value().state,'timeout');
+});
+
+for(const blocked of ['models','discovery','refresh'])test(`long text completion keeps the ${blocked} control deadline at 15 seconds`,async t=>{
+ let started,signal;const ready=new Promise(resolve=>{started=resolve;});
+ const f=timedConnection(t,{store:store(credentials(blocked==='models'?{}:{expiresAt:NOW+1})),fetchOverride:async(url,init)=>{
+  if(url===(blocked==='models'?API+'/models':blocked==='discovery'?ISSUER+'/.well-known/openid-configuration':ISSUER+'/api/accounts/oauth/token'))return new Promise(()=>{signal=init.signal;started();});return null;
+ }});
+ const observed=observe(blocked==='models'?f.c.listModels():f.c.complete(textRequest));await ready;
+ t.mock.timers.tick(14999);await nextTurn();assert.equal(observed.value().state,'pending');t.mock.timers.tick(1);await observed.settled;
+ assert.equal(observed.value().state,'timeout');assert.equal(signal.aborted,true);assert.equal(f.calls.some(call=>call.url.endsWith('/responses')),false);
+});
+
+for(const input of [{constructorMs:40,wantMs:40},{constructorMs:20,inputMs:60,wantMs:60},{inputMs:30,wantMs:30}])test(`text completion honors explicit timeout ${JSON.stringify(input)}`,async t=>{
+ let started;const ready=new Promise(resolve=>{started=resolve;});
+ const f=timedConnection(t,{store:store(credentials()),connectionOptions:{timeoutMs:input.constructorMs},fetchOverride:async url=>url.endsWith('/responses')?new Promise(()=>{started();}):null});
+ const observed=observe(f.c.complete({...textRequest,...(input.inputMs===undefined?{}:{timeoutMs:input.inputMs})}));await ready;
+ t.mock.timers.tick(input.wantMs-1);await nextTurn();assert.equal(observed.value().state,'pending');t.mock.timers.tick(1);await observed.settled;assert.equal(observed.value().state,'timeout');
+});
+
+test('text completion rejects timeout above the existing 120 second bound before transport',async t=>{
+ const f=timedConnection(t,{store:store(credentials())});await assert.rejects(f.c.complete({...textRequest,timeoutMs:120001}),error=>error.detail?.code==='bad_response');assert.equal(f.calls.length,0);
+});
+
+for(const change of ['cancel','account'])test(`extended text completion retains ${change} fencing after 15 seconds`,async t=>{
+ let started,release,signal;const ready=new Promise(resolve=>{started=resolve;}),abort=new AbortController();
+ const f=timedConnection(t,{store:store(credentials()),fetchOverride:async(url,init)=>url.endsWith('/responses')?new Promise(resolve=>{release=resolve;signal=init.signal;started();}):null});
+ const observed=observe(f.c.complete({...textRequest,signal:abort.signal}));await ready;t.mock.timers.tick(16000);await nextTurn();assert.equal(observed.value().state,'pending');
+ if(change==='cancel')abort.abort();else f.c.selectAccount(null);await observed.settled;assert.equal(observed.value().state,'cancelled');assert.equal(signal.aborted,true);
+ release(completed());await nextTurn();assert.equal(observed.value().state,'cancelled');
+});
 test('only identity-only explicit enablement reconsents with its saved registration',async t=>{
  const f=setup({store:store(credentials({scopes:['openid'],planUsageEnabled:false}))});t.after(()=>f.c.dispose());
  await f.c.begin({termsAccepted:true,recordId:'record-1',enablePlanUsage:true});assert.equal(f.auth().searchParams.get('prompt'),'consent');assert.equal(f.auth().searchParams.get('client_id'),CLIENT);assert.equal(f.auth().searchParams.has('force_reconsent'),false);f.c.cancel();
