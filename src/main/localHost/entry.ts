@@ -48,6 +48,8 @@ export async function main(argv:string[]=process.argv.slice(2)):Promise<void> {
  const stop=runProtocol(process.stdin,process.stdout,service,cause=>{if(cause)console.error(`Local host protocol stopped: ${cause.code}`);app.quit();});
  app.once('before-quit',()=>{stop();service.dispose();});process.once('SIGTERM',()=>app.quit());process.once('SIGINT',()=>app.quit());
  // Native adapters have been bound after app readiness. The parent verifies a framed round trip before server READY.
- process.stdout.write(JSON.stringify({event:'ready',protocol:1,platform:process.platform})+'\n');
+ process.stdout.write(JSON.stringify({event:'ready',protocol:1,platform:process.platform,pid:process.pid})+'\n');
 }
-if(require.main===module)void main().catch(()=>{process.stderr.write('Local host startup refused. Check the dedicated helper home and native prerequisites.\n');process.exitCode=1;process.exit(1);});
+// Electron's file loader keeps require.main at its bootstrap module, unlike Node.
+const directElectronEntry=Boolean(process.versions.electron)&&process.type==='browser'&&typeof process.argv[1]==='string'&&path.resolve(process.argv[1])===__filename;
+if(require.main===module||directElectronEntry)void main().catch(()=>{process.stderr.write('Local host startup refused. Check the dedicated helper home and native prerequisites.\n');process.exitCode=1;process.exit(1);});
