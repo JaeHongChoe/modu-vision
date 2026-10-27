@@ -1,0 +1,100 @@
+{
+  "schema": "modu-vision.task-assistant-verification/v1",
+  "scope": "controlled_provider_synthetic_data_actual_renderer_backend_and_owned_electron_not_field_or_model_acceptance",
+  "runs": {
+    "browser": {
+      "status": "passed",
+      "test": "assistant-task-plan.spec.ts › task plan approval persists real actions; pause, human resume and reload retain saved evidence without duplicate writes",
+      "mode": "browser",
+      "source": {
+        "commit": "ca52ac7a2e7c318cd9ef959019175df1d2adae49",
+        "dirty": true
+      },
+      "manifest_sha256": "1a0652262ff4a2f4e51a93f3550df53dd00be68a53f83488f2e995761fe59eec",
+      "manifest_local_path": "/private/tmp/modu-vision-task-e2e/assistant-task-plan-20261027-review-11/results/assistant-task-plan-task-p-79925-ce-without-duplicate-writes-browser/harness-manifest.json",
+      "saved_tasks": [
+        {
+          "id": "task_f4ea0ac203eb453badb606bb7d6850a0",
+          "revision": 10,
+          "status": "completed",
+          "plan_sha256": "fcef6127186b034331fa3d393cce14730bcc8d2a3ad932546a67b841f30b7988"
+        },
+        {
+          "id": "task_26b5b98a91f04555b96a4100ef830cbf",
+          "revision": 13,
+          "status": "completed",
+          "plan_sha256": "27b6e36e4c579957ea94d6e11474cc06be1734be06b637b8482f400206122468"
+        }
+      ],
+      "split_writes": 2,
+      "explicit_import_writes": 1,
+      "summary_refreshes": 2,
+      "original_source_counts": {
+        "train": 14,
+        "val": 4,
+        "test": 2
+      },
+      "imported_source_counts": {
+        "train": 12,
+        "val": 4,
+        "test": 4
+      },
+      "original_source_split_sha256": "64299edb65e1f53ade390dff92f2d6a8ead28d3034b6a99a843e14c1a886f4ae",
+      "imported_source_split_sha256": "9c60cea088434a55c8d8285942b5afa436c650234437743fc009c246e42a2cbf",
+      "narrow_layouts": [
+        {
+          "theme": "light",
+          "viewport": {
+            "width": 390,
+            "height": 844
+          },
+          "left": 17,
+          "right": 374,
+          "clientWidth": 355,
+          "scrollWidth": 355
+        },
+        {
+          "theme": "dark",
+          "viewport": {
+            "width": 390,
+            "height": 844
+          },
+          "left": 17,
+          "right": 374,
+          "clientWidth": 355,
+          "scrollWidth": 355
+        }
+      ],
+      "keyboard_approval_count": 1,
+      "external_requests": 0,
+      "page_errors": 0,
+      "provider_boundary": "controlled synthetic local helper; no real provider login/request",
+      "model_or_training_execution": false
+    },
+    "desktop": {
+      "status": "passed",
+      "test": "assistant-task-plan.spec.ts › native task plan uses the actual app window and persists prepared settings with no model or provider execution",
+      "mode": "electron",
+      "source": {
+        "commit": "ca52ac7a2e7c318cd9ef959019175df1d2adae49",
+        "dirty": true
+      },
+      "manifest_sha256": "a90dd766dbb1e47703ca81479029810394c939ebc1ee5dd30df09b4d704c14ec",
+      "manifest_local_path": "/private/tmp/modu-vision-task-e2e/assistant-native-task-20261027-review-2/results/assistant-task-plan-native-eab18-model-or-provider-execution-electron/harness-manifest.json"
+    }
+  },
+  "guide_image": {
+    "path": "docs/verification/assets/task-assistant/plan-390-dark.png",
+    "sha256": "e929d4c99fd1f7af0ae6c0e8b090ca853780b631bc73226523f776eaa4e80f84",
+    "source_image_sha256": "e929d4c99fd1f7af0ae6c0e8b090ca853780b631bc73226523f776eaa4e80f84"
+  },
+  "boundaries": {
+    "real_provider_login_or_request": false,
+    "paid_calls": false,
+    "real_manufacturing_data": false,
+    "model_quality_approval": false,
+    "all_operating_systems": false,
+    "installed_user_app_changed": false,
+    "prior_failure_artifacts_preserved": true
+  }
+}

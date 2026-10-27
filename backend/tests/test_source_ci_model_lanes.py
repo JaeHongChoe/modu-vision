@@ -369,6 +369,8 @@ def test_cpu_and_browser_ci_have_independent_original_bounds_and_complete_comman
             'backend/tests/test_foundation_labeling_api.py',
             'backend/tests/test_label_candidate_api.py',
             'backend/tests/test_assistant_run_log.py',
+            'backend/tests/test_assistant_tasks.py',
+            'backend/tests/test_project_update_registration.py',
         )),
     )
     for later_marker, controls in later_controls:
@@ -388,9 +390,14 @@ def test_cpu_and_browser_ci_have_independent_original_bounds_and_complete_comman
     preserved = original_command.replace(marker + insertion, marker, 1)
     assert hashlib.sha256(preserved.encode()).hexdigest() == 'bcc48453cbc55193ffc09ddfab2675bc657897eb509143ebb2d52264b71742fe', 'Every original CPU selector, ordering and command bound must be preserved'
     assert hashlib.sha256(original_command.encode()).hexdigest() == '402fdf2a6f2a37e30ab2c7e52acf7236d083c819502a172e57e235558df5feee', 'Complete original CPU command plus exactly eighteen published controls must remain unchanged'
-    prior_command = command.replace('backend/tests/test_beginner_metadata_export_errors.py ', '', 1).replace('backend/tests/test_labeling_loop_composition.py ', '', 1)
+    task_control = 'backend/tests/test_assistant_tasks.py '
+    assert command.split().count(task_control.strip()) == 1
+    registration_control = 'backend/tests/test_project_update_registration.py '
+    assert command.split().count(registration_control.strip()) == 1
+    before_task_control = command.replace(task_control, '', 1).replace(registration_control, '', 1)
+    prior_command = before_task_control.replace('backend/tests/test_beginner_metadata_export_errors.py ', '', 1).replace('backend/tests/test_labeling_loop_composition.py ', '', 1)
     assert hashlib.sha256(prior_command.encode()).hexdigest() == '26f5353c51eec79ac49ccaa513bf222a174bd3299f9161459dca9af05876e251', 'All previous selectors and bounds remain byte-for-byte unchanged after removing exactly the two new controls'
-    assert hashlib.sha256(command.encode()).hexdigest() == '4e52580620873db2a7ad6f181b734f7420b1113f756b63a1c5225669d6eb726c', 'The metadata/export and labeling-loop controls execute once in the reviewed insertion order'
+    assert hashlib.sha256(before_task_control.encode()).hexdigest() == '4e52580620873db2a7ad6f181b734f7420b1113f756b63a1c5225669d6eb726c', 'The metadata/export and labeling-loop controls execute once in the reviewed insertion order'
     assert cpu_step['env'] == {'MV_CI_RECORD_DIR': '${{ runner.temp }}/modu-ci-manifests'}
     assert step(cpu, 'Core defect baseline evidence')['run'] == 'python scripts/service_baseline_evidence.py --output "$MV_CI_RECORD_DIR/ci-baseline-evidence.json"'
     assert not any(value.get('name') in {'Install test browser', 'Browser transport and flow checks'} for value in cpu['steps'])
@@ -578,3 +585,14 @@ def test_a_cancelled_fast_run_leaves_its_changes_in_the_next_range(tmp_path):
     assert related.last_green_fast_head('o/r', 'b', 'HEAD', root=tmp_path, passed=lambda repo, branch: []) is None
     assert related.last_green_fast_head('o/r', 'b', 'HEAD', root=tmp_path, passed=lambda repo, branch: None) is None
 
+
+
+def test_assistant_task_ledger_recovery_reaches_full_and_related_fast_ci():
+    required = ('backend/tests/test_assistant_tasks.py', 'backend/tests/test_project_update_registration.py')
+    workflow = yaml.safe_load((ROOT / '.github/workflows/ci.yml').read_text())
+    run = next(step['run'] for step in workflow['jobs']['source']['steps']
+               if step.get('name') == 'CPU contract and recovery regressions')
+    import shlex
+    for reference in required:
+        assert shlex.split(run).count(reference) == 1
+        assert reference in related_module().select_pytest([reference])

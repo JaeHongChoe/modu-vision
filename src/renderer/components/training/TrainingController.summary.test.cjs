@@ -2,7 +2,7 @@ const assert = require('node:assert/strict'), fs = require('node:fs'), path = re
 const Module = require('node:module'), test = require('node:test'), ts = require('typescript');
 
 function fixture({warmParentsFailure = null, resumeFailure = null, deferResume = false} = {}) {
-  const slots = [], effects = [], cache = new Map(), resumeReads = []; let cursor = 0, tree;
+  const slots = [], effects = [], cache = new Map(), resumeReads = [], taskHandlers = new Map(); let cursor = 0, tree;
   const react = { createElement: (type, props, ...children) => ({ type, props: { ...props, children } }), Fragment: 'Fragment',
     useRef(initial) { const i = cursor++; return slots[i] ?? (slots[i] = { current: initial }); },
     useState(initial) { const i = cursor++; if (!(i in slots)) slots[i] = { value: typeof initial === 'function' ? initial() : initial };
@@ -41,7 +41,7 @@ function fixture({warmParentsFailure = null, resumeFailure = null, deferResume =
       if (name.endsWith('/useTrainingStore')) return { useTrainingStore: hook(training) };
       if (name.endsWith('/useComputeStore')) return { useComputeStore: hook(compute) };
       if (name.endsWith('/services/api')) return { api: { training: { warmStartParents: async () => {if (warmParentsFailure) throw Error(warmParentsFailure); return { parents: [], total: 0 };} } }, request: async () => {if (deferResume) return new Promise((resolve, reject) => resumeReads.push({resolve, reject})); if (resumeFailure) throw Error(resumeFailure); return { states: [{checkpoint_path:'/resume/last.pt',device:'cuda',recipe:{backbone:'yolo26n',epochs:12},next_epoch:2,global_step:4}], excluded: [] };}, getApiPersistenceIdentity: () => 'local' };
-      if (name.endsWith('/autoRunChannel')) return { registerAutoRun: () => () => {} };
+      if (name.endsWith('/autoRunChannel')) return { registerAutoRun: () => () => {}, registerTaskAutoRun: (kind, handler, settings) => {const record={handler,settings};taskHandlers.set(kind,record);return()=>{if(taskHandlers.get(kind)===record)taskHandlers.delete(kind);};} };
       if (name.endsWith('/datasetSplitCapability')) return { isSplitUnavailable: () => false };
       if (name.endsWith('/trainingComputeReadiness')) return { trainingComputeReadiness: () => ({ ready: true }) };
       if (name === './useTaskHandoff') return { useTaskHandoff: () => null };
@@ -65,7 +65,7 @@ function fixture({warmParentsFailure = null, resumeFailure = null, deferResume =
     preset: training.preset, nextDevice: training.nextDevice, nextBatchSize: training.nextBatchSize, selectedProfileId: compute.selectedProfileId,
     profile: compute.profiles.find(row => row.id === compute.selectedProfileId), transportRevision: compute.transportRevision,
     computeLoaded: compute.isLoaded, computeLoading: compute.isLoading, computeLoadError: compute.loadError });
-  return { project, data, training, compute, h, shared, scope, render, resumeReads,
+  return { project, data, training, compute, h, shared, scope, render, resumeReads, taskHandler: () => taskHandlers.get('train')?.handler,
     async settle() { for (let i = 0; i < 8; i++) { render(); effects.splice(0).forEach(effect => effect()); await new Promise(setImmediate); } },
     change(label, value) { const field = nodes(tree).find(node => node.props?.['aria-label'] === label); assert.ok(field, label); field.props.onChange({ target: { value } }); },
     summary: () => h.currentTrainingSummary(scope()),
@@ -205,4 +205,21 @@ test('preset and worker resets cannot publish a retired warm parent or resume st
     assert.ok(seen.every(value => !/완료 모델|중단 작업/.test(value.weights)), 'the reset happens before any new-scope publication');
     unsubscribe(); f.unmount();
   }
+});
+
+test('the real task handler starts exactly the mounted custom model, checkpoint, parent and epoch settings and returns its job receipt', async () => {
+  const f=fixture(),starts=[];f.training.startTraining=async(...args)=>{starts.push(args);f.training.jobId='task-custom-job';};
+  await f.settle();f.change('학습 모델 구조','yolo26s');f.change('사전학습 가중치 파일','/local/custom.pt');f.change('수동 학습 횟수','5');await f.settle();f.change('재학습 시작 모델','parent-job');await f.settle();
+  const expected=JSON.parse(JSON.stringify(f.summary().executionSettings));
+  const result=await f.taskHandler()({isCurrent:()=>true,isPaused:()=>false,isAuthorityCurrent:()=>true});
+  assert.equal(result.error,null);assert.equal(result.receipt.job_id,'task-custom-job');assert.deepEqual(result.receipt.settings,expected);
+  assert.equal(starts.length,1);assert.equal(starts[0][0],'/images');assert.equal(starts[0][1],'detection');assert.equal(starts[0][2],'parent-job');
+  assert.equal(starts[0][3].backbone,'yolo26s');assert.equal(starts[0][3].pretrained_checkpoint,'/local/custom.pt');assert.equal(starts[0][3].epochs,5);
+  f.unmount();
+});
+test('stale and paused task handlers refuse before dispatch and changing published model settings retires an old closure', async () => {
+  const f=fixture(),starts=[];f.training.startTraining=async(...args)=>{starts.push(args);f.training.jobId='job';};await f.settle();const old=f.taskHandler();
+  assert.match((await old({isCurrent:()=>false,isPaused:()=>false})).error,/바뀌/);
+  assert.match((await old({isCurrent:()=>true,isPaused:()=>true})).error,/일시정지/);
+  f.change('학습 모델 구조','yolo26s');await f.settle();assert.match((await old({isCurrent:()=>true,isPaused:()=>false})).error,/설정/);assert.equal(starts.length,0);f.unmount();
 });

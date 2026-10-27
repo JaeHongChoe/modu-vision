@@ -1,32 +1,27 @@
 import { create } from 'zustand';
-import { api, subscribeProjectContext } from '../../services/api';
+import { subscribeProjectContext } from '../../services/api';
 import { flowEvaluation } from '../../services/flowEvaluation';
 import { currentAssistContext, subscribeAssistContext } from '../../stores/assistContext';
-import { announceFlowSaved, requestAutoRun } from '../../stores/autoRunChannel';
 import { useDatasetStore } from '../../stores/useDatasetStore';
-import { useEvaluationStore } from '../../stores/useEvaluationStore';
-import { useFlowchartStore } from '../../stores/useFlowchartStore';
 import { useProjectStore } from '../../stores/useProjectStore';
 import { useTrainingStore } from '../../stores/useTrainingStore';
 import { bumpWorkflowEvidence } from '../../stores/workflowEvidence';
 import { WorkspaceDialog } from '../common/WorkspaceDialog';
-import { ACTION_TEXT, PERSON_STOPS, missedStillShown, runAutoProgress, type ActResult, type AutoAction, type AutoChoices, type AutoDeps, type AutoRunState, type TruthConfirm } from './autoProgress';
+import { ACTION_TEXT, PERSON_STOPS, missedStillShown, runAutoProgress, type AutoChoices, type AutoDeps, type AutoRunState, type TruthConfirm } from './autoProgress';
 import { useAnnotationStore } from '../../stores/useAnnotationStore';
 import { useEffect, useState, useSyncExternalStore } from 'react';
 import { focusWorkflowTarget, type WorkflowStep } from './workflowReadiness';
 import { useComputeStore } from '../../stores/useComputeStore';
 import { taskPreviewScope } from './TaskChangeImpactDialog';
+import { acquireExecutionLease, executionLeaseOwner, releaseExecutionLease } from '../../services/assistantTasks/executionLease';
+import { defaultAppSplit, performAutoAppAction } from '../../services/assistantTasks/appActions';
 import { currentTrainingSummary, subscribeTrainingSummary, trainingSummaryLine, trainingSummaryScope, type TrainingStartSummary, type TrainingSummaryProfile } from '../training/trainingStartSummary';
 
 export const AUTO_TITLE = '자동 진행';
 const TASK_TEXT: Record<string, string> = { classification: '분류', detection: '객체 검출', segmentation: '영역 분할', anomaly: '이상 탐지' };
 
 /** The split the step-1 screen offers by default (its ratio input starts from the store's train ratio). */
-export function defaultSplit(trainRatio: number | undefined): { train: number; val: number; test: number } {
-  const train = Math.round((trainRatio ?? 0.8) * 100) || 70;
-  const val = Math.round((100 - train) / 2);
-  return { train, val, test: 100 - train - val };
-}
+export const defaultSplit = defaultAppSplit;
 
 /** The one line of defaults said before the start; everything in it can be changed on its own step first. */
 export function defaultsLine(input: { task: string | null | undefined; trainRatio?: number; device?: string | null;
@@ -38,51 +33,11 @@ export function defaultsLine(input: { task: string | null | undefined; trainRati
 
 /** The app's own calls behind each automatic action (the same ones a person's clicks make). */
 function appDeps(cancelled: () => boolean): AutoDeps {
-  const act = async (action: AutoAction): Promise<ActResult> => {
-    const project = useProjectStore.getState();
-    const data = useDatasetStore.getState();
-    const task = project.task;
-    const folder = data.folderPath;
-    if (action === 'split') {
-      const split = defaultSplit(data.trainRatio);
-      await data.applySplit(split.train / 100, split.val / 100, split.test / 100);
-      const after = useDatasetStore.getState();
-      return after.splitError || null;
-    }
-    if (action === 'train') return requestAutoRun('train');
-    if (action === 'inspect') return requestAutoRun('inspect');
-    if (action === 'evaluate') {
-      await useEvaluationStore.getState().loadEvaluation(undefined, { folderPath: folder, task });
-      return useEvaluationStore.getState().errorMessage || null;
-    }
-    const training = useTrainingStore.getState();
-    if (action === 'saveFlow') {
-      const jobId = useEvaluationStore.getState().jobId || (training.isCurrentData ? training.jobId : null);
-      // No model on the current data (it changed after training): step 3 trains one, or moves on when one is there.
-      if (!jobId) return { back: 3, reason: '검사 흐름에 넣을 현재 데이터의 모델이 없습니다' };
-      const pipeline = task === 'detection' ? await api.flowchart.getSingleDetectionTemplate(jobId)
-        : await api.flowchart.getSingleSegmentationTemplate(jobId, task as Exclude<typeof task, 'detection'>);
-      await api.flowchart.verifyModels({ source_dataset_path: folder, models: [{ job_id: jobId, task }] });
-      await api.flowchart.savePipeline(pipeline, task, folder);
-      await useFlowchartStore.getState().loadPipeline(true, task, folder);
-      announceFlowSaved();
-      return null;
-    }
-    // evaluateFlow: freeze the held-out test images and evaluate the saved flow on them. Truth a person has not
-    // confirmed is never confirmed here: with none, the run stops at the step-5 evaluation for the person.
-    const versionId = useFlowchartStore.getState().baseVersionId;
-    if (!versionId) return { person: '저장한 검사 흐름 버전을 찾지 못했습니다. 5단계에서 저장 버전을 확인하세요.', step: 5, target: 'flow-area-edit' };
-    const cohort = await flowEvaluation.freeze(versionId, '자동 진행 시험 이미지');
-    const evaluated = await flowEvaluation.run(versionId, cohort.cohort_id);
-    if (!evaluated.coverage.known) return { person: '정답이 확인된 시험 이미지가 없어 검사 흐름을 평가하지 못했습니다. 시험 이미지의 라벨을 정답으로 확정하세요(정답 확인은 사람이 합니다).', step: 5, target: 'flow-area-evaluate',
-      confirm: { kind: 'truth', cohortId: cohort.cohort_id, versionId, images: cohort.count } };
-    return null;
-  };
   return {
     snapshot: () => currentAssistContext(),
     setStep: async (step) => { await useProjectStore.getState().setStep(step as WorkflowStep); },
     refresh: () => bumpWorkflowEvidence(),
-    act,
+    act: performAutoAppAction,
     sleep: (ms) => new Promise((resolve) => setTimeout(resolve, ms)),
     cancelled,
     now: () => Date.now(),
@@ -103,8 +58,19 @@ export const useAutoProgressStore = create<AutoProgressState>((set, get) => ({
   cancelRequested: false,
   start: (choices) => {
     if (get().run?.state === 'running') return;
-    set({ cancelRequested: false });
-    void runAutoProgress(appDeps(() => get().cancelRequested), (run) => set({ run }), { choices });
+    const token = acquireExecutionLease('automatic');
+    const fail = (reason: string) => set({cancelRequested: false, run: {state: 'failed',
+      stop: {reason, step: useProjectStore.getState().activeStep}, log: [{at: Date.now(), text: reason, tone: 'error'}]}});
+    if (!token) {
+      fail(executionLeaseOwner() === 'assistant' ? '도우미 작업이 진행 중입니다. 끝나거나 일시정지한 뒤 자동 진행을 다시 시작하세요.'
+        : '다른 자동 진행이 실행 중입니다. 현재 진행이 끝난 뒤 다시 시작하세요.');
+      return;
+    }
+    void (async () => {
+      try { set({ cancelRequested: false }); await runAutoProgress(appDeps(() => get().cancelRequested), (run) => set({ run }), { choices }); }
+      catch (cause) { fail(cause instanceof Error ? cause.message : '자동 진행 상태를 확인하지 못했습니다. 현재 화면의 안내를 확인하세요.'); }
+      finally { releaseExecutionLease(token); }
+    })();
   },
   cancel: () => set({ cancelRequested: true }),
 }));

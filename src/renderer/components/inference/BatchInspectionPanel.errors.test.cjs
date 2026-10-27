@@ -34,7 +34,7 @@ function fixture({historyRun} = {}) {
     '../../stores/useFlowchartStore': {useFlowchartStore: store(flow)},
     '../../stores/useComputeStore': {useComputeStore: store({profiles: [], isLoaded: true, load: async () => {}})},
     '../../stores/useInspectionRunStore': {useInspectionRunStore: store({setRunning() {}})},
-    '../../stores/autoRunChannel': {registerAutoRun: () => () => {}},
+    '../../stores/autoRunChannel': {registerAutoRun: () => () => {}, registerTaskAutoRun: () => () => {}},
     '../../stores/workflowProgress': {publishInspectionProgress() {}},
     '../flowchart/flowExecution': {}, '../flowchart/flowHandoff': {activeSavedVersion: () => undefined},
     '../flowchart/SavedFlowIdentityCard': {}, './ReviewQueuePanel': {}, '../training/useTaskHandoff': {useTaskHandoff: () => null},

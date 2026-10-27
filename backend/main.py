@@ -92,6 +92,8 @@ from backend.api.routes_onboarding import router as onboarding_router
 from backend.api.routes_provenance import router as provenance_router
 from backend.api.routes_defect_gan import router as defect_gan_router
 from backend.api.routes_rotated_detection import router as rotated_detection_router
+from backend.engine.assistant_tasks import TaskLedger, is_task_preparation
+from backend.api.routes_assistant_tasks import router as assistant_tasks_router
 from backend.api.routes_project import get_current_project, router as project_router
 from backend.api.routes_project_preferences import router as project_preferences_router
 from backend.api.routes_assistant import router as assistant_router
@@ -138,7 +140,7 @@ class ProjectContextMiddleware:
 
     async def __call__(self, scope, receive, send):
         path = scope.get('path', '')
-        if scope['type'] not in {'http', 'websocket'} or path == '/health' or path.startswith('/api/accounts/') or (path.startswith('/api/local-host/') and getattr(self.project_app.state,'local_host',None) is not None) or scope.get('method') == 'OPTIONS':
+        if scope['type'] not in {'http', 'websocket'} or is_task_preparation(path, scope.get('method')) or path == '/health' or path.startswith('/api/accounts/') or (path.startswith('/api/local-host/') and getattr(self.project_app.state,'local_host',None) is not None) or scope.get('method') == 'OPTIONS':
             return await self.app(scope, receive, send)
         scope.setdefault('app', self.project_app)
         state = scope.setdefault('state', {})
@@ -349,7 +351,7 @@ class ProjectStorageScopeMiddleware:
 
     @observe_storage_scope
     async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
-        if scope["type"] != "http" or scope.get('path','').startswith('/api/accounts/') or (scope.get('path','').startswith('/api/local-host/') and getattr(self.project_app.state,'local_host',None) is not None) or scope.get("path") in {
+        if scope["type"] != "http" or is_task_preparation(scope.get('path',''), scope.get('method')) or scope.get('path','').startswith('/api/accounts/') or (scope.get('path','').startswith('/api/local-host/') and getattr(self.project_app.state,'local_host',None) is not None) or scope.get("path") in {
             "/health", "/api/project/create", "/api/project/open",
             "/api/project/compatibility/preview", "/api/project/compatibility/apply",
             "/api/project/compatibility/recover", "/api/project/compatibility/global-preview",
@@ -543,6 +545,7 @@ def _admitted_create_app(project_dir: Optional[str] = None, shared_auth_dir: Opt
     p_dir.mkdir(parents=True, exist_ok=True)
     app.state.project_dir = p_dir
     app.state.context_registry = ContextRegistry(p_dir)
+    app.state.assistant_tasks = TaskLedger(p_dir / '.assistant-tasks')
 
     # The Electron supervisor provides a fresh capability for each daemon process.
     # Standalone invocations generate one too, so a missing environment variable
@@ -692,6 +695,7 @@ def _admitted_create_app(project_dir: Optional[str] = None, shared_auth_dir: Opt
     app.include_router(project_router)
     app.include_router(project_preferences_router)
     app.include_router(assistant_router)
+    app.include_router(assistant_tasks_router)
     app.include_router(accounts_router)
     app.include_router(mask_exchange_router)
     app.include_router(class_rename_router)

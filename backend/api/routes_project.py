@@ -103,6 +103,10 @@ def _activate_project(request: Request, project: Dict[str, Any]) -> Dict[str, An
 def _activate_project_locked(request: Request, project: Dict[str, Any]) -> Dict[str, Any]:
     account=getattr(request.state,'account_user',None)
     accounts=getattr(request.app.state,'accounts',None)
+    local_registry=getattr(request.app.state,'local_projects',None)
+    registration=(local_registry.response_registration(request.app,request,project,
+                    required=request.url.path=='/api/project/update')
+                  if account and accounts and local_registry and not getattr(request.state,'local_project_creation',False) else None)
     try:
         if project.get("active_labelset_id", "default") == "default":
             migrate_legacy_dataset_overlay(project)
@@ -117,6 +121,11 @@ def _activate_project_locked(request: Request, project: Dict[str, Any]) -> Dict[
     if account and accounts and getattr(request.state,'local_project_creation',False):
         request.state.scoped_project=project
         return project
+    if registration is not None:
+        # Runtime authority belongs to this response, never to project.json.
+        result={**project, **{key:registration[key] for key in ('registration_id','workspace_id','context')}}
+        request.state.scoped_project=result
+        return result
     if account and accounts:
         accounts.register_project(project['id'],project['project_dir'],account['id'])
         request.state.scoped_project=project
@@ -491,6 +500,10 @@ def _project_context_mutation(project):
 @router.put("/update", response_model=ProjectConfigResponse)
 def update_project(req: ProjectUpdateRequest, request: Request):
     with _project_context_mutation(get_current_project(request)) as project:
+        local_registry=getattr(request.app.state,'local_projects',None)
+        if local_registry is not None and getattr(request.state,'account_user',None) is not None:
+            # Finish exact actor/context/location checks before saving any source change.
+            local_registry.response_registration(request.app,request,project,required=True)
         if req.expected_source is not None:
             current_source = {"project_id": project["id"], "source_dataset_dir": project.get("source_dataset_dir"),
                               "task": project["task"], "annotations_dir": project["annotations_dir"],

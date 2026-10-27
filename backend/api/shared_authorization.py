@@ -10,6 +10,7 @@ from urllib.parse import parse_qs,unquote
 from starlette.datastructures import Headers
 from starlette.responses import JSONResponse
 from fastapi import HTTPException
+from backend.engine.assistant_tasks import is_task_preparation
 from backend.engine.original_shared_current_project import observe_shared_authorization
 from backend.engine.original_shared_auth_denial import original_shared_denial_authentication
 
@@ -88,7 +89,7 @@ class SharedAuthorizationMiddleware:
             except ValueError:return await reject(401,'Account session expired or unavailable')
         state=scope.setdefault('state',{});state['account_user']=account
         state['account_session_token']=token
-        if path.startswith('/api/accounts/') or (path.startswith('/api/local-host/') and getattr(self.project_app.state,'local_host',None) is not None):
+        if is_task_preparation(path, method) or path.startswith('/api/accounts/') or (path.startswith('/api/local-host/') and getattr(self.project_app.state,'local_host',None) is not None):
             return await self.app(scope,receive,send)
         try:
             from backend.contracts.context import declared_context

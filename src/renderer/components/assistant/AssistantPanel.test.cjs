@@ -15,6 +15,8 @@ function render(state,ui={}){
  const {AssistantPanel}=load(path.join(__dirname,'AssistantPanel.tsx'),{react:{__esModule:true,default:react,...react},
   '../../stores/useAssistantStore':{useAssistantStore:store,assistantBridge:()=>state.bridge},
   '../../stores/useAnnotationStore':{useAnnotationStore:selector=>selector({currentImage:{file_path:'/data/a.png'}})},
+  '../../stores/useAssistantTaskStore':{useAssistantTaskStore:selector=>selector({task:null,busy:false})},
+  '../../services/assistantTasks/connection':{taskConnectionKey:()=>''},'./AssistantTaskPanel':{AssistantTaskPanel:()=>null},
   './ChatgptConnectionSetup':{ChatgptConnectionSetup:()=>null},'./AssistantProviderSetup':{AssistantProviderSetup:()=>null},'./AssistantRunLog':{AssistantRunLog:()=>null}});
  return AssistantPanel({});
 }

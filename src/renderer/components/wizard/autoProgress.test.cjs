@@ -161,7 +161,7 @@ test('stopping by the person ends the run at the next pass, and the dialog\'s de
   const source = fs.readFileSync(path.join(__dirname, 'AutoProgressDialog.tsx'), 'utf8');
   assert.match(source, /학습은 3단계에 보이는 설정/);
   assert.match(source, /항상 멈추는 곳 \(사람이 합니다\)/);
-  assert.match(source, /정답 확인은 사람이 합니다/, 'flow truth is never confirmed by the run');
+  assert.match(fs.readFileSync(path.resolve(__dirname, '../../services/assistantTasks/appActions.ts'), 'utf8'), /정답 확인은 사람이 합니다/, 'flow truth is never confirmed by the run');
   assert.doesNotMatch(source, /approve|승인 요청|deploy/i, 'no approval or deployment call');
   const footer = fs.readFileSync(path.join(__dirname, 'WizardFooter.tsx'), 'utf8');
   assert.equal(footer.match(/workspace-button--primary/g).length, 1, 'the footer keeps one primary action');
@@ -216,7 +216,7 @@ test('a flow save with no model on the current data goes back to step 3 by itsel
 test('a flow saved by the run is what step 5 shows: its versions and its model check are read again', () => {
   const studio = fs.readFileSync(path.join(__dirname, '..', 'flowchart', 'FlowchartStudio.tsx'), 'utf8');
   const dialog = fs.readFileSync(path.join(__dirname, 'AutoProgressDialog.tsx'), 'utf8');
-  assert.match(dialog, /await api\.flowchart\.savePipeline\(pipeline, task, folder\);[\s\S]*announceFlowSaved\(\);/);
+  assert.match(fs.readFileSync(path.resolve(__dirname, '../../services/assistantTasks/appActions.ts'), 'utf8'), /await api\.flowchart\.savePipeline\(pipeline, task, folder\);[\s\S]*announceFlowSaved\(\);/);
   assert.match(studio, /useEffect\(\(\) => subscribeFlowSaved\(\(\) => setExternalSave\(\(value\) => value \+ 1\)\), \[\]\);/);
   assert.match(studio, /\}, \[folderPath, hasSelectedFolder, contextRevision, verificationRetry, externalSave\]\);/, 'the saved versions');
   assert.match(studio, /verificationRetry, task, isProjectBusy, externalSave\]\);/, 'the model check, so the old model\'s warning does not stay up');
@@ -266,7 +266,7 @@ test('the choice reaches the run, is kept for that run only, and the dialog offe
   assert.equal(result.state, 'stopped', 'a new run asks again');
   const dialog = fs.readFileSync(path.join(__dirname, 'AutoProgressDialog.tsx'), 'utf8');
   assert.match(dialog, /\{run\.stop\.deferDrafts && <button type="button" className="workspace-button" onClick=\{\(\) => start\(\{ deferDrafts: true \}\)\}>남은 초안은 두고 확정한 라벨 \{run\.stop\.deferDrafts\}장으로 학습까지 이어 가기<\/button>\}/);
-  assert.match(dialog, /void runAutoProgress\(appDeps\(\(\) => get\(\)\.cancelRequested\), \(run\) => set\(\{ run \}\), \{ choices \}\);/);
+  assert.match(dialog, /await runAutoProgress\(appDeps\(\(\) => get\(\)\.cancelRequested\), \(run\) => set\(\{ run \}\), \{ choices \}\);/);
 });
 
 // 5.3-4: a model that missed test defects is looked at before step 5. The footer sends the person to the wrong images;

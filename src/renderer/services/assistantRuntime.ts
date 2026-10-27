@@ -13,7 +13,7 @@ import { bumpWorkflowEvidence } from '../stores/workflowEvidence';
 import { focusWorkflowTarget, type WorkflowStep } from '../components/wizard/workflowReadiness';
 import { api, getApiPersistenceIdentity, getProjectContextGeneration, getProjectContext, request, type LabelSuggestion } from './api';
 import { fileName, minimalAssistContext, type AssistantFacts } from './assistantContext';
-import { createAssistantTools, requireToolCurrent, ToolRefusal, type DraftQueueOrder, type ImageChoice, type ToolCurrent, type ToolDeps } from './assistantTools';
+import { createAssistantTools, requireToolCurrent, ToolRefusal, type DraftQueueOrder, type ImageChoice, type ToolCurrent, type ToolDeps, type AssistantTaskToolDeps } from './assistantTools';
 import { orderDrafts, topConfidence } from '../components/labeling/draftReview';
 import { evaluationGuidance, preparationEvidence } from './assistantGuidance';
 
@@ -213,7 +213,7 @@ export const runtimeToolDeps: ToolDeps = {
   },
 };
 
-export const createRuntimeTools = () => createAssistantTools(runtimeToolDeps);
+export const createRuntimeTools = (tasks?:AssistantTaskToolDeps) => createAssistantTools({...runtimeToolDeps,tasks});
 
 /** The open step-2 image as a ≤1024 px copy for an image question, read only after the person confirmed sending it. */
 export async function currentImageForQuestion(): Promise<{ mediaType: 'image/png' | 'image/jpeg' | 'image/webp'; base64: string } | null> {

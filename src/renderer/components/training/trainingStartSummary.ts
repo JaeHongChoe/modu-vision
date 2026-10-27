@@ -6,6 +6,8 @@ export interface TrainingStartSummary {
   weights: string;
   device?: string;
   settings?: string;
+  /** Exact local invocation snapshot. Never send this object to an assistant provider. */
+  executionSettings?: Record<string, unknown>;
 }
 
 export interface TrainingSummaryProfile { id: string; name: string; gpu_selector?: string | null }
@@ -30,13 +32,13 @@ const notify = () => { for (const listener of listeners) listener(); };
 
 /** A mounted step-3 screen owns its current selection; an old effect cannot clear a newer publication. */
 export function publishTrainingSummary(scope: string, value: TrainingStartSummary): () => void {
-  const record = { scope, value: { ...value } };
+  const record = { scope, value: JSON.parse(JSON.stringify(value)) as TrainingStartSummary };
   published = record; notify();
   return () => { if (published === record) { published = null; notify(); } };
 }
 
 export function currentTrainingSummary(scope: string): TrainingStartSummary | null {
-  return published?.scope === scope ? { ...published.value } : null;
+  return published?.scope === scope ? JSON.parse(JSON.stringify(published.value)) as TrainingStartSummary : null;
 }
 
 export function subscribeTrainingSummary(listener: () => void): () => void {
