@@ -39,12 +39,14 @@ export class BrowserHost {
  private capabilities:Capabilities={};
  private reasons:Reasons={};
  private pending:Promise<void>|null=null;
+ private pendingSession:{origin:string;revision:number|undefined}|null=null;
+ private discovery:{origin:string;revision:number|undefined;ready:boolean}|null=null;
  private run:{id:string;tool:string;expires:number;resource:string}|null=null;
  constructor(private readonly runtime:{origin:()=>string|null;fetch:typeof fetch;session:typeof browserSession;now:()=>number;context?:()=>ProjectContext|null;resource?:()=>HostProjectState}){}
  available():boolean {const origin=this.runtime.origin();if(!origin)return false;try{const url=new URL(origin);return url.protocol==='https:'&&['localhost','127.0.0.1','[::1]'].includes(url.hostname);}catch{return false;}}
  private resource():HostProjectState {return this.runtime.resource?.()??{local:true,generation:0};}
  private resourceKey():string {return JSON.stringify(this.resource());}
- can(capability:Capability):boolean {if(['pickPaths','openPaths','projects'].includes(capability)&&!this.resource().local)return false;if(!this.available()||!this.runtime.session.connection())return false;const value=this.capabilities[capability];return value===true||typeof value==='object'&&value.available===true;}
+ can(capability:Capability):boolean {if(['pickPaths','openPaths','projects'].includes(capability)&&!this.resource().local)return false;if(!this.tab||!this.available()||!this.runtime.session.connection())return false;const value=this.capabilities[capability];return value===true||typeof value==='object'&&value.available===true;}
  reason(capability:Capability):string {if(['pickPaths','openPaths','projects'].includes(capability)&&!this.resource().local)return '원격 프로젝트에서는 서버 경로를 입력하거나 ZIP 파일 업로드를 사용하세요. 로컬 경로 선택·열기는 로컬 프로젝트로 돌아온 뒤 사용할 수 있습니다.';const value=this.capabilities[capability];return typeof value==='object'&&value.reason||this.reasons[capability]||this.reasons.local_host||'로컬 보조 프로그램 연결과 계정 권한을 확인하세요.';}
  private abortPending():void {for(const controller of this.inFlight)controller.abort();this.inFlight.clear();}
  private disposeTab():Promise<void>{
@@ -56,26 +58,49 @@ export class BrowserHost {
   return this.runtime.fetch(url,{...options,method:'POST',headers,body:'{}',redirect:'error',keepalive:true,signal:AbortSignal.timeout(5000)}).then(()=>undefined,()=>undefined);
  }
  private retire(clearCapabilities:boolean):void {
-  this.abortPending();this.epoch++;this.approved=false;this.tab=null;this.grants=[];this.pending=null;this.run=null;
-  if(clearCapabilities){this.capabilities={};this.reasons={};}
+  this.abortPending();this.epoch++;this.approved=false;this.tab=null;this.grants=[];this.pending=null;this.pendingSession=null;this.run=null;
+  if(clearCapabilities){this.capabilities={};this.reasons={};this.discovery=null;}
  }
  reset():void {void this.disposeTab();this.retire(true);}
  async dispose():Promise<void>{const pending=this.disposeTab();this.retire(true);await pending;}
  projectChanged():void {void this.disposeTab();this.retire(false);}
  async prepareRequest(target?:string,method='GET',_body?:unknown):Promise<void>{
-  if(!this.tab)try{await this.initialize();}catch(error){this.capabilities={};this.reasons={local_host:error instanceof Error?error.message:'로컬 보조 프로그램 연결을 확인하세요.'};}
+  try{await this.initialize();}catch{/* initialize owns failure state and fences it to the originating session */}
   if(target&&method.toUpperCase()==='POST'){const url=new URL(target,this.runtime.origin()??undefined);if(url.origin===this.runtime.origin()&&/^\/api\/runtime-services\/(install\/(activate|remove)|scm\/(prepare|activate))$/.test(url.pathname))await this.approve();}
  }
  async initialize():Promise<void> {
   if(!this.available()||!this.runtime.session.connection())return;
+  const origin=this.runtime.origin()!,revision=this.runtime.session.revision?.();
+  if([this.discovery,this.pendingSession].some(state=>state&&(state.origin!==origin||state.revision!==revision)))this.retire(true);
   if(this.pending)return this.pending;
   const epoch=this.epoch;
-  const work=(async()=>{if(!this.tab){const value=await this.call<{tab_id:string}>('/session',{},false);if(typeof value.tab_id!=='string'||!value.tab_id)throw new Error('로컬 탭 응답을 확인하세요.');this.tab=value.tab_id;}
-   const value=await this.call<{capabilities:Capabilities;reasons?:Reasons}>('/capabilities',undefined,false);
-   if(epoch!==this.epoch)throw new Error('계정 또는 프로젝트가 바뀌었습니다. 다시 시도하세요.');
-   this.capabilities=value.capabilities||{};this.reasons=value.reasons||{};
-  })();this.pending=work;
-  try{await work;}finally{if(this.pending===work)this.pending=null;}
+  const current=()=>epoch===this.epoch&&revision===this.runtime.session.revision?.()&&origin===this.runtime.origin()&&!!this.runtime.session.connection();
+  const work=(async()=>{
+   try{
+    if(!this.discovery){
+     // Discovery is read-only. A generic HTTPS shared server must never receive
+     // a native tab mutation merely because the renderer issued an API request.
+     const value=await this.call<{capabilities:Capabilities;reasons?:Reasons}>('/capabilities',undefined,false);
+     const capabilities=value?.capabilities;
+     const ready=!!capabilities&&typeof capabilities==='object'&&['pickPaths','openPaths','assistant','updates','projects'].some(name=>{
+      const capability=capabilities[name as Capability];return capability===true||typeof capability==='object'&&capability?.available===true;
+     });
+     if(!current())throw new Error('계정 또는 프로젝트가 바뀌었습니다. 다시 시도하세요.');
+     this.discovery={origin,revision,ready};this.capabilities=ready?capabilities:{};this.reasons=value?.reasons||{};
+    }
+    if(!this.discovery.ready||this.tab)return;
+    const value=await this.call<{tab_id:string}>('/session',{},false);
+    if(!current())throw new Error('계정 또는 프로젝트가 바뀌었습니다. 다시 시도하세요.');
+    if(typeof value.tab_id!=='string'||!value.tab_id)throw new Error('로컬 탭 응답을 확인하세요.');
+    this.tab=value.tab_id;
+   }catch(error){
+    // Bound failed negotiation/admission to this authenticated lifecycle, not
+    // each normal API request. A new login or explicit reset can discover again.
+    if(current()){this.discovery={origin,revision,ready:false};this.capabilities={};this.reasons={local_host:error instanceof Error?error.message:'로컬 보조 프로그램 연결을 확인하세요.'};}
+    throw error;
+   }
+  })();this.pending=work;this.pendingSession={origin,revision};
+  try{await work;}finally{if(this.pending===work){this.pending=null;this.pendingSession=null;}}
  }
  private async call<T>(path:string,body?:unknown,requireTab=true,ownerFence?:()=>boolean):Promise<T>{
   if(!this.available()||!this.runtime.session.connection()||requireTab&&!this.tab)throw new Error('로컬 계정 로그인과 보조 프로그램 연결을 확인하세요.');
