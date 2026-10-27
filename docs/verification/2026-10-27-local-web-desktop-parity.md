@@ -6,12 +6,13 @@
 ## 최신 체크포인트
 
 제품 소스는 `0a9bbfc6`의 등록 위치 결합 수정까지, 검증 fixture는 `e88f1b3b`까지
-반영했다. 아래 시점별 기록의 대기 문구보다 이 요약이 최신 상태다.
+반영했다. 아래 실제 화면 결과는 문서·검증 선언까지 반영한 `744283cf`에서 확인했다.
+아래 시점별 기록의 대기 문구보다 이 요약이 최신 상태다.
 
 - 전체 renderer/main: **2,499 PASS / 명시 opt-in SKIP 1 / FAIL 0**.
 - 웹·보조 프로그램·마스크 복원 19개 backend 모듈: **352 PASS**.
 - 기존 선택자를 유지하고 공급자 fixture 검사를 덧붙인 E2E 하네스: **67 PASS**.
-  renderer/main/e2e 타입 검사와 build가 통과했다.
+  renderer/main/e2e 타입 검사와 build가 통과했다. 이번 문서 갱신을 위해 재실행하지 않았다.
 - 복원본 로그인은 membership key를 계정 선택에 그대로 쓰면서, 서버가 검증한
   registration/workspace/actor/team/logical ID/경로 전체를 대조한다. 새 조합 18개와
   trace 정책 3개를 독립 실행해 21개가 통과했다. stale catalog/다른 같은-ID 위치/
@@ -19,14 +20,45 @@
 - 도우미 AP1은 해당 시험의 raw trace를 인증 전부터 끄고 실제 trace 옵션을 검사해
   해소했다. 의도적인 인증 전 실패에서도 ZIP trace와 helper ledger가 없었다.
   새 실제 브라우저 사례도 통과했으며, 원래 실패 trace는 SHA 그대로 private 권한에 보존했다.
-- 59443만 새 소스로 재실행해 서버 PID 26728/helper PID 26772 준비 상태와 저장한
-  프로젝트·모델·평가·흐름·검사 ID 및 원본/모델/split SHA를 재확인했다.
-  추가 학습·평가·검사 dispatch는 0회다. 소스 2,212개·빌드 58개 해시를 보존했다.
-- 실제 새 위치 마스크 복원/재로그인 수락은 **대기**다. 로컬 browser 제어가 설정상
-  enabled인데도 Work 비활성 응답을 반환해 UI 제어가 차단됐다. 도구 연결 1회 재초기화도
-  같은 응답이었다. 사용자 설정을 변경하거나 차단을 우회하지 않았다.
-- 현재 head의 hosted fast/full/gate 결과는 별도 기록한다. PR18은 draft이며 main 병합·
-  배포·사용자 앱 재패키징은 하지 않았다. 소스·모의·실제 API·실제 화면·현장 수락은 구분한다.
+- 이전 재시작의 서버 PID 26728/helper PID 26772에서 저장한 프로젝트·모델·평가·흐름·
+  검사 ID와 원본/모델/split SHA를 대조한 기록, 소스 2,212개·빌드 58개 해시는 보존했다.
+  이후 browser 도구가 enabled 설정에도 Work 비활성 응답을 반환한 차단도 과거 실패로 남긴다.
+- 사용자가 앱을 종료·재시작한 뒤 browser 제어가 복구됐다. 당시 검증 서버도 종료돼
+  실제 접속이 거절됐으며, 소유한 59443 실행기만 같은 데이터 폴더·기존 인증서로
+  다시 실행했다(서버 PID 37496). 사용자 앱·8443·설정·권한은 변경하지 않았다.
+- `744283cf`에서 정상 QA 계정 로그인으로 이전 실패 복원본의 membership를 다시 열었다.
+  실제 native 파일 창으로 원래 백업을 선택해 `restore-parent-fixed/restored-project`에
+  새로 복원했고, 데이터 통계 **라벨 완료 2장 / 미완료 0장**과 두 이미지의 각 브러시
+  라벨 2개·마스크 표시를 확인했다. 새로고침 뒤 명시 로그인 gate와 정상 재로그인,
+  원본과 새 복원본을 각각 다시 여는 동작도 통과했다.
+- 별도 파일 대조 `qa/native-ui-mask-744-fixed-restore-readback.json`
+  (SHA-256 `5946fd607bc5504b6b0c00222505581ba5af53776f981ae29e86667c8d4b95eb`)은
+  마스크 경로가 새 범위 안의 실제 PNG로 연결되고 픽셀·구멍·클래스 ID 0/3/7·색상·
+  원본 바이트·UUID·revision 2/content version 1·메타데이터 해시·이전 버전이 보존됐음을
+  확인했다. 기존 실패 복원본 25개 파일, 원본 백업·프로젝트·기존 모델/split도 그대로다.
+  브라우저 통계는 실제 UI 관측이며 이 파일 대조의 재구성 통계와 구분한다.
+- 작업 센터의 새 백업 1개가 파일 24개를 검증하고 종료됐다
+  (SHA-256 `b99f4e9d1704cc6d121cafabbd42871f68d153ee76e68239a718d4cbd5d3b9fc`).
+  실제 native 상위 폴더 선택 후 `restore-parent-task-744/restored-project` 복원 완료와
+  현재 프로젝트가 자동 전환되지 않는 상태를 확인했다. 작업
+  `4326b5fa7b6e48bb840650a0392cd260`의 검증된 116,983-byte ZIP은 payload 24개와
+  manifest 1개의 SHA/CRC가 맞았고, 새 복원본의 마스크 2장·브러시 4개, 원본·메타데이터·
+  버전과 네 위치의 registration/workspace/permission 분리를 별도 대조했다.
+  근거 `qa/native-ui-mask-744-taskcenter-restore-readback.json`의 SHA-256은
+  `8038a3323c470effd33638c645ed152f2fc8c4d73c0743926387ccf8c875c237`이다.
+  백업 원본의 `.retention/retention.sqlite3` 변경은 기록했으며 라벨·이미지·버전은 유지됐다.
+  이는 durable 백업 작업에서 명시적으로 복원한 결과이며, 별도 durable `project_restore`
+  작업을 실행했다는 뜻은 아니다.
+- 실제 HTML 보고서의 `HTML 보고서 미리보기` iframe에서 보고서 제목·지표·혼동 행렬·
+  이미지 항목 제목을 읽고 화면을 보존했다. DOM의 `sandbox=""`와
+  `referrerpolicy="no-referrer"`도 확인했다. 화면 근거는
+  `qa/actual-browser-744-html-preview.png`와 `.txt`다. 추가 학습·평가·검사 dispatch는 0회다.
+- `744283cf`의 hosted fast `40454490320`은 **11/11 SUCCESS**, 웹 보안
+  `40454490394`는 **1/1 SUCCESS**다. 정확한 head와 workflow path를 대조했다.
+  해당 head의 full은 **미기동**이고, gate `40454490323`의 최초 실패는 full 선행 조건
+  기록이다. 이전 head의 성공이나 실패를 현재 full 결과로 재사용하지 않는다.
+- PR18은 draft이며 main 병합·배포·사용자 앱 재패키징은 하지 않았다. 위 결과는 합성 QA이며,
+  전체 기능의 사람 수락·실제 공급자/원격 계정·OS 서비스·공개 릴리스·현장 품질 수락은 아니다.
 
 ## 범위와 보존
 
@@ -38,7 +70,9 @@
 사용자 계정·자료·프로젝트·GPU/서비스를 변경하지 않았다. 실제 API QA는 격리된
 포트 59443과 별도 계정·자료 폴더에서 수행했다. 원본을 삭제하지 않는다.
 
-## 직접 확인한 실제 실행
+## 직접 확인한 실제 실행 — 이전 시점 기록
+
+아래는 실행 당시의 기록이다. 이후 해소된 UI 대기는 위 최신 체크포인트와 구분한다.
 
 아래 40장 API QA는 최종 수정 전 작업 소스에서 실행했다. 최종 빌드의 서버 재시작·
 저장 결과 재독과 일반 브라우저·네이티브 수락을 대신하지 않는다. 학습을 반복해
@@ -102,20 +136,20 @@
 
 | 대조 항목 | 구현 경로 | 현재 근거 / 남은 확인 |
 | --- | --- | --- |
-| 네이티브 폴더·파일 선택 | 고정 HTTP→private RPC→기존 Electron dialog | 사용자 native 허용, 실제 40장 폴더 선택·취소 확인; 새 인증 수정 후 재확인 진행 중 |
-| 프로젝트 생성·열기·최근 | 계정별 등록과 위치 검증 | 실제 managed 생성/재접속, 외부 경로·역할 거절 및 등록 회귀 |
-| 프로젝트 백업 | durable backup와 ZIP/hash/영수증 | 실제 파일 단위 회귀; 네이티브 위치 선택 수락 별도 |
-| 프로젝트 복원 | 새 위치·같은 manifest ID·새 registration/workspace | 실제 archive/namespace/restart 회귀, 원본 보존 |
+| 네이티브 폴더·파일 선택 | 고정 HTTP→private RPC→기존 Electron dialog | 사용자 native 허용, 실제 40장 폴더 선택·취소; `744283cf` 재로그인 후 백업 파일·두 복원 상위 폴더 native 선택 확인 |
+| 프로젝트 생성·열기·최근 | 계정별 등록과 위치 검증 | 실제 managed 생성/재접속; `744283cf`에서 같은-ID 원본·새 복원본 별도 재열기와 복원본 재로그인 확인; 외부 경로·역할 거절 회귀 |
+| 프로젝트 백업 | durable backup와 ZIP/hash/영수증 | 실제 native 백업의 21개 파일·ZIP CRC/SHA 보존; `744283cf`에서 동일 백업을 native 파일 창으로 선택해 새 복원에 사용 |
+| 프로젝트 복원 | 새 위치·같은 manifest ID·새 registration/workspace | `744283cf` actual native 새 위치 복원·재로그인·원본/복원본 별도 재열기, 픽셀/메타데이터/이전 버전 및 기존 실패 복원본 보존 대조 PASS |
 | 데이터 폴더·ZIP | immutable project staging 또는 chunk upload | 실제 40장 ZIP·SHA·명시 채택·source CAS; 선택 원본 교체 경합 B1 독립 재검토 통과 |
 | 링크 자료 | 명시 대상 계획/네이티브 확인 후 사본 | 구현·대상 검토·메타데이터 한도 및 공통 writer B2 독립 재검토 통과, 실제 native 수락 별도 |
-| 작업 센터 백업 복원 | 검증된 backup job→새 네이티브 위치 | 구현·독립 재검토 완료; 원본 membership·게시 전 inventory·legacy 정규화 유지, 실제 native 위치 선택 수락 별도 |
+| 작업 센터 백업 복원 | 검증된 backup job→새 네이티브 위치 | `744283cf` actual UI 백업 24개 파일 검증·종료, native 새 위치 복원·현재 프로젝트 유지; ZIP/마스크/메타데이터/버전·네 위치 권한 분리 대조 PASS, 보존기한 DB 변경 기록 |
 | LabelMe/COCO/YOLO | 프로젝트 사본→기존 preview/apply | 실제 UI 선택·적용·ZIP 내보내기, 3장/4라벨 좌표·ID·palette·SHA 대조; COCO 충돌 중지 보존 |
-| 픽셀 마스크 | 프로젝트 사본→기존 mask preview/apply/export | 입력 grant·크기/class 계약 회귀; 실제 사용자 UI 수락 별도 |
+| 픽셀 마스크 | 프로젝트 사본→기존 mask preview/apply/export | 실제 2장/4브러시 import/export 픽셀·구멍·palette 대조; `744283cf` 새 복원과 두 이미지 실제 표시·라벨 완료 2/미완료 0·저장 파일 대조 PASS |
 | 검사 이미지 | chooser 또는 기존 library/typed path | 프로젝트 입력 사본과 선택 권한 회귀 |
 | SAM2/DINO | 모델 폴더 사본·기존 검증 | 의존성/hash/권한 조건 유지; 실제 추가 모델 실행 안 함 |
 | 사전학습 가중치 | checkpoint 사본·기존 hash 검사 | 기존 공식 캐시로 실제 학습; 추가 다운로드 안 함 |
 | 결과 폴더·문서 열기 | 현재 프로젝트 경로·기존 native whitelist | 실행 파일/bundle/비밀/다른 프로젝트 거절 회귀 |
-| 보고서 전달 | Blob download·opaque sandbox preview | 실제 받은 HTML/JSON bytes 확인, UI 버튼 수락 별도 |
+| 보고서 전달 | Blob download·opaque sandbox preview | 실제 UI HTML/JSON 다운로드 bytes/SHA 대조; `744283cf` HTML iframe 내용·실제 화면 및 빈 sandbox/no-referrer 확인 |
 | 호환성·migration | 현재 선택 프로젝트·기존 계획/hash/apply | 다른 프로젝트 거절과 기존 migration 조건 유지 |
 | runtime pack | 사본·inventory·서명/호환성 검사 | 기존 모델·OS·배포자 조건 유지; 실제 설치 안 함 |
 | 업데이트 | helper의 실제 설치 identity·기존 검증 | 소스 실행은 설치형 배포물이 아님, 공개 릴리스 수락 별도 |
@@ -126,7 +160,7 @@
 | SSH compute·예약 | 기존 HTTP 엔진·작업 소유/권한 | 기존 회귀, 실제 SSH/GPU 실행 안 함 |
 | OS 서비스 관리 | 기존 admin+owner 및 local native 허용 | 승인 전 side effect 거절 회귀, 실제 등록 안 함 |
 | 외부 링크 | 기존 브라우저 새 탭 / desktop shell | 기존 허용 scheme·opener 격리 회귀 |
-| 계정 로그인 | HTTPS cookie·Origin·CSRF·명시 재로그인 gate | 기존 실제 로컬 합성 계정; 새 reload gate 130개 및 독립 16개 통과, 최신 실제 화면 수락 진행 중 |
+| 계정 로그인 | HTTPS cookie·Origin·CSRF·명시 재로그인 gate | 실제 로컬 합성 계정; reload gate 130개·독립 16개 및 full native 위치 결합 18개; `744283cf` 새 복원본 reload→명시 gate→정상 재로그인 PASS |
 | 학습·평가·흐름·검사 | 동일 기존 HTTP 엔진 | 위 실제 합성 학습 1회·평가·흐름·검사·저장 증거 |
 
 ## 독립 검토와 실패 보존
@@ -182,7 +216,7 @@
   인증 검사 16개가 통과했다. 로컬 200·network/5xx, 새 계정·다른 remote로 바뀐
   늦은 응답을 구분하며 도우미 요청·쓰기를 재전송하지 않는다.
 
-## 현재 통합 검사 결과
+## 통합 검사 이력 — 시점별 결과
 
 증거 로그는 이 작업의 `.superpowers/sdd/2026-10-27-local-web-desktop-parity/logs/`에 보관한다.
 
