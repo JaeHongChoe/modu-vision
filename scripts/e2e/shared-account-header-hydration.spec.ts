@@ -2,6 +2,7 @@ import path from 'node:path';
 import type {Request} from '@playwright/test';
 import {test, expect} from './fixtures/test';
 import {browserTeamServer} from './fixtures/browser_team_server';
+import {expectBrowserLoginGate} from './fixtures/browserGateLogin';
 
 test.use({ignoreHTTPSErrors: true, actionTimeout: 15000});
 
@@ -30,12 +31,14 @@ test('browser account login automatically hydrates the mounted Header and accoun
       ssh_target: '127.0.0.1', ssh_port: 1, remote_root: path.join(workspace.root, 'inert-header-target'),
       runtime_kind: 'python', runtime_value: 'python3', gpu_selector: null};
     const wires: Wire[] = [], mutations: Array<{method: string; route: string}> = [];
+    const initialProtectedRequests:Array<{method:string;route:string}>=[];
     const byRequest = new WeakMap<Request, Wire>();
     let phase = 'initial-unauthenticated', navigationCount = 0;
     const requestSeen = (request: Request) => {
       const url = new URL(request.url());
       if (url.origin !== server.origin || !url.pathname.startsWith('/api/')) return;
       if (!['GET', 'HEAD', 'OPTIONS'].includes(request.method())) mutations.push({method: request.method(), route: url.pathname});
+      if(phase==='initial-unauthenticated'&&url.pathname!=='/api/accounts/config')initialProtectedRequests.push({method:request.method(),route:url.pathname});
       if (!captured.has(url.pathname)) return;
       const headers = request.headers();
       // Never retain password/login body, bearer value, cookie value or CSRF.
@@ -89,24 +92,17 @@ test('browser account login automatically hydrates the mounted Header and accoun
       page.on('framenavigated', navigationSeen);
       await page.goto(server.origin);
       const target = page.getByLabel('실행 위치', {exact: true});
-      // Drain the original finite retry budget before login. A surviving old
-      // 401 retry must not accidentally make the unpatched Header look fixed.
-      // Source contract: initial attempt + four retries at 500/1000/1500/2000ms.
-      await expect.poll(() => complete('initial-unauthenticated', discovery[0], 401).length,
-        {timeout: 20000, intervals: [100, 250, 500]}).toBe(5);
-      await expect.poll(() => complete('initial-unauthenticated', discovery[1], 401).length,
-        {timeout: 20000, intervals: [100, 250, 500]}).toBe(5);
-      expect(rows('initial-unauthenticated', discovery[0])).toHaveLength(5);
-      expect(rows('initial-unauthenticated', discovery[1])).toHaveLength(5);
-      await expect(target).toBeDisabled();
-      await page.getByRole('button', {name: '서버 관리', exact: true}).click();
-      await page.getByText('공동 작업 서버', {exact: true}).click();
-      await expect(page.getByLabel('공동 작업 서버 주소', {exact: true})).toHaveValue(server.origin);
+      // The explicit login gate replaces the old five unauthenticated Header retries.
+      // Neither project workspace nor account/scoped/discovery requests may use an ambient cookie.
+      await expectBrowserLoginGate(page,server.origin);
+      await expect(target).toHaveCount(0);
+      expect(initialProtectedRequests).toEqual([]);
+      expect(mutations).toEqual([]);
+      for(const route of [...accountReads,...discovery,scopedRead])expect(rows('initial-unauthenticated',route)).toHaveLength(0);
       await page.getByLabel('공유 계정 이름', {exact: true}).fill(username);
       await page.getByLabel('공유 계정 비밀번호', {exact: true}).fill(password);
       phase = 'ui-login';
       await page.getByRole('button', {name: '연결·로그인', exact: true}).click();
-      await expect(page.getByLabel('공동 작업 프로젝트', {exact: true})).toHaveValue(project.id);
       await expect(page.getByTitle('프로젝트 관리', {exact: true})).toContainText(project.name);
       await expect.poll(() => complete('ui-login', discovery[0], 200).length).toBe(1);
       await expect.poll(() => complete('ui-login', discovery[1], 200).length).toBe(1);
@@ -120,8 +116,6 @@ test('browser account login automatically hydrates the mounted Header and accoun
       await expect(target).toHaveValue(profile.id);
       await expect(target).toBeEnabled();
       await expect(target.locator(`option[value="${profile.id}"]`)).toHaveText(profile.name);
-      await page.getByRole('dialog', {name: '컴퓨팅 서버 관리', exact: true})
-        .getByRole('button', {name: '닫기', exact: true}).click();
       await evidence.screenshot(page, 'account-login-header-auto-hydration');
 
       phase = 'ui-reopen';
@@ -166,13 +160,14 @@ test('browser account login automatically hydrates the mounted Header and accoun
         .toMatchObject({httpOnly: true, secure: true, sameSite: 'Strict'});
       const storage = await page.evaluate(() => JSON.stringify({local: {...localStorage}, session: {...sessionStorage}}));
       for (const secret of [password, administrator.token, server.backend.token]) expect(storage).not.toContain(secret);
+      expect(storage).not.toMatch(/"(?:token|csrf_token|csrf|password)"\s*:/);
       await evidence.screenshot(page, 'account-reopen-global-reads-context-preserved');
       // Recheck every observed row after the last await; a late failed or
       // unfinished poll cannot disappear behind the earlier successful read.
       assertScopedRows();
       evidence.note('account_header_browser_scope', {actual_renderer_ui: true, actual_cookie_backend: true,
         context, profile_id: profile.id, source_build: rendererBuild.index,
-        initial_auth_retry_budget_exhausted: true, manual_compute_refresh_clicked: false,
+        initial_explicit_login_gate:true, initial_protected_requests:initialProtectedRequests, initial_workspace_absent:true, manual_compute_refresh_clicked: false,
         page_reload_after_login: false, fixture_profile_and_selection_unchanged: true,
         actual_ssh_or_gpu_execution: false, native_bearer_owned_admission: false,
         full_helper_or_native_provider_qualification: false});

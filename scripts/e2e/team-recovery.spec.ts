@@ -4,6 +4,7 @@ import crypto from 'node:crypto';
 import type {Page, BrowserContext} from '@playwright/test';
 import {test, expect} from './fixtures/test';
 import {browserTeamServer} from './fixtures/browser_team_server';
+import {expectBrowserLoginGate,openBrowserServerManagement} from './fixtures/browserGateLogin';
 
 test.use({ignoreHTTPSErrors: true, actionTimeout: 15000});
 
@@ -35,10 +36,9 @@ test('independent HTTPS team clients conflict, lose revoked authority and reopen
       return url.origin === server.origin || ['data:', 'blob:', 'about:'].includes(url.protocol) ? route.continue() : route.abort();
     });
     const second = await secondContext.newPage();
-    const login = async (client: Page, username: string) => {
-      await client.goto(server.origin);
-      await client.getByRole('button', {name: '서버 관리', exact: true}).click();
-      await client.getByText('공동 작업 서버', {exact: true}).click();
+    const login = async (client: Page, username: string, navigate=true) => {
+      if(navigate)await client.goto(server.origin);
+      await expectBrowserLoginGate(client,server.origin);
       await client.getByLabel('공유 계정 이름', {exact: true}).fill(username);
       await client.getByLabel('공유 계정 비밀번호', {exact: true}).fill(password);
       const response = client.waitForResponse(r => new URL(r.url()).pathname === '/api/accounts/login' && r.request().method() === 'POST');
@@ -47,6 +47,7 @@ test('independent HTTPS team clients conflict, lose revoked authority and reopen
       evidence.redact(loggedIn.csrf_token);
       expect(loggedIn.token).toBeUndefined();
       await expect(client.getByTitle('프로젝트 관리', {exact: true})).toContainText(project.name);
+      await openBrowserServerManagement(client);
       await client.getByRole('dialog', {name: '컴퓨팅 서버 관리', exact: true}).getByRole('button', {name: '닫기', exact: true}).click();
       const cookies = await client.context().cookies(server.origin);
       expect(cookies.find(row => row.name === 'vision_session')).toMatchObject({httpOnly: true, secure: true, sameSite: 'Strict'});
@@ -89,6 +90,8 @@ test('independent HTTPS team clients conflict, lose revoked authority and reopen
     expect(reopened.value).toEqual(before.value);
     const remainsRevoked = await request(winner, metadataPath); expect(remainsRevoked.status).toBe(403);
     await clients[loser].reload();
+    await expectBrowserLoginGate(clients[loser],server.origin);
+    csrf[loser]=await login(clients[loser],users[loser].username,false);
     await expect(clients[loser].getByTitle('프로젝트 관리', {exact: true})).toContainText(project.name);
     const preserved = await request(loser, '/api/annotations/' + annotationId + '?' + new URLSearchParams({file_path: image.file_path}));
     expect(preserved.status).toBe(200);

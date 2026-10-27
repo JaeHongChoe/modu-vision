@@ -5,6 +5,7 @@ import {storedZip} from './fixtures/storedZip';
 import {execFileSync} from 'node:child_process';
 import {test, expect} from './fixtures/test';
 import {browserTeamServer} from './fixtures/browser_team_server';
+import {expectBrowserLoginGate,openBrowserServerManagement} from './fixtures/browserGateLogin';
 const harness = require('./fixtures/harness.cjs');
 test.use({ignoreHTTPSErrors: true, actionTimeout: 15000});
 test('browser HTTPS cookie login opens authorized flow and role revocation refuses writes', async ({page, rendererBuild, workspace, evidence, loopbackGuard}) => {
@@ -25,14 +26,14 @@ test('browser HTTPS cookie login opens authorized flow and role revocation refus
     await server.call('/api/dataset/import', {folder_path: fixture.source, task: 'segmentation'}, administrator.token);
     const graph = JSON.parse(execFileSync(harness.resolvePython(), [script, workspace.root, JSON.stringify(project)], {encoding: 'utf8'}));
     await page.goto(server.origin);
-    await page.getByRole('button',{name:'서버 관리',exact:true}).click();
-    await page.getByText('공동 작업 서버', {exact: true}).click();
+    await expectBrowserLoginGate(page,server.origin);
     await expect(page.getByLabel('공동 작업 서버 주소')).toHaveValue(server.origin);
     await page.getByLabel('공유 계정 이름', {exact: true}).fill('vieweruser');
     await page.getByLabel('공유 계정 비밀번호', {exact: true}).fill(password);
     await page.getByRole('button', {name: '연결·로그인', exact: true}).click();
     await expect(page.getByTitle('프로젝트 관리', {exact: true})).toContainText(project.name);
     await expect(page.getByLabel('공유 계정 비밀번호', {exact: true})).toHaveCount(0);
+    await openBrowserServerManagement(page);
     await expect(page.getByLabel('공동 작업 프로젝트', {exact: true})).toHaveValue(project.id);
     // The value is set before login has accepted the project and rebuilt the step views; the select is enabled only
     // once the whole login has finished, as a person would see it.
@@ -56,13 +57,13 @@ test('browser HTTPS cookie login opens authorized flow and role revocation refus
     expect(storage).not.toMatch(/\"(?:token|csrf_token|password)\"\s*:/);
     await page.getByRole('button',{name:'서버 관리',exact:true}).click();
     await page.getByLabel('공동 작업 서버 연결 해제', {exact:true}).click();
-    await page.getByText('공동 작업 서버',{exact:true}).click();
+    await expectBrowserLoginGate(page,server.origin);
     await expect(page.getByLabel('공유 계정 이름', {exact: true})).toBeVisible();
     const loggedOut = await page.evaluate(async () => (await fetch('/api/accounts/me')).status); expect(loggedOut).toBe(401);
-    await page.getByLabel('공동 작업 서버 주소').fill(server.origin);
     await page.getByLabel('공유 계정 이름',{exact:true}).fill('administrator');
     await page.getByLabel('공유 계정 비밀번호',{exact:true}).fill(password);
     await page.getByRole('button',{name:'연결·로그인',exact:true}).click();
+    await openBrowserServerManagement(page);
     await expect(page.getByLabel('공동 작업 프로젝트',{exact:true})).toHaveValue(project.id);
     await expect(page.getByLabel('공동 작업 프로젝트',{exact:true})).toBeEnabled();
     await page.getByRole('dialog',{name:'컴퓨팅 서버 관리',exact:true}).getByRole('button',{name:'닫기',exact:true}).click();

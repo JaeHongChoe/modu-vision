@@ -4,6 +4,7 @@ import crypto from 'node:crypto';
 import type {BrowserContext, Page, Response} from '@playwright/test';
 import {test, expect, type LoopbackGuard} from './fixtures/test';
 import {browserTeamServer} from './fixtures/browser_team_server';
+import {expectBrowserLoginGate,openBrowserServerManagement} from './fixtures/browserGateLogin';
 import {storedZip} from './fixtures/storedZip';
 import {png} from './qa/appFlow';
 
@@ -26,16 +27,15 @@ async function expand(page: Page, text: string) {
   if (await details.getAttribute('open') === null) await summary.click();
 }
 async function login(page: Page, origin: string, projectId: string, projectName: string, password: string) {
-  await page.getByRole('button', {name: '서버 관리', exact: true}).click();
-  await page.getByText('공동 작업 서버', {exact: true}).click();
+  await expectBrowserLoginGate(page,origin);
   // A reload loses the in-memory CSRF material: a real login restores write authority.
   await expect(page.getByLabel('공유 계정 이름', {exact: true})).toBeVisible();
-  await page.getByLabel('공동 작업 서버 주소').fill(origin);
   await page.getByLabel('공유 계정 이름', {exact: true}).fill('roundtripowner');
   await page.getByLabel('공유 계정 비밀번호', {exact: true}).fill(password);
   const accepted = wire(page, '/api/accounts/login', 'POST');
   await page.getByRole('button', {name: '연결·로그인', exact: true}).click();
   await checked(await accepted);
+  await openBrowserServerManagement(page);
   await expect(page.getByLabel('공동 작업 프로젝트', {exact: true})).toHaveValue(projectId);
   await expect(page.getByLabel('공동 작업 프로젝트', {exact: true})).toBeEnabled();
   await expect(page.getByTitle('프로젝트 관리', {exact: true})).toContainText(projectName);
