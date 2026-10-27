@@ -147,7 +147,7 @@ async function exercise(page: Page, w: Workspace, e: Evidence, invoke: Api, nati
     const setupWrites = [...writes]; assertSetupWrites(native, origin, setupWrites, create); writes.length = 0;
     const before = await state(); expect(before.trees).toEqual(before.before_read_trees); const baselineReadIndex = clocks.size;
     expect(before.api['/api/project/current']).toEqual(project); expect(before.api['/api/training-workspace/tasks'].tasks).toEqual([]);
-    expect(before.api['/api/training-workspace/tasks'].source_dataset_path).toBeNull(); expect(before.api['/api/training-workspace/tasks'].labelset_id).toBe('default');
+    expect(before.api['/api/training-workspace/tasks'].source_dataset_path).toBe(''); expect(before.api['/api/training-workspace/tasks'].labelset_id).toBe('default');
     const originals = w.images.map(image => {const raw = fs.readFileSync(image.path); expect(raw.length).toBe(image.bytes); expect(sha(raw)).toBe(image.sha256); return {...image, pixels: assertHarnessPixels(raw, image.label)};});
     for (const [name, root] of Object.entries(roots)) for (const [relative, record] of Object.entries(before.trees[name])) {
       const copy = path.join(w.logs, 'source-empty-before-copy', name, relative);
