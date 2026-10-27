@@ -5,7 +5,7 @@ const textOf=node=>[node?.props?.children].flat(Infinity).map(child=>typeof chil
 
 // Render the production Studio with controlled store actions. No backend, browser,
 // child comparison implementation, or actual held-out evaluation is executed.
-function fixture({commonCohort=false}={}){
+function fixture({commonCohort=false,browser=false}={}){
  let index=0,dirty=true,tree,nextLoad=null;const slots=[],effects=[],calls=[];
  const hook=state=>Object.assign(selector=>selector?selector(state):state,{getState:()=>state});
  const react={
@@ -63,7 +63,7 @@ function fixture({commonCohort=false}={}){
    api:{datasetVersions:{list:async()=>({versions:[]})},evaluation:{comparisonModels:async()=>({models:[{job_id:'evaluation-model',task:'classification'}]})}},
    resolveApiUrl:value=>value,getApiPersistenceIdentity:()=> 'local',getProjectContextGeneration:()=>1,
   };
-  if(name.endsWith('/hostAdapter'))return{host:{can:()=>false}};
+  if(name.endsWith('/hostAdapter')){if(!browser)return{host:{kind:()=> 'desktop',can:()=>false}};const cache=new Map();function loadHost(filename){if(cache.has(filename))return cache.get(filename).exports;const local=new Module(filename,module);cache.set(filename,local);local.filename=filename;local.paths=Module._nodeModulePaths(path.dirname(filename));const req=local.require.bind(local);local.require=ref=>ref.startsWith('.')?loadHost(path.resolve(path.dirname(filename),ref)+'.ts'):req(ref);local._compile(ts.transpileModule(fs.readFileSync(filename,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText,filename);return local.exports;}return loadHost(path.resolve(__dirname,'../../services/hostAdapter.ts'));}
   if(name.endsWith('/ModelComparisonPanel'))return{ModelComparisonPanel};
   if(name.endsWith('/utils/plainLabels'))return require('../../utils/plainLabels.fixture.cjs');
   if(name.endsWith('/sampleConfidence'))return{accuracyNote:()=> '',smallTestWarning:()=>null};
@@ -76,7 +76,7 @@ function fixture({commonCohort=false}={}){
  async function settle(){for(let i=0;i<12;i++){if(dirty)render();await new Promise(setImmediate);if(!dirty)return;}assert.fail('Studio fixture did not settle');}
  function refreshButton(){const button=nodes(tree).find(node=>node.type==='button'&&textOf(node)==='새로고침');assert(button,'actual Studio header refresh');return button;}
  return{
-  calls,evaluation,settle,refreshButton,project,shared,
+  calls,evaluation,settle,refreshButton,project,shared,treeNodes:()=>nodes(tree),
   rerender(){dirty=true;},
   close(){slots.forEach(slot=>slot?.cleanup?.());},
   refresh(){const button=refreshButton();assert.equal(button.props.disabled,false);return button.props.onClick();},
@@ -130,4 +130,9 @@ test('Studio header cohort refresh retains existing cohort and store error surfa
  assert.deepEqual(await outcome,{status:'fulfilled'});await f.settle();
  assert.equal(f.evaluation.errorMessage,failure.message);assert.deepEqual(f.alerts(),[failure.message,failure.message]);
  assert.equal(f.refreshButton().props.disabled,false);assert.equal(f.calls.length,2);
+});
+
+test('browser HTML export downloads exact bytes and renders the returned report inside a restricted iframe',async()=>{
+ const previousDocument=global.document,previousCreate=URL.createObjectURL;let captured,clicked=0;const anchor={click(){clicked++;},remove(){}};global.document={createElement:()=>anchor,body:{appendChild(){}}};URL.createObjectURL=blob=>{captured=blob;return 'blob:report-fixture';};
+ try{const f=fixture({browser:true});await f.settle();const content='<!doctype html><html><body>검사 결과<script>parent.location="https://outside.invalid"</script></body></html>';f.evaluation.metrics={accuracy:1};f.evaluation.testPredictions=[{image_id:'one',file_name:'one.png',file_path:'/one.png',true_label:'ok',predicted_label:'ok',confidence:1}];f.evaluation.exportReport=async()=>{f.evaluation.exportedReportPath='/reports/one.html';f.evaluation.exportedReportContent=content;f.rerender();return '/reports/one.html';};f.rerender();await f.settle();const button=f.treeNodes().find(node=>node.type==='button'&&textOf(node)==='HTML 리포트 내보내기');assert.equal(button.props.disabled,false);await button.props.onClick();await f.settle();assert.equal(clicked,1);assert.equal(await captured.text(),content);assert.equal(anchor.download,'one.html');const frame=f.treeNodes().find(node=>node.type==='iframe');assert(frame);assert.equal(frame.props.sandbox,'');assert.equal(frame.props.referrerPolicy,'no-referrer');assert.match(frame.props.srcDoc,/default-src &apos;none&apos;/);assert(frame.props.srcDoc.endsWith(content));f.close();}finally{global.document=previousDocument;URL.createObjectURL=previousCreate;}
 });

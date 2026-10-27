@@ -13,6 +13,8 @@ from .projects import LocalProjectRegistry, install_local_projects
 from .routes import local_host_router
 from .lifecycle import LocalHostLifecycleMiddleware
 from .remote import install_remote
+from .linked_sources import install_linked_sources
+from .body_limit import LocalHostBodyLimitMiddleware
 
 
 def helper_command(entry, state, origin, protected_paths=()):
@@ -45,8 +47,10 @@ async def serve_with_local_host(api, renderer, origin, sock, cert, key, paths, h
         api.state.local_host = controller
         api.include_router(local_host_router(controller))
         api.include_router(install_remote(controller))
+        api.include_router(install_linked_sources(controller))
         install_local_projects(api,LocalProjectRegistry(paths.root/'local-projects'))
         api.add_middleware(LocalHostLifecycleMiddleware,controller=controller)
+        api.add_middleware(LocalHostBodyLimitMiddleware)
         controller.start_supervision()
         await serve(api,renderer,origin,sock,cert,key,paths,no_open=no_open)
     finally:

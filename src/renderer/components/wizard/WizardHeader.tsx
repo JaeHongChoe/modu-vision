@@ -383,6 +383,8 @@ export const WizardHeader: React.FC<{ simpleControls?: React.ReactNode; simpleMe
       {technicalDetails && (
         <dl className="flex flex-wrap items-center gap-x-5 gap-y-1 border-t border-[#2B3547] bg-[#0E121A] px-4 py-1.5 font-mono text-sm text-slate-300" aria-label={ko ? '기술 상세' : 'Technical details'}>
           <div className="flex gap-1.5"><dt className="text-slate-400">{ko ? '백엔드 포트' : 'Backend port'}</dt><dd>{isHealthy ? backendStatus.port : '—'}</dd></div>
+          {backendStatus.pid&&<div className="flex gap-1.5"><dt className="text-slate-400">{ko?'서버 PID':'Server PID'}</dt><dd>{backendStatus.pid}</dd></div>}
+          {backendStatus.helper&&<div className="flex gap-1.5"><dt className="text-slate-400">{ko?'보조 프로그램':'Native helper'}</dt><dd>{backendStatus.helper.state==='ready'?(backendStatus.helper.pid??'—'):(ko?'연결 끊김 · 실행 터미널에서 다시 시작':'Disconnected · restart from the launch terminal')}</dd></div>}
           <div className="flex gap-1.5"><dt className="text-slate-400">{ko ? '장치' : 'Device'}</dt><dd>{rawDevice || '—'}{backendStatus.deviceName ? ` · ${backendStatus.deviceName}` : ''}</dd></div>
           <div className="flex gap-1.5"><dt className="text-slate-400">{ko ? '가속' : 'Acceleration'}</dt><dd>{!isHealthy ? (ko ? '연결 안 됨' : 'offline') : isAccelerated ? (ko ? '사용' : 'on') : (ko ? '없음 (CPU)' : 'none (CPU)')}</dd></div>
           {selectedProbe?.device_name && <div className="flex gap-1.5"><dt className="text-slate-400">{ko ? '서버 장치' : 'Server device'}</dt><dd>{selectedProbe.device_name}</dd></div>}

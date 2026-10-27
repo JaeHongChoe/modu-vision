@@ -10,7 +10,7 @@ export function runProtocol(input:Readable,output:Writable,service:Pick<LocalHos
  limits:{maxBytes?:number;maxOutputBytes?:number;maxConcurrent?:number;maxControlConcurrent?:number}={}):()=>void {
  const decoder=new FrameDecoder(limits.maxBytes),pending=new Set<string>();let closed=false,ordinaryPending=0,controlPending=0;
  // A bounded reserved lane keeps revocation reachable while ordinary dialogs/provider calls are saturated.
- const controls=new Set(['session.dispose','session.disposeAll','assistant.cancel','assistant.chatgpt.cancel','assistant.chatgpt.signOut','assistant.removeKey','assistant.removeProvider','assistant.endRun']);
+ const controls=new Set(['session.dispose','session.disposeAll','assistant.cancel','assistant.retireProject','assistant.chatgpt.cancel','assistant.chatgpt.signOut','assistant.removeKey','assistant.removeProvider','assistant.endRun']);
  const close=(cause?:HostError)=>{if(closed)return;closed=true;input.removeListener('data',data);service.dispose();onClose(cause);};
  const reply=(value:HostResponse)=>{if(closed)return;let line=JSON.stringify(value);if(Buffer.byteLength(line)>(limits.maxOutputBytes??MAX_FRAME_BYTES))line=JSON.stringify({id:value.id,ok:false,error:{code:'response_too_large',message:'response_too_large'}});output.write(line+'\n');};
  const dispatch=(request:HostRequest)=>{const id=typeof request?.id==='string'&&/^[A-Za-z0-9_-]{1,200}$/.test(request.id)?request.id:'invalid';
@@ -44,6 +44,9 @@ export async function main(argv:string[]=process.argv.slice(2)):Promise<void> {
    executablePath:process.execPath,platform:process.platform,arch:process.arch,resourcesPath:process.resourcesPath},
   native:{approve:async input=>{const result=await dialog.showMessageBox({type:'question',title:'로컬 웹 기능 허용',message:'이 웹 계정의 네이티브 기능 사용을 허용하시겠습니까?',
     detail:`주소: ${input.origin}\n계정: ${input.accountLabel}\n\n파일 선택과 도우미 보호 저장소를 사용할 수 있습니다. 설치·복원 작업은 별도로 확인합니다.`,buttons:['취소','허용'],defaultId:0,cancelId:0,noLink:true});return result.response===1;},
+   confirmLinkedSource:async input=>{const result=await dialog.showMessageBox({type:'question',title:'링크 대상 복사 확인',message:'검토한 링크 대상만 프로젝트 복사본으로 만드시겠습니까?',
+    detail:`웹: ${origin}\n프로젝트: ${input.scope.project_id}\n작업공간: ${input.scope.workspace_id}\n복사 위치: ${input.project_dir}\n원본: ${input.source}\n\n${input.targets.map(target=>`${target.link} → ${target.path} (${target.kind})`).join('\n')}\n\n파일 ${input.file_count}개 · ${input.total_bytes} bytes\n계획 SHA-256: ${input.plan_sha256}\n\n복사한 내용은 이 프로젝트의 다른 멤버도 읽을 수 있습니다. 원본은 읽기만 합니다. 복사 뒤 ‘이 복사본으로 작업 시작’을 직접 눌러야 프로젝트 원본이 바뀝니다.`,
+    buttons:['취소','검토한 대상 복사'],defaultId:0,cancelId:0,noLink:true});return result.response===1;},
    choose:options=>dialog.showOpenDialog(options),openPath:value=>shell.openPath(value),openExternal:value=>shell.openExternal(value)}});
  const stop=runProtocol(process.stdin,process.stdout,service,cause=>{if(cause)console.error(`Local host protocol stopped: ${cause.code}`);app.quit();});
  app.once('before-quit',()=>{stop();service.dispose();});process.once('SIGTERM',()=>app.quit());process.once('SIGINT',()=>app.quit());

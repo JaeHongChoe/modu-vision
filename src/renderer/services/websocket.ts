@@ -3,7 +3,7 @@
  * Asynchronous WebSocket client for real-time training telemetry and hardware monitoring.
  */
 
-import { getApiBaseUrl, getProjectContext, subscribeProjectContext } from './api';
+import { getApiBaseUrl, getRemoteSocketUrl, getProjectContext, subscribeProjectContext } from './api';
 
 type MessageHandler = (event: string, data: any) => void;
 
@@ -38,7 +38,7 @@ class WebSocketTelemetryService {
     try {
       const base=await getApiBaseUrl();
       if (!this.enabled || epoch !== this.connectionEpoch) return;
-      const wsUrl = `${base.replace(/^http/,'ws')}/ws/telemetry?${new URLSearchParams({project_context:JSON.stringify(context)})}`;
+      const wsUrl = getRemoteSocketUrl('/ws/telemetry',context) ?? `${base.replace(/^http/,'ws')}/ws/telemetry?${new URLSearchParams({project_context:JSON.stringify(context)})}`;
       const socket = new WebSocket(wsUrl);
       this.ws = socket;
       const current = () => this.enabled && this.ws === socket && this.connectionEpoch === epoch;

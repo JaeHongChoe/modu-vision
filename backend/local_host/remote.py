@@ -1,5 +1,6 @@
 """Bound, same-origin remote broker. Local and remote identities never share a context."""
 import asyncio
+import copy
 from dataclasses import dataclass, field, replace
 import json
 import math
@@ -17,6 +18,8 @@ PREFIX = '/api/local-host/remote'
 BODY_LIMIT = 8 * 1024 * 1024
 RESPONSE_LIMIT = 32 * 1024 * 1024
 TIMEOUT = 30
+ASSISTANT_PROJECT_ACTIONS={'assistant.send','assistant.imageIntent','assistant.beginRun','assistant.endRun'}
+ASSISTANT_WRITES={'save_split':('POST','/api/dataset/split'),'assign_class':('PUT','/api/dataset/metadata/class-override'),'generate_label_drafts':('POST','/api/label-suggestions/batches'),'start_training':('POST','/api/training/start')}
 REQUEST_HEADERS = {'accept', 'content-type', 'range', 'if-none-match', 'if-modified-since', 'x-modu-assistant-run'}
 RESPONSE_HEADERS = {'content-type', 'content-disposition', 'content-range', 'accept-ranges', 'etag', 'last-modified'}
 
@@ -77,7 +80,10 @@ class RemoteSessions:
     def __init__(self, controller):
         self.controller = controller
         self.connections = {}
-        self.epochs = {}
+        self.epochs = controller.resource_epochs
+        self.pending_owners = {}
+        self.image_grants = {}
+        self.retire_tasks = set()
         self.transport = None  # Optional HTTP transport; production uses verified TLS and no environment proxies.
 
     def authorize(self, request, action):
@@ -89,21 +95,31 @@ class RemoteSessions:
     @staticmethod
     def owner(authority): return authority['session_id'], authority['tab_id'], authority['actor_id']
 
-    def get(self, request, connection_id, action='request'):
+    def get(self, request, connection_id, action='request', *, allow_expired=False):
         authority = self.authorize(request, action)
         row = self.connections.get(connection_id)
         if row is None: raise HTTPException(409, 'Remote connection changed; reconnect')
         if row.owner != self.owner(authority): raise HTTPException(403, 'This tab does not own this remote connection')
         if row.retired or self.epochs.get(row.owner)!=row.epoch: raise HTTPException(409, 'Remote authority changed; reconnect')
-        if row.expires <= time.time(): raise HTTPException(401, 'Remote account session expired')
+        if not allow_expired and row.expires <= time.time(): raise HTTPException(401, 'Remote account session expired')
         return row
 
     def recheck(self, request, row):
         if self.get(request, row.id) is not row: raise HTTPException(409, 'Remote connection changed')
 
     def advance(self, owner):
-        epoch=self.epochs.get(owner,0)+1
+        epoch=self.epochs.get(owner,0)+2
         self.epochs[owner]=epoch
+        for key,value in list(self.controller.runs.items()):
+            if value['scope'][:3]==(owner[2],owner[0],owner[1]):self.controller.runs.pop(key,None)
+        self.controller.grants.revoke(session_id=owner[0],tab_id=owner[1])
+        # Odd epochs retire old native work; replacement/local-return actions use
+        # the following even epoch. A late cleanup can never cancel its successor.
+        async def retire():
+            try:await self.controller.client.call({'actor_id':owner[2],'session_id':owner[0],'tab_id':owner[1]},'assistant.retireProject',{'epoch':epoch-1},timeout=5)
+            except (RuntimeError,TimeoutError,ValueError):pass
+        task=asyncio.create_task(retire());self.retire_tasks.add(task)
+        task.add_done_callback(self.retire_tasks.discard)
         return epoch
 
     def check_epoch(self, request, owner, epoch, action):
@@ -121,6 +137,8 @@ class RemoteSessions:
         return sockets
 
     async def close_streams(self, sockets):
+        retiring=list(self.retire_tasks)
+        if retiring:await asyncio.gather(*retiring,return_exceptions=True)
         for socket in sockets:
             try:
                 async with asyncio.timeout(5):await socket.close(code=1008)
@@ -177,7 +195,12 @@ class RemoteSessions:
 
     async def login(self, request: Request):
         authority=self.authorize(request,'login');owner=self.owner(authority)
-        epoch=self.advance(owner)
+        epoch=self.advance(owner);self.pending_owners[owner]=epoch
+        try:return await self.complete_login(request,owner,epoch)
+        finally:
+            if self.pending_owners.get(owner)==epoch:self.pending_owners.pop(owner,None)
+
+    async def complete_login(self, request, owner, epoch):
         sockets=self.retire_rows([row for row in self.connections.values() if row.owner==owner])
         await self.close_streams(sockets)
         self.check_epoch(request,owner,epoch,'login')
@@ -230,6 +253,97 @@ class RemoteSessions:
         return {'Authorization':'Bearer '+row.token, **({'X-Vision-Project':row.project_id} if row.project_id else {}),
                 **({'X-Vision-Context':json.dumps(row.context)} if row.context else {})}
 
+    def has_authority(self, authority):
+        owner=self.owner(authority)
+        return self.pending_owners.get(owner)==self.epochs.get(owner) and owner in self.pending_owners or any(
+            row.owner==owner and not row.retired and row.epoch==self.epochs.get(owner) for row in self.connections.values())
+
+    def reference(self, request):
+        encoded=request.headers.get('x-vision-remote-authority','')
+        try:
+            if len(encoded)>512:raise ValueError()
+            ref=json.loads(encoded)
+            if not isinstance(ref,dict) or set(ref)!={'remote_id','authority_epoch'} or not isinstance(ref['remote_id'],str) or not re.fullmatch(r'[A-Za-z0-9_-]{1,128}',ref['remote_id']) or type(ref['authority_epoch']) is not int:raise ValueError()
+        except (ValueError,TypeError):raise HTTPException(422,'Invalid remote assistant authority') from None
+        row=self.get(request,ref['remote_id'],'assistant')
+        if row.epoch!=ref['authority_epoch']:raise HTTPException(409,'Remote assistant authority changed')
+        return row
+
+    async def assistant_authority(self, request, row=None):
+        row=row or self.reference(request)
+        self.recheck(request,row)
+        if not row.project_id or not row.context:raise HTTPException(409,'Select and load an authorized remote project first')
+        context=dict(row.context)
+        status,headers,body=await self.exchange('GET',row.origin+'/api/project/current',self.upstream_headers(row),limit=1024*1024)
+        self.recheck(request,row)
+        if status!=200:raise HTTPException(401 if status==401 else 403,'Current remote project membership required')
+        try:
+            project=json.loads(body);received=self.remote_context(row,headers.get('x-vision-context'))
+            if not headers.get('x-vision-context') or received!=context or project.get('id')!=row.project_id:raise ValueError()
+            labelset=project.get('active_labelset_id','default')
+            if not isinstance(labelset,str) or not re.fullmatch(r'[A-Za-z0-9_.:-]{1,128}',labelset):raise ValueError()
+        except (ValueError,TypeError,AttributeError):raise HTTPException(409,'Remote project authority could not be verified') from None
+        status,_,body=await self.exchange('GET',row.origin+'/api/accounts/me',{'Authorization':'Bearer '+row.token},limit=1024*1024)
+        self.recheck(request,row)
+        if status!=200:raise HTTPException(401 if status==401 else 403,'Current remote project membership required')
+        try:
+            account=json.loads(body)
+            if account['user']['id']!=row.user['id']:raise ValueError()
+            role=next((p['role'] for p in account['projects'] if p['id']==row.project_id),None)
+            if role not in {'viewer','labeler','trainer','reviewer','owner'}:raise ValueError()
+        except (ValueError,TypeError,KeyError):raise HTTPException(403,'Current remote project membership required') from None
+        if row.context!=context:raise HTTPException(409,'Remote project authority changed')
+        authority=self.authorize(request,'assistant')
+        authority['remote']={'remote_id':row.id,'authority_epoch':row.epoch,'context':context,'role':role,'labelset_id':labelset}
+        return authority
+
+    @staticmethod
+    def run_scope(authority):
+        return json.dumps(authority['remote'],sort_keys=True,separators=(',',':'))
+
+    @staticmethod
+    def run_key(authority, run_id):return (authority['session_id'],authority['tab_id'],run_id)
+
+    def check_tool(self, authority, tool):
+        from backend.contracts.authentication import permission_action
+        from backend.engine.shared_accounts import ACTIONS
+        if tool not in ASSISTANT_WRITES:raise HTTPException(422,'Unknown assistant write tool')
+        verb,path=ASSISTANT_WRITES[tool]
+        if authority['remote']['role'] not in ACTIONS[permission_action(path,verb)]:raise HTTPException(403,'Current remote project role cannot run this tool')
+
+    async def invoke_assistant(self, request, action, method, args):
+        if action not in ASSISTANT_PROJECT_ACTIONS:raise HTTPException(403,'Remote authority is only valid for project assistant actions')
+        row=self.reference(request);authority=await self.assistant_authority(request,row)
+        args=copy.deepcopy(args)
+        args['projectAuthority']={'epoch':row.epoch,'scope':'remote:'+row.id}
+        if action=='assistant.beginRun':
+            self.check_tool(authority,args.get('tool'))
+            if not isinstance(args.get('runId'),str) or not re.fullmatch(r'run_[a-f0-9]{24}',args['runId']):raise HTTPException(422,'Invalid assistant run')
+        if action=='assistant.send' and isinstance(args.get('input'),dict) and args['input'].get('image'):
+            image=args['input']['image'];key=self.run_key(authority,image.get('grantId')) if isinstance(image,dict) else None
+            grant=self.image_grants.pop(key,None)
+            if not grant or grant['scope']!=self.run_scope(authority) or grant['expires']<=time.monotonic():raise HTTPException(403,'Remote image confirmation expired or changed')
+        try:result=await self.controller.client.call(authority,method,args)
+        except (RuntimeError,TimeoutError,ValueError) as error:raise HTTPException(503,str(error)[:500]) from None
+        current=await self.assistant_authority(request,row)
+        if self.run_scope(current)!=self.run_scope(authority):raise HTTPException(409,'Remote assistant authority changed during the operation')
+        if action=='assistant.imageIntent' and isinstance(result,dict) and result.get('ok') is True:
+            grant=result.get('grantId')
+            if not isinstance(grant,str) or not re.fullmatch(r'img_[a-f0-9]{24}',grant):raise HTTPException(502,'Invalid assistant image confirmation')
+            self.image_grants[self.run_key(authority,grant)]={'scope':self.run_scope(authority),'expires':time.monotonic()+120}
+        return authority,result
+
+    async def consume_run(self, request, row, path):
+        run_id=request.headers.get('x-modu-assistant-run')
+        if not run_id:return
+        if self.remote_context(row,request.headers.get('x-vision-remote-context'))!=row.context:
+            raise HTTPException(403,'Remote assistant run belongs to a different project context')
+        authority=await self.assistant_authority(request,row)
+        key=self.run_key(authority,run_id);run=self.controller.runs.get(key)
+        if not run or run.get('remote_scope')!=self.run_scope(authority) or run['expires']<=time.monotonic() or ASSISTANT_WRITES.get(run['tool'])!=(request.method,path):raise HTTPException(403,'Remote assistant run does not match this write')
+        self.check_tool(authority,run['tool'])
+        self.controller.runs.pop(key,None)
+
     async def health(self, request: Request, connection_id):
         return await self.relay(request,connection_id,'/health')
 
@@ -249,6 +363,8 @@ class RemoteSessions:
             if context:headers['X-Vision-Context']=json.dumps(context)
             if path=='/health' or path.startswith('/api/accounts/'):
                 headers.pop('X-Vision-Context',None);headers.pop('X-Vision-Project',None)
+            await self.consume_run(request,row,path)
+            self.recheck(request,row)
             query=urlencode([(k,v) for k,v in request.query_params.multi_items() if k!='local_tab'])
             status,upstream,data=await self.exchange(request.method,row.origin+path+('?' + query if query else ''),headers,body)
             self.recheck(request,row)
@@ -326,7 +442,7 @@ class RemoteSessions:
             except Exception:pass
 
     async def logout(self, request: Request, connection_id):
-        row=self.get(request,connection_id,'logout');epoch=self.advance(row.owner)
+        row=self.get(request,connection_id,'logout',allow_expired=True);epoch=self.advance(row.owner)
         await self.drop(row)
         try: await self.exchange('POST',row.origin+'/api/accounts/logout',self.upstream_headers(row),limit=65536)
         except HTTPException: pass

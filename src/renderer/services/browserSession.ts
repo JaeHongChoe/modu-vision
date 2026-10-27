@@ -1,3 +1,4 @@
+import type { BrowserHost } from './browserHost';
 import type { SharedConnection } from '../../types/electron';
 
 /** A same-origin browser client uses the server's HttpOnly cookie. Only the
@@ -87,3 +88,7 @@ export const browserSession = new BrowserSession({
   origin: () => typeof window !== 'undefined' && !window.api ? window.location?.origin ?? null : null,
   fetch: (...args) => fetch(...args), now: () => Date.now() / 1000,
 });
+
+/** Registered by the browser entrypoint; desktop and isolated consumers keep their existing host boundary. */
+export let localBrowserHost:BrowserHost|null=null;
+export function setBrowserHost(adapter:BrowserHost):void {localBrowserHost=adapter;}

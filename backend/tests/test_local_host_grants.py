@@ -77,3 +77,13 @@ def test_backup_restore_route_matches_only_the_selected_parent_and_named_fresh_c
     assert grants.validate(AUTH,tokens,str(parent/'other'),'target_dir',route) is None
     assert grants.validate(AUTH,tokens,str(parent/'restored-project'),'target_dir',route+'/extra') is None
     assert grants.validate(AUTH,tokens,str(parent/'restored-project'),'target_dir','/api/local-host/projects/backups/../restore') is None
+
+
+def test_remote_switch_and_return_cannot_reuse_old_local_selection_epoch(tmp_path):
+    from backend.local_host.grants import PathGrants
+    grants=PathGrants();target=tmp_path/'destination';target.mkdir()
+    original={**AUTH,'resource_epoch':0}
+    chosen=grants.issue(original,target,'project-backup','directory');tokens=[chosen['grant_id']]
+    assert grants.validate(original,tokens,str(target),'destination_dir','/api/local-host/projects/backup')==chosen['grant_id']
+    for epoch in (2,4):
+        assert grants.validate({**original,'resource_epoch':epoch},tokens,str(target),'destination_dir','/api/local-host/projects/backup') is None

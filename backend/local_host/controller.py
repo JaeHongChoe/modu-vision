@@ -13,7 +13,7 @@ from .grants import PathGrants, PURPOSES, literal_path
 
 STAGED_PURPOSES = {'dataset-source', 'label-import', 'mask-import', 'model-directory', 'pretrained-weights',
                    'runtime-source', 'runtime-inventory', 'inspection-image'}
-_AUTH_KEYS = ('actor_id', 'session_id', 'tab_id', 'workspace_id', 'project_id','role','permission_revision','labelset_id')
+_AUTH_KEYS = ('actor_id', 'session_id', 'tab_id', 'workspace_id', 'project_id','role','permission_revision','labelset_id','resource_epoch')
 
 
 class LocalHostController:
@@ -24,6 +24,8 @@ class LocalHostController:
         self.grants = PathGrants(protected_roots=self.protected)
         self.tabs = {}
         self.runs = {}
+        self.resource_epochs = {}
+        self.assistant_scopes = {}
         self.sessions = {}
         self.revoked_sessions = set()
         self.revocation_task = None
@@ -105,9 +107,23 @@ class LocalHostController:
         if action not in {'session','approve','capabilities'} and not action.startswith('projects.') and not tab['approved']:
             raise HTTPException(403, 'Approve this web account in the local host dialog first')
         if not self.client.ready or self.client.closed: raise HTTPException(503, 'Local helper is unavailable')
+        remote=getattr(self,'remote',None)
+        owner={'actor_id':account['id'],'session_id':session,'tab_id':tab_id}
+        reference=request.headers.get('x-vision-remote-authority')
+        project_assistant=action in {'assistant.send','assistant.imageIntent','assistant.beginRun','assistant.endRun'}
+        if reference and not project_assistant and not action.startswith('remote.'):
+            raise HTTPException(403,'Remote assistant authority cannot authorize local device operations')
+        native_project=project or action.startswith(('dialog.','shell.open','path.','projects.','linked-source.','host.linked'))
+        if remote and remote.has_authority(owner) and not action.startswith('remote.') and native_project:
+            raise HTTPException(409 if project_assistant else 403,'Remote project selected: use its separate assistant authority, server paths or ZIP upload')
+        from .routes import ASSISTANT, UPDATES
+        actor_only=(action in {'session','approve','capabilities'}
+                    or action in {'assistant.'+name for name in ASSISTANT} and not project_assistant
+                    or action in {'updates.'+name for name in UPDATES})
         # A remote context belongs to its broker connection, never this local
-        # installation's project registry. The broker checks that envelope.
-        resolved = None if action.startswith('remote.') else self._project(request, account, project)
+        # installation's project registry. Vault settings and device approval
+        # likewise have no project roots; stale saved selections cannot own them.
+        resolved = None if action.startswith('remote.') or actor_only else self._project(request, account, project)
         value = resolved['project'] if resolved else None
         context = resolved.get('context') if resolved else None
         if isinstance(context,dict): workspace=context.get('workspace_id')
@@ -126,7 +142,8 @@ class LocalHostController:
                 'workspace_id':workspace,'project_id':value['id'] if value else None,
                 'account':account,'project':value,'role':resolved.get('role') if resolved else None,
                 'permission_revision':permission_revision,
-                'labelset_id':value.get('active_labelset_id','default') if value else None}
+                'labelset_id':value.get('active_labelset_id','default') if value else None,
+                'resource_epoch':self.resource_epochs.get((session,tab_id,account['id']),0)}
 
     def recheck(self, request, action, previous, *, project=False):
         current = self.authorize(request, action, project=project)
@@ -135,7 +152,33 @@ class LocalHostController:
         return current
 
     async def invoke(self, request, action, method, args, *, project=False):
+        remote=getattr(self,'remote',None)
+        if request.headers.get('x-vision-remote-authority'):
+            if not remote:raise HTTPException(503,'Remote assistant broker unavailable')
+            return await remote.invoke_assistant(request,action,method,args)
         authority = self.authorize(request, action, project=project)
+        if project and action in {'assistant.send','assistant.imageIntent','assistant.beginRun','assistant.endRun'}:
+            owner=(authority['session_id'],authority['tab_id'],authority['actor_id'])
+            # The monotonic epoch is sent separately; hashing it would make each
+            # next action change its own resource identity after a transition.
+            resource=tuple(authority.get(key) for key in ('actor_id','session_id','tab_id','workspace_id','project_id','role','permission_revision','labelset_id'))
+            scope='local:'+hashlib.sha256(json.dumps(resource).encode()).hexdigest()
+            previous=self.assistant_scopes.get(owner)
+            if previous is not None and previous!=scope:
+                if remote:
+                    remote.advance(owner)
+                    await remote.close_streams([])
+                else:
+                    self.resource_epochs[owner]=self.resource_epochs.get(owner,0)+2
+                    await self.client.call(authority,'assistant.retireProject',{'epoch':self.resource_epochs[owner]-1},timeout=5)
+                current=self.authorize(request,action,project=True)
+                if any(current[key]!=authority[key] for key in _AUTH_KEYS if key!='resource_epoch'):raise HTTPException(409,'Local assistant project authority changed')
+                authority=current
+            self.assistant_scopes[owner]=scope
+            args={**args,'projectAuthority':{'epoch':authority['resource_epoch'],'scope':scope}}
+            if remote and action=='assistant.send' and isinstance(args.get('input'),dict) and isinstance(args['input'].get('image'),dict):
+                key=remote.run_key(authority,args['input']['image'].get('grantId'))
+                if key in remote.image_grants:raise HTTPException(403,'Remote image confirmation cannot be used for a local project')
         try: result = await self.client.call(authority, method, args)
         except (RuntimeError, TimeoutError, ValueError) as error:
             raise HTTPException(503, str(error)[:500]) from None
@@ -181,7 +224,17 @@ class LocalHostController:
         if not isinstance(run_id,str) or not re.fullmatch(r'run_[a-f0-9]{24}',run_id) or tool not in {
             'save_split','assign_class','generate_label_drafts','start_training'}:
             raise HTTPException(422,'Invalid assistant run attribution')
-        self.runs[run_id] = {'scope':_scope(authority),'tool':tool,'expires':time.monotonic()+120}
+        remote=getattr(self,'remote',None)
+        key=remote.run_key(authority,run_id) if remote and authority.get('remote') else run_id
+        self.runs[key] = {'scope':_scope(authority),'tool':tool,'expires':time.monotonic()+120,
+                          **({'remote_scope':remote.run_scope(authority)} if remote and authority.get('remote') else {})}
+
+    def disarm_run(self, authority, run_id):
+        from .grants import _scope
+        remote=getattr(self,'remote',None)
+        key=remote.run_key(authority,run_id) if remote and authority.get('remote') else run_id
+        row=self.runs.get(key)
+        if row and row['scope']==_scope(authority):self.runs.pop(key,None)
 
     def consume_run(self, scope):
         from starlette.datastructures import Headers
@@ -194,7 +247,7 @@ class LocalHostController:
                 'assign_class':('PUT','/api/dataset/metadata/class-override'),
                 'generate_label_drafts':('POST','/api/label-suggestions/batches'),
                 'start_training':('POST','/api/training/start')}
-        if not row or row['scope']!=_scope(authority) or row['expires']<=time.monotonic() or writes[row['tool']]!=(scope['method'],scope['path']):
+        if not row or row.get('remote_scope') or row['scope']!=_scope(authority) or row['expires']<=time.monotonic() or writes[row['tool']]!=(scope['method'],scope['path']):
             raise HTTPException(403,'Assistant run attribution expired or does not match this write')
         del self.runs[run_id]
 

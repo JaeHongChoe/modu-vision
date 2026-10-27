@@ -45,6 +45,7 @@ function fixture({administrator = true, loggedIn = true, refused = ''} = {}) {
   const state = {project: {id: oldContext.project_id, project_dir: '/owned/old-project', source_dataset_dir: '/owned/input'},
     isProjectBusy: false, syncCurrentProject: async () => {
       const selected = hostSelections.at(-1);
+      assert.equal(client.getProjectContext(),null,'old accepted namespace must retire before current-project discovery');
       assert.equal(selected, nextContext.project_id);
       syncCalls.push(selected);
       state.project = {...state.project, id: selected, project_dir: '/owned/next-project'};
@@ -197,7 +198,7 @@ for (const refused of ['', '/api/accounts/select-project']) test(`explicit proje
       assert.deepEqual(f.hostSelections, ['next-project']);
       assert.deepEqual(f.syncCalls, ['next-project']);
       assert.equal(f.values[5], 'next-project');
-      assert.equal(f.client.getProjectContextGeneration(), f.initialGeneration + 1);
+      assert.equal(f.client.getProjectContextGeneration(), f.initialGeneration + 2);
       await f.assertProjectRead(f.nextContext);
     }
   } finally {f.close();}

@@ -10,7 +10,7 @@ export function DistributionSettingsPanel(){
  const [state,setState]=useState<DistributionState|null>(null),[delivery,setDelivery]=useState<ManualDelivery|null>(null),[channel,setChannel]=useState<UpdateChannel['channel']>('stable'),[url,setURL]=useState(''),[busy,setBusy]=useState(false),[error,setError]=useState('');
  const generation=useRef(0);
  const apply=(result:DistributionState)=>{setState(result);setChannel(result.update.configuration?.channel||'stable');setURL(result.update.configuration?.manifest_url||'');};
- useEffect(()=>{const started=++generation.current;if(!host.can('updates')){setError('배포 상태 확인은 데스크톱 앱에서 사용할 수 있습니다.');return;}
+ useEffect(()=>{const started=++generation.current;if(!host.can('updates')){setError(host.unavailableReason('updates'));return;}
   host.updates.status().then(result=>{if(generation.current===started)apply(result);}).catch(cause=>{if(generation.current===started)setError(String(cause.message||cause));});return()=>{generation.current++;};},[]);
  const action=async(operation:()=>Promise<void>)=>{const started=++generation.current;setBusy(true);setError('');try{await operation();}catch(cause){if(generation.current===started){setError(String((cause as Error).message||cause));try{const result=await host.updates.status();if(generation.current===started)apply(result);}catch{}}}finally{if(generation.current===started)setBusy(false);}};
  return <fieldset className="space-y-3 rounded border border-slate-700 p-3"><legend>데스크톱 배포·업데이트</legend>

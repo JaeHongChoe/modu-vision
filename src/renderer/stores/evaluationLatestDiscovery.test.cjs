@@ -155,3 +155,5 @@ for (const reply of ['empty', 'model', 'failure']) {
     assert.equal(f.state().isLoading, false);
   });
 }
+
+test('current report retains exact server bytes for browser download and sandbox viewing',async()=>{const f=fixture();f.store.setState({jobId:'current'});const content='<html><body>검사 결과 &amp; 근거</body></html>';f.api.report={export:async()=>({file_path:'/reports/result.html',format:'html',content})};await f.state().exportReport('html');assert.equal(f.state().exportedReportContent,content);f.state().invalidateForDataChange();assert.equal(f.state().exportedReportContent,null);});

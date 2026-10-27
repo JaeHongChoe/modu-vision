@@ -188,10 +188,11 @@ interface ProjectState {
   syncCurrentProject: () => Promise<void>;
   loadRecentProjects: () => Promise<void>;
   createProject: (data: { name: string; task: VisionTask; project_dir?: string; description?: string; template?: Record<string, unknown> }) => Promise<boolean>;
-  openProject: (projectDir: string) => Promise<boolean>;
+  openProject: (projectDir: string, registrationId?:string) => Promise<boolean>;
   activateLabelset: (id: string) => Promise<boolean>;
   createAndActivateLabelset: (name: string) => Promise<boolean>;
   backupProject: (destinationDir: string) => Promise<ProjectBackupResult | null>;
+  recoverProject: (operationId:string,targetDir:string) => Promise<boolean>;
   restoreProject: (archivePath: string, targetDir: string) => Promise<boolean>;
 }
 
@@ -260,7 +261,7 @@ export async function saveOpenEdits(options?: {allowCleanDisconnect?: boolean}):
     if (backendProject.id !== currentProject.id || backendProject.project_dir !== currentProject.project_dir) {
       // A daemon restart can restore a different active pointer while the
       // renderer still holds unsaved work from the previous project.
-      const reopened = await api.project.open(currentProject.project_dir);
+      const reopened = await (currentProject.registration_id ? api.project.open(currentProject.project_dir,currentProject.registration_id) : api.project.open(currentProject.project_dir));
       if (reopened.id !== currentProject.id || reopened.project_dir !== currentProject.project_dir) {
         throw new Error('편집 중인 프로젝트를 백엔드에서 다시 열지 못해 저장을 중단했습니다.');
       }
@@ -596,12 +597,12 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
     }
   },
 
-  openProject: async (projectDir) => {
+  openProject: async (projectDir,registrationId) => {
     if (get().isProjectBusy) return false;
     set({ isProjectBusy: true, projectError: settledProjectError(get(), get().task) });
     try {
       await saveOpenEdits();
-      const project = await api.project.open(projectDir);
+      const project = await (registrationId ? api.project.open(projectDir,registrationId) : api.project.open(projectDir));
       const previous = get().project;
       refuseEditsMadeDuringSelection();
       acceptSelectedProject(project, { activeStep: readProjectStep(viewStorage(), project, getApiPersistenceIdentity()) });
@@ -680,6 +681,23 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
     } finally {
       set({ isProjectBusy: false });
     }
+  },
+
+  recoverProject: async (operationId,targetDir) => {
+    if(get().isProjectBusy)return false;
+    set({isProjectBusy:true,projectError:settledProjectError(get(),get().task)});
+    try{
+      await saveOpenEdits();
+      const project=await api.project.recover(operationId,targetDir),previous=get().project;
+      refuseEditsMadeDuringSelection();
+      acceptSelectedProject(project,{activeStep:1});
+      await applyProject(project,previous,true);
+      await get().loadRecentProjects();
+      if(project.source_dataset_dir)await useDatasetStore.getState().ensureImported(project.task);
+      set({projectError:settledProjectError(get(),project.task)});
+      return true;
+    }catch(error){set({projectError:projectErrorMessage(error)});return false;}
+    finally{set({isProjectBusy:false});}
   },
 
   restoreProject: async (archivePath, targetDir) => {

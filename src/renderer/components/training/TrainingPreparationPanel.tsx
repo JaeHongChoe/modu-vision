@@ -72,11 +72,11 @@ export function TrainingPreparationPanel({family,model,preset='fast',checkpoint=
     if(!same())return;
     setBusy(true);setError('');
     try {
-      if(!host.can('pickPaths'))throw new Error('데스크톱 앱의 파일 선택 기능을 사용하거나 아래 상세 경로 설정을 사용하세요.');
+      if(!host.can('pickPaths'))throw new Error(host.unavailableReason('pickPaths'));
       const shared=await host.shared.connection();
       if(!same())return;
-      if(shared)throw new Error('공유 서버에서는 서버 저장소의 가중치 경로를 상세 설정에 지정하세요. 로컬 파일을 서버 경로로 사용하지 않습니다.');
-      const path=await host.selectFile({title:'공식 사전학습 가중치 가져오기',filters:[{name:'사전학습 파일',extensions:['pt','pth','safetensors']}]});
+      if(shared&&!host.localBrowser())throw new Error('공유 서버에서는 서버 저장소의 가중치 경로를 상세 설정에 지정하세요. 로컬 파일을 서버 경로로 사용하지 않습니다.');
+      const path=await host.selectFile({purpose:'pretrained-weights',title:'공식 사전학습 가중치 가져오기',filters:[{name:'사전학습 파일',extensions:['pt','pth','safetensors']}]});
       if(!path||!same())return;
       const result=await request<{pretrained_checkpoint:string;sha256:string;content_verified:boolean}>('/api/training-workspace/import-weights',{method:'POST',body:JSON.stringify({task:family,model:check?.model||model,preset,device,pretrained_checkpoint:path})});
       if(same()){onCheckpointChange?.(result.pretrained_checkpoint);setChecked(null);}
@@ -103,7 +103,7 @@ export function TrainingPreparationPanel({family,model,preset='fast',checkpoint=
       <li className="rounded border border-slate-700 p-3"><strong>2. 정답·시험 분리</strong><p className="mt-1 text-slate-300">{prep.truth}</p><button type="button" onClick={()=>void setStep(2)} className={`${programButton} mt-2`}>정답 검토</button></li>
       <li className="rounded border border-slate-700 p-3"><strong>3. 모델·실행 환경</strong><p className="mt-1 text-slate-300">{compute.selectedProfileId?`새 학습: ${compute.profiles.find(row=>row.id===compute.selectedProfileId)?.name || '선택 서버'}`:`이 컴퓨터 · ${deviceLabel(device,check)}`}</p><button type="button" disabled={busy||!source} onClick={()=>void inspect()} className={`${programButton} mt-2`}><RefreshCw className="mr-1 inline h-3 w-3" />{busy?'확인 중…':compute.selectedProfileId?'서버 준비 검사':'로컬 준비 검사'}</button></li>
     </ol>
-    <TeamTrainingReadiness />
+    <TeamTrainingReadiness />{host.localBrowser?.()&&<p className="mt-2 text-xs text-slate-400">선택한 반입 자료는 프로젝트 작업 폴더에 검증·복사합니다. 원본은 그대로 보관합니다.</p>}
     {!simpleView&&<><p className="mt-3 text-slate-300">다음 행동: {prep.route}</p><p className="mt-1 text-slate-400">평가: {prep.evaluation}</p></>}
     {compute.selectedProfileId&&<p className="mt-2 text-slate-400">선택 서버의 모델별 준비 상태를 확인합니다. 학습 작업을 등록하거나 모델을 다운로드하지 않습니다.</p>}
     {check&&<div role="status" className="mt-3 rounded border border-slate-600 p-3"><strong className={check.ready?'text-emerald-300':'text-amber-200'}>{check.ready?'준비 항목 확인됨':'준비 필요'}</strong><p className="mt-1">장치: {check.runtime.available?check.runtime.device:check.runtime.reason} · 가중치: {({file_available:'파일 있음 · 학습 시 구조 검증',unreadable:'파일 읽기·안정된 해시 확인 실패',wrong_format:'파일 형식이 이름과 맞지 않음',not_required:'별도 사전학습 파일 불필요',transfer_ready:'프로젝트 파일 해시 확인 · 학습 시 서버로 전송',server_file_available:'서버 캐시 파일 있음 · 학습 시 구조 검증',parent_verified:'부모 모델 해시·호환 구조 확인'} as Record<string,string>)[check.weights.state]||'준비 필요'}</p>{check.weights.sha256&&<p className="mt-2 break-all" aria-label="사전학습 파일 식별 정보">{check.weights.filename} · {check.weights.origin==='explicit_file'?'지정한 파일':'캐시 파일'} · SHA256: {check.weights.sha256}<span className="block text-slate-400">파일 내용의 식별값입니다. 제공처 진위·모델 구조·품질 승인을 뜻하지 않습니다.</span></p>}{check.dependencies.missing.length>0&&<p className="mt-1 text-amber-200">설치 필요: {check.dependencies.missing.join(', ')}</p>}{check.weights.state==='missing'&&(!compute.selectedProfileId&&prefetchSupported(check.model)?<WeightsPrefetch model={check.model} onDone={()=>void read()} />:<p className="mt-1">공식 사전학습 파일을 준비하고 아래 상세 설정에서 가져오세요. 접근 승인이 필요한 모델은 제공처 승인 절차를 완료하세요.</p>)}{check.weights.problem&&<p role="alert" className="mt-1 text-amber-200">{check.weights.problem}</p>}{check.next_actions.length>0&&<ul className="mt-2 list-disc pl-5 text-amber-200">{check.next_actions.map(action=><li key={action}>{action}</li>)}</ul>}<p className="mt-1 text-slate-400">{trained?'이 검사는 다음 학습의 준비 상태만 확인합니다. 모델 품질은 4단계 평가에서 확인합니다.':'실제 학습·추론 실행과 모델 품질 승인은 아직 확인하지 않았습니다.'}</p></div>}

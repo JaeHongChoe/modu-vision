@@ -30,7 +30,7 @@ import { useFlowchartStore } from './stores/useFlowchartStore';
 import { completedSteps, mergeStepProgress } from './components/wizard/stepProgress';
 import { subscribeWorkflowProgress, workflowProgressReport } from './stores/workflowProgress';
 import { telemetryService } from './services/websocket';
-import { getBackendPort, request } from './services/api';
+import { getApiBaseUrl, getBackendPort, request } from './services/api';
 import { needsBrowserHealthProbe, startBrowserHealthProbe } from './services/browserHealth';
 import { createCatchUp, createJobEventStream } from './services/jobEventFeed';
 import { AssistantPanel } from './components/assistant/AssistantPanel';
@@ -104,7 +104,13 @@ export default function App() {
       stopHealthProbe = startBrowserHealthProbe({
         check: async signal => {
           const health = await request<{ status: string; device?: string; device_name?: string }>('/health', { signal, projectContext: null });
-          return { healthy: health.status === 'ok', device: health.device, deviceName: health.device_name };
+          let processes:{server:{pid:number};helper:{pid:number|null;state:'ready'|'unavailable'}}|null=null;
+          // A remote server's health must never be labelled with localhost PIDs.
+          if(await getApiBaseUrl()===window.location.origin){
+            try{processes=await request('/api/local-host/status',{signal,projectContext:null});}catch{/* Before login, ordinary health remains available. */}
+          }
+          return { healthy: health.status === 'ok', device: health.device, deviceName: health.device_name,
+            ...(processes?{pid:processes.server.pid,helper:processes.helper}:{}) };
         },
         port: getBackendPort,
         onStatus: setBackendStatus,

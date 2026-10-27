@@ -2,6 +2,7 @@ export interface BackendStatus {
   port: number | null;
   healthy: boolean;
   pid: number | null;
+  helper?: {pid:number|null;state:'ready'|'unavailable'};
   device?: string;
   deviceName?: string;
 }
@@ -126,7 +127,7 @@ export interface PortableFrozenCanaryReview extends PortableCanaryReviewBase {pr
 export type PortableCanaryReview=PortableSourceCanaryReview|PortableFrozenCanaryReview;
 export interface PortableUpdateReview {status:'reviewed';root:string;review_id:string;installation_id:string;plan_sha256:string;source_sha256:string;envelope_sha256:string;authority_sha256:string;version:string;current_version:string;publisher:string;channel:'stable'|'beta';application_file_count:number;application_layout:'portable/v1'|'darwin-app/v2';application_link_count:number;pack_count:number;artifact_bytes:number;database_fence:number;copied_session_policy:'revoked';application_started:false;preactivation_canary:PortableCanaryReview;installable:boolean}
 
-export interface SharedConnection {server_url:string;expires_at:number;user:{id:string;username:string;administrator:boolean|number};project_id?:string}
+export interface SharedConnection {server_url:string;transport_url?:string;remote_id?:string;authority_epoch?:number;expires_at:number;user:{id:string;username:string;administrator:boolean|number};project_id?:string}
 
 declare global {
   interface Window {

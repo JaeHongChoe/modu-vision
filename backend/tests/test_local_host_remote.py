@@ -215,9 +215,10 @@ def test_fixed_remote_health_route_requires_owner_and_keeps_transport_guards(tmp
     assert c.get(url,headers=h).status_code==502
 
 
-@pytest.mark.parametrize('earlier_action',['login','context','logout','revoke_tab','revoke_session'])
+@pytest.mark.parametrize('earlier_action',['login','context','logout','expired_logout','revoke_tab','revoke_session'])
 def test_slow_old_socket_cleanup_cannot_replace_newer_connection_or_other_tab(tmp_path,earlier_action):
     app,c,ctl,session,tab,calls=fixture(tmp_path);h=tab();other=tab();rid=login(c,h).json()['remote_id'];other_id=login(c,other).json()['remote_id'];old=ctl.remote.connections[rid]
+    if earlier_action=='expired_logout':old.expires=time.time()-1
     async def run():
         entered=asyncio.Event();release=asyncio.Event()
         class SlowSocket:
@@ -226,7 +227,7 @@ def test_slow_old_socket_cleanup_cannot_replace_newer_connection_or_other_tab(tm
         async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app),base_url='https://localhost:8443',headers={**h,'Origin':'https://localhost:8443','Cookie':'vision_session='+session['token']}) as client:
             if earlier_action=='login':work=client.post('/api/local-host/remote/login',json={'server_url':'https://first.test','username':'remote','password':'test-password-123'})
             elif earlier_action=='context':work=client.post(f'/api/local-host/remote/{rid}/context',json={'project_id':'old-project'})
-            elif earlier_action=='logout':work=client.post(f'/api/local-host/remote/{rid}/logout',json={})
+            elif earlier_action in {'logout','expired_logout'}:work=client.post(f'/api/local-host/remote/{rid}/logout',json={})
             elif earlier_action=='revoke_tab':work=ctl.remote.revoke_tab(*old.owner[:2])
             else:work=ctl.remote.revoke_session(old.owner[0])
             earlier=asyncio.create_task(work)
@@ -239,6 +240,10 @@ def test_slow_old_socket_cleanup_cannot_replace_newer_connection_or_other_tab(tm
             assert (await client.get(f'/api/local-host/remote/{latest_id}/api/current')).status_code==200
             other_response=await client.get(f'/api/local-host/remote/{other_id}/api/current',headers=other)
             assert other_response.status_code==(409 if earlier_action=='revoke_session' else 200)
+            if earlier_action=='expired_logout':
+                epoch=ctl.remote.connections[latest_id].epoch
+                assert (await client.post(f'/api/local-host/remote/{rid}/logout',json={})).status_code==409
+                assert ctl.remote.connections[latest_id].epoch==epoch
     asyncio.run(run())
 
 

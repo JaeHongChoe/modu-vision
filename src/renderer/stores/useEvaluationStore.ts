@@ -199,6 +199,7 @@ interface EvaluationState {
   heatmapUnavailable: boolean;
   isExportingReport: boolean;
   exportedReportPath: string | null;
+  exportedReportContent: string | null;
   errorMessage: string | null;
 
   // F33: Sample Filtering & Verdicts
@@ -255,6 +256,7 @@ export const useEvaluationStore = create<EvaluationState>((set, get) => ({
   heatmapError: null, heatmapUnavailable: false,
   isExportingReport: false,
   exportedReportPath: null,
+  exportedReportContent: null,
   errorMessage: null,
 
   sampleFilter: 'all',
@@ -475,7 +477,7 @@ export const useEvaluationStore = create<EvaluationState>((set, get) => ({
       metrics: {}, classSemantics: null, confusionMatrix: null, selectedCell: null,
       testPredictions: [], filteredPredictions: [], selectedPrediction: null,
       heatmapOverlayBase64: null, heatmapLoading: false, heatmapError: null, heatmapUnavailable: false,
-      isExportingReport: false, exportedReportPath: null, errorMessage: null,
+      isExportingReport: false, exportedReportPath: null, exportedReportContent: null, errorMessage: null,
       sampleFilter: 'all', overkillAnalysis: null, isAnalyzingTradeoff: false,
       isCalibrating: false, calibrationMessage: null, calibrationSuccess: false,
       benchmarkResult: null, isBenchmarking: false,
@@ -563,7 +565,7 @@ export const useEvaluationStore = create<EvaluationState>((set, get) => ({
         format,
         include_images: true,
       });
-      if (current()) set({ isExportingReport: false, exportedReportPath: res.file_path });
+      if (current()) set({ isExportingReport: false, exportedReportPath: res.file_path, exportedReportContent: res.content ?? null });
       return res.file_path;
     } catch (e) {
       if (current()) set({ isExportingReport: false, errorMessage: e instanceof Error ? e.message : '보고서 내보내기 실패' });

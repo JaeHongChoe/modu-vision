@@ -71,7 +71,7 @@ def local_host_router(controller):
         authority,result=await controller.invoke(request,'assistant.'+action,'assistant.'+action,
             dict(zip(names,body.args)),project=action in {'send','imageIntent','beginRun','endRun'})
         if action=='beginRun' and result is True:controller.arm_run(authority,*body.args)
-        if action=='endRun':controller.runs.pop(body.args[0],None)
+        if action=='endRun':controller.disarm_run(authority,body.args[0])
         return result
 
     @router.post('/updates/{action}')

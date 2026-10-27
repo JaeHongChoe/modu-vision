@@ -147,6 +147,8 @@ export interface TrainingConfigOverrides extends Record<string, unknown> {
 }
 
 export interface ProjectConfig {
+  registration_id?:string;
+  workspace_id?:string;
   id: string;
   name: string;
   task: VisionTask;
@@ -212,7 +214,7 @@ export interface ProjectBackupResult {
   source_bytes: number;
 }
 
-export type RecentProject = Pick<ProjectConfig, 'id' | 'name' | 'task' | 'project_dir' | 'updated_at'>;
+export type RecentProject = Pick<ProjectConfig, 'id' | 'name' | 'task' | 'project_dir' | 'updated_at' | 'registration_id' | 'workspace_id'>;
 
 /** A durable dataset import (S3-01): a ledger job that builds one prepared, completely validated revision. */
 export interface DatasetRevisionReceipt {
@@ -680,7 +682,25 @@ export interface ContextRequestOptions extends RequestInit {
   projectContext?: ProjectContext | null;
   responseType?: 'json' | 'blob';
 }
+type LocalHostTransport = {available:()=>boolean;canProjects:()=>boolean;requestHeaders:(url:string,method:string,body?:unknown)=>Record<string,string>;projectChanged:()=>void;prepareRequest?:(url?:string,method?:string,body?:unknown)=>Promise<void>;generation:()=>number;acceptResponseHeaders:(path:string,method:string,headers:Headers,body?:unknown)=>void};
+let localHostTransport:LocalHostTransport|null=null;
+/** Browser host registers its own local authority without changing the API transport. */
+export function setLocalHostTransport(adapter:LocalHostTransport):void {localHostTransport=adapter;}
 let boundProjectContext:ProjectContext|null=null;
+let acceptedLocalContext:ProjectContext|null=null;
+type RemoteTransport={connection:()=>{transport_url:string;server_url:string;remote_id?:string;authority_epoch?:number}|null;assetUrl:(path:string)=>string;socketUrl:(path:string,context?:ProjectContext)=>string};
+let remoteTransport:RemoteTransport|null=null;
+export function setRemoteTransport(value:RemoteTransport):void {remoteTransport=value;}
+function remoteBase(base:string|null=sharedBase):boolean {return !!base&&/\/api\/local-host\/remote\/[A-Za-z0-9_-]+$/.test(base);}
+export type HostProjectState={local:boolean;generation:number;remote?:{remote_id:string;authority_epoch:number}};
+export function getHostProjectState():HostProjectState {
+  const connection=remoteTransport?.connection(),origin=secureBrowserOrigin();
+  const local=!connection&&(!sharedBase||sharedBase===origin);
+  return {local,generation:contextGeneration,...(connection?.remote_id&&Number.isSafeInteger(connection.authority_epoch)?{remote:{remote_id:connection.remote_id,authority_epoch:connection.authority_epoch!}}:{})};
+}
+export function getLocalProjectContext():ProjectContext|null {return acceptedLocalContext?{...acceptedLocalContext}:null;}
+export function getRemoteSocketUrl(path:string,context:ProjectContext):string|null {return remoteBase()?remoteTransport?.socketUrl(path,context)??null:null;}
+
 let contextGeneration=0;
 type ContextCandidate={context:ProjectContext;generation:number;transport:string|null};
 const contextCandidates=new WeakMap<object,ContextCandidate>();
@@ -704,7 +724,7 @@ function validContext(value:unknown):value is ProjectContext {
 export function setProjectContext(context:ProjectContext|null):void {
   if(context&&!validContext(context))throw new Error('프로젝트 요청 문맥을 확인하세요.');
   if(sameContext(boundProjectContext,context))return;
-  boundProjectContext=context?{...context}:null;contextGeneration++;notifyContext();
+  boundProjectContext=context?{...context}:null;contextGeneration++;if(!remoteBase()){acceptedLocalContext=boundProjectContext?{...boundProjectContext}:null;localHostTransport?.projectChanged();}notifyContext();
 }
 export function getProjectContext():ProjectContext|null {
   return boundProjectContext?{...boundProjectContext}:null;
@@ -748,12 +768,12 @@ function acceptProjectContext(project:ProjectConfig,apply?:()=>void):void {
   const previous=boundProjectContext;
   boundProjectContext={...candidate.context};
   try{apply?.();}catch(error){boundProjectContext=previous;throw error;}
-  if(!unchanged){contextGeneration++;notifyContext();}
+  if(!unchanged){contextGeneration++;if(!remoteBase()){acceptedLocalContext={...candidate.context};localHostTransport?.projectChanged();}notifyContext();}
 }
 /** Stable storage binding; credentials, tokens and the local process port are excluded. */
 export function getApiPersistenceIdentity():string {
   if(!sharedBase)return 'local';
-  try {const url=new URL(sharedBase);return `shared:${url.origin}${url.pathname.replace(/\/+$/,'')}`;}
+  try {const url=new URL(remoteBase()?remoteTransport?.connection()?.server_url||sharedBase:sharedBase);return `shared:${url.origin}${url.pathname.replace(/\/+$/,'')}`;}
   catch {throw new Error('공유 서버 주소를 확인하세요.');}
 }
 
@@ -805,6 +825,7 @@ export async function getApiBaseUrl(): Promise<string> {
 
 export function resolveApiUrl(path: string, port?: number): string {
   if (!path) return '';
+  if(remoteBase()&&!path.startsWith('blob:')&&!path.startsWith('data:'))return remoteTransport?.assetUrl(path)??'';
   if (path.startsWith('http://') || path.startsWith('https://') || path.startsWith('data:') || path.startsWith('blob:')) {
     return path;
   }
@@ -828,12 +849,14 @@ export class ProjectContextRequiredError extends Error {
 
 export async function request<T>(path: string, options: ContextRequestOptions = {}): Promise<T> {
   const {projectContext,responseType='json',...fetchOptions}=options;
-  const selecting=['/api/project/current','/api/project/create','/api/project/open','/api/project/restore'].includes(path)
+  const selecting=['/api/project/current','/api/project/create','/api/project/open','/api/project/restore','/api/local-host/projects/select','/api/local-host/projects/recover'].includes(path)
     && projectContext===undefined;
   const generation=contextGeneration,transport=sharedBase,sessionOptions=browserRequestOptions;
+  const localGeneration=localHostTransport?.generation();
   const selected=projectContext===null||selecting?null:projectContext??boundProjectContext;
   if(selected&&!validContext(selected))throw new Error('프로젝트 요청 문맥을 확인하세요.');
   const captured=selected?{...selected}:null;
+  const localSelectionContext=selecting&&boundProjectContext?{...boundProjectContext}:null;
   // Login publishes a session before project selection. These automatic reads
   // must not fall back to the server account's previously stored selection.
   if(transport&&!captured&&(fetchOptions.method||'GET').toUpperCase()==='GET'
@@ -842,11 +865,21 @@ export async function request<T>(path: string, options: ContextRequestOptions = 
   if(!headers.has('Content-Type'))headers.set('Content-Type','application/json');
   if(captured){
     headers.set('X-Vision-Project',captured.project_id);
-    headers.set('X-Vision-Context',JSON.stringify(captured));
+    headers.set(remoteBase(transport)?'X-Vision-Remote-Context':'X-Vision-Context',JSON.stringify(captured));
   }
   // Capture both transport and project before a port lookup or selection can yield.
   const base = transport||secureBrowserOrigin()||`http://127.0.0.1:${await getBackendPort()}`;
-  const url = `${base}${path.startsWith('/') ? path : `/${path}`}`;
+  let requestPath=path.startsWith('/')?path:`/${path}`;
+  const localOrigin=secureBrowserOrigin();
+  if(localOrigin===base&&localHostTransport?.prepareRequest)await localHostTransport.prepareRequest(base+requestPath,fetchOptions.method||'GET',fetchOptions.body);
+  if(localOrigin===base&&localHostTransport?.canProjects()&&/^\/api\/project\/(current|list|create|open|backup|template|restore)$/.test(requestPath))requestPath=requestPath.replace('/api/project/','/api/local-host/projects/');
+  if(localOrigin===base&&localSelectionContext&&/^\/api\/local-host\/projects\/(current|create|open|restore|recover)$/.test(requestPath)){
+    // The chooser proof belongs to the prior namespace; the new response still remains a discovery candidate.
+    headers.set('X-Vision-Context',JSON.stringify(localSelectionContext));
+    headers.set('X-Vision-Project',localSelectionContext.project_id);
+  }
+  const url = `${base}${requestPath}`;
+  if(localOrigin===base)for(const [key,value] of Object.entries(localHostTransport?.requestHeaders(url,fetchOptions.method||'GET',fetchOptions.body)||{}))headers.set(key,value);
   const browserOptions=sessionOptions?.(url,fetchOptions.method||'GET')||{};
   for(const [key,value] of Object.entries(browserOptions.headers||{}))headers.set(key,value);
   const response = await fetch(url, {
@@ -875,7 +908,8 @@ export async function request<T>(path: string, options: ContextRequestOptions = 
     throw Object.assign(new Error(errorDetail), { status: response.status });
   }
 
-  const encoded=response.headers?.get('X-Vision-Context');
+  if(remoteBase(transport)&&(transport!==sharedBase||generation!==contextGeneration))throw new Error('원격 연결 상태가 바뀌었습니다. 다시 시도하세요.');
+  const encoded=response.headers?.get(remoteBase(transport)?'X-Vision-Remote-Context':'X-Vision-Context');
   let receivedContext:ProjectContext|null=null;
   if(encoded){
     let received:unknown;
@@ -887,6 +921,7 @@ export async function request<T>(path: string, options: ContextRequestOptions = 
   if (response.status === 204) return undefined as T;
   if(responseType==='blob')return response.blob() as Promise<T>;
   const value:T=await response.json();
+  if(localOrigin===base&&generation===contextGeneration&&transport===sharedBase&&localGeneration===localHostTransport?.generation())localHostTransport?.acceptResponseHeaders(url,fetchOptions.method||'GET',response.headers,value);
   if(receivedContext&&value&&typeof value==='object')contextCandidates.set(value,{context:receivedContext,generation,transport});
   return value;
 }
@@ -928,8 +963,11 @@ export const api = {
     list: () => request<{ projects: RecentProject[] }>('/api/project/list'),
     create: (data: { name: string; task: VisionTask; project_dir?: string; description?: string; template?: Record<string, unknown> }) =>
       request<ProjectConfig>('/api/project/create', { method: 'POST', body: JSON.stringify(data) }),
-    open: (projectDir: string) =>
-      request<ProjectConfig>('/api/project/open', { method: 'POST', body: JSON.stringify({ project_dir: projectDir }) }),
+    open: (projectDir: string,registrationId?:string) => {
+      const origin=secureBrowserOrigin();
+      if(registrationId&&origin&&(!sharedBase||sharedBase===origin)&&localHostTransport?.canProjects())return request<ProjectConfig>('/api/local-host/projects/select',{method:'POST',body:JSON.stringify({registration_id:registrationId})});
+      return request<ProjectConfig>('/api/project/open', { method: 'POST', body: JSON.stringify({ project_dir: projectDir }) });
+    },
     update: (data: Partial<Pick<ProjectConfig, 'name' | 'task' | 'active_preset' | 'description' | 'source_dataset_dir'>> & {expected_source?: ProjectSourceExpectation}) =>
       request<ProjectConfig>('/api/project/update', { method: 'PUT', body: JSON.stringify(data) }),
     listLabelsets: () => request<{ active_id: string; labelsets: ProjectLabelSet[] }>('/api/project/labelsets'),
@@ -942,6 +980,16 @@ export const api = {
     backup: (destinationDir: string) => request<ProjectBackupResult>('/api/project/backup', {
       method: 'POST', body: JSON.stringify({ destination_dir: destinationDir }),
     }),
+    recovery: () => {
+      const origin=secureBrowserOrigin();
+      if(!origin||(sharedBase&&sharedBase!==origin)||!localHostTransport?.canProjects())return Promise.reject(new Error('로컬 보조 프로그램과 계정 연결을 확인하세요.'));
+      return request<{operations:Array<{id:string;kind:'restore'|'create'|'backup';phase:string;requires_adoption:boolean;recovery_status:'registration_pending'|'recovery_required'}>}>('/api/local-host/projects/recovery');
+    },
+    recover: (operationId:string,targetDir:string) => {
+      const origin=secureBrowserOrigin();
+      if(!origin||(sharedBase&&sharedBase!==origin)||!localHostTransport?.canProjects())return Promise.reject(new Error('로컬 보조 프로그램과 계정 연결을 확인하세요.'));
+      return request<ProjectConfig>('/api/local-host/projects/recover',{method:'POST',body:JSON.stringify({operation_id:operationId,target_dir:targetDir})});
+    },
     template: () => request<Record<string, unknown>>('/api/project/template'),
     restore: (archivePath: string, targetDir: string) => request<ProjectConfig>('/api/project/restore', {
       method: 'POST', body: JSON.stringify({ archive_path: archivePath, target_dir: targetDir }),

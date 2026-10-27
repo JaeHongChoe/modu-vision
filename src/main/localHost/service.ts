@@ -12,14 +12,20 @@ import {PortableUpdateManager,validatedCanaryPins} from '../portableUpdate';
 import {classifyOpenTarget} from '../nativeOpen';
 import {HostError,MAX_FRAME_BYTES,parseRequest,type HostRequest,type HostResponse} from './protocol';
 import {TabKeyStore,tabSiwcStore} from './assistantScope';
+export interface LinkedSourceConsent {source:string;project_dir:string;targets:{link:string;path:string;kind:'file'|'directory'}[];plan_sha256:string;file_count:number;total_bytes:number;
+ scope:{actor_id:string;session_id:string;tab_id:string;project_id:string;workspace_id:string}}
 export interface NativeAdapters {
  approve(input:{origin:string;accountLabel:string}):Promise<boolean>;
+ confirmLinkedSource?(input:LinkedSourceConsent):Promise<boolean>;
  choose(options:OpenDialogOptions):Promise<{canceled:boolean;filePaths:string[]}>;
  openPath(value:string):Promise<string>;openExternal(value:string):Promise<unknown>;
 }
 export interface LocalHostOptions {stateDirectory:string;origin:string;native:NativeAdapters;encryptor:KeyEncryptor;
  distribution:Omit<DistributionOptions,'userDataPath'>;fetchImpl?:typeof fetch;protectedPaths?:string[];canRecover?:()=>boolean}
 type Actor={directory:string;keys:AssistantKeyStore;siwc:SiwcStore;credentialOwner:SiwcCredentialOwner};
+type ProjectBinding={epoch:number;scope:string};
+type ProjectRow={actor:string;session:string;tab:string;epoch:number;scope:string|null};
+const PROJECT_ASSISTANT_METHODS=new Set(['assistant.send','assistant.imageIntent','assistant.beginRun','assistant.endRun']);
 type Tab={actor:string;session:string;id:string;disposed:boolean;assistant:AssistantService;runs:AssistantRunRegistry;distribution:DistributionManager;portable:PortableUpdateManager};
 const hash=(value:string)=>crypto.createHash('sha256').update(value).digest('hex');
 const within=(p:string,root:string)=>{const relative=path.relative(root,p);return relative===''||relative!=='..'&&!relative.startsWith('..'+path.sep)&&!path.isAbsolute(relative);};
@@ -32,6 +38,7 @@ export function prepareStateDirectory(directory:string):void {
 
 /** Constructed once by the owned windowless helper. HTTP authorization is repeated by the controller. */
 export class LocalHostService {
+ private projectRows=new Map<string,ProjectRow>();
  private actors=new Map<string,Actor>();private tabs=new Map<string,Tab>();private disposedSessions=new Set<string>();private disposedTabs=new Set<string>();private closed=false;
  constructor(readonly options:LocalHostOptions){
   if(!path.isAbsolute(options.stateDirectory)||new URL(options.origin).origin!==options.origin||!/^https:\/\/(localhost|127\.0\.0\.1|\[::1\])(?::\d+)?$/.test(options.origin))throw new HostError('invalid_configuration');
@@ -69,19 +76,70 @@ export class LocalHostService {
  private retire(tab:Tab){tab.disposed=true;tab.assistant.dispose();}
  async handle(raw:unknown):Promise<HostResponse>{const id=typeof (raw as any)?.id==='string'&&/^[A-Za-z0-9_-]{1,200}$/.test((raw as any).id)?(raw as any).id:'invalid';
   try {if(Buffer.byteLength(JSON.stringify(raw))>MAX_FRAME_BYTES)throw new HostError('frame_too_large');const r=parseRequest(raw);
-   if(r.method==='session.dispose'||r.method==='session.disposeAll'){if(r.method==='session.disposeAll')this.disposedSessions.add(this.sessionKey(r));else this.disposedTabs.add(this.key(r));for(const [key,t]of this.tabs)if(t.actor===r.actor_id&&t.session===r.session_id&&(r.method==='session.disposeAll'||t.id===r.tab_id)){this.retire(t);this.tabs.delete(key);}return {id,ok:true,result:true};}
-   this.live(r);const actor=this.actor(r.actor_id);
+   if(r.method==='session.dispose'||r.method==='session.disposeAll'){for(const [key,row]of this.projectRows)if(row.actor===r.actor_id&&row.session===r.session_id&&(r.method==='session.disposeAll'||row.tab===r.tab_id))this.projectRows.delete(key);if(r.method==='session.disposeAll')this.disposedSessions.add(this.sessionKey(r));else this.disposedTabs.add(this.key(r));for(const [key,t]of this.tabs)if(t.actor===r.actor_id&&t.session===r.session_id&&(r.method==='session.disposeAll'||t.id===r.tab_id)){this.retire(t);this.tabs.delete(key);}return {id,ok:true,result:true};}
+   this.live(r);
+   if(r.method==='assistant.retireProject')return {id,ok:true,result:this.retireProject(r)};
+   const actor=this.actor(r.actor_id);
    if(r.method==='host.approve'){if(r.args.origin!==this.options.origin||typeof r.args.accountLabel!=='string'||!r.args.accountLabel.trim()||r.args.accountLabel.length>200||/[\u0000-\u001f\u007f]/.test(r.args.accountLabel))throw new HostError('invalid_request');if(this.approval(actor))return {id,ok:true,result:{approved:true}};
     const approved=await this.options.native.approve({origin:this.options.origin,accountLabel:r.args.accountLabel});this.live(r);if(approved)this.saveApproval(actor);return {id,ok:true,result:{approved}};}
-   if(!this.approval(actor))throw new HostError('host_approval_required');const tab=this.tab(r);const result=await this.dispatch(r,tab);this.live(r,tab);return {id,ok:true,result:result??null};
+   if(!this.approval(actor))throw new HostError('host_approval_required');const tab=this.tab(r),project=PROJECT_ASSISTANT_METHODS.has(r.method)?this.bindProject(r,tab):undefined;
+   const result=await this.dispatch(r,tab);this.live(r,tab);
+   if(project){const current=this.projectRows.get(this.key(r));if(!current||current.epoch!==project.epoch||current.scope!==project.scope)throw new HostError('project_authority_changed');}
+   return {id,ok:true,result:result??null};
   }catch(error){const code=error instanceof HostError?error.code:'operation_refused';
    // Existing prerequisite errors are application owned; never echo raw OS/provider/network failures or credential arguments.
    const message=error instanceof HostError?error.message:this.safeMessage(error);return {id,ok:false,error:{code,message}};}
  }
  private safeMessage(error:unknown):string {const text=error instanceof Error?error.message:'';if(/packaged application|Portable update currently requires|Select an owned portable installation|Select a stable or beta channel/.test(text))return text.slice(0,300);return '요청을 완료하지 못했습니다. 권한·보호 저장소·서명과 실행 조건을 확인하세요.';}
+ private async approveLinkedSource(r:HostRequest,t:Tab):Promise<unknown> {
+  const a=r.args,id=(v:unknown)=>typeof v==='string'&&/^[A-Za-z0-9_.:-]{1,128}$/.test(v);
+  if(!id(a.project_id)||!id(a.workspace_id)||typeof a.plan_sha256!=='string'||! /^[a-f0-9]{64}$/.test(a.plan_sha256)
+   ||!Number.isSafeInteger(a.file_count)||a.file_count<1||a.file_count>10000||!Number.isSafeInteger(a.total_bytes)||a.total_bytes<0||a.total_bytes>4*1024**3
+   ||!Array.isArray(a.targets)||a.targets.length<1||a.targets.length>32||JSON.stringify(a.targets).length+String(a.source).length+String(a.project_dir).length>16000)throw new HostError('invalid_request');
+  const source=this.allowedPath(a.source),project=this.allowedPath(a.project_dir);if(source!==a.source||project!==a.project_dir||!fs.lstatSync(project).isDirectory()||!fs.lstatSync(source).isDirectory())throw new HostError('invalid_request');
+  const seen=new Set<string>();
+  const targets=a.targets.map((target:any)=>{
+   if(!target||typeof target.link!=='string'||!target.link||target.link.length>4096||/[\u0000-\u001f\u007f]/.test(target.link)||path.isAbsolute(target.link)||target.link.split(/[\\/]/).some((part:string)=>part==='..')
+    ||!['file','directory'].includes(target.kind)||seen.has(target.link))throw new HostError('invalid_request');
+   seen.add(target.link);const canonical=this.allowedPath(target.path),info=fs.lstatSync(canonical);
+   if(canonical!==target.path||target.kind==='file'&&(!info.isFile()||info.nlink!==1)||target.kind==='directory'&&!info.isDirectory())throw new HostError('invalid_request');
+   return {link:target.link,path:canonical,kind:target.kind as 'file'|'directory'};
+  });
+  const identity=(p:string)=>{const s=fs.lstatSync(p);return JSON.stringify([s.dev,s.ino,s.mode,s.nlink,s.size,s.mtimeMs,s.ctimeMs]);};
+  const paths=[source,project,...targets.map((v:{path:string})=>v.path)],before=paths.map(identity);
+  if(!this.options.native.confirmLinkedSource)throw new HostError('native_confirmation_unavailable');
+  const approved=await this.options.native.confirmLinkedSource({source,project_dir:project,targets,plan_sha256:a.plan_sha256,file_count:a.file_count,total_bytes:a.total_bytes,
+   scope:{actor_id:r.actor_id,session_id:r.session_id,tab_id:r.tab_id,project_id:a.project_id,workspace_id:a.workspace_id}});
+  this.live(r,t);
+  if(!approved)return {approved:false};
+  if(paths.some((p,i)=>this.allowedPath(p)!==p||identity(p)!==before[i]))throw new HostError('selection_changed');
+  return {approved:true,plan_sha256:a.plan_sha256};
+ }
+ private invalidateProject(tab:Tab|undefined):void {if(tab){tab.assistant.invalidateAuthority();tab.runs=new AssistantRunRegistry();}}
+ private setProject(r:HostRequest,epoch:number,scope:string|null):void {
+  const key=this.key(r);if(!this.projectRows.has(key)&&this.projectRows.size>=512)throw new HostError('too_many_project_scopes');
+  this.projectRows.set(key,{actor:r.actor_id,session:r.session_id,tab:r.tab_id,epoch,scope});
+ }
+ private retireProject(r:HostRequest):boolean {
+  const epoch=r.args.epoch;
+  if(!Number.isSafeInteger(epoch)||epoch<1||epoch%2!==1||Object.keys(r.args).some(key=>key!=='epoch'))throw new HostError('invalid_project_authority');
+  const row=this.projectRows.get(this.key(r));if(row&&epoch<=row.epoch)return false;
+  this.setProject(r,epoch,null);this.invalidateProject(this.tabs.get(this.key(r)));return true;
+ }
+ private bindProject(r:HostRequest,tab:Tab):ProjectBinding {
+  const value=r.args.projectAuthority;
+  if(!value||typeof value!=='object'||Array.isArray(value)||Object.keys(value).some(key=>!['epoch','scope'].includes(key))
+   ||!Number.isSafeInteger(value.epoch)||value.epoch<0||value.epoch%2!==0||typeof value.scope!=='string'
+   ||! /^(?:local:[a-f0-9]{64}|remote:[A-Za-z0-9_-]{1,128})$/.test(value.scope))throw new HostError('invalid_project_authority');
+  const row=this.projectRows.get(this.key(r));
+  if(row&&(value.epoch<row.epoch||value.epoch===row.epoch&&value.scope!==row.scope))throw new HostError('project_authority_changed');
+  if(!row||value.epoch>row.epoch){this.setProject(r,value.epoch,value.scope);this.invalidateProject(tab);}
+  return {epoch:value.epoch,scope:value.scope};
+ }
  private credentialsChanged(actor:string):void {for(const tab of this.tabs.values())if(tab.actor===actor)tab.assistant.invalidateAuthority();}
  private async dispatch(r:HostRequest,t:Tab):Promise<unknown>{const a=r.args,s=t.assistant,d=t.distribution,p=t.portable;
   switch(r.method){
+   case 'host.approveLinkedSource':return this.approveLinkedSource(r,t);
    case 'dialog.folder':return this.choose(r,t,this.dialogOptions('folder',a));case 'dialog.file':return this.choose(r,t,this.dialogOptions('file',a));
    case 'shell.open':{const value=a.path??a.target;let target=classifyOpenTarget(value);if(target.kind==='rejected')return false;if(target.kind==='url'){await this.options.native.openExternal(target.url);return true;}this.allowedPath(target.path);return (await this.options.native.openPath(target.path))==='';}
    case 'assistant.getState':return s.state();case 'assistant.saveProvider':{const actor=this.actor(r.actor_id),before=actor.keys.config(a.input?.provider),result=s.save(a.input),after=actor.keys.config(a.input.provider);
@@ -97,5 +155,5 @@ export class LocalHostService {
    default:throw new HostError('unknown_method');
   }
  }
- dispose():void {if(this.closed)return;this.closed=true;for(const t of this.tabs.values())this.retire(t);this.tabs.clear();for(const a of this.actors.values())a.credentialOwner.dispose(a.siwc);this.actors.clear();}
+ dispose():void {if(this.closed)return;this.closed=true;this.projectRows.clear();for(const t of this.tabs.values())this.retire(t);this.tabs.clear();for(const a of this.actors.values())a.credentialOwner.dispose(a.siwc);this.actors.clear();}
 }

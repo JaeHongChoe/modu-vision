@@ -23,7 +23,7 @@ test('S1-10: the stream belongs to one committed project on one API server, and 
 test('S1-10: every telemetry connection, first and after a drop, is announced to listeners',async()=>{
  const sockets=[];class FakeSocket{static OPEN=1;static CONNECTING=0;constructor(url){this.url=url;this.readyState=0;sockets.push(this);}send(){}close(){this.readyState=3;}}
  const previous=global.WebSocket;global.WebSocket=FakeSocket;const realSetTimeout=global.setTimeout;
- try{const {telemetryService}=load('websocket.ts',{'./api':{getApiBaseUrl:async()=>'http://127.0.0.1:1',getProjectContext:()=>({workspace_id:'w',project_id:'p'}),subscribeProjectContext:()=>()=>{}}});
+ try{const {telemetryService}=load('websocket.ts',{'./api':{getRemoteSocketUrl:()=>null,getApiBaseUrl:async()=>'http://127.0.0.1:1',getProjectContext:()=>({workspace_id:'w',project_id:'p'}),subscribeProjectContext:()=>()=>{}}});
   const heard=[];telemetryService.subscribe(event=>heard.push(event));await telemetryService.connect();
   sockets[0].readyState=1;sockets[0].onopen();assert.deepEqual(heard,['telemetry_connected']);
   global.setTimeout=(fn)=>{fn();return 0;};sockets[0].onclose();await tick();global.setTimeout=realSetTimeout;

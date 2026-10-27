@@ -28,7 +28,7 @@ PURPOSES = {
 
 
 def _scope(authority):
-    return tuple(authority.get(key) for key in ('actor_id', 'session_id', 'tab_id', 'workspace_id', 'project_id','role','permission_revision','labelset_id'))
+    return tuple(authority.get(key) for key in ('actor_id', 'session_id', 'tab_id', 'workspace_id', 'project_id','role','permission_revision','labelset_id','resource_epoch'))
 
 
 def literal_path(value):

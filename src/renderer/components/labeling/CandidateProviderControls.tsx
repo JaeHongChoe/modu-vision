@@ -162,7 +162,7 @@ export const CandidateProviderControls:React.FC<Props>=({disabled,onCreated,onOp
   const generate=()=>run(async()=>{if(!currentImage||!setup)return;const imagePath=currentImage.file_path;
     useModelAssistRunStore.getState().begin();try{const current=await provider.setup();if(!sameProject())return;setSetup(current);const next=await provider.generate(buildFoundationRequest(imagePath,options(),current));if(sameProject()&&useAnnotationStore.getState().currentImage?.file_path===imagePath)onCreated(next);}finally{useModelAssistRunStore.getState().end();}});
   const applySetup=(next:FoundationSetup)=>{setSetup(next);setMaskDir(next.configuration.mask_model_dir||'');setTextDir(next.configuration.model_dir||'');};
-  const chooseModel=(field:'mask_model_dir'|'model_dir')=>run(async()=>{const path=await host.selectFolder({title:field==='mask_model_dir'?'로컬 SAM2 모델 폴더':'로컬 Grounding DINO 모델 폴더'});if(path&&sameProject()){const next=await provider.configure({[field]:path});if(sameProject())applySetup(next);}},true);
+  const chooseModel=(field:'mask_model_dir'|'model_dir')=>run(async()=>{const path=await host.selectFolder({purpose:'model-directory',title:field==='mask_model_dir'?'로컬 SAM2 모델 폴더':'로컬 Grounding DINO 모델 폴더'});if(path&&sameProject()){const next=await provider.configure({[field]:path});if(sameProject())applySetup(next);}},true);
   // The typed path is the browser/shared-server way to point at a folder; the backend only checks that it is a directory.
   const saveFolder=(field:'mask_model_dir'|'model_dir',path:string)=>run(async()=>{
     try{const next=await provider.configure({[field]:path.trim()});if(sameProject())applySetup(next);}
@@ -213,7 +213,7 @@ export const CandidateProviderControls:React.FC<Props>=({disabled,onCreated,onOp
   const canPick=host.can('pickPaths');
   const cardButton=(primary:boolean)=>`rounded px-2 py-1 disabled:opacity-40 ${primary?'bg-indigo-700 font-semibold text-white':'border border-indigo-600'}`;
   return <section className="space-y-3 rounded-lg border border-indigo-800 bg-[#101722] p-3" aria-label="SAM2 기반 라벨링">
-    <h4 className="font-semibold text-indigo-100">SAM2 mask · 텍스트 · positive/negative 예시</h4>
+    <h4 className="font-semibold text-indigo-100">SAM2 mask · 텍스트 · positive/negative 예시</h4>{host.localBrowser?.()&&<p className="mt-2 text-xs text-slate-400">선택한 반입 자료는 프로젝트 작업 폴더에 검증·복사합니다. 원본은 그대로 보관합니다.</p>}
     {/* Step 3's weights card, for SAM2: state, Korean cause, the loader's file list, the folder, and the weight file's identification. The app never downloads a model. */}
     <section aria-label="SAM2 모델 준비" className="rounded border border-slate-600 bg-[#0D1420] p-2">
       <details open={cardOpen}><summary className="cursor-pointer"><strong role="status" className={view.state==='ready'?'text-emerald-300':view.state==='checking'?'text-slate-300':'text-amber-200'}>SAM2 모델 준비 · {view.label}</strong></summary>

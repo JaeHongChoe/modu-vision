@@ -141,7 +141,7 @@ export const PhraseDraftCreate: React.FC<Props> = ({ task, disabled, pendingImag
     if (isCurrent()) { setSetup(next); setTextDir(next.configuration.model_dir || ''); setMaskDir(next.configuration.mask_model_dir || ''); }
   });
   const pickFolder = (field: 'model_dir' | 'mask_model_dir') => run(async () => {
-    const path = await host.selectFolder({ title: field === 'model_dir' ? '문구 모델(Grounding DINO) 폴더' : 'SAM2 모델 폴더' });
+    const path = await host.selectFolder({ purpose: 'model-directory', title: field === 'model_dir' ? '문구 모델(Grounding DINO) 폴더' : 'SAM2 모델 폴더' });
     if (path && isCurrent()) { const next = await provider.configure({ [field]: path }); if (isCurrent()) { setSetup(next); setTextDir(next.configuration.model_dir || ''); setMaskDir(next.configuration.mask_model_dir || ''); } }
   });
   const start = () => run(async () => {
@@ -175,7 +175,7 @@ export const PhraseDraftCreate: React.FC<Props> = ({ task, disabled, pendingImag
     </div>
   );
   const official = setup?.providers.grounding_dino.official_match;
-  return <section aria-label="문구로 초안 만들기" className="space-y-2 rounded border border-indigo-900 bg-[#0D1420] p-2">
+  return <section aria-label="문구로 초안 만들기" className="space-y-2 rounded border border-indigo-900 bg-[#0D1420] p-2">{host.localBrowser?.()&&<p className="mt-2 text-xs text-slate-400">선택한 반입 자료는 프로젝트 작업 폴더에 검증·복사합니다. 원본은 그대로 보관합니다.</p>}
     <p className="font-semibold text-slate-100">문구로 초안 만들기 <span className="font-normal text-slate-400">· 학습한 모델 없이</span></p>
     <Explain text="찾을 대상을 영어 낱말로 적으면 문구 모델이 라벨 없는 이미지마다 초안을 만듭니다. 긁힘·찍힘·균열·얼룩 같은 흔한 한국어 낱말은 영어로 바꿔 읽습니다. 클래스 이름과 같은 낱말은 그 클래스로, 나머지는 적은 이름의 새 클래스로(클래스를 고르면 그 클래스로) 넣습니다. 검토할 초안이 이미 있는 이미지는 건너뜁니다. 한 묶음의 초안을 다 보기 전에 다른 묶음을 만들면, 한쪽에서 채택한 뒤 다른 쪽 초안은 다시 만들어야 하니 한 묶음씩 끝내세요. 초안은 보고 채택해야 라벨이 되고, 채택할 때마다 백업이 남습니다." />
     {blocked && setup && <div className="space-y-2 rounded border border-amber-800 bg-amber-950/20 p-2 text-[11px] text-amber-100">

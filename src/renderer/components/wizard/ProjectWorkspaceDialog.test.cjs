@@ -34,7 +34,7 @@ function render(refusal,{busy=false}={}){
  const icons=new Proxy({},{get:(_,name)=>name==='__esModule'?true:()=>null});
  const {ProjectWorkspaceDialog}=load('ProjectWorkspaceDialog.tsx',{'lucide-react':icons,
   '../../stores/useProjectStore':{useProjectStore:()=>state,projectSwitchRefusal:()=>refusal,subscribeProjectSwitchRefusal:()=>()=>{}},
-  '../../services/hostAdapter':{host:{can:()=>false}},'./ArtifactRetentionPanel':{ArtifactRetentionPanel:()=>null},'../../services/api':{api:{project:{}}}});
+  '../../services/hostAdapter':{host:{can:()=>false,unavailableReason:()=> '로컬 파일 선택 연결을 확인하세요.'}},'./ArtifactRetentionPanel':{ArtifactRetentionPanel:()=>null},'../../services/api':{api:{project:{}}}});
  return renderToStaticMarkup(react.createElement(ProjectWorkspaceDialog,{onClose(){}}));
 }
 const projectButton=(html,dir)=>{const at=html.indexOf(`title="${dir}"`);assert.ok(at>0,dir);return html.slice(html.lastIndexOf('<button',at),at);};
