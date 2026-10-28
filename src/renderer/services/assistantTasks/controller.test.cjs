@@ -194,8 +194,8 @@ test('history is bounded actor-scoped summaries and explicit selection only read
 });
 test('stopping a GET retires its late reply and does not clear a newer create wait',async()=>{
  const f=recoveryFixture();await saved(f,'draft','pending');let releaseRead,releaseCreate,signal;const old=structuredClone(f.task);f.client.get=(_id,value)=>{signal=value;return new Promise(resolve=>{releaseRead=resolve;});};
- const reading=f.c.restore(ID);await tick();assert.equal(f.c.state.readPending,true);f.c.stopRead();assert.equal(signal.aborted,true);assert.equal(f.c.state.readPending,false);assert.equal(f.c.state.loading,false);
- f.client.create=()=>new Promise(resolve=>{releaseCreate=resolve;});const creating=f.c.propose(proposal);await tick();f.c.stopRead();assert.equal(f.c.state.loading,true);releaseRead({...old,revision:99});await reading;assert.equal(f.c.state.task.revision,old.revision);assert.equal(f.c.state.loading,true);
+ const reading=f.c.restore(ID);assert.equal(typeof releaseRead,'function','the GET callback is registered synchronously');assert.equal(f.c.state.readPending,true);f.c.stopRead();assert.equal(signal.aborted,true);assert.equal(f.c.state.readPending,false);assert.equal(f.c.state.loading,false);
+ f.client.create=()=>new Promise(resolve=>{releaseCreate=resolve;});const creating=f.c.propose(proposal);assert.equal(typeof releaseCreate,'function','the create callback is registered synchronously');f.c.stopRead();assert.equal(f.c.state.loading,true);releaseRead({...old,revision:99});await reading;assert.equal(f.c.state.task.revision,old.revision);assert.equal(f.c.state.loading,true);
  releaseCreate({...old,id:'task_'+'b'.repeat(32)});await creating;assert.equal(f.c.state.task.id,'task_'+'b'.repeat(32));assert.equal(f.c.state.loading,false);
 });
 test('GET deadline releases the owned display wait without retry and ignores a late saved result',{timeout:500},async()=>{
