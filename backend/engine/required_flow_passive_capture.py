@@ -391,7 +391,8 @@ def verify_bound_functions(functions, source_root, source_pins):
                 and (source_pins == CURRENT_PRODUCER_SOURCE_PINS
                      or source_pins == COMBINED_PRODUCER_SOURCE_PINS
                      or source_pins == PARAMETERLESS_ROTATION_PRODUCER_SOURCE_PINS
-                     or source_pins == COLD_SCHEMA_PRODUCER_SOURCE_PINS)):
+                     or source_pins == COLD_SCHEMA_PRODUCER_SOURCE_PINS
+                     or source_pins == INPUT_PREPARATION_PRODUCER_SOURCE_PINS)):
             # Current execute must remain the registered observer even when an
             # unwrapped original engine code object is otherwise source-pinned.
             relative = 'backend/engine/original_owned_flow_execution_request.py'
@@ -470,6 +471,17 @@ COLD_SCHEMA_PRODUCER_SOURCE_PINS = types.MappingProxyType({name: types.MappingPr
             'sha256': 'aa2b99d4e8fd2d76e6123f98f89e8fc670b8107139f9ad7571187de85e9e833a'},
         'backend/engine/flowchart_schema.py': {'size': 2873,
             'sha256': '37f10afcb3637ce1222597a695a074724484ea88571d3885914a0155d31e707c'}}.items()})
+# Separate exact successor: model-bound deterministic input preparation is now
+# used by the engine and backbone controls. Its shared semantic implementation
+# must join their exact source closure; the prior seven-source cohort stays intact.
+INPUT_PREPARATION_PRODUCER_SOURCE_PINS = types.MappingProxyType({name: types.MappingProxyType(dict(row))
+    for name, row in {**COLD_SCHEMA_PRODUCER_SOURCE_PINS,
+        'backend/engine/flowchart_engine.py': {'size': 150814,
+            'sha256': '8773a5b5a687d214041fc33957560a644e71496fa0ce2f2463dc3b92d86e07c2'},
+        'backend/engine/model_backbones.py': {'size': 19313,
+            'sha256': 'bd2d6efa3734751ada7b073cef3f7c1ba8bc63e278717aebceadabc827382c2d'},
+        'backend/engine/input_preparation.py': {'size': 7463,
+            'sha256': '7981f99900c0310a978d08f4b38f39bc19f312adb0e13ea71e1b9d9b185b7efa'}}.items()})
 REGISTERED_ENGINE_OBSERVER_PIN = types.MappingProxyType({'size': 40214,
     'sha256': '9102a6126774d9d68b6097d844dcc5c8984b09fe0ab14b97fd06ce7d4db80fe3'})
 
@@ -768,6 +780,10 @@ COLD_SCHEMA_CAPTURE_COHORT = types.MappingProxyType({
     'profile_id': 'server42-l40s-2-native43-20261016-01',
     'execution_profile_sha256': '6f36f621864d3c6b327295f684118434c6c1d18ddee8b21f30071527b0e7ea49',
     'source_pins': COLD_SCHEMA_PRODUCER_SOURCE_PINS})
+INPUT_PREPARATION_CAPTURE_COHORT = types.MappingProxyType({
+    'profile_id': 'server42-l40s-2-native43-20261016-01',
+    'execution_profile_sha256': '6f36f621864d3c6b327295f684118434c6c1d18ddee8b21f30071527b0e7ea49',
+    'source_pins': INPUT_PREPARATION_PRODUCER_SOURCE_PINS})
 RETAINED_CAPTURE_COHORTS = (
     types.MappingProxyType({'profile_id': RETAINED_PROFILE_ID,
         'execution_profile_sha256': RETAINED_EXECUTION_PROFILE_SHA,
@@ -780,6 +796,7 @@ RETAINED_CAPTURE_COHORTS = (
         'source_pins': COMBINED_PRODUCER_SOURCE_PINS}),
     PARAMETERLESS_ROTATION_CAPTURE_COHORT,
     COLD_SCHEMA_CAPTURE_COHORT,
+    INPUT_PREPARATION_CAPTURE_COHORT,
 )
 
 

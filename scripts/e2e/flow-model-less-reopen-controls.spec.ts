@@ -63,7 +63,7 @@ const F064_POINTERS=[
 ] as const;
 const FLOW_DRAFT_SERVICE={
  'src/renderer/services/flowDraft.ts':'f8cd76aab7d1045c3af1fa41f68ae09daa757c0db05772f4085e2e093348b800',
- 'backend/engine/flowchart_engine.py':'aa2b99d4e8fd2d76e6123f98f89e8fc670b8107139f9ad7571187de85e9e833a',
+ 'backend/engine/flowchart_engine.py':'8773a5b5a687d214041fc33957560a644e71496fa0ce2f2463dc3b92d86e07c2',
  'backend/engine/flowchart_schema.py':'37f10afcb3637ce1222597a695a074724484ea88571d3885914a0155d31e707c',
 } as const;
 const UI_SOURCE={

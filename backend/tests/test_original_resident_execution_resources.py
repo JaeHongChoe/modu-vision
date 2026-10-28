@@ -138,16 +138,17 @@ def test_original_GET_send_failure_is_not_resident_metadata_completion(tmp_path,
     _refused(admission, observer)
 
 
-def test_current_cold_schema_producer_cohort_equals_actual_source_files():
+def test_current_input_preparation_producer_cohort_equals_actual_source_files():
     """A registered current cohort must describe this source tree, not a prior build."""
     import hashlib
     from pathlib import Path
     from backend.engine import required_flow_passive_capture as capture
     source_root = Path(capture.__file__).resolve().parents[2]
-    pins = capture.COLD_SCHEMA_PRODUCER_SOURCE_PINS
+    pins = capture.INPUT_PREPARATION_PRODUCER_SOURCE_PINS
     assert set(pins) == {
         'backend/engine/flow_operators.py', 'backend/engine/flow_package_runtime.py',
         'backend/engine/flowchart_engine.py', 'backend/engine/flowchart_schema.py',
+        'backend/engine/input_preparation.py',
         'backend/engine/model_backbones.py', 'backend/engine/rotation.py',
         'backend/engine/segmentation_evidence.py',
     }

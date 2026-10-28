@@ -12,6 +12,7 @@
 [![Node.js 24](https://img.shields.io/badge/Node.js-24-339933)](package.json)
 [![Python 3.13](https://img.shields.io/badge/Python-3.13-3776AB)](CONTRIBUTING.md)
 [![Electron 44](https://img.shields.io/badge/Electron-44-47848F)](package-lock.json)
+[![Windows 11 x64 네이티브 CI 대상](https://img.shields.io/badge/Windows-11%20x64-0078D4)](.github/workflows/windows-native.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
 [빠른 시작](#빠른-시작) · [6단계 작업 흐름](#작업-흐름) · [ChatGPT 도우미](#chatgpt-도우미) · [앱과 웹의 구조](#앱과-웹의-구조) · [주요 기능](#주요-기능) · [문서](#문서)
