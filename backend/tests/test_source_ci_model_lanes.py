@@ -9,6 +9,16 @@ import yaml
 
 ROOT = Path(__file__).resolve().parents[2]
 
+READINESS_CI_CONTROLS = (
+    'backend/tests/test_local_location_identity.py',
+    'backend/tests/test_local_location_recovery.py',
+    'backend/tests/test_local_project_assets.py',
+    'backend/tests/test_daemon_command_preparation.py',
+    'backend/tests/test_telemetry_original_task_lifetime.py',
+    'backend/tests/test_browser_project_mode.py',
+    'backend/tests/test_managed_service_initial_identity.py',
+)
+
 
 def ci_module():
     spec = importlib.util.spec_from_file_location('ci_lane_receipt', ROOT / 'scripts/write_ci_receipt.py')
@@ -264,6 +274,13 @@ def test_cpu_and_browser_ci_have_independent_original_bounds_and_complete_comman
         'backend/tests/test_runtime_spawn_diagnostic.py',
     )
     command = cpu_step['run']
+    readiness_cli = 'python -m pytest -q --junitxml="$MV_CI_RECORD_DIR/ci-pytest.xml" '
+    readiness_insertion = ' '.join(READINESS_CI_CONTROLS) + ' '
+    assert command.startswith(readiness_cli + readiness_insertion), 'Readiness CI controls must be the exact first ordered block after pytest options'
+    assert command.count(readiness_insertion) == 1, 'Readiness CI block must execute exactly once'
+    assert all(command.split().count(reference) == 1 for reference in READINESS_CI_CONTROLS), 'Readiness CI references must each execute exactly once'
+    # Strip only this verified prefix before the unchanged historical contracts.
+    command = command.replace(readiness_cli + readiness_insertion, readiness_cli, 1)
     local_host_controls = (
         'backend/tests/test_local_web_app.py',
         'backend/tests/test_local_web_cli.py',
@@ -411,6 +428,44 @@ def test_cpu_and_browser_ci_have_independent_original_bounds_and_complete_comman
     assert browser_step['env'] == {'MV_E2E_ARTIFACT_DIR': '${{ runner.temp }}/modu-e2e', 'MV_CI_RECORD_DIR': '${{ runner.temp }}/modu-ci-manifests'}
     assert step(cpu, 'Preserve evidence')['with']['name'] == 'linux-cpu-${{ github.sha }}'
     assert step(browser, 'Preserve evidence')['with']['name'] == 'linux-browser-${{ github.sha }}'
+
+
+@pytest.mark.parametrize('damage', ['reordered', 'missing', 'duplicate_block', 'duplicate_reference'])
+def test_readiness_ci_prefix_rejects_changed_order_missing_or_duplicate_controls(monkeypatch, damage):
+    """The additive selection cannot disappear behind historical normalization."""
+    path = ROOT / '.github/workflows/ci.yml'
+    original_read = Path.read_text
+    workflow = yaml.safe_load(original_read(path))
+    step = next(item for item in workflow['jobs']['source']['steps']
+                if item.get('name') == 'CPU contract and recovery regressions')
+    insertion = ' '.join(READINESS_CI_CONTROLS) + ' '
+    assert step['run'].count(insertion) == 1
+    if damage == 'reordered':
+        changed = (READINESS_CI_CONTROLS[1], READINESS_CI_CONTROLS[0], *READINESS_CI_CONTROLS[2:])
+        step['run'] = step['run'].replace(insertion, ' '.join(changed) + ' ', 1)
+    elif damage == 'missing':
+        step['run'] = step['run'].replace(insertion, ' '.join(READINESS_CI_CONTROLS[1:]) + ' ', 1)
+    elif damage == 'duplicate_block':
+        step['run'] += ' ' + insertion
+    else:
+        step['run'] += ' ' + READINESS_CI_CONTROLS[0]
+    controlled = yaml.safe_dump(workflow, sort_keys=False)
+    def read_text(file, *args, **kwargs):
+        return controlled if file == path else original_read(file, *args, **kwargs)
+    monkeypatch.setattr(Path, 'read_text', read_text)
+    with pytest.raises(AssertionError, match='Readiness CI'):
+        test_cpu_and_browser_ci_have_independent_original_bounds_and_complete_commands()
+
+
+def test_readiness_ci_controls_reach_full_and_changed_file_fast_selection():
+    import shlex
+    workflow = yaml.safe_load((ROOT / '.github/workflows/ci.yml').read_text())
+    command = next(step['run'] for step in workflow['jobs']['source']['steps']
+                   if step.get('name') == 'CPU contract and recovery regressions')
+    related = related_module()
+    for reference in READINESS_CI_CONTROLS:
+        assert shlex.split(command).count(reference) == 1
+        assert reference in related.select_pytest([reference])
 
 
 @pytest.mark.parametrize('job_name', ['source', 'browser'])
@@ -596,3 +651,32 @@ def test_assistant_task_ledger_recovery_reaches_full_and_related_fast_ci():
     for reference in required:
         assert shlex.split(run).count(reference) == 1
         assert reference in related_module().select_pytest([reference])
+
+
+@pytest.mark.parametrize('kind', ['backend', 'backend_producer', 'source_node', 'browser_node', 'fast_static_node'])
+def test_browser_auth_controls_reach_canonical_and_mirrored_ci_selection(kind):
+    """The new non-renderer controls must actually be selected, without duplicating renderer discovery."""
+    import shlex
+    full = yaml.safe_load((ROOT/'.github/workflows/ci.yml').read_text())
+    fast = yaml.safe_load((ROOT/'.github/workflows/ci-fast.yml').read_text())
+    if kind in {'backend', 'backend_producer'}:
+        command = next(step['run'] for step in full['jobs']['source']['steps']
+                       if step.get('name') == 'CPU contract and recovery regressions')
+        for reference, producer in (
+            ('backend/tests/test_browser_project_mode.py', 'backend/api/routes_accounts.py'),
+            ('backend/tests/test_managed_service_initial_identity.py', 'backend/engine/managed_service.py'),
+        ):
+            assert shlex.split(command).count(reference) == 1, 'New backend control must execute exactly once'
+            changed = reference if kind == 'backend' else producer
+            assert reference in related_module().select_pytest([changed])
+        return
+    job = fast['jobs']['static'] if kind == 'fast_static_node' else full['jobs'][kind.removesuffix('_node')]
+    command = next(step['run'] for step in job['steps']
+                   if step.get('name') == 'Type checks, renderer regressions, and build')
+    reference = 'scripts/e2e/fixtures/browserGateLogin.test.cjs'
+    lines = [shlex.split(line) for line in command.splitlines() if line.strip()]
+    selected = [line for line in lines if line[:2] == ['node', '--test']]
+    assert sum(line.count(reference) for line in selected) == 1, 'Explicit browser login helper control must execute exactly once'
+    assert (ROOT/reference).is_file()
+    assert command.splitlines().count('npm run test:renderer') == 1
+    assert 'src/renderer/components/compute/SharedProjectPanelBrowserMode.test.cjs' not in command

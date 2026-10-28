@@ -5,7 +5,7 @@ import {storedZip} from './fixtures/storedZip';
 import {execFileSync} from 'node:child_process';
 import {test, expect} from './fixtures/test';
 import {browserTeamServer} from './fixtures/browser_team_server';
-import {expectBrowserLoginGate,openBrowserServerManagement} from './fixtures/browserGateLogin';
+import {expectBrowserLoginGate,openBrowserServerManagement,chooseBrowserProject,browserLoginWithin} from './fixtures/browserGateLogin';
 const harness = require('./fixtures/harness.cjs');
 test.use({ignoreHTTPSErrors: true, actionTimeout: 15000});
 test('browser HTTPS cookie login opens authorized flow and role revocation refuses writes', async ({page, rendererBuild, workspace, evidence, loopbackGuard}) => {
@@ -30,8 +30,10 @@ test('browser HTTPS cookie login opens authorized flow and role revocation refus
     await expect(page.getByLabel('공동 작업 서버 주소')).toHaveValue(server.origin);
     await page.getByLabel('공유 계정 이름', {exact: true}).fill('vieweruser');
     await page.getByLabel('공유 계정 비밀번호', {exact: true}).fill(password);
+    const browserLoginDeadline=performance.now()+20_000;
     await page.getByRole('button', {name: '연결·로그인', exact: true}).click();
-    await expect(page.getByTitle('프로젝트 관리', {exact: true})).toContainText(project.name);
+    await chooseBrowserProject(page,project.id,'shared',browserLoginDeadline);
+    await browserLoginWithin(()=>expect(page.getByTitle('프로젝트 관리', {exact: true})).toContainText(project.name),browserLoginDeadline);
     await expect(page.getByLabel('공유 계정 비밀번호', {exact: true})).toHaveCount(0);
     await openBrowserServerManagement(page);
     await expect(page.getByLabel('공동 작업 프로젝트', {exact: true})).toHaveValue(project.id);
@@ -62,8 +64,10 @@ test('browser HTTPS cookie login opens authorized flow and role revocation refus
     const loggedOut = await page.evaluate(async () => (await fetch('/api/accounts/me')).status); expect(loggedOut).toBe(401);
     await page.getByLabel('공유 계정 이름',{exact:true}).fill('administrator');
     await page.getByLabel('공유 계정 비밀번호',{exact:true}).fill(password);
+    const browserReloginDeadline=performance.now()+20_000;
     await page.getByRole('button',{name:'연결·로그인',exact:true}).click();
-    await openBrowserServerManagement(page);
+    await chooseBrowserProject(page,project.id,'shared',browserReloginDeadline);
+    await browserLoginWithin(()=>openBrowserServerManagement(page),browserReloginDeadline);
     await expect(page.getByLabel('공동 작업 프로젝트',{exact:true})).toHaveValue(project.id);
     await expect(page.getByLabel('공동 작업 프로젝트',{exact:true})).toBeEnabled();
     await page.getByRole('dialog',{name:'컴퓨팅 서버 관리',exact:true}).getByRole('button',{name:'닫기',exact:true}).click();

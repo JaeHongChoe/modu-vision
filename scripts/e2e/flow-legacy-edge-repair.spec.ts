@@ -11,6 +11,17 @@ const sha=(bytes:Buffer|string)=>crypto.createHash('sha256').update(bytes).diges
 const stable=(v:any):any=>Array.isArray(v)?v.map(stable):v&&typeof v==='object'?Object.fromEntries(Object.keys(v).sort().map(k=>[k,stable(v[k])])):v;
 const graphSha=(graph:any)=>sha(JSON.stringify(stable(graph)));
 
+async function enterLegacyEditor(page:Page,project:{name:string;task:string}){
+ await expect(page.getByTitle('프로젝트 관리',{exact:true})).toHaveText(project.name);
+ const task=page.getByRole('combobox',{name:'검사 작업 종류',exact:true});
+ await expect(task).toHaveValue(project.task);
+ await expect(task).toBeEnabled();
+ const stage=page.getByRole('navigation',{name:'Workflow Stages'}).getByRole('button').nth(4);
+ await stage.click();
+ await expect(stage).toHaveAttribute('aria-current','step');
+ await page.getByRole('tab',{name:'편집',exact:true}).click();
+}
+
 async function exercise(page:Page,workspace:Workspace,evidence:Evidence,api:Api,url?:string){
  await api('/api/project/create',{name:'Owned legacy edge repair',task:'anomaly'});
  await api('/api/project/update',{source_dataset_dir:workspace.dataset},'PUT');
@@ -46,8 +57,7 @@ async function exercise(page:Page,workspace:Workspace,evidence:Evidence,api:Api,
  expect(initial.pipeline.edges.map((e:any)=>e.id)).toEqual(['','input-b','duplicate','duplicate','output-edge']);
  const images=workspace.images.map(row=>({...row,current_sha256:sha(fs.readFileSync(row.path))}));
  if(url)await page.goto(url);else await page.reload();
- await page.getByRole('navigation',{name:'Workflow Stages'}).getByRole('button').nth(4).click();
- await page.getByRole('tab',{name:'편집',exact:true}).click();
+ await enterLegacyEditor(page,project);
  await expect(page.getByRole('heading',{name:'검사 플로우 편집기',exact:true})).toBeVisible();
  await expect(page.locator('path[data-flow-edge]')).toHaveCount(5);
  const wire=(source:string,target:string)=>page.getByRole('button',{name:new RegExp(`^Select connection ${source} to ${target}(?: when |:|$)`)});
@@ -86,7 +96,7 @@ async function exercise(page:Page,workspace:Workspace,evidence:Evidence,api:Api,
  expect(final.pipeline.edges[0]).toMatchObject({id:'',label:'Missing edited explicitly'});
  expect(final.pipeline.nodes).toEqual(initial.pipeline.nodes);
  await evidence.screenshot(page,'one-legacy-row-edited-and-deleted-without-normalization');
- await page.reload();await page.getByRole('navigation',{name:'Workflow Stages'}).getByRole('button').nth(4).click();await page.getByRole('tab',{name:'편집',exact:true}).click();
+ await page.reload();await enterLegacyEditor(page,project);
  await expect(page.locator('path[data-flow-edge]')).toHaveCount(4);await select('input','model_a');await expect(name()).toHaveValue('Missing edited explicitly');
  expect((await api('/api/flowchart/draft')).draft_sha256).toBe(final.draft_sha256);
  await expect(page.getByRole('button',{name:'플로우 저장',exact:true})).toBeDisabled();
@@ -108,3 +118,32 @@ test('native legacy wire repair preserves exact saved draft and runtime identity
  const api:Api=(route,body,method)=>window.evaluate(async({port,route,body,method})=>{const response=await fetch(`http://127.0.0.1:${port}${route}`,{method:method||(body===undefined?'GET':'POST'),...(body===undefined?{}:{headers:{'Content-Type':'application/json'},body:JSON.stringify(body)})});if(!response.ok)throw Error(`Owned API ${response.status}: ${await response.text()}`);return response.json();},{port:backend.port,route,body,method});
  await exercise(window,workspace,evidence,api);
 });
+
+// Modeled readiness states exercise the real browser locators and the test-local
+// preparation, without pretending to exercise the product or legacy row repair.
+// The original owned-backend legacy case above remains the integration evidence.
+for(const control of ['wrong-project','sync-busy','settled'] as const){
+ test(`legacy editor readiness preparation ${control}`,async({page,evidence})=>{
+  const project={name:'Expected owned readiness project',task:'anomaly'};
+  await page.setContent(`<button title="프로젝트 관리">${control==='wrong-project'?'Other '+project.name:project.name}</button>
+   <select aria-label="검사 작업 종류" ${control==='sync-busy'?'disabled':''}><option value="anomaly">이상 탐지</option></select>
+   <nav aria-label="Workflow Stages">${[1,2,3,4,5,6].map(n=>`<button type="button" ${n===1?'aria-current="step"':''}>${n}</button>`).join('')}</nav>
+   <button role="tab" hidden>편집</button>
+   <script>window.legacyReadinessClicks=[];
+   const stage=document.querySelectorAll('nav button')[4],tab=document.querySelector('[role="tab"]');
+   stage.onclick=()=>{window.legacyReadinessClicks.push({kind:'stage',project:document.querySelector('[title="프로젝트 관리"]').textContent,task:document.querySelector('select').value,busy:document.querySelector('select').disabled});document.querySelector('[aria-current]')?.removeAttribute('aria-current');stage.setAttribute('aria-current','step');tab.hidden=false;};
+   tab.onclick=()=>window.legacyReadinessClicks.push({kind:'tab'});</script>`);
+  let refused=false;
+  try{await enterLegacyEditor(page,project);}catch{refused=true;}
+  const clicks=await page.evaluate(()=>(window as any).legacyReadinessClicks);
+  if(control==='settled'){
+   expect(refused).toBe(false);
+   expect(clicks).toEqual([{kind:'stage',project:project.name,task:'anomaly',busy:false},{kind:'tab'}]);
+   await expect(page.getByRole('navigation',{name:'Workflow Stages'}).getByRole('button').nth(4)).toHaveAttribute('aria-current','step');
+  }else{
+   expect(refused,'unaccepted or busy renderer must refuse entry before a stage or tab click').toBe(true);
+   expect(clicks).toEqual([]);
+  }
+  evidence.note('legacy_readiness_model',{control,clicks,refused,modeled_DOM_only:true,product_legacy_rows_exercised:false});
+ });
+}

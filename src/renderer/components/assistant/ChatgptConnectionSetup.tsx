@@ -10,6 +10,9 @@ const TERMS = 'https://openai.com/policies/sign-in-with-chatgpt-terms/';
 export const ChatgptConnectionSetup: React.FC = () => {
   const config = useAssistantStore(state => state.config);
   const configError = useAssistantStore(state => state.configError);
+  const configReadStatus = useAssistantStore(state => state.configReadStatus);
+  const configuring = useAssistantStore(state => state.configuring);
+  const readBlocked = configReadStatus === 'waiting' || configReadStatus === 'unverified';
   const isOpen = useAssistantStore(state => state.isOpen);
   const chat = config?.chatgpt;
   const account = chat?.accounts.find(item => item.recordId === chat.active);
@@ -25,7 +28,7 @@ export const ChatgptConnectionSetup: React.FC = () => {
   const [models, setModels] = useState<{ id: string; label: string }[]>([]);
   const [usageVisited, setUsageVisited] = useState<string|null>(null);
   const [recoveryTicket,setRecoveryTicket] = useState<string|null>(null);
-  const alive = useRef(true), operation = useRef(0);
+  const alive = useRef(true), operation = useRef(0), cancelling = useRef(false);
   const selection = () => {
     const current = useAssistantStore.getState().config?.chatgpt;
     return JSON.stringify([current?.active, current?.authority]);
@@ -86,10 +89,18 @@ export const ChatgptConnectionSetup: React.FC = () => {
       setSignOutNotice(confirmed ? '이 컴퓨터의 연결을 지웠고 서비스 쪽 연결 해제도 확인했습니다.' : '이 컴퓨터의 연결을 지웠습니다. 서비스 쪽 연결 해제는 확인되지 않았습니다. 필요하면 ChatGPT 설정에서도 연결을 확인하세요.');
     });
   };
+  const cancelPending = async () => {
+    const current = useAssistantStore.getState(), status = current.config?.chatgpt?.status;
+    if (busy || cancelling.current || current.writing || (status !== 'waiting' && status !== 'exchanging') || (current.configuring && current.configReadStatus !== 'waiting')) return;
+    cancelling.current = true;
+    try { await run(() => current.cancelChatgpt()); }
+    finally { cancelling.current = false; }
+  };
   const acknowledgeWelcome=()=>{if(!account||busy||renderedSelection!==selection())return;return run(()=>useAssistantStore.getState().acknowledgeChatgptPlanUsage(account.recordId));};
 
   return (
     <section aria-label="ChatGPT 연결" className="space-y-2 rounded border border-slate-700 p-2 text-xs">
+      <fieldset aria-label="ChatGPT 연결 설정" disabled={readBlocked} className="min-w-0 space-y-2">
       <details open={!ready || Boolean(pending)}>
         <summary className="cursor-pointer font-semibold text-slate-200">ChatGPT 연결</summary>
         <div className="mt-2 space-y-2">
@@ -114,7 +125,6 @@ export const ChatgptConnectionSetup: React.FC = () => {
             {account && <button type="button" className="workspace-button" disabled={!accepted || !chat?.encryptionAvailable || pending || busy} onClick={() => begin(account.recordId)}>선택 계정 다시 연결</button>}
             {account?.signedIn && !account.planUsageEnabled && <button type="button" className="workspace-button" disabled={!accepted || !chat?.encryptionAvailable || pending || busy} onClick={() => begin(account.recordId,true)}>ChatGPT 플랜 사용 켜기</button>}
             {Boolean(chat?.accounts.length) && <span className="self-center text-slate-400">다른 계정은 Continue with ChatGPT에서 추가합니다.</span>}
-            {pending && <button type="button" className="workspace-button" onClick={() => run(() => useAssistantStore.getState().cancelChatgpt())}>연결 취소</button>}
             {account && <button type="button" className="workspace-button" disabled={busy || pending} onClick={signOut}>이 컴퓨터에서 연결 지우기</button>}
           </div>
           {pending && <p role="status">{chat?.status === 'exchanging' ? '브라우저에서 승인한 연결을 확인하고 있습니다.' : '브라우저에서 로그인을 마친 뒤 이 화면으로 돌아오세요.'}</p>}
@@ -145,6 +155,8 @@ export const ChatgptConnectionSetup: React.FC = () => {
       {planEnabled && account?.usagePaused && <div role="status" className="space-y-2 rounded border border-amber-700 p-2"><p>ChatGPT 사용 한도 때문에 새 질문을 중단했습니다. 전체 플랜 또는 이 앱에 적용된 한도를 확인하세요.</p><a href={USAGE} target="_blank" rel="noopener noreferrer" className="workspace-button workspace-button--primary inline-block" onClick={() => setUsageVisited(selection())}>ChatGPT 사용량 관리</a><button type="button" className="workspace-button" disabled={busy||pending||usageVisited!==renderedSelection} onClick={() => {if(renderedSelection!==selection())return;void run(() => useAssistantStore.getState().resumeChatgptUsage(account.recordId));}}>사용량 확인 후 요청 재개 허용</button><p>요청 재개는 질문을 자동으로 보내지 않습니다.</p></div>}
       {chat?.error && <div role="alert" className="space-y-1 text-amber-200"><p>{chat.error.reason} {chat.error.action}</p>{chat.error.code === 'rate_limited' && <a href={USAGE} target="_blank" rel="noopener noreferrer" className="workspace-button inline-block">ChatGPT 사용량 관리</a>}</div>}
       {(note || configError || signOutNotice) && <p role="status" className="text-slate-300">{configError || signOutNotice || note}</p>}
+      </fieldset>
+      {pending && <button type="button" className="workspace-button" disabled={busy || Boolean(configuring && configReadStatus !== 'waiting')} onClick={cancelPending}>연결 취소</button>}
     </section>
   );
 };

@@ -4,11 +4,11 @@ function harness(){
  const project=create(()=>({project:{id:'a',source_dataset_dir:'/a',active_labelset_id:'labels'},projectDir:'/a',task:'detection'}));
  const annotation=create(()=>({currentImage:{file_path:'/a/a.png',file_name:'a.png',image_id:'a'},metadata:{image_uuid:'a',content_hash:'abc',revision:1},annotationLoadStatus:'ready',isDirty:false,annotations:[]}));
  const compute=create(()=>({transportRevision:0,selectedProfileId:null})),dataset=create(()=>({folderPath:'/a',split:{train:7,val:2,test:1}})),training=create(()=>({preset:'fast'}));
- let generation=1,contextListeners=[],imageReads=0,delayedRead=null,delayedIntent=null;const sent=[],cancelled=[],executed=[],logged=[];const tools={specs:()=>[],tier:name=>name==='write'?'write':null,preview:async()=>({title:'테스트 쓰기',lines:[],undo:'거절'}),execute:async()=>{executed.push('write');return {ok:true,summary:'쓰기',content:'쓰기'};}};
+ let generation=1,contextListeners=[],imageReads=0,delayedRead=null,delayedIntent=null;let taskConnection;const sent=[],cancelled=[],executed=[],logged=[];const tools={specs:()=>[],tier:name=>name==='write'?'write':null,preview:async()=>({title:'테스트 쓰기',lines:[],undo:'거절'}),execute:async()=>{executed.push('write');return {ok:true,summary:'쓰기',content:'쓰기'};}};
  const config={active:'openai-compatible',providers:[{provider:'openai-compatible',baseUrl:'http://localhost:123/v1',model:'m',format:'chat',supportsImages:true}]};
  const bridge={getState:async()=>config,saveProvider:async input=>({...config,providers:[input]}),imageIntent:async input=>delayedIntent?delayedIntent(input):({ok:true,grantId:'g',message:'확인',providerLabel:'local'}),
   send:async input=>{sent.push(input);return {ok:true,text:'답',toolCalls:[]};},cancel:async id=>{cancelled.push(id);return true;},beginRun:async()=>true,endRun:async()=>{}};
- const stubs={zustand:{create},'./useAssistantTaskStore':{useAssistantTaskStore:{getState:()=>({busy:false})},assistantTaskTools:{isExecuting:()=>false,cachedStatus:()=>({status:'waiting_human',revision:7})},configureTaskConnection:()=>{},notifyTaskConnectionChange:()=>{}},'./useAnnotationStore':{useAnnotationStore:annotation},'./useProjectStore':{useProjectStore:project},'./useComputeStore':{useComputeStore:compute},'./useDatasetStore':{useDatasetStore:dataset},'./useTrainingStore':{useTrainingStore:training},
+ const stubs={zustand:{create},'./useAssistantTaskStore':{useAssistantTaskStore:{getState:()=>({busy:false})},assistantTaskTools:{isExecuting:()=>false,cachedStatus:()=>({status:'waiting_human',revision:7})},configureTaskConnection:read=>{taskConnection=read;},notifyTaskConnectionChange:()=>{}},'./useAnnotationStore':{useAnnotationStore:annotation},'./useProjectStore':{useProjectStore:project},'./useComputeStore':{useComputeStore:compute},'./useDatasetStore':{useDatasetStore:dataset},'./useTrainingStore':{useTrainingStore:training},
   '../stores/useAnnotationStore':{useAnnotationStore:annotation},'../stores/useProjectStore':{useProjectStore:project},'../stores/useComputeStore':{useComputeStore:compute},'../stores/useDatasetStore':{useDatasetStore:dataset},'../stores/useTrainingStore':{useTrainingStore:training},
   '../services/api':{getApiPersistenceIdentity:()=> 'local',getProjectContextGeneration:()=>generation,subscribeProjectContext:fn=>{contextListeners.push(fn);return()=>{};}},
   './api':{getApiPersistenceIdentity:()=> 'local',getProjectContextGeneration:()=>generation,subscribeProjectContext:fn=>{contextListeners.push(fn);return()=>{};}},
@@ -17,7 +17,7 @@ function harness(){
   '../stores/workflowEvidence':{workflowEvidenceRevision:()=>0},'./workflowEvidence':{workflowEvidenceRevision:()=>0}};
  const cache=new Map();function load(file){if(cache.has(file))return cache.get(file).exports;const m=new Module(file,module);m.filename=file;m.paths=Module._nodeModulePaths(path.dirname(file));cache.set(file,m);const orig=m.require.bind(m);m.require=n=>{if(stubs[n])return stubs[n];if(n.startsWith('.')){const target=path.resolve(path.dirname(file),n)+'.ts';if(fs.existsSync(target))return load(target);}return orig(n);};m._compile(ts.transpileModule(fs.readFileSync(file,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText,file);return m.exports;}
  const store=load(path.join(__dirname,'useAssistantStore.ts')).useAssistantStore;
- return {store,project,annotation,compute,dataset,training,sent,cancelled,executed,logged,tools,config,bridge,reads:()=>imageReads,setRead:fn=>delayedRead=fn,setIntent:fn=>delayedIntent=fn,changeAuthority:()=>{generation++;contextListeners.forEach(fn=>fn());}};
+ return {store,project,annotation,compute,dataset,training,taskConnection:()=>taskConnection(),sent,cancelled,executed,logged,tools,config,bridge,reads:()=>imageReads,setRead:fn=>delayedRead=fn,setIntent:fn=>delayedIntent=fn,changeAuthority:()=>{generation++;contextListeners.forEach(fn=>fn());}};
 }
 const deferred=()=>{let resolve;return {promise:new Promise(r=>resolve=r),resolve:v=>resolve(v)};};
 test('the next explicit question receives cached task feedback without a separate provider send',async()=>{
@@ -160,4 +160,99 @@ test('while settings load the store exposes configuring, keeps the shown image o
  assert.equal(h.store.getState().items.filter(i=>i.kind==='notice'&&/설정을 확인하는 중.*다시/.test(i.text)).length,2,'each held request says why and what to do');
  assert.equal(configuring,true);loading.resolve(h.config);await reloading;assert.equal(h.store.getState().configuring,false);
  await h.store.getState().sendImage();assert.equal(h.sent.length,1);
+});
+
+// A missing display deadline must not leave a protected-storage read spinning forever.
+test('an unresolved config read stops waiting at 15 seconds without provider work or automatic retry',async t=>{
+ t.mock.timers.enable({apis:['setTimeout']});
+ const h=harness();let reads=0;h.bridge.getState=()=>{reads++;return new Promise(()=>{});};
+ let settled=false;const loading=h.store.getState().loadConfig().then(()=>{settled=true;});
+ t.mock.timers.tick(14999);await Promise.resolve();assert.equal(h.store.getState().configuring,true);
+ t.mock.timers.tick(1);await Promise.resolve();await Promise.resolve();
+ assert.equal(h.store.getState().configuring,false,'the display has a bounded wait');
+ await loading;assert.equal(settled,true);assert.equal(h.store.getState().configReadStatus,'unverified');assert.ok(h.store.getState().configError);
+ await h.store.getState().loadConfig();t.mock.timers.tick(60000);assert.equal(reads,1);assert.equal(h.store.getState().configuring,false);
+ assert.deepEqual(h.sent,[]);assert.deepEqual(h.cancelled,[],'no provider/native cancellation is claimed');
+});
+
+// A closed panel must retire its result even when the underlying IPC later succeeds.
+test('closing a config read settles the display and cannot accept a late result',async()=>{
+ const h=harness(),read=deferred();h.bridge.getState=()=>read.promise;
+ const loading=h.store.getState().loadConfig();h.store.getState().close();
+ assert.equal(h.store.getState().configuring,false);
+ read.resolve(h.config);await loading;await Promise.resolve();
+ assert.equal(h.store.getState().config,null);assert.equal(h.store.getState().configReadStatus,'unverified');assert.deepEqual(h.cancelled,[]);
+});
+
+// Without coalescing every reopen or manual recheck would create another OS request.
+test('reopening and repeated explicit rechecks share one unresolved config IPC',async()=>{
+ const h=harness(),read=deferred();let reads=0;h.bridge.getState=()=>{reads++;return read.promise;};
+ const first=h.store.getState().loadConfig();h.store.getState().close();h.store.getState().open();
+ const second=h.store.getState().loadConfig({explicit:true}),third=h.store.getState().loadConfig({explicit:true});
+ assert.equal(reads,1,'one underlying read survives changing display generations');
+ read.resolve(h.config);await Promise.all([first,second,third]);
+ assert.equal(h.store.getState().config,h.config);assert.equal(h.store.getState().configuring,false);assert.deepEqual(h.sent,[]);
+});
+
+// Stopping display waiting must not clear conversation/history or forward provider cancellation.
+test('explicit config stop preserves cached state and retires a late result',async()=>{
+ const h=harness();await h.store.getState().loadConfig();h.store.setState({items:[{id:91,kind:'person',text:'보관할 질문'}]});
+ const read=deferred();h.bridge.getState=()=>read.promise;const loading=h.store.getState().loadConfig();
+ assert.equal(typeof h.store.getState().stopConfigLoad,'function');h.store.getState().stopConfigLoad();
+ assert.equal(h.store.getState().configuring,false);assert.equal(h.store.getState().configReadStatus,'unverified');
+ read.resolve({...h.config,active:null});await loading;await Promise.resolve();
+ assert.equal(h.store.getState().config,h.config);assert.equal(h.store.getState().items[0].text,'보관할 질문');assert.deepEqual(h.cancelled,[]);
+});
+
+// Cached ready state must not authorize requests or account/model changes after an unverified read.
+test('unverified config blocks sending and connection selection until an explicit recheck succeeds',async t=>{
+ t.mock.timers.enable({apis:['setTimeout']});const h=harness();await h.store.getState().loadConfig();
+ const read=deferred();let reads=0,changes=0,modelLists=0;h.bridge.listModels=async()=>{modelLists++;return {ok:true,models:[]};};h.bridge.getState=()=>{reads++;return read.promise;};
+ h.bridge.chatgpt={selectAccount:async()=>{changes++;return h.config;},selectModel:async()=>{changes++;return h.config;}};
+ const loading=h.store.getState().loadConfig();t.mock.timers.tick(15000);await Promise.resolve();await Promise.resolve();
+ assert.equal(h.store.getState().configuring,false);await loading;
+ await h.store.getState().ask('아직 보내지 않기');await h.store.getState().selectChatgptAccount('another');await h.store.getState().selectChatgptModel('another','model');
+ await h.store.getState().listModels('chatgpt');assert.equal(modelLists,0);assert.equal(h.taskConnection().configuring,true,'task restore/approval cannot use unverified cached readiness');
+ assert.equal(changes,0);assert.deepEqual(h.sent,[]);assert.equal(h.store.getState().config,h.config);
+ const recheck=h.store.getState().loadConfig({explicit:true});assert.equal(reads,1);read.resolve(h.config);await recheck;
+ await h.store.getState().ask('확인 후 질문');assert.equal(h.sent.length,1);
+});
+
+// A failed cancel must not make an unverified cached connection ready again.
+test('failed connection cancellation retains unverified state and blocked provider sends',async()=>{
+ const h=harness();await h.store.getState().loadConfig();h.bridge.getState=()=>new Promise(()=>{});
+ const waiting=h.store.getState().loadConfig();h.store.getState().stopConfigLoad();await waiting;
+ h.bridge.chatgpt={cancel:async()=>{throw new Error('cancel unavailable');}};
+ assert.equal(await h.store.getState().cancelChatgpt(),false);
+ assert.equal(h.store.getState().configReadStatus,'unverified');
+ await h.store.getState().ask('보내지 않기');assert.deepEqual(h.sent,[]);
+});
+
+// Once the retired read settles, polling still cannot apply its result or issue another IPC.
+test('late config success after timeout remains unverified until a fresh explicit read',async t=>{
+ t.mock.timers.enable({apis:['setTimeout']});const h=harness(),read=deferred();let reads=0;
+ h.bridge.getState=()=>{reads++;return reads===1?read.promise:Promise.resolve(h.config);};
+ const loading=h.store.getState().loadConfig();t.mock.timers.tick(15000);await loading;
+ read.resolve(h.config);await Promise.resolve();await h.store.getState().loadConfig();
+ assert.equal(h.store.getState().config,null);assert.equal(h.store.getState().configReadStatus,'unverified');assert.equal(reads,1);
+ await h.store.getState().loadConfig({explicit:true});assert.equal(reads,2);assert.equal(h.store.getState().config,h.config);assert.equal(h.store.getState().configReadStatus,'idle');
+});
+
+// The old unresolved snapshot cannot overwrite the result of a newer settings transaction.
+test('a pre-mutation config read cannot replace the newer selected account snapshot',async()=>{
+ const h=harness();await h.store.getState().loadConfig();const read=deferred();let reads=0;h.bridge.getState=()=>{reads++;return read.promise;};
+ const loading=h.store.getState().loadConfig(),next={...h.config,active:null};h.bridge.setActive=async()=>next;
+ await h.store.getState().setActive('chatgpt');await loading;
+ const recheck=h.store.getState().loadConfig({explicit:true});assert.equal(reads,1);
+ read.resolve(h.config);await recheck;
+ assert.equal(h.store.getState().config,next);assert.equal(h.store.getState().configReadStatus,'unverified');assert.deepEqual(h.sent,[]);
+});
+
+test('a retired config rejection is handled and never clears a later recheck outcome',async()=>{
+ const h=harness();let reject;h.bridge.getState=()=>new Promise((_,fail)=>{reject=fail;});
+ const waiting=h.store.getState().loadConfig();h.store.getState().stopConfigLoad();await waiting;
+ reject(new Error('late IPC rejection'));await Promise.resolve();
+ assert.equal(h.store.getState().configReadStatus,'unverified');assert.equal(h.store.getState().config,null);
+ h.bridge.getState=async()=>h.config;await h.store.getState().loadConfig({explicit:true});
+ assert.equal(h.store.getState().config,h.config);assert.equal(h.store.getState().configError,null);
 });

@@ -2,6 +2,7 @@
 from __future__ import annotations
 import hashlib
 import json
+import math
 import os
 import secrets
 import shutil
@@ -18,7 +19,77 @@ from backend.engine.inspection_service import _verify_release_policy
 from backend.engine.runtime_deployment import DeploymentLedger
 from backend.engine.runtime_device import resolve_package_device as resolve_runtime_device
 from backend.engine.runtime_process_control import (atomic_private_json,
-    owned_inspection_process,process_identity,runtime_state_lock,serialized_lifecycle,session_isolation,wait_for_owned_exit)
+    command_sha256,owned_inspection_process,process_identity,runtime_state_lock,serialized_lifecycle,session_isolation,wait_for_owned_exit)
+
+
+def _initial_process_identity(process,state,expected_command,parent_pid,deadline):
+    """Observe one fresh child, withholding ownership until its actual argv exists.
+
+    Only the strict predicate's canonical empty observation may wait. This is
+    part of the original startup budget, never a launch or ownership fallback.
+    Restored/native process discovery continues to use the strict predicate.
+    """
+    pid=process.pid;birth=None;mismatch=None
+    if type(pid) is not int or pid<=0:raise ValueError('Initial runtime PID is invalid')
+
+    def remaining():
+        value=deadline-time.monotonic()
+        if value<=0:raise TimeoutError('Managed service initial identity timed out') from mismatch
+        return value
+
+    def snapshot():
+        remaining()
+        if process.pid!=pid or process.poll() is not None:
+            raise RuntimeError('Managed service exited before initial identity verification')
+        remaining()
+        # create_time is cached on a psutil.Process instance: do not reuse it
+        # for the next sample or final PID/birth/parent check.
+        owner=psutil.Process(pid);remaining()
+        created=owner.create_time();remaining()
+        if type(created) not in (int,float) or not math.isfinite(created) or created<=0:
+            raise ValueError('Initial runtime birth is unavailable')
+        if birth is not None and created!=birth:raise ValueError('Initial runtime process changed')
+        parent=owner.ppid();remaining()
+        if type(parent) is not int or parent!=parent_pid:raise ValueError('Initial runtime parent changed')
+        status=owner.status();remaining()
+        if type(status) is not str or status in {psutil.STATUS_ZOMBIE,psutil.STATUS_DEAD}:
+            raise ValueError('Initial runtime is not live')
+        if process.pid!=pid or process.poll() is not None:
+            raise RuntimeError('Managed service exited before initial identity verification')
+        remaining()
+        return created
+
+    def canonical_empty(error):
+        row=getattr(error,'runtime_spawn_diagnostic',None)
+        if type(error) is not ValueError or str(error)!='Spawned runtime command differs from its owned state' or type(row) is not dict:return False
+        observed=row.get('observed');expected=row.get('expected');child=row.get('process')
+        return (row.get('schema')=='modu-vision.runtime-spawn-observation/v1'
+            and row.get('non_atomic') is True and row.get('ownership_verified') is False
+            and type(observed) is dict and type(observed.get('argc')) is int
+            and type(observed.get('state_flag_count')) is int and observed.get('state_matches') is False
+            and observed=={'argc':0,'sha256':command_sha256([]),'entry':'empty',
+                          'state_flag_count':0,'state_matches':False,'tokens':[]}
+            and type(expected) is dict and expected.get('sha256')==expected_command
+            and type(child) is dict and type(child.get('pid')) is int and child['pid']==pid
+            and type(child.get('birth')) in (int,float) and child['birth']==birth)
+
+    while True:
+        created=snapshot()
+        if birth is None:birth=created
+        try:
+            actual=process_identity(process,state)
+        except ValueError as error:
+            if not canonical_empty(error):raise
+            mismatch=error
+            snapshot()
+            time.sleep(min(.1,remaining()))
+        else:
+            snapshot()
+            if (actual.get('pid')!=pid or actual.get('process_created_at')!=birth
+                    or actual.get('process_command_sha256')!=expected_command):
+                raise ValueError('Initial runtime actual command or process differs')
+            remaining()
+            return actual
 
 
 class ManagedService:
@@ -233,15 +304,20 @@ class ManagedService:
         # Runtime modules are loaded from this checkout, never from untrusted release code.
         checkout=runtime_cwd()
         log=(self.root/'service.log').open('ab')
+        deadline=time.monotonic()+20
+        parent_pid=os.getpid();expected_command=command_sha256(arguments)
         try:process=subprocess.Popen(arguments,cwd=checkout,env=env,stdout=log,stderr=subprocess.STDOUT,**session_isolation())
         finally:log.close()
-        try:self.config.update(process_identity(process,self.root/'state'));self.save(self.config)
+        try:
+            identity=_initial_process_identity(process,self.root/'state',expected_command,parent_pid,deadline)
+            if time.monotonic()>=deadline:raise TimeoutError('Managed service initial identity timed out')
+            self.config.update(identity);self.save(self.config)
         except Exception:
             process.terminate();process.wait(timeout=10);raise
-        deadline=time.monotonic()+20
         while time.monotonic()<deadline:
             if process.poll() is not None:raise RuntimeError('Managed service exited; inspect its local service.log')
             result=self.readback()
+            if time.monotonic()>=deadline:break
             if result.get('status')=='ready':
                 if recover:self.ledger._validate_ack(release,result)
                 return result

@@ -10,6 +10,7 @@ import time
 from fastapi import HTTPException, Request
 
 from .grants import PathGrants, PURPOSES, literal_path
+from .client import LocalHostRemoteError
 
 STAGED_PURPOSES = {'dataset-source', 'label-import', 'mask-import', 'model-directory', 'pretrained-weights',
                    'runtime-source', 'runtime-inventory', 'inspection-image'}
@@ -66,7 +67,8 @@ class LocalHostController:
     def capabilities(self, request):
         self._account(request)
         ready = bool(self.client.ready and not self.client.closed)
-        return {'capabilities':{name:ready for name in ('pickPaths','openPaths','assistant','updates','projects')},
+        return {'capabilities':{**{name:ready for name in ('pickPaths','openPaths','assistant','updates','projects')},
+                                'projectAssetTickets':ready and bool(getattr(getattr(self.app.state,'project_assets',None),'supported',False))},
                 'platform':self.client.ready.get('platform') if ready else None,
                 'reasons':{} if ready else {'local_host':'로컬 보조 프로그램이 종료되었습니다. 실행 터미널을 확인하세요.'}}
 
@@ -117,7 +119,8 @@ class LocalHostController:
         if remote and remote.has_authority(owner) and not action.startswith('remote.') and native_project:
             raise HTTPException(409 if project_assistant else 403,'Remote project selected: use its separate assistant authority, server paths or ZIP upload')
         from .routes import ASSISTANT, UPDATES
-        actor_only=(action in {'session','approve','capabilities'}
+        from .location_recovery import ACTIONS as RECOVERY_ACTIONS
+        actor_only=(action in RECOVERY_ACTIONS or action in {'session','approve','capabilities'}
                     or action in {'assistant.'+name for name in ASSISTANT} and not project_assistant
                     or action in {'updates.'+name for name in UPDATES})
         # A remote context belongs to its broker connection, never this local
@@ -180,6 +183,11 @@ class LocalHostController:
                 key=remote.run_key(authority,args['input']['image'].get('grantId'))
                 if key in remote.image_grants:raise HTTPException(403,'Remote image confirmation cannot be used for a local project')
         try: result = await self.client.call(authority, method, args)
+        except LocalHostRemoteError as error:
+            if error.code == 'native_dialog_busy':
+                raise HTTPException(409, {'code':'local_host_native_dialog_busy',
+                    'message':'열린 파일·폴더 선택창을 먼저 마친 뒤 다시 시도하세요.'}) from None
+            raise HTTPException(503, str(error)[:500]) from None
         except (RuntimeError, TimeoutError, ValueError) as error:
             raise HTTPException(503, str(error)[:500]) from None
         self.recheck(request, action, authority, project=project)
@@ -274,6 +282,24 @@ class LocalHostController:
             except (RuntimeError,TimeoutError):pass
         remote=getattr(self,'remote',None)
         if remote:await remote.revoke_session(session)
+
+    async def retire_recovery_sessions(self, sessions, actor_id):
+        """Recovery publication requires acknowledged retirement, never best effort."""
+        for session in sessions:
+            entry = self.sessions.get(session)
+            tabs = [(key,row) for key,row in self.tabs.items() if row['session_id'] == session]
+            self.revoked_sessions.add(session)
+            self.grants.revoke(session_id=session)
+            self.runs = {key:row for key,row in self.runs.items() if row['scope'][1] != session}
+            self.assistant_scopes = {key:row for key,row in self.assistant_scopes.items() if key[0] != session}
+            self.resource_epochs = {key:row for key,row in self.resource_epochs.items() if key[0] != session}
+            authority = {'actor_id':actor_id,'session_id':session,'tab_id':tabs[0][0] if tabs else 'recovery-retirement'}
+            result = await self.client.call(authority,'session.disposeAll',{},timeout=5)
+            if result is not True: raise HTTPException(503,'Native session retirement was not acknowledged')
+            for key,_ in tabs: self.tabs.pop(key,None)
+            self.sessions.pop(session,None)
+            remote = getattr(self,'remote',None)
+            if remote: await remote.revoke_session(session)
 
     async def prune_sessions(self):
         for session,entry in list(self.sessions.items()):

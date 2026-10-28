@@ -3,7 +3,7 @@ import fs from 'fs';
 import path from 'path';
 import { pathToFileURL } from 'url';
 import { BackendSupervisor } from './supervisor';
-import { registerIpcHandlers } from './ipc';
+import { registerIpcHandlers, disposeAssistantHandlers } from './ipc';
 import { acquireAppInstanceLock } from './instanceLock';
 import {isSharedServerUrl,sharedHeaders} from './sharedSession';
 import {authenticateMainLaunch} from './applicationLaunch';
@@ -243,7 +243,9 @@ app.on('before-quit', async (event) => {
     isQuitting = true;
     console.log('[Main] Application quit initiated. Stopping backend daemon...');
     try {
-      await supervisor?.stopBackend();
+      // Credential invalidation starts immediately; its own cleanup budget does not change supervisor shutdown policy.
+      const credentials=disposeAssistantHandlers();
+      try {await supervisor?.stopBackend();} finally {await credentials;}
     } catch (err) {
       console.error('[Main] Error during supervisor shutdown:', err);
     } finally {

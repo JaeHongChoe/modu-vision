@@ -12,7 +12,7 @@ import { useAnnotationStore } from '../../stores/useAnnotationStore';
 import { useProjectStore } from '../../stores/useProjectStore';
 import { useFoundationPromptStore } from '../../stores/useFoundationPromptStore';
 import { brushEditTarget } from './foundationRequest';
-import { resolveApiUrl } from '../../services/api';
+import { resolveApiUrl,redactLocalAssetTicket } from '../../services/api';
 import { resolveLabelingShortcut } from './labelingShortcuts';
 import { refitAfterResize } from './labelingLayout';
 import {
@@ -577,9 +577,9 @@ export const LabelingCanvas: React.FC = () => {
       redrawAllLayers();
     };
 
-    img.onerror = (err) => {
+    img.onerror = () => {
       if (!ownsSelection()) return;
-      console.warn(`[LabelingCanvas] Failed to load raw image from ${rawUrl}, trying thumbnail:`, err);
+      console.warn(`[LabelingCanvas] Failed to load raw image from ${redactLocalAssetTicket(rawUrl)}, trying thumbnail`);
       if (img.src !== thumbUrl) {
         img.src = thumbUrl;
       }

@@ -265,3 +265,37 @@ typecheck, renderer and original F064 fixture evidence under
 provider/account participation and source-bound execution order remain unchanged.
 A local pass or static audit is not hosted-regression qualification, merge/release
 completion, keyboard-popup/theme/locale coverage, 200% zoom, or field acceptance.
+
+### Local browser authentication and location reconnect
+
+`LocalProjectGate` is the authenticated variant of `SharedProjectPanel`'s initial
+browser gate. Login retains the account session while the workspace stays empty;
+a person explicitly chooses a project. Only the fixed structured location 409
+offers the native folder reconnect action. Other 409, 401 and 403 responses do not
+authorize recovery. The existing native select is retained; the OS owns its popup.
+
+Recovery uses the existing workspace section/button/status tokens. Native chooser
+and specific app-owned confirmation identify the account, project and folder and
+explain the local-session logout. Successful enrollment returns to login, then
+explicit project selection; it does not mount a workspace or approve inspection
+results. Interrupted recovery remains blocked until a fresh confirmation. Shared
+registrations, active work and independent service metadata require their stated
+review or idle state. No project files, permissions or saved operational history
+are removed by this flow. Same-boot disposable tests do not establish reboot,
+packaging, visual-browser or field acceptance.
+
+After an actor has approved location recovery, the existing local tab nonce also
+binds ordinary project reads and new sockets to that tab's current cookie session.
+A cookie refreshed by another tab does not refresh the stale tab's memory. Native
+bootstrap still needs current-session CSRF, and the proof is kept out of URLs and
+persistent browser storage. This is a local recovery boundary, with no shared
+server or remote context format change.
+
+Local project acceptance prepares its distinct, memory-only image read ticket
+before committing the context and rendering the workspace. The central resolver
+adds this reference only to same-origin image/mask/derived reads; ordinary native
+capabilities still retire on project change. An expired or unprepared ticket does
+not fall back to a bare image URL. Two ZIP exports stream through a fixed POST
+form in a hidden download target, keeping the ticket and CSRF value out of the
+download URL. Responses disable caching and referrers, and diagnostics redact the
+image reference. These controls do not qualify actual browser download behavior.

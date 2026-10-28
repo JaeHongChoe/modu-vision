@@ -3,7 +3,7 @@ import path from 'node:path';
 import crypto from 'node:crypto';
 import {test,expect} from './fixtures/test';
 import {localAssistantBrowser} from './fixtures/localAssistantBrowser';
-import {expectBrowserLoginGate} from './fixtures/browserGateLogin';
+import {expectBrowserLoginGate,chooseBrowserProject,browserLoginWithin} from './fixtures/browserGateLogin';
 import {png} from './qa/appFlow';
 import type {AssistantTask} from '../../src/renderer/services/assistantTasks/types';
 
@@ -63,8 +63,10 @@ test('explicit diagnostics question receives scoped errors and GET-only task fee
     await page.context().routeWebSocket(/^wss?:\/\//,socket=>{if(new URL(socket.url()).host===new URL(server.origin).host)socket.connectToServer();else{foreign.push(new URL(socket.url()).origin);socket.close();}});
     await page.goto(server.origin);await expectBrowserLoginGate(page,server.origin);
     await page.getByLabel('공유 계정 이름',{exact:true}).fill(username);await page.getByLabel('공유 계정 비밀번호',{exact:true}).fill(password);
+    const browserLoginDeadline=performance.now()+20_000;
     await page.getByRole('button',{name:'연결·로그인',exact:true}).click();
-    await expect(page.getByRole('main',{name:'브라우저 계정 로그인',exact:true})).toHaveCount(0);
+    await chooseBrowserProject(page,project.id,'local_host',browserLoginDeadline);
+    await browserLoginWithin(()=>expect(page.getByRole('main',{name:'브라우저 계정 로그인',exact:true})).toHaveCount(0),browserLoginDeadline);
     await expect(page.getByTitle('프로젝트 관리',{exact:true})).toContainText(project.name);
     await expect(page.getByRole('button',{name:'전체 (20)',exact:true})).toBeVisible();
     const openAssistant=async()=>{await page.getByRole('button',{name:'왜 그런가요?',exact:true}).click();await page.getByRole('button',{name:'도우미에게 묻기',exact:true}).click();return page.getByRole('complementary',{name:'도우미',exact:true});};

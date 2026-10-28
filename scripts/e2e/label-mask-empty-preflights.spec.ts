@@ -39,8 +39,8 @@ async function splitControlBody(response:import('@playwright/test').Response,dea
 // Original renderer/backend requests, state, source files and custody checks remain real.
 const harness=require('./fixtures/harness.cjs');
 const UI_SOURCE={
-  "src/renderer/components/dataset/DatasetWorkflowPanel.tsx": "e1b99742a1d4c16c43379fe3b83b9044bc6bb6cf44c2e666392803820c3b3bdc",
-  "src/renderer/components/dataset/ExternalMaskExchangePanel.tsx": "1fc8c44d4fae23f18a00529c42b2380cdb28d68f5b55866a5b17fbd7b2e4867b",
+  "src/renderer/components/dataset/DatasetWorkflowPanel.tsx": "05c5debcbf2b26e5b139f9214bbdf4ca86a26afe92ec99f40058333e3cbc8d4c",
+  "src/renderer/components/dataset/ExternalMaskExchangePanel.tsx": "eaaa69d49101c40c03341b926d12123f1cd294b6408e508faa2c5511cdeb4c49",
   "backend/api/routes_dataset.py": "92df70e8ad696b3d1a81eab5c290132c0802768ffaaeaa778eb0aad76eeabca3",
   "backend/api/routes_mask_exchange.py": "f66d4f4273692bf3c46f038c25b56a60ad4b4db5ba3dee9d31c3bac6dcd9a7c5",
   "backend/engine/annotation_formats.py": "dd046ef5e66187577217fe7de19ec6cf0376db5abf30d1b845c5b36a66e9a90c",
@@ -51,7 +51,7 @@ const UI_SOURCE={
   "scripts/e2e/fixtures/harness.cjs": "6fe3bb6411a28bc83c6da36ba0b2480b12de6b86fd08daa61d8d0e76d7dac950",
   "scripts/e2e/fixtures/test.ts": "7a7effa184e71c02414773308e0ea88e16cf83dfbd72d77d47046f2cfc1b8d09",
   "scripts/e2e/qa/appFlow.ts": "4eed3e5dad1d9d65a6b19fc9bb51a1f9b0e23911a39e7f255220bec0ce37fea2",
-  "src/renderer/services/hostAdapter.ts": "85ebdc30b94e8e11970dd54cdf748bdfd58469a72cc5de82e187e7167301db51"
+  "src/renderer/services/hostAdapter.ts": "36f1bd262335e7bd3b3c7a510345fc78e64d3a07c22af66408f8075c512f2f1b"
 } as const;
 const POINTERS=['/records/116/actions/1/scenarios/empty','/records/117/actions/0/scenarios/empty','/records/117/actions/1/scenarios/empty','/records/117/actions/2/scenarios/empty'] as const;
 type OCROwnedThumbScope={source:string;images:Array<{image:string;sha256:string}>;project:{id:string}};

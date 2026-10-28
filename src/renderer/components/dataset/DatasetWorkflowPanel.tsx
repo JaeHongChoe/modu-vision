@@ -1,6 +1,6 @@
 import React,{useEffect,useRef,useState} from 'react';
 import {datasetWorkflow,workflowError,type ImageReviewMetadata,type GroupSplit,type ImportPreview,type DuplicateGroup} from '../../services/datasetWorkflow';
-import {resolveApiUrl,getProjectContextGeneration,getApiPersistenceIdentity,subscribeProjectContext} from '../../services/api';
+import {downloadProjectAsset,projectAssetDownloadNotice,getProjectContextGeneration,getApiPersistenceIdentity,subscribeProjectContext} from '../../services/api';
 import {host} from '../../services/hostAdapter';
 import {useDatasetStore} from '../../stores/useDatasetStore';
 import {useProjectStore} from '../../stores/useProjectStore';
@@ -57,7 +57,7 @@ export const DatasetWorkflowPanel:React.FC=()=>{
     if(busy||activeExport.current||!same())return;
     const controller=new AbortController();activeExport.current=controller;setExporting(controller);setBusy(true);setError('');setNotice('');
     const current=()=>activeExport.current===controller&&!controller.signal.aborted&&same();
-    try{const result=await datasetWorkflow.export(format,controller.signal);if(!current())return;const a=document.createElement('a');a.href=resolveApiUrl(result.download_url);a.download=`${format}_annotations.zip`;a.click();setNotice(`${result.image_count}개 이미지 · ${result.annotation_count}개 라벨 내보내기 완료`);}
+    try{const result=await datasetWorkflow.export(format,controller.signal);if(!current())return;await downloadProjectAsset(result.download_url,`${format}_annotations.zip`,controller.signal);if(!current())return;setNotice(projectAssetDownloadNotice(result.image_count,result.annotation_count));}
     catch(cause){if(current())setError(workflowError(cause));}
     finally{if(current()){activeExport.current=null;setExporting(null);setBusy(false);}}
   };

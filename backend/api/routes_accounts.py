@@ -109,9 +109,13 @@ def me(request:Request):
     try:selected=accounts.project_for(user(request)['id'])
     except ValueError:selected=None
     metadata=accounts.metadata()
+    # Composition remains local when a controller/registry is unavailable or
+    # only partially installed; helper readiness cannot grant a shared fallback.
+    local_composition=hasattr(request.app.state,'local_host') or hasattr(request.app.state,'local_projects')
     return {'user':user(request),'projects':accounts.projects_for(user(request)['id']),
             'selected_project_id':selected['id'] if selected else None,
-            'workspace_id':metadata['workspace_id'],'organization_id':metadata['organization_id']}
+            'workspace_id':metadata['workspace_id'],'organization_id':metadata['organization_id'],
+            'browser_project_mode':'local_host' if local_composition else 'shared'}
 
 @router.get('/users')
 @observe_original_owned_account

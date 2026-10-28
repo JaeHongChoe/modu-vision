@@ -28,10 +28,12 @@ export const AssistantPanel: React.FC = () => {
   const busy = useAssistantStore(state => state.busy);
   const writing = useAssistantStore(state => state.writing);
   const configuring = useAssistantStore(state => state.configuring);
+  const configReadStatus = useAssistantStore(state => state.configReadStatus);
+  const configError = useAssistantStore(state => state.configError);
   const pendingWrite = useAssistantStore(state => state.pending);
   const taskStatus=useAssistantTaskStore(state=>state.task?.status);
   const taskBusy=useAssistantTaskStore(state=>state.busy);
-  const { close, ask, stop, decide, newConversation } = useAssistantStore.getState();
+  const { close, ask, stop, decide, newConversation, stopConfigLoad, loadConfig } = useAssistantStore.getState();
   const [draft, setDraft] = useState('');
   const list = useRef<HTMLOListElement>(null);
   useEffect(() => { list.current?.lastElementChild?.scrollIntoView({ block: 'nearest' }); }, [items.length, pendingWrite]);
@@ -41,10 +43,10 @@ export const AssistantPanel: React.FC = () => {
   const active = config?.active === 'chatgpt' ? config.providers.find(entry => entry.provider === 'chatgpt') ?? null : null;
   const chatgpt = active?.provider === 'chatgpt';
   const account = config?.chatgpt?.accounts.find(item => item.recordId === config.chatgpt?.active);
-  const ready = Boolean(bridge && active?.ready && account?.signedIn && account.planUsageEnabled && !account.usagePaused && account.model && account.model === active.model);
+  const ready = Boolean(configReadStatus !== 'unverified' && bridge && active?.ready && account?.signedIn && account.planUsageEnabled && !account.usagePaused && account.model && account.model === active.model);
   const pending = chatgpt ? pendingWrite : null;
   // Retained handlers must not continue a former connection after the settings change.
-  const connectionCurrent = () => { const now = useAssistantStore.getState(); return ready && now.config === config && now.config?.active === 'chatgpt' && !now.configuring; };
+  const connectionCurrent = () => { const now = useAssistantStore.getState(); return ready && now.config === config && now.config?.active === 'chatgpt' && !now.configuring && now.configReadStatus !== 'unverified'; };
   // The typed question is cleared only when it is actually handed over; while settings load it stays in the composer.
   const canHandOver = () => { const now = useAssistantStore.getState(); return connectionCurrent() && !now.busy && !now.pending && !now.writing; };
   const submit = () => { const text = draft.trim(); if (!text || !canHandOver()) return; setDraft(''); void ask(text); };
@@ -61,6 +63,17 @@ export const AssistantPanel: React.FC = () => {
       <div className="flex-1 space-y-3 overflow-y-auto px-4 py-3">
         <p className="text-xs text-slate-300">도우미 없이도 모든 단계를 쓸 수 있습니다. 작업 계획을 확인하면 도우미가 화면을 조작하며 진행합니다. 승인·배포·정답 확정은 사람이 직접 합니다.</p>
         {!bridge && <p role="alert" className="text-amber-200">이 화면(브라우저)에서는 도우미를 쓸 수 없습니다. 데스크톱 앱에서 여세요.</p>}
+        {bridge && (configReadStatus === 'waiting' || configReadStatus === 'unverified') && (
+          <section aria-label="연결 상태 확인" className="workspace-section space-y-2">
+            {configReadStatus === 'waiting'
+              ? <p role="status" aria-busy="true">연결 상태를 확인하는 중입니다.</p>
+              : <p role="alert" className="text-[var(--workspace-warning)]">{configError || '연결 상태가 아직 확인되지 않았습니다.'}</p>}
+            <p className="text-xs">운영체제의 보호 요청이 있다면 확인한 뒤 다시 확인하세요. 대기 중지는 화면의 기다림만 끝내며 운영체제 작업을 취소하지 않습니다.</p>
+            {configReadStatus === 'waiting'
+              ? <button type="button" className="workspace-button" onClick={stopConfigLoad}>설정 확인 대기 중지</button>
+              : <button type="button" className="workspace-button" onClick={() => void loadConfig({ explicit: true })}>연결 상태 다시 확인</button>}
+          </section>
+        )}
         {bridge && (
           // Locked while a confirmed write executes: a receiver change then would end the turn before its outcome is recorded.
           <fieldset aria-label="도우미 설정" disabled={Boolean(writing||taskBusy)} className="min-w-0 space-y-3">

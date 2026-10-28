@@ -8,6 +8,13 @@ import uuid
 MAX_FRAME = 8 * 1024 * 1024
 
 
+class LocalHostRemoteError(RuntimeError):
+    """Private helper error retaining its exact code without parsing message text."""
+    def __init__(self, message, *, code=None):
+        super().__init__(message)
+        self.code = code if isinstance(code, str) and len(code) <= 128 else None
+
+
 class LocalHostClient:
     def __init__(self, command, *, cwd, env=None, stderr=None):
         self.command, self.cwd, self.env = command, Path(cwd), env
@@ -64,7 +71,8 @@ class LocalHostClient:
                 elif frame.get('ok') is False:
                     error = frame.get('error', {})
                     message = error.get('message') if isinstance(error, dict) else None
-                    future.set_exception(RuntimeError(message[:500] if isinstance(message, str) else 'Local operation failed'))
+                    future.set_exception(LocalHostRemoteError(message[:500] if isinstance(message, str) else 'Local operation failed',
+                        code=error.get('code') if isinstance(error, dict) else None))
                 else: future.set_exception(RuntimeError('Local helper returned an invalid result'))
         except (Exception, asyncio.CancelledError) as error:
             # Readiness is a live transport property, never a cached startup

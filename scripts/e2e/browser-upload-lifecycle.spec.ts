@@ -3,7 +3,7 @@ import path from 'node:path';
 import crypto from 'node:crypto';
 import {test, expect} from './fixtures/test';
 import {browserTeamServer} from './fixtures/browser_team_server';
-import {expectBrowserLoginGate,openBrowserServerManagement} from './fixtures/browserGateLogin';
+import {expectBrowserLoginGate,openBrowserServerManagement,chooseBrowserProject,browserLoginWithin} from './fixtures/browserGateLogin';
 import {storedZip} from './fixtures/storedZip';
 
 test.use({ignoreHTTPSErrors: true, actionTimeout: 15_000});
@@ -27,8 +27,10 @@ test('empty HTTPS browser project uploads and explicitly adopts its own images',
     await expectBrowserLoginGate(page,server.origin);
     await page.getByLabel('공유 계정 이름', {exact: true}).fill('webowner');
     await page.getByLabel('공유 계정 비밀번호', {exact: true}).fill(password);
+    const browserLoginDeadline=performance.now()+20_000;
     await page.getByRole('button', {name: '연결·로그인', exact: true}).click();
-    await expect(page.getByTitle('프로젝트 관리', {exact: true})).toContainText(project.name);
+    await chooseBrowserProject(page,project.id,'shared',browserLoginDeadline);
+    await browserLoginWithin(()=>expect(page.getByTitle('프로젝트 관리', {exact: true})).toContainText(project.name),browserLoginDeadline);
     await openBrowserServerManagement(page);
     await expect(page.getByLabel('공동 작업 프로젝트', {exact: true})).toBeEnabled();
     await page.getByRole('dialog', {name: '컴퓨팅 서버 관리', exact: true}).getByRole('button', {name: '닫기', exact: true}).click();

@@ -6,6 +6,7 @@ import {getSharedConnection,loginSharedServer,selectSharedProject,disconnectShar
 import {DistributionManager} from './distributionStatus';
 import {PortableUpdateManager,validatedCanaryPins} from './portableUpdate';
 import {registerAssistantHandlers} from './assistant/ipc';
+export {disposeAssistantHandlers} from './assistant/ipc';
 
 import {classifyOpenTarget} from './nativeOpen';
 export {classifyOpenTarget} from './nativeOpen';

@@ -12,13 +12,15 @@ const text=tree=>!tree?'':typeof tree==='string'||typeof tree==='number'?String(
 function render(state,ui={}){
  const react={createElement:(type,props,...children)=>({type,props:{...props,children}}),useState:initial=>[ui.draft!==undefined&&initial===''?ui.draft:typeof initial==='function'?initial():initial,value=>ui.sets?.push(value)],useRef:()=>({current:null}),useEffect:()=>{}};
  const store=Object.assign(selector=>selector(state),{getState:()=>state});
+ const setup=ui.withSetup?load(path.join(__dirname,'ChatgptConnectionSetup.tsx'),{react:{__esModule:true,default:react,...react},'../../stores/useAssistantStore':{useAssistantStore:store,assistantBridge:()=>state.bridge},'../common/WorkspaceDialog':{WorkspaceDialog:()=>null}}).ChatgptConnectionSetup:()=>null;
  const {AssistantPanel}=load(path.join(__dirname,'AssistantPanel.tsx'),{react:{__esModule:true,default:react,...react},
   '../../stores/useAssistantStore':{useAssistantStore:store,assistantBridge:()=>state.bridge},
   '../../stores/useAnnotationStore':{useAnnotationStore:selector=>selector({currentImage:{file_path:'/data/a.png'}})},
-  '../../stores/useAssistantTaskStore':{useAssistantTaskStore:selector=>selector({task:null,busy:false})},
+  '../../stores/useAssistantTaskStore':{useAssistantTaskStore:selector=>selector({task:null,busy:Boolean(ui.taskBusy)})},
   '../../services/assistantTasks/connection':{taskConnectionKey:()=>''},'./AssistantTaskPanel':{AssistantTaskPanel:()=>null},
-  './ChatgptConnectionSetup':{ChatgptConnectionSetup:()=>null},'./AssistantProviderSetup':{AssistantProviderSetup:()=>null},'./AssistantRunLog':{AssistantRunLog:()=>null}});
- return AssistantPanel({});
+  './ChatgptConnectionSetup':{ChatgptConnectionSetup:setup},'./AssistantProviderSetup':{AssistantProviderSetup:()=>null},'./AssistantRunLog':{AssistantRunLog:()=>null}});
+ const expand=tree=>!tree||typeof tree!=='object'?tree:typeof tree.type==='function'?expand(tree.type(tree.props)):{...tree,props:{...tree.props,children:[].concat(tree.props.children||[]).flat(Infinity).map(expand)}};
+ return ui.withSetup?expand(AssistantPanel({})):AssistantPanel({});
 }
 const base={isOpen:true,busy:false,pending:null,imageOffer:null,items:[],bridge:{},config:{active:'anthropic',encryptionAvailable:true,providers:[{provider:'anthropic',baseUrl:'https://api.anthropic.com',model:'m',format:null,hasKey:true,supportsImages:true,label:'Anthropic'}]},
  close(){},ask(){},stop(){},decide(){},offerImage(){},sendImage(){},dropImage(){},newConversation(){}};
@@ -163,4 +165,56 @@ test('a question typed while settings load is kept and nothing is cleared withou
  const after=[],ready=render({...state,configuring:false},{draft:question,sets:after});
  nodes(ready).find(b=>b.type==='button'&&/workspace-button--primary/.test(b.props.className)).props.onClick();
  assert.deepEqual(asked,[question]);assert.deepEqual(after,['']);
+});
+
+test('config waiting offers a separate display stop without triggering provider stop',()=>{
+ let configStops=0,providerStops=0;
+ const tree=render({...base,config:connectedConfig(),configuring:true,configReadStatus:'waiting',stopConfigLoad:()=>configStops++,stop:()=>providerStops++},{withSetup:true});
+ const button=nodes(tree).find(n=>n.type==='button'&&text(n)==='설정 확인 대기 중지');assert.ok(button);
+ button.props.onClick();assert.equal(configStops,1);assert.equal(providerStops,0);
+ assert.ok(nodes(tree).some(n=>n.props?.role==='status'&&/연결 상태.*확인/.test(text(n))));
+ assert.equal(nodes(tree).find(n=>n.type==='fieldset'&&n.props['aria-label']==='ChatGPT 연결 설정').props.disabled,true);
+});
+
+test('unverified config visibly requires explicit recheck and cannot send through cached readiness',()=>{
+ const calls=[],sets=[];const state={...base,config:connectedConfig(),configReadStatus:'unverified',configError:'연결 상태가 아직 확인되지 않았습니다.',loadConfig:input=>calls.push(['recheck',input]),ask:input=>calls.push(['send',input])};
+ const tree=render(state,{draft:'보관할 질문',sets,withSetup:true}),buttons=nodes(tree).filter(n=>n.type==='button');
+ const recheck=buttons.find(n=>text(n)==='연결 상태 다시 확인');assert.ok(recheck);recheck.props.onClick();
+ assert.deepEqual(calls,[['recheck',{explicit:true}]]);
+ const primary=buttons.find(n=>/workspace-button--primary/.test(n.props.className));assert.equal(primary.props.disabled,true);primary.props.onClick();
+ assert.equal(calls.length,1);assert.ok(!sets.includes(''));assert.equal(nodes(tree).find(n=>n.type==='fieldset'&&n.props['aria-label']==='ChatGPT 연결 설정').props.disabled,true);
+ assert.ok(nodes(tree).some(n=>n.props?.role==='alert'&&/확인되지/.test(text(n))));
+ assert.match(text(tree),/운영체제.*보호.*요청.*있다면/);assert.match(text(tree),/운영체제.*작업.*취소.*않/);
+});
+
+test('retained send handlers recheck unverified state before clearing a question',()=>{
+ const asked=[],sets=[],state={...base,config:connectedConfig(),configReadStatus:'idle',ask:value=>asked.push(value)};
+ const tree=render(state,{draft:'그대로 보관',sets});
+ state.configReadStatus='unverified';
+ nodes(tree).find(n=>n.type==='button'&&text(n)==='보내기').props.onClick();
+ nodes(tree).find(n=>n.type==='textarea').props.onKeyDown({key:'Enter',shiftKey:false,nativeEvent:{isComposing:false},preventDefault(){}});
+ assert.deepEqual(asked,[]);assert.ok(!sets.includes(''));
+});
+
+// The browser inherits disabled from every ancestor fieldset, not only the button prop.
+function buttonsWithAncestry(tree,disabledAncestor=false){
+ if(!tree||typeof tree!=='object')return [];
+ const disabled=disabledAncestor||(tree.type==='fieldset'&&Boolean(tree.props.disabled));
+ const own=tree.type==='button'?[{button:tree,disabled:disabled||Boolean(tree.props.disabled)}]:[];
+ return [...own,...[].concat(tree.props.children||[]).flat(Infinity).flatMap(child=>buttonsWithAncestry(child,disabled))];
+}
+test('pending login cancellation escapes read-disabled fields but retains write task and duplicate guards',async()=>{
+ for(const configReadStatus of ['waiting','unverified'])for(const status of ['waiting','exchanging']){
+  const calls=[];let finish;const cancelled=new Promise(resolve=>{finish=resolve;});
+  const state={...base,configReadStatus,configuring:configReadStatus==='waiting',bridge:{chatgpt:{}},config:{active:null,providers:[],encryptionAvailable:true,chatgpt:{active:null,accounts:[],status,encryptionAvailable:true}},cancelChatgpt:()=>{calls.push('connection.cancel');return cancelled;},stop:()=>calls.push('provider.cancel'),ask:()=>calls.push('provider.send')};
+  const controls=buttonsWithAncestry(render(state,{withSetup:true}));
+  const cancels=controls.filter(entry=>text(entry.button)==='연결 취소');
+  assert.equal(cancels.length,1,'one visible cancellation path');assert.equal(cancels[0].disabled,false,'the actual login cancel stays outside disabled read fields');
+  assert.equal(controls.find(entry=>text(entry.button)==='Continue with ChatGPT').disabled,true,'account and consent setup stays blocked');
+  const stopping=cancels[0].button.props.onClick();await cancels[0].button.props.onClick();assert.deepEqual(calls,['connection.cancel'],'a retained double click cannot dispatch twice');finish(true);await stopping;
+  for(const lock of ['write','task']){
+   const locked=buttonsWithAncestry(render({...state,writing:lock==='write'},{withSetup:true,taskBusy:lock==='task'}));
+   assert.equal(locked.find(entry=>text(entry.button)==='연결 취소').disabled,true,`${lock} keeps cancellation locked`);
+  }
+ }
 });

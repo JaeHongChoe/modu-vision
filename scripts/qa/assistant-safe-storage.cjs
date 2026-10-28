@@ -97,29 +97,29 @@ async function runElectronPhase() {
     const store = new AssistantKeyStore(path.join(run.userData, 'assistant'), electronEncryptor(safeStorage));
     progress('checking-real-os-storage');
     assert.equal(app.getPath('userData'), run.userData);
-    const initial = store.state();
+    const initial = await store.state();
     assert.equal(initial.encryptionAvailable, true, 'real OS protected storage must be available');
     progress('executing-' + phase);
     let state, fileBeforeSha256 = fs.existsSync(store.file) ? hash(store.file) : null;
     if (phase === 'save') {
       assert.equal(fileBeforeSha256, null, 'fresh profile contains no provider file');
-      state = store.save({provider: PROVIDER, baseUrl: 'https://safe-storage-qa.invalid/v1', model: 'non-secret-qa',
+      state = await store.save({provider: PROVIDER, baseUrl: 'https://safe-storage-qa.invalid/v1', model: 'non-secret-qa',
         supportsImages: false, key: DUMMY});
       assert.equal(state.providers[0].hasKey, true);
     } else if (phase === 'read-after-restart') {
       assert.equal(initial.providers[0].hasKey, true);
-      assert.equal(store.key(PROVIDER), DUMMY, 'a new Electron process decrypts the saved dummy');
+      assert.equal(await store.key(PROVIDER), DUMMY, 'a new Electron process decrypts the saved dummy');
       assert.equal(hash(store.file), fileBeforeSha256, 'reading does not rewrite the provider file');
-      state = store.state();
+      state = await store.state();
     } else if (phase === 'remove') {
       assert.equal(initial.providers[0].hasKey, true);
-      state = store.removeKey(PROVIDER);
-      assert.equal(store.key(PROVIDER), null);
+      state = await store.removeKey(PROVIDER);
+      assert.equal(await store.key(PROVIDER), null);
       assert.equal(state.providers[0].hasKey, false);
     } else {
-      state = store.state();
+      state = await store.state();
       assert.equal(state.providers[0].hasKey, false);
-      assert.equal(store.key(PROVIDER), null, 'another new process confirms removal');
+      assert.equal(await store.key(PROVIDER), null, 'another new process confirms removal');
     }
     const raw = fs.readFileSync(store.file, 'utf8');
     const stored = JSON.parse(raw).providers[PROVIDER];

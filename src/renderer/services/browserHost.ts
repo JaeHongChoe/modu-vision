@@ -5,7 +5,7 @@ import type { AssistantBridge, ElectronAPI } from '../../types/electron';
 export type PickerPurpose = 'project-create'|'project-open'|'project-backup'|'project-restore-archive'|'project-restore-target'|'project-recover-target'|'dataset-source'|'label-import'|'mask-import'|'model-directory'|'pretrained-weights'|'runtime-source'|'runtime-inventory'|'project-compatibility'|'inspection-image';
 export type FolderOptions = {title?:string;defaultPath?:string;purpose?:PickerPurpose};
 export type FileOptions = NonNullable<Parameters<ElectronAPI['selectFile']>[0]> & {purpose?:PickerPurpose};
-type Capability = 'pickPaths'|'openPaths'|'assistant'|'updates'|'projects';
+type Capability = 'pickPaths'|'openPaths'|'assistant'|'updates'|'projects'|'projectAssetTickets';
 type Capabilities = Partial<Record<Capability,boolean|{available:boolean;reason?:string}>>;
 type Reasons = Partial<Record<Capability|'local_host',string>>;
 type Grant = {id:string;path:string;purpose:PickerPurpose};
@@ -47,6 +47,7 @@ export class BrowserHost {
  private resource():HostProjectState {return this.runtime.resource?.()??{local:true,generation:0};}
  private resourceKey():string {return JSON.stringify(this.resource());}
  can(capability:Capability):boolean {if(['pickPaths','openPaths','projects'].includes(capability)&&!this.resource().local)return false;if(!this.tab||!this.available()||!this.runtime.session.connection())return false;const value=this.capabilities[capability];return value===true||typeof value==='object'&&value.available===true;}
+ canProjectAssets():boolean {const value=this.capabilities.projectAssetTickets;return this.available()&&this.resource().local&&!!this.runtime.session.connection()&&(value===true||typeof value==='object'&&value.available===true);}
  reason(capability:Capability):string {if(['pickPaths','openPaths','projects'].includes(capability)&&!this.resource().local)return '원격 프로젝트에서는 서버 경로를 입력하거나 ZIP 파일 업로드를 사용하세요. 로컬 경로 선택·열기는 로컬 프로젝트로 돌아온 뒤 사용할 수 있습니다.';const value=this.capabilities[capability];return typeof value==='object'&&value.reason||this.reasons[capability]||this.reasons.local_host||'로컬 보조 프로그램 연결과 계정 권한을 확인하세요.';}
  private abortPending():void {for(const controller of this.inFlight)controller.abort();this.inFlight.clear();}
  private disposeTab():Promise<void>{
@@ -162,6 +163,18 @@ export class BrowserHost {
    }
   }catch{/* malformed continuation cannot create authority */}
  }
+ async prepareSocketProtocols(target:string):Promise<string[]>{
+  try{const url=new URL(target),origin=new URL(this.runtime.origin()!);if(url.protocol!=='wss:'||url.host!==origin.host||!url.pathname.startsWith('/ws/')||!this.resource().local)return [];}catch{return [];}
+  const epoch=this.epoch,revision=this.runtime.session.revision?.(),resource=this.resourceKey();
+  await this.initialize();
+  if(epoch!==this.epoch||revision!==this.runtime.session.revision?.()||resource!==this.resourceKey())throw new Error('소켓의 계정 또는 프로젝트가 바뀌었습니다.');
+  return this.socketProtocols(target);
+ }
+ socketProtocols(target:string):string[]{
+  if(!this.tab||!this.available()||!this.runtime.session.connection()||!this.resource().local)return [];
+  try{const url=new URL(target),origin=new URL(this.runtime.origin()!);if(url.protocol!=='wss:'||url.host!==origin.host||!url.pathname.startsWith('/ws/'))return [];}catch{return [];}
+  return ['vision-local-tab.'+this.tab];
+ }
  requestHeaders(target:string,method='GET',body?:unknown):Record<string,string>{
   if(!this.tab||!this.available()||!this.runtime.session.connection())return {};
   let url:URL;try{url=new URL(target,this.runtime.origin()!);}catch{return {};}
@@ -205,7 +218,7 @@ export class BrowserHost {
 const updateMethods={status:'getDistributionStatus',configure:'configureUpdateChannel',check:'checkForUpdate',download:'downloadUpdate',verifyOffline:'verifyOfflineUpdate',selectPortableHome:'selectPortableUpdateHome',inspectPortable:'inspectPortableUpdate',previewPortable:'previewPortableUpdate',applyPortable:'applyPortableUpdate',recoverPortable:'recoverPortableUpdate',launchPortable:'launchPortableUpdate',inspectPortableLaunch:'inspectPortableLaunch'} as const;
 export const browserHost=new BrowserHost({origin:()=>typeof window!=='undefined'&&!window.api?window.location?.origin??null:null,fetch:(...args)=>fetch(...args),session:browserSession,context:getLocalProjectContext,resource:getHostProjectState,now:()=>Date.now()});
 
-setLocalHostTransport({available:()=>browserHost.available(),canProjects:()=>browserHost.can('projects'),requestHeaders:(...args)=>browserHost.requestHeaders(...args),projectChanged:()=>browserHost.projectChanged(),prepareRequest:(...args)=>browserHost.prepareRequest(...args),generation:()=>browserHost.generation(),acceptResponseHeaders:(...args)=>browserHost.acceptResponseHeaders(...args)});
+setLocalHostTransport({available:()=>browserHost.available(),canProjects:()=>browserHost.can('projects'),canProjectAssets:()=>browserHost.canProjectAssets(),requestHeaders:(...args)=>browserHost.requestHeaders(...args),projectChanged:()=>browserHost.projectChanged(),prepareRequest:(...args)=>browserHost.prepareRequest(...args),socketProtocols:url=>browserHost.socketProtocols(url),prepareSocketProtocols:url=>browserHost.prepareSocketProtocols(url),generation:()=>browserHost.generation(),acceptResponseHeaders:(...args)=>browserHost.acceptResponseHeaders(...args)});
 
 setBrowserHost(browserHost);
 

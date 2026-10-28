@@ -416,6 +416,46 @@ class TelemetryBroadcaster:
         except Exception:
             return False
 
+    def reserve_recovery_sockets(self, app, actor):
+        """Refuse undrained sends before durable retirement; fence new sends."""
+        from backend.local_host.location_recovery import refusal
+        sockets = [ws for ws in tuple(self._active_connections)
+                   if ws.scope.get('app') is app and ws.scope.get('state',{}).get('account_user',{}).get('id') == actor]
+        if any(self._connection_sends.get(ws) is None or self._connection_sends[ws].locked() for ws in sockets):
+            raise refusal('location_recovery_busy','열린 연결의 전송이 끝난 뒤 폴더를 다시 확인하세요.')
+        self._closing_connections.update(sockets)
+        return sockets
+
+    def release_recovery_sockets(self, sockets):
+        for ws in sockets: self._closing_connections.discard(ws)
+
+    async def send_owned(self, websocket, text, payload):
+        lock = self._connection_sends.get(websocket)
+        if lock is None: return False
+        async with lock:
+            if websocket not in self._active_connections or websocket in self._closing_connections: return False
+            local = getattr(getattr(websocket,'scope',{}).get('app'), 'state', None)
+            local = local is not None and getattr(local,'local_projects',None) is not None
+            if local and not self._can_receive(websocket,payload): return False
+            await websocket.send_text(text)
+            return True
+
+    async def retire_account_sessions(self, app, sessions) -> None:
+        """Close both local telemetry routes before recovered storage is published."""
+        import hashlib
+        for ws in tuple(self._active_connections):
+            scope = ws.scope
+            state = scope.get('state',{})
+            token = state.get('account_session_token','')
+            if scope.get('app') is not app or hashlib.sha256(token.encode()).hexdigest() not in sessions:
+                continue
+            lock = self._connection_sends.get(ws)
+            if lock is None: raise RuntimeError('Telemetry retirement lock unavailable')
+            self._closing_connections.add(ws)
+            async with lock:
+                await ws.close(code=1008, reason='Project folder reconnected; log in again')
+                self.unregister(ws)
+
     async def connect(self, websocket: WebSocket) -> None:
         """Alias for register to support different naming conventions."""
         await self.register(websocket)
@@ -435,6 +475,8 @@ class TelemetryBroadcaster:
             return
         self._connection_sends[websocket] = asyncio.Lock()
         self._active_connections.add(websocket)
+        registered = websocket.scope.get('state',{}).get('_local_recovery_handshake_complete')
+        if registered: registered()
         logger.info(
             "WebSocket client connected. Active connections: %d",
             len(self._active_connections),
@@ -460,7 +502,11 @@ class TelemetryBroadcaster:
                 "gpu_memory_used_mb": hw.gpu_memory_used_mb,
                 "device_type": hw.device_type,
             }
-            await websocket.send_text(json.dumps(snapshot))
+            async with self._connection_sends[websocket]:
+                local = getattr(getattr(websocket,'scope',{}).get('app'), 'state', None)
+                local = local is not None and getattr(local,'local_projects',None) is not None
+                if not local or self._can_receive(websocket,snapshot):
+                    await websocket.send_text(json.dumps(snapshot))
         except Exception as e:
             logger.debug("Failed to send initial hardware snapshot: %s", e)
 
@@ -538,9 +584,9 @@ class TelemetryBroadcaster:
         text = json.dumps(payload)
         dead = []
         for ws in list(self._active_connections):
-            if not self._can_receive(ws,payload):continue
+            if not self._can_receive(ws,payload): continue
             try:
-                await ws.send_text(text)
+                await self.send_owned(ws,text,payload)
             except Exception:
                 dead.append(ws)
         for ws in dead:
@@ -744,7 +790,7 @@ async def _handle_websocket_connection(websocket: WebSocket) -> None:
             # Keep connection alive; accept optional ping/command frames
             data = await websocket.receive_text()
             if data == "ping":
-                await websocket.send_text("pong")
+                if not await broadcaster.send_owned(websocket,'pong',{'event':'hardware_stats'}): break
     except (WebSocketDisconnect, asyncio.CancelledError):
         pass
     except Exception as e:

@@ -4,7 +4,7 @@ import crypto from 'node:crypto';
 import type {Page} from '@playwright/test';
 import {test,expect} from './fixtures/test';
 import {localAssistantBrowser} from './fixtures/localAssistantBrowser';
-import {expectBrowserLoginGate} from './fixtures/browserGateLogin';
+import {expectBrowserLoginGate,chooseBrowserProject,browserLoginWithin} from './fixtures/browserGateLogin';
 import {png} from './qa/appFlow';
 
 const {assertPrivateEvidencePolicy}=require('./fixtures/localAssistantHelper.cjs');
@@ -25,7 +25,7 @@ test('real browser local helper controls provider setup read preview decline con
  const responses:Promise<void>[]=[],publicBodies:string[]=[];
  const ledger=()=>fs.existsSync(server.ledger)?fs.readFileSync(server.ledger,'utf8').trim().split('\n').filter(Boolean).map(line=>JSON.parse(line)):[];
  const guard=async(target:Page)=>{target.on('pageerror',error=>pageErrors.push(error.message));await target.context().route(/^https?:\/\//,route=>{const url=new URL(route.request().url());if(url.origin===server.origin)return route.fallback();foreign.push(url.origin);return route.abort('blockedbyclient');});await target.context().routeWebSocket(/^wss?:\/\//,socket=>{if(new URL(socket.url()).host===new URL(server.origin).host)socket.connectToServer();else{foreign.push(new URL(socket.url()).origin);socket.close();}});};
- const login=async(target:Page,user=username)=>{await target.goto(server.origin);await expectBrowserLoginGate(target,server.origin);await target.getByLabel('공유 계정 이름',{exact:true}).fill(user);await target.getByLabel('공유 계정 비밀번호',{exact:true}).fill(password);await target.getByRole('button',{name:'연결·로그인',exact:true}).click();await expect(target.getByRole('main',{name:'브라우저 계정 로그인',exact:true})).toHaveCount(0);};
+ const login=async(target:Page,projectId:string,user=username)=>{await target.goto(server.origin);await expectBrowserLoginGate(target,server.origin);await target.getByLabel('공유 계정 이름',{exact:true}).fill(user);await target.getByLabel('공유 계정 비밀번호',{exact:true}).fill(password);const browserLoginDeadline=performance.now()+20_000;await target.getByRole('button',{name:'연결·로그인',exact:true}).click();await chooseBrowserProject(target,projectId,'local_host',browserLoginDeadline);await browserLoginWithin(()=>expect(target.getByRole('main',{name:'브라우저 계정 로그인',exact:true})).toHaveCount(0),browserLoginDeadline);};
  const open=async(target:Page)=>{await target.getByRole('button',{name:'왜 그런가요?',exact:true}).click();await target.getByRole('button',{name:'도우미에게 묻기',exact:true}).click();return target.getByRole('complementary',{name:'도우미',exact:true});};
  let second:Awaited<ReturnType<typeof browser.newContext>>|undefined,other:Awaited<ReturnType<typeof browser.newContext>>|undefined;
  try{
@@ -38,7 +38,7 @@ test('real browser local helper controls provider setup read preview decline con
   await guard(page);
   page.on('request',request=>{const url=new URL(request.url());if(url.origin!==server.origin)return;const headers=request.headers();if(url.pathname==='/api/dataset/split'&&request.method()==='POST')writes.push({body:request.postDataJSON(),project:headers['x-vision-project']??null,context:headers['x-vision-context']?JSON.parse(headers['x-vision-context']):null,run:headers['x-modu-assistant-run']??null});if(/\/api\/(training\/start|label-suggestions\/batches|labeling-jobs)/.test(url.pathname)&&request.method()!=='GET')pageErrors.push('Unexpected model operation');});
   page.on('response',response=>{const route=new URL(response.url()).pathname;if(route==='/api/accounts/login'){responses.push(response.json().then(value=>{secrets.push(value.csrf_token);evidence.redact(value.csrf_token);expect(value.token).toBeUndefined();}));}else if(route.startsWith('/api/local-host/assistant/'))responses.push(response.text().then(text=>{publicBodies.push(text);}));});
-  await login(page);await expect(page.getByTitle('프로젝트 관리',{exact:true})).toContainText(project.name);await expect(page.getByRole('button',{name:'전체 (20)',exact:true})).toBeVisible();
+  await login(page,project.id);await expect(page.getByTitle('프로젝트 관리',{exact:true})).toContainText(project.name);await expect(page.getByRole('button',{name:'전체 (20)',exact:true})).toBeVisible();
   const assistant=await open(page);await expect(assistant.getByText('데스크톱 앱에서 여세요.',{exact:false})).toHaveCount(0);
   const terms=assistant.getByRole('checkbox',{name:'약관과 전송·보관 안내를 읽고 동의합니다.',exact:true});await expect(terms).not.toBeChecked();await expect(assistant.getByRole('button',{name:'Continue with ChatGPT',exact:true})).toBeDisabled();
   expect(ledger().filter(row=>row.kind==='provider')).toEqual([]);
@@ -58,9 +58,22 @@ test('real browser local helper controls provider setup read preview decline con
   let runs=(await api('/api/assistant/runs')).runs;expect(runs).toEqual(expect.arrayContaining([expect.objectContaining({tool:'read_dataset_summary',tier:'read',actor:username,result:'ok'}),expect.objectContaining({tool:'save_split',confirmed:false,result:'refused',error_code:'declined_by_person',actor:username}),expect.objectContaining({run_id:writes[0].run,tool:'save_split',confirmed:true,result:'ok',actor:username})]));
   await assistant.getByText('실행 기록(이 프로젝트)',{exact:true}).click();await expect(assistant.getByRole('list',{name:'도우미 실행 기록',exact:true})).toContainText('save_split');
   // A separate cookie session for the same real account starts with no selected provider recipient.
-  second=await browser.newContext({ignoreHTTPSErrors:true});const tab=await second.newPage();await guard(tab);await login(tab);const sibling=await open(tab);await expect(sibling.getByLabel('ChatGPT 계정',{exact:true})).toHaveValue('');await expect(sibling.getByRole('textbox',{name:'도우미에게 묻기',exact:true})).toBeDisabled();await expect(question).toBeEnabled();await ask('READ_FIXTURE 다른 탭 연결 뒤에도 원래 탭의 읽기만 확인합니다.');await expect(question).toBeEnabled();await expect.poll(()=>ledger().filter(row=>row.route==='/v1/responses').length).toBe(9);expect(writes).toHaveLength(1);
+  second=await browser.newContext({ignoreHTTPSErrors:true});const tab=await second.newPage();await guard(tab);await login(tab,project.id);const sibling=await open(tab);await expect(sibling.getByLabel('ChatGPT 계정',{exact:true})).toHaveValue('');await expect(sibling.getByRole('textbox',{name:'도우미에게 묻기',exact:true})).toBeDisabled();await expect(question).toBeEnabled();await ask('READ_FIXTURE 다른 탭 연결 뒤에도 원래 탭의 읽기만 확인합니다.');await expect(question).toBeEnabled();await expect.poll(()=>ledger().filter(row=>row.route==='/v1/responses').length).toBe(9);expect(writes).toHaveLength(1);
   // Different real account cannot read the owner's generated provider registrations.
-  await api('/api/accounts/users',{username:'assistantother',password,administrator:false});other=await browser.newContext({ignoreHTTPSErrors:true});const foreignActor=await other.newPage();await guard(foreignActor);await login(foreignActor,'assistantother');const isolated=await open(foreignActor);await expect(isolated.getByLabel('ChatGPT 계정',{exact:true})).toHaveCount(0);await expect(isolated.getByRole('textbox',{name:'도우미에게 묻기',exact:true})).toBeDisabled();
+  const foreignUser=await api('/api/accounts/users',{username:'assistantother',password,administrator:false});
+  // This account previously had no project. Explicit choice now needs its own inert read-only destination.
+  const foreignProject=await api('/api/project/create',{name:'Isolated viewer assistant fixture',task:'classification'});
+  await api(`/api/accounts/projects/${foreignProject.id}/members`,{user_id:foreignUser.id,role:'viewer'},'PUT');
+  await api('/api/accounts/select-project',{project_id:project.id});
+  const foreignSession=await server.call('/api/accounts/login',{username:'assistantother',password});evidence.redact(foreignSession.token);
+  expect(foreignSession.user.administrator).toBe(0);
+  const foreignMe=await server.call('/api/accounts/me',undefined,foreignSession.token);
+  expect(foreignMe.projects.map((row:{id:string;role:string})=>({id:row.id,role:row.role}))).toEqual([{id:foreignProject.id,role:'viewer'}]);
+  await expect(server.call('/api/accounts/select-project',{project_id:project.id},foreignSession.token)).rejects.toThrow(/403/);
+  await server.call('/api/accounts/select-project',{project_id:foreignProject.id},foreignSession.token);
+  await expect(server.call('/api/project/update',{name:'Refused viewer mutation'},foreignSession.token,'PUT')).rejects.toThrow(/403/);
+  evidence.note('isolated_nonadmin_project_choice',{project_id:foreignProject.id,role:'viewer',owner_project_access_refused:true,viewer_mutation_refused:true,administrator:false});
+  other=await browser.newContext({ignoreHTTPSErrors:true});const foreignActor=await other.newPage();await guard(foreignActor);await login(foreignActor,foreignProject.id,'assistantother');const isolated=await open(foreignActor);await expect(isolated.getByLabel('ChatGPT 계정',{exact:true})).toHaveCount(0);await expect(isolated.getByRole('textbox',{name:'도우미에게 묻기',exact:true})).toBeDisabled();
   runs=(await api('/api/assistant/runs')).runs;expect(runs).toHaveLength(12);expect(runs.every((run:{actor:string})=>run.actor===username)).toBe(true);
   // This check observes public renderer state; it does not inject a bridge, capability or credential.
   await Promise.all(responses);const visible=await page.evaluate(()=>({preload:typeof window.api,html:document.documentElement.outerHTML,storage:JSON.stringify({local:{...localStorage},session:{...sessionStorage}})}));expect(visible.preload).toBe('undefined');expect(publicBodies.join('\n')).not.toMatch(/eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+/);for(const secret of ['fixture-browser-access-secret','fixture-browser-refresh-secret',...secrets]){expect(visible.html).not.toContain(secret);expect(visible.storage).not.toContain(secret);expect(publicBodies.join('\n')).not.toContain(secret);expect(JSON.stringify(runs)).not.toContain(secret);expect(fs.readFileSync(server.ledger,'utf8')).not.toContain(secret);}

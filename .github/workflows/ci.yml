@@ -60,15 +60,25 @@ jobs:
           node scripts/verify-supervisor.js --owned-bootstrap-order
           npm run test:renderer
           node --test scripts/tests/assistant-safe-storage-qa.test.cjs scripts/tests/chatgpt-account-acceptance.test.cjs
+          node --test scripts/e2e/fixtures/browserGateLogin.test.cjs
           npm run build
           npm run test:e2e:harness
           node --test scripts/acceptance/action_inventory.test.cjs
           node --test scripts/tests/release-readiness.test.cjs scripts/tests/package-license-texts.test.cjs scripts/verify-release-recovery.cjs
+      - name: Canary ownership observer controls
+        run: python -B -m unittest discover -s scripts/ci -p test_canary_unknown_observer.py -v
       - name: CPU contract and recovery regressions
         env:
           MV_CI_RECORD_DIR: ${{ runner.temp }}/modu-ci-manifests
         run: >-
           python -m pytest -q --junitxml="$MV_CI_RECORD_DIR/ci-pytest.xml"
+          backend/tests/test_local_location_identity.py
+          backend/tests/test_local_location_recovery.py
+          backend/tests/test_local_project_assets.py
+          backend/tests/test_daemon_command_preparation.py
+          backend/tests/test_telemetry_original_task_lifetime.py
+          backend/tests/test_browser_project_mode.py
+          backend/tests/test_managed_service_initial_identity.py
           backend/tests/test_local_web_app.py
           backend/tests/test_local_web_cli.py
           backend/tests/test_local_web_state.py
@@ -474,6 +484,7 @@ jobs:
           node scripts/verify-supervisor.js --owned-bootstrap-order
           npm run test:renderer
           node --test scripts/tests/assistant-safe-storage-qa.test.cjs scripts/tests/chatgpt-account-acceptance.test.cjs
+          node --test scripts/e2e/fixtures/browserGateLogin.test.cjs
           npm run build
           npm run test:e2e:harness
           node --test scripts/acceptance/action_inventory.test.cjs

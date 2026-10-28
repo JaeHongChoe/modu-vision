@@ -6,6 +6,7 @@ import {AssistantKeyStore,type KeyEncryptor} from '../assistant/keyStore';
 import {AssistantService} from '../assistant/service';
 import {SiwcStore} from '../assistant/siwcStore';
 import {SiwcConnection,SiwcCredentialOwner} from '../assistant/siwcConnection';
+import {validateBaseUrl} from '../assistant/providers';
 import {AssistantRunRegistry} from '../assistant/runHeader';
 import {DistributionManager,type DistributionOptions} from '../distributionStatus';
 import {PortableUpdateManager,validatedCanaryPins} from '../portableUpdate';
@@ -14,15 +15,17 @@ import {HostError,MAX_FRAME_BYTES,parseRequest,type HostRequest,type HostRespons
 import {TabKeyStore,tabSiwcStore} from './assistantScope';
 export interface LinkedSourceConsent {source:string;project_dir:string;targets:{link:string;path:string;kind:'file'|'directory'}[];plan_sha256:string;file_count:number;total_bytes:number;
  scope:{actor_id:string;session_id:string;tab_id:string;project_id:string;workspace_id:string}}
+export interface ProjectLocationConsent {origin:string;account_label:string;registration_id:string;project_id:string;workspace_id:string;path:string;revision:number;approval_digest:string;scope:{actor_id:string;session_id:string;tab_id:string}}
 export interface NativeAdapters {
  approve(input:{origin:string;accountLabel:string}):Promise<boolean>;
  confirmLinkedSource?(input:LinkedSourceConsent):Promise<boolean>;
+ confirmProjectLocation?(input:ProjectLocationConsent):Promise<boolean>;
  choose(options:OpenDialogOptions):Promise<{canceled:boolean;filePaths:string[]}>;
  openPath(value:string):Promise<string>;openExternal(value:string):Promise<unknown>;
 }
 export interface LocalHostOptions {stateDirectory:string;origin:string;native:NativeAdapters;encryptor:KeyEncryptor;
  distribution:Omit<DistributionOptions,'userDataPath'>;fetchImpl?:typeof fetch;protectedPaths?:string[];canRecover?:()=>boolean}
-type Actor={directory:string;keys:AssistantKeyStore;siwc:SiwcStore;credentialOwner:SiwcCredentialOwner};
+type Actor={directory:string;keys:AssistantKeyStore;siwc:SiwcStore;credentialOwner:SiwcCredentialOwner;apiBindings:Map<string,string>};
 type ProjectBinding={epoch:number;scope:string};
 type ProjectRow={actor:string;session:string;tab:string;epoch:number;scope:string|null};
 const PROJECT_ASSISTANT_METHODS=new Set(['assistant.send','assistant.imageIntent','assistant.beginRun','assistant.endRun']);
@@ -39,6 +42,7 @@ export function prepareStateDirectory(directory:string):void {
 /** Constructed once by the owned windowless helper. HTTP authorization is repeated by the controller. */
 export class LocalHostService {
  private projectRows=new Map<string,ProjectRow>();
+ private chooserPending=false;
  private actors=new Map<string,Actor>();private tabs=new Map<string,Tab>();private disposedSessions=new Set<string>();private disposedTabs=new Set<string>();private closed=false;
  constructor(readonly options:LocalHostOptions){
   if(!path.isAbsolute(options.stateDirectory)||new URL(options.origin).origin!==options.origin||!/^https:\/\/(localhost|127\.0\.0\.1|\[::1\])(?::\d+)?$/.test(options.origin))throw new HostError('invalid_configuration');
@@ -46,7 +50,7 @@ export class LocalHostService {
  }
  private secureDirectory(directory:string):void {prepareStateDirectory(directory);}
  private actor(id:string):Actor {let a=this.actors.get(id);if(!a){const directory=path.join(this.options.stateDirectory,'actors',hash(id));this.secureDirectory(directory);
-  a={directory,keys:new AssistantKeyStore(path.join(directory,'api'),this.options.encryptor),siwc:new SiwcStore(path.join(directory,'chatgpt'),this.options.encryptor,{canRecover:this.options.canRecover}),credentialOwner:new SiwcCredentialOwner()};this.actors.set(id,a);}return a;}
+  a={directory,keys:new AssistantKeyStore(path.join(directory,'api'),this.options.encryptor),siwc:new SiwcStore(path.join(directory,'chatgpt'),this.options.encryptor,{canRecover:this.options.canRecover}),credentialOwner:new SiwcCredentialOwner(),apiBindings:new Map()};this.actors.set(id,a);}return a;}
  private key(r:HostRequest):string{return JSON.stringify([r.actor_id,r.session_id,r.tab_id]);}
  private sessionKey(r:HostRequest):string{return JSON.stringify([r.actor_id,r.session_id]);}
  private live(r:HostRequest,tab?:Tab):void {if(this.closed||tab?.disposed||this.disposedSessions.has(this.sessionKey(r))||this.disposedTabs.has(this.key(r)))throw new HostError('session_disposed');}
@@ -72,8 +76,13 @@ export class LocalHostService {
   if(kind==='file'&&options.filters!==undefined){if(!Array.isArray(options.filters)||options.filters.length>20||options.filters.some((f:any)=>!f||typeof f.name!=='string'||f.name.length>100||!Array.isArray(f.extensions)||f.extensions.length>30||f.extensions.some((x:any)=>typeof x!=='string'||!/^([a-zA-Z0-9]{1,20}|\*)$/.test(x))))throw new HostError('invalid_request');result.filters=options.filters;}
   return result;
  }
- private async choose(r:HostRequest,t:Tab,options:OpenDialogOptions):Promise<string|null>{const value=await this.options.native.choose(options);this.live(r,t);if(value.canceled||!value.filePaths[0])return null;return this.allowedPath(value.filePaths[0]);}
- private retire(tab:Tab){tab.disposed=true;tab.assistant.dispose();}
+ private async choose(r:HostRequest,t:Tab,options:OpenDialogOptions):Promise<string|null>{
+  if(this.chooserPending)throw new HostError('native_dialog_busy');
+  this.chooserPending=true;
+  try{const value=await this.options.native.choose(options);this.live(r,t);if(value.canceled||!value.filePaths[0])return null;return this.allowedPath(value.filePaths[0]);}
+  finally{this.chooserPending=false;}
+ }
+ private retire(tab:Tab){tab.disposed=true;void tab.assistant.dispose().catch(()=>undefined);}
  async handle(raw:unknown):Promise<HostResponse>{const id=typeof (raw as any)?.id==='string'&&/^[A-Za-z0-9_-]{1,200}$/.test((raw as any).id)?(raw as any).id:'invalid';
   try {if(Buffer.byteLength(JSON.stringify(raw))>MAX_FRAME_BYTES)throw new HostError('frame_too_large');const r=parseRequest(raw);
    if(r.method==='session.dispose'||r.method==='session.disposeAll'){for(const [key,row]of this.projectRows)if(row.actor===r.actor_id&&row.session===r.session_id&&(r.method==='session.disposeAll'||row.tab===r.tab_id))this.projectRows.delete(key);if(r.method==='session.disposeAll')this.disposedSessions.add(this.sessionKey(r));else this.disposedTabs.add(this.key(r));for(const [key,t]of this.tabs)if(t.actor===r.actor_id&&t.session===r.session_id&&(r.method==='session.disposeAll'||t.id===r.tab_id)){this.retire(t);this.tabs.delete(key);}return {id,ok:true,result:true};}
@@ -115,6 +124,31 @@ export class LocalHostService {
   if(paths.some((p,i)=>this.allowedPath(p)!==p||identity(p)!==before[i]))throw new HostError('selection_changed');
   return {approved:true,plan_sha256:a.plan_sha256};
  }
+ private async approveProjectLocation(r:HostRequest,t:Tab):Promise<unknown> {
+  const a=r.args,id=(v:unknown)=>typeof v==='string'&&/^[A-Za-z0-9_.:-]{1,128}$/.test(v);
+  if(a.origin!==this.options.origin||typeof a.account_label!=='string'||!a.account_label.trim()||a.account_label.length>200||/[\u0000-\u001f\u007f]/.test(a.account_label)
+   ||!id(a.registration_id)||!id(a.project_id)||!id(a.workspace_id)||!Number.isSafeInteger(a.revision)||a.revision<1
+   ||typeof a.approval_digest!=='string'||!/^[a-f0-9]{64}$/.test(a.approval_digest)||typeof a.manifest_sha256!=='string'||!/^[a-f0-9]{64}$/.test(a.manifest_sha256)
+   ||!Array.isArray(a.directory_identity)||a.directory_identity.length!==2||a.directory_identity.some((v:unknown)=>typeof v!=='string'||!/^\d{1,20}$/.test(v)))throw new HostError('invalid_request');
+  const selected=this.allowedPath(a.path);if(selected!==a.path)throw new HostError('selection_changed');
+  const snapshot=()=>{
+   let current=path.parse(selected).root;for(const part of selected.slice(current.length).split(path.sep).filter(Boolean)){current=path.join(current,part);const info=fs.lstatSync(current);if(info.isSymbolicLink()||!info.isDirectory())throw new HostError('selection_changed');}
+   if(!['darwin','linux'].includes(process.platform))throw new HostError('native_confirmation_unavailable');
+   const directory=fs.openSync(selected,fs.constants.O_RDONLY|fs.constants.O_DIRECTORY|fs.constants.O_NOFOLLOW|fs.constants.O_NONBLOCK);
+   try{const info=fs.fstatSync(directory,{bigint:true});if(!info.isDirectory()||String(info.dev)!==a.directory_identity[0]||String(info.ino)!==a.directory_identity[1])throw new HostError('selection_changed');
+    // The backend retains the authoritative openat directory FD. This native
+    // snapshot stays bounded and rechecks both the leaf and current directory.
+    const file=path.join(selected,'project.json'),fd=fs.openSync(file,fs.constants.O_RDONLY|fs.constants.O_NOFOLLOW|fs.constants.O_NONBLOCK);
+    try{const before=fs.fstatSync(fd);if(!before.isFile()||before.nlink!==1||before.size<1||before.size>2*1024*1024)throw new HostError('selection_changed');const raw=Buffer.alloc(before.size);let offset=0;while(offset<raw.length){const size=fs.readSync(fd,raw,offset,raw.length-offset,null);if(!size)break;offset+=size;}if(offset!==raw.length)throw new HostError('selection_changed');const after=fs.fstatSync(fd),entry=fs.lstatSync(file);const same=(value:fs.Stats)=>before.ino===value.ino&&before.dev===value.dev&&before.mode===value.mode&&before.nlink===value.nlink&&before.size===value.size&&before.mtimeMs===value.mtimeMs&&before.ctimeMs===value.ctimeMs;if(!same(after)||!same(entry)||hash(raw.toString('utf8'))!==a.manifest_sha256||JSON.parse(raw.toString('utf8')).id!==a.project_id)throw new HostError('selection_changed');}
+    finally{fs.closeSync(fd);}
+    const current=fs.lstatSync(selected,{bigint:true});if(!current.isDirectory()||current.dev!==info.dev||current.ino!==info.ino||this.allowedPath(selected)!==selected)throw new HostError('selection_changed');
+   }finally{fs.closeSync(directory);}
+  };
+  snapshot();if(!this.options.native.confirmProjectLocation)throw new HostError('native_confirmation_unavailable');
+  const approved=await this.options.native.confirmProjectLocation({origin:a.origin,account_label:a.account_label,registration_id:a.registration_id,project_id:a.project_id,workspace_id:a.workspace_id,path:selected,revision:a.revision,approval_digest:a.approval_digest,scope:{actor_id:r.actor_id,session_id:r.session_id,tab_id:r.tab_id}});
+  this.live(r,t);if(!approved)return {approved:false};snapshot();if(this.allowedPath(selected)!==selected)throw new HostError('selection_changed');
+  return {approved:true,approval_digest:a.approval_digest};
+ }
  private invalidateProject(tab:Tab|undefined):void {if(tab){tab.assistant.invalidateAuthority();tab.runs=new AssistantRunRegistry();}}
  private setProject(r:HostRequest,epoch:number,scope:string|null):void {
   const key=this.key(r);if(!this.projectRows.has(key)&&this.projectRows.size>=512)throw new HostError('too_many_project_scopes');
@@ -140,12 +174,15 @@ export class LocalHostService {
  private async dispatch(r:HostRequest,t:Tab):Promise<unknown>{const a=r.args,s=t.assistant,d=t.distribution,p=t.portable;
   switch(r.method){
    case 'host.approveLinkedSource':return this.approveLinkedSource(r,t);
+   case 'host.approveProjectLocation':return this.approveProjectLocation(r,t);
    case 'dialog.folder':return this.choose(r,t,this.dialogOptions('folder',a));case 'dialog.file':return this.choose(r,t,this.dialogOptions('file',a));
    case 'shell.open':{const value=a.path??a.target;let target=classifyOpenTarget(value);if(target.kind==='rejected')return false;if(target.kind==='url'){await this.options.native.openExternal(target.url);return true;}this.allowedPath(target.path);return (await this.options.native.openPath(target.path))==='';}
-   case 'assistant.getState':return s.state();case 'assistant.saveProvider':{const actor=this.actor(r.actor_id),before=actor.keys.config(a.input?.provider),result=s.save(a.input),after=actor.keys.config(a.input.provider);
-    if(a.input.key||before&&after&&JSON.stringify({...before,model:''})!==JSON.stringify({...after,model:''}))this.credentialsChanged(r.actor_id);return result;}
-   case 'assistant.removeKey':{const result=s.removeKey(a.provider);this.credentialsChanged(r.actor_id);return result;}
-   case 'assistant.removeProvider':{const result=s.removeProvider(a.provider);this.credentialsChanged(r.actor_id);return result;}case 'assistant.setActive':return s.setActive(a.provider);case 'assistant.listModels':return s.listModels(a.provider);case 'assistant.send':return s.send(a.input);case 'assistant.cancel':return s.cancel(a.requestId);case 'assistant.imageIntent':return s.imageIntent(a.input);case 'assistant.beginRun':return t.runs.arm(a.runId,a.tool);case 'assistant.endRun':return t.runs.disarm(a.runId);
+   case 'assistant.getState':return s.state();case 'assistant.saveProvider':{const actor=this.actor(r.actor_id),input=a.input;
+    const binding=JSON.stringify([validateBaseUrl(input.baseUrl),input.provider==='anthropic'?null:input.format==='responses'?'responses':'chat',input.supportsImages===true]);
+    if(input.key||actor.apiBindings.get(input.provider)!==binding)this.credentialsChanged(r.actor_id);
+    const result=await s.save(input);actor.apiBindings.set(input.provider,binding);return result;}
+   case 'assistant.removeKey':{this.credentialsChanged(r.actor_id);return s.removeKey(a.provider);}
+   case 'assistant.removeProvider':{this.credentialsChanged(r.actor_id);return s.removeProvider(a.provider);}case 'assistant.setActive':return s.setActive(a.provider);case 'assistant.listModels':return s.listModels(a.provider);case 'assistant.send':return s.send(a.input);case 'assistant.cancel':return s.cancel(a.requestId);case 'assistant.imageIntent':return s.imageIntent(a.input);case 'assistant.beginRun':return t.runs.arm(a.runId,a.tool);case 'assistant.endRun':return t.runs.disarm(a.runId);
    case 'assistant.chatgpt.begin':return s.chatgptBegin(a.input);case 'assistant.chatgpt.acknowledgePlanUsage':return s.chatgptAcknowledgePlanUsage(a.recordId);case 'assistant.chatgpt.resumeUsage':return s.chatgptResumeUsage(a.recordId);case 'assistant.chatgpt.recover':return s.chatgptRecover(a.input);case 'assistant.chatgpt.cancel':return s.chatgptCancel();case 'assistant.chatgpt.selectAccount':return s.chatgptSelectAccount(a.recordId);case 'assistant.chatgpt.selectModel':return s.chatgptSelectModel(a.recordId,a.model);case 'assistant.chatgpt.signOut':return s.chatgptSignOut(a.recordId);
    case 'updates.status':return d.status();case 'updates.configure':return d.configure(a.configuration);case 'updates.check':return d.check();case 'updates.download':return d.download();
    case 'updates.verifyOffline':{if(!d.options.packaged)throw Error('Offline release handoff requires the packaged application and its provisioned publisher authority');const file=await this.choose(r,t,{title:'서명된 오프라인 릴리스 목록 선택',properties:['openFile'],filters:[{name:'Release manifest',extensions:['json']}]});return file?d.verifyOffline(file):null;}
@@ -155,5 +192,7 @@ export class LocalHostService {
    default:throw new HostError('unknown_method');
   }
  }
- dispose():void {if(this.closed)return;this.closed=true;this.projectRows.clear();for(const t of this.tabs.values())this.retire(t);this.tabs.clear();for(const a of this.actors.values())a.credentialOwner.dispose(a.siwc);this.actors.clear();}
+ private closing:Promise<void>|undefined;
+ dispose():Promise<void> {if(this.closing)return this.closing;this.closed=true;this.projectRows.clear();for(const t of this.tabs.values())this.retire(t);this.tabs.clear();
+  const work=[...this.actors.values()].map(a=>{void a.keys.close().catch(()=>undefined);return a.credentialOwner.dispose(a.siwc);});this.actors.clear();return this.closing=Promise.allSettled(work).then(()=>undefined);}
 }

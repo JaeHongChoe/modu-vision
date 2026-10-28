@@ -9,6 +9,8 @@ import uuid
 
 from fastapi import APIRouter, HTTPException, Request
 from backend.contracts.context import ProjectContext, current_project_context
+from . import location_identity
+from .location_recovery import location_changed
 
 
 class LocalProjectRegistry:
@@ -50,18 +52,25 @@ class LocalProjectRegistry:
                              (context.workspace_id, identifier)).fetchone()
         return row['permission_key'] if row else identifier
 
-    def authorize_location(self, app, account, path):
+    def authorize_location(self, app, account, path, *, selecting=False):
         """Authorize known storage before its loader can perform legacy normalization."""
+        literal = str(Path(path).expanduser().absolute())
         path = str(Path(path).expanduser().resolve())
         with self.db() as db:
-            location = db.execute('SELECT * FROM locations WHERE path=?', (path,)).fetchone()
+            # Check the registered literal first: canonicalizing a replacement
+            # symlink must not make its old registration disappear from lookup.
+            location = db.execute('SELECT * FROM locations WHERE path=?', (literal,)).fetchone()
+            if location is None:
+                location = db.execute('SELECT * FROM locations WHERE path=?', (path,)).fetchone()
         with app.state.accounts._db() as db:
             existing = db.execute('SELECT id FROM projects WHERE path=?', (path,)).fetchone()
         key = location['permission_key'] if location else existing['id'] if existing else None
         if key and app.state.accounts.project_role_exact(account['id'], key) is None:
             raise HTTPException(403, 'Project membership required')
-        if location and json.loads(location['identity']) != _identity(path):
-            raise HTTPException(409, 'Registered location ownership changed')
+        if location and getattr(self, 'recovery', None):
+            self.recovery.check_access(location, account['id'], selecting=selecting)
+        if location and not location_identity.matches(json.loads(location['identity']), location['path']):
+            raise location_changed()
 
     def register(self, app, account, project):
         """Register a location without moving legacy account selection or granting an existing location."""
@@ -72,8 +81,8 @@ class LocalProjectRegistry:
             db.execute('BEGIN IMMEDIATE')
             row = db.execute('SELECT * FROM locations WHERE path=?', (path,)).fetchone()
             if row:
-                if json.loads(row['identity']) != _identity(path):
-                    raise HTTPException(409, 'Registered location ownership changed')
+                if not location_identity.matches(json.loads(row['identity']), path):
+                    raise location_changed()
                 if row['project_id'] != project['id']:
                     raise HTTPException(409, 'Registered manifest identity changed')
                 if accounts.project_role_exact(account['id'], row['permission_key']) is None:
@@ -109,7 +118,7 @@ class LocalProjectRegistry:
                     # Preserve existing/default selections even after opening a restored copy.
                     account_db.execute('INSERT OR IGNORE INTO selections VALUES(?,?)', (account['id'], key))
             row = dict(registration_id=uuid.uuid4().hex, workspace_id=context.workspace_id,
-                       project_id=project['id'], permission_key=key, path=path, revision=1, identity=json.dumps(_identity(path)))
+                       project_id=project['id'], permission_key=key, path=path, revision=1, identity=json.dumps(location_identity.read(path)))
             db.execute('INSERT INTO locations VALUES(:registration_id,:workspace_id,:project_id,:permission_key,:path,:revision,:identity)', row)
         return self.public(row, account)
 
@@ -133,8 +142,8 @@ class LocalProjectRegistry:
             raise HTTPException(403, 'Updated project does not match its authenticated local registration')
         try:
             selected = app.state.accounts.registered_project_for(account['id'], row['permission_key'])
-            if str(Path(selected['path']).resolve()) != path or json.loads(row['identity']) != _identity(path):
-                raise HTTPException(409, 'Registered project location ownership changed')
+            if str(Path(selected['path']).resolve()) != path or not location_identity.matches(json.loads(row['identity']), path):
+                raise location_changed()
         except ValueError as exc:
             raise HTTPException(403, 'Current registered project membership required') from exc
         except OSError as exc:
@@ -174,9 +183,10 @@ class LocalProjectRegistry:
                                  (declared.workspace_id, declared.project_id)).fetchone()
             if row:
                 row = dict(row)
-                if json.loads(row['identity']) != _identity(row['path']):
-                    raise HTTPException(409, 'Registered location ownership changed')
                 selected = accounts.registered_project_for(account['id'], row['permission_key'])
+                if getattr(self, 'recovery', None): self.recovery.check_access(row, account['id'])
+                if not location_identity.matches(json.loads(row['identity']), row['path']):
+                    raise location_changed()
                 if selected['path'] != row['path']:
                     raise HTTPException(409, 'Registered project location changed')
                 project = _load_project(Path(row['path']))
@@ -195,7 +205,13 @@ class LocalProjectRegistry:
 
 
 def install_local_projects(app, registry):
+    from .location_recovery import LocationRecovery, RecoveryAdmissionMiddleware, recovery_router
     app.state.local_projects = registry
+    registry.recovery = LocationRecovery(app, registry)
+    from .project_assets import install_project_assets
+    install_project_assets(app,registry)
+    app.include_router(recovery_router(registry.recovery))
+    app.add_middleware(RecoveryAdmissionMiddleware, coordinator=registry.recovery)
     app.state.accounts.local_permission_resolver = lambda identifier: registry.permission_key(current_project_context.get(), identifier)
     app.include_router(local_projects_router(app, registry))
 
@@ -321,8 +337,11 @@ def local_projects_router(app, registry):
         if row is None:
             raise HTTPException(404, 'Registration unavailable')
         _fresh_authority(app, request, row['permission_key'], action='project.read')
-        registry.authorize_location(app, account, row['path'])
+        registry.authorize_location(app, account, row['path'], selecting=True)
         project = _load_project(Path(row['path']))
+        if project['id'] != row['project_id']: raise HTTPException(409, 'Registered manifest identity changed')
+        registry.recovery.selected(row, account['id'])
+        app.state.accounts.select_project(account['id'], row['permission_key'])
         return response(project, registry.register(app, account, project))
 
     @router.get('/template')

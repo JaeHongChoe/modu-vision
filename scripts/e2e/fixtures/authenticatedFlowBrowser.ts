@@ -2,7 +2,7 @@ import type {Page} from '@playwright/test';
 import path from 'node:path';
 import {expect,type Workspace,type Evidence} from './test';
 import {browserTeamServer} from './browser_team_server';
-import {expectBrowserLoginGate,openBrowserServerManagement} from './browserGateLogin';
+import {expectBrowserLoginGate,openBrowserServerManagement,chooseBrowserProject,browserLoginWithin} from './browserGateLogin';
 import {handoffWithin,type HandoffApi} from './remaining-project-handoff';
 
 export type FlowNavigation=(project:{id:string;name:string})=>Promise<void>;
@@ -93,11 +93,13 @@ export async function authenticatedFlowBrowser(inputs:Inputs,
       await page.getByLabel('공유 계정 비밀번호',{exact:true}).fill(password);
       const waiting=page.waitForResponse(response=>new URL(response.url()).origin===server.origin
         &&new URL(response.url()).pathname==='/api/accounts/login'&&response.request().method()==='POST',{timeout:10_000});
+      const browserLoginDeadline=performance.now()+20_000;
       await page.getByRole('button',{name:'연결·로그인',exact:true}).click();
+      await chooseBrowserProject(page,project.id,'shared',browserLoginDeadline);
       const response=await waiting;expect(response.status()).toBe(200);const session=await response.json();
       expect(session.user.id).toBe(owner.user.id);expect(session.token).toBeUndefined();
       evidence.redact(session.csrf_token);
-      await expect(page.getByRole('main',{name:'브라우저 계정 로그인',exact:true})).toHaveCount(0);
+      await browserLoginWithin(()=>expect(page.getByRole('main',{name:'브라우저 계정 로그인',exact:true})).toHaveCount(0),browserLoginDeadline);
       await page.getByRole('navigation',{name:'Workflow Stages'}).getByRole('button').nth(0).click();
       await openBrowserServerManagement(page);
       const select=page.getByLabel('공동 작업 프로젝트',{exact:true});
