@@ -31,6 +31,6 @@ export function assistantWriteBinding(scope: string): string {
   const data = useDatasetStore.getState(), image = useAnnotationStore.getState(), training = useTrainingStore.getState(), compute = useComputeStore.getState();
   return JSON.stringify([assistantImageBinding(scope), image.isDirty, image.annotations, image.activeCategory, image.labelbookVersion,
     data.folderPath, data.datasetKey, data.sourceAuthority, data.split, data.splitState, data.totalImages, data.unlabeledImages,
-    data.classes, data.trainRatio, training.preset, training.nextBatchSize, training.nextDevice, training.jobId, training.status,
+    data.classes, data.trainRatio, training.preset, training.nextBatchSize, training.nextDevice, training.inputRecipeScope, training.inputRecipeSha256, training.jobId, training.status,
     compute.selectedProfileId, compute.profiles?.find(profile => profile.id === compute.selectedProfileId), workflowEvidenceRevision()]);
 }

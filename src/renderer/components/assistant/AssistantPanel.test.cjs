@@ -4,13 +4,14 @@
 const test=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path'),Module=require('node:module'),ts=require('typescript');
 const read=name=>fs.readFileSync(path.join(__dirname,name),'utf8');
 const sources=fs.readdirSync(__dirname).filter(name=>name.endsWith('.tsx')).map(name=>[name,read(name)]);
-function load(file,mocks){const m=new Module(file,module);m.filename=file;m.paths=Module._nodeModulePaths(path.dirname(file));const original=m.require.bind(m);m.require=name=>name in mocks?mocks[name]:original(name);
+function load(file,mocks){const m=new Module(file,module);m.filename=file;m.paths=Module._nodeModulePaths(path.dirname(file));const original=m.require.bind(m);m.require=name=>{if(name in mocks)return mocks[name];if(name.startsWith('.')){const target=path.resolve(path.dirname(file),name)+'.ts';if(fs.existsSync(target))return load(target,mocks);}return original(name);};
  m._compile(ts.transpileModule(fs.readFileSync(file,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022,jsx:ts.JsxEmit.React,esModuleInterop:true}}).outputText,file);return m.exports;}
 const nodes=tree=>!tree||typeof tree!=='object'?[]:[tree,...[].concat(tree.props?.children||[]).flat(Infinity).flatMap(nodes)];
 const text=tree=>!tree?'':typeof tree==='string'||typeof tree==='number'?String(tree):[].concat(tree.props?.children||[]).flat(Infinity).map(text).join('');
 
 function render(state,ui={}){
- const react={createElement:(type,props,...children)=>({type,props:{...props,children}}),useState:initial=>[ui.draft!==undefined&&initial===''?ui.draft:typeof initial==='function'?initial():initial,value=>ui.sets?.push(value)],useRef:()=>({current:ui.focus?{focus:ui.focus}:null}),useEffect:()=>{}};
+ const slots=ui.slots||(ui.slots=[]);let cursor=0;
+ const react={createElement:(type,props,...children)=>({type,props:{...props,children}}),useState:initial=>{const i=cursor++;if(!(i in slots))slots[i]=ui.draft!==undefined&&initial===''?ui.draft:typeof initial==='function'?initial():initial;return[slots[i],value=>{slots[i]=typeof value==='function'?value(slots[i]):value;ui.sets?.push(slots[i]);}];},useRef:()=>({current:ui.focus?{focus:ui.focus}:null}),useEffect:()=>{}};
  const store=Object.assign(selector=>selector(state),{getState:()=>state});
  const taskState=ui.taskState||{};
  Object.assign(taskState,{task:null,busy:Boolean(ui.taskBusy),planningNew:false,history:[],readPending:false,contextMatches:true,loading:false,error:null,...taskState});
@@ -175,7 +176,7 @@ test('ChatGPT readiness comes from the selected account and plan, never a key fl
  }
  const ready={...base,config:{active:'chatgpt',providers:[{...provider,hasKey:false}],encryptionAvailable:true,chatgpt:{accounts:[{recordId:'a',model:'chosen',signedIn:true,planUsageEnabled:true}],active:'a',status:'connected'}}};
  assert.equal(nodes(render(ready)).find(n=>n.type==='textarea').props.disabled,false);
- assert.match(text(render(ready)),/ChatGPT.*텍스트/);
+ assert.match(text(render(ready)),/이미지.*지원/);
  assert.ok(!nodes(render(ready)).some(n=>n.type==='button'&&text(n)==='이미지와 함께 묻기'));
 });
 
@@ -260,4 +261,21 @@ test('pending login cancellation escapes read-disabled fields but retains write 
    assert.equal(locked.find(entry=>text(entry.button)==='연결 취소').disabled,true,`${lock} keeps cancellation locked`);
   }
  }
+});
+
+
+test('ChatGPT image selection is local until send, then carries the selected attachment once',async()=>{
+ const calls=[],ui={draft:'이 이미지로 검사 흐름 만들어줘'},config=connectedConfig();config.providers[0].supportsImages=true;
+ const image={fileName:'qa.png',mediaType:'image/png',base64:'AAAA',imageIdentity:'a'.repeat(64),previewUrl:'data:image/png;base64,AAAA'};
+ const state={...base,config,prepareAttachment:async file=>{calls.push(['prepare',file.name]);return image;},attachmentBinding:()=> 'scope',ask:async(...args)=>{calls.push(['ask',...args]);return true;}};
+ let tree=render(state,ui);const input=nodes(tree).find(n=>n.type==='input'&&n.props.type==='file');assert.ok(input);assert.match(input.props.accept,/image\/png/);
+ await input.props.onChange({target:{files:[{name:'qa.png'}],value:'qa.png'}});assert.deepEqual(calls,[['prepare','qa.png']]);
+ tree=render(state,ui);assert.ok(nodes(tree).some(n=>n.type==='img'&&n.props.alt==='첨부한 이미지'));
+ nodes(tree).find(n=>n.type==='button'&&text(n)==='보내기').props.onClick();await Promise.resolve();
+ assert.equal(calls[1][0],'ask');assert.equal(calls[1][2].attachment.fileName,'qa.png');
+});
+test('an empty task panel never tells the beginner to use a missing old-plan action',()=>{
+ const tree=render({...base,config:connectedConfig(),items:[]},{taskState:{task:null}});
+ assert.ok(!text(tree).includes('다른 작업을 시작하려면 계획의'));
+ assert.match(text(tree),/새 작업은 대화로 요청/);
 });

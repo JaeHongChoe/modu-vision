@@ -24,7 +24,7 @@ export const flowEvaluation = {
   versions:(source:string)=>request<{pipelines:SavedEvaluationFlow[];total:number}>(`/api/flowchart/pipelines?source_dataset_path=${encodeURIComponent(source)}`),
   scope:(versionId:string)=>request<TruthScope>(`/api/flow-evaluations/scope/${encodeURIComponent(versionId)}`),
   cohorts:()=>request<{cohorts:FlowEvaluationCohort[];total:number}>('/api/flow-evaluations/cohorts'),
-  freeze:(version_id:string,name:string)=>request<FlowEvaluationCohort>('/api/flow-evaluations/cohorts',json('POST',{version_id,name})),
+  freeze:(version_id:string,name:string,labelTruthPolicy?:'folder-labels-v1')=>request<FlowEvaluationCohort>('/api/flow-evaluations/cohorts',json('POST',{version_id,name,...(labelTruthPolicy?{label_truth_policy:labelTruthPolicy}:{})})),
   run:(version_id:string,cohort_id:string)=>request<FlowEvaluation>('/api/flow-evaluations',json('POST',{version_id,cohort_id})),
   confirmTruthFromLabels:(cohort_id:string,version_id:string,reviewer:string)=>request<{cohort_id:string;total:number;declared:number;kept:number;skipped:number;unknown:string[]}>(`/api/flow-evaluations/cohorts/${encodeURIComponent(cohort_id)}/truth-from-labels`,json('POST',{version_id,reviewer})),
   history:()=>request<{evaluations:FlowEvaluationHistory[];total:number}>('/api/flow-evaluations'),

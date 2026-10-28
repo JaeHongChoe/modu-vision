@@ -706,7 +706,10 @@ def _rebind_deployments(staging: Path, old_source: Path | None, new_source: Path
     if not database.is_file() or old_source is None or new_source is None:
         return
     with closing(sqlite3.connect(database)) as conn, conn:
-        for table in ("revisions", "active_revisions"):
+        # Preserve policy receipt bytes as historical source-bound evidence. Move
+        # only its selection index so an invalidated qualification cannot
+        # silently reveal an older human active model after restoration.
+        for table in ("revisions", "active_revisions", "policy_active_revisions"):
             columns = {row[1] for row in conn.execute(f"PRAGMA table_info({table})")}
             if "source_dataset_path" in columns:
                 conn.execute(f"UPDATE {table} SET source_dataset_path = ? WHERE source_dataset_path = ?",

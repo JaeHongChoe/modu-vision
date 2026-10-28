@@ -62,7 +62,7 @@ test('the main-process filter refuses assistant providers even while a shared se
  globalThis.fetch=async()=>({ok:true});try{await session.disconnectSharedServer();}finally{globalThis.fetch=fetch;}
 });
 
-test('provider calls live only in the main process; the renderer assistant has no network or storage of its own',()=>{
+test('provider calls and secrets stay in main; renderer stores only isolated allowlisted reasoning preferences',()=>{
  const files=['src/renderer/stores/useAssistantStore.ts',
   ...fs.readdirSync(path.join(root,'src/renderer/services')).filter(name=>/^assistant.*\.ts$/.test(name)).map(name=>`src/renderer/services/${name}`),
   ...fs.readdirSync(path.join(root,'src/renderer/components/assistant')).filter(name=>name.endsWith('.tsx')).map(name=>`src/renderer/components/assistant/${name}`)];
@@ -70,8 +70,13 @@ test('provider calls live only in the main process; the renderer assistant has n
  for(const file of files){
   const source=read(file).replace(/\/\*[\s\S]*?\*\/|\/\/.*$/gm,'');
   for(const pattern of [/\bfetch\(/,/XMLHttpRequest/,/new WebSocket/,/EventSource/,/sendBeacon/,/localStorage/,/sessionStorage/,/indexedDB/,/api\.openai\.com/,/anthropic\.com\/v1/,/x-api-key/i,/Authorization/])
-   assert.ok(!pattern.test(source),`${file} must not use ${pattern}`);
+   // The sole storage owner persists only a validated effort enum under opaque account/model scope.
+   if(!(file==='src/renderer/services/assistantPreferences.ts'&&pattern.source==='localStorage'))assert.ok(!pattern.test(source),`${file} must not use ${pattern}`);
  }
+ const preferences=read('src/renderer/services/assistantPreferences.ts');
+ assert.match(preferences,/EFFORTS\.has\(value\)/,'storage values must be allowlisted reasoning efforts');
+ assert.match(preferences,/vision\.assistant\.effort\.v1\./,'only the effort preference namespace is allowed');
+ assert.ok(!/JSON\.stringify|base64|messages|password|accessToken|refreshToken/.test(preferences),'no conversation, image or credential serialization in preference owner');
  const main=['src/main/assistant/providers.ts','src/main/assistant/service.ts'].map(read).join('\n');
  assert.match(main,/redirect: 'error'/,'a redirect never carries a key to another host');
  assert.ok(!/console\.(log|info|warn|error)/.test(read('src/main/assistant/providers.ts')+read('src/main/assistant/keyStore.ts')+read('src/main/assistant/service.ts')),'nothing in the key path logs');

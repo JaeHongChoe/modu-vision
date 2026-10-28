@@ -39,6 +39,7 @@ class OperationsPolicy(BaseModel):
     minimum_sample_count:int=Field(default=8,ge=8,le=1000000)
     minimum_metrics:dict[str,float]=Field(default_factory=dict)
     maximum_metrics:dict[str,float]=Field(default_factory=dict)
+    flow_policy:dict|None=None
     new_data_validation_fraction:float=Field(default=.2,ge=0,le=.5,allow_inf_nan=False)
     watch_interval_seconds:float=Field(default=30,ge=5,le=86400,allow_inf_nan=False)
     @model_validator(mode='after')
@@ -48,10 +49,63 @@ class OperationsPolicy(BaseModel):
         if (self.auto_approve or self.auto_deploy) and not self.approval_policy_authorized:raise ValueError('Explicit automatic approval policy authorization is required')
         if self.auto_deploy and not self.auto_approve:raise ValueError('Automatic deployment requires automatic quality approval')
         if self.auto_approve and self.task=='defect_gan':raise ValueError('Generator outputs need explicit image review before composition or training adoption')
+        if self.flow_policy is not None:
+            from backend.engine.whole_flow_approval import validate_policy
+            self.flow_policy=validate_policy(self.flow_policy)
         return self
 
 class RunRequest(BaseModel):
     background:bool=True
+
+
+class ModelQualificationRequest(BaseModel):
+    model_config=ConfigDict(extra='forbid')
+    task_id:str=Field(pattern=r'^task_[a-f0-9]{32}$')
+    step_id:str=Field(pattern=r'^step_[a-f0-9]{32}$')
+    evaluation_id:str=Field(pattern=r'^evaluation_[a-f0-9]{32}$')
+    comparison_id:str|None=Field(default=None,pattern=r'^comparison_[a-f0-9]{32}$')
+    incumbent_evaluation_id:str|None=Field(default=None,pattern=r'^evaluation_[a-f0-9]{32}$')
+
+
+@router.post('/qualify-model')
+def qualify_model(body:ModelQualificationRequest,request:Request):
+    from backend.engine.assistant_qualification import authorized_step
+    from backend.api.routes_image_truth import require_role
+    from backend.api.routes_model_deployments import qualify_candidate_policy
+    current=project(request);require_role(request,current,{'owner','reviewer','trainer'})
+    def check():
+        require_role(request,current,{'owner','reviewer','trainer'})
+        return authorized_step(request,current,body.task_id,body.step_id,body.evaluation_id,'evaluate_model')
+    authorization=check()
+    configured=OperationsStore(current['project_dir']).policy()
+    return qualify_candidate_policy(current,configured,body.evaluation_id,comparison_id=body.comparison_id,
+        incumbent_evaluation_id=body.incumbent_evaluation_id,authorization=authorization,recheck=check,
+        expected_job_id=authorization['receipt'].get('job_id'))
+
+
+@router.get('/assessments')
+def quality_assessments(task_id:str,request:Request):
+    from backend.api.routes_assistant_tasks import _scope
+    from backend.engine.assistant_tasks import TaskError
+    current=project(request);scope=_scope(request)
+    try:request.app.state.assistant_tasks.read(scope,task_id)
+    except TaskError as exc:raise HTTPException(exc.status_code,str(exc)) from exc
+    rows=OperationsStore(current['project_dir']).assessments()
+    return {'assessments':[row for row in rows if row.get('task_id')==task_id
+        and (row.get('authorization') or {}).get('scope')==scope.document() and row.get('project_id')==current['id']]}
+
+
+@router.get('/assessments/{assessment_id}')
+def quality_assessment(assessment_id:str,request:Request):
+    from backend.api.routes_assistant_tasks import _scope
+    current=project(request);scope=_scope(request)
+    try:row=OperationsStore(current['project_dir']).assessment(assessment_id)
+    except KeyError as exc:raise HTTPException(404,'Quality assessment not found') from exc
+    except ValueError as exc:raise HTTPException(409,str(exc)) from exc
+    grant=row.get('authorization') or {}
+    if row.get('project_id')!=current['id'] or grant.get('scope')!=scope.document():
+        raise HTTPException(403,'Quality assessment belongs to another authenticated task actor')
+    return row
 
 
 class CandidateFlowPreparationRequest(BaseModel):

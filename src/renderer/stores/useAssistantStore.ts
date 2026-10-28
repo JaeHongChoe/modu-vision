@@ -5,8 +5,10 @@
  * person configured one and pressed send. A key never enters this store (the key field sends it straight to the main
  * process and clears itself). */
 import { create } from 'zustand';
+import {isAssistantExecutionRequest,prepareAssistantAttachment,attachmentFromPixels,type AssistantAttachment,type AssistantQuestionOptions} from '../services/assistantAttachments';
+import {readAssistantEffort,saveAssistantEffort} from '../services/assistantPreferences';
 import type {
-  AssistantBridge, AssistantConfigState, AssistantError, AssistantProviderId, AssistantProviderInput,
+  AssistantBridge, AssistantConfigState, AssistantError, AssistantProviderId, AssistantProviderInput, AssistantModel, AssistantReasoningEffort,
 } from '../../types/electron';
 import { AssistantConversation, type PendingWrite, type SessionEvent } from '../services/assistantSession';
 import { assistantLog, type RunRecord } from '../services/assistantLog';
@@ -50,7 +52,7 @@ interface AssistantState {
   removeKey: (provider: AssistantProviderId) => Promise<void>;
   removeProvider: (provider: AssistantProviderId) => Promise<void>;
   setActive: (provider: AssistantProviderId) => Promise<void>;
-  listModels: (provider: AssistantProviderId) => Promise<{ id: string; label: string }[] | AssistantError>;
+  listModels: (provider: AssistantProviderId) => Promise<AssistantModel[] | AssistantError>;
   beginChatgpt: (input: { termsAccepted: true; recordId?: string; label?: string; enablePlanUsage?: true }) => Promise<boolean>;
   acknowledgeChatgptPlanUsage: (recordId:string) => Promise<boolean>;
   resumeChatgptUsage: (recordId:string) => Promise<boolean>;
@@ -59,7 +61,13 @@ interface AssistantState {
   selectChatgptAccount: (recordId: string | null) => Promise<boolean>;
   selectChatgptModel: (recordId: string, model: string) => Promise<boolean>;
   signOutChatgpt: (recordId: string) => Promise<boolean>;
-  ask: (text: string) => Promise<void>;
+  reasoningEffort: AssistantReasoningEffort|undefined;
+  setReasoningEffort:(value:AssistantReasoningEffort|undefined)=>void;
+  attachmentRevision:number;
+  attachmentBinding:()=>string;
+  prepareAttachment:(file:Blob & {name?:string})=>Promise<AssistantAttachment>;
+  currentImageAttachment:()=>Promise<AssistantAttachment>;
+  ask: (text: string, options?:AssistantQuestionOptions) => Promise<boolean>;
   stop: () => Promise<void>;
   decide: (confirmed: boolean) => Promise<void>;
   offerImage: (question: string) => Promise<void>;
@@ -77,13 +85,16 @@ export function assistantBridge(): AssistantBridge | null {
 const message = (cause: unknown) => (cause instanceof Error ? cause.message.replace(/^Error invoking remote method '[^']+': (Error: )?/, '') : String(cause));
 let nextItem = 0;
 let conversation: AssistantConversation | null = null;
+let taskExecutionIntent=false;
+let taskExecutionAbort:AbortController|null=null;
+const effortScope=(config:AssistantConfigState|null)=>JSON.stringify([config?.active,config?.chatgpt?.active,config?.providers.find(row=>row.provider===config.active)?.model]);
 let imageOfferVersion = 0;
 let configRequest = 0;
 let invalidationDeferred = false;
 let imageRevision = 0;
 let writeRevision = 0;
-const readImageBinding = () => JSON.stringify([imageRevision, assistantImageBinding(assistantScope(useAssistantStore.getState().config))]);
-const readWriteBinding = () => JSON.stringify([writeRevision, assistantWriteBinding(assistantScope(useAssistantStore.getState().config))]);
+const readImageBinding = ():string => JSON.stringify([imageRevision, assistantImageBinding(assistantScope(useAssistantStore.getState().config))]);
+const readWriteBinding = ():string => JSON.stringify([writeRevision, assistantWriteBinding(assistantScope(useAssistantStore.getState().config))]);
 const CONFIG_WAIT_MS = 15_000;
 const CONFIG_UNVERIFIED = '연결 상태가 아직 확인되지 않았습니다. 운영체제의 보호 요청이 있다면 확인한 뒤 다시 확인하세요.';
 const HELD_FOR_UNVERIFIED = '연결 상태가 확인되지 않아 보내지 않았습니다. 연결 상태를 다시 확인한 뒤 보내세요.';
@@ -112,7 +123,7 @@ export const useAssistantStore = create<AssistantState>((set, get) => {
     if (!bridge) return null;
     if (!conversation) {
       conversation = new AssistantConversation({
-        bridge, tools: createRuntimeTools(assistantTaskTools), context: () => assistantContext(assistantTaskTools.cachedStatus()),
+        bridge, tools: createRuntimeTools({...assistantTaskTools,propose:input=>assistantTaskTools.propose(input,taskExecutionIntent?{source:'user_request',signal:taskExecutionAbort?.signal}:undefined)}), context: () => assistantContext(assistantTaskTools.cachedStatus()),
         scope: () => assistantScope(get().config), projectScope: assistantProjectScope,
         writeBinding: readWriteBinding,
         log: entry => assistantLog.append(entry), provider: () => get().config?.active ?? null,
@@ -218,6 +229,12 @@ export const useAssistantStore = create<AssistantState>((set, get) => {
     configuring: false,
     pending: null,
     imageOffer: null,
+    reasoningEffort:undefined,
+    setReasoningEffort:value=>{
+      const config=get().config,provider=config?.providers.find(row=>row.provider===config.active);
+      if(value&&!provider?.capabilities?.reasoningEfforts?.includes(value))return;
+      saveAssistantEffort(effortScope(config),value);set({reasoningEffort:value});
+    },
     runs: null,
     runsError: null,
     loadConfig,
@@ -241,15 +258,41 @@ export const useAssistantStore = create<AssistantState>((set, get) => {
       const result = await bridge.listModels(provider);
       return result.ok ? result.models : result.error;
     },
-    ask: async text => {
-      const active = session();
-      if (!active || !text.trim() || active.busy || active.pending) return;
-      if (get().configReadStatus === 'unverified') { add({ kind: 'notice', text: HELD_FOR_UNVERIFIED }); return; }
-      if (get().configuring) { add({ kind: 'notice', text: HELD_FOR_SETTINGS }); return; }
-      add({ kind: 'person', text: text.trim() });
-      await active.ask(text);
+    attachmentRevision:0,attachmentBinding:readImageBinding,
+    prepareAttachment:async file=>{const binding=readImageBinding(),attachment=await prepareAssistantAttachment(file);if(binding!==readImageBinding())throw new Error('프로젝트나 모델이 바뀌었습니다. 이미지를 다시 선택하세요.');return {...attachment,binding};},
+    currentImageAttachment:async()=>{const binding=readImageBinding(),image=await currentImageForQuestion();if(!image)throw new Error('2단계에서 이미지를 먼저 여세요.');const attachment=await attachmentFromPixels(image);if(binding!==readImageBinding())throw new Error('선택 이미지가 바뀌었습니다. 다시 첨부하세요.');return{...attachment,binding};},
+    ask: async (text,options={}) => {
+      const active=session();
+      if(!active||!text.trim()||active.busy||active.pending||get().busy||get().writing)return false;
+      if(get().configReadStatus==='unverified'){add({kind:'notice',text:HELD_FOR_UNVERIFIED});return false;}
+      if(get().configuring){add({kind:'notice',text:HELD_FOR_SETTINGS});return false;}
+      const version=++imageOfferVersion,binding=readImageBinding(),scope=assistantScope(get().config);
+      const current=()=>version===imageOfferVersion&&binding===readImageBinding()&&scope===assistantScope(get().config);
+      if(options.attachment?.binding&&options.attachment.binding!==binding){add({kind:'notice',text:'프로젝트·이미지·모델이 바뀌어 이전 첨부를 보내지 않았습니다. 다시 첨부하세요.'});return false;}
+      const context=assistantContext(assistantTaskTools.cachedStatus());
+      const effort=options.reasoningEffort??get().reasoningEffort;
+      taskExecutionIntent=!options.explainOnly&&isAssistantExecutionRequest(text);
+      taskExecutionAbort=taskExecutionIntent?new AbortController():null;
+      try{
+        let image;
+        if(options.attachment){
+          const provider=get().config?.providers.find(row=>row.provider===get().config?.active);
+          if(!provider?.supportsImages){add({kind:'notice',text:'선택한 모델의 이미지 입력 지원을 확인할 수 없습니다. 이미지 지원 모델을 선택하세요.'});return false;}
+          set({busy:true});
+          const attachment=options.attachment;
+          const grant=await assistantBridge()!.imageIntent({fileName:attachment.fileName,imageIdentity:attachment.imageIdentity,context});
+          if(!current())return false;
+          if(!grant.ok){add({kind:'error',text:grant.error.reason,detail:grant.error.action});return false;}
+          image={grantId:grant.grantId,imageIdentity:attachment.imageIdentity,mediaType:attachment.mediaType,base64:attachment.base64};
+        }
+        if(!current())return false;
+        add({kind:'person',text:text.trim()+(image?' (이미지 1장)':'')});
+        await active.ask(text,image,{context,reasoningEffort:effort,allowImageTools:Boolean(image),executionIntent:taskExecutionIntent});
+        return true;
+      }catch(cause){if(current())add({kind:'error',text:'질문을 보내지 못했습니다.',detail:message(cause)});return false;}
+      finally{if(current()&&!active.busy)set({busy:false});}
     },
-    stop: async () => { await conversation?.stop(); },
+    stop: async () => { taskExecutionAbort?.abort();imageOfferVersion++;await conversation?.stop();if(!conversation?.writing)set({busy:false}); },
     decide: async confirmed => { await conversation?.decide(confirmed); },
     offerImage: async question => {
       const bridge = assistantBridge();
@@ -257,8 +300,8 @@ export const useAssistantStore = create<AssistantState>((set, get) => {
       if (get().configReadStatus === 'unverified') { add({ kind: 'notice', text: HELD_FOR_UNVERIFIED }); return; }
       if (get().configuring) { add({ kind: 'notice', text: HELD_FOR_SETTINGS }); return; }
       if (get().config?.active === 'chatgpt') {
-        set({ imageOffer: null });
-        add({ kind: 'notice', text: 'ChatGPT 연결은 현재 텍스트 질문만 지원합니다. 이미지 질문은 이미지 지원 API 키 공급자를 선택한 뒤 전송 대상을 확인하세요.' });
+        set({imageOffer:null});
+        add({kind:'notice',text:'현재 이미지는 도우미의 ‘현재 이미지 첨부’로 선택한 뒤 질문과 함께 보내세요.'});
         return;
       }
       const version = ++imageOfferVersion;
@@ -329,6 +372,7 @@ let observedScope = assistantScope(useAssistantStore.getState().config);
 let observedImage = assistantImageBinding(observedScope);
 let observedWrite = assistantWriteBinding(observedScope);
 function invalidateAssistant(): void {
+  taskExecutionAbort?.abort();
   // An executing confirmed write records and shows its outcome first; the reset follows when it returns.
   if (conversation?.writing) { invalidationDeferred = true; return; }
   invalidationDeferred = false;
@@ -340,9 +384,13 @@ function invalidateAssistant(): void {
 function observeAuthority(): void {
   const next = assistantScope(useAssistantStore.getState().config);
   const image = assistantImageBinding(next), write = assistantWriteBinding(next);
-  if (image !== observedImage) { observedImage = image; imageRevision++; imageOfferVersion++; }
+  if (image !== observedImage) { observedImage = image; imageRevision++; imageOfferVersion++; useAssistantStore.setState({attachmentRevision:imageRevision}); }
   if (write !== observedWrite) { observedWrite = write; writeRevision++; }
-  if (next !== observedScope) { observedScope = next; invalidateAssistant(); }
+  if (next !== observedScope) {
+    observedScope = next; invalidateAssistant();
+    const config=useAssistantStore.getState().config,provider=config?.providers.find(row=>row.provider===config.active),saved=readAssistantEffort(effortScope(config));
+    useAssistantStore.setState({reasoningEffort:saved&&provider?.capabilities?.reasoningEfforts?.includes(saved)?saved:undefined});
+  }
   else {
     const pending = useAssistantStore.getState().pending;
     if (pending && pending.binding !== readWriteBinding()) {
@@ -361,5 +409,9 @@ useAssistantStore.subscribe(state => {
   notifyTaskConnectionChange();
   const next = assistantScope(state.config);
   if (next !== observedScope) observeAuthority();
+  else if(state.reasoningEffort&&!state.config?.providers.find(row=>row.provider===state.config?.active)?.capabilities?.reasoningEfforts?.includes(state.reasoningEffort)){
+    saveAssistantEffort(effortScope(state.config),undefined);
+    useAssistantStore.setState({reasoningEffort:undefined,items:[...state.items,{id:++nextItem,kind:'notice' as const,text:'선택한 추론 강도를 현재 모델이 지원하지 않아 모델 기본값으로 되돌렸습니다.'}].slice(-200)});
+  }
 });
 subscribeProjectContext(observeAuthority);

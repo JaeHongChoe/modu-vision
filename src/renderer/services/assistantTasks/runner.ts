@@ -1,5 +1,6 @@
 import { ACTION_CATALOG, validateTaskPlan } from './catalog';
-import type { AssistantTask, TaskActionResult, TaskControl, TaskEvent, TaskStep } from './types';
+import type { AssistantTask, TaskActionResult, TaskControl, TaskEvent, TaskStep,TaskQualityAssessment } from './types';
+import {EXECUTION_POLICY_VERSION} from './types';
 
 export interface TaskRunnerDeps {
   read(id: string): Promise<AssistantTask>;
@@ -10,6 +11,8 @@ export interface TaskRunnerDeps {
   execute(step: TaskStep, control: TaskControl): Promise<TaskActionResult>;
   reconcile?(step: TaskStep, control: TaskControl): Promise<TaskActionResult>;
   onChange(task: AssistantTask): void;
+  /** Runs only after the evaluation receipt is durable, before the next planned side effect. */
+  afterStep?(task:AssistantTask,step:TaskStep):Promise<TaskQualityAssessment|void>;
 }
 
 type EventFields = Omit<TaskEvent, 'expected_revision' | 'binding'>;
@@ -19,7 +22,7 @@ const stable = (value: unknown): string => JSON.stringify(value, (_key, item: un
   if (item && typeof item === 'object' && !Array.isArray(item)) return Object.fromEntries(Object.entries(item).sort(([a],[b]) => a.localeCompare(b)));
   return item;
 });
-const planIdentity = (task: AssistantTask) => stable({id:task.id,goal:task.goal,hash:task.plan_sha256,steps:task.steps.map(({id,action,args,label})=>({id,action,args,label})),approval:task.approval});
+const planIdentity = (task: AssistantTask) => stable({id:task.id,goal:task.goal,hash:task.plan_sha256,steps:task.steps.map(({id,action,args,label})=>({id,action,args,label})),approval:task.approval,authorization:task.authorization??null});
 const terminal = (task: AssistantTask) => task.status === 'completed' || task.status === 'failed';
 const activeStep = (task: AssistantTask) => task.steps.find(step => step.id === task.current_step_id) ?? task.steps.find(step => ['running','uncertain','waiting_job','waiting_human'].includes(step.status));
 const errorMessage = (error: unknown) => error instanceof Error ? error.message : '실행 응답을 확인하지 못했습니다.';
@@ -97,10 +100,17 @@ export class AssistantTaskRunner {
 
   private valid(task: AssistantTask): boolean {
     try {
+      const grant=task.authorization;
+      const authorized=Boolean(grant&&!task.approval&&['user_request','oneclick'].includes(grant.source)
+        &&grant.policy_version===EXECUTION_POLICY_VERSION&&grant.plan_sha256===task.plan_sha256
+        &&grant.binding&&grant.authorized_at&&typeof grant.scope?.workspace_id==='string'&&grant.scope.workspace_id.trim()
+        &&typeof grant.scope?.actor_id==='string'&&grant.scope.actor_id.trim()
+        &&stable(grant.allowed_steps)===stable(task.steps.map(step=>step.id)));
+      const approved=Boolean(task.approval&&task.approval.plan_sha256===task.plan_sha256&&task.approval.binding&&task.approval.confirmed_at);
       validateTaskPlan({goal:task.goal,binding:task.binding,steps:task.steps.map(({action,args,label})=>({action,args,label}))});
       if (task.schema_version !== 1 || !Number.isInteger(task.revision) || task.revision < 1 || !/^[a-f0-9]{64}$/.test(task.plan_sha256)
         || !['draft','ready','running','waiting_human','waiting_job','paused','needs_reconciliation','failed','completed'].includes(task.status)
-        || !task.approval || task.approval.plan_sha256 !== task.plan_sha256 || !task.approval.binding || !task.approval.confirmed_at
+        || (!authorized&&!approved)
         || new Set(task.steps.map(step=>step.id)).size !== task.steps.length || task.steps.some(step=>!step.id)) return false;
       let unfinished = false, active: TaskStep | undefined;
       for (const step of task.steps) {
@@ -170,6 +180,8 @@ export class AssistantTaskRunner {
     const receipt = receiptCopy(result.receipt);
     if (result.kind === 'needs_reconciliation' || !receipt)
       return this.uncertain(saved,result.message || '시작한 작업의 저장 결과를 다시 확인해야 합니다.',receipt);
+    if(result.kind==='completed'&&task.authorization&&this.deps.afterStep&&['evaluate_model','evaluate_flow'].includes(step.action)&&typeof receipt.evaluation_id==='string')
+      receipt.quality_assessment={status:'pending',evaluation_id:receipt.evaluation_id,decision_source:'policy'};
     const changesBinding = ACTION_CATALOG.find(row=>row.id===step.action)?.changesBinding === true;
     let bindingAfter: string | undefined;
     if ((result.kind === 'completed' || result.kind === 'waiting_job') && changesBinding
@@ -188,11 +200,27 @@ export class AssistantTaskRunner {
       // A queued pause can turn running into uncertain after recordResult's first read. Select the transition only
       // after this serialized read so the committed receipt is accepted without ever retrying the actual action.
       const type = reconciliation || active.status !== 'running' ? 'reconcile_step' : wait ? 'wait_step' : 'complete_step';
-      return {type,step_id:step.id,attempt_id:step.attempt_id ?? undefined,receipt,
+      return {type,step_id:step.id,attempt_id:step.attempt_id ?? undefined,receipt:{...receipt,...(result.reasonCode?{reason_code:result.reasonCode}:{})},
         ...(result.message?{message:result.message}:{}),...(wait?{wait_kind:wait}:{}),...(bindingAfter?{binding_after:bindingAfter}:{})};
     });
+    const finished=written.task.steps.find(row=>row.id===step.id);
+    if(finished?.status==='completed'&&!this.stopped&&written.task.status!=='paused')return this.qualify(written.task,finished);
     // If persistence is still unresolved, leave the intent in place for a later reconciliation; never execute again.
     if (written.recovered && !['completed','waiting_human','waiting_job'].includes(written.task.steps.find(row=>row.id===step.id)?.status || '')) return written.task;
+    return written.task;
+  }
+
+  private async qualify(task:AssistantTask,step:TaskStep):Promise<AssistantTask>{
+    if(!this.deps.afterStep)return task;
+    const result=await this.deps.afterStep(clone(task),clone(step));
+    if(!task.authorization||!['evaluate_model','evaluate_flow'].includes(step.action)||typeof step.receipt?.evaluation_id!=='string')return task;
+    if(!result||!/^quality_[a-f0-9]{32}$/.test(result.assessment_id)||result.evaluation_id!==step.receipt.evaluation_id
+      ||result.decision_source!=='policy'||!['qualified','not_qualified','input_needed'].includes(result.status))
+      throw new Error('품질 판정의 저장된 결과를 확인하지 못했습니다. 평가를 반복하지 않고 판정 결과만 다시 확인합니다.');
+    const written=await this.post({type:'quality_result',step_id:step.id,attempt_id:step.attempt_id??undefined,assessment_id:result.assessment_id});
+    const stored=written.task.steps.find(row=>row.id===step.id)?.receipt?.quality_assessment as {assessment_id?:unknown;status?:unknown}|undefined;
+    if(stored?.assessment_id!==result.assessment_id||stored.status==='pending')
+      throw new Error('품질 판정 결과의 작업 기록 저장을 확인하지 못했습니다. 평가를 반복하지 않고 판정 저장만 다시 확인합니다.');
     return written.task;
   }
 
@@ -201,8 +229,21 @@ export class AssistantTaskRunner {
     // A failed read cannot establish whether the last action finished. Let the
     // controller expose the error and stop polling instead of reporting stale state.
     task=await this.read();
-    if (task.status === 'draft' || terminal(task) || task.status === 'paused' || task.status === 'waiting_human') return task;
+    if (task.status === 'draft' || task.status==='failed' || task.status === 'paused' || task.status === 'waiting_human') return task;
     if (!this.valid(task)) return task;
+    // The completed evaluation plus this marker is durable pending postprocessing. A reload retries only
+    // its idempotent qualification, never the already-completed inference or a later dependent action.
+    if(task.authorization&&this.deps.afterStep){
+      for(const step of task.steps){
+        const quality=step.receipt?.quality_assessment as {status?:unknown}|undefined;
+        if(step.status==='completed'&&['evaluate_model','evaluate_flow'].includes(step.action)&&typeof step.receipt?.evaluation_id==='string'
+          &&(!quality||quality.status==='pending')){
+          if(this.stopped||!this.current(task))return task;
+          task=await this.qualify(task,step);
+        }
+      }
+    }
+    if(terminal(task))return task;
     // Each iteration consumes one of at most 24 immutable steps; waiting always returns to durable storage.
     for (let count=0; count<24; count++) {
       task=await this.read();

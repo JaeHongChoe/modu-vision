@@ -106,3 +106,13 @@ test('local signout notice survives the authority and account removal returned b
 test('polling stops after the pending connection becomes connected',()=>{
  const h=harness({accounts:[],active:null,encryptionAvailable:true,status:'waiting'});h.render();assert.equal(h.timers.size,1);h.setChat({accounts:[account()],active:'opaque-a',encryptionAvailable:true,status:'connected'});h.render();assert.equal(h.timers.size,0);
 });
+
+
+test('reasoning selector offers only model-supported values and invokes the explicit preference action',()=>{
+ const h=harness({accounts:[account({model:'chosen',capabilities:{imageInput:true,reasoningEfforts:['low','high'],source:'catalog'}})],active:'opaque-a',encryptionAvailable:true,status:'connected'});
+ h.state.setReasoningEffort=value=>h.calls.push(['effort',value]);h.state.reasoningEffort='high';
+ const tree=h.render(),picker=nodes(tree).find(n=>n.type==='select'&&n.props['aria-label']==='추론 강도');assert.ok(picker);
+ assert.equal(picker.props.value,'high');assert.deepEqual(nodes(picker).filter(n=>n.type==='option').map(n=>n.props.value),['','low','high']);
+ picker.props.onChange({target:{value:'low'}});assert.deepEqual(h.calls,[['effort','low']]);
+ picker.props.onChange({target:{value:'max'}});assert.equal(h.calls.length,1);
+});

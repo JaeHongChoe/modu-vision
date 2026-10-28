@@ -77,7 +77,9 @@ def load_checkpoint_and_reconstruct_model(
             with open(meta_file, "r", encoding="utf-8") as f:
                 sidecar = json.load(f)
         except (OSError, ValueError):
-            pass
+            if ckpt.get("input_recipe"):
+                raise ValueError("Recipe-bound checkpoint metadata is unreadable")
+            sidecar = ckpt
         else:
             def canonical_task(value):
                 clean = str(value).strip().lower()
@@ -87,6 +89,8 @@ def load_checkpoint_and_reconstruct_model(
             meta = {**meta, **sidecar}
 
     task = meta.get("task", "classification").lower().strip()
+    from backend.engine.input_preparation import saved_recipe
+    saved_recipe(sidecar if meta_file.is_file() else ckpt, ckpt, task)
     classes = meta.get("classes", ["OK", "Defect"])
     anomaly_obj = None
 
@@ -364,7 +368,7 @@ def load_config(config_path: str = "config.json") -> dict:
         return json.load(f)
 
 
-def preprocess_image(image_input, target_size=(256, 256), mean=None, std=None):
+def preprocess_image(image_input, target_size=(256, 256), mean=None, std=None, input_recipe=None, task="classification", with_geometry=False):
     if mean is None:
         mean = [0.485, 0.456, 0.406]
     if std is None:
@@ -386,8 +390,14 @@ def preprocess_image(image_input, target_size=(256, 256), mean=None, std=None):
 
     orig_h, orig_w = img.shape[:2]
     w_t, h_t = target_size
-    resized = cv2.resize(img, (w_t, h_t), interpolation=cv2.INTER_LINEAR)
-    rgb = cv2.cvtColor(resized, cv2.COLOR_BGR2RGB).astype(np.float32) / 255.0
+    geometry = None
+    if input_recipe:
+        from input_preparation import prepare_input
+        rgb, _, geometry = prepare_input(cv2.cvtColor(img, cv2.COLOR_BGR2RGB), input_recipe, task=task, image_size=target_size)
+        rgb = rgb.astype(np.float32) / 255.0
+    else:
+        resized = cv2.resize(img, (w_t, h_t), interpolation=cv2.INTER_LINEAR)
+        rgb = cv2.cvtColor(resized, cv2.COLOR_BGR2RGB).astype(np.float32) / 255.0
 
     mean_arr = np.array(mean, dtype=np.float32).reshape(1, 1, 3)
     std_arr = np.array(std, dtype=np.float32).reshape(1, 1, 3)
@@ -395,7 +405,7 @@ def preprocess_image(image_input, target_size=(256, 256), mean=None, std=None):
 
     chw = np.transpose(norm, (2, 0, 1))
     batch = np.expand_dims(chw, axis=0)
-    return batch, orig_w, orig_h
+    return (batch, orig_w, orig_h, geometry) if with_geometry else (batch, orig_w, orig_h)
 
 
 __CLASS_SEMANTICS_RUNTIME__
@@ -430,6 +440,10 @@ class StandaloneInspector:
 
         self.model_path = model_path
         self.task = self.cfg.get("task", "classification").lower()
+        self.input_recipe = None
+        if self.cfg.get("input_recipe"):
+            from input_preparation import saved_recipe
+            self.input_recipe = saved_recipe(self.cfg, task=self.task)
         self.classes = self.cfg.get("classes", ["OK", "Defect"])
         self.class_roles = recorded_class_roles(self.cfg)
         self.resolution = tuple(self.cfg.get("image_size", [256, 256]))
@@ -640,10 +654,11 @@ class StandaloneInspector:
         t0 = time.perf_counter()
         if self.task == "patch_classification" or (self.task in ("anomaly", "anomaly_detection") and self.cfg.get("detector_type") == "dino_synthetic"):
             return self._inspect_native_patches(image_input, t0)
-        if self.task == "segmentation" and self.segmentation_mode == "tiled_full_image":
+        if self.task == "segmentation" and self.segmentation_mode == "tiled_full_image" and not getattr(self,"input_recipe",None):
             return self._inspect_tiled_segmentation(image_input, t0)
-        batch, orig_w, orig_h = preprocess_image(
-            image_input, target_size=self.resolution, mean=self.mean, std=self.std
+        batch, orig_w, orig_h, input_geometry = preprocess_image(
+            image_input, target_size=self.resolution, mean=self.mean, std=self.std,
+            input_recipe=getattr(self,"input_recipe",None), task=self.task, with_geometry=True
         )
 
         if self.model_format == "onnx":
@@ -676,6 +691,7 @@ class StandaloneInspector:
         # Calculate task-specific defect score
         requires_review = False
         review_reason = None
+        recipe_segmentation_ng = None
         detections = []
         if self.task == "classification":
             logits = raw_out[0]
@@ -733,12 +749,23 @@ class StandaloneInspector:
             # [1, C, H, W]
             probs = np.exp(raw_out[0] - np.max(raw_out[0], axis=0, keepdims=True))
             probs = probs / np.sum(probs, axis=0, keepdims=True)
+            if input_geometry:
+                from input_preparation import restore_mask
+                observed = restore_mask(np.ones(probs.shape[1:], dtype=np.uint8), input_geometry).astype(bool)
+                probs = np.stack([restore_mask(channel, input_geometry, continuous=True) for channel in probs])
+                probs[0, ~observed] = 1.0
             if probs.shape[0] > 1:
-                defect_score = float(np.max(probs[1]))
+                # A prepared input keeps all foreground channels, exactly as
+                # the flow's class evidence and the returned source mask do.
+                defect_score = float(np.max(probs[1:] if input_geometry else probs[1]))
             else:
                 defect_score = float(np.max(probs[0]))
             confidence = defect_score
-            pred_name = "Defect" if defect_score >= self.threshold else "OK"
+            if input_geometry:
+                recipe_mask = np.any(probs[1:] > self.threshold, axis=0).astype(np.uint8)
+                recipe_area = int(recipe_mask.sum())
+                recipe_segmentation_ng = recipe_area >= self.min_defect_area_px
+            pred_name = "Defect" if (recipe_segmentation_ng if recipe_segmentation_ng is not None else defect_score >= self.threshold) else "OK"
 
         elif "anomaly" in self.task:
             # Distance / feature norm
@@ -754,6 +781,8 @@ class StandaloneInspector:
             pred_name = "Defect" if defect_score >= self.threshold else "OK"
 
         verdict = "REVIEW" if requires_review else "NG" if defect_score >= self.threshold else "OK"
+        if recipe_segmentation_ng is not None:
+            verdict = "NG" if recipe_segmentation_ng else "OK"
 
         result = {
             "status": "success",
@@ -770,6 +799,15 @@ class StandaloneInspector:
         }
         if self.task == "detection":
             result["detections"] = detections
+        if self.task == "segmentation" and input_geometry:
+            mask = recipe_mask
+            import base64
+            _, encoded = cv2.imencode(".png", mask)
+            result["segmentation_mask"] = "data:image/png;base64," + base64.b64encode(encoded.tobytes()).decode("ascii")
+            result["defect_area_px"] = int(mask.sum())
+            result["min_defect_area_px"] = self.min_defect_area_px
+            result["mask_coordinate_space"] = "source_image"
+            result["input_geometry"] = input_geometry
         return result
 
 
@@ -888,6 +926,13 @@ def export_runtime_package(
                 raise ValueError('Synthetic anomaly model input must match its saved patch_size')
             if classes != ['good', 'anomaly']:
                 raise ValueError('Synthetic anomaly export requires saved good/anomaly classes')
+
+    from backend.engine.input_preparation import saved_recipe, bind_recipe
+    input_recipe = saved_recipe(meta, task=task)
+    if input_recipe:
+        if resolution is not None and int(resolution) != int(meta["image_size"][0]):
+            raise ValueError("Recipe-bound export must keep its saved model input size")
+        img_size = list(meta["image_size"])
 
     base_dir = (output_base_dir or EXPORTS_DIR).resolve()
     base_dir.mkdir(parents=True, exist_ok=True)
@@ -1011,6 +1056,9 @@ def export_runtime_package(
         "exported_from_checkpoint": ckpt_path.name,
         "exported_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
     }
+    config_data.update(bind_recipe(input_recipe, task))
+    if input_recipe:
+        (pkg_dir / "input_preparation.py").write_text(Path(__file__).with_name("input_preparation.py").read_text(encoding="utf-8"), encoding="utf-8")
     if calibration_applied:
         config_data["threshold_calibration"] = threshold_decision["threshold_calibration"]
     for key in ("backbone", "model_name", "architecture", "encoder_architecture", "encoder_frozen",
@@ -1048,6 +1096,11 @@ def export_runtime_package(
     with open(pkg_dir / "config.json", "w", encoding="utf-8") as f:
         json.dump(config_data, f, indent=2)
 
+    if input_recipe and task == "segmentation":
+        config_data["segmentation_mode"] = "resize_single"
+        with open(pkg_dir / "config.json", "w", encoding="utf-8") as stream:
+            json.dump(config_data, stream, indent=2)
+
     # 6. Standalone code templates
     with open(pkg_dir / "infer.py", "w", encoding="utf-8") as f:
         f.write(generate_standalone_infer_py())
@@ -1074,7 +1127,7 @@ def export_runtime_package(
 - Results contain individual patch boxes and scores. The runner does not infer a dense defect mask or execute other flowchart nodes.
 
 """
-    elif task == "segmentation":
+    elif task == "segmentation" and not input_recipe:
         inspection_scope = f"""## Inspection Scope
 - `infer.py` inspects the original image with overlapping {res}×{res} tiles (batch size 4, at most 1024 tiles).
 - It averages overlapping foreground probabilities, then returns NG when more than `optimal_threshold` covers at least `min_defect_area_px` pixels (default 8). These rules match the single full-image segmentation node in Step 5.
@@ -1086,6 +1139,15 @@ def export_runtime_package(
         inspection_scope = """## Inspection Scope
 - `infer.py` resizes one image to the configured model input size and runs that model once. It does not execute the Step 5 flowchart's ROI, crop, filter, or final review nodes.
 - The Step 6 single-forward benchmark does not include image I/O, camera, or PLC time.
+
+"""
+
+    if input_recipe:
+        inspection_scope = f"""## Inspection Scope
+- `infer.py` applies the checkpoint-bound ordered fixed input rules exactly once, then the saved {img_size[0]}x{img_size[1]} model input resize.
+- `config.json` retains input recipe SHA256 `{config_data['input_recipe_sha256']}` and the shared implementation. No train-only random augmentation is applied.
+- Segmentation mask evidence is restored to source-image coordinates; excluded ROI pixels are background. This package runs the model only, without additional Step 5 measurement or decision nodes.
+- Single-forward benchmark timing excludes image preparation, image I/O, camera and PLC time.
 
 """
 
@@ -1143,7 +1205,7 @@ The exported files include the model and client; a Python runtime and the listed
 
     # 7. Smoke Test Verification
     run_smoke_test_validation(model_output_path, format_clean,
-        tuple(img_size) if task == 'patch_classification' or dino_anomaly else res, task=task)
+        tuple(img_size) if task == 'patch_classification' or dino_anomaly or input_recipe else res, task=task)
 
     # 8. Build File Manifest
     manifest = []

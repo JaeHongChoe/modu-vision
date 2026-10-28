@@ -19,6 +19,7 @@ from backend.engine.runtime_process_control import runtime_state_lock
 
 POLICY_FIELDS = {'policy_id','revision','minimum_normal','minimum_defect',
                  'maximum_escape_rate','maximum_overkill_rate','maximum_review_rate'}
+CURRENT_POLICY_SELECTION=object()
 
 
 def validate_policy(policy):
@@ -62,11 +63,22 @@ def _record(project,revision):
     if not isinstance(revision,str) or not re.fullmatch(r'flowapproval_[0-9a-f]{32}',revision):
         raise ValueError('Invalid whole-flow approval revision')
     value=_read(_root(project)/(revision+'.json'))
+    policy=value.get('contract')=='whole_flow_policy_qualification_v1'
     if (value.get('revision_id')!=revision or value.get('project_id')!=project['id']
-            or value.get('schema_version')!=1 or value.get('contract')!='whole_flow_review_v1'
-            or value.get('holdout_reviewed') is not True or value.get('package_qualified') is not False
+            or value.get('schema_version')!=1 or value.get('contract') not in {'whole_flow_review_v1','whole_flow_policy_qualification_v1'}
+            or (not policy and value.get('holdout_reviewed') is not True) or value.get('package_qualified') is not False
             or value.get('device_accepted') is not False):
         raise ValueError('Whole-flow approval belongs to another subject')
+    if policy and (value.get('decision_source')!='policy' or value.get('policy_version')!='whole-flow-policy-qualification-v1'
+            or {'reviewer','holdout_reviewed','holdout_review_verified'} & value.keys()
+            or value.get('policy_sha256')!=digest(value.get('policy'))
+            or not isinstance(value.get('operations_policy'),dict)
+            or value.get('operations_policy',{}).get('approval_policy_authorized') is not True
+            or value.get('operations_policy',{}).get('auto_approve') is not True
+            or value.get('operations_policy',{}).get('flow_policy')!=value.get('policy')
+            or value.get('operations_policy',{}).get('revision')!=value.get('policy_revision')
+            or value.get('checks')!={'explicit_truth':True,'independent_cohort':True,'current_subject':True,'configured_policy_bounds':True}):
+        raise ValueError('Whole-flow policy qualification changed')
     return value
 
 
@@ -168,11 +180,14 @@ def approve_flow(project,*,evaluation_id,policy,reviewer,reason,holdout_reviewed
 
 def verified_approval(project,revision_id,*,accounts=None):
     verify_project_context(project);record=_record(project,revision_id)
-    _authority(project,record.get('authority_user_id'),accounts)
+    (_qualification_authority if record.get('decision_source')=='policy' else _authority)(project,record.get('authority_user_id'),accounts)
     if (record['source_dataset_path']!=project['source_dataset_dir']
             or record['labelset_id']!=project.get('active_labelset_id','default')):
         raise ValueError('Whole-flow approval source or labelset changed')
     evaluation=assess_flow(project,record['evaluation_id'],record['policy'])
+    if record.get('decision_source')=='policy' and record.get('metrics')!=evaluation['metrics']:
+        raise ValueError('Whole-flow measured metrics changed')
+    if record.get('decision_source')=='policy':_qualification_receipt(evaluation,record.get('authorization'))
     for saved,current in (('evaluation_sha256','record_sha256'),('graph_sha256','graph_sha256'),
                           ('cohort_sha256','cohort_sha256'),('truth_sha256','truth_sha256'),('model_sha256','model_sha256')):
         if record[saved]!=evaluation[current]:raise ValueError('Whole-flow approved subject changed')
@@ -225,8 +240,9 @@ def qualify_package(project,package,revision_id,*,device,accounts=None):
         model_approvals=authorize_release_action(package,project,action='stage')
         evidence=verify_release_evidence(package,device)
         if evidence['receipt_kind']=='measured_precision_cohort':
-            from backend.engine.whole_flow_runtime_review import verified_runtime_review
-            qualified=verified_runtime_review(project,package,revision_id,device=device,accounts=accounts)
+            from backend.engine.whole_flow_runtime_review import verified_runtime_review,qualify_runtime_flow_policy
+            qualification=qualify_runtime_flow_policy if record.get('decision_source')=='policy' else verified_runtime_review
+            qualified=qualification(project,package,revision_id,device=device,accounts=accounts)
             verified_approval(project,revision_id,accounts=accounts)
             if verify_release_evidence(package,device,expected_receipt_sha256=evidence['receipt_sha256'])!=evidence:
                 raise ValueError('Package changed during converted whole-flow qualification')
@@ -244,10 +260,85 @@ def qualify_package(project,package,revision_id,*,device,accounts=None):
         authorize_release_action(package,project,action='stage')
         if verify_release_evidence(package,device,expected_receipt_sha256=evidence['receipt_sha256'])!=evidence:
             raise ValueError('Package changed during whole-flow qualification')
-        return {'contract':'whole_flow_review_v1','revision_id':record['revision_id'],
+        return {'contract':record['contract'],'revision_id':record['revision_id'],
+                **({'decision_source':'policy','policy_version':record['policy_version']} if record.get('decision_source')=='policy' else {}),
                 'approval_sha256':record['record_sha256'],'graph_sha256':record['graph_sha256'],
                 'evaluation_sha256':record['evaluation_sha256'],'policy_sha256':digest(record['policy']),
                 'cohort_sha256':record['cohort_sha256'],'manifest_sha256':evidence['manifest_sha256'],
                 'parity_receipt_sha256':evidence['receipt_sha256'],'device':device,
                 'model_approval_revisions':model_approvals,'runtime_cohort_qualified':True,
                 'device_accepted':False}
+
+
+def _qualification_authority(project,user_id,accounts):
+    if user_id is not None and (accounts is None or accounts.project_role(user_id,project['id']) not in {'owner','reviewer','trainer'}):
+        raise ValueError('Policy qualification actor authority is unavailable or revoked')
+
+
+def _qualification_receipt(evaluation,authorization):
+    if (authorization or {}).get('kind')!='assistant_task':return
+    receipt=authorization.get('receipt') or {}
+    for key in ('evaluation_id','version_id','cohort_id','record_sha256','graph_sha256','model_sha256','truth_sha256'):
+        if receipt.get(key)!=evaluation.get(key):
+            raise ValueError('Authorized task receipt differs from persisted whole-flow '+key)
+
+
+def _qualify_flow_policy(project,*,evaluation_id,expected_revision=CURRENT_POLICY_SELECTION,authorization=None,
+                        authority_user_id=None,accounts=None,recheck=None):
+    """Apply configured process criteria to measured graph evidence, without a human attestation."""
+    from backend.engine.model_deployments import configured_policy, QualificationInputNeeded, policy_subject
+    try:
+        configured=configured_policy(project)
+        if not configured.get('flow_policy'):raise QualificationInputNeeded('Configure explicit whole-flow process quality criteria')
+        policy=validate_policy(configured['flow_policy'])
+        with _locked(project):
+            configured_policy(project,configured)
+            _qualification_authority(project,authority_user_id,accounts)
+            if recheck:recheck()
+            key=digest({'authorization':authorization,'evaluation_id':evaluation_id,
+                        'operations_policy':policy_subject(configured),'policy':policy})
+            # Every idempotent result is revalidated; no receipt supplies a shortcut.
+            for file in _root(project).glob('flowapproval_*.json'):
+                prior=_record(project,file.stem)
+                if prior.get('qualification_key')==key:
+                    return {'status':'qualified','decision_source':'policy','reasons':[],
+                            'qualification':verified_approval(project,prior['revision_id'],accounts=accounts)}
+            _cas(project,(_active(project) or {}).get('revision_id') if expected_revision is CURRENT_POLICY_SELECTION else expected_revision)
+            evaluation=assess_flow(project,evaluation_id,policy);_policy_revision(project,policy)
+            _qualification_receipt(evaluation,authorization)
+            record={'schema_version':1,'contract':'whole_flow_policy_qualification_v1',
+                    'decision_source':'policy','policy_version':'whole-flow-policy-qualification-v1',
+                    'revision_id':'flowapproval_'+uuid.uuid4().hex,'qualification_key':key,
+                    'project_id':project['id'],'source_dataset_path':project['source_dataset_dir'],
+                    'labelset_id':project.get('active_labelset_id','default'),'evaluation_id':evaluation_id,
+                    'evaluation_sha256':evaluation['record_sha256'],'version_id':evaluation['version_id'],
+                    'graph_sha256':evaluation['graph_sha256'],'cohort_sha256':evaluation['cohort_sha256'],
+                    'truth_sha256':evaluation['truth_sha256'],'model_sha256':evaluation['model_sha256'],
+                    'policy':policy,'policy_sha256':digest(policy),'policy_revision':configured['revision'],
+                    'operations_policy':policy_subject(configured),'authorization':authorization,
+                    'metrics':evaluation['metrics'],
+                    'checks':{'explicit_truth':True,'independent_cohort':True,'current_subject':True,'configured_policy_bounds':True},
+                    'authority_user_id':authority_user_id,'created_at':_now(),
+                    'package_qualified':False,'device_accepted':False}
+            record['record_sha256']=digest(record)
+            if recheck:recheck()
+            configured_policy(project,configured)
+            if assess_flow(project,evaluation_id,policy)['record_sha256']!=record['evaluation_sha256']:
+                raise ValueError('Whole-flow evaluation changed during policy qualification')
+            _qualification_authority(project,authority_user_id,accounts)
+            file=_root(project)/(record['revision_id']+'.json');atomic_json(file,record)
+            event={'schema_version':1,'event_id':uuid.uuid4().hex,'project_id':project['id'],
+                   'revision_id':record['revision_id'],'approval_sha256':record['record_sha256'],
+                   'decision_source':'policy','policy_version':record['policy_version'],'selected_at':_now(),
+                   'prior_revision_id':(_active(project) or {}).get('revision_id')}
+            event['record_sha256']=digest(event);atomic_json(_root(project)/'active.json',event)
+            return {'status':'qualified','decision_source':'policy','reasons':[],'qualification':record}
+    except QualificationInputNeeded as exc:return {'status':'input_needed','decision_source':'policy','reasons':[str(exc)]}
+    except (ValueError,OSError,KeyError,TypeError) as exc:return {'status':'not_qualified','decision_source':'policy','reasons':[str(exc)]}
+
+
+def qualify_flow_policy(project,*,evaluation_id,**options):
+    from backend.engine.model_deployments import persist_quality_assessment
+    result=_qualify_flow_policy(project,evaluation_id=evaluation_id,**options)
+    return persist_quality_assessment(project,subject_kind='flow',evaluation_id=evaluation_id,result=result,
+                                      authorization=options.get('authorization'))

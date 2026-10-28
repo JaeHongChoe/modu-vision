@@ -5,10 +5,10 @@
  * (Anthropic only accepts its replayed thinking blocks under an unchanged prefix). Read and navigate tools run at once;
  * a write tool stops the loop at its preview until the person confirms or declines in the panel; a forbidden tool is
  * answered "직접 하세요". Every provider call and every tool call is one line in the project's run log. An image
- * question is a single call without tools, so its pixels leave exactly once for the one confirmation the person gave.
+ * question may opt into bounded tool followups. Each stateless followup obtains a fresh one-shot grant for the same selected pixels; later questions retain only a note.
  *
  * Dependencies are injected (bridge, tools, context, log) so node tests drive it with fakes. */
-import type { AssistantBridge, AssistantError, AssistantImageInput, AssistantMessage, AssistantProviderId, AssistantToolCall } from '../../types/electron';
+import type { AssistantBridge, AssistantError, AssistantImageInput, AssistantMessage, AssistantProviderId, AssistantReasoningEffort, AssistantToolCall } from '../../types/electron';
 import { argumentSummary, canonicalJson, randomHex, sha256Hex, trimConversation } from './assistantContext';
 import { ToolRefusal, type AssistantToolRegistry, type ToolOutcome, type ToolPreview, type ToolTier } from './assistantTools';
 import {diagnosticError} from './assistantDiagnostics';
@@ -28,7 +28,7 @@ export type SessionEvent =
 export interface PendingWrite { call: AssistantToolCall; preview: ToolPreview; runId: string; binding: string }
 
 export interface SessionDeps {
-  bridge: Pick<AssistantBridge, 'send' | 'cancel' | 'beginRun' | 'endRun'>;
+  bridge: Pick<AssistantBridge, 'send' | 'cancel' | 'beginRun' | 'endRun'> & Partial<Pick<AssistantBridge,'imageIntent'>>;
   tools: AssistantToolRegistry;
   context(): Record<string, unknown>;
   /** Local authority only; never sent to the provider or run log. */
@@ -41,6 +41,8 @@ export interface SessionDeps {
   /** Controlled-fixture deadline; production uses the shared 15-second read deadline. */
   readTimeoutMs?: number;
 }
+
+export interface ConversationQuestionOptions {reasoningEffort?:AssistantReasoningEffort;allowImageTools?:boolean;context?:Record<string,unknown>;executionIntent?:boolean}
 
 interface Turn { version: number; scope: string; project: string }
 class StaleTurn extends Error {}
@@ -68,6 +70,9 @@ export class AssistantConversation {
   private inFlight: string | null = null;
   private image: AssistantImageInput | undefined;
   private imageQuestion = false;
+  private allowImageTools = false;
+  private reasoningEffort:AssistantReasoningEffort|undefined;
+  private executionIntent=false;
   private logWarned = false;
   private version = 0;
   private turn: Turn | null = null;
@@ -131,8 +136,8 @@ export class AssistantConversation {
     catch (cause) { if (this.deps.projectScope() === turn.project) this.logFailed(cause); }
   }
 
-  /** A new question. `image` is passed only after the person confirmed sending it; the call then carries no tools. */
-  async ask(text: string, image?: AssistantImageInput): Promise<void> {
+  /** A new question. The explicit Send action authorizes the selected image in this bounded turn; tool followups renew scoped grants. */
+  async ask(text: string, image?: AssistantImageInput, options:ConversationQuestionOptions={}): Promise<void> {
     const question = text.trim();
     if (!question || this.busy || this.pending || this.writing) return;
     const scope = this.deps.scope();
@@ -140,7 +145,8 @@ export class AssistantConversation {
     this.historyScope = scope;
     const turn = { version: ++this.version, scope, project: this.deps.projectScope() }; this.turn = turn;
     this.history = trimConversation(this.messages);
-    this.frozenContext = this.deps.context();
+    this.frozenContext = options.context ?? this.deps.context();
+    this.reasoningEffort=options.reasoningEffort;this.allowImageTools=options.allowImageTools===true;this.executionIntent=options.executionIntent===true;
     this.current = [{ role: 'user', text: question }];
     this.calls = 0;this.queue = [];this.image = image;this.imageQuestion = Boolean(image);this.logWarned = false;
     await this.loop(turn);
@@ -167,8 +173,15 @@ export class AssistantConversation {
         const requestId = `req_${randomHex(12)}`;
         this.inFlight = requestId;
         const messages = [...this.history, ...this.current];
+        let image=this.image;
+        if(image&&this.calls>1){
+          const grant=await this.deps.bridge.imageIntent?.({fileName:'현재 질문의 첨부 이미지',imageIdentity:image.imageIdentity,context:this.frozenContext});
+          this.check(turn);
+          if(!grant?.ok){this.emit({kind:'error',error:grant&&!grant.ok?grant.error:{code:'image_refused',reason:'이미지 문맥을 이어서 보내지 못했습니다.',action:'연결을 확인한 뒤 다시 질문하세요.'}});this.current=[];this.image=undefined;this.imageQuestion=false;return;}
+          image={...image,grantId:grant.grantId};
+        }
         const result = await this.deps.bridge.send({ requestId, context: this.frozenContext, messages,
-          tools: this.imageQuestion ? [] : this.deps.tools.specs(), ...(this.image && this.calls === 1 ? { image: this.image } : {}) });
+          tools: this.imageQuestion&&!this.allowImageTools ? [] : this.deps.tools.specs().filter(spec=>!this.executionIntent||this.deps.tools.tier(spec.name)!=='write'), ...(image?{image}:{}), ...(this.reasoningEffort?{reasoningEffort:this.reasoningEffort}:{}) });
         this.check(turn);
         this.inFlight = null;
         const lastUser = [...this.current].reverse().find(message => message.role === 'user') as { text: string } | undefined;
@@ -184,7 +197,7 @@ export class AssistantConversation {
           return;
         }
         if (result.text) this.emit({ kind: 'assistant', text: result.text });
-        if (this.imageQuestion && result.toolCalls.length) {
+        if (this.imageQuestion && !this.allowImageTools && result.toolCalls.length) {
           // An unsolicited provider call cannot turn one image confirmation into a tool-enabled conversation.
           this.current.push({role: 'assistant', text: result.text});
           this.emit({kind: 'notice', text: '이미지 질문에서는 도구를 실행하지 않습니다. 필요한 작업은 별도 질문으로 요청하세요.'});
@@ -231,6 +244,8 @@ export class AssistantConversation {
           content: call.argumentsError ? '인자를 JSON 객체로 읽지 못했습니다. 다시 호출하세요.' : '그런 도구는 없습니다. 목록의 도구만 쓰세요.' };
       } else if (tier === 'forbidden') {
         outcome = this.deps.tools.refusal(call.name);
+      } else if (tier === 'write' && this.executionIntent) {
+        outcome={ok:false,errorCode:'use_task_executor',summary:'작업 실행 계획으로 진행합니다.',content:'이 실행 요청은 propose_task로 앱 작업 실행기에 맡기세요. 직접 쓰기 도구를 재호출하지 마세요.'};
       } else if (tier === 'write') {
         try {
           const binding = this.deps.writeBinding();

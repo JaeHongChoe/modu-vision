@@ -46,7 +46,7 @@ export async function saveSingleModelFlow(jobId: string, folder: string, task: V
 }
 export async function evaluateSavedFlow(versionId: string, name: string, check: Fence = unrestricted, hooks?: {cohort?: (cohort: FlowEvaluationCohort) => Promise<void>; evaluated?: (evaluated: FlowEvaluation) => Promise<void>}) {
   check();
-  const cohort = await flowEvaluation.freeze(versionId, name);
+  const cohort = await flowEvaluation.freeze(versionId, name, 'folder-labels-v1');
   await hooks?.cohort?.(cohort);
   check();
   const evaluated = await flowEvaluation.run(versionId, cohort.cohort_id);

@@ -25,7 +25,7 @@ function fixture(){
  const computeStore=Object.assign(selector=>selector?selector(compute):compute,{getState:()=>compute});
  const dataset={folderPath:'',totalImages:0,sourceImages:0,split:{train:0,val:0,test:0},datasetKey:'',isLoading:false,isSplitting:false};
  const datasetStore=Object.assign(selector=>{const value={...dataset,images:[{image_id:'own-image',file_name:'image.png',file_path:state.project.source_dataset_dir+'/image.png'}]};return selector?selector(value):value;},{getState:()=>dataset});
- const training={jobId:'',status:'idle',preset:'default',recoverActiveJob:async()=>{},refreshCurrentJob:async()=>{}};
+ const training={inputRecipe:null,inputRecipeScope:null,inputRecipeSha256:null,jobId:'',status:'idle',preset:'default',recoverActiveJob:async()=>{},refreshCurrentJob:async()=>{}};
  const requests=[],allCalls=[];
  const prepared=()=>state.projectDir+'/dataset/rotated_detection/'+state.project.active_labelset_id+'/'+encodeURIComponent(state.project.source_dataset_dir)+'/prepared';
  const samples=()=>['train','val','test'].map((split,i)=>({image:split+'.png',split,label:'saved-'+state.project.id,box:{cx:80,cy:60,width:40,height:20,angle_deg:0},direction_deg:15+i}));
@@ -45,7 +45,7 @@ function fixture(){
  const program={automated:{capabilities:async()=>({tasks:{rotated_detection:cap}}),jobs:async()=>({jobs:[]})}};
  const mocks={
   react,'react/jsx-runtime':{jsx,jsxs:jsx,Fragment:'fragment'},'lucide-react':{},
-  '../../stores/useProjectStore':{useProjectStore:store},'../../stores/useDatasetStore':{useDatasetStore:datasetStore,readDatasetAuthority:()=> 'owned'},'../../stores/useTrainingStore':{useTrainingStore:()=>training},'../../stores/useComputeStore':{useComputeStore:computeStore},
+  '../../stores/useProjectStore':{useProjectStore:store},'../../stores/useDatasetStore':{useDatasetStore:datasetStore,readDatasetAuthority:()=> 'owned'},'../../stores/useTrainingStore':{useTrainingStore:Object.assign(selector=>selector?selector(training):training,{getState:()=>training})},'../../stores/useComputeStore':{useComputeStore:computeStore},
   '../../services/api':{api:{},request,getApiPersistenceIdentity:()=> 'local'},
   '../../services/specializedApi':{specializedApi:{rotated:{models:async()=>({models:[]}),manifest:async p=>manifest(p)}}},
   '../../services/modelExecution':{},
@@ -59,7 +59,7 @@ function fixture(){
   '../wizard/TaskChangeImpactDialog':{taskPreviewScope:()=> 'scope'},'../common/errorActions':{},'./trainingLog':{},
   './TrainingSchedulingSettings':{defaultTrainingScheduling:{},trainingSchedulingOptions:()=>({})},'./useSelectedCoreJob':{useSelectedCoreJob:()=>({job:null,error:null})}
  };
- for(const name of ['../common/OperatorGuidanceBanner','../common/GuardrailBanner','../common/LedAnnunciator','./OscilloscopeLossCurve','./HardwareTelemetryPanel','./RecipePresetSelector','./OCRWorkbench','./DefectGANWorkbench','./EnhancementWorkbench','./ModelFamilyCatalog','./DinoSyntheticOptions','./PatchClassificationWorkbench','./RotationWorkbench','./TrainingPreparationPanel','./JobProgressView','../runtime/OperationsObservabilityPanel','./ModelExecutionEvidence'])mocks[name]={};
+ for(const name of ['../common/OperatorGuidanceBanner','../common/GuardrailBanner','../common/LedAnnunciator','./OscilloscopeLossCurve','./HardwareTelemetryPanel','./RecipePresetSelector','./OCRWorkbench','./DefectGANWorkbench','./EnhancementWorkbench','./ModelFamilyCatalog','./DinoSyntheticOptions','./PatchClassificationWorkbench','./RotationWorkbench','./TrainingPreparationPanel','./TrainingInputPreparation','./JobProgressView','../runtime/OperationsObservabilityPanel','./ModelExecutionEvidence'])mocks[name]={};
  const {WarmStartSelector}=load('WarmStartSelector.tsx',mocks);mocks['./WarmStartSelector']={WarmStartSelector};
  const {AutoDLWorkbench}=load('AutoDLWorkbench.tsx',mocks);mocks['./AutoDLWorkbench']={AutoDLWorkbench};
  const {RotatedBoxFitting}=load('RotatedBoxFitting.tsx',mocks);mocks['./RotatedBoxFitting']={RotatedBoxFitting};

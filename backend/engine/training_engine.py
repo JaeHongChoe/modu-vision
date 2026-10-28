@@ -39,6 +39,8 @@ ACTIVE={'queued','running','stopping'}
 for _task in ('classification','patch_classification','segmentation'):
     CONFIG_FIELDS[_task].update({'train_mode','partial_blocks','use_amp','seed'})
 CONFIG_FIELDS['ocr'].add('recipe')
+for _task in TASKS:
+    CONFIG_FIELDS[_task].add('input_recipe')
 _EVENTS={}
 _LOCK=threading.RLock()
 logger=logging.getLogger(__name__)

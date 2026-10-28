@@ -30,6 +30,7 @@ function fixture() {
       if (name.endsWith('/useDatasetStore')) return { useDatasetStore: hook(dataset) };
       if (name.endsWith('/useTrainingStore')) return { useTrainingStore: hook(training) };
       if (name.endsWith('/useComputeStore')) return { useComputeStore: hook(compute) };
+      if (name.endsWith('/useAssistantTaskStore')) return {startOneclickTask:async()=>null,pauseOneclickTask:async()=>{}};
       if (name.endsWith('/useEvaluationStore') || name.endsWith('/useFlowchartStore')) return {};
       if (name.endsWith('/useAnnotationStore')) return { useAnnotationStore: hook({ reviewerName: '' }) };
       if (name.endsWith('/services/api')) return { api: {}, subscribeProjectContext: () => () => {} };

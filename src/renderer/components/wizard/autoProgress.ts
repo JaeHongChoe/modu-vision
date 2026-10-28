@@ -28,7 +28,7 @@ export const ACTION_TEXT: Record<AutoAction, string> = {
   inspect: '시험 이미지 검사 (6단계)',
 };
 /** Where the run always stops, said before it starts. */
-export const PERSON_STOPS = ['프로젝트와 이미지 폴더 고르기', '정답 라벨 그리기', '초안 검토와 채택', '불량을 놓친 모델 (틀린 이미지를 보고 그대로 이어 갈 수 있음)', '평가 정답 확인', '승인·패키지·배포'];
+export const PERSON_STOPS = ['프로젝트·이미지 폴더가 없을 때', '사용할 학습 라벨이 없을 때', '클래스·분할·출처가 맞지 않을 때', '새 운영 대상이나 권한 입력이 필요할 때'];
 
 const START_TRAINING = new Set(['학습 시작 버튼으로 이동 (3단계)', '학습 결과 평가 (4단계)']);
 const SPLIT = new Set(['분할 다시 적용 (1단계)', '학습·시험 분할 확인 (1단계)']);
@@ -52,7 +52,7 @@ export function missedStillShown(missed: MissedDefects, ctx: Snapshot | null): b
  *  with the result they saw: the same test images with no more defects missed. Another result stops the run again. */
 export type AutoChoices = { deferDrafts?: boolean; acceptMissed?: MissedDefects };
 
-export function decide(ctx: Snapshot, choices: AutoChoices = {}): AutoDecision {
+export function decide(ctx: Snapshot, _choices: AutoChoices = {}): AutoDecision {
   const { stage, status, nextAction: next } = ctx;
   const label = next.label;
   const stop = (reason: string, step = next.step, target = next.target): AutoDecision => ({ kind: 'stop', reason, step, ...(target ? { target } : {}) });
@@ -65,7 +65,7 @@ export function decide(ctx: Snapshot, choices: AutoChoices = {}): AutoDecision {
   if (stage === 2) {
     if (next.target === 'draft-review-queue') {
       const confirmed = ctx.progress && 'confirmed' in ctx.progress ? ctx.progress.confirmed : 0;
-      if (choices.deferDrafts && confirmed > 0 && status !== 'blocked') return { kind: 'advance', step: 3 };
+      if (confirmed > 0 && status !== 'blocked') return { kind: 'advance', step: 3 };
       // With labels already confirmed the stop offers that choice; with none there is nothing to train on yet.
       return { ...stop(`${ctx.blocker || '초안 검토 대기'} · 초안 채택은 사람이 합니다.`), ...(confirmed > 0 && status !== 'blocked' ? { deferDrafts: confirmed } : {}) } as AutoDecision;
     }
@@ -91,10 +91,7 @@ export function decide(ctx: Snapshot, choices: AutoChoices = {}): AutoDecision {
     // The model missed test defects: fixing labels, lowering the score, retraining or going on as it is is the person's
     // call. Like the draft stop, going on applies to this run only.
     if (label === MISSED_IMAGES) {
-      const seen = ctx.progress && 'escapes' in ctx.progress ? { escapes: ctx.progress.escapes, samples: ctx.progress.samples } : null;
-      const accepted = choices.acceptMissed;
-      if (seen && accepted && seen.samples === accepted.samples && seen.escapes <= accepted.escapes) return { kind: 'advance', step: 5 };
-      return { ...stop(`${ctx.blocker || '모델이 시험 이미지의 불량을 놓쳤습니다'} · 놓친 이미지를 보고 고칠지, 이대로 갈지는 사람이 정합니다.`), ...(seen && seen.escapes > 0 ? { missed: seen } : {}) } as AutoDecision;
+      return { kind: 'advance', step: 5 };
     }
     if (label === READ_RESULTS) return status === 'blocked' ? stop(`${ctx.blocker || label} · 4단계의 새로고침으로 다시 읽으세요.`) : { kind: 'wait', refresh: true };
     if (label === '시험 이미지로 평가하기 (4단계)') return { kind: 'act', action: 'evaluate' };

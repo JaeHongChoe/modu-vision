@@ -299,3 +299,11 @@ not fall back to a bare image URL. Two ZIP exports stream through a fixed POST
 form in a hidden download target, keeping the ticket and CSRF value out of the
 download URL. Responses disable caching and referrers, and diagnostics redact the
 image reference. These controls do not qualify actual browser download behavior.
+
+## 2026-10-29 continuous execution and input preparation
+
+The scoped automatic mode replaces routine plan/review checkpoints for ready data and labels. Legacy/manual plans retain explicit confirmation, while policy decisions keep their own provenance instead of manufacturing human review. Required inputs, failures, active jobs, explicit pauses and unknown outcomes retain distinct visible states.
+
+Stage3 adds TrainingInputPreparation as the first training section; the existing six-stage navigation and Stage5 inspection/decision role remain. It uses workspace surfaces/buttons and native bounded number/select fields, with a real source-bound before/after preview. No new palette or UI library is introduced.
+
+The assistant adds local single-image attachment/paste/current-image selection, thumbnail/removal, external recipient disclosure and supported-model reasoning effort. The sidebar remains nonmodal, keyboard reachable and 13px minimum. Native effort dropdown geometry is intentionally platform-owned, like existing account/model controls. No unsupported model or API provider is silently selected.

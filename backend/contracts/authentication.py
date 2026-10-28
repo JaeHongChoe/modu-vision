@@ -120,6 +120,8 @@ def permission_action(path, method):
     if path.startswith(('/api/annotations/','/api/label-candidates/','/api/label-suggestions/','/api/dataset/metadata/','/api/dataset/formats/','/api/data-workbench/')):return 'label.write'
     if path=='/api/model-execution/recipes' or path.startswith(('/api/training/','/api/engine/','/api/automated-training/','/api/patch-classification/','/api/rotation/','/api/ocr/','/api/rotated-detection/','/api/enhancement/','/api/defect-gan/','/api/evaluation/','/api/training-workspace/')):return 'training.execute'
     if path.startswith(('/api/flowchart/','/api/inspections/','/api/export/','/api/geometry/','/api/flow-workspace/','/api/flow-evaluations')):return 'flow.execute'
+    if path=='/api/model-operations/qualify-model':return 'training.execute'
+    if re.fullmatch(r'/api/assistant-tasks/task_[a-f0-9]{32}/quality',path):return 'training.execute'
     if path=='/api/image-truth' or path.startswith(('/api/image-truth/','/api/model-deployments/','/api/runtime-services/','/api/model-operations/','/api/fleet/')):return 'review.approve'
     if path.startswith('/api/compute/jobs'):return 'compute.execute'
     return 'project.manage'

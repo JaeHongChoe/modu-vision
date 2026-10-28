@@ -1,0 +1,135 @@
+{
+  "schema": "modu-vision.action-source-portability-provenance-delta/v1",
+  "scope": "Current training input recipe source declaration; three previous native DINO click dimensions remain historical",
+  "source_declaration_only": true,
+  "historical_acceptance_rebound": false,
+  "historical_receipts_modified": false,
+  "new_GUI_executions": [],
+  "newly_verified_scenarios": [],
+  "parent_completion_credit": false,
+  "whole_current_GUI_suite_pending": true,
+  "base_commit": "5dad9852a0f5f407cbb4a7ae4cdda250459e7504",
+  "historical_registry_sha256": "46098cc82b7cfee5a4f2b4a67f9dd196c48eae01386d8a2e1ea5bacebc2c97a6",
+  "current_source_table_changes": [
+    {
+      "relative": "src/renderer/components/training/TrainingController.tsx",
+      "historical_declaration_sha256": "733e81e5b2070ff6ea485c8097311f0e5a9ab02cee102a767afcfe32dec92ed2",
+      "current_declaration_sha256": "ee5e6eb4a38a68c179ed8c21c9eb69dd403c2e32b34c26de862333fff390d456"
+    }
+  ],
+  "historical_GUI_dimensions": [
+    {
+      "feature": "F025",
+      "action": "dino-classification-native-start",
+      "dimension": "success",
+      "historical_state": "verified",
+      "historical_dimension": {
+        "state": "verified",
+        "evidence": [
+          {
+            "task": "S4-01",
+            "source_sha": "0eadf8c9ee87e894597286fdc85bed625771e132",
+            "kind": "click",
+            "action": "선택 설정으로 학습 시작",
+            "expected": "Start actual DINO CPU training only after valid model input dimensions.",
+            "observed": "Native65px input disabled start; valid64px submitted the exact two-epoch CPU/head-only/pretrained recipe. Actual training completed with three synthetic classes and matching original pretrained SHA.",
+            "reviewer": "Automated execution reviewer review of exact observed control; human model quality, independent and release acceptance pending",
+            "test": "scripts/e2e/dino-classification-closure.spec.ts::native authentic three-class DINO classification learns evaluates reopens and exports parity",
+            "receipt": "2026-10-07-app-execution-4d092424b43e11540f90.json",
+            "receipt_sha256": "079adfc76deef6ff64e2b1c39d66328e0574288e6d504eb0d62dc6c6b5d163a9",
+            "artifacts": [
+              {
+                "id": "screenshot-0",
+                "sha256": "f189852df1924e27613e506d3c8b6a4deea9cac191f857fa761320a3a87396ec"
+              },
+              {
+                "id": "screenshot-1",
+                "sha256": "239c060eab448f393019f5d939543ef842083eef3f20cbb2563b77173e3e13a1"
+              }
+            ]
+          }
+        ]
+      },
+      "current_state": "pending",
+      "reason": "Shared saved input recipes change the training-start payload; current native DINO execution was not repeated."
+    },
+    {
+      "feature": "F025",
+      "action": "dino-classification-native-start",
+      "dimension": "invalid",
+      "historical_state": "verified",
+      "historical_dimension": {
+        "state": "verified",
+        "evidence": [
+          {
+            "task": "S4-01",
+            "source_sha": "0eadf8c9ee87e894597286fdc85bed625771e132",
+            "kind": "click",
+            "action": "선택 설정으로 학습 시작",
+            "expected": "Start actual DINO CPU training only after valid model input dimensions.",
+            "observed": "Native65px input disabled start; valid64px submitted the exact two-epoch CPU/head-only/pretrained recipe. Actual training completed with three synthetic classes and matching original pretrained SHA.",
+            "reviewer": "Automated execution reviewer review of exact observed control; human model quality, independent and release acceptance pending",
+            "test": "scripts/e2e/dino-classification-closure.spec.ts::native authentic three-class DINO classification learns evaluates reopens and exports parity",
+            "receipt": "2026-10-07-app-execution-4d092424b43e11540f90.json",
+            "receipt_sha256": "079adfc76deef6ff64e2b1c39d66328e0574288e6d504eb0d62dc6c6b5d163a9",
+            "artifacts": [
+              {
+                "id": "screenshot-0",
+                "sha256": "f189852df1924e27613e506d3c8b6a4deea9cac191f857fa761320a3a87396ec"
+              },
+              {
+                "id": "screenshot-1",
+                "sha256": "239c060eab448f393019f5d939543ef842083eef3f20cbb2563b77173e3e13a1"
+              }
+            ]
+          }
+        ]
+      },
+      "current_state": "pending",
+      "reason": "Shared saved input recipes change the training-start payload; current native DINO execution was not repeated."
+    },
+    {
+      "feature": "F027",
+      "action": "dino-segmentation-native-start",
+      "dimension": "success",
+      "historical_state": "verified",
+      "historical_dimension": {
+        "state": "verified",
+        "evidence": [
+          {
+            "task": "S4-02",
+            "source_sha": "0eadf8c9ee87e894597286fdc85bed625771e132",
+            "kind": "click",
+            "action": "선택 설정으로 학습 시작",
+            "expected": "Train real DINO dense segmentation using explicit CPU and input recipe.",
+            "observed": "Native two-epoch training completed with authentic pretrained SHA and paired mask augmentation; actual pixel metrics and original-coordinate tiled package controls passed. Human mask truth/quality unapproved.",
+            "reviewer": "Automated execution reviewer review of exact observed control; human model quality, independent and release acceptance pending",
+            "test": "scripts/e2e/dino-segmentation-closure.spec.ts::native authentic DINO dense masks train evaluate tile Blob reopen and export",
+            "receipt": "2026-10-07-app-execution-bef7a8ebe227d39ccc1a.json",
+            "receipt_sha256": "d01f64cca4df8b68f1be1b6578eb90549387fe6798cddd05a84a28d171fe9953",
+            "artifacts": [
+              {
+                "id": "screenshot-0",
+                "sha256": "cedf6f4d99219642f8f3bed251c0c976bb541bfefaf6bf760036568c7f7be098"
+              },
+              {
+                "id": "screenshot-1",
+                "sha256": "98043c5c215699d1a082ebb1b80e23619aca4bffdc4309bd05a46a0874f733ca"
+              }
+            ]
+          }
+        ]
+      },
+      "current_state": "pending",
+      "reason": "Shared saved input recipes change the training-start payload; current native DINO execution was not repeated."
+    }
+  ],
+  "current_action_accounting": {
+    "actions": 207,
+    "verified_scenarios": 1011,
+    "pending_scenarios": 438,
+    "accepted_features": 0
+  },
+  "separate_current_controlled_evidence": "docs/verification/2026-10-29-continuous-assistant-training.md",
+  "separate_evidence_boundary": "Controlled browser and CPU tests are not native DINO training, field quality or target device acceptance."
+}

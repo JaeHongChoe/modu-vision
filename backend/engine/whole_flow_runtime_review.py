@@ -110,11 +110,16 @@ def _selected(project,subject):
     if not isinstance(identifier,str) or not re.fullmatch('runtimeflow_[0-9a-f]{32}',identifier):
         raise ValueError('Invalid selected runtime review revision')
     record=base._read(_root(project)/(identifier+'.json'))
+    automated=record.get('contract')=='whole_flow_runtime_policy_qualification_v1'
     if (record.get('revision_id')!=identifier or record.get('schema_version')!=1
-            or record.get('contract')!='whole_flow_runtime_review_v1' or record.get('project_id')!=project['id']
-            or record.get('holdout_reviewed') is not True or record.get('device_accepted') is not False
+            or record.get('contract') not in {'whole_flow_runtime_review_v1','whole_flow_runtime_policy_qualification_v1'} or record.get('project_id')!=project['id']
+            or not automated and record.get('holdout_reviewed') is not True or record.get('device_accepted') is not False
             or active.get('approval_sha256')!=record['record_sha256']):
         raise ValueError('Selected runtime review belongs to another subject')
+    if automated and (record.get('decision_source')!='policy' or record.get('policy_version')!='whole-flow-runtime-policy-qualification-v1'
+            or {'reviewer','holdout_reviewed','holdout_review_verified'} & record.keys()
+            or record.get('checks')!={'measured_precision_cohort':True,'same_test_cohort':True,'configured_policy_bounds':True}):
+        raise ValueError('Converted policy qualification changed')
     return record
 
 
@@ -148,13 +153,39 @@ def verified_runtime_review(project,package,revision_id,*,device,accounts=None):
     record=_selected(project,subject)
     if record is None or record['subject']!=subject:
         raise ValueError('A separate full-flow runtime review is missing or stale')
-    base._authority(project,record.get('authority_user_id'),accounts)
-    return {'contract':'whole_flow_runtime_review_v1','revision_id':revision_id,
+    automated=record.get('decision_source')=='policy'
+    (base._qualification_authority if automated else base._authority)(project,record.get('authority_user_id'),accounts)
+    return {'contract':record['contract'],'revision_id':revision_id,
+        **({'decision_source':'policy','policy_version':record['policy_version']} if automated else {}),
         **{k:subject[k] for k in ('approval_sha256','graph_sha256','evaluation_sha256','policy_sha256',
             'cohort_sha256','manifest_sha256','runtime_acceptance_sha256','device','model_approval_revisions')},
         'runtime_review_revision_id':record['revision_id'],'runtime_review_sha256':record['record_sha256'],
         'candidate_metrics_sha256':digest(subject['metrics']),
         'runtime_cohort_qualified':True,'device_accepted':False}
+
+
+def qualify_runtime_flow_policy(project,package,revision_id,*,device,accounts=None):
+    """Persist only after checking actual converted outputs against the qualified base process policy."""
+    with base._locked(project):
+        reviewed=base.verified_approval(project,revision_id,accounts=accounts)
+        if reviewed.get('decision_source')!='policy':raise ValueError('An automated base whole-flow qualification is required')
+        subject=_subject(project,package,revision_id,device,accounts)
+        previous=_selected(project,subject)
+        if previous is not None:
+            if previous['subject']!=subject:raise ValueError('Converted qualification subject changed')
+            return verified_runtime_review(project,package,revision_id,device=device,accounts=accounts)
+        record={'schema_version':1,'contract':'whole_flow_runtime_policy_qualification_v1','project_id':project['id'],
+                'decision_source':'policy','policy_version':'whole-flow-runtime-policy-qualification-v1',
+                'revision_id':'runtimeflow_'+uuid.uuid4().hex,'subject':subject,
+                'checks':{'measured_precision_cohort':True,'same_test_cohort':True,'configured_policy_bounds':True},
+                'device_accepted':False,'authority_user_id':reviewed.get('authority_user_id'),'created_at':_now()}
+        record['record_sha256']=digest(record)
+        if _subject(project,package,revision_id,device,accounts)!=subject:
+            raise ValueError('Converted whole-flow subject changed during policy qualification')
+        atomic_json(_root(project)/(record['revision_id']+'.json'),record)
+        selected={'revision_id':record['revision_id'],'approval_sha256':record['record_sha256']}
+        selected['record_sha256']=digest(selected);atomic_json(_selection_path(project,subject),selected)
+        return verified_runtime_review(project,package,revision_id,device=device,accounts=accounts)
 
 
 def preview_runtime_flow(project,package,revision_id,*,device,accounts=None):
@@ -163,7 +194,7 @@ def preview_runtime_flow(project,package,revision_id,*,device,accounts=None):
         selected=_selected(project,subject)
         valid=bool(selected and selected['subject']==subject)
         if valid:
-            try:base._authority(project,selected.get('authority_user_id'),accounts)
+            try:(base._qualification_authority if selected.get('decision_source')=='policy' else base._authority)(project,selected.get('authority_user_id'),accounts)
             except ValueError:valid=False
         return {**subject,'review_revision_id':selected['revision_id'] if selected else None,
             'review_valid':valid,'device_accepted':False}

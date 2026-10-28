@@ -208,6 +208,9 @@ def _release_candidates(project: Dict[str, Any], source: Path, task: str, job_id
         rows = [dict(row) for row in conn.execute(
             "SELECT * FROM revisions WHERE source_dataset_path = ? AND task = ? AND job_id = ? AND checkpoint_sha256 = ? "
             "ORDER BY rowid DESC", (str(source), task, job_id, checkpoint_sha)).fetchall()]
+        rows += [value for saved in conn.execute('SELECT payload FROM policy_qualifications ORDER BY rowid DESC').fetchall()
+                 if (value:=json.loads(saved[0])).get('source_dataset_path')==str(source) and value.get('task')==task
+                 and value.get('job_id')==job_id and value.get('checkpoint_sha256')==checkpoint_sha]
         rolled_back = {row[0] for row in conn.execute(
             "SELECT parent_revision_id FROM revisions WHERE source_dataset_path = ? AND task = ? AND action = 'rollback' "
             "AND parent_revision_id IS NOT NULL", (str(source), task)).fetchall()}
@@ -219,7 +222,8 @@ def _release_candidates(project: Dict[str, Any], source: Path, task: str, job_id
         verified = deployments.verified_approval_revision(project, row["revision_id"], expected_task=task)
         if verified is None or verified.get("job_id") != job_id or verified.get("checkpoint_sha256") != checkpoint_sha:
             continue
-        candidates.append({key: row[key] for key in ("revision_id", "action", "reviewer", "reason", "created_at", "comparison_id")}
+        candidates.append({key: row[key] for key in ("revision_id", "action", "reviewer", "reason", "created_at", "comparison_id") if key in row}
+                          | ({'decision_source':'policy','policy_revision':row['policy_revision']} if row.get('decision_source')=='policy' else {})
                           | {"checkpoint_sha256": checkpoint_sha, "is_active": bool(active and active["revision_id"] == row["revision_id"])})
     return candidates
 

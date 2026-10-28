@@ -1,9 +1,10 @@
 /** Only restores ephemeral local training inputs after a reload, never project/source/compute authority. */
 export function trainingSettingsRecovery(saved:string,current:string):{device:string|null;batch:number|null;label:string}|null{
   try{
-    const target=JSON.parse(saved),now=JSON.parse(current);
-    if(!Array.isArray(target)||!Array.isArray(now)||target.length!==9||now.length!==9
-      ||JSON.stringify(target.slice(0,7))!==JSON.stringify(now.slice(0,7)))return null;
+    let target=JSON.parse(saved),now=JSON.parse(current);
+    if(!Array.isArray(target)||!Array.isArray(now)||![9,11].includes(target.length)||![9,11].includes(now.length))return null;
+    if(target.length===9)target=[...target,null,null];if(now.length===9)now=[...now,null,null];
+    if(JSON.stringify(target.slice(0,7))!==JSON.stringify(now.slice(0,7))||JSON.stringify(target.slice(9))!==JSON.stringify(now.slice(9)))return null;
     const device=target[7],batch=target[8];
     if(!(device===null||['auto','cpu','mps','cuda'].includes(device))
       ||!(batch===null||Number.isInteger(batch)&&batch>=1&&batch<=128))return null;

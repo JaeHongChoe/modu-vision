@@ -50,18 +50,20 @@ def test_activation_cancellation_keeps_durable_truth_and_blocks_the_next_side_ef
         'auto_approve':True,'auto_deploy':True,'approval_policy_authorized':True,'pipeline_id':flow.id,
         'pipeline_version_id':saved['version_id'],'require_label_review':False,'reviewer':'qa'})
     Image.new('RGB',(32,32),'red').save(source/'new.png');event=threading.Event();deployments=[]
-    def approve(*args):
+    def qualify(*args,**kwargs):
         if cancel_at=='approval':event.set()
-        return {'revision':{'revision_id':'reviewed-revision'}}
+        return {'status':'qualified','qualification':{'revision_id':'policy-revision','job_id':'job_candidate','decision_source':'policy'}}
     def deploy(*args):
         if cancel_at=='deployment_prepare':event.set();raise InterruptedError('Cancelled before applying the prepared release')
         deployments.append('owned-runtime');event.set();return {'status':'ready','manifest_sha256':'a'*64}
-    monkeypatch.setattr(routes_model_deployments,'approve_candidate',approve)
+    monkeypatch.setattr(routes_model_deployments,'qualify_candidate_policy',qualify)
     monkeypatch.setattr(model_operations,'_deploy_candidate',deploy)
     result=model_operations.run_cycle(project,event,training_fn=lambda *args:{'status':'completed','winner':{'checkpoint_path':'/fixture/job_candidate/best_model.pt'}},
-        evaluation_fn=lambda *args:{'comparison':{'comparison_id':'fixture','selected_image_count':8}})
+        evaluation_fn=lambda *args:{'comparison':{'comparison_id':'fixture','selected_image_count':8},
+            'candidate':{'evaluation_id':'candidate-fixture'},'incumbent':{'evaluation_id':'incumbent-fixture'}})
     reopened=model_operations.OperationsStore(project['project_dir']).get(result['cycle_id'])
-    assert reopened['result']['approval']['revision']['revision_id']=='reviewed-revision'
+    assert reopened['result']['approval']['revision']['revision_id']=='policy-revision'
+    assert reopened['result']['approval']['decision_source']=='policy'
     if cancel_at in {'approval','deployment_prepare'}:
         assert reopened['status']=='approved_deployment_cancelled' and not deployments and reopened['result'].get('deployment') is None
     else:

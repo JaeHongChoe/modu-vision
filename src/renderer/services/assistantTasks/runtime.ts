@@ -1,5 +1,5 @@
 /** The task supervisor's local adapter. No credentials, pixels, arbitrary code, truth/adoption or deployment actions. */
-import { api, getApiPersistenceIdentity, getProjectContext, getProjectContextGeneration } from '../api';
+import { api, request, getApiPersistenceIdentity, getProjectContext, getProjectContextGeneration } from '../api';
 import { host } from '../hostAdapter';
 import { flowEvaluation, type FlowEvaluation, type ImageTruth } from '../flowEvaluation';
 import { foundationLabelingApi } from '../foundationLabelingApi';
@@ -19,11 +19,12 @@ import { applyAppSplit, evaluateAppModel, evaluateSavedFlow, saveSingleModelFlow
 import { taskActionCatalog as pureTaskActionCatalog, validateTaskAction } from './catalog';
 import type { TaskActionResult, TaskStep, TaskControl } from './types';
 import {diagnosticError, diagnosticText} from '../assistantDiagnostics';
+import {validateInputRecipe,inputPreparationScope,type FixedInputRecipe} from '../../components/training/inputPreparation';
 
 type Control = TaskControl;
 const message = (cause: unknown) => diagnosticError(cause).message;
-const human = (text: string, receipt?: Record<string, unknown>): TaskActionResult => ({kind: 'waiting_human', message: text, receipt: receipt ? {not_started: false, ...receipt} : {not_started: true}});
-const uncertain = (text = '실행 결과를 저장 기록에서 확인해야 합니다. 확인 전 같은 작업을 다시 실행하지 않습니다.', receipt?: Record<string, unknown>): TaskActionResult => ({kind: 'needs_reconciliation', message: text, receipt: {...receipt, not_started: false}});
+const human = (text: string, receipt?: Record<string, unknown>, reasonCode?: TaskActionResult['reasonCode']): TaskActionResult => ({kind: 'waiting_human', reasonCode:reasonCode??(['failed','stopped','aborted','interrupted'].includes(String(receipt?.status))?'failed':'waiting_input'), message: text, receipt: receipt ? {not_started: false, ...receipt} : {not_started: true}});
+const uncertain = (text = '실행 결과를 저장 기록에서 확인해야 합니다. 확인 전 같은 작업을 다시 실행하지 않습니다.', receipt?: Record<string, unknown>): TaskActionResult => ({kind: 'needs_reconciliation', reasonCode:'needs_reconciliation', message: text, receipt: {...receipt, not_started: false}});
 const completed = (receipt: Record<string, unknown>): TaskActionResult => ({kind: 'completed', receipt: {...receipt, not_started: false}});
 const jobs = new Set(['queued','preparing','transferring','running','stopping','syncing','cancelling']);
 /** Existing result reads only. Keep diagnostic samples separate from authority/identity evidence. */
@@ -49,7 +50,7 @@ export function taskRuntimeBinding(): string {
   const project = useProjectStore.getState(), data = useDatasetStore.getState(), compute = useComputeStore.getState(), training = useTrainingStore.getState();
   return JSON.stringify([projectAuthority(false), project.project?.source_dataset_dir, data.folderPath, data.datasetKey,
     compute.selectedProfileId, compute.profiles.find(row => row.id === compute.selectedProfileId) ?? null,
-    training.preset, training.nextDevice, training.nextBatchSize]);
+    training.preset, training.nextDevice, training.nextBatchSize,training.inputRecipeScope??null,training.inputRecipeSha256??null]);
 }
 let authorityRevision = 0;
 let observedBinding: string | null = null;
@@ -243,9 +244,36 @@ export async function executeTaskAction(step: TaskStep, control: Control): Promi
       if (saved.split_state !== 'saved' || JSON.stringify(saved.split) !== JSON.stringify(after.split)) return uncertain('저장된 분할과 화면의 개수가 다릅니다.');
       return completed({...localScopeReceipt(), split: {...saved.split}, ratios: {train: Number(args.train_percent) / 100, val: Number(args.val_percent) / 100, test: Number(args.test_percent) / 100}, split_state: 'saved'});
     }
+    if(step.action==='configure_input_recipe'){
+      await navigate(3,control);check();
+      const state=useProjectStore.getState(),data=useDatasetStore.getState();
+      if(useTrainingStore.getState().isTraining)return human('학습 중에는 고정 입력 규칙을 바꾸지 않습니다.',undefined,'waiting_resource');
+      const recipe=validateInputRecipe(args.input_recipe as FixedInputRecipe,state.task);
+      const selected=useAnnotationStore.getState().currentImage?.file_path;
+      const imagePath=selected||(await api.dataset.getImages({folder_path:data.folderPath,task:state.task,limit:1,offset:0})).items[0]?.file_path;check();
+      if(!imagePath)return human('미리 확인할 현재 프로젝트의 이미지가 필요합니다.');
+      const settings=taskAutoRunSettings('train'),size=(settings?.config_overrides as Record<string,unknown>|undefined)?.image_size??256;
+      const imageSize=Array.isArray(size)?size:[size,size];
+      const preview=await request<{input_recipe?:FixedInputRecipe;input_recipe_sha256?:string;source_sha256?:string;prepared_size?:number[]}>('/api/training/input-preparation/preview',{
+        method:'POST',body:JSON.stringify({task:state.task,image_path:imagePath,input_recipe:recipe,image_size:imageSize})});check();
+      const clearing=recipe.operations.length===0;
+      const recipeMatches=clearing?preview.input_recipe===undefined&&preview.input_recipe_sha256===undefined
+        :JSON.stringify(preview.input_recipe)===JSON.stringify(recipe)&&Boolean(preview.input_recipe_sha256&&/^[a-f0-9]{64}$/.test(preview.input_recipe_sha256));
+      if(!recipeMatches
+        ||!preview.source_sha256||!/^[a-f0-9]{64}$/.test(preview.source_sha256)
+        ||JSON.stringify(preview.prepared_size)!==JSON.stringify(imageSize))return human('실제 입력 미리보기의 규칙·크기·해시가 요청과 다릅니다.');
+      const scope=inputPreparationScope({apiIdentity:getApiPersistenceIdentity(),projectId:state.project!.id,labelsetId:state.project!.active_labelset_id||'default',source:data.folderPath,task:state.task});
+      if(typeof window!=='undefined'&&window.localStorage){
+        const key=`modu.input-preparation.v1:${getApiPersistenceIdentity()}:${scope}`;let history:unknown[]=[];
+        try{const saved=JSON.parse(localStorage.getItem(key)||'[]');if(Array.isArray(saved))history=saved;}catch{/* first valid saved version */}
+        localStorage.setItem(key,JSON.stringify([...history.slice(-19),{recipe,sha256:preview.input_recipe_sha256??null,saved_at:new Date().toISOString()}]));
+      }
+      useTrainingStore.getState().setInputRecipe(scope,clearing?null:recipe,preview.input_recipe_sha256??null);
+      return{...completed({...localScopeReceipt(),input_recipe_sha256:preview.input_recipe_sha256??null,preview_source_sha256:preview.source_sha256,input_recipe:recipe,input_recipe_cleared:clearing,previewed:true}),bindingAfter:taskRuntimeBinding()};
+    }
     if (step.action === 'generate_label_drafts') {dispatched = true; return await draftAction(args, control);}
     if (step.action === 'start_training') {
-      if (useTrainingStore.getState().isTraining) return human('기존 학습이 진행 중입니다. 다른 작업을 중단하거나 새 학습을 겹쳐 시작하지 않습니다.');
+      if (useTrainingStore.getState().isTraining) return human('기존 학습이 진행 중입니다. 다른 작업을 중단하거나 새 학습을 겹쳐 시작하지 않습니다.',undefined,'waiting_resource');
       await navigate(3, control); check();
       const startAuthority = trainingStartAuthority(), initial = useTrainingStore.getState();
       const before = {device: initial.nextDevice, batch: initial.nextBatchSize}, bindingBefore = taskRuntimeBinding(), startedScope = localScopeReceipt();
@@ -299,7 +327,10 @@ export async function executeTaskAction(step: TaskStep, control: Control): Promi
       if (!source || source.jobId !== jobId || evaluated.executionEvidence?.job_id !== jobId || !evaluated.testPredictions.length)
         return uncertain('요청 모델과 현재 원본에 묶인 평가 결과를 확인하지 못했습니다.');
       bumpWorkflowEvidence();
+      const history=evaluated.executionEvidence as unknown as {evaluation_id?:unknown;binding?:unknown};
       return completed({...localScopeReceipt(), job_id: jobId, evaluated_at: evaluated.executionEvidence.evaluated_at,
+        ...(typeof history.evaluation_id==='string'?{evaluation_id:history.evaluation_id}:{}),
+        ...(history.binding&&typeof history.binding==='object'&&!Array.isArray(history.binding)?{evaluation_binding:history.binding}:{}),
         samples: evaluated.testPredictions.length, ...(evaluated.executionEvidence.common_cohort ? {common_cohort: evaluated.executionEvidence.common_cohort} : {})});
     }
     if (step.action === 'save_flow') {
@@ -352,8 +383,10 @@ export async function executeTaskAction(step: TaskStep, control: Control): Promi
         graph_sha256: evaluated.graph_sha256, model_sha256: evaluated.model_sha256, truth_sha256: evaluated.truth_sha256,
         truth_review_required: !evaluated.coverage.known || Boolean(evaluated.coverage.unknown), diagnostics: detail};
       bumpWorkflowEvidence();
-      if (!evaluated.coverage.known || evaluated.coverage.unknown) return human('시험 이미지의 정답을 사람이 확인해야 합니다. 5단계에서 UNKNOWN 정답을 확인한 뒤 이어 가세요.', receipt);
       if (evaluated.status !== 'completed' || evaluated.errors?.length) return human(`검사 흐름 평가 오류: ${diagnosticMessage(detail, '실행 오류·실패가 있습니다. 5단계 결과를 확인하세요.')}`, receipt);
+      if ((!evaluated.coverage.known || evaluated.coverage.unknown) && evaluated.validity.valid)
+        return {...completed({...receipt,quality_status:'input_needed',quality_passed:false}),
+          message:'검사 흐름 실행을 마쳤습니다. 독립 정답이 없어 정확도·미검 검증은 정답 입력이 필요하며, 다음 추론 작업은 계속합니다.'};
       if (!evaluated.validity.valid) return human(`검사 흐름 평가 확인: ${diagnosticMessage(detail, '유효성 조건을 5단계에서 확인하세요.')}`, receipt);
       return completed(receipt);
     }
@@ -517,6 +550,9 @@ export async function reconcileTaskAction(step: TaskStep, control: Control): Pro
       const detail = resultDiagnostics('label_drafts', [batch.error, ...(batch.entries || []).filter(row => row.error).slice(0, 3).map(row => row.error)]);
       const latest = {...receipt, not_started: false, status: batch.status, total: batch.total, processed: batch.processed, generated: batch.generated, failed: batch.failed, adopted: false, diagnostics: detail};
       if (jobs.has(batch.status)) return {kind: 'waiting_job', receipt: latest, message: '초안 생성을 기다리고 있습니다.'};
+      const data=useDatasetStore.getState();
+      if(batch.status==='completed'&&!batch.error&&!batch.failed&&data.totalImages>data.unlabeledImages)
+        return completed({...latest,existing_labels_used:true});
       if (batch.status === 'completed' && step.status === 'waiting_human') {
         const entries = batch.entries || [], generated = batch.generated;
         if (generated === 0) return completed({...latest, generated: 0, reviewed: 0, accepted: 0, rejected: 0});

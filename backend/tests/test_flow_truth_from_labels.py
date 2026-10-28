@@ -49,6 +49,49 @@ def test_reviewer_name_is_required(labelled_workspace):
         flow_evaluation.confirm_truth_from_labels(project, cohort['cohort_id'], version, reviewer='  ')
 
 
+def test_folder_label_policy_is_separate_from_human_declarations_and_invalidates_with_bytes(labelled_workspace):
+    from backend.engine import image_truth
+    project, _, _ = labelled_workspace
+    image = Path(project['source_dataset_dir']) / 'test/NG/defect.png'
+    before = image.read_bytes()
+    result = image_truth.derive_folder_truth(project, str(image), task='classification', classes=['OK', 'NG'],
+        class_roles={'OK': 'normal', 'NG': 'defect'}, policy_version='folder-labels-v1')
+    assert result['verdict'] == 'NG' and result['defect_classes'] == ['NG']
+    assert result['reviewer'] is None and result['declaration'] is None and result['truth_revision'] == 0
+    assert result['label_provenance']['decision_source'] == 'policy'
+    assert result['label_provenance']['source_kind'] == 'folder_label'
+    assert result['label_provenance']['policy_version'] == 'folder-labels-v1'
+    assert image.read_bytes() == before
+    again = image_truth.derive_folder_truth(project, str(image), task='classification', classes=['OK', 'NG'],
+        class_roles={'OK': 'normal', 'NG': 'defect'}, policy_version='folder-labels-v1')
+    assert again['truth_sha256'] == result['truth_sha256']
+    image.write_bytes(before + b'changed')
+    changed = image_truth.read_truth(project, str(image), task='classification', classes=['OK', 'NG'], class_roles={'OK': 'normal', 'NG': 'defect'})
+    assert changed['verdict'] == 'UNKNOWN' and changed['invalidated']
+
+
+def test_folder_label_policy_never_turns_unknown_class_or_model_prediction_into_truth(labelled_workspace):
+    from backend.engine import image_truth
+    project, _, _ = labelled_workspace
+    image = Path(project['source_dataset_dir']) / 'test/misc/unknown.png'
+    result = image_truth.derive_folder_truth(project, str(image), task='classification', classes=['OK', 'NG'],
+        class_roles={'OK': 'normal', 'NG': 'defect'}, policy_version='folder-labels-v1')
+    assert result['verdict'] == 'UNKNOWN' and result['label_provenance'] is None
+    with pytest.raises(ValueError, match='policy'):
+        image_truth.derive_folder_truth(project, str(image), task='classification', classes=['OK', 'NG'], policy_version='model-predictions')
+
+
+def test_automatic_cohort_freezes_label_policy_truth_before_predictions(labelled_workspace, monkeypatch):
+    from backend.engine.image_truth import truth_scope
+    project, version, _ = labelled_workspace
+    monkeypatch.setattr(flow_evaluation, 'graph_truth_scope', lambda *args: truth_scope(project, 'classification', ['OK', 'NG'], {'OK': 'normal', 'NG': 'defect'}))
+    cohort = flow_evaluation.freeze_cohort(project, version, label_truth_policy='folder-labels-v1', model_provider=lambda *args: {})
+    assert cohort['label_truth_policy'] == 'folder-labels-v1'
+    known = [row for row in cohort['samples'] if row['truth']['verdict'] != 'UNKNOWN']
+    assert len(known) == 2
+    assert all(row['truth']['reviewer'] is None and row['truth']['declaration'] is None for row in known)
+
+
 def test_detection_truth_comes_only_from_positive_labels_a_person_made():
     roles = {'defect': 'defect', 'scratch': 'defect', 'OK': 'normal', 'background': 'normal'}
     verdict = flow_evaluation._shape_label_verdict

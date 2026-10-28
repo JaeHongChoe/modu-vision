@@ -2,7 +2,7 @@
 import {request} from '../api';
 import type {AssistantTask, TaskEvent, TaskPlanInput} from './types';
 
-type Send = <T>(path:string, options?:{method?:string;body?:string;projectContext:null;signal?:AbortSignal})=>Promise<T>;
+type Send = <T>(path:string, options?:{method?:string;body?:string;projectContext?:null;signal?:AbortSignal})=>Promise<T>;
 export interface AssistantTaskClient {
   list(signal?:AbortSignal):Promise<AssistantTask[]>;
   get(id:string,signal?:AbortSignal):Promise<AssistantTask>;
@@ -30,7 +30,10 @@ export function createTaskClient(send:Send=request):AssistantTaskClient {
     },
     async get(id,signal){return taskRecord(await send(base+'/'+identity(id),{projectContext:null,...(signal?{signal}:{})}));},
     async create(plan){return taskRecord(await send(base,{method:'POST',body:JSON.stringify(plan),projectContext:null}));},
-    async event(id,event){return taskRecord(await send(base+'/'+identity(id)+'/events',{
+    async event(id,event){if(event.type==='quality_result'){
+      const {type:_,receipt:_receipt,...fields}=event;
+      return taskRecord(await send(base+'/'+identity(id)+'/quality',{method:'POST',body:JSON.stringify(fields)}));
+    }return taskRecord(await send(base+'/'+identity(id)+'/events',{
       method:'POST',body:JSON.stringify(event),projectContext:null}));},
   };
 }

@@ -25,6 +25,11 @@ async function setup(t,{supportsImages=true,key=KEY,local=true,now}={}){
  return {service:new AssistantService({store,...(now?{now}:{})}),store,requests,base,port:server.address().port};
 }
 const send=(service,extra={})=>service.send({requestId:'req_'+'0'.repeat(24),context:{step:2},messages:[{role:'user',text:'왜 막혔나요?'}],tools:[],...extra});
+test('instructions distinguish execution requests from advice and retain actual evidence boundaries',()=>{
+ assert.doesNotMatch(SYSTEM_INSTRUCTIONS,/사람이 패널에서 확인할 때까지/);
+ assert.match(SYSTEM_INSTRUCTIONS,/설명.*읽기/);assert.match(SYSTEM_INSTRUCTIONS,/실행 권한/);
+ assert.match(SYSTEM_INSTRUCTIONS,/정답.*품질/);
+});
 
 test('the main process writes the instructions and redacts context, questions and tool results before sending',async t=>{
  const {service,requests}=await setup(t);
@@ -153,4 +158,36 @@ test('only a saved successful ChatGPT connection replaces the API choice, and a 
  chatgpt.connect();assert.equal((await service.state()).active,'chatgpt');
  chatgpt.set({accounts:[],active:null,status:'error',encryptionAvailable:false});
  assert.equal((await new AssistantService({store,chatgpt}).state()).active,'chatgpt','never silently from ChatGPT to the API provider');
+});
+
+test('ChatGPT image send consumes a receiver authority and context bound grant and forwards effort',async t=>{
+ const {store}=await setup(t),chatgpt=chatgptFake(),sent=[];chatgpt.connect();let authority='connection-a';
+ chatgpt.authority=()=>authority;const original=chatgpt.state;chatgpt.state=()=>{const state=original();return {...state,accounts:state.accounts.map(a=>({...a,capabilities:{imageInput:true,reasoningEfforts:['low','high'],source:'catalog'}}))};};
+ chatgpt.complete=async input=>{sent.push(input);return {text:'확인',toolCalls:[],stop:'end'};};
+ const identity=require('node:crypto').createHash('sha256').update(Buffer.from('iVBORw0KGgo=','base64')).digest('hex');
+ const service=new AssistantService({store,chatgpt});await service.setActive('chatgpt');const context={project_id:'project-a',step:2},image={mediaType:'image/png',base64:'iVBORw0KGgo=',imageIdentity:identity};
+ const grant=await service.imageIntent({imageIdentity:identity,fileName:'fixture.png',context});assert.equal(grant.ok,true);
+ const result=await send(service,{context,image:{...image,grantId:grant.grantId},reasoningEffort:'high'});assert.equal(result.ok,true);assert.equal(sent[0].image.base64,image.base64);assert.equal(sent[0].reasoningEffort,'high');
+ assert.equal((await send(service,{context,image:{...image,grantId:grant.grantId}})).error.code,'image_refused');
+ const changed=await service.imageIntent({imageIdentity:identity,context});assert.equal((await send(service,{context:{...context,project_id:'project-b'},image:{...image,grantId:changed.grantId}})).error.code,'image_refused');
+ const stale=await service.imageIntent({imageIdentity:identity,context});authority='connection-b';assert.equal((await send(service,{context,image:{...image,grantId:stale.grantId}})).error.code,'image_refused');
+ const swapped=await service.imageIntent({imageIdentity:identity,context});assert.equal((await send(service,{context,image:{...image,base64:'c3dhcHBlZA==',grantId:swapped.grantId}})).error.code,'image_refused');
+ assert.equal(sent.length,1);
+});
+
+test('native send applies the same 8 MiB frame ceiling and API grants remain context bound when supplied',async t=>{
+ const {service,requests}=await setup(t);
+ const huge=await send(service,{padding:'x'.repeat(8*1024*1024)});assert.equal(huge.ok,false);assert.equal(huge.error.detail,'frame_too_large');assert.equal(requests.length,0);
+ const grant=await service.imageIntent({imageIdentity:ID,fileName:'fixture.png',context:{project:'a'}});
+ const refused=await send(service,{context:{project:'b'},image:{grantId:grant.grantId,imageIdentity:ID,mediaType:'image/png',base64:'iVBORw0KGgo='}});assert.equal(refused.error.code,'image_refused');assert.equal(requests.length,0);
+});
+
+test('a fresh one-use image grant permits only a balanced receipted ChatGPT tool tail',async t=>{
+ const {store}=await setup(t),chatgpt=chatgptFake(),calls=[];chatgpt.connect();const original=chatgpt.state;chatgpt.state=()=>{const s=original();return {...s,accounts:s.accounts.map(a=>({...a,capabilities:{imageInput:true,reasoningEfforts:null,source:'catalog'}}))};};chatgpt.complete=async input=>{calls.push(input);return {text:'완료',toolCalls:[],stop:'end'};};
+ const service=new AssistantService({store,chatgpt});await service.setActive('chatgpt');const context={project_id:'p'},base64='iVBORw0KGgo=',imageIdentity=require('node:crypto').createHash('sha256').update(Buffer.from(base64,'base64')).digest('hex'),image={mediaType:'image/png',base64,imageIdentity};
+ const tool={name:'read_status',description:'상태',parameters:{type:'object'}},call={id:'call_tail',name:tool.name,arguments:{}},replay=[{type:'function_call',namespace:'modu_vision',name:tool.name,call_id:call.id,arguments:'{}'}],messages=[{role:'user',text:'원래 이미지 질문'},{role:'assistant',text:'',toolCalls:[call],replay},{role:'tool',toolCallId:call.id,name:tool.name,content:'준비됨'}];
+ const intent=()=>service.imageIntent({fileName:'fixture.png',imageIdentity,context});const grant=await intent();assert.equal((await send(service,{context,messages,tools:[tool],image:{...image,grantId:grant.grantId}})).ok,true);assert.equal(calls.length,1);
+ assert.equal((await send(service,{context,messages,tools:[tool],image:{...image,grantId:grant.grantId}})).error.code,'image_refused');
+ for(const wrong of [[...messages,{role:'assistant',text:'임의 끝'}],[messages[0],messages[1],{...messages[2],toolCallId:'foreign'}],[messages[0],{role:'assistant',text:'',toolCalls:[call]},messages[2]]]){const fresh=await intent();assert.equal((await send(service,{context,messages:wrong,tools:[tool],image:{...image,grantId:fresh.grantId}})).error.code,'image_refused');}
+ assert.equal(calls.length,1);
 });

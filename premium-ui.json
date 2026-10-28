@@ -1,0 +1,6 @@
+{
+  "profile": "product-admin",
+  "canonicalMap": "UX-CONTRACT.md",
+  "ownership": {"Select/Listbox": "native"},
+  "requiredCapabilities": ["Select/Listbox", "Scrollbar"]
+}

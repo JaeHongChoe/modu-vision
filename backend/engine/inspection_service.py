@@ -118,12 +118,17 @@ def _verify_release_policy(package_dir: Path, checkpoints: dict[str, Path], poli
         fields={'contract','revision_id','approval_sha256','graph_sha256','evaluation_sha256',
                 'policy_sha256','cohort_sha256','manifest_sha256','parity_receipt_sha256','device',
                 'model_approval_revisions','runtime_cohort_qualified','device_accepted'}
-        runtime_review=isinstance(review,dict) and review.get('contract')=='whole_flow_runtime_review_v1'
+        runtime_review=isinstance(review,dict) and review.get('contract') in {'whole_flow_runtime_review_v1','whole_flow_runtime_policy_qualification_v1'}
+        automated=isinstance(review,dict) and review.get('contract') in {'whole_flow_policy_qualification_v1','whole_flow_runtime_policy_qualification_v1'}
+        if automated:fields|={'decision_source','policy_version'}
         if runtime_review:
             fields=(fields-{'parity_receipt_sha256'})|{'runtime_acceptance_sha256','runtime_review_revision_id',
                 'runtime_review_sha256','candidate_metrics_sha256'}
         if (not isinstance(review,dict) or set(review)!=fields
-                or review['contract'] not in {'whole_flow_review_v1','whole_flow_runtime_review_v1'}
+                or review['contract'] not in {'whole_flow_review_v1','whole_flow_runtime_review_v1','whole_flow_policy_qualification_v1','whole_flow_runtime_policy_qualification_v1'}
+                or automated and (review.get('decision_source')!='policy' or review.get('policy_version')!=
+                    {'whole_flow_policy_qualification_v1':'whole-flow-policy-qualification-v1',
+                     'whole_flow_runtime_policy_qualification_v1':'whole-flow-runtime-policy-qualification-v1'}[review['contract']])
                 or not isinstance(review['revision_id'],str) or not re.fullmatch('flowapproval_[0-9a-f]{32}',review['revision_id'])
                 or review['runtime_cohort_qualified'] is not True or review['device_accepted'] is not False):
             raise ValueError('Invalid separately sealed whole-flow review')

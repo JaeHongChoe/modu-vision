@@ -4,20 +4,20 @@ function harness(){
  const project=create(()=>({project:{id:'a',source_dataset_dir:'/a',active_labelset_id:'labels'},projectDir:'/a',task:'detection'}));
  const annotation=create(()=>({currentImage:{file_path:'/a/a.png',file_name:'a.png',image_id:'a'},metadata:{image_uuid:'a',content_hash:'abc',revision:1},annotationLoadStatus:'ready',isDirty:false,annotations:[]}));
  const compute=create(()=>({transportRevision:0,selectedProfileId:null})),dataset=create(()=>({folderPath:'/a',split:{train:7,val:2,test:1}})),training=create(()=>({preset:'fast'}));
- let generation=1,contextListeners=[],imageReads=0,delayedRead=null,delayedIntent=null;let taskConnection;const sent=[],cancelled=[],executed=[],logged=[];const tools={specs:()=>[],tier:name=>name==='write'?'write':null,preview:async()=>({title:'테스트 쓰기',lines:[],undo:'거절'}),execute:async()=>{executed.push('write');return {ok:true,summary:'쓰기',content:'쓰기'};}};
+ let generation=1,contextListeners=[],imageReads=0,delayedRead=null,delayedIntent=null;let taskConnection,taskPort;const proposed=[];const sent=[],cancelled=[],executed=[],logged=[];const tools={specs:()=>[],tier:name=>name==='write'?'write':null,preview:async()=>({title:'테스트 쓰기',lines:[],undo:'거절'}),execute:async()=>{executed.push('write');return {ok:true,summary:'쓰기',content:'쓰기'};}};
  const config={active:'openai-compatible',providers:[{provider:'openai-compatible',baseUrl:'http://localhost:123/v1',model:'m',format:'chat',supportsImages:true}]};
  const bridge={getState:async()=>config,saveProvider:async input=>({...config,providers:[input]}),imageIntent:async input=>delayedIntent?delayedIntent(input):({ok:true,grantId:'g',message:'확인',providerLabel:'local'}),
   send:async input=>{sent.push(input);return {ok:true,text:'답',toolCalls:[]};},cancel:async id=>{cancelled.push(id);return true;},beginRun:async()=>true,endRun:async()=>{}};
- const stubs={zustand:{create},'./useAssistantTaskStore':{useAssistantTaskStore:{getState:()=>({busy:false})},assistantTaskTools:{isExecuting:()=>false,cachedStatus:()=>({status:'waiting_human',revision:7})},configureTaskConnection:read=>{taskConnection=read;},notifyTaskConnectionChange:()=>{}},'./useAnnotationStore':{useAnnotationStore:annotation},'./useProjectStore':{useProjectStore:project},'./useComputeStore':{useComputeStore:compute},'./useDatasetStore':{useDatasetStore:dataset},'./useTrainingStore':{useTrainingStore:training},
+ const stubs={'./assistantImagePreparation':{normalizeSelectedImage:async file=>file},zustand:{create},'./useAssistantTaskStore':{useAssistantTaskStore:{getState:()=>({busy:false})},assistantTaskTools:{propose:async(...args)=>{proposed.push(args);return {status:'running'};},isExecuting:()=>false,cachedStatus:()=>({status:'waiting_human',revision:7})},configureTaskConnection:read=>{taskConnection=read;},notifyTaskConnectionChange:()=>{}},'./useAnnotationStore':{useAnnotationStore:annotation},'./useProjectStore':{useProjectStore:project},'./useComputeStore':{useComputeStore:compute},'./useDatasetStore':{useDatasetStore:dataset},'./useTrainingStore':{useTrainingStore:training},
   '../stores/useAnnotationStore':{useAnnotationStore:annotation},'../stores/useProjectStore':{useProjectStore:project},'../stores/useComputeStore':{useComputeStore:compute},'../stores/useDatasetStore':{useDatasetStore:dataset},'../stores/useTrainingStore':{useTrainingStore:training},
   '../services/api':{getApiPersistenceIdentity:()=> 'local',getProjectContextGeneration:()=>generation,subscribeProjectContext:fn=>{contextListeners.push(fn);return()=>{};}},
   './api':{getApiPersistenceIdentity:()=> 'local',getProjectContextGeneration:()=>generation,subscribeProjectContext:fn=>{contextListeners.push(fn);return()=>{};}},
   '../services/hostAdapter':{host:{assistant:()=>bridge}},'../services/assistantLog':{assistantLog:{append:async entry=>{logged.push(entry);},list:async()=>({runs:[]})}},
-  '../services/assistantRuntime':{assistantContext:execution=>({step:2,execution}),createRuntimeTools:()=>tools,currentImageForQuestion:async()=>{imageReads++;if(delayedRead)return delayedRead();return {mediaType:'image/png',base64:'AAAA'};}},
+  '../services/assistantRuntime':{assistantContext:execution=>({step:2,execution}),createRuntimeTools:port=>{taskPort=port;return tools;},currentImageForQuestion:async()=>{imageReads++;if(delayedRead)return delayedRead();return {mediaType:'image/png',base64:'AAAA'};}},
   '../stores/workflowEvidence':{workflowEvidenceRevision:()=>0},'./workflowEvidence':{workflowEvidenceRevision:()=>0}};
  const cache=new Map();function load(file){if(cache.has(file))return cache.get(file).exports;const m=new Module(file,module);m.filename=file;m.paths=Module._nodeModulePaths(path.dirname(file));cache.set(file,m);const orig=m.require.bind(m);m.require=n=>{if(stubs[n])return stubs[n];if(n.startsWith('.')){const target=path.resolve(path.dirname(file),n)+'.ts';if(fs.existsSync(target))return load(target);}return orig(n);};m._compile(ts.transpileModule(fs.readFileSync(file,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText,file);return m.exports;}
  const store=load(path.join(__dirname,'useAssistantStore.ts')).useAssistantStore;
- return {store,project,annotation,compute,dataset,training,taskConnection:()=>taskConnection(),sent,cancelled,executed,logged,tools,config,bridge,reads:()=>imageReads,setRead:fn=>delayedRead=fn,setIntent:fn=>delayedIntent=fn,changeAuthority:()=>{generation++;contextListeners.forEach(fn=>fn());}};
+ return {store,project,annotation,compute,dataset,training,proposed,taskPort:()=>taskPort,taskConnection:()=>taskConnection(),sent,cancelled,executed,logged,tools,config,bridge,reads:()=>imageReads,setRead:fn=>delayedRead=fn,setIntent:fn=>delayedIntent=fn,changeAuthority:()=>{generation++;contextListeners.forEach(fn=>fn());}};
 }
 const deferred=()=>{let resolve;return {promise:new Promise(r=>resolve=r),resolve:v=>resolve(v)};};
 test('the next explicit question receives cached task feedback without a separate provider send',async()=>{
@@ -112,7 +112,7 @@ test('ChatGPT connection mutation invalidates the session before IPC and cannot 
 });
 test('ChatGPT image requests cannot even obtain an intent or read local pixels',async()=>{
  const h=harness();await h.store.getState().loadConfig();h.store.setState({config:{active:'chatgpt',providers:[],chatgpt:{active:null,accounts:[],status:'idle'}}});let intents=0;h.bridge.imageIntent=async()=>{intents++;return {ok:true};};
- await h.store.getState().offerImage('이 이미지');assert.equal(intents,0);assert.equal(h.reads(),0);assert.equal(h.store.getState().imageOffer,null);assert.match(h.store.getState().items.at(-1).text,/텍스트/);
+ await h.store.getState().offerImage('이 이미지');assert.equal(intents,0);assert.equal(h.reads(),0);assert.equal(h.store.getState().imageOffer,null);assert.match(h.store.getState().items.at(-1).text,/첨부/);
 });
 
 test('provider rate-limit errors retain a machine code for the visible usage-management action',async()=>{
@@ -255,4 +255,62 @@ test('a retired config rejection is handled and never clears a later recheck out
  assert.equal(h.store.getState().configReadStatus,'unverified');assert.equal(h.store.getState().config,null);
  h.bridge.getState=async()=>h.config;await h.store.getState().loadConfig({explicit:true});
  assert.equal(h.store.getState().config,h.config);assert.equal(h.store.getState().configError,null);
+});
+
+
+test('explicit ChatGPT attachment sends one scoped image and effort without an extra review roundtrip',async()=>{
+ const h=harness();await h.store.getState().loadConfig();
+ h.store.setState({config:{active:'chatgpt',providers:[{provider:'chatgpt',baseUrl:'https://api.openai.com/v1',model:'chosen',supportsImages:true,ready:true,capabilities:{imageInput:true,reasoningEfforts:['low','high'],source:'catalog'}}],chatgpt:{active:'a',accounts:[{recordId:'a',model:'chosen',signedIn:true,planUsageEnabled:true}]}}});
+ const intents=[];h.bridge.imageIntent=async input=>{intents.push(input);return{ok:true,grantId:'scoped',message:'image',providerLabel:'ChatGPT'};};
+ const attachment={fileName:'qa.png',mediaType:'image/png',base64:'AAAA',imageIdentity:'a'.repeat(64),previewUrl:'data:image/png;base64,AAAA'};
+ await h.store.getState().ask('이 이미지로 학습 준비해줘',{attachment,reasoningEffort:'high'});
+ assert.equal(intents.length,1);assert.equal(h.sent.length,1);assert.equal(h.sent[0].image.grantId,'scoped');assert.equal(h.sent[0].reasoningEffort,'high');
+ assert.deepEqual(intents[0].context,h.sent[0].context);assert.equal(h.store.getState().pending,null);
+});
+
+test('a stale attachment grant cannot send pixels after the project changes',async()=>{
+ const h=harness();await h.store.getState().loadConfig();
+ h.store.setState({config:{active:'chatgpt',providers:[{provider:'chatgpt',baseUrl:'https://api.openai.com/v1',model:'chosen',supportsImages:true,ready:true}],chatgpt:{active:'a',accounts:[{recordId:'a',model:'chosen',signedIn:true,planUsageEnabled:true}]}}});
+ const d=deferred();h.bridge.imageIntent=()=>d.promise;
+ const asking=h.store.getState().ask('확인해줘',{attachment:{fileName:'qa.png',mediaType:'image/png',base64:'AAAA',imageIdentity:'a'.repeat(64)}});
+ h.changeAuthority();d.resolve({ok:true,grantId:'late'});await asking;assert.equal(h.sent.length,0);
+});
+
+
+test('app-owned execution intent authorizes task proposals only for a work request and not explain-only mode',async()=>{
+ const h=harness();await h.store.getState().loadConfig();const plan={goal:'분할 저장',steps:[]};
+ await h.store.getState().ask('이 자료로 학습해줘');await h.taskPort().propose(plan);assert.equal(h.proposed.at(-1)[0],plan);assert.equal(h.proposed.at(-1)[1].source,'user_request');assert.equal(h.proposed.at(-1)[1].signal.aborted,false);
+ await h.store.getState().ask('학습은 무엇인지 설명해줘');await h.taskPort().propose(plan);assert.deepEqual(h.proposed.at(-1),[plan,undefined]);
+ await h.store.getState().ask('이 자료로 학습해줘',{explainOnly:true});await h.taskPort().propose(plan);assert.deepEqual(h.proposed.at(-1),[plan,undefined]);
+});
+
+test('changing reasoning effort affects the next request without altering the active request',async()=>{
+ const h=harness();await h.store.getState().loadConfig();h.store.setState({config:{...h.config,providers:[{...h.config.providers[0],capabilities:{reasoningEfforts:['low','high'],source:'catalog'}}]}});
+ const d=deferred();h.bridge.send=async input=>{h.sent.push(input);return d.promise;};
+ h.store.getState().setReasoningEffort('high');const asking=h.store.getState().ask('질문');h.store.getState().setReasoningEffort('low');
+ assert.equal(h.sent[0].reasoningEffort,'high');d.resolve({ok:true,text:'답',toolCalls:[]});await asking;
+ h.bridge.send=async input=>{h.sent.push(input);return{ok:true,text:'답',toolCalls:[]};};await h.store.getState().ask('다음 질문');assert.equal(h.sent[1].reasoningEffort,'low');
+ h.store.getState().setReasoningEffort('max');assert.equal(h.store.getState().reasoningEffort,'low');
+});
+
+test('editing a saved input recipe invalidates a pending legacy write before it can run',async()=>{
+ const h=harness();await h.store.getState().loadConfig();h.training.setState({inputRecipeScope:'project-labels-source',inputRecipeSha256:'a'.repeat(64)});
+ h.bridge.send=async()=>({ok:true,text:'',toolCalls:[{id:'recipe-write',name:'write',arguments:{}}]});await h.store.getState().ask('쓰기');assert.ok(h.store.getState().pending);
+ h.training.setState({inputRecipeSha256:'b'.repeat(64)});await h.store.getState().decide(true);
+ assert.equal(h.store.getState().pending,null);assert.deepEqual(h.executed,[]);
+});
+test('attachment selection context changes notify the composer immediately',async()=>{
+ const h=harness();await h.store.getState().loadConfig();const before=h.store.getState().attachmentBinding(),seen=[];const unsubscribe=h.store.subscribe(state=>seen.push(state.attachmentBinding()));
+ h.annotation.setState({metadata:{image_uuid:'a',content_hash:'new-image-bytes',revision:2}});unsubscribe();
+ assert.ok(seen.length>0);assert.notEqual(seen.at(-1),before);
+});
+test('a capability refresh drops an unsupported reasoning selection without changing the model',async()=>{
+ const h=harness();await h.store.getState().loadConfig();h.store.setState({config:{...h.config,providers:[{...h.config.providers[0],capabilities:{reasoningEfforts:['low','high'],source:'catalog'}}]}});h.store.getState().setReasoningEffort('high');
+ h.store.setState({config:{...h.config,providers:[{...h.config.providers[0],capabilities:{reasoningEfforts:['low'],source:'catalog'}}]}});
+ assert.equal(h.store.getState().reasoningEffort,undefined);await h.store.getState().ask('상태 질문');assert.equal(h.sent[0].reasoningEffort,undefined);assert.ok(h.store.getState().items.some(i=>i.kind==='notice'&&/추론 강도/.test(i.text)));
+});
+test('stopping a request aborts only its execution-intent signal before a late proposal can start',async()=>{
+ const h=harness();await h.store.getState().loadConfig();const reply=deferred();h.bridge.send=()=>reply.promise;const asking=h.store.getState().ask('학습 시작해줘');
+ await h.taskPort().propose({goal:'current',steps:[]});const request=h.proposed[0][1];assert.equal(request.source,'user_request');assert.equal(request.signal.aborted,false);
+ await h.store.getState().stop();assert.equal(request.signal.aborted,true);reply.resolve({ok:true,text:'late',toolCalls:[]});await asking;
 });

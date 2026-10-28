@@ -133,9 +133,16 @@ def test_http_role_and_trusted_actor_are_used_for_graph_review(workspace,monkeyp
 
 
 @pytest.mark.parametrize('damage',['none','graph','cohort','receipt_changed','models'])
-def test_package_subject_and_parity_binding_controls(workspace,monkeypatch,tmp_path,damage):
+@pytest.mark.parametrize('decision_source',['human','policy'])
+def test_package_subject_and_parity_binding_controls(workspace,monkeypatch,tmp_path,damage,decision_source):
     module,p,result=setup_review(workspace,monkeypatch)
-    approved=approve(module,p,result)
+    if decision_source=='human':approved=approve(module,p,result)
+    else:
+        from backend.engine.model_operations import OperationsStore
+        OperationsStore(p['project_dir']).save_policy({'revision':1,'project_id':p['id'],
+            'source_dataset_path':p['source_dataset_dir'],'labelset_id':p.get('active_labelset_id','default'),
+            'approval_policy_authorized':True,'auto_approve':True,'flow_policy':POLICY})
+        approved=module.qualify_flow_policy(p,evaluation_id=result['evaluation_id'])['qualification']
     from backend.engine import flow_package_runtime,release_eligibility,runtime_release_evidence
     import hashlib
     from backend.engine.flowchart_engine import FlowchartPipeline

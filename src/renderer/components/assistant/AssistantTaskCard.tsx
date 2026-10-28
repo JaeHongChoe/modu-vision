@@ -3,6 +3,8 @@ import { ACTION_CATALOG } from '../../services/assistantTasks/catalog';
 import {newRequestPendingReason, taskWaitingGuidance} from '../../services/assistantTasks/taskRecoveryPresentation';
 import type {TaskHistoryItem} from '../../services/assistantTasks/controller';
 import type { ActionId, AssistantTask, StepStatus, TaskStatus, TaskStep } from '../../services/assistantTasks/types';
+import {hasPendingTaskQuality} from '../../services/assistantTasks/types';
+import {diagnosticText} from '../../services/assistantDiagnostics';
 
 export interface AssistantTaskCardProps {
   task: AssistantTask | null;
@@ -39,10 +41,16 @@ const STEP_STATUS: Record<StepStatus, string> = {
 };
 const STAGE: Record<ActionId, number> = {
   create_project: 1, import_dataset: 1, save_split: 1, configure_training: 3, generate_label_drafts: 2,
-  start_training: 3, evaluate_model: 4, save_flow: 5, evaluate_flow: 5, inspect_test: 6, export_report: 4, open_step: 1,
+  start_training: 3, configure_input_recipe:3,evaluate_model: 4, save_flow: 5, evaluate_flow: 5, inspect_test: 6, export_report: 4, open_step: 1,
 };
 const text = (value: unknown, limit = 200): string => typeof value === 'string' ? value.slice(0, limit) : '';
 const count = (value: unknown): string => typeof value === 'number' && Number.isFinite(value) && value >= 0 ? value.toLocaleString('ko-KR') : '';
+function qualitySummary(step:TaskStep):{label:string;reasons:string[]}|null{
+  const quality=step.receipt?.quality_assessment as {status?:string;reasons?:unknown[]}|undefined;
+  const labels:Record<string,string>={pending:'품질 판정 결과 확인 중',qualified:'품질 기준 충족',not_qualified:'품질 기준 미달',input_needed:'품질 판정 입력 필요'};
+  if(!quality?.status||!labels[quality.status])return null;
+  return{label:labels[quality.status],reasons:(Array.isArray(quality.reasons)?quality.reasons:[]).slice(0,3).map(value=>diagnosticText(value,300)).filter((value):value is string=>Boolean(value))};
+}
 const identifier = (value: unknown): string => typeof value === 'string' && /^[\w.-]{1,160}$/.test(value) ? value : '';
 const title = (step: TaskStep): string => ACTION_CATALOG.find(action => action.id === step.action)?.title ?? '지원하지 않는 작업';
 const stage = (step: TaskStep): number => step.action === 'open_step' && Number.isInteger(step.args.step) && Number(step.args.step) >= 1 && Number(step.args.step) <= 6 ? Number(step.args.step) : STAGE[step.action];
@@ -122,7 +130,7 @@ export const AssistantTaskCard: React.FC<AssistantTaskCardProps> = ({task, busy,
   </section>;
   if (!task) return <section aria-label="도우미 작업" aria-busy={loading} className="workspace-section space-y-3" style={{color: 'var(--workspace-text)'}}>
     <h3>수행할 작업</h3>
-    <p className="workspace-description text-xs">예: “이 폴더로 균열 검사 만들어줘”라고 요청하면 실행할 계획을 먼저 보여 줍니다.</p>
+    <p className="workspace-description text-xs">예: “이 폴더로 균열 검사 만들어줘”라고 요청하면 계획과 진행 상태를 함께 보여 줍니다.</p>
     <p role="status" className="workspace-description text-xs">{reason || '저장된 작업을 불러오거나 새 작업을 요청하세요.'}</p>
     {error && <p role="alert" className="text-xs" style={{color: 'var(--workspace-danger)'}}>{text(error, 1000)}</p>}
     <button type="button" className="workspace-button" disabled={readDisabled} onClick={() => {if (!readDisabled) onRestore();}}>저장된 작업 불러오기</button>
@@ -151,6 +159,7 @@ export const AssistantTaskCard: React.FC<AssistantTaskCardProps> = ({task, busy,
   else if (status === 'waiting_job') primary = {label: '저장 결과 확인하고 계획 계속', disabled: continueDisabled, run: onRefresh};
   else if (status === 'paused') primary = {label: '저장 결과 확인하고 이어하기', disabled: continueDisabled, run: onResume};
   else if (status === 'needs_reconciliation') primary = {label: '저장 결과 확인하고 계획 계속', disabled: continueDisabled, run: onResume};
+  else if (status === 'completed' && hasPendingTaskQuality(task)) primary = {label:'품질 판정 결과 다시 확인',disabled:readDisabled,run:onRefresh};
   else if (status === 'completed' && canNavigate) primary = {label: '결과 화면 열기', disabled: readDisabled, run: navigate};
   if (!contextMatches && settingsRecoveryLabel && onRestoreSettings) primary = {label: settingsRecoveryLabel, disabled: readDisabled, run: ()=>onRestoreSettings(id,revision)};
   const pendingReason = newRequestPendingReason(task);
@@ -175,16 +184,19 @@ export const AssistantTaskCard: React.FC<AssistantTaskCardProps> = ({task, busy,
     {status === 'waiting_job' && <p className="workspace-description text-xs">작업은 계속 진행됩니다. 저장된 완료 기록을 확인한 뒤 다음 단계로 이어 갑니다.</p>}
     {['paused', 'needs_reconciliation'].includes(status) && <p className="workspace-description text-xs">먼저 저장된 결과를 확인합니다. 이미 실행한 작업을 다시 시작하지 않고 이어갈 위치를 확인합니다.</p>}
     {status === 'failed' && <p className="workspace-description text-xs">실패한 단계와 저장 결과를 먼저 확인하세요. 이 버튼은 작업을 재실행하지 않습니다.</p>}
-    {status === 'completed' && <p className="workspace-description text-xs">계획의 작업을 완료했습니다. 모델·검사 흐름의 최종 승인과 운영 배포는 직접 판단해야 합니다.</p>}
+    {status === 'completed' && <p className="workspace-description text-xs">계획의 실행 작업을 완료했습니다. 품질 기준 충족과 운영 배포 상태는 각각 저장된 근거에서 확인합니다.</p>}
+    {task.steps.some(row=>row.receipt?.quality_status==='input_needed')&&<p className="workspace-description text-xs">검사 실행은 완료했지만 독립 정답이 필요한 정확도·미검 검증은 입력이 필요합니다.</p>}
     <ol aria-label="실행 계획" className="max-h-80 space-y-3 overflow-y-auto pr-1 text-sm" style={{scrollbarGutter: 'stable'}}>
       {visible.map((step, index) => {
         const saved = savedSummary(step.receipt);
+        const quality=qualitySummary(step);
         return <li key={step.id} aria-current={step === active ? 'step' : undefined} className="min-w-0 border-l-2 pl-3" style={{borderColor: step === active ? 'var(--workspace-accent)' : 'var(--workspace-border)'}}>
           <div className="flex flex-wrap items-start justify-between gap-2"><p className="font-semibold">{index + 1}. {title(step)}</p><span className="workspace-badge" data-tone={tone(step.status)}>{STEP_STATUS[step.status]}</span></div>
           {step.label !== title(step) && <p className="workspace-description text-xs">{text(step.label, 160)}</p>}
           {inputSummary(step).map((line, lineIndex) => <p key={lineIndex} className="workspace-description text-xs">{line}</p>)}
           {step.error && <p role="alert" className="mt-1 text-xs" style={{color: 'var(--workspace-danger)'}}>{text(step.error, 1000)}</p>}
           {saved.length > 0 && <dl aria-label={`${index + 1}단계 저장 결과`} className="mt-2 space-y-1 text-xs">{saved.map(([label, value]) => <div key={label} className="flex flex-wrap gap-x-2"><dt style={{color: 'var(--workspace-muted)'}}>{label}</dt><dd className="min-w-0 select-text">{value}</dd></div>)}</dl>}
+          {quality&&<div aria-label={`${index+1}단계 품질 판정`} className="mt-2 space-y-1 text-xs"><p>{quality.label}</p>{quality.reasons.map((reason,i)=><p key={i} className="workspace-description">{reason}</p>)}</div>}
         </li>;
       })}
     </ol>

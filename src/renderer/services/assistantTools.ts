@@ -125,9 +125,9 @@ export function createAssistantTools(deps: ToolDeps): AssistantToolRegistry {
         run:async(args:Record<string,unknown>)=>ok(deps.tasks!.features(typeof args.action==='string'?args.action:undefined),'앱 기능을 읽었습니다.')},
       {name:'inspect_app_screen',tier:'read',description:'현재 앱 화면과 가능한 다음 작업을 구조화된 상태로 읽습니다. 화면 픽셀이나 원본 이미지는 전송하지 않습니다.',parameters:NO_ARGS,
         run:async()=>ok(deps.tasks!.screen(),'현재 화면의 작업 상태를 읽었습니다.')},
-      {name:'read_task_status',tier:'read',description:'현재 위임한 작업의 계획·진행·사람 검토 대기·오류를 읽습니다. 실행·승인하거나 재시도하지 않습니다.',parameters:NO_ARGS,
+      {name:'read_task_status',tier:'read',description:'현재 위임한 작업의 계획·진행·필요 입력·오류를 읽습니다. 실행·승인하거나 재시도하지 않습니다.',parameters:NO_ARGS,
         run:async()=>ok(await deps.tasks!.status(),'위임 작업 상태를 읽었습니다.')},
-      {name:'propose_task',tier:'navigate',description:'사용자가 맡긴 작업을 여러 단계 실행 계획으로 제시합니다. 기능 목록의 action과 입력만 사용하세요. 계획을 제시한 뒤 사용자가 패널에서 확인할 때까지 실행하지 않습니다.',
+      {name:'propose_task',tier:'navigate',description:'사용자가 맡긴 작업을 여러 단계 실행 계획으로 제시합니다. 기능 목록의 action과 입력만 사용하세요. 실행을 맡긴 사용자 요청이면 준비된 단계는 앱 실행기가 이어서 수행합니다. 설명 질문은 실행하지 않습니다.',
         parameters:{type:'object',properties:{goal:{type:'string',minLength:1,maxLength:4096},steps:{type:'array',minItems:1,maxItems:24,items:{type:'object',properties:{action:{type:'string',enum:ACTION_CATALOG.map(row=>row.id)},args:{type:'object'},label:{type:'string',maxLength:160}},required:['action','args'],additionalProperties:false}}},required:['goal','steps'],additionalProperties:false},
         run:async(args:Record<string,unknown>)=>{
           if(Object.keys(args).some(key=>!['goal','steps'].includes(key))||!Array.isArray(args.steps))throw new ToolRefusal('invalid_task_plan','목표와 실행 단계로 작업 계획을 제시하세요.');
@@ -137,7 +137,7 @@ export function createAssistantTools(deps: ToolDeps): AssistantToolRegistry {
             return {...step,label:step.label||ACTION_CATALOG.find(row=>row.id===step.action)?.title||''};
           });
           const plan=validateTaskPlan({goal:args.goal,steps,binding:'local_pending_plan'});
-          return ok(await deps.tasks!.propose({goal:plan.goal,steps:plan.steps}),'실행할 작업 계획을 준비했습니다. 패널에서 확인하세요.');
+          return ok(await deps.tasks!.propose({goal:plan.goal,steps:plan.steps}),'실행할 작업 계획과 현재 진행 상태를 준비했습니다.');
         }},
     ] as ToolDefinition[]):[]),
     // ---- read ----

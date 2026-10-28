@@ -1,4 +1,5 @@
 /** Optional, explicit ChatGPT account connection. No authorization URL or token enters the renderer. */
+import type {AssistantModel,AssistantReasoningEffort} from '../../../types/electron';
 import React, { useEffect, useRef, useState } from 'react';
 import { assistantBridge, useAssistantStore } from '../../stores/useAssistantStore';
 import {WorkspaceDialog} from '../common/WorkspaceDialog';
@@ -20,12 +21,15 @@ export const ChatgptConnectionSetup: React.FC = () => {
   const pending = chat?.status === 'waiting' || chat?.status === 'exchanging';
   const planEnabled = Boolean(config?.active === 'chatgpt' && account?.signedIn && account.planUsageEnabled);
   const ready = Boolean(planEnabled && account?.model && !account.usagePaused);
+  const reasoningEffort=useAssistantStore(state=>state.reasoningEffort);
+  const capabilities=account?.capabilities??config?.providers.find(item=>item.provider==='chatgpt')?.capabilities;
+  const effortNames:Record<string,string>={none:'추론 없음',minimal:'최소',low:'낮음 · 빠른 응답',medium:'보통',high:'높음 · 깊게 검토',xhigh:'매우 높음',max:'최대',ultra:'최상'};
   const renderedSelection = JSON.stringify([chat?.active, chat?.authority]);
   const [accepted, setAccepted] = useState(false);
   const [busy, setBusy] = useState(false);
   const [note, setNote] = useState('');
   const [signOutNotice, setSignOutNotice] = useState('');
-  const [models, setModels] = useState<{ id: string; label: string }[]>([]);
+  const [models, setModels] = useState<AssistantModel[]>([]);
   const [usageVisited, setUsageVisited] = useState<string|null>(null);
   const [recoveryTicket,setRecoveryTicket] = useState<string|null>(null);
   const alive = useRef(true), operation = useRef(0), cancelling = useRef(false);
@@ -105,7 +109,7 @@ export const ChatgptConnectionSetup: React.FC = () => {
         <summary className="cursor-pointer font-semibold text-slate-200">ChatGPT 연결</summary>
         <div className="mt-2 space-y-2">
           <p>본인의 ChatGPT 계정을 연결해 앱 상태를 묻고 작업을 준비할 수 있습니다. 기본 검사·학습 단계는 이 연결 없이 동작합니다.</p>
-          <p>로그인 토큰은 이 컴퓨터의 보호 저장소에만 보관합니다. 질문과 필요한 최소 작업 상태만 선택한 계정 범위로 보냅니다. 프로젝트 파일·키·로컬 경로 전체는 보내지 않습니다. 현재는 텍스트 질문만 지원하며 이미지는 보내지 않습니다.</p>
+          <p>로그인 토큰은 이 컴퓨터의 보호 저장소에만 보관합니다. 질문과 필요한 최소 작업 상태, 직접 첨부한 이미지를 선택한 계정으로 보냅니다. 프로젝트 폴더 전체·키·로그인 정보는 보내지 않습니다. 이미지 입력은 해당 모델이 지원할 때 사용할 수 있습니다.</p>
           <p><a className="text-sky-300 underline" href={TERMS} target="_blank" rel="noopener noreferrer">Sign in with ChatGPT 약관</a>을 확인하세요. 로그인은 아래 버튼을 눌러 연 브라우저에서 직접 진행합니다.</p>
           <label className="flex items-start gap-2"><input type="checkbox" checked={accepted} onChange={event => setAccepted(event.target.checked)} />약관과 전송·보관 안내를 읽고 동의합니다.</label>
           {!supported && <p role="status">이 앱에서는 ChatGPT 연결을 사용할 수 없습니다. 최신 데스크톱 앱에서 여세요.</p>}
@@ -139,6 +143,14 @@ export const ChatgptConnectionSetup: React.FC = () => {
                 {models.map(item => <option key={item.id} value={item.id}>{item.label}</option>)}
               </select>
             </label>
+            <label className="block">추론 강도
+              <select aria-label="추론 강도" className={FIELD} value={reasoningEffort||''} disabled={busy||pending||!ready||!capabilities?.reasoningEfforts?.length}
+                onChange={event=>{const value=event.target.value;if(renderedSelection!==selection()||busy||pending)return;if(!value||capabilities?.reasoningEfforts?.includes(value as AssistantReasoningEffort))useAssistantStore.getState().setReasoningEffort(value?value as AssistantReasoningEffort:undefined);}}>
+                <option value="">모델 기본값</option>
+                {(capabilities?.reasoningEfforts||[]).map(value=><option key={value} value={value}>{effortNames[value]||value}</option>)}
+              </select>
+            </label>
+            <p className="text-xs text-slate-300">{capabilities?.reasoningEfforts?.length?'강도가 높을수록 응답 시간과 사용량이 늘어날 수 있습니다. 검사 판정 기준 점수와는 별개입니다.':'이 모델의 지원 강도가 확인되지 않아 모델 기본값으로 요청합니다.'}</p>
           </>}
         </div>
       </details>

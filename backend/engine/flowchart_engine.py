@@ -19,6 +19,7 @@ from __future__ import annotations
 
 # execute()가 그래프 검증 → 노드별 실행 → 결과 집계·출력 분기를 조율하고, 모델 로더는 엔진 캐시를 공유한다.
 import base64
+import json
 from copy import deepcopy
 from contextlib import contextmanager
 from contextvars import ContextVar
@@ -903,6 +904,7 @@ class FlowchartEngine:
         self._checkpoint_resolver = checkpoint_resolver
         self._model_cache: Dict[Tuple[Any, ...], Any] = {}
         self._model_input_sizes: Dict[Tuple[Any, ...], Tuple[int, int]] = {}
+        self._model_input_recipes: Dict[Tuple[Any, ...], Any] = {}
         self._model_classes: Dict[Tuple[Any, ...], List[str]] = {}
         self._model_class_roles: Dict[Tuple[Any, ...], Optional[Dict[str, str]]] = {}
         if type(max_device_concurrency) is not int or not 1 <= max_device_concurrency <= 8:
@@ -937,6 +939,7 @@ class FlowchartEngine:
                 with self._model_load_lock:
                     self._model_cache.clear()
                     self._model_input_sizes.clear()
+                    self._model_input_recipes.clear()
                     self._model_classes.clear()
                     self._model_class_roles.clear()
                     self.device = torch.device('cpu')
@@ -954,6 +957,13 @@ class FlowchartEngine:
         self._model_class_roles[cache_key] = roles
 
     def _remember_input_size(self, cache_key: Tuple[Any, ...], checkpoint: Dict[str, Any]) -> None:
+        from backend.engine.input_preparation import saved_recipe
+        sidecar = checkpoint
+        if len(cache_key) > 3:
+            metadata_path = Path(cache_key[-2]).with_name("model_meta.json")
+            if metadata_path.is_file():
+                sidecar = json.loads(metadata_path.read_text(encoding="utf-8"))
+        self._model_input_recipes[cache_key] = saved_recipe(sidecar, checkpoint, "classification" if cache_key[0]=="classifier" else cache_key[0])
         raw = checkpoint.get("image_size", [224, 224])
         if isinstance(raw, (list, tuple)) and len(raw) == 2:
             width, height = int(raw[0]), int(raw[1])
@@ -986,6 +996,9 @@ class FlowchartEngine:
         with Path(checkpoint).open("rb") as stream:
             for chunk in iter(lambda: stream.read(1024 * 1024), b""):
                 digest.update(chunk)
+        metadata_path = Path(checkpoint).with_name("model_meta.json")
+        if metadata_path.is_file():
+            digest.update(metadata_path.read_bytes())
         return (*key, str(Path(checkpoint).resolve()), digest.hexdigest())
 
     @_synchronized_model_load
@@ -1524,6 +1537,7 @@ class FlowchartEngine:
             task_clean, job_id, "fast", self._resolve_checkpoint(job_id, task_clean)
         )
         input_size = self._model_input_sizes.get(key, (224, 224))
+        input_recipe = self._model_input_recipes.get(key)
         class_names = self._model_classes.get(key, [])
         if task_clean == "segmentation" and inspect_node.data.params.get("class_names"):
             requested = inspect_node.data.params["class_names"]
@@ -1546,7 +1560,7 @@ class FlowchartEngine:
         # Sequential processing with torch.no_grad()
         with torch.no_grad():
             for roi in rois:
-                tiled_full_image = task_clean == "segmentation" and roi["id"] == "full_image"
+                tiled_full_image = task_clean == "segmentation" and roi["id"] == "full_image" and not input_recipe
                 if tiled_full_image:
                     h, w = img_rgb.shape[:2]
                     bounded_bbox = [0, 0, w, h]
@@ -1557,7 +1571,7 @@ class FlowchartEngine:
                         roi["bbox"],
                         padding_px=roi.get("crop_padding", padding),
                         min_size=16,
-                        target_size=None if patch_scores else input_size,
+                        target_size=None if patch_scores or input_recipe else input_size,
                     )
 
                 # 2. Extract unresized crop for high-fidelity thumbnail downsampled to max 160px (EC-02)
@@ -1580,6 +1594,10 @@ class FlowchartEngine:
                 _, buf = cv2.imencode(".png", thumb_bgr)
                 crop_b64 = f"data:image/png;base64,{base64.b64encode(buf.tobytes()).decode('utf-8')}"
 
+                input_geometry = None
+                if input_recipe:
+                    from backend.engine.input_preparation import prepare_input
+                    resized_crop, _, input_geometry = prepare_input(raw_crop, input_recipe, task="classification" if task_clean=="classifier" else task_clean, image_size=input_size)
                 crop_tensor = None if tiled_full_image else (
                     torch.from_numpy(resized_crop).permute(2, 0, 1).float().unsqueeze(0) / 255.0
                 )
@@ -1639,6 +1657,11 @@ class FlowchartEngine:
                     else:
                         logits = model(crop_tensor)
                         probability_maps = torch.softmax(logits, dim=1)[0].cpu().numpy()
+                    if input_geometry:
+                        from backend.engine.input_preparation import restore_mask
+                        observed = restore_mask(np.ones(probability_maps.shape[1:], dtype=np.uint8), input_geometry).astype(bool)
+                        probability_maps = np.stack([restore_mask(channel, input_geometry, continuous=True) for channel in probability_maps])
+                        probability_maps[0, ~observed] = 1.0
                     segmentation_classes, segmentation_masks, defect_mask = (
                         class_evidence(
                             probability_maps,
