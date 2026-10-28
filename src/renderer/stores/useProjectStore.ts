@@ -86,11 +86,22 @@ async function acceptSelectedProject(project: ProjectConfig, view: { activeStep?
   // then notifies telemetry; a stale selection or a failing setter throws and leaves the previous binding.
   const previousScope = projectViewScope(useProjectStore.getState().project, getApiPersistenceIdentity());
   api.project.acceptContext(project, () => {
-    // Annotation clearing below may await. Never publish the next namespace
-    // with an image whose automatic reads still belong to the previous one.
-    if (previousScope !== projectViewScope(project, getApiPersistenceIdentity())
-        && useFlowchartStore.getState().selectedImage) {
-      useFlowchartStore.getState().setSelectedImage(null);
+    if (previousScope !== projectViewScope(project, getApiPersistenceIdentity())) {
+      // applyProject's full reset follows an await. Retire image custody in
+      // this accepted synchronous commit, before consumers can read the new
+      // project with the previous image UUID or client lease. Dirty/save and
+      // running-operation guards have already passed; saved data is untouched.
+      const annotation = useAnnotationStore.getState();
+      if (annotation.currentImage || annotation.activeImage || annotation.metadata || annotation.images?.length) {
+        useAnnotationStore.setState({
+          images: [], currentImageIndex: -1, currentImage: null, activeImage: null,
+          externalSelectionPath: null, metadata: null, loadedAnnotationContext: null,
+          annotations: [], selectedAnnotationId: null, history: [], future: [],
+          editLease: null, editLeaseAcquiring: null, teamEditingEnabled: false, teamReviewEnabled: false,
+          annotationLoadStatus: 'ready', annotationLoadError: null, autoSelectError: null,
+        });
+      }
+      if (useFlowchartStore.getState().selectedImage) useFlowchartStore.getState().setSelectedImage(null);
     }
     useProjectStore.setState({
       project, projectName: project.name, projectDir: project.project_dir, task: project.task, ...view,

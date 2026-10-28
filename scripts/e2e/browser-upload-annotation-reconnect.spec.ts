@@ -4,7 +4,7 @@ import crypto from 'node:crypto';
 import type {Page, Response} from '@playwright/test';
 import {test, expect} from './fixtures/test';
 import {browserTeamServer} from './fixtures/browser_team_server';
-import {expectBrowserLoginGate,openBrowserServerManagement} from './fixtures/browserGateLogin';
+import {expectBrowserLoginGate,openBrowserServerManagement,chooseBrowserProject,browserLoginWithin} from './fixtures/browserGateLogin';
 import {storedZip} from './fixtures/storedZip';
 import {png} from './qa/appFlow';
 
@@ -25,9 +25,11 @@ async function login(page: Page, origin: string, projectId: string, projectName:
   await page.getByLabel('공유 계정 비밀번호', {exact: true}).fill(password);
   const accepted = page.waitForResponse(response => new URL(response.url()).pathname === '/api/accounts/login'
     && response.request().method() === 'POST');
+  const browserLoginDeadline=performance.now()+20_000;
   await page.getByRole('button', {name: '연결·로그인', exact: true}).click();
+  await chooseBrowserProject(page,projectId,'shared',browserLoginDeadline);
   await checked(await accepted);
-  await openBrowserServerManagement(page);
+  await browserLoginWithin(()=>openBrowserServerManagement(page),browserLoginDeadline);
   await expect(page.getByLabel('공동 작업 프로젝트', {exact: true})).toHaveValue(projectId);
   await expect(page.getByLabel('공동 작업 프로젝트', {exact: true})).toBeEnabled();
   await expect(page.getByTitle('프로젝트 관리', {exact: true})).toContainText(projectName);

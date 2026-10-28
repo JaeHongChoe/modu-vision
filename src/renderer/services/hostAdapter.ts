@@ -120,6 +120,13 @@ export const host = {
   },
 
   shared: {
+    /** Public identity of this tab's same-origin cookie session; never a native/remote bearer authority. */
+    browserIdentity():{origin:string;actor_id:string;revision:number}|null {
+      if(bridge()||browserRemote.selection())return null;
+      const connection=browserSession.connection();
+      return connection&&connection.server_url===window.location.origin
+        ?{origin:connection.server_url,actor_id:connection.user.id,revision:browserSession.revision()}:null;
+    },
     requestOptions: (url: string, method: string) => browserRemote.selection()?browserRemote.requestOptions(url,method):browserSession.requestOptions(url, method),
     async connection(): Promise<SharedConnection | null> {
       const api = bridge();

@@ -15,6 +15,8 @@ READINESS_CI_CONTROLS = (
     'backend/tests/test_local_project_assets.py',
     'backend/tests/test_daemon_command_preparation.py',
     'backend/tests/test_telemetry_original_task_lifetime.py',
+    'backend/tests/test_browser_project_mode.py',
+    'backend/tests/test_managed_service_initial_identity.py',
 )
 
 
@@ -649,3 +651,32 @@ def test_assistant_task_ledger_recovery_reaches_full_and_related_fast_ci():
     for reference in required:
         assert shlex.split(run).count(reference) == 1
         assert reference in related_module().select_pytest([reference])
+
+
+@pytest.mark.parametrize('kind', ['backend', 'backend_producer', 'source_node', 'browser_node', 'fast_static_node'])
+def test_browser_auth_controls_reach_canonical_and_mirrored_ci_selection(kind):
+    """The new non-renderer controls must actually be selected, without duplicating renderer discovery."""
+    import shlex
+    full = yaml.safe_load((ROOT/'.github/workflows/ci.yml').read_text())
+    fast = yaml.safe_load((ROOT/'.github/workflows/ci-fast.yml').read_text())
+    if kind in {'backend', 'backend_producer'}:
+        command = next(step['run'] for step in full['jobs']['source']['steps']
+                       if step.get('name') == 'CPU contract and recovery regressions')
+        for reference, producer in (
+            ('backend/tests/test_browser_project_mode.py', 'backend/api/routes_accounts.py'),
+            ('backend/tests/test_managed_service_initial_identity.py', 'backend/engine/managed_service.py'),
+        ):
+            assert shlex.split(command).count(reference) == 1, 'New backend control must execute exactly once'
+            changed = reference if kind == 'backend' else producer
+            assert reference in related_module().select_pytest([changed])
+        return
+    job = fast['jobs']['static'] if kind == 'fast_static_node' else full['jobs'][kind.removesuffix('_node')]
+    command = next(step['run'] for step in job['steps']
+                   if step.get('name') == 'Type checks, renderer regressions, and build')
+    reference = 'scripts/e2e/fixtures/browserGateLogin.test.cjs'
+    lines = [shlex.split(line) for line in command.splitlines() if line.strip()]
+    selected = [line for line in lines if line[:2] == ['node', '--test']]
+    assert sum(line.count(reference) for line in selected) == 1, 'Explicit browser login helper control must execute exactly once'
+    assert (ROOT/reference).is_file()
+    assert command.splitlines().count('npm run test:renderer') == 1
+    assert 'src/renderer/components/compute/SharedProjectPanelBrowserMode.test.cjs' not in command

@@ -63,6 +63,7 @@ jobs:
           node scripts/verify-supervisor.js --owned-bootstrap-order
           npm run test:renderer
           node --test scripts/tests/assistant-safe-storage-qa.test.cjs scripts/tests/chatgpt-account-acceptance.test.cjs
+          node --test scripts/e2e/fixtures/browserGateLogin.test.cjs
           npm run build
           npm run test:e2e:harness
           node --test scripts/acceptance/action_inventory.test.cjs

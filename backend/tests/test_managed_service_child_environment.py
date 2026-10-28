@@ -60,7 +60,8 @@ def test_managed_start_strips_private_application_authority_only_for_its_child(t
     def identity(original,state):
         assert original is process and state==service.root/'state'
         events.append('original-process-identity')
-        return {'pid':process.pid,'process_created_at':1.0,'process_command_sha256':'fixture-command-digest'}
+        return {'pid':process.pid,'process_created_at':1.0,
+                'process_command_sha256':managed_service.command_sha256(captured[0][0])}
     def save(value):
         events.append('save-original-identity')
         service.config=dict(value)
@@ -76,6 +77,10 @@ def test_managed_start_strips_private_application_authority_only_for_its_child(t
     monkeypatch.setattr(service,'input_arguments',lambda _release:[])
     monkeypatch.setattr(managed_service.subprocess,'Popen',popen)
     monkeypatch.setattr(managed_service,'process_identity',identity)
+    # This unit seam now models the genuine initial-child checks too; all
+    # original single-launch, event-order and environment assertions remain.
+    monkeypatch.setattr(managed_service.psutil,'Process',lambda pid:SimpleNamespace(
+        pid=pid,create_time=lambda:1.0,ppid=lambda:os.getpid(),status=lambda:managed_service.psutil.STATUS_RUNNING))
     monkeypatch.setattr(service_bootstrap.sys,'frozen',frozen,raising=False)
     policy_values,parent=_seed(monkeypatch,tmp_path)
     assert service.start(release,recover=False)=={'status':'ready'}

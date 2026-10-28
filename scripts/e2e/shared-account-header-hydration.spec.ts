@@ -2,7 +2,7 @@ import path from 'node:path';
 import type {Request} from '@playwright/test';
 import {test, expect} from './fixtures/test';
 import {browserTeamServer} from './fixtures/browser_team_server';
-import {expectBrowserLoginGate} from './fixtures/browserGateLogin';
+import {expectBrowserLoginGate,chooseBrowserProject,browserLoginWithin} from './fixtures/browserGateLogin';
 
 test.use({ignoreHTTPSErrors: true, actionTimeout: 15000});
 
@@ -102,8 +102,10 @@ test('browser account login automatically hydrates the mounted Header and accoun
       await page.getByLabel('공유 계정 이름', {exact: true}).fill(username);
       await page.getByLabel('공유 계정 비밀번호', {exact: true}).fill(password);
       phase = 'ui-login';
+      const browserLoginDeadline=performance.now()+20_000;
       await page.getByRole('button', {name: '연결·로그인', exact: true}).click();
-      await expect(page.getByTitle('프로젝트 관리', {exact: true})).toContainText(project.name);
+      await chooseBrowserProject(page,project.id,'shared',browserLoginDeadline);
+      await browserLoginWithin(()=>expect(page.getByTitle('프로젝트 관리', {exact: true})).toContainText(project.name),browserLoginDeadline);
       await expect.poll(() => complete('ui-login', discovery[0], 200).length).toBe(1);
       await expect.poll(() => complete('ui-login', discovery[1], 200).length).toBe(1);
       for (const route of discovery) {

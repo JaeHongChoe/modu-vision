@@ -72,7 +72,7 @@ const UI_SOURCE={
  "src/renderer/components/flowchart/CustomNode.tsx": "97350539036826f52411bc8defe234d638e2c18fde5092a5f104af7557dd1828",
  "src/renderer/components/flowchart/ImagePickerModal.tsx": "0ef27d643ddc2fddd5014e2c27087116eefbc87eb5dd92c95b732a401ceb6e4e",
  "src/renderer/stores/useFlowchartStore.ts": "99796bbeabb039f63044a05c65a343c6d1d2b4ef6a253afcd588480a9222bb35",
- "src/renderer/services/api.ts": "20e1f7faba939733d56cb074cea35aff361da579303aba73e4153b995413e9f0",
+ "src/renderer/services/api.ts": "5cc9fc4fbfda8113e0b5e5018de5aea568aa7bd77ceaa77abbd8ae9e2f6bacc5",
  "src/renderer/components/flowchart/FlowWorkspacePanel.tsx": "6e7c74ae465e6a426601de756a91a9966615195f52c1e6aa9e4691b187baa8bf",
  "src/renderer/components/flowchart/FlowChangeDialog.tsx": "2e66a530f565b8211829d1cb3507bf2d9d1e7aa7173a1a37a54de98d19230347",
  "src/renderer/components/flowchart/FlowRecipeDialog.tsx": "09418ce7091fd126a9f341fddf0acb9d30f20fe955268c71ae21f25204c935ba",

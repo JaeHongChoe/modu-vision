@@ -63,7 +63,7 @@ async function exercise(page:Page,workspace:Workspace,evidence:Evidence,api:Api,
   await expect(panel().getByRole('button',{name:'라벨 내보내기',exact:true})).toBeEnabled();
  };
  const capture=async(name:string)=>{
-  const status=panel().getByRole('status').filter({hasText:/내보내기 완료/});
+  const status=panel().getByRole('status').filter({hasText:/ZIP 생성 완료 · 다운로드 요청/});
   const target=await status.count()?status:panel().getByRole('alert');
   await target.scrollIntoViewIfNeeded();await expect(target).toBeInViewport();await evidence.screenshot(page,`${native?'native':'browser'}-label-export-${name}`);
  };
@@ -93,7 +93,7 @@ async function exercise(page:Page,workspace:Workspace,evidence:Evidence,api:Api,
   const empty=await exportBundle('labelme','empty-labelme');
   expect(empty.response.image_count).toBe(0);expect(empty.response.annotation_count).toBe(0);
   expect(empty.response.payload).toEqual({format:'labelme',documents:[]});expect(empty.members).toEqual({});
-  await expect(panel().getByRole('status').filter({hasText:'0개 이미지 · 0개 라벨 내보내기 완료'})).toBeVisible();await capture('zero-image-zero-member-zip');
+  await expect(panel().getByRole('status').filter({hasText:'0개 이미지 · 0개 라벨 ZIP 생성 완료 · 다운로드 요청'})).toBeVisible();await capture('zero-image-zero-member-zip');
   expect(tree(emptySource)).toEqual({});expect(tree(emptyAnnotationRoot)).toEqual(emptyAnnotationTree);
   expect(await api('/api/dataset/versions')).toEqual(emptyVersions);expect((await api('/api/dataset/metadata?limit=10')).items).toEqual(emptyMetadata.items);
   expect(sha(path.join(emptyProject.project_dir,'project.json'))).toBe(emptyProjectHash);
@@ -148,15 +148,15 @@ async function exercise(page:Page,workspace:Workspace,evidence:Evidence,api:Api,
   expect(JSON.parse(exported.members['image_manifest.json'].text).sort((a:any,b:any)=>a.file_name.localeCompare(b.file_name))).toEqual([...names].sort().map(name=>({file_name:name,width:32,height:32})));
   expect(JSON.parse(exported.members['studio_classes.json'].text)).toEqual([{label:'ControlledBox',category_id:7,color:'#f59e0b'}]);
   for(const name of labelNames){const line=exported.members[name].text.trim().split(/\s+/).map(Number);expect(line).toEqual([0,0.328125,0.375,0.46875,0.5]);}
-  await expect(panel().getByRole('status').filter({hasText:'2개 이미지 · 2개 라벨 내보내기 완료'})).toBeVisible();await capture('completed-real-yolo-bundle');
+  await expect(panel().getByRole('status').filter({hasText:'2개 이미지 · 2개 라벨 ZIP 생성 완료 · 다운로드 요청'})).toBeVisible();await capture('completed-real-yolo-bundle');
   const beforeReopen={POSTs:observed.length,downloads:await downloads.count(),zip_sha256:exported.downloaded_sha256};
   await toggle().click();await expect(panel()).toHaveCount(0);await open(2);
   await expect(panel().getByLabel('라벨 교환 형식',{exact:true})).toHaveValue('yolo');
-  await expect(panel().getByRole('status').filter({hasText:'2개 이미지 · 2개 라벨 내보내기 완료'})).toBeVisible();
+  await expect(panel().getByRole('status').filter({hasText:'2개 이미지 · 2개 라벨 ZIP 생성 완료 · 다운로드 요청'})).toBeVisible();
   expect(observed.length).toBe(beforeReopen.POSTs);expect(await downloads.count()).toBe(beforeReopen.downloads);await capture('completed-panel-reopen-no-repeat-export');
   states.push({name:'completed-view-close-open',format:'yolo',notice_preserved:true,extra_export_POST:0,extra_download:0,zip_sha256:sha(exported.downloaded_zip)});
   await navigate(project.name);await open(2);await expect(panel().getByLabel('라벨 교환 형식',{exact:true})).toHaveValue('labelme');
-  await expect(panel().getByRole('status').filter({hasText:/내보내기 완료/})).toHaveCount(0);
+  await expect(panel().getByRole('status').filter({hasText:/ZIP 생성 완료 · 다운로드 요청/})).toHaveCount(0);
   expect(observed.length).toBe(beforeReopen.POSTs);expect(await downloads.count()).toBe(beforeReopen.downloads);
   const exportButton=panel().getByRole('button',{name:'라벨 내보내기',exact:true});await exportButton.scrollIntoViewIfNeeded();await expect(exportButton).toBeInViewport();await evidence.screenshot(page,`${native?'native':'browser'}-label-export-reload-default-no-automatic-export`);
   states.push({name:'actual-renderer-reload',format:'labelme',transient_notice_cleared:true,persisted_zip_sha256:sha(exported.source_zip),extra_export_POST:0,extra_download:0});

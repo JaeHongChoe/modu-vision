@@ -4,7 +4,7 @@ import crypto from 'node:crypto';
 import type {Page, BrowserContext} from '@playwright/test';
 import {test, expect} from './fixtures/test';
 import {browserTeamServer} from './fixtures/browser_team_server';
-import {expectBrowserLoginGate,openBrowserServerManagement} from './fixtures/browserGateLogin';
+import {expectBrowserLoginGate,openBrowserServerManagement,chooseBrowserProject,browserLoginWithin} from './fixtures/browserGateLogin';
 
 test.use({ignoreHTTPSErrors: true, actionTimeout: 15000});
 
@@ -42,11 +42,13 @@ test('independent HTTPS team clients conflict, lose revoked authority and reopen
       await client.getByLabel('공유 계정 이름', {exact: true}).fill(username);
       await client.getByLabel('공유 계정 비밀번호', {exact: true}).fill(password);
       const response = client.waitForResponse(r => new URL(r.url()).pathname === '/api/accounts/login' && r.request().method() === 'POST');
+      const browserLoginDeadline=performance.now()+20_000;
       await client.getByRole('button', {name: '연결·로그인', exact: true}).click();
+      await chooseBrowserProject(client,project.id,'shared',browserLoginDeadline);
       const loggedIn = await (await response).json();
       evidence.redact(loggedIn.csrf_token);
       expect(loggedIn.token).toBeUndefined();
-      await expect(client.getByTitle('프로젝트 관리', {exact: true})).toContainText(project.name);
+      await browserLoginWithin(()=>expect(client.getByTitle('프로젝트 관리', {exact: true})).toContainText(project.name),browserLoginDeadline);
       await openBrowserServerManagement(client);
       await client.getByRole('dialog', {name: '컴퓨팅 서버 관리', exact: true}).getByRole('button', {name: '닫기', exact: true}).click();
       const cookies = await client.context().cookies(server.origin);

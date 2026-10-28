@@ -47,7 +47,7 @@ async function exercise(page:Page,workspace:Workspace,evidence:Evidence,api:Api,
   panel=await openPanel();await panel.getByLabel('라벨 교환 형식',{exact:true}).selectOption(format);
   const response=page.waitForResponse(r=>new URL(r.url()).pathname==='/api/dataset/formats/export'&&r.request().method()==='POST');
   const zip=await download(()=>panel.getByRole('button',{name:'라벨 내보내기',exact:true}).click(),format);const exported=await (await response).json();
-  expect(exported.image_count).toBe(2);expect(exported.annotation_count).toBe(format==='labelme'?6:4);await expect(panel.getByRole('status').filter({hasText:'내보내기 완료'})).toBeVisible();
+  expect(exported.image_count).toBe(2);expect(exported.annotation_count).toBe(format==='labelme'?6:4);await expect(panel.getByRole('status').filter({hasText:'ZIP 생성 완료 · 다운로드 요청'})).toBeVisible();
   const dir=path.join(workspace.root,`exchange-${format}`);fs.mkdirSync(dir);
   execFileSync(process.env.MV_E2E_PYTHON||'python3',['-c',"import sys,zipfile,pathlib\nr=pathlib.Path(sys.argv[2]).resolve()\nwith zipfile.ZipFile(sys.argv[1]) as z:\n for name in z.namelist():\n  p=(r/name).resolve();assert p.is_relative_to(r);assert not name.startswith('/')\n z.extractall(r)",zip,dir]);
   await chooseFolder(dir);await panel.getByRole('button',{name:'라벨 폴더 선택',exact:true}).click();await expect(panel.getByText(dir,{exact:true})).toBeVisible();
