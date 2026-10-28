@@ -1,0 +1,69 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="1030" viewBox="0 0 1200 1030" role="img" aria-labelledby="title desc" style="max-width:100%;height:auto">
+  <title id="title">Vision AI Studio: 설치 앱과 localhost 웹의 실행 구성</title>
+  <desc id="desc">설치 앱은 React 화면, Electron 앱과 로컬 Python FastAPI 엔진으로 구성됩니다. localhost 웹은 브라우저가 로컬 계정으로 HTTPS에 연결하고 Python FastAPI가 창 없는 Electron 보조 프로그램과 네이티브 기능을 연결합니다. 설치 앱과 웹의 저장소는 별도이며 자동으로 합치지 않습니다. 선택 기능인 ChatGPT에는 텍스트와 구조화된 앱 상태만 보내고 이미지는 보내지 않습니다.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#071523"/><stop offset="1" stop-color="#0d2033"/></linearGradient>
+    <linearGradient id="card" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#122c3f"/><stop offset="1" stop-color="#102334"/></linearGradient>
+    <marker id="arrow" markerWidth="8" markerHeight="8" refX="6.5" refY="4" orient="auto-start-reverse"><path d="M1 1 L6 4 L1 7" fill="none" stroke="#5ed8dd" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></marker>
+  </defs>
+  <style>
+    text {font-family:-apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif;fill:#e9f3f8}
+    .muted {fill:#a8bfce} .teal {fill:#6fe0dc} .warm {fill:#f3c67c}
+    .label {font-weight:700} .line {fill:none;stroke:#5ed8dd;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+  </style>
+  <rect width="1200" height="1030" rx="24" fill="url(#bg)"/>
+  <text x="44" y="38" font-size="14" class="teal label">VISION AI STUDIO  /  LOCAL RUNTIME</text>
+  <text x="44" y="88" font-size="36" class="label">앱도 웹도, 이 PC에서 실행</text>
+  <text x="44" y="125" font-size="22" class="muted">설치 앱과 localhost 웹은 실행 경로와 저장소를 따로 유지합니다.</text>
+  <rect x="44" y="155" width="1112" height="238" rx="18" fill="url(#card)" stroke="#284c5d"/>
+  <text x="68" y="195" font-size="26" class="label">설치 앱</text>
+  <text x="1132" y="194" font-size="18" class="teal" text-anchor="end">이 PC의 앱·엔진</text>
+  <rect x="68" y="225" width="220" height="86" rx="12" fill="#0b1c2c" stroke="#2b485a"/>
+  <text x="178.0" y="261" font-size="23" class="label" text-anchor="middle">React 화면</text>
+  <text x="178.0" y="290" font-size="17" class="muted" text-anchor="middle">사용자 작업 화면</text>
+  <rect x="338" y="225" width="220" height="86" rx="12" fill="#0b1c2c" stroke="#2b485a"/>
+  <text x="448.0" y="261" font-size="23" class="label" text-anchor="middle">Electron 앱</text>
+  <text x="448.0" y="290" font-size="17" class="muted" text-anchor="middle">네이티브 기능·엔진 실행</text>
+  <rect x="608" y="225" width="284" height="86" rx="12" fill="#102b3c" stroke="#3a8190"/>
+  <text x="750.0" y="261" font-size="23" class="label" text-anchor="middle">Python / FastAPI</text>
+  <text x="750.0" y="290" font-size="17" class="muted" text-anchor="middle">로컬 작업 · HTTP API</text>
+  <rect x="938" y="225" width="194" height="86" rx="12" fill="#0b1c2c" stroke="#2b485a"/>
+  <text x="1035.0" y="261" font-size="23" class="label" text-anchor="middle">앱 저장소</text>
+  <text x="1035.0" y="290" font-size="17" class="muted" text-anchor="middle">프로젝트 · 결과</text>
+  <path d="M294 268 H330" class="line" marker-end="url(#arrow)"/>
+  <path d="M564 268 H600" class="line" marker-end="url(#arrow)"/>
+  <path d="M900 268 H930" class="line" marker-start="url(#arrow)" marker-end="url(#arrow)"/>
+  <path d="M178 317 v26 h572 v-26" fill="none" stroke="#5a8f9e" stroke-width="1.5" stroke-dasharray="5 6" marker-end="url(#arrow)"/>
+  <text x="464" y="371" font-size="17" class="muted" text-anchor="middle">화면은 로컬 API로 엔진과 통신합니다.</text>
+  <rect x="44" y="419" width="1112" height="320" rx="18" fill="url(#card)" stroke="#284c5d"/>
+  <text x="68" y="459" font-size="26" class="label">localhost 웹</text>
+  <text x="1132" y="458" font-size="18" class="teal" text-anchor="end">같은 PC의 HTTPS · 로컬 계정</text>
+  <rect x="68" y="487" width="220" height="86" rx="12" fill="#0b1c2c" stroke="#2b485a"/>
+  <text x="178.0" y="523" font-size="23" class="label" text-anchor="middle">브라우저</text>
+  <text x="178.0" y="552" font-size="17" class="muted" text-anchor="middle">이 PC의 웹 화면</text>
+  <rect x="338" y="487" width="220" height="86" rx="12" fill="#0b1c2c" stroke="#2b485a"/>
+  <text x="448.0" y="523" font-size="23" class="label" text-anchor="middle">localhost HTTPS</text>
+  <text x="448.0" y="552" font-size="17" class="muted" text-anchor="middle">로컬 계정 로그인</text>
+  <rect x="608" y="487" width="284" height="86" rx="12" fill="#102b3c" stroke="#3a8190"/>
+  <text x="750.0" y="523" font-size="23" class="label" text-anchor="middle">Python / FastAPI</text>
+  <text x="750.0" y="552" font-size="17" class="muted" text-anchor="middle">로컬 작업 · HTTP API</text>
+  <rect x="938" y="487" width="194" height="86" rx="12" fill="#0b1c2c" stroke="#2b485a"/>
+  <text x="1035.0" y="523" font-size="23" class="label" text-anchor="middle">웹 저장소</text>
+  <text x="1035.0" y="552" font-size="17" class="muted" text-anchor="middle">별도 웹 데이터 폴더</text>
+  <path d="M294 530 H330" class="line" marker-end="url(#arrow)"/>
+  <path d="M564 530 H600" class="line" marker-end="url(#arrow)"/>
+  <path d="M900 530 H930" class="line" marker-start="url(#arrow)" marker-end="url(#arrow)"/>
+  <path d="M750 580 V617" class="line" marker-start="url(#arrow)" marker-end="url(#arrow)"/>
+  <rect x="608" y="625" width="284" height="86" rx="12" fill="#102b3c" stroke="#3a8190"/>
+  <text x="750.0" y="661" font-size="23" class="label" text-anchor="middle">Electron 보조 프로그램</text>
+  <text x="750.0" y="690" font-size="17" class="muted" text-anchor="middle">폴더 선택 · 파일 · 보호 저장소</text>
+  <text x="68" y="633" font-size="19" class="muted">폴더·파일 기능이 필요할 때</text>
+  <text x="68" y="662" font-size="19" class="muted">창 없는 보조 프로그램과 연결합니다.</text>
+  <rect x="44" y="762" width="1112" height="55" rx="12" fill="#102e3c" stroke="#2b5966"/>
+  <text x="600" y="797" font-size="23" class="teal label" text-anchor="middle">앱 저장소와 웹 저장소는 별도이며, 자동으로 합치지 않습니다.</text>
+  <rect x="44" y="842" width="1112" height="127" rx="16" fill="#112839" stroke="#346476"/>
+  <text x="68" y="882" font-size="26" class="label">선택 기능 · ChatGPT 연결</text>
+  <text x="68" y="919" font-size="22" class="muted">텍스트와 구조화된 앱 상태만 전달하며, 이 연결로 이미지를 보내지 않습니다.</text>
+  <text x="68" y="950" font-size="18" class="muted">실제 계정 연결과 지원 범위는 안내서에서 확인합니다.</text>
+  <text x="44" y="1008" font-size="16" class="muted">실행 구조를 설명한 도식입니다. OS별 지원과 배포 상태는 문서를 확인하세요.</text>
+</svg>

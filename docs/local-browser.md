@@ -41,6 +41,11 @@ $env:VISION_AI_PYTHON = "$PWD\.venv\Scripts\python.exe"
 npm run web -- --help
 ```
 
+아래 날짜별 검증 문단은 **당시의 기록**입니다. 커밋·PR·CI 상태는 그 시점의
+관측을 뜻하며, 현재 상태는 [Pull requests](https://github.com/JaeHongChoe/modu-vision/pulls)와
+[Actions](https://github.com/JaeHongChoe/modu-vision/actions)에서 확인하세요.
+실행·설치 지원 범위는 [배포 지원 표](release-platform-matrix.md)를 함께 확인하세요.
+
 2026-10-26 macOS의 기존 웹 경로에서 실제 제품 실행기와 격리 Chromium으로 로그인·프로젝트 생성·ZIP
 업로드·라벨 저장·분할, 합성 이미지 16장의 CPU 학습 1회와 저장 모델 평가, 같은 포트의
 WSS 재연결·새 로그인 후 저장 결과를 확인했습니다. [검증 근거](verification/2026-10-26-local-browser.md)를
@@ -71,8 +76,8 @@ E2E 하네스 67개가 통과했습니다. 별도 opt-in Electron 검사는 전�
 격리된 미리보기에 표시되는 것도 확인했습니다. 추가 학습·평가·검사 실행은 하지 않았습니다.
 
 `744283cf`의 fast CI 11개와 웹 보안 검사 1개는 모두 통과했습니다. 해당 head의
-전체 회귀는 아직 시작하지 않았고, Merge readiness의 최초 실패는 전체 회귀 선행
-조건에 따른 기록으로 남겨 둡니다. PR18은 draft입니다. 전체 기능 일치 수락이나
+당시 전체 회귀는 아직 시작하지 않았고, Merge readiness의 최초 실패는 전체 회귀 선행
+조건에 따른 기록으로 남겨 둡니다. 해당 기록 시점의 PR18은 draft였습니다. 전체 기능 일치 수락이나
 병합 완료를 뜻하지 않으며, 실제 공급자·원격 계정·다른 OS·배포 검증은 별도입니다.
 [현재 통합 검증 기록](verification/2026-10-27-local-web-desktop-parity.md)을 참고하세요.
 

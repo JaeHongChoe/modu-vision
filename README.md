@@ -4,37 +4,102 @@
 
 # Modu Vision (모두의 비전)
 
-**데이터 준비부터 라벨링, 학습, 평가, 검사 플로우와 모델 내보내기까지 연결하는 데스크톱 비전 AI 스튜디오**
+**이미지 준비부터 라벨링·학습·평가·검사까지 연결하는 비전 AI 스튜디오**
 
-[![Linux CPU source checks](https://github.com/JaeHongChoe/modu-vision/actions/workflows/ci.yml/badge.svg)](https://github.com/JaeHongChoe/modu-vision/actions/workflows/ci.yml)
+설치 앱으로, 또는 이 PC의 브라우저에서 사용합니다. 앱 이름은 **Vision AI Studio**입니다.
+
+[![Linux 전체 회귀](https://github.com/JaeHongChoe/modu-vision/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/JaeHongChoe/modu-vision/actions/workflows/ci.yml)
 [![Node.js 24](https://img.shields.io/badge/Node.js-24-339933)](package.json)
 [![Python 3.13](https://img.shields.io/badge/Python-3.13-3776AB)](CONTRIBUTING.md)
 [![Electron 44](https://img.shields.io/badge/Electron-44-47848F)](package-lock.json)
-[![Windows 11 x64](https://img.shields.io/badge/Windows-11%20x64-0078D4)](https://github.com/JaeHongChoe/modu-vision/actions/workflows/windows-native.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-[작업 흐름](#작업-흐름) · [주요 기능](#주요-기능) · [빠른 시작](#빠른-시작) · [패키징](#데스크톱-패키징) · [문서](#문서)
+[빠른 시작](#빠른-시작) · [6단계 작업 흐름](#작업-흐름) · [ChatGPT 도우미](#chatgpt-도우미) · [앱과 웹의 구조](#앱과-웹의-구조) · [주요 기능](#주요-기능) · [문서](#문서)
 
 </div>
 
-## 프로젝트 소개
+![이미지와 라벨을 준비하고 모델을 학습·평가한 뒤 검사 흐름을 저장·실행하는 6단계 개념도](assets/readme/studio-workflow.svg)
 
-Modu Vision은 Electron·React 화면과 Python·FastAPI 학습 엔진으로 구성됩니다. 앱 이름은 **Vision AI Studio**입니다. 프로젝트의 이미지와 라벨, 학습 작업, 저장 모델, 평가 결과와 검사 이력을 연결해 관리합니다. 저장한 플로우를 데스크톱에서 실행하거나, 실행 패키지와 독립 검사 서비스로 내보낼 수 있습니다.
+프로젝트 안에서 원본 이미지, 라벨, 학습 작업, 저장 모델과 검사 이력을 연결합니다. 화면의 **간단히 보기**는 지금 필요한 작업을 안내하고, **모두 보기**와 고급 편집에서는 세부 설정을 다룹니다. 도우미에 작업을 요청해 지원되는 준비·학습·평가 동작을 맡길 수도 있습니다.
 
-현재 버전은 **0.1.0, 개발 단계**입니다. 코드 구현, 자동 테스트, 실제 앱 실행, 대상 OS의 설치·복구, 현장 장비와 모델 품질의 검증은 각각 구분합니다. 플랫폼별 빌드·서명·실행 조건은 [배포 지원 표](docs/release-platform-matrix.md), 기능별 구현·확인 범위는 [작업 계획](docs/service-upgrade-program.json)과 [검증 근거](docs/service-upgrade-evidence.json)를 확인하세요.
+현재 **0.1.0 개발 버전**입니다. 기능 구현과 자동 검사, 대상 OS의 설치·서명, 실제 장비·모델 품질의 확인 범위는 [배포 지원 표](docs/release-platform-matrix.md)와 [검증 근거](docs/service-upgrade-evidence.json)에서 구분합니다.
+
+## 빠른 시작
+
+| 사용 방식 | 시작 방법 | 준비할 것 |
+| --- | --- | --- |
+| **설치 앱** | 전달받은 설치 파일로 설치한 뒤 **Vision AI Studio** 실행 | 해당 OS·아키텍처의 설치본. Python 런타임은 앱에 포함됩니다. |
+| **이 PC의 브라우저** | 소스 환경을 준비한 뒤 `npm run web` → [https://localhost:8443](https://localhost:8443) | Node·Python 의존성, 최초 로컬 계정 설정 |
+| **소스 개발** | [개발 환경 설치](#개발-환경-설치) 후 `npm run dev` | Git, Node.js 24, Python 3.13 |
+
+### 설치 앱으로 시작
+
+설치 파일을 전달받았다면 일반 사용자는 아래의 개발 환경 설치를 먼저 할 필요가 없습니다. macOS arm64는 앱/DMG·ZIP, Windows x64는 NSIS, Linux x64는 AppImage·deb 빌드 경로가 있습니다. **빌드 경로와 실제 설치·서명·복구 확인은 구분**하며, 대상 환경의 조건은 [배포 지원 표](docs/release-platform-matrix.md)를 따릅니다. 설치본을 직접 만들려면 [데스크톱 패키징](#데스크톱-패키징)을 보세요.
+
+앱을 연 뒤 **프로젝트 만들기·열기 → 데이터 준비**부터 시작합니다. 원본을 가져오고 클래스를 확인한 뒤 6단계를 따라 진행하세요.
+
+### 브라우저로 시작
+
+[개발 환경 설치](#개발-환경-설치)를 완료한 저장소의 터미널에서 실행합니다.
+
+```bash
+npm run web
+```
+
+첫 실행에는 **터미널에서 로컬 계정을 생성**하고, 열린 브라우저에서 그 계정으로 로그인합니다. 로컬 HTTPS 인증서 확인은 사용자가 직접 진행합니다. 사용 중에는 실행 터미널을 유지하세요.
+
+이 실행기는 **해당 PC의 localhost용**입니다. LAN·외부 호스팅용 서버와는 구분됩니다. 현재 Windows 로컬 웹은 TLS 키 권한 검사가 준비되지 않아 실행을 거절하며, Linux 웹 런타임은 미검증입니다. 실행 옵션·지원 범위·데이터 보관 위치는 [로컬 브라우저 안내](docs/local-browser.md)를 확인하세요.
 
 ## 작업 흐름
 
-번호가 있는 Studio 화면은 다음 **6단계**입니다. 별도의 운영자 검사 작업 공간과 작업 센터에서 실행과 이력을 관리할 수 있습니다.
+Studio의 실제 화면 이름을 기준으로 한 **6단계**입니다.
 
-| 단계 | 화면 | 주요 작업 |
+| 단계 | 화면 | 여기서 하는 일 |
 | --- | --- | --- |
-| 1 | 데이터 관리 | 이미지·LabelMe 가져오기, 데이터 분할·버전 관리, 합성 후보 관리 |
-| 2 | 라벨링 & AI | 도형·마스크 편집, 라벨 세트, 팀 기준서·배정·검수 |
-| 3 | 오토딥러닝 | 모델·실행 자원·학습 설정 선택, 후보 탐색, 작업 상태 확인 |
-| 4 | 평가 & 과검/미검 | 이미지별 결과, 임계값 검토, 동일 이미지 기준 모델 비교·보고서 |
-| 5 | 플로우차트 | 모델·ROI·측정·집계 연결, 저장·테스트·일괄 평가 |
-| 6 | 추론 & 모델 내보내기 | 저장된 플로우 실행, 결과·검토 이력, 모델·전체 플로우 패키지 내보내기 |
+| **01** | **데이터 준비** | 이미지·LabelMe 가져오기, 클래스 확인, 학습·검증·시험 분할 |
+| **02** | **라벨 달기** | 도형·마스크 편집, AI 초안 검토, 라벨 저장·검수 |
+| **03** | **모델 학습** | 모델과 실행 자원 선택, 학습 시작·상태·저장 결과 확인 |
+| **04** | **결과 평가** | 모델 성능과 과검·미검 이미지 확인, 모델 비교·보고서 |
+| **05** | **검사 흐름 만들기** | 모델과 판정 규칙 연결 → 흐름 저장 → 시험 이미지로 전체 흐름 확인 |
+| **06** | **검사 실행** | 저장한 흐름으로 검사, 결과·검토 이력 확인, 패키지 내보내기 |
+
+**4단계는 모델 자체를, 5단계는 전처리·모델·판정 규칙이 연결된 저장 흐름을 확인**합니다. 5단계의 기본 안내와 고급 편집은 [검사 흐름 준비 안내](docs/inspection-flow.md)를 보세요. 별도의 작업 센터에서는 실행 중인 작업과 저장 이력을, 운영자 화면에서는 반복 검사를 관리합니다.
+
+<details>
+<summary><strong>합성 프로젝트의 검사 준비 화면 보기</strong></summary>
+
+![합성 자료를 사용한 5단계 검사 준비 화면 예시](docs/verification/assets/step5-guided-flow/preparation.png)
+
+합성 자료를 사용한 화면 예시입니다. [촬영·검증 범위](docs/verification/2026-10-27-step5-guided-flow.md)를 함께 확인하세요.
+
+</details>
+
+## ChatGPT 도우미
+
+“이 자료로 학습을 준비해줘”, “이 오류가 왜 뜨는지 확인해줘”처럼 요청합니다. 도우미는 현재 프로젝트·화면·작업 상태를 읽고 **지원되는 앱 동작을 계획해, 확인한 계획을 실행**합니다. 프로젝트 준비, 자료 가져오기·분할, 지원되는 라벨 초안·학습·평가·시험 검사·보고서 저장과 화면 이동을 맡길 수 있습니다.
+
+**요청 작성 → 계획·입력값 검토 → 계획 확인하고 실행 → 결과 확인·필요한 사람 검토**
+
+| 상황 | 다음 행동 |
+| --- | --- |
+| 폴더 선택이나 검토를 기다림 | 카드에 표시된 **폴더 선택하고 이어하기**, **검토 화면 열기**, **정답 확인 화면 열기** 사용 |
+| 이전 계획 대신 다른 일을 맡김 | **이 계획 멈추고 새 요청**. 이전 기록과 작성 중인 질문은 보존되며, 질문을 자동 전송하지 않습니다. |
+| 예전 진행·결과를 확인함 | **계획 기록 새로 보기**. 기록을 여는 것만으로 실행되지 않습니다. |
+| 상태 조회가 오래 걸림 | **상태 확인 대기 중지**. 조회는 기본 15초 제한이며, 실행 중인 학습·평가를 취소하거나 재시도하지 않습니다. |
+| 대화 내용만 정리함 | **대화만 비우기**. 저장된 계획은 유지됩니다. |
+
+진행 중이거나 결과가 확인되지 않은 작업은 먼저 저장 결과를 확인하도록 안내합니다. **계획 계속·이어하기**는 저장 결과를 확인한 뒤 이미 승인한 남은 작업을 실행할 수 있습니다. AI 라벨은 검토 전까지 초안이며, **라벨 채택·정답 확정·최종 승인·배포는 사람이 결정**합니다. 새 작업 실행은 현재 macOS/Linux 경로이며 Windows 지원은 준비 중입니다.
+
+ChatGPT 연결에는 **텍스트와 구조화된 앱 상태**를 제공하며, 이 연결은 원본 이미지·화면 캡처를 전송하지 않습니다. 로컬 웹 계정 로그인, 컴퓨터의 네이티브 기능 허용, ChatGPT 계정 연결은 각각 별개입니다. [도우미 사용·복구 안내](docs/assistant-tasks.md)에서 지원 동작과 확인 범위를 확인하세요.
+
+## 앱과 웹의 구조
+
+![설치 앱과 localhost 웹이 각각 Python 엔진을 사용하며 웹은 별도 Electron 보조 프로그램과 연결되는 구조도](assets/readme/studio-runtime.svg)
+
+- **설치 앱:** React 화면과 Electron이 이 PC의 Python/FastAPI 엔진에 연결됩니다.
+- **localhost 웹:** 브라우저가 로컬 HTTPS 서버에 연결되고, 창 없는 Electron 보조 프로그램이 폴더 창·파일 열기·OS 보호 저장소를 담당합니다.
+- **저장 공간:** 설치 앱과 웹의 계정·프로젝트 저장 공간은 자동으로 합쳐지지 않습니다. 웹은 전용 폴더에 보관합니다.
+- **원격 계산:** SSH 실행 프로필은 필요할 때 선택합니다. localhost 웹을 열었다고 외부 GPU나 서버가 자동으로 사용되지는 않습니다.
 
 ## 주요 기능
 
@@ -94,13 +159,12 @@ GAN은 생성 데이터를 검토해 학습에 채택하는 용도이며, 검사
 
 통합 방법은 [검사 서비스·SDK 안내](docs/api-integration.md)와 [학습 CLI·REST 안내](docs/training-engine-cli-rest.md)를 참고하세요.
 
-## 빠른 시작
+## 개발 환경 설치
 
-소스 환경을 설치한 뒤 일반 브라우저에서 실행하려면 `npm run web`을 사용합니다. 첫 실행 계정 설정, 로컬 HTTPS 인증서와 OS별 지원 범위는 [로컬 브라우저 실행 안내](docs/local-browser.md)를 확인하세요.
+<details>
+<summary><strong>소스 설치·개발 실행 명령 펼치기</strong></summary>
 
-5단계의 기본 준비 순서와 고급 편집 사용법은 [검사 흐름 준비 안내](docs/inspection-flow.md)를 확인하세요.
-
-### 개발 환경
+### 준비할 도구
 
 **Git, Node.js 24, Python 3.13**을 준비합니다. 고정 버전은 **Python**: 3.13, **Node.js**: 24, **Electron**: 44입니다(Electron 44는 `package-lock.json`이 고정합니다). Windows·Linux 명령은 CPU용 해시 잠금 파일을 사용합니다. macOS arm64는 별도 잠금 파일이 없어 `requirements.txt`를 사용합니다. GPU 학습에는 장치에 맞는 드라이버와 Python 의존성 구성이 추가로 필요합니다.
 
@@ -171,6 +235,8 @@ python scripts/cpu_demo.py
 ```
 
 Windows에서는 `python` 대신 `.venv\Scripts\python.exe`를 사용합니다. 결과를 보존하려면 `--keep` 또는 `--workdir 경로`를 지정하세요. 데모 데이터와 작업 기록은 격리된 작업 폴더에 저장됩니다.
+
+</details>
 
 ## 개발 검사
 
@@ -244,6 +310,9 @@ macOS 기본 빌더 설정은 `mac.identity: "-"`이며 실제 산출물의 서�
 
 | 문서 | 내용 |
 | --- | --- |
+| [로컬 브라우저 실행](docs/local-browser.md) | localhost 실행, 계정·저장 공간, 네이티브 기능 허용 |
+| [말로 작업을 맡기는 도우미](docs/assistant-tasks.md) | 작업 계획, 실행·진단, 사람 확인 대기와 복구 |
+| [검사 흐름 준비](docs/inspection-flow.md) | 5단계 기본 준비 순서와 고급 편집 |
 | [기여 안내](CONTRIBUTING.md) | 새 환경 설치, CPU 데모, 테스트와 지원 범위 |
 | [Windows 빠른 시작](docs/quickstart-windows.md) | Windows 설치·첫 실행·진단 |
 | [문제 해결](docs/troubleshooting.md) | 오류 재현과 진단 자료 |
