@@ -6,6 +6,16 @@ test('real helper completes generated PKCE login, lists models and cancels provi
 
 test('assistant fixture refuses unsafe raw trace recording before any authentication or helper starts',()=>{assert.doesNotThrow(()=>assertPrivateEvidencePolicy('off'));for(const trace of ['on','retain-on-failure','on-first-retry',{mode:'retain-on-failure'},undefined])assert.throws(()=>assertPrivateEvidencePolicy(trace),/requires trace off before authentication/);});
 
+test('recovery plan fixture has a distinct goal while preserving the original action plan',async()=>{
+ const provider=controlledProvider(()=>{});
+ const plan=async question=>{const r=await provider.fetchImpl('https://api.openai.com/v1/responses',{headers:{Authorization:'Bearer '+ACCESS},body:JSON.stringify({model:'fixture-model',store:false,stream:true,input:[{role:'user',content:question}]})});
+  return JSON.parse(JSON.parse((await r.text()).split('data: ')[1]).response.output[0].arguments);};
+ const original=await plan('TASK_PLAN_FIXTURE'),recovery=await plan('TASK_PLAN_FIXTURE_RECOVERY');
+ assert.equal(original.goal,'합성 자료 분할과 학습 설정 준비');
+ assert.equal(recovery.goal,'이전 계획 보관 뒤 새 합성 자료 준비');
+ assert.deepEqual(recovery.steps,original.steps);
+});
+
 test('diagnostics marker reads bounded status then proposes an unapproved follow-up without logging raw output',async()=>{
  const records=[],provider=controlledProvider(row=>records.push(row));
  const send=async input=>{const r=await provider.fetchImpl('https://api.openai.com/v1/responses',{headers:{Authorization:'Bearer '+ACCESS},body:JSON.stringify({model:'fixture-model',store:false,stream:true,input})});

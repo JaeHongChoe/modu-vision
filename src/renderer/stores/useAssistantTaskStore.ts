@@ -21,7 +21,10 @@ let pollCount=0;
 let observedConnection='';
 interface TaskState extends TaskControllerState {
   propose(input:unknown):Promise<Record<string,unknown>>;
-  restore():Promise<void>;
+  restore(id?:string):Promise<void>;
+  prepareNewRequest(id:string,revision:number):Promise<boolean>;
+  stopRead():void;
+  loadHistory():Promise<void>;
   restoreSettings(id:string,revision:number):Promise<void>;
   approve(id:string,revision:number):Promise<void>;
   pause():Promise<void>;
@@ -30,30 +33,34 @@ interface TaskState extends TaskControllerState {
 }
 const failure=(cause:unknown)=>cause instanceof Error?cause.message:'작업 상태를 확인하지 못했습니다.';
 async function operate(action:()=>Promise<unknown>):Promise<void>{
-  const authority=connectionIdentity();
-  try{await action();}catch(cause){if(authority===connectionIdentity())useAssistantTaskStore.setState({error:failure(cause)});}
+  const authority=connectionIdentity(),generation=taskRuntimeGeneration();
+  try{await action();}catch(cause){if(authority===connectionIdentity()&&Object.is(generation,taskRuntimeGeneration())&&!['read_timeout','read_stopped'].includes(String((cause as {code?:unknown})?.code)))useAssistantTaskStore.setState({error:failure(cause)});}
 }
 function schedule(){
   if(poll!==null){clearTimeout(poll);poll=null;}
   const state=useAssistantTaskStore.getState();
-  if(state.task?.status!=='waiting_job'||state.busy||state.loading||state.error
+  if(!controller.canPollWaiting()||state.task?.status!=='waiting_job'||state.busy||state.loading||state.error
       ||connection().configuring||!taskConnectionReady(connection().config))return;
   poll=setTimeout(()=>{poll=null;void operate(()=>controller.pollWaiting()).finally(schedule);},Math.min(15_000,1500+pollCount++*500));
 }
 
 export const useAssistantTaskStore=create<TaskState>(()=>({
-  task:null,busy:false,loading:false,error:null,contextMatches:true,settingsRecoveryLabel:null,
+  task:null,busy:false,loading:false,error:null,contextMatches:true,settingsRecoveryLabel:null,planningNew:false,history:[],readPending:false,
   propose:async input=>{await controller.propose(input);return controller.summary();},
-  restore:()=>operate(()=>controller.restore()),
+  restore:id=>operate(()=>controller.restore(id)),
+  prepareNewRequest:(id,revision)=>controller.prepareNewRequest(id,revision),
+  stopRead:()=>controller.stopRead(),
+  loadHistory:()=>operate(()=>controller.loadHistory()),
   restoreSettings:(id,revision)=>operate(()=>controller.restoreSettings(id,revision)),
   approve:(id,revision)=>operate(()=>controller.approve(id,revision)),
   pause:()=>operate(()=>controller.pause()),
   resume:()=>operate(()=>controller.resume()),
   refresh:()=>operate(async()=>{
     const current=controller.state.task;
-    const authority=connectionIdentity();
+    const authority=connectionIdentity(),generation=taskRuntimeGeneration(),planningNew=controller.state.planningNew;
+    if(planningNew)return;
     const restored=await controller.restore(current?.id);
-    if(!restored||authority!==connectionIdentity()||controller.state.task?.id!==restored.id)return;
+    if(!restored||authority!==connectionIdentity()||!Object.is(generation,taskRuntimeGeneration())||controller.state.planningNew||controller.state.task?.id!==restored.id)return;
     if(restored.status==='waiting_job'||restored.status==='needs_reconciliation')await controller.resume();
   }),
 }));

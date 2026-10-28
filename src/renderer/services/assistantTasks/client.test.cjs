@@ -20,3 +20,9 @@ test('invalid task identity refuses before any request',async()=>{
  for(const id of ['../other','task_a','https://example.com'])await assert.rejects(client.get(id),/작업 ID/);
  assert.equal(calls,0);
 });
+test('task GETs forward only an optional abort signal while mutations keep their original wait contract',async()=>{
+ const calls=[],abort=new AbortController(),client=load().createTaskClient(async(url,options)=>{calls.push([url,options]);return url==='/api/assistant-tasks'&&!options?.method?{tasks:[task]}:{task};});
+ await client.list(abort.signal);await client.get(ID,abort.signal);await client.create({goal:'준비',binding:'x',steps:[]});await client.event(ID,{type:'pause',expected_revision:1,binding:'x'});
+ assert.equal(calls[0][1].signal,abort.signal);assert.equal(calls[1][1].signal,abort.signal);
+ assert.equal(Object.hasOwn(calls[2][1],'signal'),false);assert.equal(Object.hasOwn(calls[3][1],'signal'),false);assert.equal(calls.length,4);
+});

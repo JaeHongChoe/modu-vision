@@ -20,7 +20,9 @@ function load(file, mocks = {}) {
 const file = path.join(__dirname, 'AssistantTaskCard.tsx');
 const catalog = load(path.join(__dirname, '../../services/assistantTasks/catalog.ts'));
 // A missing feature is an empty render, so RED fails on the public behavior, not a module-loader error.
-const Card = fs.existsSync(file) ? load(file, {'../../services/assistantTasks/catalog': catalog}).AssistantTaskCard : () => null;
+const presentationFile = path.join(__dirname, '../../services/assistantTasks/taskRecoveryPresentation.ts');
+const presentation = fs.existsSync(presentationFile) ? load(presentationFile) : {};
+const Card = fs.existsSync(file) ? load(file, {'../../services/assistantTasks/catalog': catalog, '../../services/assistantTasks/taskRecoveryPresentation': presentation}).AssistantTaskCard : () => null;
 const nodes = tree => !tree || typeof tree !== 'object' ? [] : [tree, ...[].concat(tree.props?.children || []).flat(Infinity).flatMap(nodes)];
 const text = tree => tree == null || typeof tree === 'boolean' ? '' : typeof tree === 'string' || typeof tree === 'number' ? String(tree) : [].concat(tree.props?.children || []).flat(Infinity).map(text).join('');
 const step = (extra = {}) => ({id: 's1', action: 'save_split', args: {train_percent: 70, val_percent: 20, test_percent: 10}, label: '균열 자료 나누기', status: 'pending', attempt_id: null, receipt: null, error: null, ...extra});
@@ -85,7 +87,7 @@ test('running work exposes a usable pause while busy and says training continues
 test('human waiting opens the real review stage and resumes only through a separate explicit check', () => {
   const navigated = [], resumed = [];
   const tree = render({task: task({status: 'waiting_human', current_step_id: 's1', steps: [step({action: 'generate_label_drafts', args: {mode: 'phrase', prompt: '균열'}, status: 'waiting_human'})]}), onNavigate: value => navigated.push(value), onResume: () => resumed.push(true)});
-  assert.match(text(tree), /사람 검토 대기/);
+  assert.match(text(tree), /초안 검토/);
   assert.match(text(tree), /채택.*정답 확정.*직접/);
   primary(tree)[0].props.onClick(); assert.deepEqual(navigated, [2]); assert.deepEqual(resumed, []);
   button(tree, '검토 결과 확인하고 이어하기').props.onClick(); assert.deepEqual(resumed, [true]);
@@ -161,9 +163,116 @@ test('an oversized human review plan cannot continue through a secondary action'
   let resumed = 0;
   const steps = Array.from({length: 25}, (_, index) => step({id: `s${index}`}));
   const tree = render({task: task({status: 'waiting_human', steps}), onResume: () => resumed++});
-  const resume = button(tree, '검토 결과 확인하고 이어하기');
+  const resume = button(tree, '설정 확인하고 이어하기');
   assert.equal(resume.props.disabled, true);
   resume.props.onClick(); assert.equal(resumed, 0);
+});
+
+test('cancelled folder choice offers folder selection through explicit resume and gives its message first', () => {
+  const calls = [], message = '자료 폴더 선택을 취소했습니다. 사용할 폴더를 선택하세요.';
+  const tree = render({task: task({status: 'waiting_human', current_step_id: 's1', message, steps: [step({action: 'import_dataset', status: 'waiting_human', args: {}, receipt: {not_started: true}})]}), onResume: () => calls.push('resume'), onNavigate: () => calls.push('navigate')});
+  assert.equal(text(primary(tree)[0]), '폴더 선택하고 이어하기');
+  const status = nodes(tree).find(node => node.props?.role === 'status');
+  assert.equal(text([].concat(status.props.children).flat(Infinity)[0]), message);
+  assert.ok(!/정답 확정|초안 채택/.test(text(tree)));
+  primary(tree)[0].props.onClick(); assert.deepEqual(calls, ['resume']);
+});
+
+test('truth review and setup waits name their actual prerequisite instead of label adoption', () => {
+  for (const [action, receipt, message, label] of [
+    ['evaluate_flow', {truth_review_required: true}, '5단계에서 정답을 확정하세요.', '정답 확인 화면 열기'],
+    ['configure_training', {not_started: true}, '3단계에서 실행 위치를 선택하세요.', '설정 화면 열기'],
+  ]) {
+    const tree = render({task: task({status: 'waiting_human', message, steps: [step({action, receipt, status: 'waiting_human'})]})});
+    assert.equal(text(primary(tree)[0]), label);
+    assert.ok(!text(tree).includes('라벨 초안 채택'));
+  }
+});
+
+test('failed or stopped started work is a saved-result check rather than draft review or setup', async t => {
+  for (const [action, jobStatus, receipt, label, stage] of [
+    ['generate_label_drafts', 'failed', {batch_id: 'batch_failed', generated: 0}, '초안 작업 기록 열기', 2],
+    ['generate_label_drafts', 'stopped', {batch_id: 'batch_stopped', generated: 0}, '초안 작업 기록 열기', 2],
+    ['start_training', 'failed', {job_id: 'job_failed'}, '학습 작업 기록 열기', 3],
+    ['start_training', 'stopped', {job_id: 'job_stopped'}, '학습 작업 기록 열기', 3],
+    ['start_training', 'aborted', {job_id: 'job_aborted'}, '학습 작업 기록 열기', 3],
+    ['start_training', 'interrupted', {job_id: 'job_interrupted'}, '학습 작업 기록 열기', 3],
+  ]) {
+    await t.test(`${action} ${jobStatus}`, () => {
+    const calls = [], message = '작업 오류: 필요한 모델 파일을 읽지 못했습니다.';
+    const shown = task({status: 'waiting_human', message, current_step_id: 's1', steps: [step({action, status: 'waiting_human', args: {}, receipt: {not_started: false, status: jobStatus, diagnostics: {source: action, errors: [{message: '필요한 모델 파일을 읽지 못했습니다.'}]}, ...receipt}})]});
+    const guidance = presentation.taskWaitingGuidance(shown, shown.steps[0]);
+    assert.equal(guidance.label, label); assert.equal(guidance.action, 'navigate'); assert.equal(guidance.secondary, null);
+    assert.match(guidance.status, /결과 확인/); assert.ok(!/검토|채택|정답|설정 확인/.test(guidance.status + guidance.description));
+    const tree = render({task: shown, onNavigate: step => calls.push(['navigate', step]), onResume: () => calls.push('resume'), onApprove: () => calls.push('approve')});
+    assert.equal(text(primary(tree)[0]), label);
+    assert.match(text(tree), /필요한 모델 파일을 읽지 못했습니다/);
+    assert.ok(!buttons(tree).some(node => /검토.*이어하기|설정 확인.*이어하기/.test(text(node))));
+    primary(tree)[0].props.onClick(); assert.deepEqual(calls, [['navigate', stage]], `${action} ${jobStatus}`);
+    });
+  }
+});
+
+test('completed available drafts stay reviewable and inputs not dispatched stay setup checks', () => {
+  const completedDraft = task({status: 'waiting_human', message: '초안을 만들었습니다. 검토한 뒤 이어 가세요.', steps: [step({action: 'generate_label_drafts', status: 'waiting_human', receipt: {not_started: false, status: 'completed', batch_id: 'batch_ready', generated: 3}})]});
+  const review = presentation.taskWaitingGuidance(completedDraft, completedDraft.steps[0]);
+  assert.equal(review.status, '초안 검토 대기'); assert.equal(review.label, '검토 화면 열기'); assert.equal(review.secondary, '검토 결과 확인하고 이어하기');
+  for (const action of ['generate_label_drafts', 'start_training']) {
+    const shown = task({status: 'waiting_human', message: '필요한 모델과 입력 자료를 먼저 준비하세요.', steps: [step({action, status: 'waiting_human', receipt: {not_started: true}})]});
+    const setup = presentation.taskWaitingGuidance(shown, shown.steps[0]);
+    assert.equal(setup.status, '설정 확인 필요'); assert.equal(setup.label, '설정 화면 열기');
+    assert.equal(text(primary(render({task: shown}))[0]), '설정 화면 열기');
+  }
+});
+
+test('new request captures the shown plan without approving resuming or calling a provider', () => {
+  const shown = task({status: 'waiting_human'}), calls = [];
+  const tree = render({task: shown, onPrepareNewRequest: (...args) => calls.push(['prepare', ...args]), onApprove: () => calls.push('approve'), onResume: () => calls.push('resume')});
+  const prepare = button(tree, '이 계획 멈추고 새 요청'); assert.ok(prepare);
+  shown.id = 'changed'; shown.revision = 80;
+  prepare.props.onClick(); assert.deepEqual(calls, [['prepare', 'task_1', 7]]);
+  assert.match(text(tree), /이미 시작한 학습.*계속/);
+});
+
+test('unresolved steps and busy writes keep new request disabled while explaining what is pending', () => {
+  for (const extra of [{busy: true}, {loading: true}, {blocked: true}, ...['running', 'uncertain', 'waiting_job'].map(status => ({task: task({status: 'paused', steps: [step({status})]})}))]) {
+    let prepared = 0;
+    const tree = render({...extra, onPrepareNewRequest: () => prepared++});
+    const prepare = button(tree, '이 계획 멈추고 새 요청'); assert.ok(prepare);
+    assert.equal(prepare.props.disabled, true); prepare.props.onClick(); assert.equal(prepared, 0);
+    assert.match(text(tree), /기록|확인|진행|완료/);
+  }
+});
+
+test('prepared mode keeps the earlier plan as history and removes old execution controls', () => {
+  const calls = [];
+  const tree = render({planningNew: true, task: task({status: 'draft'}), onApprove: () => calls.push('approve'), onResume: () => calls.push('resume'), onRefresh: () => calls.push('refresh')});
+  assert.match(text(tree), /새 요청을 입력하세요/); assert.match(text(tree), /이전 계획 기록/);
+  assert.equal(primary(tree).length, 0);
+  assert.ok(!buttons(tree).some(node => /실행|이어하기|일시정지/.test(text(node))));
+  assert.deepEqual(calls, []);
+});
+
+test('history selection reads a chosen saved record and a pending read can be stopped without execution', () => {
+  const calls = [];
+  const tree = render({readPending: true, loading: true, history: [{id: 'old', goal: '다른 프로젝트 계획', status: 'completed', updated_at: '2026-10-28T01:02:00Z', contextMatches: false}], onSelectHistory: id => calls.push(['history', id]), onStopRead: () => calls.push('stop')});
+  const stop = button(tree, '상태 확인 대기 중지'); assert.ok(stop); assert.equal(stop.props.disabled, false); stop.props.onClick();
+  assert.deepEqual(calls, ['stop']); assert.match(text(tree), /다른 프로젝트/);
+  const ready = render({history: [{id: 'old', goal: '이전 검사', status: 'completed', updated_at: '2026-10-28T01:02:00Z', contextMatches: true}], onSelectHistory: id => calls.push(['history', id])});
+  const select = buttons(ready).find(node => text(node).includes('이전 검사')); assert.ok(select); select.props.onClick();
+  assert.deepEqual(calls, ['stop', ['history', 'old']]);
+});
+
+test('job refresh honestly says it can continue the plan', () => {
+  const tree = render({task: task({status: 'waiting_job'})});
+  assert.equal(text(primary(tree)[0]), '저장 결과 확인하고 계획 계속');
+});
+
+test('a read stop never exposes an escape from an executing write', () => {
+  let stops = 0;
+  const tree = render({busy: true, readPending: true, onStopRead: () => stops++});
+  const stop = button(tree, '상태 확인 대기 중지'); assert.ok(stop); assert.equal(stop.props.disabled, true);
+  stop.props.onClick(); assert.equal(stops, 0);
 });
 
 test('connection, loading and conflict guards protect every visible task callback', () => {

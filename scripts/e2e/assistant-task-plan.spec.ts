@@ -263,20 +263,21 @@ test('task plan approval persists real actions; pause, human resume and reload r
     await expect(page.getByRole('button', {name: '전체 (20)', exact: true})).toBeVisible();
     await reconnectAssistant();
     await expect(card()).toContainText('합성 자료 가져오기와 분할 준비');
-    await expect(card()).toContainText('사람 검토 대기');
+    await expect(card()).toContainText('직접 확인 필요');
+    await expect(card()).toContainText('폴더 선택 필요');
     expect((await readTask(secondDraft!.id)).revision).toBe(human.revision);
     expect(importWrites).toHaveLength(0);
     // Simulates a native user choice, restricted by the helper to this fixture's generated directory and consumed once.
     fs.writeFileSync(path.join(workspace.root, 'controlled-native-host', 'controlled-task-folder.json'), JSON.stringify({folder: source}), {mode: 0o600});
     const eventCountBeforeSettings = taskEvents.length;
     await card().getByRole('button', {name: /^저장 설정 복원/}).click();
-    await expect(card().getByRole('button', {name: '검토 결과 확인하고 이어하기', exact: true})).toBeEnabled();
+    await expect(card().getByRole('button', {name: '폴더 선택하고 이어하기', exact: true})).toBeEnabled();
     expect((await readTask(secondDraft!.id)).revision).toBe(human.revision);
     expect(taskEvents).toHaveLength(eventCountBeforeSettings);
     expect(importWrites).toHaveLength(0);
     expect(splitWrites).toHaveLength(1);
     await evidence.screenshot(page, 'task-explicit-settings-restored-without-dispatch');
-    await card().getByRole('button', {name: '검토 결과 확인하고 이어하기', exact: true}).click();
+    await card().getByRole('button', {name: '폴더 선택하고 이어하기', exact: true}).click();
     const secondCompleted = await waitTask(secondDraft!.id, 'completed');
     expect(secondCompleted.steps[1].receipt).toMatchObject({project_id: project.id, imported: true, images: 20, not_started: false});
     expect(secondCompleted.steps[2].receipt?.split).toEqual({train: 12, val: 4, test: 4});
@@ -321,6 +322,71 @@ test('task plan approval persists real actions; pause, human resume and reload r
       final_split_counts: savedCounts(finalSplitFile), original_source_split_counts: savedCounts(),
       controlled_provider_call_count: 4, page_errors: pageErrors,
       external_network_requests: foreign, forbidden_model_operations: prohibited, renderer_boundary: rendererBoundary,
+    });
+
+    // Seed a prior cancelled-folder record through the actual actor-scoped ledger. This is generated fixture
+    // history, not evidence of a new native dialog action; the original real cancelled/accepted choices above remain.
+    const heldDraft: AssistantTask = (await api('/api/assistant-tasks', {
+      goal: '이전 폴더 선택 대기', binding: secondCompleted.binding,
+      steps: [{action: 'import_dataset', args: {}, label: '사용자가 폴더를 고르기 전 대기'}],
+    })).task;
+    const heldApproved: AssistantTask = (await api(`/api/assistant-tasks/${heldDraft.id}/events`, {
+      type: 'approve', confirmed: true, binding: heldDraft.binding, expected_revision: heldDraft.revision,
+    })).task;
+    const heldStarted: AssistantTask = (await api(`/api/assistant-tasks/${heldDraft.id}/events`, {
+      type: 'begin_step', binding: heldApproved.binding, expected_revision: heldApproved.revision,
+      step_id: heldApproved.steps[0].id, attempt_id: 'fixture-prior-folder-wait',
+    })).task;
+    const held: AssistantTask = (await api(`/api/assistant-tasks/${heldDraft.id}/events`, {
+      type: 'wait_step', binding: heldStarted.binding, expected_revision: heldStarted.revision,
+      step_id: heldStarted.steps[0].id, attempt_id: 'fixture-prior-folder-wait',
+      wait_kind: 'human', receipt: {not_started: true}, message: '자료 폴더 선택을 취소했습니다. 폴더를 선택한 뒤 이어가세요.',
+    })).task;
+    await page.reload(); await login(); await reconnectAssistant();
+    await expect(card()).toContainText('이전 폴더 선택 대기');
+    await expect(card()).toContainText('폴더 선택 필요');
+    const question = 'TASK_PLAN_FIXTURE_RECOVERY 이전 계획은 기록으로 남기고 현재 합성 자료로 새 계획을 준비해 주세요.';
+    await assistant.getByRole('textbox', {name: '도우미에게 묻기', exact: true}).fill(question);
+    const beforeNewRequest = ledger().filter(row => row.route === '/v1/responses').length;
+    const beforeRecoveryImports = importWrites.length, beforeRecoverySplits = splitWrites.length;
+    await card().getByRole('button', {name: '이 계획 멈추고 새 요청', exact: true}).click();
+    await expect(card()).toContainText('새 요청을 입력하세요.');
+    await expect(assistant.getByRole('textbox', {name: '도우미에게 묻기', exact: true})).toHaveValue(question);
+    await expect(assistant.getByRole('textbox', {name: '도우미에게 묻기', exact: true})).toBeFocused();
+    const parked = await readTask(held.id);
+    expect(parked.status).toBe('paused');
+    expect(parked.steps).toEqual(held.steps);
+    expect(parked.approval).toEqual(held.approval);
+    expect(parked.plan_sha256).toBe(held.plan_sha256);
+    expect(ledger().filter(row => row.route === '/v1/responses')).toHaveLength(beforeNewRequest);
+    expect(importWrites).toHaveLength(beforeRecoveryImports);
+    expect(splitWrites).toHaveLength(beforeRecoverySplits);
+    await evidence.screenshot(page, 'task-recovery-new-request-with-held-history');
+
+    await assistant.getByRole('button', {name: '보내기', exact: true}).click();
+    await expect(card().getByRole('button', {name: '계획 확인하고 실행', exact: true})).toBeEnabled();
+    const replacement = await findTask('이전 계획 보관 뒤 새 합성 자료 준비');
+    expect(replacement?.id).not.toBe(firstDraft!.id);
+    expect(replacement?.id).not.toBe(held.id);
+    expect(replacement?.approval).toBeNull();
+    await card().getByRole('button', {name: '계획 확인하고 실행', exact: true}).click();
+    const recoveryCompleted = await waitTask(replacement!.id, 'completed');
+    await expect(card()).toContainText('완료 3/3개');
+    expect((await readTask(held.id)).revision).toBe(parked.revision);
+    await page.reload(); await login(); await reconnectAssistant();
+    await expect(card().locator(':scope > p.font-semibold')).toHaveText(recoveryCompleted.goal);
+    await expect(card()).toContainText('완료 3/3개');
+    await expect(card().getByRole('heading', {name: '작업 계획', exact: true})).toBeVisible();
+    expect((await readTask(held.id)).revision).toBe(parked.revision);
+    for (const file of originals) expect(sha(fs.readFileSync(file.path))).toBe(file.sha256);
+    expect(prohibited).toEqual([]); expect(foreign).toEqual([]); expect(pageErrors).toEqual([]);
+    await evidence.screenshot(page, 'task-recovery-new-completed-plan-after-reload');
+    evidence.note('assistant_task_recovery', {
+      seeded_actor_scoped_human_wait: held, parked_without_execution: parked,
+      replacement_completed: recoveryCompleted, unsent_question_preserved: true,
+      no_provider_request_on_prepare: true, no_import_or_split_on_prepare: true,
+      newest_completed_restored_instead_of_older_paused: true,
+      real_GPT_or_model_execution: false, external_image_transmission: false,
     });
   } finally {
     releaseSplit.resolve();

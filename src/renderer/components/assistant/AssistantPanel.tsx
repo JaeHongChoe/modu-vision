@@ -33,9 +33,11 @@ export const AssistantPanel: React.FC = () => {
   const pendingWrite = useAssistantStore(state => state.pending);
   const taskStatus=useAssistantTaskStore(state=>state.task?.status);
   const taskBusy=useAssistantTaskStore(state=>state.busy);
+  const planningNew=useAssistantTaskStore(state=>state.planningNew);
   const { close, ask, stop, decide, newConversation, stopConfigLoad, loadConfig } = useAssistantStore.getState();
   const [draft, setDraft] = useState('');
   const list = useRef<HTMLOListElement>(null);
+  const composer = useRef<HTMLTextAreaElement>(null);
   useEffect(() => { list.current?.lastElementChild?.scrollIntoView({ block: 'nearest' }); }, [items.length, pendingWrite]);
   if (!isOpen) return null;
 
@@ -50,6 +52,11 @@ export const AssistantPanel: React.FC = () => {
   // The typed question is cleared only when it is actually handed over; while settings load it stays in the composer.
   const canHandOver = () => { const now = useAssistantStore.getState(); return connectionCurrent() && !now.busy && !now.pending && !now.writing; };
   const submit = () => { const text = draft.trim(); if (!text || !canHandOver()) return; setDraft(''); void ask(text); };
+  const preparedNewRequest = () => {
+    if(!canHandOver()||useAssistantStore.getState().items!==items||!useAssistantTaskStore.getState().planningNew)return;
+    newConversation();
+    composer.current?.focus();
+  };
   const confirm = (accepted: boolean) => { const now = useAssistantStore.getState(); if (!pending || now.pending !== pending || !connectionCurrent() || now.writing) return; void decide(accepted); };
   const primary = pending ? { label: '확인하고 실행', run: () => confirm(true), disabled: configuring || writing || !ready }
     : { label: writing ? '실행 중…' : configuring ? '설정 확인 중…' : busy ? '보내는 중…' : '보내기', run: submit, disabled: busy || configuring || !ready || !draft.trim() };
@@ -88,7 +95,7 @@ export const AssistantPanel: React.FC = () => {
             </li>
           ))}
         </ol>
-        {bridge&&<AssistantTaskPanel ready={ready&&!configuring} blocked={Boolean(busy||writing||pending)} connectionKey={taskConnectionKey(config)}/>}
+        {bridge&&<AssistantTaskPanel ready={ready&&!configuring} blocked={Boolean(busy||writing||pending)} connectionKey={taskConnectionKey(config)} onNewRequestPrepared={preparedNewRequest}/>}
         {pending && (
           <section role="group" aria-label="쓰기 실행 확인" className="space-y-2 rounded border border-amber-600 bg-amber-950/40 p-3">
             <h3 className="font-semibold text-amber-100">{pending.preview.title} · 확인이 필요합니다</h3>
@@ -101,17 +108,18 @@ export const AssistantPanel: React.FC = () => {
       </div>
       <footer className="space-y-2 border-t border-slate-700 px-4 py-3">
         {chatgpt && !account?.usagePaused && items.some(item => item.kind === 'error' && item.code === 'rate_limited') && <p role="status" className="text-xs text-amber-200">ChatGPT 사용 한도를 확인하세요. <a href="https://chatgpt.com/settings/usage" target="_blank" rel="noopener noreferrer" className="workspace-button inline-block">ChatGPT 사용량 관리</a></p>}
-        <textarea aria-label="도우미에게 묻기" rows={3} value={draft} disabled={!ready || Boolean(pending)}
+        <textarea ref={composer} aria-label="도우미에게 묻기" rows={3} value={draft} disabled={!ready || Boolean(pending)}
           onChange={event => setDraft(event.target.value)}
           onKeyDown={event => { if (event.key === 'Enter' && !event.shiftKey && !event.nativeEvent.isComposing) { event.preventDefault(); if (!busy) submit(); } }}
           placeholder={chatgpt&&account?.usagePaused ? 'ChatGPT 사용량을 확인한 뒤 요청 재개를 허용하세요.' : ready ? '예: 이 자료로 불량 검사 만들어줘' : 'ChatGPT 계정을 연결하고 모델을 선택하면 물어볼 수 있습니다.'}
           className="w-full resize-none rounded border border-slate-600 bg-slate-900 px-2 py-1.5 text-slate-100" />
         <p className="text-xs text-slate-300">ChatGPT 연결은 현재 텍스트 질문만 지원합니다. 이미지 전송은 지원하지 않습니다.</p>
+        <p className="text-xs text-slate-300">대화만 비워도 저장된 계획은 남습니다. 다른 작업을 시작하려면 계획의 ‘이 계획 멈추고 새 요청’을 선택하세요.</p>
         {writing && <p role="status" className="text-xs text-amber-200">확인한 작업을 실행 중입니다. 결과가 대화와 실행 기록에 남으면 다시 묻거나 설정을 바꿀 수 있습니다.</p>}
         <div className="flex flex-wrap items-center gap-2">
-          <button type="button" className={`workspace-button${chatgpt&&account?.usagePaused||taskStatus?'':' workspace-button--primary'}`} disabled={primary.disabled} onClick={primary.run}>{primary.label}</button>
+          <button type="button" className={`workspace-button${chatgpt&&account?.usagePaused||taskStatus&&!planningNew?'':' workspace-button--primary'}`} disabled={primary.disabled} onClick={primary.run}>{primary.label}</button>
           {busy && !pending && !writing && <button type="button" className="workspace-button" onClick={() => void stop()}>멈추기</button>}
-          <button type="button" className="workspace-button" disabled={busy || Boolean(pending) || !items.length} onClick={newConversation}>새 대화</button>
+          <button type="button" className="workspace-button" disabled={busy || Boolean(pending) || !items.length} onClick={newConversation}>대화만 비우기</button>
         </div>
       </footer>
     </aside>
