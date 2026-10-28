@@ -8,8 +8,9 @@ function load(file,cache=new Map()){if(cache.has(file))return cache.get(file).ex
 const cache=new Map();
 const {AssistantConversation}=load(path.join(__dirname,'assistantSession.ts'),cache);
 const {createAssistantTools}=load(path.join(__dirname,'assistantTools.ts'),cache);
+const {AssistantReadWaitError}=load(path.join(__dirname,'assistantReadWait.ts'),cache);
 
-function harness(replies,{contexts,toolDeps={}}={}){
+function harness(replies,{contexts,toolDeps={},readTimeoutMs,log}={}){
  const sent=[],logged=[],events=[],runs=[],executed=[];let contextCount=0;const authority={scope:'project-a',project:'project-a',write:'image-a:revision-1'};
  const deps={snapshot:()=>({stage:3,status:'ready',blocker:null,nextAction:{label:'학습 시작',step:3},progress:null,errors:[]}),
   facts:()=>({task:'classification',view:'simple',shared:false,images:20,unlabeled:0,classes:{OK:10,NG:10},split:{train:14,val:4,test:2},splitState:'saved',trainingStatus:'idle',currentImage:null}),
@@ -21,7 +22,7 @@ function harness(replies,{contexts,toolDeps={}}={}){
   cancel:async()=>true,beginRun:async(runId,tool)=>{runs.push(['begin',runId,tool]);return true;},endRun:async runId=>{runs.push(['end',runId]);}};
  Object.assign(deps,toolDeps);
  const tools=createAssistantTools(deps);const conversation=new AssistantConversation({bridge,tools,context:()=>contexts?contexts[contextCount++]:{step:3},
-  scope:()=>authority.scope,projectScope:()=>authority.project,writeBinding:()=>authority.write,log:async entry=>{logged.push(entry);},provider:()=>'anthropic'},event=>events.push(event));
+  scope:()=>authority.scope,projectScope:()=>authority.project,writeBinding:()=>authority.write,log:async entry=>{logged.push(entry);await log?.(entry);},provider:()=>'anthropic',readTimeoutMs},event=>events.push(event));
  return {conversation,sent,logged,events,runs,executed,authority,bridge,deps,tools};
 }
 const call=(id,name,args={})=>({id,name,arguments:args});
@@ -126,7 +127,114 @@ test('a provider error is shown with its Korean action and the unanswered questi
  assert.deepEqual(h.logged.map(entry=>[entry.result,entry.error_code]),[['error','rate_limited']]);
 });
 
-const deferred=()=>{let resolve;const promise=new Promise(r=>resolve=r);return {promise,resolve};};
+const deferred=()=>{let resolve,reject;const promise=new Promise((yes,no)=>{resolve=yes;reject=no;});return {promise,resolve,reject};};
+const delay=ms=>new Promise(resolve=>setTimeout(resolve,ms));
+test('a stalled read ends the unfinished turn locally and leaves another question usable without a provider retry',async()=>{
+ const release=deferred(),entered=deferred(),h=harness([answer('',[call('r1','read_app_diagnostics'),call('w1','start_training')]),answer('새 질문의 답')],
+  {readTimeoutMs:5,toolDeps:{diagnostics:async()=>{entered.resolve();return release.promise;}}});
+ const asking=h.conversation.ask('왜 대기 중인가요?');await entered.promise;
+ try{
+  await delay(30);assert.equal(h.conversation.busy,false,'a timed out read must release the composer');await asking;
+  assert.equal(h.conversation.pending,null);assert.deepEqual(h.conversation.messages,[]);assert.equal(h.sent.length,1,'timeout must not start another provider round');
+  const notice=h.events.find(event=>event.kind==='notice');assert.match(notice?.text??'',/상태|진단|읽/);assert.match(notice.text,/다시|새 질문/);
+  assert.ok(!h.events.some(event=>event.kind==='error'),'a local read timeout has its own recovery notice');
+  const entry=h.logged.find(row=>row.tool==='read_app_diagnostics');assert.equal(entry?.error_code,'read_timeout');
+  await h.conversation.ask('새 질문');assert.deepEqual(h.conversation.messages.map(row=>row.text),['새 질문','새 질문의 답']);
+  release.resolve({stale:'never display'});await delay(1);
+  assert.ok(!h.events.some(event=>event.kind==='tool'&&event.name==='read_app_diagnostics'&&event.ok));
+  assert.equal(h.sent.length,2);assert.deepEqual(h.executed,[]);assert.deepEqual(h.runs,[]);
+ }finally{release.resolve({});await asking;}
+});
+
+test('a stalled timeout audit cannot keep the composer busy or later alter another turn or account',async()=>{
+ for(const settleLog of ['resolve','reject'])for(const changeAccount of [false,true]){
+  const read=deferred(),readEntered=deferred(),audit=deferred(),auditEntered=deferred(),fresh=deferred(),freshEntered=deferred(),auditScopes=[];
+  const h=harness([answer('이전 답'),answer('',[call('r1','read_app_diagnostics'),call('w1','start_training')]),()=>{freshEntered.resolve();return fresh.promise;}],
+   {readTimeoutMs:5,toolDeps:{diagnostics:async()=>{readEntered.resolve();return read.promise;}},log:entry=>{
+    if(entry.error_code==='read_timeout'){auditScopes.push({scope:h.authority.scope,project:h.authority.project,provider:entry.provider});auditEntered.resolve();return audit.promise;}
+   }});
+  await h.conversation.ask('이전 완료 질문');let finished=false;const asking=h.conversation.ask('상태 읽기');asking.then(()=>finished=true);await readEntered.promise;await auditEntered.promise;
+  let current;
+  try{
+   await delay(10);assert.equal(h.conversation.busy,false,'an unfinished audit POST cannot hold the read composer');assert.equal(finished,true,'ask settles without waiting for the audit POST');await asking;
+   assert.deepEqual(h.conversation.messages.map(row=>row.text),['이전 완료 질문','이전 답']);assert.equal(h.sent.length,2,'timeout does not request another provider round');
+   assert.ok(h.events.some(event=>event.kind==='notice'&&/진단.*멈췄/.test(event.text)));assert.deepEqual(h.executed,[]);assert.deepEqual(h.runs,[]);
+   assert.deepEqual(auditScopes,[{scope:'project-a',project:'project-a',provider:'anthropic'}],'the append starts under the old account and project');
+   if(changeAccount){h.authority.scope=h.authority.project='account-b:project-b';h.conversation.invalidate();}
+   current=h.conversation.ask('현재 질문');await freshEntered.promise;const eventCount=h.events.length;
+   read.resolve({stale:'old read'});if(settleLog==='resolve')audit.resolve({saved:true});else audit.reject(new Error('old audit failed'));
+   await delay(5);assert.equal(h.conversation.busy,true,'an old audit reply cannot release the new provider wait');assert.equal(h.events.length,eventCount,'old GET/audit replies emit nothing into a newer turn');
+   fresh.resolve(answer('현재 답'));await current;
+   assert.deepEqual(h.conversation.messages.map(row=>row.text),changeAccount?['현재 질문','현재 답']:['이전 완료 질문','이전 답','현재 질문','현재 답']);
+   assert.equal(h.sent.length,3);assert.ok(!h.logged.some(row=>row.tool==='read_app_diagnostics'&&row.result==='ok'));
+  }finally{read.resolve({});audit.resolve({});fresh.resolve(answer('cleanup'));await asking;if(current)await current;}
+ }
+});
+
+test('an audit failure is shown only while its retired timeout still owns the current scope',async()=>{
+ const read=deferred(),audit=deferred(),auditEntered=deferred(),h=harness([answer('',[call('r1','read_task_status')])],
+  {readTimeoutMs:5,toolDeps:{tasks:{isExecuting:()=>false,features:()=>({}),screen:()=>({}),status:()=>read.promise,propose:async()=>({})}},log:entry=>{
+   if(entry.error_code==='read_timeout'){auditEntered.resolve();return audit.promise;}
+  }});
+ let finished=false;const asking=h.conversation.ask('작업 상태');asking.then(()=>finished=true);await auditEntered.promise;
+ try{
+  await delay(10);assert.equal(finished,true);assert.equal(h.conversation.busy,false);
+  audit.reject(new Error('audit unavailable'));await delay(5);
+  assert.ok(h.events.some(event=>event.kind==='notice'&&/기록.*남기지 못/.test(event.text)&&/audit unavailable/.test(event.text)));
+  assert.equal(h.sent.length,1);assert.deepEqual(h.conversation.messages,[]);assert.equal(h.conversation.busy,false);
+ }finally{read.resolve({});audit.resolve({});await asking;}
+});
+
+test('stopping a read retires its wait immediately and its late result cannot overwrite a new request',async()=>{
+ const release=deferred(),entered=deferred(),h=harness([answer('',[call('r1','read_task_status')]),answer('현재 요청 답')],
+  {readTimeoutMs:1000,toolDeps:{tasks:{isExecuting:()=>false,features:()=>({}),screen:()=>({}),status:async()=>{entered.resolve();return release.promise;},propose:async()=>({})}}});
+ let finished=false;const asking=h.conversation.ask('이전 작업');asking.then(()=>finished=true);await entered.promise;
+ try{
+  await h.conversation.stop();await delay(10);assert.equal(finished,true,'stop must settle even when the GET ignores abort');
+  assert.equal(h.conversation.busy,false);assert.equal(h.sent.length,1);await h.conversation.ask('현재 질문');
+  release.resolve({goal:'late old task'});await asking;assert.deepEqual(h.conversation.messages.map(row=>row.text),['현재 질문','현재 요청 답']);
+  assert.ok(!h.logged.some(row=>row.tool==='read_task_status'));assert.ok(!h.events.some(event=>event.kind==='tool'&&event.name==='read_task_status'));
+ }finally{release.resolve({});await asking;}
+});
+
+test('a disconnected project or account cannot revive an older read after returning to the same scope',async()=>{
+ const release=deferred(),entered=deferred(),h=harness([answer('',[call('r1','read_status')]),answer('복귀 후 답')],{readTimeoutMs:1000});let ownsRead;
+ h.tools.runAutomatic=(_name,_args,isCurrent)=>{ownsRead=isCurrent;entered.resolve();return release.promise;};
+ const asking=h.conversation.ask('이전 계정 상태');await entered.promise;
+ try{
+  h.authority.scope='other-account:project-b';h.conversation.invalidate();
+  h.authority.scope='project-a';h.conversation.invalidate();await asking;
+  assert.equal(ownsRead(),false,'returning to the same binding cannot renew an aborted read');
+  await h.conversation.ask('복귀 후 질문');release.resolve({ok:true,summary:'이전 계정 상태',content:'old account evidence'});await delay(1);
+  assert.deepEqual(h.conversation.messages.map(row=>row.text),['복귀 후 질문','복귀 후 답']);
+  assert.ok(!h.logged.some(row=>row.tool==='read_status'));assert.ok(!h.events.some(event=>event.kind==='tool'));
+ }finally{release.resolve({ok:true,summary:'late',content:'late'});await asking;}
+});
+
+test('the read deadline does not retire an in-flight proposal mutation or a confirmed write',async()=>{
+ for(const kind of ['proposal','write']){
+  const entered=deferred(),release=deferred();
+  const taskDeps={isExecuting:()=>false,features:()=>({}),screen:()=>({}),status:async()=>({}),propose:async()=>{entered.resolve();await release.promise;return {status:'draft'};}};
+  const h=harness([answer('',[kind==='proposal'?call('p1','propose_task',{goal:'화면 열기',steps:[{action:'open_step',args:{step:3}}]}):call('w1','start_training')]),answer('완료 결과')],{readTimeoutMs:5,toolDeps:{tasks:taskDeps}});
+  h.deps.startTraining=async()=>{h.executed.push(['startTraining']);entered.resolve();await release.promise;return {jobId:'job_1'};};
+  const asking=h.conversation.ask('작업');let finishing=asking;if(kind==='write'){await asking;finishing=h.conversation.decide(true);}await entered.promise;
+  try{
+   await delay(25);assert.equal(h.conversation.busy,true,kind);assert.equal(h.sent.length,1);assert.equal(h.conversation.writing,kind==='write');
+   assert.ok(!h.logged.some(row=>row.error_code==='read_timeout'));assert.ok(!h.events.some(event=>event.kind==='notice'));
+   release.resolve();await finishing;assert.equal(h.sent.length,2);assert.equal(h.conversation.busy,false);
+   if(kind==='write')assert.equal(h.logged.find(row=>row.tool==='start_training')?.confirmed,true);
+  }finally{release.resolve();await finishing;}
+ }
+});
+
+test('a proposal failure is recorded as navigation even if its cause has a read-wait code',async()=>{
+ const h=harness([answer('',[call('p1','propose_task',{goal:'학습 화면 열기',steps:[{action:'open_step',args:{step:3}}]})]),answer('계획을 저장하지 못했습니다.')],
+  {readTimeoutMs:5,toolDeps:{tasks:{isExecuting:()=>false,features:()=>({}),screen:()=>({}),status:async()=>({}),propose:async()=>{throw new AssistantReadWaitError('read_timeout');}}}});
+ await h.conversation.ask('화면 열기 계획');const row=h.logged.find(entry=>entry.tool==='propose_task');
+ assert.equal(row?.tier,'navigate');assert.equal(row?.error_code,'tool_error');assert.equal(h.sent.length,2);
+ assert.equal(h.conversation.busy,false);assert.ok(!h.events.some(event=>event.kind==='notice'));
+});
+
 test('a write preview cannot authorize another project or changed image/settings',async()=>{
  for(const kind of ['scope','write']){
   const h=harness([answer('',[call('w1','start_training')])]);await h.conversation.ask('학습 시작');

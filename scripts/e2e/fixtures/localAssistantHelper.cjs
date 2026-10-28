@@ -75,7 +75,8 @@ function controlledProvider(record=()=>{}){
      {action:'configure_training',args:{preset:'fast',device:'cpu',batch_size:8},label:'CPU · 빠르게 · 배치 8 준비'},
      {action:'open_step',args:{step:3},label:'준비한 학습 화면 열기'},
     ];
-    return output([{type:'function_call',namespace:'modu_vision',name:'propose_task',call_id:'call_fixture_'+ ++seq,arguments:JSON.stringify({goal:taskImport?'합성 자료 가져오기와 분할 준비':'합성 자료 분할과 학습 설정 준비',steps})}]);
+    const goal=taskImport?'합성 자료 가져오기와 분할 준비':question.includes('TASK_PLAN_FIXTURE_RECOVERY')?'이전 계획 보관 뒤 새 합성 자료 준비':'합성 자료 분할과 학습 설정 준비';
+    return output([{type:'function_call',namespace:'modu_vision',name:'propose_task',call_id:'call_fixture_'+ ++seq,arguments:JSON.stringify({goal,steps})}]);
    }
    const write=question.includes('WRITE_FIXTURE'),read=question.includes('READ_FIXTURE');
    if(!write&&!read)throw Error('Unscripted provider operation refused');

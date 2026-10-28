@@ -45,9 +45,10 @@ test('resume is single flight before reading the saved revision',async()=>{
  const one=f.c.resume(),two=f.c.resume();await new Promise(r=>setImmediate(r));
  assert.equal(f.executions,1);await f.finish();await Promise.all([one,two]);
 });
-test('restoration displays an unfinished same-account task read-only after the current project changes',async()=>{
+test('another inactive project stays in history until explicitly selected read-only',async()=>{
  const f=fixture();await f.c.propose(proposal);f.setRuntime('different-project');
- const restored=await f.c.restore();assert.equal(restored.id,ID);assert.match(f.c.state.error,/프로젝트|자료/);
+ assert.equal(await f.c.restore(),null);assert.equal(f.c.state.task,null);assert.equal(f.c.state.history[0].id,ID);assert.equal(f.c.state.history[0].contextMatches,false);
+ const restored=await f.c.restore(ID);assert.equal(restored.id,ID);assert.match(f.c.state.error,/프로젝트|자료/);
  await assert.rejects(f.c.approve(ID,1),/프로젝트|자료/);assert.equal(f.executions,0);
  f.setConnection('different-account');assert.equal(await f.c.restore(),null);
 });
@@ -74,7 +75,8 @@ test('a lost unstarted claim response never retries the claim or dispatches an a
  await c.restore();await c.resume();assert.equal(events,1);assert.equal(effects,0);assert.match(c.state.error,/acknowledgement/);
 });
 test('completed records remain visible after reload even when ephemeral inputs reset',async()=>{
- const f=fixture();await f.c.propose(proposal);f.task.status='completed';f.setRuntime('project-reset-inputs');
+ const f=fixture();await f.c.propose(proposal);f.task.status='completed';f.task.approval={binding:f.task.binding,plan_sha256:f.task.plan_sha256,confirmed_at:'now'};f.setRuntime('project-reset-inputs');
+ f.deps.settingsRecovery=saved=>saved==='project1'?{label:'저장 설정 복원',restore:()=>true}:null;
  const restored=await f.c.restore();assert.equal(restored.id,ID);assert.equal(restored.status,'completed');assert.equal(f.executions,0);
 });
 test('saved settings restoration is explicit, context scoped, and never runs a step',async()=>{
@@ -132,4 +134,166 @@ test('an older in-flight ledger snapshot cannot supersede newer cached task evid
 });
 for(const malformed of [null,{}, {id:'task_'+'b'.repeat(32)}, {revision:0}, {steps:null}, {status:'made_up'}])test(`malformed ledger observation is stale cache rather than execution evidence ${JSON.stringify(malformed)}`,async()=>{
  const f=fixture();await f.c.propose(proposal);const before=structuredClone(f.c.state);f.client.get=async()=>malformed&&Object.keys(malformed).length?{...f.task,...malformed}:malformed;const result=await f.c.observe();assert.equal(result.fresh,false);assert.equal(result.revision,1);assert.equal(result.status,'draft');assert.ok(result.read_error);assert.deepEqual(f.c.state,before);assert.equal(f.executions,0);
+});
+
+// Recovery fixtures use only an in-memory ledger; no provider or app mutation is available.
+const tick=()=>new Promise(resolve=>setImmediate(resolve));
+function recoveryFixture(){
+ const f=fixture();let generation=1;f.deps.generation=()=>generation;f.bumpGeneration=()=>{generation++;};
+ f.client.event=async(id,event)=>{f.calls.push(['event',event]);assert.equal(id,f.task.id);assert.equal(event.expected_revision,f.task.revision);f.task.revision++;if(event.type==='pause')f.task.status='paused';return structuredClone(f.task);};
+ f.c.deps.readTimeoutMs=10;return f;
+}
+async function saved(f,status='waiting_human',stepStatus='waiting_human'){
+ await f.c.propose(proposal);f.task.status=status;f.task.steps[0].status=stepStatus;f.task.current_step_id='step_1';
+ if(status!=='draft')f.task.approval={binding:f.task.binding,plan_sha256:f.task.plan_sha256,confirmed_at:'now'};
+ await f.c.restore(ID);return f.c.state.task;
+}
+test('safe human wait is freshly read and paused before preparing a new request without starting work',async()=>{
+ const f=recoveryFixture(),old=await saved(f),before=structuredClone(old);let reads=0;const get=f.client.get;f.client.get=async(id,signal)=>{reads++;assert.ok(signal instanceof AbortSignal);return get(id);};
+ assert.equal(await f.c.prepareNewRequest(old.id,old.revision),true);assert.equal(reads,1);assert.equal(f.c.state.planningNew,true);assert.equal(f.c.state.task.id,old.id);assert.equal(f.c.state.task.status,'paused');assert.equal(f.c.state.task.steps[0].status,before.steps[0].status);
+ assert.equal(f.calls.filter(row=>row[0]==='event').length,1);assert.equal(f.calls.at(-1)[1].type,'pause');assert.equal(f.executions,0);
+ const summary=f.c.summary();assert.equal(summary.planning_new,true);assert.equal(summary.active_requested_plan,false);assert.equal(summary.loaded,false);assert.equal(summary.task_id,undefined);assert.equal(summary.steps,undefined);
+ const calls=f.calls.length;await f.c.observe();assert.equal(reads,1);assert.equal(f.calls.length,calls);
+});
+for(const status of ['running','uncertain','waiting_job'])test(`new-request preparation preserves unresolved ${status} ownership and explains its step`,async()=>{
+ const f=recoveryFixture(),old=await saved(f,status==='uncertain'?'needs_reconciliation':status,status),before=structuredClone(f.c.state.task),calls=f.calls.length;
+ assert.equal(await f.c.prepareNewRequest(old.id,old.revision),false);assert.equal(f.c.state.planningNew,false);assert.deepEqual(f.c.state.task,before);assert.match(f.c.state.error,/자료 확인/);assert.equal(f.calls.length,calls);assert.equal(f.c.ownsExecution(),true);assert.equal(f.executions,0);
+});
+for(const status of ['draft','paused','completed'])test(`preparing a quiescent ${status} record preserves it without an invented ledger event`,async()=>{
+ const f=recoveryFixture(),old=await saved(f,status,status==='completed'?'completed':'pending'),events=f.calls.length;
+ assert.equal(await f.c.prepareNewRequest(old.id,old.revision),true);assert.equal(f.c.state.task.status,status);assert.equal(f.calls.length,events);assert.equal(f.c.state.planningNew,true);
+});
+test('a ready plan is paused and old captured approval/resume callbacks cannot run in prepared mode',async()=>{
+ const f=recoveryFixture(),old=await saved(f,'ready','pending');assert.equal(await f.c.prepareNewRequest(old.id,old.revision),true);const calls=f.calls.length;
+ await assert.rejects(f.c.approve(old.id,old.revision),/새 요청/);await assert.rejects(f.c.resume(),/새 요청/);assert.equal(f.calls.length,calls);assert.equal(f.executions,0);assert.equal(f.c.blocksOtherWrites(),false);
+});
+test('a failed new proposal retains the old held plan and prepared mode until a new draft is saved',async()=>{
+ const f=recoveryFixture(),old=await saved(f,'draft','pending');await f.c.prepareNewRequest(old.id,old.revision);const held=structuredClone(f.c.state.task),create=f.client.create;
+ f.client.create=async()=>{throw Error('controlled create acknowledgement lost');};await assert.rejects(f.c.propose(proposal),/acknowledgement/);assert.deepEqual(f.c.state.task,held);assert.equal(f.c.state.planningNew,true);
+ f.client.create=async plan=>({...await create(plan),id:'task_'+'b'.repeat(32),status:'draft'});await f.c.propose(proposal);assert.equal(f.c.state.task.id,'task_'+'b'.repeat(32));assert.equal(f.c.state.planningNew,false);assert.equal(f.executions,0);
+});
+test('prepare refuses a changed saved revision before pausing or changing requested intent',async()=>{
+ const f=recoveryFixture(),old=await saved(f);f.task.revision++;assert.equal(await f.c.prepareNewRequest(old.id,old.revision),false);assert.equal(f.c.state.planningNew,false);assert.equal(f.calls.filter(row=>row[0]==='event').length,0);assert.match(f.c.state.error,/바뀌/);
+});
+for(const change of ['runtime','account'])test(`late prepare cannot survive ${change} A-B-A or pause a stale plan`,async()=>{
+ const f=recoveryFixture(),old=await saved(f);let release;const get=f.client.get;f.client.get=()=>new Promise(resolve=>{release=resolve;});const pending=f.c.prepareNewRequest(old.id,old.revision);
+ if(change==='runtime')f.bumpGeneration();else{f.setConnection('other');f.c.invalidateConnection();f.setConnection('account-model-1');}
+ release(await get(ID));assert.equal(await pending,false);assert.equal(f.c.state.planningNew,false);assert.equal(f.calls.filter(row=>row[0]==='event').length,0);assert.equal(f.executions,0);
+});
+test('default restore prefers the newest current-binding completed record over an older paused plan',async()=>{
+ const f=recoveryFixture();await saved(f,'paused','pending');const old=structuredClone(f.task),latest={...structuredClone(old),id:'task_'+'b'.repeat(32),status:'completed',updated_at:'2026-10-28T02:00:00Z'};old.updated_at='2026-10-28T01:00:00Z';f.client.list=async()=>[old,latest];
+ assert.equal((await f.c.restore()).id,latest.id);assert.equal(f.c.state.task.status,'completed');assert.equal(f.executions,0);
+});
+test('default restoration gives unresolved execution first ownership even over a newer completed plan',async()=>{
+ const f=recoveryFixture();await saved(f,'paused','uncertain');const old=structuredClone(f.task),latest={...structuredClone(old),id:'task_'+'b'.repeat(32),status:'completed',updated_at:'z',steps:[]};f.client.list=async()=>[old,latest];
+ assert.equal((await f.c.restore()).id,old.id);assert.equal(f.c.ownsExecution(),true);await assert.rejects(f.c.restore(latest.id),/결과|확인/);assert.equal(f.c.state.task.id,old.id);
+});
+test('history is bounded actor-scoped summaries and explicit selection only reads a plan',async()=>{
+ const f=recoveryFixture();await saved(f,'paused','pending');f.setRuntime('new-project');await f.c.loadHistory();assert.equal(f.c.state.history.length,1);assert.deepEqual(Object.keys(f.c.state.history[0]).sort(),['contextMatches','goal','id','status','updated_at'].sort());assert.equal(f.c.state.history[0].contextMatches,false);
+ assert.equal(await f.c.restore(),null);assert.equal(f.c.state.task,null);const calls=f.calls.length;await f.c.restore(ID);assert.equal(f.c.state.task.id,ID);assert.equal(f.c.state.contextMatches,false);assert.equal(f.calls.length,calls);assert.equal(f.executions,0);
+});
+test('stopping a GET retires its late reply and does not clear a newer create wait',async()=>{
+ const f=recoveryFixture();await saved(f,'draft','pending');let releaseRead,releaseCreate,signal;const old=structuredClone(f.task);f.client.get=(_id,value)=>{signal=value;return new Promise(resolve=>{releaseRead=resolve;});};
+ const reading=f.c.restore(ID);assert.equal(typeof releaseRead,'function','the GET callback is registered synchronously');assert.equal(f.c.state.readPending,true);f.c.stopRead();assert.equal(signal.aborted,true);assert.equal(f.c.state.readPending,false);assert.equal(f.c.state.loading,false);
+ f.client.create=()=>new Promise(resolve=>{releaseCreate=resolve;});const creating=f.c.propose(proposal);assert.equal(typeof releaseCreate,'function','the create callback is registered synchronously');f.c.stopRead();assert.equal(f.c.state.loading,true);releaseRead({...old,revision:99});await reading;assert.equal(f.c.state.task.revision,old.revision);assert.equal(f.c.state.loading,true);
+ releaseCreate({...old,id:'task_'+'b'.repeat(32)});await creating;assert.equal(f.c.state.task.id,'task_'+'b'.repeat(32));assert.equal(f.c.state.loading,false);
+});
+test('GET deadline releases the owned display wait without retry and ignores a late saved result',{timeout:500},async()=>{
+ const f=recoveryFixture();await saved(f,'draft','pending');let release,reads=0,signal;const old=structuredClone(f.c.state.task);f.client.get=(_id,value)=>{reads++;signal=value;return new Promise(resolve=>{release=resolve;});};
+ await f.c.restore(ID);assert.equal(reads,1);assert.equal(signal.aborted,true);assert.equal(f.c.state.readPending,false);assert.equal(f.c.state.loading,false);assert.match(f.c.state.error,/15초|응답|시간/);release({...old,revision:99});await tick();assert.deepEqual(f.c.state.task,old);assert.equal(f.executions,0);
+});
+test('restore and history ignore a project A-B-A response and cannot select its old record',async()=>{
+ const f=recoveryFixture();await saved(f,'draft','pending');let release;const old=structuredClone(f.task);f.client.list=()=>new Promise(resolve=>{release=resolve;});
+ const pending=f.c.restore();f.bumpGeneration();release([{...old,revision:99}]);assert.equal(await pending,null);assert.notEqual(f.c.state.task.revision,99);assert.equal(f.c.state.loading,false);
+});
+
+test('newest recoverable completed record outranks an older exact-binding paused record',async()=>{
+ const f=recoveryFixture();await saved(f,'paused','pending');const old={...structuredClone(f.task),updated_at:'2026-10-28T01:00:00Z'},latest={...structuredClone(old),id:'task_'+'b'.repeat(32),binding:JSON.stringify(['project1-saved-inputs','account-model-1']),status:'completed',updated_at:'2026-10-28T02:00:00Z'};
+ latest.approval={binding:latest.binding,plan_sha256:latest.plan_sha256,confirmed_at:'now'};f.deps.settingsRecovery=value=>value==='project1-saved-inputs'?{label:'저장 설정 복원',restore:()=>true}:null;f.client.list=async()=>[old,latest];
+ assert.equal((await f.c.restore()).id,latest.id);assert.equal(f.c.state.settingsRecoveryLabel,'저장 설정 복원');assert.equal(f.executions,0);
+});
+test('an authoritative resolved snapshot can retire cached unresolved ownership without running anything',async()=>{
+ const f=recoveryFixture();await saved(f,'waiting_job','waiting_job');const complete={...structuredClone(f.task),revision:f.task.revision+1,status:'completed',steps:f.task.steps.map(step=>({...step,status:'completed'}))};f.client.list=async()=>[complete];
+ assert.equal((await f.c.restore()).status,'completed');assert.equal(f.c.ownsExecution(),false);assert.equal(f.executions,0);
+});
+test('a fresh unresolved revision is retained when an old safe card tries to prepare a new request',async()=>{
+ const f=recoveryFixture(),old=await saved(f,'draft','pending');f.task.revision++;f.task.status='needs_reconciliation';f.task.steps[0].status='uncertain';
+ assert.equal(await f.c.prepareNewRequest(old.id,old.revision),false);assert.equal(f.c.state.task.revision,f.task.revision);assert.equal(f.c.state.task.steps[0].status,'uncertain');assert.equal(f.c.ownsExecution(),true);assert.equal(f.c.state.planningNew,false);assert.equal(f.calls.filter(row=>row[0]==='event').length,0);
+});
+test('stopRead cannot time out or retire a confirmed safe pause event',async()=>{
+ const f=recoveryFixture(),old=await saved(f);let release;const event=f.client.event;f.client.event=(_id,value)=>new Promise(resolve=>{release=async()=>resolve(await event(_id,value));});
+ const preparing=f.c.prepareNewRequest(old.id,old.revision);await tick();assert.equal(f.c.state.loading,true);assert.equal(f.c.state.readPending,false);f.c.stopRead();await new Promise(resolve=>setTimeout(resolve,20));assert.equal(f.c.state.loading,true);assert.equal(f.c.state.planningNew,false);await release();assert.equal(await preparing,true);assert.equal(f.c.state.planningNew,true);
+});
+test('pause owns its mutation wait and cannot overwrite a newly selected account with a late result',async()=>{
+ const f=recoveryFixture();await saved(f,'ready','pending');let release;const event=f.client.event;f.client.event=(_id,value)=>new Promise(resolve=>{release=async()=>resolve(await event(_id,value));});
+ const pausing=f.c.pause();assert.equal(f.c.state.loading,true);assert.equal(await f.c.prepareNewRequest(ID,1),false);f.setConnection('other-account');f.c.invalidateConnection();await release();await pausing;assert.equal(f.c.state.task,null);assert.equal(f.c.state.loading,false);assert.equal(f.executions,0);
+});
+test('history summaries are bounded and a late account reply cannot replace the new history',async()=>{
+ const f=recoveryFixture();await saved(f,'paused','pending');const original=structuredClone(f.task);f.client.list=async()=>Array.from({length:60},(_,index)=>({...original,id:'task_'+index.toString(16).padStart(32,'0'),goal:'x'.repeat(500)}));
+ await f.c.loadHistory();assert.equal(f.c.state.history.length,50);assert.ok(f.c.state.history.every(row=>row.goal.length<=180));let release;f.client.list=()=>new Promise(resolve=>{release=resolve;});const pending=f.c.loadHistory();f.setConnection('other');f.c.invalidateConnection();release([original]);await pending;assert.deepEqual(f.c.state.history,[]);assert.equal(f.c.state.task,null);
+});
+test('explicit history selection refuses a record saved under another connected account',async()=>{
+ const f=recoveryFixture();await saved(f,'paused','pending');f.setConnection('different-account');f.c.invalidateConnection();
+ await assert.rejects(f.c.restore(ID),/연결|계정/);assert.equal(f.c.state.task,null);assert.equal(f.c.state.planningNew,false);assert.equal(f.executions,0);
+});
+test('loading history does not clear an unresolved task error that had stopped job polling',async()=>{
+ const f=recoveryFixture();await saved(f,'waiting_job','waiting_job');f.c.state.error='controlled result still requires confirmation';await f.c.loadHistory();assert.equal(f.c.state.error,'controlled result still requires confirmation');assert.equal(f.c.state.task.status,'waiting_job');assert.equal(f.executions,0);
+});
+test('selecting waiting-job history does not enroll it in automatic continuation',async()=>{
+ const f=recoveryFixture();await saved(f,'waiting_job','waiting_job');const pending=f.c.pollWaiting();await tick();if(f.executions)await f.finish();await pending;assert.equal(f.executions,0);assert.equal(f.c.canPollWaiting(),false);
+});
+test('history context labels track live project changes without a ledger or provider request',async()=>{
+ const f=recoveryFixture();await saved(f,'paused','pending');await f.c.loadHistory();const calls=f.calls.length;assert.equal(f.c.state.history[0].contextMatches,true);f.setRuntime('different-project');f.c.refreshContext();assert.equal(f.c.state.history[0].contextMatches,false);f.setRuntime('project1');f.c.refreshContext();assert.equal(f.c.state.history[0].contextMatches,true);assert.equal(f.calls.length,calls);assert.equal(f.executions,0);
+});
+
+// Independent review round 1: display reads must not retire already confirmed execution.
+test('stopping an observation GET preserves an already confirmed runner and its result evidence',async()=>{
+ const cache=new Map(),Controller=load(file,cache).AssistantTaskController,lease=load(path.join(__dirname,'executionLease.ts'),cache);
+ const clone=value=>structuredClone(value),events=[];let ledger,entered,releaseAction,releaseRead,readSignal,control,effects=0,deferDisplay=false;
+ const dispatched=new Promise(resolve=>{entered=resolve;}),actionDone=new Promise(resolve=>{releaseAction=resolve;});
+ const client={list:async()=>[clone(ledger)],create:async plan=>{
+   ledger={schema_version:1,id:ID,revision:1,status:'draft',...clone(plan),plan_sha256:'a'.repeat(64),approval:null,current_step_id:null,message:null,created_at:'now',updated_at:'now',steps:plan.steps.map((step,index)=>({...clone(step),id:'step_'+(index+1),status:'pending',attempt_id:null,receipt:null,error:null}))};return clone(ledger);
+ },get:async(id,signal)=>{assert.equal(id,ID);if(deferDisplay&&signal){readSignal=signal;return new Promise(resolve=>{releaseRead=resolve;});}return clone(ledger);},event:async(id,event)=>{
+   assert.equal(id,ID);assert.equal(event.expected_revision,ledger.revision);assert.equal(event.binding,ledger.binding);events.push(clone(event));
+   const step=ledger.steps[0];
+   if(event.type==='approve'){ledger.status='ready';ledger.approval={binding:ledger.binding,plan_sha256:ledger.plan_sha256,confirmed_at:'now'};}
+   else if(event.type==='begin_step'){step.status='running';step.attempt_id=event.attempt_id;ledger.status='running';ledger.current_step_id=step.id;}
+   else if(event.type==='complete_step'){assert.equal(step.attempt_id,event.attempt_id);assert.equal(step.status,'running');step.status='completed';step.receipt=clone(event.receipt);ledger.status='completed';ledger.current_step_id=null;}
+   else assert.fail('unexpected confirmed-runner ledger event '+event.type);
+   ledger.revision++;return clone(ledger);
+ }};
+ const c=new Controller({client,binding:()=> 'project1',connection:()=> 'account-model-1',ready:()=>true,mayStart:()=>true,onChange:()=>{},execute:async(_step,value)=>{effects++;control=value;entered();await actionDone;return{kind:'completed',receipt:{opened:true,job_id:'job_confirmed_read_stop'}};},reconcile:async()=>assert.fail('a stopped GET must not require reconciliation')});
+ await c.propose(proposal);const approving=c.approve(ID,1);await dispatched;assert.equal(c.state.busy,true);assert.equal(lease.executionLeaseOwner(),'assistant');const version=c.version;
+ deferDisplay=true;const oldObservation=clone(ledger),observing=c.observe();assert.equal(c.state.readPending,true);c.stopRead();const authorityAfterStop=control.isAuthorityCurrent(),leaseAfterStop=lease.executionLeaseOwner();const observed=await observing;
+ releaseAction();const result=await approving;releaseRead({...oldObservation,revision:99});await tick();
+ assert.equal(readSignal.aborted,true);assert.equal(c.state.readPending,false);assert.equal(authorityAfterStop,true);assert.equal(leaseAfterStop,'assistant');assert.equal(c.version,version);assert.equal(result.status,'completed');assert.equal(c.state.task.status,'completed');assert.equal(c.state.task.revision,4);assert.deepEqual(c.state.task.steps[0].receipt,{opened:true,job_id:'job_confirmed_read_stop'});assert.equal(effects,1);assert.deepEqual(events.map(event=>event.type),['approve','begin_step','complete_step']);assert.equal(lease.executionLeaseOwner(),null);assert.equal(c.state.busy,false);assert.equal(observed.fresh,false);assert.notEqual(c.state.task.revision,99);
+});
+for(const status of ['running','waiting_job','uncertain'])test(`new-request preparation retains ${status} ownership after an authoritative same-account runtime-binding transition`,async()=>{
+ const f=recoveryFixture(),old=await saved(f,'paused','pending'),fresh={...structuredClone(f.task),revision:old.revision+2,binding:JSON.stringify(['project-after-owned-transition','account-model-1']),status:status==='uncertain'?'needs_reconciliation':status};
+ Object.assign(fresh.steps[0],{status,attempt_id:'attempt_'+'d'.repeat(32),receipt:{job_id:'job_authoritative_transition'}});f.client.get=async()=>structuredClone(fresh);const calls=f.calls.length;
+ assert.equal(await f.c.prepareNewRequest(old.id,old.revision),false);assert.equal(f.c.state.task.revision,fresh.revision);assert.equal(f.c.state.task.binding,fresh.binding);assert.equal(f.c.state.task.steps[0].status,status);assert.equal(f.c.ownsExecution(),true);assert.equal(f.c.state.planningNew,false);assert.equal(f.c.state.contextMatches,false);assert.match(f.c.state.error,/결과|확인/);
+ const summary=f.c.summary();assert.equal(summary.current_context_matches,false);assert.equal(summary.execution_evidence_withheld,true);assert.equal(summary.steps,undefined);assert.doesNotMatch(JSON.stringify(summary),/job_authoritative_transition/);
+ await assert.rejects(f.c.propose(proposal),/진행|확인/);assert.equal(f.calls.length,calls);assert.equal(f.executions,0);
+});
+test('preparation never adopts changed-account unresolved ownership from a fresh response',async()=>{
+ const f=recoveryFixture(),old=await saved(f,'paused','pending'),before=structuredClone(f.c.state.task),fresh={...structuredClone(f.task),revision:old.revision+2,binding:JSON.stringify(['project-after-transition','foreign-account-model']),status:'waiting_job'};Object.assign(fresh.steps[0],{status:'waiting_job',attempt_id:'attempt_'+'e'.repeat(32),receipt:{job_id:'foreign_private_job'}});f.client.get=async()=>structuredClone(fresh);const calls=f.calls.length;
+ assert.equal(await f.c.prepareNewRequest(old.id,old.revision),false);assert.deepEqual(f.c.state.task,before);assert.equal(f.c.state.planningNew,false);assert.equal(f.c.ownsExecution(),false);assert.doesNotMatch(JSON.stringify(f.c.summary()),/foreign_private_job|foreign-account/);assert.equal(f.calls.length,calls);assert.equal(f.executions,0);
+});
+for(const changed of ['id','hash','goal','args','approval'])test(`changed-binding unresolved response cannot replace the held immutable ${changed}`,async()=>{
+ const f=recoveryFixture(),old=await saved(f,'paused','pending'),before=structuredClone(f.c.state.task),fresh={...structuredClone(f.task),revision:old.revision+1,binding:JSON.stringify(['project-after-transition','account-model-1']),status:'needs_reconciliation'};Object.assign(fresh.steps[0],{status:'uncertain',attempt_id:'attempt_'+'f'.repeat(32)});
+ if(changed==='id')fresh.id='task_'+'f'.repeat(32);if(changed==='hash')fresh.plan_sha256='b'.repeat(64);if(changed==='goal')fresh.goal='다른 계획';if(changed==='args')fresh.steps[0].args={step:2};if(changed==='approval')fresh.approval={...fresh.approval,confirmed_at:'new-unreviewed-grant'};f.client.get=async()=>structuredClone(fresh);
+ assert.equal(await f.c.prepareNewRequest(old.id,old.revision),false);assert.deepEqual(f.c.state.task,before);assert.equal(f.c.state.planningNew,false);assert.equal(f.executions,0);
+});
+test('a stopped observation cannot publish an already-resolved GET after its wait token is retired',async()=>{
+ const f=recoveryFixture();await saved(f,'paused','pending');const old=structuredClone(f.c.state.task),version=f.c.version;let release;f.client.get=()=>new Promise(resolve=>{release=resolve;});const observing=f.c.observe();release({...old,revision:99,status:'completed'});await Promise.resolve();f.c.stopRead();const observed=await observing;
+ assert.equal(f.c.version,version);assert.equal(observed.fresh,false);assert.equal(observed.revision,old.revision);assert.equal(f.c.state.task.revision,old.revision);assert.equal(f.c.state.readPending,false);
+});
+test('a cached draft may gain its valid original-plan human grant while retaining transitioned unresolved ownership',async()=>{
+ const f=recoveryFixture(),old=await saved(f,'draft','pending'),fresh={...structuredClone(f.task),revision:old.revision+3,binding:JSON.stringify(['project-after-transition','account-model-1']),status:'waiting_job'};fresh.approval={binding:old.binding,plan_sha256:old.plan_sha256,confirmed_at:'2026-10-28T02:00:00Z'};Object.assign(fresh.steps[0],{status:'waiting_job',attempt_id:'attempt_'+'d'.repeat(32),receipt:{job_id:'job_draft_transition'}});f.client.get=async()=>structuredClone(fresh);
+ assert.equal(await f.c.prepareNewRequest(old.id,old.revision),false);assert.equal(f.c.state.task.revision,fresh.revision);assert.deepEqual(f.c.state.task.approval,fresh.approval);assert.equal(f.c.ownsExecution(),true);await assert.rejects(f.c.propose(proposal),/진행|확인/);assert.equal(f.executions,0);
+});
+for(const changed of ['goal','args','approval'])test(`same-binding unresolved response cannot replace the held immutable ${changed}`,async()=>{
+ const f=recoveryFixture(),old=await saved(f,'paused','pending'),before=structuredClone(f.c.state.task),fresh={...structuredClone(f.task),revision:old.revision+1,status:'needs_reconciliation'};Object.assign(fresh.steps[0],{status:'uncertain',attempt_id:'attempt_'+'f'.repeat(32)});
+ if(changed==='goal')fresh.goal='다른 계획';if(changed==='args')fresh.steps[0].args={step:2};if(changed==='approval')fresh.approval={...fresh.approval,confirmed_at:'new-unreviewed-grant'};f.client.get=async()=>structuredClone(fresh);
+ assert.equal(await f.c.prepareNewRequest(old.id,old.revision),false);assert.deepEqual(f.c.state.task,before);assert.equal(f.c.state.planningNew,false);assert.equal(f.executions,0);
 });

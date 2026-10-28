@@ -12,6 +12,7 @@ import type { AssistantBridge, AssistantError, AssistantImageInput, AssistantMes
 import { argumentSummary, canonicalJson, randomHex, sha256Hex, trimConversation } from './assistantContext';
 import { ToolRefusal, type AssistantToolRegistry, type ToolOutcome, type ToolPreview, type ToolTier } from './assistantTools';
 import {diagnosticError} from './assistantDiagnostics';
+import { AssistantReadWaitError, runBoundedAssistantRead } from './assistantReadWait';
 import type { RunEntry } from './assistantLog';
 
 export type SessionEvent =
@@ -37,6 +38,8 @@ export interface SessionDeps {
   writeBinding(): string;
   log(entry: RunEntry): Promise<unknown>;
   provider(): AssistantProviderId | null;
+  /** Controlled-fixture deadline; production uses the shared 15-second read deadline. */
+  readTimeoutMs?: number;
 }
 
 interface Turn { version: number; scope: string; project: string }
@@ -69,6 +72,7 @@ export class AssistantConversation {
   private version = 0;
   private turn: Turn | null = null;
   private historyScope: string | null = null;
+  private readWait: AbortController | null = null;
 
   constructor(private readonly deps: SessionDeps, private readonly emit: (event: SessionEvent) => void) {}
 
@@ -79,6 +83,7 @@ export class AssistantConversation {
   invalidate(reason?: string, clearHistory = true): void {
     const request = this.inFlight;
     this.version++; this.turn = null; this.inFlight = null;
+    const readWait = this.readWait; this.readWait = null; readWait?.abort();
     this.pending = null; this.queue = []; this.current = []; this.image = undefined; this.imageQuestion = false;
     if (clearHistory) { this.messages.length = 0; this.history = []; this.historyScope = null; }
     this.emit({ kind: 'confirm', pending: null }); this.setBusy(false);
@@ -240,9 +245,37 @@ export class AssistantConversation {
       } else {
         const binding = tier === 'read' ? this.deps.writeBinding() : undefined;
         try {
-          outcome = await this.deps.tools.runAutomatic(call.name, call.arguments, () => this.isCurrent(turn, binding));
+          if (tier === 'read') {
+            const wait = new AbortController(); this.readWait = wait;
+            try {
+              outcome = await runBoundedAssistantRead(signal => this.deps.tools.runAutomatic(call.name, call.arguments,
+                () => !signal.aborted && this.isCurrent(turn, binding)), { timeoutMs: this.deps.readTimeoutMs, signal: wait.signal });
+            } finally { if (this.readWait === wait) this.readWait = null; }
+          } else {
+            outcome = await this.deps.tools.runAutomatic(call.name, call.arguments, () => this.isCurrent(turn, binding));
+          }
           this.check(turn, binding);
-        } catch (cause) { if (cause instanceof StaleTurn) throw cause; outcome = refused(cause); }
+        } catch (cause) {
+          if (cause instanceof StaleTurn) throw cause;
+          if (tier === 'read' && cause instanceof AssistantReadWaitError) {
+            this.check(turn, binding);
+            const subject = call.name === 'read_task_status' ? '작업 상태' : call.name === 'read_app_diagnostics' ? '진단 정보' : '상태 정보';
+            const provider = this.deps.provider(), retiredVersion = turn.version + 1;
+            const entry: RunEntry = { run_id: runId, tool: call.name, tier: 'read', summary, args_sha256, confirmed: false,
+              result: cause.code === 'read_timeout' ? 'error' : 'cancelled', error_code: cause.code, ...(provider ? { provider } : {}) };
+            // Start the audit under the still-current account/project, but its POST cannot hold the composer.
+            let append: Promise<unknown>;
+            try { append = Promise.resolve(this.deps.log(entry)); } catch (failure) { append = Promise.reject(failure); }
+            void append.catch(failure => {
+              if (this.version === retiredVersion && this.deps.scope() === turn.scope && this.deps.projectScope() === turn.project)
+                this.logFailed(failure);
+            });
+            this.check(turn, binding);
+            this.invalidate(`${subject}를 읽는 시간이 길어져 이번 질문을 멈췄습니다. 현재 화면에서 상태를 확인한 뒤 다시 묻거나 새 질문을 입력하세요.`, false);
+            return true;
+          }
+          outcome = refused(cause);
+        }
       }
       this.check(turn);
       this.answer(call, outcome);

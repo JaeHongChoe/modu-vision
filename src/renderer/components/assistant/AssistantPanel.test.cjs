@@ -10,17 +10,28 @@ const nodes=tree=>!tree||typeof tree!=='object'?[]:[tree,...[].concat(tree.props
 const text=tree=>!tree?'':typeof tree==='string'||typeof tree==='number'?String(tree):[].concat(tree.props?.children||[]).flat(Infinity).map(text).join('');
 
 function render(state,ui={}){
- const react={createElement:(type,props,...children)=>({type,props:{...props,children}}),useState:initial=>[ui.draft!==undefined&&initial===''?ui.draft:typeof initial==='function'?initial():initial,value=>ui.sets?.push(value)],useRef:()=>({current:null}),useEffect:()=>{}};
+ const react={createElement:(type,props,...children)=>({type,props:{...props,children}}),useState:initial=>[ui.draft!==undefined&&initial===''?ui.draft:typeof initial==='function'?initial():initial,value=>ui.sets?.push(value)],useRef:()=>({current:ui.focus?{focus:ui.focus}:null}),useEffect:()=>{}};
  const store=Object.assign(selector=>selector(state),{getState:()=>state});
+ const taskState=ui.taskState||{};
+ Object.assign(taskState,{task:null,busy:Boolean(ui.taskBusy),planningNew:false,history:[],readPending:false,contextMatches:true,loading:false,error:null,...taskState});
+ const taskStore=Object.assign(selector=>selector(taskState),{getState:()=>taskState});
+ let taskPanel=()=>null;
+ if(ui.realTaskPanel){
+  const catalog=load(path.join(__dirname,'../../services/assistantTasks/catalog.ts'),{});
+  const presentationFile=path.join(__dirname,'../../services/assistantTasks/taskRecoveryPresentation.ts');
+  const presentation=fs.existsSync(presentationFile)?load(presentationFile,{}):{};
+  const card=load(path.join(__dirname,'AssistantTaskCard.tsx'),{react:{__esModule:true,default:react,...react},'../../services/assistantTasks/catalog':catalog,'../../services/assistantTasks/taskRecoveryPresentation':presentation});
+  taskPanel=load(path.join(__dirname,'AssistantTaskPanel.tsx'),{react:{__esModule:true,default:react,...react},'../../stores/useAssistantTaskStore':{useAssistantTaskStore:taskStore},'../../stores/useProjectStore':{useProjectStore:{getState:()=>({setStep(){}})}},'./AssistantTaskCard':card}).AssistantTaskPanel;
+ }
  const setup=ui.withSetup?load(path.join(__dirname,'ChatgptConnectionSetup.tsx'),{react:{__esModule:true,default:react,...react},'../../stores/useAssistantStore':{useAssistantStore:store,assistantBridge:()=>state.bridge},'../common/WorkspaceDialog':{WorkspaceDialog:()=>null}}).ChatgptConnectionSetup:()=>null;
  const {AssistantPanel}=load(path.join(__dirname,'AssistantPanel.tsx'),{react:{__esModule:true,default:react,...react},
   '../../stores/useAssistantStore':{useAssistantStore:store,assistantBridge:()=>state.bridge},
   '../../stores/useAnnotationStore':{useAnnotationStore:selector=>selector({currentImage:{file_path:'/data/a.png'}})},
-  '../../stores/useAssistantTaskStore':{useAssistantTaskStore:selector=>selector({task:null,busy:Boolean(ui.taskBusy)})},
-  '../../services/assistantTasks/connection':{taskConnectionKey:()=>''},'./AssistantTaskPanel':{AssistantTaskPanel:()=>null},
+  '../../stores/useAssistantTaskStore':{useAssistantTaskStore:taskStore},
+  '../../services/assistantTasks/connection':{taskConnectionKey:()=>''},'./AssistantTaskPanel':{AssistantTaskPanel:taskPanel},
   './ChatgptConnectionSetup':{ChatgptConnectionSetup:setup},'./AssistantProviderSetup':{AssistantProviderSetup:()=>null},'./AssistantRunLog':{AssistantRunLog:()=>null}});
  const expand=tree=>!tree||typeof tree!=='object'?tree:typeof tree.type==='function'?expand(tree.type(tree.props)):{...tree,props:{...tree.props,children:[].concat(tree.props.children||[]).flat(Infinity).map(expand)}};
- return ui.withSetup?expand(AssistantPanel({})):AssistantPanel({});
+ return ui.withSetup||ui.realTaskPanel?expand(AssistantPanel({})):AssistantPanel({});
 }
 const base={isOpen:true,busy:false,pending:null,imageOffer:null,items:[],bridge:{},config:{active:'anthropic',encryptionAvailable:true,providers:[{provider:'anthropic',baseUrl:'https://api.anthropic.com',model:'m',format:null,hasKey:true,supportsImages:true,label:'Anthropic'}]},
  close(){},ask(){},stop(){},decide(){},offerImage(){},sendImage(){},dropImage(){},newConversation(){}};
@@ -40,6 +51,38 @@ test('the public panel only offers ChatGPT and never sends through a saved API p
 
 const connectedConfig=()=>({active:'chatgpt',providers:[{provider:'chatgpt',baseUrl:'https://chatgpt.com',model:'chosen',hasKey:false,ready:true,label:'ChatGPT',supportsImages:false}],chatgpt:{accounts:[{recordId:'a',model:'chosen',signedIn:true,planUsageEnabled:true}],active:'a'}});
 const pendingWrite=()=>({call:{id:'c',name:'save_split',arguments:{}},runId:'run_x',preview:{title:'분할 저장',lines:['학습 70%'],undo:'다시 나누기'}});
+
+test('real task card prepares a new request before resetting conversation and preserves the typed draft',async()=>{
+ for(const accepted of [false,true]){
+  let finish;const waiting=new Promise(resolve=>{finish=resolve;}),calls=[],sets=[];
+  const task={id:'shown',revision:7,status:'waiting_human',goal:'폴더 검사 만들기',message:'폴더 선택을 취소했습니다.',current_step_id:'s1',steps:[{id:'s1',action:'import_dataset',args:{},label:'자료 가져오기',status:'waiting_human',receipt:{not_started:true}}]};
+  const taskState={task,busy:false,loading:false,contextMatches:true,history:[],planningNew:false,readPending:false,prepareNewRequest:async(id,revision)=>{calls.push(['prepare',id,revision]);const result=await waiting;taskState.planningNew=result;return result;},approve:()=>calls.push('approve'),resume:()=>calls.push('resume'),restore:()=>calls.push('restore')};
+  const tree=render({...base,config:connectedConfig(),items:[{id:'old',kind:'person',text:'이전 대화'}],ask:()=>calls.push('ask'),newConversation:()=>calls.push('reset')},{draft:'아직 보내지 않은 질문',sets,taskState,realTaskPanel:true,focus:()=>calls.push('focus')});
+  const prepare=nodes(tree).find(node=>node.type==='button'&&text(node)==='이 계획 멈추고 새 요청');assert.ok(prepare);
+  const pending=prepare.props.onClick();assert.deepEqual(calls,[['prepare','shown',7]]);finish(accepted);await pending;
+  assert.deepEqual(calls,accepted?[['prepare','shown',7],'reset','focus']:[['prepare','shown',7]]);
+  assert.ok(!sets.includes(''),'preparation never clears an unsent draft');
+  assert.equal(nodes(tree).find(node=>node.type==='textarea').props.value,'아직 보내지 않은 질문');
+ }
+});
+
+test('prepared request gives send the primary action and conversation clearing explains the saved plan remains',()=>{
+ const tree=render({...base,config:connectedConfig(),items:[{id:'1',kind:'person',text:'이전 질문'}]},{draft:'다른 검사 요청',taskState:{task:{status:'paused'},planningNew:true}});
+ const send=nodes(tree).find(node=>node.type==='button'&&text(node)==='보내기');assert.match(send.props.className,/workspace-button--primary/);
+ const clear=nodes(tree).find(node=>node.type==='button'&&text(node)==='대화만 비우기');assert.ok(clear);
+ assert.match(text(tree),/계획.*남/);
+});
+
+test('a completed preparation does not erase a question that arrived during its saved-state read',async()=>{
+ let finish;const waiting=new Promise(resolve=>{finish=resolve;}),calls=[];
+ const task={id:'shown',revision:7,status:'paused',goal:'이전 계획',steps:[{id:'s1',action:'save_split',args:{},status:'pending',label:'분할 저장'}]};
+ const taskState={task,prepareNewRequest:async()=>{await waiting;taskState.planningNew=true;return true;}};
+ const state={...base,config:connectedConfig(),items:[],newConversation:()=>calls.push('reset')};
+ const tree=render(state,{taskState,realTaskPanel:true,focus:()=>calls.push('focus')});
+ const pending=nodes(tree).find(node=>node.type==='button'&&text(node)==='이 계획 멈추고 새 요청').props.onClick();
+ state.items=[{id:'new',kind:'person',text:'새로 들어온 질문'}];finish();await pending;
+ assert.deepEqual(calls,[],'a late preparation may not clear a newer conversation');
+});
 
 test('legacy pending writes and image offers have no execution controls in the ChatGPT-only panel',()=>{
  for(const config of [base.config,{active:'openai-compatible',providers:[{provider:'openai-compatible',baseUrl:'http://127.0.0.1:12345/v1',model:'local',hasKey:false,supportsImages:true,label:'Local'}]}]){

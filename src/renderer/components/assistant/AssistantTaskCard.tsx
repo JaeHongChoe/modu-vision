@@ -1,5 +1,7 @@
 import React from 'react';
 import { ACTION_CATALOG } from '../../services/assistantTasks/catalog';
+import {newRequestPendingReason, taskWaitingGuidance} from '../../services/assistantTasks/taskRecoveryPresentation';
+import type {TaskHistoryItem} from '../../services/assistantTasks/controller';
 import type { ActionId, AssistantTask, StepStatus, TaskStatus, TaskStep } from '../../services/assistantTasks/types';
 
 export interface AssistantTaskCardProps {
@@ -12,6 +14,13 @@ export interface AssistantTaskCardProps {
   settingsRecoveryLabel?: string | null;
   onRestoreSettings?(id:string,revision:number): void;
   blocked?: boolean;
+  planningNew?: boolean;
+  history?: TaskHistoryItem[];
+  readPending?: boolean;
+  onPrepareNewRequest?(id: string, revision: number): Promise<void> | void;
+  onStopRead?(): void;
+  onLoadHistory?(): void;
+  onSelectHistory?(id: string): void;
   onApprove(id: string, revision: number): void;
   onPause(): void;
   onResume(): void;
@@ -21,11 +30,11 @@ export interface AssistantTaskCardProps {
 }
 
 const TASK_STATUS: Record<TaskStatus, string> = {
-  draft: '실행 확인', ready: '실행 준비', running: '진행 중', waiting_human: '사람 검토 대기',
+  draft: '실행 확인', ready: '실행 준비', running: '진행 중', waiting_human: '직접 확인 필요',
   waiting_job: '작업 완료 대기', paused: '일시정지', needs_reconciliation: '저장 결과 확인 필요', failed: '실패', completed: '완료',
 };
 const STEP_STATUS: Record<StepStatus, string> = {
-  pending: '예정', running: '진행 중', waiting_human: '사람 검토 대기', waiting_job: '완료 대기',
+  pending: '예정', running: '진행 중', waiting_human: '직접 확인 필요', waiting_job: '완료 대기',
   completed: '완료', failed: '실패', uncertain: '결과 확인 필요',
 };
 const STAGE: Record<ActionId, number> = {
@@ -100,17 +109,24 @@ function savedSummary(receipt: Record<string, unknown> | null): Array<[string, s
 }
 
 /** Presentational only. Authority, stale revisions and recovery are checked by the local controller. */
-export const AssistantTaskCard: React.FC<AssistantTaskCardProps> = ({task, busy, loading, error, ready, contextMatches = true, settingsRecoveryLabel = null, onRestoreSettings, blocked = false, onApprove, onPause, onResume, onRefresh, onRestore, onNavigate}) => {
+export const AssistantTaskCard: React.FC<AssistantTaskCardProps> = ({task, busy, loading, error, ready, contextMatches = true, settingsRecoveryLabel = null, onRestoreSettings, blocked = false, planningNew = false, history = [], readPending = false, onPrepareNewRequest, onStopRead, onLoadHistory, onSelectHistory, onApprove, onPause, onResume, onRefresh, onRestore, onNavigate}) => {
   const unavailable = !ready || blocked || loading;
   const readDisabled = unavailable || busy;
   const reason = loading ? '저장된 작업 상태를 읽고 있습니다.' : !ready ? 'ChatGPT 연결과 로그인 상태를 확인하면 작업을 이어갈 수 있습니다.'
     : blocked ? '다른 도우미 작업이 끝난 뒤 진행할 수 있습니다.' : busy ? '현재 작업의 결과를 기록하고 있습니다.' : null;
+  const readStop = readPending && <div className="space-y-1 text-xs"><p>상태 읽기는 15초 안에 끝나지 않으면 대기를 끝냅니다. 대기 중지는 실행 중인 작업을 취소하지 않습니다.</p><button type="button" className="workspace-button" disabled={busy} onClick={() => {if (!busy) onStopRead?.();}}>상태 확인 대기 중지</button></div>;
+  const historyView = (onLoadHistory || history.length > 0) && <section aria-label="저장된 계획 기록" className="space-y-2 text-xs">
+    <p className="workspace-description">이전 계획을 열면 저장 기록만 읽습니다. 실행하려면 열린 계획에서 따로 선택하세요.</p>
+    {onLoadHistory && <button type="button" className="workspace-button" disabled={readDisabled} onClick={() => {if (!readDisabled) onLoadHistory();}}>계획 기록 새로 보기</button>}
+    <ul className="max-h-40 space-y-1 overflow-y-auto">{history.slice(0, 10).map(item => <li key={item.id}><button type="button" className="workspace-button w-full text-left" disabled={readDisabled} onClick={() => {if (!readDisabled) onSelectHistory?.(item.id);}}>{text(item.goal, 160)} · {TASK_STATUS[item.status]} · {text(item.updated_at, 40)}{!item.contextMatches ? ' · 다른 프로젝트·설정' : ''}</button></li>)}</ul>
+  </section>;
   if (!task) return <section aria-label="도우미 작업" aria-busy={loading} className="workspace-section space-y-3" style={{color: 'var(--workspace-text)'}}>
     <h3>수행할 작업</h3>
     <p className="workspace-description text-xs">예: “이 폴더로 균열 검사 만들어줘”라고 요청하면 실행할 계획을 먼저 보여 줍니다.</p>
     <p role="status" className="workspace-description text-xs">{reason || '저장된 작업을 불러오거나 새 작업을 요청하세요.'}</p>
     {error && <p role="alert" className="text-xs" style={{color: 'var(--workspace-danger)'}}>{text(error, 1000)}</p>}
     <button type="button" className="workspace-button" disabled={readDisabled} onClick={() => {if (!readDisabled) onRestore();}}>저장된 작업 불러오기</button>
+    {readStop}{historyView}
   </section>;
 
   // Captured scalars identify exactly the displayed plan, even if a caller mutates its old DTO.
@@ -118,36 +134,44 @@ export const AssistantTaskCard: React.FC<AssistantTaskCardProps> = ({task, busy,
   const completed = task.steps.filter(step => step.status === 'completed').length;
   const currentIndex = task.steps.findIndex(step => step.id === task.current_step_id);
   const active = task.steps[currentIndex] ?? task.steps.find(step => step.status !== 'completed') ?? task.steps.at(-1);
+  const waiting = taskWaitingGuidance(task, active);
+  const statusLabel = status === 'waiting_human' ? waiting.status : TASK_STATUS[status];
   const visible = task.steps.slice(0, 24);
   const invalidPlanSize = task.steps.length < 1 || task.steps.length > 24;
   const continueDisabled = readDisabled || invalidPlanSize || !contextMatches;
-  const canNavigate = contextMatches && active && Number.isInteger(stage(active));
+  const canNavigate = !planningNew && contextMatches && active && Number.isInteger(stage(active));
   const navigate = () => {if (!readDisabled && active && canNavigate) onNavigate(stage(active));};
   let primary = {label: '저장 결과 확인', disabled: readDisabled, run: onRefresh};
   if (status === 'draft') primary = {label: '계획 확인하고 실행', disabled: continueDisabled, run: () => onApprove(id, revision)};
   else if (status === 'ready') primary = {label: '작업 시작', disabled: continueDisabled, run: onResume};
   else if (status === 'running') primary = {label: '작업 일시정지', disabled: unavailable, run: onPause};
-  else if (status === 'waiting_human' && canNavigate) primary = {label: '검토 화면 열기', disabled: readDisabled, run: navigate};
+  else if (status === 'waiting_human') primary = waiting.action === 'resume'
+    ? {label: waiting.label, disabled: continueDisabled, run: onResume}
+    : {label: waiting.label, disabled: readDisabled || !canNavigate, run: navigate};
+  else if (status === 'waiting_job') primary = {label: '저장 결과 확인하고 계획 계속', disabled: continueDisabled, run: onRefresh};
   else if (status === 'paused') primary = {label: '저장 결과 확인하고 이어하기', disabled: continueDisabled, run: onResume};
-  else if (status === 'needs_reconciliation') primary = {label: '저장 결과 확인 후 이어하기', disabled: continueDisabled, run: onResume};
+  else if (status === 'needs_reconciliation') primary = {label: '저장 결과 확인하고 계획 계속', disabled: continueDisabled, run: onResume};
   else if (status === 'completed' && canNavigate) primary = {label: '결과 화면 열기', disabled: readDisabled, run: navigate};
   if (!contextMatches && settingsRecoveryLabel && onRestoreSettings) primary = {label: settingsRecoveryLabel, disabled: readDisabled, run: ()=>onRestoreSettings(id,revision)};
+  const pendingReason = newRequestPendingReason(task);
+  const prepareDisabled = readDisabled || Boolean(pendingReason) || !onPrepareNewRequest;
 
   return <section aria-label="도우미 작업" aria-busy={loading || busy} className="workspace-section min-w-0 space-y-3" style={{color: 'var(--workspace-text)', overflowWrap: 'anywhere'}}>
     <header className="flex flex-wrap items-center justify-between gap-2">
-      <h3>작업 계획</h3><span className="workspace-badge" data-tone={tone(status)}>{TASK_STATUS[status]}</span>
+      <h3>{planningNew ? '이전 계획 기록' : '작업 계획'}</h3><span className="workspace-badge" data-tone={tone(status)}>{statusLabel}</span>
     </header>
+    {planningNew && <p role="status" className="text-xs">새 요청을 입력하세요. 이전 계획은 기록으로 남아 있으며 자동으로 실행하지 않습니다.</p>}
     <p className="font-semibold">{text(task.goal, 4096)}</p>
     <div role="status" aria-live="polite" aria-atomic="true" className="space-y-1 text-xs">
-      <p>{TASK_STATUS[status]} · 완료 {completed}/{task.steps.length}개</p>
+      {task.message && <p>{text(task.message, 1000)}</p>}
+      <p>{statusLabel} · 완료 {completed}/{task.steps.length}개</p>
       {active && <p>현재 단계 {currentIndex >= 0 ? currentIndex + 1 : task.steps.indexOf(active) + 1}/{task.steps.length} · {title(active)}</p>}
       {reason && <p className="workspace-description">{reason}</p>}
-      {task.message && <p>{text(task.message, 1000)}</p>}
     </div>
     {error && <p role="alert" className="text-xs" style={{color: 'var(--workspace-danger)'}}>{text(error, 1000)}</p>}
     {!contextMatches && <p className="workspace-description text-xs">현재 화면과 저장된 작업의 설정이 다릅니다. {settingsRecoveryLabel ? '저장 설정 복원은 학습 입력만 복원하며, 작업이나 학습을 시작하지 않습니다.' : '기록만 표시합니다. 원래 프로젝트와 자료를 연 뒤 다시 확인하세요.'}</p>}
-    {status === 'draft' && <p className="workspace-description text-xs">아래 작업과 설정을 확인하세요. 확인한 계획 안에서 차례대로 실행합니다.</p>}
-    {status === 'waiting_human' && <p className="workspace-description text-xs">라벨 초안 채택·정답 확정·최종 승인은 직접 합니다. 검토를 마친 뒤 결과를 확인하고 이어가세요.</p>}
+    {!planningNew && status === 'draft' && <p className="workspace-description text-xs">아래 작업과 설정을 확인하세요. 확인한 계획 안에서 차례대로 실행합니다.</p>}
+    {!planningNew && status === 'waiting_human' && <p className="workspace-description text-xs">{waiting.description}</p>}
     {status === 'waiting_job' && <p className="workspace-description text-xs">작업은 계속 진행됩니다. 저장된 완료 기록을 확인한 뒤 다음 단계로 이어 갑니다.</p>}
     {['paused', 'needs_reconciliation'].includes(status) && <p className="workspace-description text-xs">먼저 저장된 결과를 확인합니다. 이미 실행한 작업을 다시 시작하지 않고 이어갈 위치를 확인합니다.</p>}
     {status === 'failed' && <p className="workspace-description text-xs">실패한 단계와 저장 결과를 먼저 확인하세요. 이 버튼은 작업을 재실행하지 않습니다.</p>}
@@ -166,12 +190,15 @@ export const AssistantTaskCard: React.FC<AssistantTaskCardProps> = ({task, busy,
     </ol>
     {task.steps.length > visible.length && <p className="workspace-description text-xs">추가 {task.steps.length - visible.length}개 단계는 표시를 생략했습니다. 전체 계획을 다시 요청하세요.</p>}
     {task.steps.length === 0 && <p role="alert" className="text-xs" style={{color: 'var(--workspace-danger)'}}>실행할 단계가 없습니다. 작업 계획을 다시 요청하세요.</p>}
-    <div className="flex flex-wrap items-center gap-2">
+    {!planningNew && <div className="flex flex-wrap items-center gap-2">
       <button type="button" className="workspace-button workspace-button--primary" disabled={primary.disabled} onClick={() => {if (!primary.disabled) primary.run();}}>{primary.label}</button>
-      {status === 'waiting_human' && <button type="button" className="workspace-button" disabled={continueDisabled} onClick={() => {if (!continueDisabled) onResume();}}>검토 결과 확인하고 이어하기</button>}
+      {status === 'waiting_human' && waiting.secondary && <button type="button" className="workspace-button" disabled={continueDisabled} onClick={() => {if (!continueDisabled) onResume();}}>{waiting.secondary}</button>}
       {['ready', 'waiting_human', 'waiting_job', 'needs_reconciliation'].includes(status) && <button type="button" className="workspace-button" disabled={unavailable} onClick={() => {if (!unavailable) onPause();}}>작업 일시정지</button>}
       {canNavigate && !['waiting_human', 'completed'].includes(status) && <button type="button" className="workspace-button" disabled={readDisabled} onClick={navigate}>관련 화면 열기</button>}
-    </div>
+      <button type="button" className="workspace-button" disabled={prepareDisabled} onClick={() => {if (!prepareDisabled) return onPrepareNewRequest?.(id, revision);}}>이 계획 멈추고 새 요청</button>
+    </div>}
+    {!planningNew && pendingReason && <p className="workspace-description text-xs">{pendingReason}</p>}
+    {readStop}{historyView}
     {['ready', 'running', 'waiting_human', 'waiting_job', 'paused', 'needs_reconciliation'].includes(status) && <p className="workspace-description text-xs">일시정지는 다음 도우미 작업을 멈춥니다. 이미 시작한 학습은 별도로 계속됩니다.</p>}
   </section>;
 };
