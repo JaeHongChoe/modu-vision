@@ -10,6 +10,7 @@ import time
 from fastapi import HTTPException, Request
 
 from .grants import PathGrants, PURPOSES, literal_path
+from .client import LocalHostRemoteError
 
 STAGED_PURPOSES = {'dataset-source', 'label-import', 'mask-import', 'model-directory', 'pretrained-weights',
                    'runtime-source', 'runtime-inventory', 'inspection-image'}
@@ -182,6 +183,11 @@ class LocalHostController:
                 key=remote.run_key(authority,args['input']['image'].get('grantId'))
                 if key in remote.image_grants:raise HTTPException(403,'Remote image confirmation cannot be used for a local project')
         try: result = await self.client.call(authority, method, args)
+        except LocalHostRemoteError as error:
+            if error.code == 'native_dialog_busy':
+                raise HTTPException(409, {'code':'local_host_native_dialog_busy',
+                    'message':'열린 파일·폴더 선택창을 먼저 마친 뒤 다시 시도하세요.'}) from None
+            raise HTTPException(503, str(error)[:500]) from None
         except (RuntimeError, TimeoutError, ValueError) as error:
             raise HTTPException(503, str(error)[:500]) from None
         self.recheck(request, action, authority, project=project)

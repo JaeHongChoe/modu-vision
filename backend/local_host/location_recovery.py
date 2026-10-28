@@ -10,6 +10,7 @@ import threading
 import time
 
 from fastapi import APIRouter, HTTPException, Request
+from .client import LocalHostRemoteError
 from pydantic import BaseModel, ConfigDict, Field
 from starlette.datastructures import Headers
 from starlette.requests import HTTPConnection
@@ -276,6 +277,18 @@ class LocationRecovery:
         for key,c in list(self.candidates.items()):
             if c.expires <= time.monotonic(): c.close(); del self.candidates[key]
 
+    async def dialog(self, authority, method, args):
+        try:
+            return await self.app.state.local_host.client.call(authority, method, args)
+        except TimeoutError:
+            raise refusal('local_project_location_dialog_expired',
+                '시간이 지나 폴더 확인이 만료되었습니다. 열린 선택·확인창을 닫고 프로젝트 폴더를 다시 확인하세요.',504) from None
+        except LocalHostRemoteError as error:
+            if error.code == 'native_dialog_busy':
+                raise refusal('local_host_native_dialog_busy',
+                    '열린 파일·폴더 선택창을 먼저 마친 뒤 다시 시도하세요.',409) from None
+            raise
+
     async def choose(self, request, identifier, expected):
         authority = self.authority(request,'choose')
         authority = {**authority,'token':request.state.account_session_token}
@@ -284,8 +297,7 @@ class LocationRecovery:
         with self.candidate_lock:
             self.prune()
             if len(self.candidates) >= 32: raise HTTPException(429,'Too many pending folder confirmations')
-        controller = self.app.state.local_host
-        result = await controller.client.call(authority,'dialog.folder',{'purpose':'location-recovery','title':'등록된 프로젝트 폴더 다시 선택','defaultPath':row['path']})
+        result = await self.dialog(authority,'dialog.folder',{'purpose':'location-recovery','title':'등록된 프로젝트 폴더 다시 선택','defaultPath':row['path']})
         current = self.authority(request,'choose')
         self.owner(row,authority,expected=revision)
         if not result: return {'canceled':True}
@@ -371,7 +383,7 @@ class LocationRecovery:
                     'registration_id':row['registration_id'],'project_id':row['project_id'],'workspace_id':row['workspace_id'],
                     'path':row['path'],'revision':row['revision'],**candidate.snapshot}
             args['approval_digest'] = digest(args)
-            approved = await controller.client.call(candidate.authority,'host.approveProjectLocation',args)
+            approved = await self.dialog(candidate.authority,'host.approveProjectLocation',args)
             self.recheck(request,candidate,'confirm'); self.check_snapshot(candidate)
             if not isinstance(approved,dict) or approved.get('approved') is not True: return {'canceled':True}
             if approved.get('approval_digest') != args['approval_digest']: raise location_changed()

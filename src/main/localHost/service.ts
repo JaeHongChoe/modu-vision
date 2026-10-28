@@ -42,6 +42,7 @@ export function prepareStateDirectory(directory:string):void {
 /** Constructed once by the owned windowless helper. HTTP authorization is repeated by the controller. */
 export class LocalHostService {
  private projectRows=new Map<string,ProjectRow>();
+ private chooserPending=false;
  private actors=new Map<string,Actor>();private tabs=new Map<string,Tab>();private disposedSessions=new Set<string>();private disposedTabs=new Set<string>();private closed=false;
  constructor(readonly options:LocalHostOptions){
   if(!path.isAbsolute(options.stateDirectory)||new URL(options.origin).origin!==options.origin||!/^https:\/\/(localhost|127\.0\.0\.1|\[::1\])(?::\d+)?$/.test(options.origin))throw new HostError('invalid_configuration');
@@ -75,7 +76,12 @@ export class LocalHostService {
   if(kind==='file'&&options.filters!==undefined){if(!Array.isArray(options.filters)||options.filters.length>20||options.filters.some((f:any)=>!f||typeof f.name!=='string'||f.name.length>100||!Array.isArray(f.extensions)||f.extensions.length>30||f.extensions.some((x:any)=>typeof x!=='string'||!/^([a-zA-Z0-9]{1,20}|\*)$/.test(x))))throw new HostError('invalid_request');result.filters=options.filters;}
   return result;
  }
- private async choose(r:HostRequest,t:Tab,options:OpenDialogOptions):Promise<string|null>{const value=await this.options.native.choose(options);this.live(r,t);if(value.canceled||!value.filePaths[0])return null;return this.allowedPath(value.filePaths[0]);}
+ private async choose(r:HostRequest,t:Tab,options:OpenDialogOptions):Promise<string|null>{
+  if(this.chooserPending)throw new HostError('native_dialog_busy');
+  this.chooserPending=true;
+  try{const value=await this.options.native.choose(options);this.live(r,t);if(value.canceled||!value.filePaths[0])return null;return this.allowedPath(value.filePaths[0]);}
+  finally{this.chooserPending=false;}
+ }
  private retire(tab:Tab){tab.disposed=true;void tab.assistant.dispose().catch(()=>undefined);}
  async handle(raw:unknown):Promise<HostResponse>{const id=typeof (raw as any)?.id==='string'&&/^[A-Za-z0-9_-]{1,200}$/.test((raw as any).id)?(raw as any).id:'invalid';
   try {if(Buffer.byteLength(JSON.stringify(raw))>MAX_FRAME_BYTES)throw new HostError('frame_too_large');const r=parseRequest(raw);

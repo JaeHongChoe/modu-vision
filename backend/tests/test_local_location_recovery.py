@@ -594,3 +594,88 @@ def test_recovered_actor_tab_requirement_is_durable_and_explicit_bearer_remains_
     token=f.app.state.accounts.login('owner','isolated-test-password',transport='bearer')['token']
     explicit=TestClient(f.app,base_url=ORIGIN,headers={'Authorization':'Bearer '+token,'X-Vision-Context':json.dumps(f.row['context'])})
     assert explicit.get('/api/project/current').status_code==200
+
+
+def _dialog_deadline_database_snapshot(f):
+    # These are only the generated fixture's real SQLite stores, including audit
+    # rows. Compare full logical contents rather than selected identity columns.
+    with f.registry.db() as db:
+        registry = tuple(db.iterdump())
+    with f.app.state.accounts._db() as db:
+        accounts = tuple(db.iterdump())
+    return registry, accounts, (Path(f.project['project_dir'])/'project.json').read_bytes()
+
+
+def _dialog_deadline_busy_error():
+    from backend.local_host import client as local_client
+    remote_error = getattr(local_client, 'LocalHostRemoteError', None)
+    return remote_error('opaque generated helper error', code='native_dialog_busy') if remote_error else RuntimeError('native_dialog_busy')
+
+
+@pytest.mark.parametrize('stage', ['choose', 'confirm'])
+@pytest.mark.parametrize('kind,status,code', [('timeout',504,'local_project_location_dialog_expired'), ('busy',409,'local_host_native_dialog_busy')])
+def test_dialog_deadline_public_refusal_preserves_real_registry_sessions_and_receipts(tmp_path, monkeypatch, stage, kind, status, code):
+    f = fixture(tmp_path, monkeypatch)
+    candidate_id = choose(f) if stage == 'confirm' else None
+    candidate = f.registry.recovery.candidates.get(candidate_id)
+    before = _dialog_deadline_database_snapshot(f)
+    calls = []
+    async def refuse(authority, method, args, **kwargs):
+        calls.append((method, kwargs))
+        if kind == 'timeout': raise TimeoutError()
+        raise _dialog_deadline_busy_error()
+    monkeypatch.setattr(f.native, 'call', refuse)
+    client = TestClient(f.app, base_url=ORIGIN, headers=dict(f.client.headers), raise_server_exceptions=False)
+    client.cookies.update(f.client.cookies)
+    response = client.post(BASE+'/'+stage, json={'candidate_id':candidate_id} if stage == 'confirm' else {'registration_id':f.row['registration_id'],'expected_revision':1})
+    assert _dialog_deadline_database_snapshot(f) == before, 'A dialog refusal must change no real registration/account/audit row or manifest byte'
+    assert f.registry.recovery.candidates == {}
+    assert not f.controller.grants.rows and not f.controller.runs
+    assert calls == [('host.approveProjectLocation' if stage == 'confirm' else 'dialog.folder', {})], 'One call uses the unchanged180s default without resend'
+    if candidate is not None: assert candidate.descriptor is None
+    assert response.status_code == status, response.text
+    detail = response.json()['detail']
+    assert detail['code'] == code and any('\uac00' <= c <= '\ud7a3' for c in detail['message'])
+    assert f.app.state.accounts.authenticate(f.session['token'])['id'] == f.owner['id'], 'Expected dialog refusal does not log out the owner'
+
+
+@pytest.mark.parametrize('stage', ['choose', 'confirm'])
+def test_dialog_deadline_late_revoked_result_adds_no_recovery_mutation(tmp_path, monkeypatch, stage):
+    f = fixture(tmp_path, monkeypatch)
+    candidate_id = choose(f) if stage == 'confirm' else None
+    candidate = f.registry.recovery.candidates.get(candidate_id)
+    registration_before = stored(f)
+    after_external_revocation = []
+    def revoke():
+        f.app.state.accounts.logout(f.session['token'])
+        after_external_revocation.append(_dialog_deadline_database_snapshot(f))
+    f.native.after['host.approveProjectLocation' if stage == 'confirm' else 'dialog.folder'] = revoke
+    response = f.client.post(BASE+'/'+stage, json={'candidate_id':candidate_id} if stage == 'confirm' else {'registration_id':f.row['registration_id'],'expected_revision':1})
+    assert response.status_code == 401, response.text
+    assert len(after_external_revocation) == 1
+    assert _dialog_deadline_database_snapshot(f) == after_external_revocation[0], 'Only the external logout may mutate the real account DB; recovery adds no mutation'
+    assert stored(f) == registration_before and f.registry.recovery.candidates == {}
+    assert not f.controller.grants.rows and not f.controller.runs
+    if candidate is not None: assert candidate.descriptor is None
+    assert all(method != 'session.disposeAll' for method,args in f.native.calls)
+
+
+@pytest.mark.parametrize('kind', ['cancellation', 'unrelated_remote', 'unrelated_runtime'])
+def test_dialog_deadline_mapper_does_not_rewrite_cancellation_or_unexpected_errors(tmp_path, monkeypatch, kind):
+    import asyncio
+    from backend.local_host.client import LocalHostRemoteError
+    f = fixture(tmp_path, monkeypatch)
+    before = _dialog_deadline_database_snapshot(f)
+    error = asyncio.CancelledError() if kind == 'cancellation' else LocalHostRemoteError('generated unrelated error',code='operation_refused') if kind == 'unrelated_remote' else RuntimeError('generated unrelated runtime')
+    calls = []
+    async def fail(authority,method,args,**kwargs):
+        calls.append((method,kwargs))
+        raise error
+    monkeypatch.setattr(f.native,'call',fail)
+    async def exercise():
+        with pytest.raises(type(error)) as caught:
+            await f.registry.recovery.dialog({},'dialog.folder',{})
+        assert caught.value is error
+    asyncio.run(exercise())
+    assert _dialog_deadline_database_snapshot(f) == before and f.registry.recovery.candidates == {}
+    assert calls == [('dialog.folder',{})]

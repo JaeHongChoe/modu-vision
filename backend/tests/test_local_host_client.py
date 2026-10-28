@@ -71,3 +71,61 @@ def test_lost_or_malformed_helper_revokes_readiness_and_fails_closed(tmp_path, a
         finally:await client.close()
         assert client.process.returncode is not None
     asyncio.run(exercise())
+
+
+class _DialogDeadlineWriter:
+    def __init__(self): self.frames = []
+    def write(self, data): self.frames.append(json.loads(data))
+    async def drain(self): pass
+
+
+def test_dialog_deadline_private_timeout_discards_old_uuid_during_a_new_wait(tmp_path):
+    from types import SimpleNamespace
+    from backend.local_host.client import LocalHostClient
+    import inspect
+    assert inspect.signature(LocalHostClient.call).parameters['timeout'].default == 180
+    async def exercise():
+        client = LocalHostClient([], cwd=tmp_path)
+        stream, writer = asyncio.StreamReader(), _DialogDeadlineWriter()
+        client.process = SimpleNamespace(returncode=None, stdin=writer, stdout=stream)
+        client.ready = {'protocol':1}
+        client.ready_future = asyncio.get_running_loop().create_future(); client.ready_future.set_result(client.ready)
+        client.reader = asyncio.create_task(client._read())
+        scope = {'actor_id':'fixture-actor','session_id':'fixture-session','tab_id':'fixture-tab'}
+        try:
+            with pytest.raises(TimeoutError): await client.call(scope, 'dialog.folder', {}, timeout=.01)
+            assert client.pending == {} and len(writer.frames) == 1
+            old = writer.frames[0]['id']
+            fresh = asyncio.create_task(client.call(scope, 'dialog.folder', {}, timeout=1))
+            await asyncio.sleep(0)
+            assert len(writer.frames) == 2
+            current = writer.frames[1]['id']; assert old != current
+            for identifier, value in ((old,'expired-folder'), (current,'fresh-folder')):
+                stream.feed_data((json.dumps({'id':identifier,'ok':True,'result':value})+'\n').encode())
+            assert await fresh == 'fresh-folder'
+            assert client.pending == {} and len(writer.frames) == 2 and client.ready is not None
+        finally:
+            client.reader.cancel(); await asyncio.gather(client.reader, return_exceptions=True)
+    asyncio.run(exercise())
+
+
+def test_dialog_deadline_private_busy_code_is_typed_and_independent_of_message(tmp_path):
+    from types import SimpleNamespace
+    from backend.local_host.client import LocalHostClient
+    async def exercise():
+        client = LocalHostClient([], cwd=tmp_path)
+        stream, writer = asyncio.StreamReader(), _DialogDeadlineWriter()
+        client.process = SimpleNamespace(returncode=None, stdin=writer, stdout=stream)
+        client.ready = {'protocol':1}
+        client.ready_future = asyncio.get_running_loop().create_future(); client.ready_future.set_result(client.ready)
+        client.reader = asyncio.create_task(client._read())
+        try:
+            pending = asyncio.create_task(client.call({'actor_id':'a','session_id':'s','tab_id':'t'}, 'dialog.folder', {}, timeout=1))
+            await asyncio.sleep(0)
+            stream.feed_data((json.dumps({'id':writer.frames[0]['id'],'ok':False,'error':{'code':'native_dialog_busy','message':'opaque generated message'}})+'\n').encode())
+            with pytest.raises(RuntimeError) as caught: await pending
+            assert getattr(caught.value,'code',None) == 'native_dialog_busy'
+            assert str(caught.value) == 'opaque generated message' and client.pending == {}
+        finally:
+            client.reader.cancel(); await asyncio.gather(client.reader, return_exceptions=True)
+    asyncio.run(exercise())

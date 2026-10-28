@@ -64,6 +64,8 @@ jobs:
           npm run test:e2e:harness
           node --test scripts/acceptance/action_inventory.test.cjs
           node --test scripts/tests/release-readiness.test.cjs scripts/tests/package-license-texts.test.cjs scripts/verify-release-recovery.cjs
+      - name: Canary ownership observer controls
+        run: python -B -m unittest discover -s scripts/ci -p test_canary_unknown_observer.py -v
       - name: CPU contract and recovery regressions
         env:
           MV_CI_RECORD_DIR: ${{ runner.temp }}/modu-ci-manifests

@@ -903,26 +903,78 @@ function localZipSelector(path:string):{kind:'formats'|'masks';export_id:string}
   return masks?{kind:'masks',export_id:masks[1]}:null;
 }
 let downloadTargetSequence=0;
-/** Stream local ZIPs through the original download handlers; no reference enters a URL. */
-export async function downloadProjectAsset(path:string,filename:string):Promise<void> {
+let localAssetDownloadPending=false;
+type LocalAssetDownloadDocument={document:Document;attached:()=>boolean;dispose:()=>void};
+/** A fresh frame prevents a later request superseding a previous download before its headers arrive. */
+function prepareLocalAssetDownloadDocument(signal?:AbortSignal):Promise<LocalAssetDownloadDocument> {
+  signal?.throwIfAborted();
+  const frame=document.createElement('iframe');
+  frame.name='modu-vision-download-'+(++downloadTargetSequence);frame.hidden=true;frame.referrerPolicy='no-referrer';
+  frame.setAttribute('sandbox','allow-downloads allow-forms allow-same-origin');frame.setAttribute('aria-hidden','true');
+  // Static markup only: authority stays in DOM input values, never in markup or a URL.
+  frame.srcdoc='<!doctype html><meta name="referrer" content="origin"><title>ZIP download</title><body></body>';
+  return new Promise<LocalAssetDownloadDocument>((resolve,reject)=>{
+    let settled=false,timer:ReturnType<typeof setTimeout>|undefined;
+    const stopWaiting=()=>{clearTimeout(timer);frame.removeEventListener('load',loaded);frame.removeEventListener('error',discard);signal?.removeEventListener('abort',aborted);};
+    const discardWith=(error:unknown)=>{
+      stopWaiting();window.removeEventListener('pagehide',discard);frame.remove();
+      if(!settled){settled=true;reject(error);}
+    };
+    const discard=()=>discardWith(new Error('브라우저 다운로드 준비를 다시 시도하세요.'));
+    const aborted=()=>discardWith(signal?.reason??new DOMException('다운로드 요청을 취소했습니다.','AbortError'));
+    const loaded=()=>{
+      try{
+        const child=frame.contentDocument;
+        if(child?.URL==='about:blank')return;
+        if(!child||child.URL!=='about:srcdoc'||!child.body||child.querySelector<HTMLMetaElement>('meta[name="referrer"]')?.content!=='origin')throw new Error();
+        settled=true;stopWaiting();resolve({document:child,attached:()=>frame.isConnected&&frame.contentDocument===child,dispose:discard});
+      }catch{discard();}
+    };
+    frame.addEventListener('load',loaded);frame.addEventListener('error',discard);
+    window.addEventListener('pagehide',discard,{once:true});signal?.addEventListener('abort',aborted,{once:true});
+    if(signal?.aborted){aborted();return;}
+    timer=setTimeout(discard,10000); // Only bootstrap readiness; never the file-body lifetime.
+    try{document.body.appendChild(frame);}catch{discard();}
+  });
+}
+/** Describe only ZIP generation and dispatch; no file receipt is observable here. */
+export function projectAssetDownloadNotice(images:number,labels:number,contents='라벨'):string {
+  const hint=secureBrowserOrigin()?'브라우저 다운로드 목록을 확인하세요':'저장 위치를 확인하세요';
+  return `${images}개 이미지 · ${labels}개 ${contents} ZIP 생성 완료 · 다운로드 요청 (${hint})`;
+}
+/** Resolves after browser submission, not after file receipt or saving. */
+export async function downloadProjectAsset(path:string,filename:string,signal?:AbortSignal):Promise<void> {
+  signal?.throwIfAborted();
   if(!localProjectAssetsRequired()){
-    const anchor=document.createElement('a');anchor.href=resolveApiUrl(path);anchor.download=filename;anchor.rel='noreferrer';anchor.click();return;
+    const anchor=document.createElement('a');anchor.href=resolveApiUrl(path);anchor.download=filename;anchor.rel='noreferrer';signal?.throwIfAborted();anchor.click();return;
   }
   const origin=secureBrowserOrigin()!,url=new URL(path,origin),selector=localZipSelector(url.pathname);
   if(url.origin!==origin||url.protocol!=='https:'||url.search||url.hash||!selector||!validAssetTicket(boundAssetTicket,boundProjectContext))
     throw new Error('현재 프로젝트의 내보내기 파일을 다시 확인하세요.');
-  const target=origin+'/api/local-host/project-assets/download';
-  const options=browserRequestOptions?.(target,'POST')??browserSessionTransport?.requestOptions(target,'POST')??{};
+  if(localAssetDownloadPending)throw new Error('브라우저 다운로드를 준비 중입니다. 잠시 뒤 다시 요청하세요.');
+  const target=origin+'/api/local-host/project-assets/download',ticket=boundAssetTicket;
+  const generation=contextGeneration,transport=sharedBase,session=browserSessionTransport,requestOptions=browserRequestOptions;
+  const options=requestOptions?.(target,'POST')??session?.requestOptions(target,'POST')??{};
   const csrf=new Headers(options.headers).get('X-Vision-CSRF');
   if(!csrf||csrf.length>256)throw new BrowserSessionRequiredError();
-  const frame=document.createElement('iframe'),form=document.createElement('form');
-  frame.name='modu-vision-download-'+(++downloadTargetSequence);frame.hidden=true;frame.referrerPolicy='no-referrer';
-  frame.setAttribute('sandbox','allow-downloads allow-forms allow-same-origin');frame.setAttribute('aria-hidden','true');
-  form.method='POST';form.action=target;form.target=frame.name;form.enctype='application/x-www-form-urlencoded';form.acceptCharset='UTF-8';form.noValidate=true;form.hidden=true;
-  const fields={ticket:boundAssetTicket.ticket,csrf_token:csrf,...selector};
-  for(const [name,value] of Object.entries(fields)){const input=document.createElement('input');input.type='hidden';input.name=name;input.value=value;form.appendChild(input);}
-  document.body.appendChild(frame);document.body.appendChild(form);
-  try{form.submit();}finally{form.remove();}
+  const current=(prepared:LocalAssetDownloadDocument)=>{
+    signal?.throwIfAborted();let attached=false;try{attached=prepared.attached();}catch{}
+    if(!attached||generation!==contextGeneration||transport!==sharedBase||origin!==secureBrowserOrigin()||session!==browserSessionTransport
+      ||requestOptions!==browserRequestOptions||boundAssetTicket!==ticket||!validAssetTicket(ticket,boundProjectContext))
+      throw new Error('프로젝트 연결이 바뀌었습니다. 현재 프로젝트를 다시 확인하세요.');
+  };
+  localAssetDownloadPending=true;
+  let prepared:LocalAssetDownloadDocument|undefined,submitted=false;
+  try{
+    prepared=await prepareLocalAssetDownloadDocument(signal);current(prepared);
+    const child=prepared.document,form=child.createElement('form');
+    form.method='POST';form.action=target;form.target='_self';form.enctype='application/x-www-form-urlencoded';form.acceptCharset='UTF-8';form.noValidate=true;form.hidden=true;
+    const fields={ticket:ticket.ticket,csrf_token:csrf,...selector};
+    for(const [name,value] of Object.entries(fields)){const input=child.createElement('input');input.type='hidden';input.name=name;input.value=value;form.appendChild(input);}
+    child.body.appendChild(form);
+    try{current(prepared);form.submit();submitted=true;}finally{form.remove();}
+  }catch(error){if(!submitted)prepared?.dispose();throw error;}finally{localAssetDownloadPending=false;}
+  // Each submitted frame belongs to its independent browser download until pagehide.
 }
 
 export function resolveApiUrl(path: string, port?: number): string {

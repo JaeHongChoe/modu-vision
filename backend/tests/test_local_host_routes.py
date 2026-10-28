@@ -125,3 +125,41 @@ def test_labelset_changed_during_native_selection_cannot_target_the_new_labelset
     assert client.post('/api/local-host/dialog/folder',headers=h,json={'purpose':'label-import'}).status_code==409
     assert not controller.grants.rows
     assert not (workspace/'.local-host-imports').exists()
+
+
+def test_dialog_deadline_existing_picker_busy_is_controlled_without_grant_or_session_mutation(tmp_path):
+    from backend.local_host import client as local_client
+    app,client,controller,helper,session,headers = setup(tmp_path)
+    tab = client.post('/api/local-host/session',headers=headers).json()['tab_id']
+    h = {**headers,'X-Vision-Local-Tab':tab}
+    assert client.post('/api/local-host/approve',headers=h,json={}).status_code == 200
+    with app.state.accounts._db() as db: before = tuple(db.iterdump())
+    calls = []
+    async def busy(authority,method,args,**kwargs):
+        calls.append(method)
+        remote_error = getattr(local_client,'LocalHostRemoteError',None)
+        if remote_error: raise remote_error('opaque generated message',code='native_dialog_busy')
+        raise RuntimeError('native_dialog_busy')
+    helper.call = busy
+    response = client.post('/api/local-host/dialog/folder',headers=h,json={'purpose':'project-open'})
+    with app.state.accounts._db() as db: assert tuple(db.iterdump()) == before
+    assert not controller.grants.rows and not controller.runs and calls == ['dialog.folder']
+    assert response.status_code == 409, response.text
+    assert response.json()['detail']['code'] == 'local_host_native_dialog_busy'
+    assert app.state.accounts.authenticate(session['token'])['id']
+
+
+def test_dialog_deadline_other_helper_error_keeps_existing_unavailable_response(tmp_path):
+    from backend.local_host import client as local_client
+    app,client,controller,helper,session,headers = setup(tmp_path)
+    tab = client.post('/api/local-host/session',headers=headers).json()['tab_id']
+    h = {**headers,'X-Vision-Local-Tab':tab}
+    assert client.post('/api/local-host/approve',headers=h,json={}).status_code == 200
+    async def unrelated(authority,method,args,**kwargs):
+        remote_error = getattr(local_client,'LocalHostRemoteError',None)
+        if remote_error: raise remote_error('opaque generated message',code='operation_refused')
+        raise RuntimeError('opaque generated message')
+    helper.call = unrelated
+    response = client.post('/api/local-host/dialog/folder',headers=h,json={'purpose':'project-open'})
+    assert response.status_code == 503 and response.json()['detail'] == 'opaque generated message'
+    assert not controller.grants.rows
