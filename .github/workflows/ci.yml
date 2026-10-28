@@ -69,6 +69,11 @@ jobs:
           MV_CI_RECORD_DIR: ${{ runner.temp }}/modu-ci-manifests
         run: >-
           python -m pytest -q --junitxml="$MV_CI_RECORD_DIR/ci-pytest.xml"
+          backend/tests/test_local_location_identity.py
+          backend/tests/test_local_location_recovery.py
+          backend/tests/test_local_project_assets.py
+          backend/tests/test_daemon_command_preparation.py
+          backend/tests/test_telemetry_original_task_lifetime.py
           backend/tests/test_local_web_app.py
           backend/tests/test_local_web_cli.py
           backend/tests/test_local_web_state.py

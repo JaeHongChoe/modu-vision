@@ -257,6 +257,47 @@ def _poll(call, predicate, deadline, message):
     raise AssertionError(message)
 
 
+def _prepare_daemon_command(process, command, deadline):
+    """Only empty metadata may wait, inside the original readiness frame.
+
+    This grants no ownership: the original strict identity call follows once.
+    OS reads are synchronous; a read crossing the frame must fail when it returns.
+    """
+    message = 'Original10s command readiness cap expired'
+
+    def read(call):
+        assert time.monotonic() < deadline, message
+        value = call()
+        assert time.monotonic() < deadline, message
+        return value
+
+    pid = read(lambda: process.pid)
+    assert type(pid) is int and pid > 0
+    expected = list(command)
+    assert process.args == expected
+    parent = read(os.getpid)
+    birth = None
+    while True:
+        assert read(lambda: process.pid) == pid
+        assert read(process.poll) is None, 'Original daemon exited before command readiness'
+        owner = read(lambda: psutil.Process(pid))
+        assert read(lambda: owner.pid) == pid
+        observed_birth = read(owner.create_time)
+        assert type(observed_birth) in (int, float) and 0 < observed_birth < float('inf')
+        if birth is None:
+            birth = observed_birth
+        assert observed_birth == birth, 'Original daemon birth changed before command readiness'
+        assert read(owner.ppid) == parent
+        assert read(lambda: os.getpgid(pid)) == pid
+        assert read(lambda: os.getsid(pid)) == pid
+        assert read(owner.status) not in ('zombie', 'dead')
+        arguments = read(owner.cmdline)
+        if arguments != []:
+            assert arguments == expected, 'Original daemon command differs before identity admission'
+            return
+        time.sleep(min(.025, max(0, deadline - time.monotonic())))
+
+
 def test_owned_real_cpu_daemon_restarts_committed_inbox_result_and_replays_outbox_once(tmp_path, monkeypatch):
     if os.name != 'posix':
         pytest.skip('POSIX owned-process interruption; Windows native scope is separately waived')
@@ -441,12 +482,13 @@ def test_owned_real_cpu_daemon_restarts_committed_inbox_result_and_replays_outbo
         thread.start()
         assert launch_event.wait(min(10, max(0, case_deadline - time.monotonic())))
         process = handles[index]
+        deadline = min(case_deadline - 10, time.monotonic() + 10)
+        _prepare_daemon_command(process, command, deadline)
         identity = _identity_for_daemon_test(process, state, case_deadline)
         owner = owned_inspection_process(identity, state)
         assert owner is not None and owner.pid == process.pid
         assert owner.ppid() == os.getpid() and owner.cmdline() == command
         assert os.getpgid(process.pid) == os.getsid(process.pid) == process.pid
-        deadline = min(case_deadline - 10, time.monotonic() + 10)
         def ready():
             assert process.poll() is None, 'Original daemon exited before readiness'
             try:

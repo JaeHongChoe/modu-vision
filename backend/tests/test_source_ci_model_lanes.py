@@ -9,6 +9,14 @@ import yaml
 
 ROOT = Path(__file__).resolve().parents[2]
 
+READINESS_CI_CONTROLS = (
+    'backend/tests/test_local_location_identity.py',
+    'backend/tests/test_local_location_recovery.py',
+    'backend/tests/test_local_project_assets.py',
+    'backend/tests/test_daemon_command_preparation.py',
+    'backend/tests/test_telemetry_original_task_lifetime.py',
+)
+
 
 def ci_module():
     spec = importlib.util.spec_from_file_location('ci_lane_receipt', ROOT / 'scripts/write_ci_receipt.py')
@@ -264,6 +272,13 @@ def test_cpu_and_browser_ci_have_independent_original_bounds_and_complete_comman
         'backend/tests/test_runtime_spawn_diagnostic.py',
     )
     command = cpu_step['run']
+    readiness_cli = 'python -m pytest -q --junitxml="$MV_CI_RECORD_DIR/ci-pytest.xml" '
+    readiness_insertion = ' '.join(READINESS_CI_CONTROLS) + ' '
+    assert command.startswith(readiness_cli + readiness_insertion), 'Readiness CI controls must be the exact first ordered block after pytest options'
+    assert command.count(readiness_insertion) == 1, 'Readiness CI block must execute exactly once'
+    assert all(command.split().count(reference) == 1 for reference in READINESS_CI_CONTROLS), 'Readiness CI references must each execute exactly once'
+    # Strip only this verified prefix before the unchanged historical contracts.
+    command = command.replace(readiness_cli + readiness_insertion, readiness_cli, 1)
     local_host_controls = (
         'backend/tests/test_local_web_app.py',
         'backend/tests/test_local_web_cli.py',
@@ -411,6 +426,44 @@ def test_cpu_and_browser_ci_have_independent_original_bounds_and_complete_comman
     assert browser_step['env'] == {'MV_E2E_ARTIFACT_DIR': '${{ runner.temp }}/modu-e2e', 'MV_CI_RECORD_DIR': '${{ runner.temp }}/modu-ci-manifests'}
     assert step(cpu, 'Preserve evidence')['with']['name'] == 'linux-cpu-${{ github.sha }}'
     assert step(browser, 'Preserve evidence')['with']['name'] == 'linux-browser-${{ github.sha }}'
+
+
+@pytest.mark.parametrize('damage', ['reordered', 'missing', 'duplicate_block', 'duplicate_reference'])
+def test_readiness_ci_prefix_rejects_changed_order_missing_or_duplicate_controls(monkeypatch, damage):
+    """The additive selection cannot disappear behind historical normalization."""
+    path = ROOT / '.github/workflows/ci.yml'
+    original_read = Path.read_text
+    workflow = yaml.safe_load(original_read(path))
+    step = next(item for item in workflow['jobs']['source']['steps']
+                if item.get('name') == 'CPU contract and recovery regressions')
+    insertion = ' '.join(READINESS_CI_CONTROLS) + ' '
+    assert step['run'].count(insertion) == 1
+    if damage == 'reordered':
+        changed = (READINESS_CI_CONTROLS[1], READINESS_CI_CONTROLS[0], *READINESS_CI_CONTROLS[2:])
+        step['run'] = step['run'].replace(insertion, ' '.join(changed) + ' ', 1)
+    elif damage == 'missing':
+        step['run'] = step['run'].replace(insertion, ' '.join(READINESS_CI_CONTROLS[1:]) + ' ', 1)
+    elif damage == 'duplicate_block':
+        step['run'] += ' ' + insertion
+    else:
+        step['run'] += ' ' + READINESS_CI_CONTROLS[0]
+    controlled = yaml.safe_dump(workflow, sort_keys=False)
+    def read_text(file, *args, **kwargs):
+        return controlled if file == path else original_read(file, *args, **kwargs)
+    monkeypatch.setattr(Path, 'read_text', read_text)
+    with pytest.raises(AssertionError, match='Readiness CI'):
+        test_cpu_and_browser_ci_have_independent_original_bounds_and_complete_commands()
+
+
+def test_readiness_ci_controls_reach_full_and_changed_file_fast_selection():
+    import shlex
+    workflow = yaml.safe_load((ROOT / '.github/workflows/ci.yml').read_text())
+    command = next(step['run'] for step in workflow['jobs']['source']['steps']
+                   if step.get('name') == 'CPU contract and recovery regressions')
+    related = related_module()
+    for reference in READINESS_CI_CONTROLS:
+        assert shlex.split(command).count(reference) == 1
+        assert reference in related.select_pytest([reference])
 
 
 @pytest.mark.parametrize('job_name', ['source', 'browser'])

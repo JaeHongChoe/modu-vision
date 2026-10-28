@@ -89,16 +89,26 @@ class SharedAuthorizationMiddleware:
             except ValueError:return await reject(401,'Account session expired or unavailable')
         state=scope.setdefault('state',{});state['account_user']=account
         state['account_session_token']=token
+        # Headerless media retains an exact server-held project; a read ticket
+        # never falls back to this account's current/default selection.
+        assets=getattr(self.project_app.state,'project_assets',None)
+        try:asset_context=assets.check(scope,account,token) if assets is not None else None
+        except HTTPException as exc:return await reject(exc.status_code,exc.detail)
+        if asset_context is not None and state.get('_local_asset_download_form') is not None:
+            try:assets.bind_download(scope,account,token,asset_context)
+            except HTTPException as exc:return await reject(exc.status_code,exc.detail)
+            return await self.app(scope,receive,send)
         if is_task_preparation(path, method) or path.startswith('/api/accounts/') or (path.startswith('/api/local-host/') and getattr(self.project_app.state,'local_host',None) is not None):
             return await self.app(scope,receive,send)
         try:
             from backend.contracts.context import declared_context
-            declared=declared_context(headers,query_string=scope.get('query_string') if scope['type']=='websocket' else None)
+            declared=asset_context or declared_context(headers,query_string=scope.get('query_string') if scope['type']=='websocket' else None)
             local_projects=getattr(self.project_app.state,'local_projects',None)
             if local_projects is not None:
                 project,permission_key,local_context=local_projects.resolve(self.project_app,account,declared,headers.get('x-vision-project'))
                 role=store.project_role_exact(account['id'],permission_key) if project else None
                 if project:
+                    if asset_context is not None:assets.check_project(scope,project)
                     state['scoped_project']=project
                     state['account_project_key']=permission_key
                     state['local_project_context']=local_context

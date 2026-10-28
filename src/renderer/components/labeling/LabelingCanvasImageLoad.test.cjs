@@ -20,7 +20,7 @@ function load(file, mocks = {}) {
   return m.exports;
 }
 
-function fixture() {
+function fixture(ticket = '') {
   const previous = Object.fromEntries(['Image', 'window', 'document', 'ResizeObserver', 'requestAnimationFrame', 'cancelAnimationFrame']
     .map(name => [name, Object.getOwnPropertyDescriptor(globalThis, name)]));
   const originalWarn = console.warn;
@@ -106,7 +106,7 @@ function fixture() {
     '../../stores/useProjectStore': {useProjectStore: hook(project)},
     '../../stores/useFoundationPromptStore': {useFoundationPromptStore: hook(foundation)},
     './foundationRequest': load(path.resolve(__dirname, 'foundationRequest.ts')),
-    '../../services/api': {resolveApiUrl: route => 'http://127.0.0.1:' + project.backendPort + route},
+    '../../services/api': {resolveApiUrl: route => 'http://127.0.0.1:' + project.backendPort + route + (ticket ? '&local_asset_ticket=' + ticket : ''),redactLocalAssetTicket:load(path.resolve(__dirname, '../../services/api.ts')).redactLocalAssetTicket},
     './labelingShortcuts': {resolveLabelingShortcut: () => null},
     './labelingLayout': layout,
     '../../utils/coordinateMath': math,
@@ -342,5 +342,20 @@ test('a brush layer with nothing stored, an undecodable mask or another image cl
     f.annotation.currentImage = {image_id: 'c', file_path: '/controlled/c.png', file_name: 'c.png'}; f.annotation.annotations = [];
     f.render(); await settle();
     assert.deepEqual(f.maskPlane(), [], 'Nothing of the previous image stays on the mask plane');
+  } finally { f.close(); }
+});
+
+
+test('a raw-image warning redacts its read ticket and never records the DOM error event URL', () => {
+  const ticket = 'asset_' + 'd'.repeat(48), f = fixture(ticket);
+  try {
+    const current = f.images[0];
+    assert(current.src.includes(ticket));
+    current.onerror({target:{src:current.src},message:'synthetic event contains the raw URL'});
+    const recorded = JSON.stringify(f.warnings);
+    assert.equal(f.warnings.length,1);
+    assert(recorded.includes('[redacted]'));
+    assert(!recorded.includes(ticket));
+    assert(!recorded.includes('synthetic event'));
   } finally { f.close(); }
 });

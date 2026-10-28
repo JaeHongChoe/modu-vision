@@ -1,6 +1,6 @@
 /** Private parent/child protocol. Never accepts arbitrary main-process method names. */
 export const MAX_FRAME_BYTES=8*1024*1024;
-export const METHODS=new Set(['host.approve','host.approveLinkedSource','dialog.folder','dialog.file','shell.open','session.dispose','session.disposeAll',
+export const METHODS=new Set(['host.approve','host.approveLinkedSource','host.approveProjectLocation','dialog.folder','dialog.file','shell.open','session.dispose','session.disposeAll',
  'assistant.retireProject',
  'assistant.getState','assistant.saveProvider','assistant.removeKey','assistant.removeProvider','assistant.setActive','assistant.listModels','assistant.send','assistant.cancel','assistant.imageIntent','assistant.beginRun','assistant.endRun',
  ...['begin','acknowledgePlanUsage','resumeUsage','recover','cancel','selectAccount','selectModel','signOut'].map(k=>`assistant.chatgpt.${k}`),

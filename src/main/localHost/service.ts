@@ -15,9 +15,11 @@ import {HostError,MAX_FRAME_BYTES,parseRequest,type HostRequest,type HostRespons
 import {TabKeyStore,tabSiwcStore} from './assistantScope';
 export interface LinkedSourceConsent {source:string;project_dir:string;targets:{link:string;path:string;kind:'file'|'directory'}[];plan_sha256:string;file_count:number;total_bytes:number;
  scope:{actor_id:string;session_id:string;tab_id:string;project_id:string;workspace_id:string}}
+export interface ProjectLocationConsent {origin:string;account_label:string;registration_id:string;project_id:string;workspace_id:string;path:string;revision:number;approval_digest:string;scope:{actor_id:string;session_id:string;tab_id:string}}
 export interface NativeAdapters {
  approve(input:{origin:string;accountLabel:string}):Promise<boolean>;
  confirmLinkedSource?(input:LinkedSourceConsent):Promise<boolean>;
+ confirmProjectLocation?(input:ProjectLocationConsent):Promise<boolean>;
  choose(options:OpenDialogOptions):Promise<{canceled:boolean;filePaths:string[]}>;
  openPath(value:string):Promise<string>;openExternal(value:string):Promise<unknown>;
 }
@@ -116,6 +118,31 @@ export class LocalHostService {
   if(paths.some((p,i)=>this.allowedPath(p)!==p||identity(p)!==before[i]))throw new HostError('selection_changed');
   return {approved:true,plan_sha256:a.plan_sha256};
  }
+ private async approveProjectLocation(r:HostRequest,t:Tab):Promise<unknown> {
+  const a=r.args,id=(v:unknown)=>typeof v==='string'&&/^[A-Za-z0-9_.:-]{1,128}$/.test(v);
+  if(a.origin!==this.options.origin||typeof a.account_label!=='string'||!a.account_label.trim()||a.account_label.length>200||/[\u0000-\u001f\u007f]/.test(a.account_label)
+   ||!id(a.registration_id)||!id(a.project_id)||!id(a.workspace_id)||!Number.isSafeInteger(a.revision)||a.revision<1
+   ||typeof a.approval_digest!=='string'||!/^[a-f0-9]{64}$/.test(a.approval_digest)||typeof a.manifest_sha256!=='string'||!/^[a-f0-9]{64}$/.test(a.manifest_sha256)
+   ||!Array.isArray(a.directory_identity)||a.directory_identity.length!==2||a.directory_identity.some((v:unknown)=>typeof v!=='string'||!/^\d{1,20}$/.test(v)))throw new HostError('invalid_request');
+  const selected=this.allowedPath(a.path);if(selected!==a.path)throw new HostError('selection_changed');
+  const snapshot=()=>{
+   let current=path.parse(selected).root;for(const part of selected.slice(current.length).split(path.sep).filter(Boolean)){current=path.join(current,part);const info=fs.lstatSync(current);if(info.isSymbolicLink()||!info.isDirectory())throw new HostError('selection_changed');}
+   if(!['darwin','linux'].includes(process.platform))throw new HostError('native_confirmation_unavailable');
+   const directory=fs.openSync(selected,fs.constants.O_RDONLY|fs.constants.O_DIRECTORY|fs.constants.O_NOFOLLOW|fs.constants.O_NONBLOCK);
+   try{const info=fs.fstatSync(directory,{bigint:true});if(!info.isDirectory()||String(info.dev)!==a.directory_identity[0]||String(info.ino)!==a.directory_identity[1])throw new HostError('selection_changed');
+    // The backend retains the authoritative openat directory FD. This native
+    // snapshot stays bounded and rechecks both the leaf and current directory.
+    const file=path.join(selected,'project.json'),fd=fs.openSync(file,fs.constants.O_RDONLY|fs.constants.O_NOFOLLOW|fs.constants.O_NONBLOCK);
+    try{const before=fs.fstatSync(fd);if(!before.isFile()||before.nlink!==1||before.size<1||before.size>2*1024*1024)throw new HostError('selection_changed');const raw=Buffer.alloc(before.size);let offset=0;while(offset<raw.length){const size=fs.readSync(fd,raw,offset,raw.length-offset,null);if(!size)break;offset+=size;}if(offset!==raw.length)throw new HostError('selection_changed');const after=fs.fstatSync(fd),entry=fs.lstatSync(file);const same=(value:fs.Stats)=>before.ino===value.ino&&before.dev===value.dev&&before.mode===value.mode&&before.nlink===value.nlink&&before.size===value.size&&before.mtimeMs===value.mtimeMs&&before.ctimeMs===value.ctimeMs;if(!same(after)||!same(entry)||hash(raw.toString('utf8'))!==a.manifest_sha256||JSON.parse(raw.toString('utf8')).id!==a.project_id)throw new HostError('selection_changed');}
+    finally{fs.closeSync(fd);}
+    const current=fs.lstatSync(selected,{bigint:true});if(!current.isDirectory()||current.dev!==info.dev||current.ino!==info.ino||this.allowedPath(selected)!==selected)throw new HostError('selection_changed');
+   }finally{fs.closeSync(directory);}
+  };
+  snapshot();if(!this.options.native.confirmProjectLocation)throw new HostError('native_confirmation_unavailable');
+  const approved=await this.options.native.confirmProjectLocation({origin:a.origin,account_label:a.account_label,registration_id:a.registration_id,project_id:a.project_id,workspace_id:a.workspace_id,path:selected,revision:a.revision,approval_digest:a.approval_digest,scope:{actor_id:r.actor_id,session_id:r.session_id,tab_id:r.tab_id}});
+  this.live(r,t);if(!approved)return {approved:false};snapshot();if(this.allowedPath(selected)!==selected)throw new HostError('selection_changed');
+  return {approved:true,approval_digest:a.approval_digest};
+ }
  private invalidateProject(tab:Tab|undefined):void {if(tab){tab.assistant.invalidateAuthority();tab.runs=new AssistantRunRegistry();}}
  private setProject(r:HostRequest,epoch:number,scope:string|null):void {
   const key=this.key(r);if(!this.projectRows.has(key)&&this.projectRows.size>=512)throw new HostError('too_many_project_scopes');
@@ -141,6 +168,7 @@ export class LocalHostService {
  private async dispatch(r:HostRequest,t:Tab):Promise<unknown>{const a=r.args,s=t.assistant,d=t.distribution,p=t.portable;
   switch(r.method){
    case 'host.approveLinkedSource':return this.approveLinkedSource(r,t);
+   case 'host.approveProjectLocation':return this.approveProjectLocation(r,t);
    case 'dialog.folder':return this.choose(r,t,this.dialogOptions('folder',a));case 'dialog.file':return this.choose(r,t,this.dialogOptions('file',a));
    case 'shell.open':{const value=a.path??a.target;let target=classifyOpenTarget(value);if(target.kind==='rejected')return false;if(target.kind==='url'){await this.options.native.openExternal(target.url);return true;}this.allowedPath(target.path);return (await this.options.native.openPath(target.path))==='';}
    case 'assistant.getState':return s.state();case 'assistant.saveProvider':{const actor=this.actor(r.actor_id),input=a.input;

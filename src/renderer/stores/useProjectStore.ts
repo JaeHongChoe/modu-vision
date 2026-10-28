@@ -75,7 +75,13 @@ function refuseEditsMadeDuringSelection(): void {
  * visible project change in one synchronous step, before any dataset, annotation or flow read for it. A
  * refused or stale acceptance binds nothing, so the UI and the API both stay on the previous project.
  */
-function acceptSelectedProject(project: ProjectConfig, view: { activeStep?: WizardStep } = {}): void {
+async function acceptSelectedProject(project: ProjectConfig, view: { activeStep?: WizardStep } = {}): Promise<void> {
+  const startedProject=useProjectStore.getState().project,startedDir=useProjectStore.getState().projectDir;
+  await api.project.prepareContext?.(project);
+  if(useProjectStore.getState().project!==startedProject||useProjectStore.getState().projectDir!==startedDir)
+    throw new Error('프로젝트 선택이 바뀌었습니다. 현재 프로젝트를 다시 확인하세요.');
+  refuseEditsMadeDuringSelection();
+  const refusal=projectSwitchRefusal();if(refusal)throw new Error(refusal);
   // acceptContext validates the selection, binds its request context, runs this synchronous setter and only
   // then notifies telemetry; a stale selection or a failing setter throws and leaves the previous binding.
   const previousScope = projectViewScope(useProjectStore.getState().project, getApiPersistenceIdentity());
@@ -266,6 +272,8 @@ export async function saveOpenEdits(options?: {allowCleanDisconnect?: boolean}):
         throw new Error('편집 중인 프로젝트를 백엔드에서 다시 열지 못해 저장을 중단했습니다.');
       }
       // The daemon reopened the project being edited; bind its requests to that same project.
+      await api.project.prepareContext?.(reopened);
+      if(useProjectStore.getState().project!==currentProject)throw new Error('편집 중인 프로젝트가 바뀌었습니다. 저장을 다시 확인하세요.');
       api.project.acceptContext(reopened);
     }
   }
@@ -544,7 +552,7 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
       // A stage the user chose while the app's first sync was in flight is kept (and remembered for this project)
       // instead of the stage remembered from an earlier session.
       const chosenMeanwhile = !previous && stepChoices !== choicesAtStart;
-      acceptSelectedProject(project, { activeStep: chosenMeanwhile || (previous && projectViewScope(previous, identity) === projectViewScope(project, identity))
+      await acceptSelectedProject(project, { activeStep: chosenMeanwhile || (previous && projectViewScope(previous, identity) === projectViewScope(project, identity))
         ? get().activeStep : readProjectStep(viewStorage(), project, identity) });
       if (chosenMeanwhile) rememberProjectStep(viewStorage(), project, identity, get().activeStep);
       await applyProject(project, previous, true);
@@ -584,7 +592,7 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
       const project = await api.project.create(data);
       const previous = get().project;
       refuseEditsMadeDuringSelection();
-      acceptSelectedProject(project, { activeStep: 1 });
+      await acceptSelectedProject(project, { activeStep: 1 });
       await applyProject(project, previous);
       set({ projectError: settledProjectError(get(), project.task) });
       await get().loadRecentProjects();
@@ -605,7 +613,7 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
       const project = await (registrationId ? api.project.open(projectDir,registrationId) : api.project.open(projectDir));
       const previous = get().project;
       refuseEditsMadeDuringSelection();
-      acceptSelectedProject(project, { activeStep: readProjectStep(viewStorage(), project, getApiPersistenceIdentity()) });
+      await acceptSelectedProject(project, { activeStep: readProjectStep(viewStorage(), project, getApiPersistenceIdentity()) });
       await applyProject(project, previous);
       if (project.source_dataset_dir && get().activeStep !== 1) {
         await useDatasetStore.getState().ensureImported(project.task);
@@ -690,7 +698,7 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
       await saveOpenEdits();
       const project=await api.project.recover(operationId,targetDir),previous=get().project;
       refuseEditsMadeDuringSelection();
-      acceptSelectedProject(project,{activeStep:1});
+      await acceptSelectedProject(project,{activeStep:1});
       await applyProject(project,previous,true);
       await get().loadRecentProjects();
       if(project.source_dataset_dir)await useDatasetStore.getState().ensureImported(project.task);
@@ -708,7 +716,7 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
       const project = await api.project.restore(archivePath, targetDir);
       const previous = get().project;
       refuseEditsMadeDuringSelection();
-      acceptSelectedProject(project, { activeStep: 1 });
+      await acceptSelectedProject(project, { activeStep: 1 });
       await applyProject(project, previous, true);
       await get().loadRecentProjects();
       if (project.source_dataset_dir) {

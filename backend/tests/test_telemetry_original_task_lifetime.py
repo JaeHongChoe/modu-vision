@@ -211,6 +211,7 @@ def test_connection_close_uses_same_deadline_and_late_completion_is_not_admissio
                 entered.set()
                 await release.wait()
         ws = OriginalConnection()
+        b._connection_sends[ws] = asyncio.Lock()
         b._active_connections.add(ws)
         with pytest.raises(RuntimeError, match='deadline|unresolved'):
             await asyncio.to_thread(b.prepare_shutdown, time.monotonic() + .04)
