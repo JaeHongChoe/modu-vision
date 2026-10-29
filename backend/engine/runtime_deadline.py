@@ -189,8 +189,14 @@ class _OwnedGroup:
         if self.module is None: return 'unknown'
         try:
             current = self.module.Process(identity['pid'])
-            if current.create_time() != identity['birth'] or tuple(current.cmdline()) != tuple(identity['command']):
+            if current.create_time() != identity['birth']:
                 return 'unknown'
+            command = tuple(current.cmdline())
+            if command != tuple(identity['command']):
+                # Linux can expose [] after this registered generation has
+                # become a zombie. This is exit-only evidence, never live
+                # identity, descendant enrollment or signal authority.
+                return 'exited' if not command and current.status() == self.module.STATUS_ZOMBIE else 'unknown'
             return 'exited' if current.status() == self.module.STATUS_ZOMBIE else 'live'
         except self.module.NoSuchProcess: return 'exited'
         except self.module.Error: return 'unknown'

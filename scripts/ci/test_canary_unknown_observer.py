@@ -41,6 +41,38 @@ def selected_function():
 SELECTED = selected_function()
 
 
+LEGACY_RUNTIME_SHA = 'd98502523703705b5fef1ac06eb367a1e4e02d73d19949953e5b051edd627a44'
+REGISTERED_EXIT_RUNTIME_SHA = '2a2f1dfe2c7e96811eff8a23c68abb72e8843770bf9efa431ee9097217136a7c'
+
+
+def legacy_runtime_metadata():
+    """Reconstruct exact old bytes and compile metadata; never execute/import it."""
+    current = b"""            if current.create_time() != identity['birth']:
+                return 'unknown'
+            command = tuple(current.cmdline())
+            if command != tuple(identity['command']):
+                # Linux can expose [] after this registered generation has
+                # become a zombie. This is exit-only evidence, never live
+                # identity, descendant enrollment or signal authority.
+                return 'exited' if not command and current.status() == self.module.STATUS_ZOMBIE else 'unknown'
+"""
+    original = b"""            if current.create_time() != identity['birth'] or tuple(current.cmdline()) != tuple(identity['command']):
+                return 'unknown'
+"""
+    if RUNTIME.count(current) != 1:
+        raise AssertionError('The exact reviewed source delta is unavailable')
+    source = RUNTIME.replace(current, original, 1)
+    if hashlib.sha256(source).hexdigest() != LEGACY_RUNTIME_SHA:
+        raise AssertionError('Reconstructed legacy bytes are not the immutable original')
+    compiled = compile(source, '<legacy-runtime-metadata-only>', 'exec')
+    owned = source_code(compiled, '_OwnedGroup')
+    metadata = SimpleNamespace(**{name: FunctionType(source_code(owned, name), {})
+        for name in ('__init__', 'leader_matches', 'member_state', 'observe')})
+    module = SimpleNamespace(_OwnedGroup=metadata, **{name: FunctionType(source_code(compiled, name), {})
+        for name in ('_terminate_owned', '_observe_owned', 'execute_owned_process')})
+    return source, module
+
+
 class ReaderError(Exception):
     pass
 
@@ -214,6 +246,82 @@ class ObserverTests(unittest.TestCase):
         self.assertEqual(current.calls, baseline.calls, 'observer added or reordered an original boundary call')
         self.assertEqual(result, expected)
         return current, observer, result
+
+    def test_current_exact_source_captures_its_own_cohort_without_legacy_credit(self):
+        self.assertEqual(hashlib.sha256(RUNTIME).hexdigest(), REGISTERED_EXIT_RUNTIME_SHA)
+        world, observer, result = self.run_pair('leader_mismatch')
+        record = observer.public_record()
+        self.assertEqual(record['instrumentation_status'], 'captured')
+        self.assertEqual(record['runtime_source_sha256'], REGISTERED_EXIT_RUNTIME_SHA)
+        self.assertNotEqual(record['runtime_source_sha256'], probe.RUNTIME_SHA256)
+        self.assertEqual(record['first_unknown']['reason'], 'leader_identity_unproven')
+        self.assertEqual(record['first_unknown']['phase'], 'wait_observation')
+        self.assertTrue(record['first_unknown']['row_session_equal'])
+        self.assertEqual(result['status'], 'uncertain')
+        self.assertEqual(world.calls.count('Popen'), 1)
+        self.assertEqual(observer._sites, {
+            ('observe', 221): 'leader_identity_unproven',
+            ('observe', 229): 'unregistered_without_live_leader',
+            ('observe', 230): 'foreign_session_row',
+            ('observe', 235): 'registered_identity_unproven',
+            ('_terminate_owned', 315): 'termination_leader_unproven',
+        })
+
+    def test_legacy_exact_source_and_maps_remain_bound_without_frozen_execution(self):
+        source, module = legacy_runtime_metadata()
+        canonical = ACTUAL_RUNTIME.execute_owned_process
+        observer = self.make(World(), module=module, runtime_source=source)
+        # Constructor reads code metadata only; no context or frozen body is entered.
+        self.assertEqual(observer.public_record()['instrumentation_status'], 'ready')
+        self.assertEqual(observer.public_record()['runtime_source_sha256'], LEGACY_RUNTIME_SHA)
+        self.assertEqual(probe.RUNTIME_SHA256, LEGACY_RUNTIME_SHA)
+        self.assertEqual(probe._SITES, {
+            ('observe', 215): 'leader_identity_unproven',
+            ('observe', 223): 'unregistered_without_live_leader',
+            ('observe', 224): 'foreign_session_row',
+            ('observe', 229): 'registered_identity_unproven',
+            ('_terminate_owned', 309): 'termination_leader_unproven',
+        })
+        self.assertEqual(observer._sites, probe._SITES)
+        self.assertEqual(probe._NEXT_LINES, {215: 216, 223: 224, 224: 210, 229: 226, 309: 310})
+        self.assertEqual(observer._next_lines, probe._NEXT_LINES)
+        self.assertEqual(probe._PHASES, {382: 'wait_observation', 401: 'interrupted_cleanup_observation', 404: 'final_observation'})
+        self.assertEqual(observer._phases, probe._PHASES)
+        self.assertIs(ACTUAL_RUNTIME.execute_owned_process, canonical)
+        self.assertIsNone(sys.gettrace())
+
+    def test_unrecognized_source_declines_without_inventing_a_recognized_source(self):
+        world = World(); observer = self.make(world, runtime_source=RUNTIME + b'\n')
+        before = sys.gettrace()
+        with observer:
+            self.assertIs(sys.gettrace(), before)
+            result = world.execute()
+        record = observer.public_record()
+        self.assertEqual(record['instrumentation_status'], 'source_pin_mismatch')
+        self.assertIsNone(record['runtime_source_sha256'])
+        self.assertIsNone(record['first_unknown'])
+        self.assertFalse(record['ownership_refusal_observed'])
+        self.assertEqual(result['status'], 'uncertain')
+        with tempfile.TemporaryDirectory(dir=Path(__file__).parent) as directory:
+            self.assertFalse(observer.emit_failure(directory, call_failed=False))
+            self.assertFalse((Path(directory) / probe.FILENAME).exists())
+
+    def test_legacy_bytes_cannot_authorize_current_function_metadata(self):
+        source, _ = legacy_runtime_metadata()
+        observer = self.make(World(), runtime_source=source)
+        with observer:
+            self.assertIsNone(sys.gettrace())
+        record = observer.public_record()
+        self.assertEqual(record['instrumentation_status'], 'code_pin_mismatch')
+        self.assertIsNone(record['first_unknown'])
+        self.assertFalse(record['ownership_refusal_observed'])
+
+    def test_current_registered_reader_error_uses_current_return_mapping(self):
+        _, observer, result = self.run_pair('registered_error')
+        self.assertEqual(result['status'], 'uncertain')
+        first = observer.public_record()['first_unknown']
+        self.assertEqual(first['reason'], 'registered_identity_unproven')
+        self.assertEqual(first['member_identity'], 'reader_error')
 
     def test_five_first_unknown_callsite_reasons_and_wait_or_termination_phase(self):
         # Break: attributing a visited false predicate, or a later repeated add, as first cause.
@@ -531,7 +639,9 @@ class ObserverTests(unittest.TestCase):
     def test_missing_next_line_mapping_does_not_invent_a_first_add(self):
         baseline = World(); expected = baseline.execute()
         current = World(); observer = self.make(current)
-        with patch.dict(probe._NEXT_LINES, {215: 999}):
+        site = next(line for (role, line), reason in observer._sites.items()
+                    if role == 'observe' and reason == 'leader_identity_unproven')
+        with patch.dict(observer._next_lines, {site: 999}):
             with observer:
                 result = current.execute()
         self.assertEqual(result, expected)

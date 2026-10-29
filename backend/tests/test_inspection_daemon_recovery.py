@@ -35,6 +35,56 @@ _identity_now = time.monotonic
 _IDENTITY_NOTE = 'Original daemon identity failure observations: '
 
 
+def _owned_daemon_outcome_note(outcome):
+    """Failure-only stored observations, never new OS reads or raw private bytes."""
+    try:
+        source = outcome if type(outcome) is dict else {}
+        ownership = source.get('ownership')
+        ownership = ownership if type(ownership) is dict else {}
+        def integer(value):
+            return value if type(value) is int and -(1 << 31) <= value < (1 << 31) else None
+        def pids(value):
+            return [pid for pid in value[:8] if type(pid) is int and 0 < pid < (1 << 31)] if type(value) is list else []
+        registered = ownership.get('registered_members')
+        registered = registered if type(registered) is list else []
+        note = {'schema': 'modu-vision.daemon-outcome-failure-summary/v1',
+            'non_atomic': True, 'ownership_verified': False,
+            'status': source.get('status') if source.get('status') in ('completed', 'uncertain', 'timeout', 'cancelled') else 'unavailable',
+            'returncode': integer(source.get('returncode')),
+            'leader_returncode': integer(source.get('leader_returncode')),
+            'pid': integer(source.get('pid')),
+            'registered_member_count': len(registered),
+            'registered_member_pids': pids([row.get('pid') for row in registered[:8] if type(row) is dict]),
+            'unknown_members': pids(ownership.get('unknown_members')),
+            'remaining_members': pids(ownership.get('remaining_members')),
+            'ownership_flags': {key: ownership.get(key) if type(ownership.get(key)) is bool else None
+                for key in ('leader_exit_confirmed', 'observation_failed', 'group_exit_verified',
+                            'process_tree_exit_verified', 'recovery_required', 'termination_attempted',
+                            'termination_failed')}}
+        return 'Original owned daemon outcome (no new authority): ' + json.dumps(note, allow_nan=False, separators=(',', ':'))
+    except BaseException:
+        return 'Original owned daemon outcome summary unavailable; original assertion retained'
+
+
+def test_owned_daemon_outcome_failure_summary_is_bounded_and_redacts_private_bytes():
+    outcome = {'status': 'uncertain', 'returncode': 1, 'leader_returncode': 0, 'pid': 733,
+        'stdout': 'PRIVATE-STDOUT', 'stderr': 'PRIVATE-STDERR',
+        'private_diagnostics': '/PRIVATE-DIAGNOSTICS',
+        'ownership': {'registered_members': [{'pid': 800 + index, 'birth': 42.5,
+            'command': ['PRIVATE-TOKEN', '/PRIVATE-PATH']} for index in range(100)],
+            'unknown_members': list(range(900, 1000)), 'remaining_members': list(range(1000, 1100)),
+            'observation_failed': False, 'leader_exit_confirmed': True}}
+    note = _owned_daemon_outcome_note(outcome)
+    value = json.loads(note.split(': ', 1)[1])
+    assert len(note.encode()) < 4096 and 'PRIVATE-' not in note
+    assert value['non_atomic'] is True and value['ownership_verified'] is False
+    assert value['status'] == 'uncertain' and value['returncode'] == 1 and value['leader_returncode'] == 0
+    assert value['registered_member_count'] == 100
+    assert value['registered_member_pids'] == list(range(800, 808))
+    assert value['unknown_members'] == list(range(900, 908))
+    assert value['remaining_members'] == list(range(1000, 1008))
+
+
 def _identity_for_daemon_test(process, state, case_deadline):
     try:
         return process_identity(process, state)
@@ -298,6 +348,61 @@ def _prepare_daemon_command(process, command, deadline):
         time.sleep(min(.025, max(0, deadline - time.monotonic())))
 
 
+@pytest.mark.parametrize('boundary,want', [
+    ('registered_zombie_empty_command', 'exited'),
+    ('live_original_command', 'live'),
+    ('zombie_original_command', 'exited'),
+    ('live_empty_command', 'unknown'),
+    ('live_changed_command', 'unknown'),
+    ('zombie_changed_command', 'unknown'),
+    ('zombie_changed_birth', 'unknown'),
+])
+def test_registered_cpu_member_exit_keeps_live_and_foreign_identity_refusals(tmp_path, monkeypatch, boundary, want):
+    """Linux may return [] for a real zombie; empty live/foreign work is unproven."""
+    if os.name != 'posix':
+        pytest.skip('Original unreaped POSIX child exit boundary')
+    from backend.tests.test_runtime_deadline_identity import cooperative_leader
+
+    original_command = psutil.Process.cmdline
+    with cooperative_leader(tmp_path / boundary) as fixture:
+        process = runtime_deadline.subprocess.Popen(fixture['command'], cwd=fixture['directory'],
+            stdin=runtime_deadline.subprocess.DEVNULL, stdout=runtime_deadline.subprocess.DEVNULL,
+            stderr=runtime_deadline.subprocess.DEVNULL, start_new_session=True)
+        fixture.update(owner=SimpleNamespace(process=process), original_cmdline=original_command)
+        end = time.monotonic() + 3
+        registration = fixture['directory'] / 'registered.json'
+        _poll(registration.exists, bool, end, 'Original CPU child did not register')
+        identity = json.loads(registration.read_text())
+        original = psutil.Process(process.pid)
+        assert identity['nonce'] == fixture['nonce'] and identity['pid'] == process.pid
+        assert identity['birth'] == original.create_time()
+        assert identity['command'] == original_command(original) == fixture['command']
+        assert original.ppid() == os.getpid() and original.status() != psutil.STATUS_ZOMBIE
+        assert os.getpgid(process.pid) == os.getsid(process.pid) == process.pid
+        if boundary.startswith(('registered_zombie', 'zombie')):
+            (fixture['directory'] / 'stop.json').write_text(json.dumps({'nonce': fixture['nonce']}))
+            _poll(original.status, lambda state: state == psutil.STATUS_ZOMBIE, end,
+                  'Original cooperative CPU child did not reach unreaped zombie boundary')
+            assert process.returncode is None  # Do not reap or substitute its result.
+        observed_status = original.status()
+        if boundary == 'zombie_changed_birth':
+            identity = {**identity, 'birth': identity['birth'] - 1}
+
+        def read_command(owner):
+            if owner.pid != process.pid:
+                return original_command(owner)
+            # Preserve the actual OS status/birth/handle. Only model the Linux
+            # [] cmdline read; macOS instead raises ZombieProcess here.
+            assert owner.status() == observed_status
+            if 'original_command' in boundary:
+                return fixture['command']
+            return ['controlled-foreign-command'] if 'changed_command' in boundary else []
+
+        monkeypatch.setattr(psutil.Process, 'cmdline', read_command)
+        owner = SimpleNamespace(module=psutil)
+        assert runtime_deadline._OwnedGroup.member_state(owner, identity) == want
+
+
 def test_owned_real_cpu_daemon_restarts_committed_inbox_result_and_replays_outbox_once(tmp_path, monkeypatch):
     if os.name != 'posix':
         pytest.skip('POSIX owned-process interruption; Windows native scope is separately waived')
@@ -536,7 +641,7 @@ def test_owned_real_cpu_daemon_restarts_committed_inbox_result_and_replays_outbo
         first_thread = attempts[0][0]
         first_thread.join(min(10, max(0, case_deadline - time.monotonic())))
         assert not first_thread.is_alive() and not failures
-        assert outcomes[0]['status'] == 'completed' and outcomes[0]['returncode'] == -signal.SIGKILL
+        assert outcomes[0]['status'] == 'completed' and outcomes[0]['returncode'] == -signal.SIGKILL, _owned_daemon_outcome_note(outcomes[0])
         assert outcomes[0]['pid'] == first.pid and not outcomes[0].get('private_diagnostics')
         assert owned_inspection_process(identity, state) is None
         assert _raw_state(state / 'inspection_service.sqlite3') == raw
@@ -569,7 +674,7 @@ def test_owned_real_cpu_daemon_restarts_committed_inbox_result_and_replays_outbo
         assert api('/v1/runtime/shutdown', post=True)['status'] == 'stopping'
         attempts[1][0].join(min(10, max(0, case_deadline - time.monotonic())))
         assert not attempts[1][0].is_alive() and not failures
-        assert outcomes[1]['status'] == 'completed' and outcomes[1]['returncode'] == 0
+        assert outcomes[1]['status'] == 'completed' and outcomes[1]['returncode'] == 0, _owned_daemon_outcome_note(outcomes[1])
         assert outcomes[1]['pid'] == second.pid and not outcomes[1].get('private_diagnostics')
         assert owned_inspection_process(identity2, state) is None
         assert _sha(image) == image_sha and _sha(checkpoint) == checkpoint_sha
