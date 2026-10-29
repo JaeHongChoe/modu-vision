@@ -5,6 +5,7 @@ observes an identical replay after the *owned daemon* is killed/restarted.
 This is controlled process interruption, never physical power-loss evidence.
 """
 import asyncio
+import errno
 import hashlib
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from functools import wraps
@@ -606,6 +607,144 @@ def _prepare_daemon_command(process, command, deadline):
         time.sleep(min(.025, max(0, deadline - time.monotonic())))
 
 
+def _assert_registered_cpu_fixture_boundary(registered, observed, initial_status, *, zombie):
+    """Test-only policy; pure records here never establish real OS ownership."""
+    assert observed['pid'] == registered['pid'] == observed['handle_pid']
+    for key in ('birth', 'parent_pid', 'nonce'):
+        assert observed[key] == registered[key]
+    assert observed['handle_command'] == registered['command']
+    if zombie:
+        assert initial_status == observed['status'] == psutil.STATUS_ZOMBIE
+        for key in ('pgid', 'sid'):
+            if observed[key] is not None:
+                assert observed[key] == registered[key]
+    else:
+        for key in ('pgid', 'sid'):
+            assert observed[key] == registered[key]
+        for status in (initial_status, observed['status']):
+            assert isinstance(status, str) and status and status not in (psutil.STATUS_ZOMBIE, psutil.STATUS_DEAD)
+        assert observed['command'] == registered['command']
+
+
+def _read_registered_cpu_fixture_scope(read, owner, process, registered, *, zombie, status):
+    """A test-only scope read; only actual same-generation zombies may lack it."""
+    try:
+        return read(owner.pid)
+    except ProcessLookupError as error:
+        if error.errno != errno.ESRCH or not zombie or status != psutil.STATUS_ZOMBIE:
+            raise
+        assert process.returncode is None  # No poll/wait: retain the original unreaped handle.
+        assert owner.pid == process.pid == registered['pid']
+        fresh = psutil.Process(process.pid)
+        assert fresh.status() == psutil.STATUS_ZOMBIE
+        assert fresh.create_time() == registered['birth']
+        return None  # Current terminal scope is unavailable, not the stored live value.
+
+
+@pytest.fixture
+def registered_cpu_boundary_records():
+    """Synthetic records solely for the fixture guard's deterministic policy tests."""
+    registered = {'pid': 40123, 'birth': 1234.5, 'parent_pid': 201,
+                  'pgid': 40123, 'sid': 40123, 'nonce': 'controlled-fixture-nonce',
+                  'command': ('python', 'controlled-fixture.py')}
+    observed = {**registered, 'handle_pid': 40123,
+                'handle_command': registered['command'], 'status': psutil.STATUS_SLEEPING}
+    return registered, observed
+
+
+@pytest.mark.parametrize('zombie,initial_status,status', [
+    (False, psutil.STATUS_SLEEPING, psutil.STATUS_RUNNING),
+    (False, psutil.STATUS_RUNNING, psutil.STATUS_SLEEPING),
+    (False, psutil.STATUS_SLEEPING, psutil.STATUS_SLEEPING),
+    (True, psutil.STATUS_ZOMBIE, psutil.STATUS_ZOMBIE),
+])
+def test_registered_cpu_fixture_boundary_preserves_phase_across_scheduler_states(
+        registered_cpu_boundary_records, zombie, initial_status, status):
+    registered, observed = registered_cpu_boundary_records
+    observed = {**observed, 'status': status,
+                'command': None if zombie else observed['command']}
+    _assert_registered_cpu_fixture_boundary(registered, observed, initial_status, zombie=zombie)
+
+
+@pytest.mark.parametrize('field,foreign', [
+    ('pid', 40124), ('birth', 1235.5), ('parent_pid', 202),
+    ('pgid', 40124), ('sid', 40124), ('nonce', 'foreign-fixture'),
+    ('handle_pid', 40124), ('handle_command', ('foreign',)), ('command', ('foreign',)),
+    ('status', psutil.STATUS_ZOMBIE), ('status', psutil.STATUS_DEAD),
+])
+def test_registered_cpu_fixture_boundary_refuses_changed_generation_or_live_phase(
+        registered_cpu_boundary_records, field, foreign):
+    registered, observed = registered_cpu_boundary_records
+    with pytest.raises(AssertionError):
+        _assert_registered_cpu_fixture_boundary(
+            registered, {**observed, field: foreign}, psutil.STATUS_SLEEPING, zombie=False)
+
+
+def test_registered_cpu_fixture_boundary_refuses_zombie_to_live_transition(registered_cpu_boundary_records):
+    registered, observed = registered_cpu_boundary_records
+    with pytest.raises(AssertionError):
+        _assert_registered_cpu_fixture_boundary(
+            registered, {**observed, 'command': None}, psutil.STATUS_ZOMBIE, zombie=True)
+
+
+@pytest.mark.parametrize('unavailable', [('pgid',), ('sid',), ('pgid', 'sid')])
+def test_registered_cpu_fixture_boundary_allows_unavailable_zombie_group_scope(
+        registered_cpu_boundary_records, unavailable):
+    registered, observed = registered_cpu_boundary_records
+    observed = {**observed, 'status': psutil.STATUS_ZOMBIE, 'command': None,
+                **{key: None for key in unavailable}}
+    _assert_registered_cpu_fixture_boundary(
+        registered, observed, psutil.STATUS_ZOMBIE, zombie=True)
+
+
+@pytest.mark.parametrize('field', ['pgid', 'sid'])
+def test_registered_cpu_fixture_boundary_refuses_unavailable_live_group_scope(
+        registered_cpu_boundary_records, field):
+    registered, observed = registered_cpu_boundary_records
+    with pytest.raises(AssertionError):
+        _assert_registered_cpu_fixture_boundary(
+            registered, {**observed, field: None}, psutil.STATUS_SLEEPING, zombie=False)
+
+
+@pytest.mark.parametrize('fault,want', [
+    ('same_zombie_esrch', None),
+    ('live_esrch', ProcessLookupError),
+    ('other_lookup_errno', ProcessLookupError),
+    ('permission', PermissionError),
+    ('zombie_became_live', AssertionError),
+    ('changed_birth', AssertionError),
+    ('changed_handle', AssertionError),
+    ('reaped_handle', AssertionError),
+])
+def test_registered_cpu_fixture_scope_reader_keeps_synthetic_faults_fail_closed(
+        registered_cpu_boundary_records, monkeypatch, fault, want):
+    registered, _ = registered_cpu_boundary_records
+    owner = SimpleNamespace(pid=registered['pid'])
+    process = SimpleNamespace(pid=registered['pid'] + (fault == 'changed_handle'),
+                              returncode=0 if fault == 'reaped_handle' else None)
+    fresh = SimpleNamespace(status=lambda: psutil.STATUS_RUNNING if fault == 'zombie_became_live' else psutil.STATUS_ZOMBIE,
+                            create_time=lambda: registered['birth'] + (fault == 'changed_birth'))
+    monkeypatch.setattr(psutil, 'Process', lambda pid: fresh)
+
+    def unavailable(pid):
+        assert pid == registered['pid']
+        if fault == 'permission':
+            raise PermissionError(errno.EACCES, 'controlled scope reader refusal')
+        raise ProcessLookupError(errno.ENOENT if fault == 'other_lookup_errno' else errno.ESRCH,
+                                 'controlled scope reader boundary')
+
+    def read():
+        return _read_registered_cpu_fixture_scope(
+            unavailable, owner, process, registered, zombie=fault != 'live_esrch',
+            status=psutil.STATUS_SLEEPING if fault == 'live_esrch' else psutil.STATUS_ZOMBIE)
+
+    if want is None:
+        assert read() is None
+    else:
+        with pytest.raises(want):
+            read()
+
+
 @pytest.mark.parametrize('boundary,want', [
     ('registered_zombie_empty_command', 'exited'),
     ('live_original_command', 'live'),
@@ -620,6 +759,7 @@ def test_registered_cpu_member_exit_keeps_live_and_foreign_identity_refusals(tmp
     if os.name != 'posix':
         pytest.skip('Original unreaped POSIX child exit boundary')
     from backend.tests.test_runtime_deadline_identity import cooperative_leader
+    from backend.tests.test_runtime_deadline_tree import publish_owned_stop
 
     original_command = psutil.Process.cmdline
     with cooperative_leader(tmp_path / boundary) as fixture:
@@ -637,12 +777,28 @@ def test_registered_cpu_member_exit_keeps_live_and_foreign_identity_refusals(tmp
         assert identity['command'] == original_command(original) == fixture['command']
         assert original.ppid() == os.getpid() and original.status() != psutil.STATUS_ZOMBIE
         assert os.getpgid(process.pid) == os.getsid(process.pid) == process.pid
-        if boundary.startswith(('registered_zombie', 'zombie')):
-            (fixture['directory'] / 'stop.json').write_text(json.dumps({'nonce': fixture['nonce']}))
+        registered = {**identity, 'command': tuple(identity['command'])}
+        zombie = boundary.startswith(('registered_zombie', 'zombie'))
+        if zombie:
+            publish_owned_stop(fixture['directory'], fixture['nonce'])
             _poll(original.status, lambda state: state == psutil.STATUS_ZOMBIE, end,
                   'Original cooperative CPU child did not reach unreaped zombie boundary')
             assert process.returncode is None  # Do not reap or substitute its result.
         observed_status = original.status()
+
+        def observe_boundary(owner):
+            status = owner.status()
+            def scope(read):
+                return _read_registered_cpu_fixture_scope(
+                    read, owner, process, registered, zombie=zombie, status=status)
+            return {'pid': owner.pid, 'birth': owner.create_time(), 'parent_pid': owner.ppid(),
+                    'pgid': scope(os.getpgid), 'sid': scope(os.getsid),
+                    'nonce': fixture['nonce'], 'handle_pid': process.pid,
+                    'handle_command': tuple(process.args), 'status': status,
+                    'command': None if zombie else tuple(original_command(owner))}
+
+        _assert_registered_cpu_fixture_boundary(
+            registered, observe_boundary(original), observed_status, zombie=zombie)
         if boundary == 'zombie_changed_birth':
             identity = {**identity, 'birth': identity['birth'] - 1}
 
@@ -651,7 +807,8 @@ def test_registered_cpu_member_exit_keeps_live_and_foreign_identity_refusals(tmp
                 return original_command(owner)
             # Preserve the actual OS status/birth/handle. Only model the Linux
             # [] cmdline read; macOS instead raises ZombieProcess here.
-            assert owner.status() == observed_status
+            _assert_registered_cpu_fixture_boundary(
+                registered, observe_boundary(owner), observed_status, zombie=zombie)
             if 'original_command' in boundary:
                 return fixture['command']
             return ['controlled-foreign-command'] if 'changed_command' in boundary else []
