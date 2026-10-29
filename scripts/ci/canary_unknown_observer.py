@@ -41,6 +41,19 @@ _REGISTERED_EXIT_SITES = {
 }
 _REGISTERED_EXIT_NEXT_LINES = {221: 222, 229: 230, 230: 216, 235: 232, 315: 316}
 _REGISTERED_EXIT_PHASES = {388: 'wait_observation', 407: 'interrupted_cleanup_observation', 410: 'final_observation'}
+
+# Pending admission changes observation, not the five original unknown.add sites.
+# Unresolved admission without an add must keep first_unknown absent.
+_PENDING_ADMISSION_RUNTIME_SHA256 = '4f1cc56eca4943cd9992b585da05187e380f278736cf179b49552c8f173f1452'
+_PENDING_ADMISSION_SITES = {
+    ('observe', 288): 'leader_identity_unproven',
+    ('observe', 296): 'unregistered_without_live_leader',
+    ('observe', 297): 'foreign_session_row',
+    ('observe', 302): 'registered_identity_unproven',
+    ('_terminate_owned', 382): 'termination_leader_unproven',
+}
+_PENDING_ADMISSION_NEXT_LINES = {288: 289, 296: 297, 297: 283, 302: 299, 382: 383}
+_PENDING_ADMISSION_PHASES = {455: 'wait_observation', 474: 'interrupted_cleanup_observation', 477: 'final_observation'}
 _RUNTIME_COHORTS = {
     RUNTIME_SHA256: {
         'sites': _SITES, 'next_lines': _NEXT_LINES, 'phases': _PHASES,
@@ -51,6 +64,13 @@ _RUNTIME_COHORTS = {
         'sites': _REGISTERED_EXIT_SITES, 'next_lines': _REGISTERED_EXIT_NEXT_LINES, 'phases': _REGISTERED_EXIT_PHASES,
         'observe_leader_line': 205,
         'member_returns': {189: 'reader_unavailable', 193: 'birth_or_command_mismatch', 199: 'birth_or_command_mismatch', 202: 'reader_error'},
+    },
+    _PENDING_ADMISSION_RUNTIME_SHA256: {
+        'sites': _PENDING_ADMISSION_SITES, 'next_lines': _PENDING_ADMISSION_NEXT_LINES, 'phases': _PENDING_ADMISSION_PHASES,
+        'observe_leader_line': 272, 'leader_facts_line': 241,
+        # Original OS tuple is already read at164; pending may clear it at170.
+        'initial_command_line': 165,
+        'member_returns': {256: 'reader_unavailable', 260: 'birth_or_command_mismatch', 266: 'birth_or_command_mismatch', 269: 'reader_error'},
     },
 }
 
@@ -128,6 +148,8 @@ class Observer:
         self._runtime_source_sha256 = None
         self._sites, self._next_lines, self._phases = {}, {}, {}
         self._observe_leader_line = None
+        self._leader_facts_line = 176
+        self._initial_command_line = None
         self._member_returns = {}
         if sys.implementation.name != 'cpython' or sys.version_info[:2] != (3, 13):
             self._disable('interpreter_unsupported'); return
@@ -142,6 +164,8 @@ class Observer:
         self._next_lines = dict(cohort['next_lines'])
         self._phases = dict(cohort['phases'])
         self._observe_leader_line = cohort['observe_leader_line']
+        self._leader_facts_line = cohort.get('leader_facts_line', 176)
+        self._initial_command_line = cohort.get('initial_command_line')
         self._member_returns = dict(cohort['member_returns'])
         if type(test_source) is not bytes:
             self._disable('test_ast_pin_mismatch'); return
@@ -369,7 +393,11 @@ class Observer:
             state['exception_pending'] = True
         elif event == 'line':
             state['exception_pending'] = False
-            if fields is not None and role == 'leader_matches' and frame.f_lineno == 176:
+            if fields is not None and role == '__init__' and frame.f_lineno == self._initial_command_line:
+                captured = fields.get('leader')
+                if type(captured) is tuple and len(captured) == 2:
+                    self._initial_command = _command_shape(captured[1]) or 'not_captured'
+            if fields is not None and role == 'leader_matches' and frame.f_lineno == self._leader_facts_line:
                 state['facts'] = self._facts(frame, fields)
             if fields is not None and (role, frame.f_lineno) in self._sites:
                 candidate = self._candidate(frame, role, fields)
@@ -380,8 +408,9 @@ class Observer:
                 unknown = fields.get('unknown')
                 if type(unknown) is set:
                     self._unknown = id(unknown)
-                    captured = fields.get('leader')
-                    self._initial_command = 'absent' if captured is None else _command_shape(captured[1]) if type(captured) is tuple and len(captured) == 2 else 'not_captured'
+                    if self._initial_command == 'not_captured':
+                        captured = fields.get('leader')
+                        self._initial_command = 'absent' if captured is None else _command_shape(captured[1]) if type(captured) is tuple and len(captured) == 2 else 'not_captured'
             elif fields is not None and role == 'leader_matches' and type(arg) is bool:
                 parent = frame.f_back
                 parent_state = self._frames.get(id(parent), {}) if parent is not None else {}
