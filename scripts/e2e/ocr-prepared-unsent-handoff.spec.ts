@@ -42,7 +42,7 @@ const harness=require('./fixtures/harness.cjs');
 const UI_SOURCE={
  "src/renderer/components/training/OCRWorkbench.tsx": "769a2316ba1770bccd1c6c78987d99ee779ddf64d82f4c080ad5280924e51125",
  "backend/api/routes_ocr.py": "f3a3c76fdf6789e13239c4f980fdd677aaa811e94e55c4151165b2e7f99fcc29",
- "src/renderer/services/api.ts": "5cc9fc4fbfda8113e0b5e5018de5aea568aa7bd77ceaa77abbd8ae9e2f6bacc5",
+ "src/renderer/services/api.ts": "0308a1318cd1980b319294c2d89ba0a63d030db8fe6bb1cdba0968aaf0a63783",
  "backend/engine/prepared_family_datasets.py": "656b31e84535da564ea3325b5d88f95414951ec7bf30c58970c72c9645b0f53d",
  "src/renderer/components/training/ProjectImagePicker.tsx": "96d972f0a2afc0791b0c7b68365c36ce65c4c6527e29af509a12cd88e73b9522",
  "src/renderer/components/training/TrainingPreparationPanel.tsx": "c60df368894074d448b75cff5fb179bca8e04351d3e6de9cd35f5447c272d5b8",
