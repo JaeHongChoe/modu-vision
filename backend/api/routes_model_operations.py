@@ -100,11 +100,11 @@ def quality_assessment(assessment_id:str,request:Request):
     from backend.api.routes_assistant_tasks import _scope
     current=project(request);scope=_scope(request)
     try:row=OperationsStore(current['project_dir']).assessment(assessment_id)
-    except KeyError as exc:raise HTTPException(404,'Quality assessment not found') from exc
+    except KeyError as exc:raise HTTPException(404,'품질 판정 기록을 찾을 수 없습니다. 평가 기록을 새로 불러오세요.') from exc
     except ValueError as exc:raise HTTPException(409,str(exc)) from exc
     grant=row.get('authorization') or {}
     if row.get('project_id')!=current['id'] or grant.get('scope')!=scope.document():
-        raise HTTPException(403,'Quality assessment belongs to another authenticated task actor')
+        raise HTTPException(403,'이 품질 판정은 현재 계정의 작업에 속하지 않습니다. 현재 계정의 작업에서 판정을 다시 선택하세요.')
     return row
 
 

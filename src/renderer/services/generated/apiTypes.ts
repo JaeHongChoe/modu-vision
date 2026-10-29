@@ -311,6 +311,7 @@ export type CohortRequest = {
   version_id: string;
   name?: string;
   relative_paths?: Array<string> | null;
+  label_truth_policy?: "folder-labels-v1" | null;
 };
 
 export type CommonOperationCancel = {
@@ -666,6 +667,13 @@ export type FlowPreflightRequest = {
   target: { [key: string]: unknown };
 };
 
+export type FlowQualificationRequest = {
+  task_id: string;
+  step_id: string;
+  evaluation_id: string;
+  expected_revision?: string | null;
+};
+
 export type FlowReviewRequest = {
   evaluation_id: string;
   policy: { [key: string]: unknown };
@@ -865,6 +873,13 @@ export type IndustrialImportOptions = {
   max_dim?: number | null;
 };
 
+export type InputPreparationPreviewRequest = {
+  task: string;
+  image_path: string;
+  input_recipe: { [key: string]: unknown };
+  image_size?: Array<number> | null;
+};
+
 export type InspectionReplay = {
   reason: string;
   operator: string;
@@ -1027,6 +1042,14 @@ export type ModelDraftOrigin = {
   backup_version_id?: string | null;
 };
 
+export type ModelQualificationRequest = {
+  task_id: string;
+  step_id: string;
+  evaluation_id: string;
+  comparison_id?: string | null;
+  incumbent_evaluation_id?: string | null;
+};
+
 export type NewUser = {
   username: string;
   password: string;
@@ -1143,6 +1166,7 @@ export type OperationsPolicy = {
   maximum_metrics?: {
     [key: string]: number;
   };
+  flow_policy?: { [key: string]: unknown } | null;
   new_data_validation_fraction?: number;
   watch_interval_seconds?: number;
 };
@@ -2062,6 +2086,7 @@ export interface ApiRequestBody {
   "PUT /api/flow-evaluations/approvals/{revision_id}/select": FlowSelectionRequest;
   "POST /api/flow-evaluations/cohorts": CohortRequest;
   "POST /api/flow-evaluations/cohorts/{cohort_id}/truth-from-labels": TruthFromLabelsRequest;
+  "POST /api/flow-evaluations/qualifications": FlowQualificationRequest;
   "POST /api/flow-workspace/comparisons": FlowCompare;
   "POST /api/flow-workspace/templates": TemplateSave;
   "POST /api/flow-workspace/templates/{template_id}/map": TemplateMap;
@@ -2097,6 +2122,7 @@ export interface ApiRequestBody {
   "POST /api/model-execution/recipes": RecipeRequest;
   "POST /api/model-operations/cycles/{cycle_id}/prepare-flow": CandidateFlowPreparationRequest;
   "PUT /api/model-operations/policy": OperationsPolicy;
+  "POST /api/model-operations/qualify-model": ModelQualificationRequest;
   "POST /api/model-operations/run": backend__api__routes_model_operations__RunRequest;
   "POST /api/ocr/evaluate": OCREvaluateRequest;
   "POST /api/ocr/manifest": OCRManifestRequest;
@@ -2165,6 +2191,7 @@ export interface ApiRequestBody {
   "POST /api/training-workspace/import-weights": WeightImportRequest;
   "POST /api/training-workspace/prefetch-weights": WeightPrefetchRequest;
   "POST /api/training-workspace/readiness": ReadinessRequest;
+  "POST /api/training/input-preparation/preview": InputPreparationPreviewRequest;
   "POST /api/training/reconnect": TrainingStopRequest;
   "POST /api/training/reservations/confirm-release": ReservationReleaseRequest;
   "POST /api/training/start": TrainingStartRequest;

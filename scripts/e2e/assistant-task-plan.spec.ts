@@ -234,6 +234,10 @@ test('task plan approval persists real actions; pause, human resume and reload r
     await page.reload();
     await login();
     await expect(page.getByTitle('프로젝트 관리', {exact: true})).toContainText(project.name);
+    // The remembered last task action is stage 3. Verify that restored view
+    // before ordinary navigation, rather than clicking the initial stage-1
+    // placeholder while project/ticket preparation is still being accepted.
+    await expect(page.locator('#workflow-training')).toBeVisible();
     await page.getByRole('navigation', {name: '작업 단계 (Workflow Stages)', exact: true}).getByRole('button', {name: /^01 데이터 준비/}).click();
     await expect(page.getByRole('button', {name: '전체 (20)', exact: true})).toBeVisible();
     await reconnectAssistant();
