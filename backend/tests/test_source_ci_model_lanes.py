@@ -680,3 +680,89 @@ def test_browser_auth_controls_reach_canonical_and_mirrored_ci_selection(kind):
     assert (ROOT/reference).is_file()
     assert command.splitlines().count('npm run test:renderer') == 1
     assert 'src/renderer/components/compute/SharedProjectPanelBrowserMode.test.cjs' not in command
+
+
+OWNED_STARTUP_CONTROLS = (
+    'backend/tests/test_runtime_deadline_identity.py',
+    'backend/tests/test_runtime_deadline_admission.py',
+)
+
+
+def test_owned_startup_controls_are_an_additive_full_lane_step():
+    """New ownership coverage cannot rewrite any existing qualification command."""
+    import hashlib
+    workflow = yaml.safe_load((ROOT / '.github/workflows/ci.yml').read_text())
+    steps = workflow['jobs']['source']['steps']
+    names = [step.get('name') for step in steps]
+    name = 'Owned startup identity controls'
+    assert names.count(name) == 1, 'Startup controls require one separate full-lane step'
+    index = names.index(name)
+    assert names[index - 1] == 'Canary ownership observer controls'
+    assert names[index + 1] == 'CPU contract and recovery regressions'
+    assert steps[index] == {
+        'name': name,
+        'env': {'MV_CI_RECORD_DIR': '${{ runner.temp }}/modu-ci-manifests'},
+        'run': 'python -m pytest -q --junitxml="$MV_CI_RECORD_DIR/ci-startup-identity-pytest.xml" '
+               + ' '.join(OWNED_STARTUP_CONTROLS),
+    }
+    # Pin every original mapping, command, order, permission, trigger and bound
+    # to the pre-insertion de9 qualification after removing only the new step.
+    workflow['jobs']['source']['steps'] = steps[:index] + steps[index + 1:]
+    preserved = json.dumps(workflow, sort_keys=True, separators=(',', ':')).encode()
+    assert hashlib.sha256(preserved).hexdigest() == '65b71ef1a39e25ff2a6d458b3d3835e922ad2417242b7a5956a945a07a406697', \
+        'Startup coverage must preserve the complete previous full qualification'
+
+
+def test_owned_startup_controls_reach_full_and_related_fast_selection_once():
+    related = related_module()
+    references = related.full_pytest_references()
+    assert references[:2] == list(OWNED_STARTUP_CONTROLS), 'Selector must follow actual full workflow order'
+    for reference in OWNED_STARTUP_CONTROLS:
+        assert references.count(reference) == 1, 'New startup coverage must appear exactly once in full CI'
+        assert related.select_pytest([reference]).count(reference) == 1
+    selected = related.select_pytest(['backend/engine/runtime_deadline.py'])
+    shards = [related.shard(selected, index, 6) for index in range(1, 7)]
+    for reference in OWNED_STARTUP_CONTROLS:
+        assert selected.count(reference) == 1, 'Changed runtime must reach both startup controls in fast CI'
+        assert sum(part.count(reference) for part in shards) == 1, 'Fast sharding must execute each startup control once'
+    assert all(part == [reference for reference in selected if reference in part] for part in shards)
+
+
+@pytest.mark.parametrize('damage', [
+    'missing', 'duplicate', 'after_cpu', 'inline_cpu', 'duplicate_reference',
+    'unrecorded', 'conditional', 'weakened_budget', 'continue_on_error',
+])
+def test_owned_startup_ci_contract_rejects_missing_duplicate_or_weakened_coverage(monkeypatch, damage):
+    import copy
+    path = ROOT / '.github/workflows/ci.yml'
+    original_read = Path.read_text
+    workflow = yaml.safe_load(original_read(path))
+    job = workflow['jobs']['source']
+    steps = job['steps']
+    new = next(step for step in steps if step.get('name') == 'Owned startup identity controls')
+    if damage == 'missing':
+        steps.remove(new)
+    elif damage == 'duplicate':
+        steps.append(copy.deepcopy(new))
+    elif damage == 'after_cpu':
+        steps.remove(new)
+        index = next(index for index, step in enumerate(steps) if step.get('name') == 'CPU contract and recovery regressions')
+        steps.insert(index + 1, new)
+    elif damage == 'inline_cpu':
+        next(step for step in steps if step.get('name') == 'CPU contract and recovery regressions')['run'] += ' ' + OWNED_STARTUP_CONTROLS[0]
+    elif damage == 'duplicate_reference':
+        new['run'] += ' ' + OWNED_STARTUP_CONTROLS[0]
+    elif damage == 'unrecorded':
+        new['env']['MV_CI_RECORD_DIR'] = 'checkout-local-records'
+    elif damage == 'conditional':
+        new['if'] = 'false'
+    elif damage == 'weakened_budget':
+        job['timeout-minutes'] += 1
+    else:
+        new['continue-on-error'] = True
+    controlled = yaml.safe_dump(workflow, sort_keys=False)
+    def read_text(file, *args, **kwargs):
+        return controlled if file == path else original_read(file, *args, **kwargs)
+    monkeypatch.setattr(Path, 'read_text', read_text)
+    with pytest.raises(AssertionError):
+        test_owned_startup_controls_are_an_additive_full_lane_step()

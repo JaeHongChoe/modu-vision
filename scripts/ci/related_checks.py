@@ -34,6 +34,7 @@ FULL_WORKFLOW = '.github/workflows/ci.yml'
 FAST_WORKFLOW = 'ci-fast.yml'
 CPU_STEP = 'CPU contract and recovery regressions'
 DIAGNOSTIC_STEP = 'Isolated flow outcome diagnostic controls'
+STARTUP_STEP = 'Owned startup identity controls'
 REFERENCE = re.compile(r'(?:backend/tests|scripts/tests)/[A-Za-z0-9_./-]+\.py(?:::[A-Za-z0-9_\[\]-]+)*')
 # Checks of the CI definitions themselves; cheap, and they guard every lane, so the fast lane always runs them.
 ALWAYS_PYTEST = (
@@ -48,10 +49,10 @@ def _git(*args: str, root: Path = ROOT) -> str:
 
 
 def full_pytest_references(root: Path = ROOT) -> list[str]:
-    """Every pytest reference the full CPU lane runs, in its order (the main step, then the diagnostic step)."""
+    """Every recognized pytest step's references, in full workflow order."""
     import yaml
     workflow = yaml.safe_load((root / FULL_WORKFLOW).read_text(encoding='utf-8'))
-    steps = [step for step in workflow['jobs']['source']['steps'] if step.get('name') in (CPU_STEP, DIAGNOSTIC_STEP)]
+    steps = [step for step in workflow['jobs']['source']['steps'] if step.get('name') in (STARTUP_STEP, CPU_STEP, DIAGNOSTIC_STEP)]
     references: list[str] = []
     for step in steps:
         for reference in REFERENCE.findall(step['run']):

@@ -162,7 +162,8 @@ def _split(project):
     return file, normalized_assignments(source, record['assignments'])
 
 
-def freeze_cohort(project, version_id, *, relative_paths=None, name='Held-out test cohort', model_provider=None):
+def freeze_cohort(project, version_id, *, relative_paths=None, name='Held-out test cohort', model_provider=None, label_truth_policy=None):
+    if label_truth_policy not in {None, 'folder-labels-v1'}: raise ValueError('Unsupported label truth policy')
     graph,_ = saved_graph(project,version_id); models = (model_provider or verified_models)(project,graph)
     scope = graph_truth_scope(project,graph,models)
     participating_tasks = _participating_tasks(graph) if scope['task'] == 'mixed' else None
@@ -188,6 +189,10 @@ def freeze_cohort(project, version_id, *, relative_paths=None, name='Held-out te
                 raise ValueError(f'{relative}은(는) 라벨 검수의 기준 샘플(gold sample)이라 시험 정답으로 쓰지 않습니다. 데이터 정책에서 기준 샘플을 시험에 포함하도록 바꾸거나 이 이미지를 빼고 고정하세요.')
             # Keep the resolver basis identical to the graph's recorded roles.
             roles = scope['class_semantics']['roles'] if any(b=='explicit' for b in scope['class_semantics']['basis'].values()) else None
+            if label_truth_policy and scope['task'] in {'classification', 'anomaly'}:
+                from backend.engine.image_truth import derive_folder_truth
+                derive_folder_truth(project, str(image), task=scope['task'], classes=scope['classes'],
+                                    class_roles=roles, policy_version=label_truth_policy)
             truth = read_truth(project,str(image),task=scope['task'],classes=scope['classes'],class_roles=roles,
                                participating_tasks=participating_tasks)
             checksum = truth['binding']['content_hash']; selected_hashes.add(checksum)
@@ -212,6 +217,7 @@ def freeze_cohort(project, version_id, *, relative_paths=None, name='Held-out te
                   'truth_sha256':digest([row['truth']['truth_sha256'] for row in snapshots]),
                   'input_sha256':digest([{'relative_path':row['relative_path'],'sha256':row['input_sha256']} for row in snapshots])}
         if participating_tasks:record['participating_tasks']=participating_tasks
+        if label_truth_policy:record['label_truth_policy']=label_truth_policy
         record['record_sha256'] = digest(record); atomic_json(staging/'record.json',record)
         staging.rename(root/cohort_id)
         return record

@@ -2548,3 +2548,21 @@ def list_training_jobs(request:Request=None):
             "observation": _job_observation(record, reserved),
         })
     return {"jobs": jobs}
+
+
+class InputPreparationPreviewRequest(BaseModel):
+    model_config = ConfigDict(extra='forbid')
+    task: str
+    image_path: str
+    input_recipe: Dict[str, Any]
+    image_size: Optional[List[int]] = None
+
+
+@router.post('/input-preparation/preview')
+def preview_training_input(req: InputPreparationPreviewRequest, request: Request):
+    """Read pixels and target only; never registers a job or writes source data."""
+    from backend.engine.input_preparation_preview import preview_input
+    try:
+        return preview_input(request, **req.model_dump())
+    except (ValueError, OSError) as exc:
+        raise HTTPException(422, str(exc)) from exc

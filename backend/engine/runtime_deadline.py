@@ -146,6 +146,9 @@ class _OwnedGroup:
         self.termination_attempted = False
         self.termination_failed = False
         self._leader_command_unavailable = False
+        self._leader_pending = None
+        self._leader_pending_empty = False
+        self._leader_admission_refused = False
         if os.name == 'posix':
             try:
                 group, session = os.getpgid(process.pid), os.getsid(process.pid)
@@ -159,18 +162,80 @@ class _OwnedGroup:
             try:
                 parent = module.Process(process.pid)
                 self.leader = (parent.create_time(), tuple(parent.cmdline()))
+                if os.name == 'posix' and not self.leader[1]:
+                    # Empty initial argv is not a live identity. Only this
+                    # original child's later exact argv may finish admission;
+                    # expected launch arguments never authorize a signal.
+                    birth = self.leader[0]
+                    self.leader = None
+                    self._leader_admission_refused = True
+                    arguments = process.args
+                    expected = tuple(arguments) if type(arguments) in (list,tuple) else None
+                    parent_pid = os.getpid()
+                    status = parent.status()
+                    if (type(birth) in (int,float) and 0 < birth < float('inf')
+                            and expected
+                            and all(type(item) is str for item in expected) and expected[0]
+                            and self.group == self.session == process.pid and not self.observation_failed
+                            and parent.ppid() == parent_pid
+                            and type(status) is str and status not in (module.STATUS_ZOMBIE,module.STATUS_DEAD)
+                            and process.poll() is None):
+                        self._leader_pending = (birth,expected,parent_pid,self.group)
+                        self._leader_admission_refused = False
             except module.Error: pass
 
     def leader_matches(self):
         self._leader_command_unavailable = False
-        if self.process.poll() is not None: return False
+        self._leader_pending_empty = False
+        pending = self._leader_pending
+        if self._leader_admission_refused: return False
+        if pending is not None and (self.unknown or self.observation_failed):
+            self._leader_admission_refused = True
+            return False
+        if pending is not None and self.process.pid != pending[3]:
+            self._leader_admission_refused = True
+            return False
+        if self.process.poll() is not None:
+            if pending is not None: self._leader_admission_refused = True
+            return False
         if os.name == 'posix' and self.group is None: return False
         errors = (OSError,) if self.module is None else (OSError,self.module.Error)
         try:
-            if self.group is not None and (os.getpgid(self.process.pid) != self.group
-                    or os.getsid(self.process.pid) != self.session): return False
+            leader_pid = pending[3] if pending is not None else self.process.pid
+            if self.group is not None and (os.getpgid(leader_pid) != self.group
+                    or os.getsid(leader_pid) != self.session):
+                if pending is not None: self._leader_admission_refused = True
+                return False
             if self.module is not None:
-                current = self.module.Process(self.process.pid)
+                current = self.module.Process(leader_pid)
+                if pending is not None:
+                    birth, command = current.create_time(), tuple(current.cmdline())
+                    status = current.status()
+                    if (birth != pending[0] or current.ppid() != pending[2]
+                            or type(status) is not str or status in (self.module.STATUS_ZOMBIE,self.module.STATUS_DEAD)
+                            or self.process.poll() is not None or self.process.pid != pending[3]):
+                        self._leader_admission_refused = True
+                        return False
+                    if not command:
+                        self._leader_pending_empty = True
+                        return False
+                    if command != pending[1]:
+                        self._leader_admission_refused = True
+                        return False
+                    # A fresh Process avoids a cached birth across publication.
+                    final = self.module.Process(leader_pid)
+                    status = final.status()
+                    if (final.create_time() != pending[0] or final.ppid() != pending[2]
+                            or type(status) is not str or status in (self.module.STATUS_ZOMBIE,self.module.STATUS_DEAD)
+                            or tuple(final.cmdline()) != pending[1]
+                            or os.getpgid(leader_pid) != self.group
+                            or os.getsid(leader_pid) != self.session
+                            or self.process.poll() is not None or self.process.pid != pending[3]):
+                        self._leader_admission_refused = True
+                        return False
+                    self.leader = (birth,command)
+                    self._leader_pending = None
+                    return True
                 if self.leader is None: return False
                 birth, command = current.create_time(), tuple(current.cmdline())
                 if (birth,command) != self.leader:
@@ -183,14 +248,22 @@ class _OwnedGroup:
                         and self.process.returncode is None)
                     return False
             return True
-        except errors: return False
+        except errors:
+            if pending is not None: self._leader_admission_refused = True
+            return False
 
     def member_state(self, identity):
         if self.module is None: return 'unknown'
         try:
             current = self.module.Process(identity['pid'])
-            if current.create_time() != identity['birth'] or tuple(current.cmdline()) != tuple(identity['command']):
+            if current.create_time() != identity['birth']:
                 return 'unknown'
+            command = tuple(current.cmdline())
+            if command != tuple(identity['command']):
+                # Linux can expose [] after this registered generation has
+                # become a zombie. This is exit-only evidence, never live
+                # identity, descendant enrollment or signal authority.
+                return 'exited' if not command and current.status() == self.module.STATUS_ZOMBIE else 'unknown'
             return 'exited' if current.status() == self.module.STATUS_ZOMBIE else 'live'
         except self.module.NoSuchProcess: return 'exited'
         except self.module.Error: return 'unknown'
@@ -210,7 +283,7 @@ class _OwnedGroup:
         for pid, row in rows.items():
             if row['state'].startswith('Z'): continue
             if pid == self.process.pid:
-                if not live_leader and not (self._leader_command_unavailable and self.process.returncode is None
+                if not live_leader and not ((self._leader_command_unavailable or self._leader_pending_empty) and self.process.returncode is None
                         and row.get('session') == self.session):
                     self.unknown.add(pid)
                 continue
@@ -227,7 +300,7 @@ class _OwnedGroup:
             state = self.member_state(identity)
             if state == 'live': self.remaining.add(pid)
             elif state == 'unknown': self.unknown.add(pid)
-        return self.remaining or self.unknown or self.observation_failed
+        return self.remaining or self.unknown or self.observation_failed or self._leader_pending is not None or self._leader_admission_refused
 
     def reconcile(self):
         # A previously unknown member never becomes enrolled by disappearing.

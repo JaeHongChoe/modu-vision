@@ -53,6 +53,75 @@ def event(client, task, kind, **fields):
     return response.json()['task']
 
 
+@pytest.mark.parametrize('source', ['user_request', 'oneclick'])
+def test_execution_authorization_is_durable_scoped_and_never_human_approval(tmp_path, source):
+    app, client = desktop(tmp_path)
+    task = create(client)
+    authorized = event(client, task, 'authorize', authorization_source=source)
+    assert authorized['status'] == 'ready'
+    assert authorized['approval'] is None
+    grant = authorized['authorization']
+    assert grant == {'source': source, 'scope': {
+        'workspace_id': app.state.context_registry.workspace_id,
+        'actor_id': app.state.context_registry.local_actor_id},
+        'plan_sha256': task['plan_sha256'], 'binding': BINDING, 'allowed_steps': [step['id'] for step in task['steps']],
+        'policy_version': 'continuous-execution-v1', 'authorized_at': grant['authorized_at']}
+    assert grant['authorized_at']
+    started = event(client, authorized, 'begin_step', step_id=task['steps'][0]['id'], attempt_id='attempt-auto')
+    finished = event(client, started, 'complete_step', step_id=task['steps'][0]['id'], attempt_id='attempt-auto', receipt={'opened_step': 1})
+    assert finished['status'] == 'completed'
+    assert finished['authorization'] == grant and finished['approval'] is None
+    assert client.get('/api/assistant-tasks/'+task['id']).json()['task'] == finished
+
+
+def test_execution_authorization_cannot_auto_resume_an_explicit_pause_or_change_scope(tmp_path):
+    _, client = desktop(tmp_path)
+    task = create(client)
+    authorized = event(client, task, 'authorize', authorization_source='user_request')
+    paused = event(client, authorized, 'pause')
+    response = client.post('/api/assistant-tasks/'+task['id']+'/events', json={
+        'type': 'authorize', 'authorization_source': 'user_request', 'expected_revision': paused['revision'], 'binding': BINDING})
+    assert response.status_code == 409
+    assert client.get('/api/assistant-tasks/'+task['id']).json()['task']['status'] == 'paused'
+    other = create(client)
+    assert client.post('/api/assistant-tasks/'+other['id']+'/events', json={
+        'type': 'authorize', 'authorization_source': 'advice', 'expected_revision': 1, 'binding': BINDING}).status_code == 422
+
+
+def test_machine_input_recheck_does_not_attest_human_review_or_resume_an_explicit_pause(tmp_path):
+    _, client = desktop(tmp_path)
+    task = event(client, create(client), 'authorize', authorization_source='user_request')
+    step_id = task['steps'][0]['id']
+    running = event(client, task, 'begin_step', step_id=step_id, attempt_id='input-attempt')
+    waiting = event(client, running, 'wait_step', step_id=step_id, attempt_id='input-attempt',
+                    wait_kind='human', receipt={'not_started': True, 'reason_code': 'waiting_input'})
+    rechecking = event(client, waiting, 'recheck')
+    assert rechecking['status'] == 'needs_reconciliation' and rechecking['approval'] is None
+    paused = event(client, rechecking, 'pause')
+    response = client.post('/api/assistant-tasks/'+paused['id']+'/events', json={
+        'type': 'recheck', 'binding': BINDING, 'expected_revision': paused['revision']})
+    assert response.status_code == 409
+
+
+def test_input_recipe_plan_uses_canonical_bounded_operations(tmp_path):
+    _, client = desktop(tmp_path)
+    recipe = {'version': 1, 'operations': [{'op': 'crop', 'roi': [0, 0, .5, 1]}, {'op': 'rotate90', 'turns': 1}]}
+    value = plan(steps=[{'action': 'configure_input_recipe', 'args': {'input_recipe': recipe}, 'label': '학습 입력 규칙'}])
+    assert create(client, value)['steps'][0]['args']['input_recipe'] == recipe
+    recipe['operations'][0]['unknown'] = True
+    assert client.post('/api/assistant-tasks', json=value).status_code == 422
+
+
+def test_renderer_cannot_invent_quality_result_through_generic_ledger_events(tmp_path):
+    _, client = desktop(tmp_path)
+    task = event(client, create(client), 'authorize', authorization_source='user_request')
+    response = client.post('/api/assistant-tasks/'+task['id']+'/events', json={
+        'type': 'quality_result', 'expected_revision': task['revision'], 'binding': task['binding'],
+        'step_id': task['steps'][0]['id'], 'attempt_id': 'a',
+        'receipt': {'quality_assessment': {'assessment_id': 'quality_'+'a'*32, 'status': 'qualified'}}})
+    assert response.status_code == 422
+
+
 def test_authenticated_no_project_plan_does_not_bootstrap_unrelated_apis(tmp_path):
     app, admin, other = team(tmp_path)
     task = create(admin)

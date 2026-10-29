@@ -36,6 +36,7 @@ class OperationsStore:
         if self.path.is_symlink():raise ValueError('Operations database is linked')
         with self.connect() as conn:
             conn.executescript('CREATE TABLE IF NOT EXISTS policy(id INTEGER PRIMARY KEY CHECK(id=1),payload TEXT NOT NULL);CREATE TABLE IF NOT EXISTS cycles(cycle_id TEXT PRIMARY KEY,payload TEXT NOT NULL);')
+            conn.execute('CREATE TABLE IF NOT EXISTS quality_assessments(assessment_id TEXT PRIMARY KEY,assessment_key TEXT UNIQUE NOT NULL,payload TEXT NOT NULL)')
     def connect(self):
         conn=sqlite3.connect(self.path,timeout=30);use_wal(conn,30);return conn
     def policy(self):
@@ -63,6 +64,25 @@ class OperationsStore:
     def history(self):
         with self.connect() as conn:rows=conn.execute('SELECT payload FROM cycles').fetchall()
         return sorted([json.loads(row[0]) for row in rows],key=lambda r:r['created_at'],reverse=True)
+    def save_assessment(self,value):
+        with self.connect() as conn:
+            conn.execute('INSERT OR IGNORE INTO quality_assessments VALUES(?,?,?)',
+                (value['assessment_id'],value['assessment_key'],json.dumps(value,allow_nan=False)))
+            row=conn.execute('SELECT assessment_id FROM quality_assessments WHERE assessment_key=?',(value['assessment_key'],)).fetchone()
+        return self.assessment(row[0])
+    def assessment(self,identifier):
+        import re
+        from backend.engine.image_truth import digest
+        if not isinstance(identifier,str) or not re.fullmatch(r'quality_[a-f0-9]{32}',identifier):raise ValueError('Invalid quality assessment identifier')
+        with self.connect() as conn:row=conn.execute('SELECT payload FROM quality_assessments WHERE assessment_id=?',(identifier,)).fetchone()
+        if row is None:raise KeyError(identifier)
+        value=json.loads(row[0])
+        if value.get('assessment_id')!=identifier or value.get('record_sha256')!=digest({k:v for k,v in value.items() if k!='record_sha256'}):
+            raise ValueError('Quality assessment record changed')
+        return value
+    def assessments(self):
+        with self.connect() as conn:rows=conn.execute('SELECT assessment_id FROM quality_assessments ORDER BY rowid DESC LIMIT 256').fetchall()
+        return [self.assessment(row[0]) for row in rows]
 
 
 @contextmanager
@@ -419,27 +439,14 @@ def _evaluate(project,policy,candidate,event):
 
 def _approve_and_deploy(project,policy,evidence,candidate,event,on_update):
     if event.is_set():raise InterruptedError('Operations cycle cancelled before approval')
-    request=SimpleNamespace(state=SimpleNamespace(scoped_project=project,account_user=None))
-    if policy['task'] in ('classification','detection','segmentation','anomaly','patch_classification'):
-        import math
-        if evidence['comparison'].get('selected_image_count',0)<policy['minimum_sample_count']:
-            raise ValueError('Independent test count is below the authorized policy minimum')
-        metrics=evidence.get('candidate',{}).get('metrics',{})
-        for key,bound in policy['minimum_metrics'].items():
-            value=metrics.get(key)
-            if not isinstance(value,(int,float)) or not math.isfinite(value) or value<bound:raise ValueError(f'Candidate {key} is below the authorized policy minimum')
-        for key,bound in policy['maximum_metrics'].items():
-            value=metrics.get(key)
-            if not isinstance(value,(int,float)) or not math.isfinite(value) or value>bound:raise ValueError(f'Candidate {key} exceeds the authorized policy maximum')
-        from backend.api.routes_model_deployments import approve_candidate,ApprovalRequest
-        approval=approve_candidate(ApprovalRequest(source_dataset_path=project['source_dataset_dir'],task=policy['task'],comparison_id=evidence['comparison']['comparison_id'],
-                    reviewer=policy['reviewer'],reason='Preauthorized operations policy with immutable independent holdout',holdout_reviewed=True),request)
-    else:
-        from backend.api.routes_model_deployments import approve_specialized,SpecializedApprovalRequest
-        approval=approve_specialized(SpecializedApprovalRequest(source_dataset_path=project['source_dataset_dir'],task=policy['task'],
-                evaluation_id=evidence['candidate']['evaluation_id'],incumbent_evaluation_id=evidence['incumbent']['evaluation_id'],reviewer=policy['reviewer'],
-                reason='Preauthorized family quality bounds on the immutable independent holdout',holdout_reviewed=True,minimum_sample_count=policy['minimum_sample_count'],
-                minimum_metrics=policy['minimum_metrics'],maximum_metrics=policy['maximum_metrics']),request)
+    from backend.api.routes_model_deployments import qualify_candidate_policy
+    qualification=qualify_candidate_policy(project,policy,evidence['candidate']['evaluation_id'],
+        comparison_id=(evidence.get('comparison') or {}).get('comparison_id'),
+        incumbent_evaluation_id=evidence['incumbent']['evaluation_id'],activate=True,
+        authorization={'kind':'operations_policy','policy_revision':policy['revision']},expected_job_id=candidate)
+    if qualification['status']!='qualified':raise ValueError('; '.join(qualification['reasons']))
+    if qualification['qualification']['job_id']!=candidate:raise ValueError('Qualified policy evidence names another candidate')
+    approval={'revision':qualification['qualification'],'decision_source':'policy','field_runtime_applied':False}
     on_update({'approval':approval})
     if event.is_set():return {'approval':approval,'deployment':None,'activation_state':'approved_deployment_cancelled','cancellation_requested':True}
     deployment=_deploy_candidate(project,policy,candidate,approval,event) if policy['auto_deploy'] else None

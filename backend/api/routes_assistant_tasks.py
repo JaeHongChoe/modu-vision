@@ -93,4 +93,28 @@ def read_task(task_id: str, request: Request):
 @router.post('/{task_id}/events')
 async def task_event(task_id: str, request: Request):
     body = await _body(request)
+    if isinstance(body, dict) and body.get('type') == 'quality_result':
+        raise HTTPException(422, 'Quality observations must be read from the authenticated assessment endpoint')
     return {'task': _call(request, 'event', task_id, body)}
+
+
+@router.post('/{task_id}/quality')
+async def task_quality(task_id: str, request: Request):
+    body = await _body(request)
+    if not isinstance(body, dict) or set(body) != {'binding', 'expected_revision', 'step_id', 'attempt_id', 'assessment_id'}:
+        raise HTTPException(422, 'Quality result identity fields are required')
+    from backend.api.routes_model_operations import quality_assessment
+    assessment = quality_assessment(body['assessment_id'], request)
+    task = _call(request, 'read', task_id)
+    step = next((row for row in task['steps'] if row['id'] == body['step_id']), None)
+    if (assessment.get('task_id') != task_id or assessment.get('step_id') != body['step_id']
+            or step is None or assessment.get('evaluation_id') != (step.get('receipt') or {}).get('evaluation_id')):
+        raise HTTPException(409, 'Quality assessment belongs to another completed task evaluation')
+    keys = ('assessment_id', 'evaluation_id', 'subject_kind', 'status', 'decision_source', 'policy_version',
+            'policy_revision', 'qualification_revision_id', 'quality_qualified', 'assessed_at')
+    summary = {key: assessment[key] for key in keys if key in assessment}
+    from backend.engine.image_truth import digest
+    summary['assessment_sha256'] = digest(assessment)
+    summary['reasons'] = [str(reason)[:300] for reason in assessment.get('reasons', [])[:8]]
+    event = {key: body[key] for key in ('binding', 'expected_revision', 'step_id', 'attempt_id')}
+    return {'task': _call(request, 'event', task_id, {**event, 'type': 'quality_result', 'receipt': {'quality_assessment': summary}})}

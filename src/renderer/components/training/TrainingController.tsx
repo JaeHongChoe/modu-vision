@@ -46,6 +46,8 @@ import type { ModelFamily } from '../../services/modelTrainingProgram';
 import type { VisionTask } from '../../types';
 import {TaskChangeImpactDialog,taskPreviewScope} from '../wizard/TaskChangeImpactDialog';
 import {TrainingPreparationPanel} from './TrainingPreparationPanel';
+import {TrainingInputPreparation} from './TrainingInputPreparation';
+import {inputPreparationScope} from './inputPreparation';
 import {useTaskHandoff} from './useTaskHandoff';
 import {clearTaskHandoff} from './taskHandoff';
 import {trainingPresetBatchSize} from '../common/errorActions';
@@ -83,10 +85,14 @@ export const TrainingController: React.FC = () => {
   const syntheticAnomaly = task === 'anomaly' && selectedBackbone === 'dino_synthetic';
   const statisticalRefit = task === 'anomaly' && !syntheticAnomaly;
   useEffect(() => { if (syntheticAnomaly) setAnomalyPurpose('image'); }, [syntheticAnomaly]);
+  const fixedInput = useTrainingStore(state=>state.inputRecipe);
+  const fixedScope = useTrainingStore(state=>state.inputRecipeScope);
+  const activeInputScope = inputPreparationScope({apiIdentity:getApiPersistenceIdentity(),projectId:project?.id||'',labelsetId:project?.active_labelset_id||'default',source:project?.source_dataset_dir||'',task});
   let modelOptions: Record<string, unknown> = {};
   let modelOptionsError: string | null = null;
   try { modelOptions = resumeState ? {...resumeState.recipe,resume_checkpoint:resumeState.checkpoint_path} : trainingModelOverrides(task, selectedBackbone, pretrainedCheckpoint, syntheticOptions, anomalyPurpose,
     selectedBackbone.startsWith('dinov3')?{train_mode:trainMode,partial_blocks:partialBlocks}:undefined);
+    if (!resumeState && fixedInput && fixedScope===activeInputScope) modelOptions.input_recipe=fixedInput;
     if (!resumeState && task !== 'anomaly') Object.assign(modelOptions, manualTrainingRecipe(manualEpochs, manualImageSize));
     if (statisticalRefit) Object.assign(modelOptions, manualTrainingRecipe('', manualImageSize));
     if (syntheticAnomaly) Object.assign(modelOptions, manualTrainingRecipe(manualEpochs, '')); }
@@ -434,6 +440,7 @@ export const TrainingController: React.FC = () => {
       {startWarning&&<div className="workspace-record m-3 text-xs" role="note" aria-label="학습 전 확인"><p className="text-amber-200">{startWarning}</p><button className="workspace-button mt-2" onClick={()=>void setStep(1)}>분할 확인 (1단계)</button></div>}
       <OperatorGuidanceBanner step={3} />
       <div className="max-w-7xl w-full mx-auto space-y-5 p-6">
+        <TrainingInputPreparation task={task} imageSize={(modelOptions.image_size as number|number[]|undefined) ?? (preset==='precision'?512:256)} disabled={isTraining||Boolean(resumeState)} />
         <ModelFamilyCatalog selectedFamily={selectedFamily} onSelect={chooseFamily} disabled={isLoading||isSplitting||isProjectBusy} />
         {selectedFamily===task&&<TrainingPreparationPanel family={selectedFamily} model={syntheticAnomaly ? syntheticOptions.anomaly_backbone : selectedBackbone} preset={preset} checkpoint={pretrainedCheckpoint} onCheckpointChange={setPretrainedCheckpoint} device={nextDevice==='mps'||nextDevice==='cuda'||nextDevice==='cpu' ? nextDevice : 'auto'} config={modelOptions} warmStartJobId={warmParentId||undefined} trained={Boolean(completedJobId)} />}
         {remediationNotice&&<p role="status" className="rounded border border-cyan-800 bg-cyan-950/30 p-3 text-sm text-cyan-100">{remediationNotice}</p>}

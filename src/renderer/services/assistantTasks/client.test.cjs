@@ -26,3 +26,9 @@ test('task GETs forward only an optional abort signal while mutations keep their
  assert.equal(calls[0][1].signal,abort.signal);assert.equal(calls[1][1].signal,abort.signal);
  assert.equal(Object.hasOwn(calls[2][1],'signal'),false);assert.equal(Object.hasOwn(calls[3][1],'signal'),false);assert.equal(calls.length,4);
 });
+test('quality projection sends only its stored assessment identity to the current project endpoint',async()=>{
+ const calls=[],client=load().createTaskClient(async(url,options)=>{calls.push([url,options]);return{task};});
+ await client.event(ID,{type:'quality_result',expected_revision:2,binding:'x',step_id:'step_a',attempt_id:'attempt_a',assessment_id:'quality_'+'a'.repeat(32),receipt:{quality_assessment:{status:'forged'}}});
+ assert.equal(calls[0][0],`/api/assistant-tasks/${ID}/quality`);assert.equal(Object.hasOwn(calls[0][1],'projectContext'),false);
+ const body=JSON.parse(calls[0][1].body);assert.equal(body.type,undefined);assert.equal(body.receipt,undefined);assert.equal(body.assessment_id,'quality_'+'a'.repeat(32));
+});

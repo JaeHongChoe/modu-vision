@@ -102,6 +102,8 @@ def model_metadata(model: nn.Module) -> dict[str, Any]:
 
 def validate_training_controls(task: str, preset: str, options: dict) -> None:
     """Reject unsupported fine-tune/resume combinations before allocating work."""
+    from backend.engine.input_preparation import canonical_recipe
+    canonical_recipe(options.get("input_recipe"), task)
     if task in ('anomaly', 'anomaly_detection'):
         purpose = options.get('anomaly_mode', 'classification')
         if purpose not in ('classification', 'segmentation'):

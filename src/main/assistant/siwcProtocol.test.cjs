@@ -278,3 +278,35 @@ test('stream limits and cancellation are bounded even if the injected iterator i
  const abort=new AbortController(),pending=p.readSiwcResponse(stalled,{tools:allow,signal:abort.signal,timeoutMs:1000});abort.abort();await assert.rejects(pending,e=>e.code==='cancelled');assert.equal(returned,true);
  await assert.rejects(p.readSiwcResponse(stalled,{tools:allow,timeoutMs:10}),e=>e.code==='timeout');
 });
+
+test('explicit SIWC image plus effort uses Responses image data URL and actual reasoning field',()=>{
+ const p=load(),image={mediaType:'image/png',base64:'iVBORw0KGgo='},base={model:'gpt-6.1-sol',input:[{role:'user',content:'왜 /Users/private/a.png 에 결함이 있나요?'}],tools:[]};
+ const body=p.buildSiwcTextRequest({...base,image,reasoningEffort:'high'});
+ assert.deepEqual(body.reasoning,{effort:'high'});assert.equal(body.store,false);assert.equal(body.stream,true);
+ assert.deepEqual(body.input[0].content,[{type:'input_text',text:'왜 a.png 에 결함이 있나요?'},{type:'input_image',image_url:'data:image/png;base64,iVBORw0KGgo='}]);
+ assert.equal(p.buildSiwcTextRequest(base).reasoning,undefined,'model default is omitted');
+ assert.throws(()=>p.buildSiwcTextRequest({...base,reasoningEffort:'unbounded'}));
+ assert.throws(()=>p.buildSiwcTextRequest({...base,image:{...image,mediaType:'image/svg+xml'}}));
+ assert.throws(()=>p.buildSiwcTextRequest({...base,image:{...image,base64:Buffer.alloc(5*1024*1024+1).toString('base64')}}));
+ const max=p.buildSiwcTextRequest({...base,image:{...image,base64:Buffer.alloc(5*1024*1024).toString('base64')}});assert.equal(max.input[0].content[1].type,'input_image');
+ assert.throws(()=>p.buildSiwcTextRequest({...base,input:[{role:'assistant',content:'안내'}],image}));
+});
+
+test('catalog capability values are explicit, partial and malformed values stay unknown',()=>{
+ const p=load();assert.deepEqual(p.siwcModelCapabilities('brand-new',{input_modalities:['text','image'],supported_reasoning_levels:[{effort:'low'},{effort:'high'}]}),{imageInput:true,reasoningEfforts:['low','high'],source:'catalog'});
+ assert.deepEqual(p.siwcModelCapabilities('gpt-6.1-sol-new'),{imageInput:null,reasoningEfforts:null,source:'unknown'});
+ assert.deepEqual(p.siwcModelCapabilities('gpt-6.1-sol',{input_modalities:'image',supported_reasoning_levels:['bogus']}),{imageInput:null,reasoningEfforts:null,source:'catalog'});
+ assert.deepEqual(p.siwcModelCapabilities('brand-new',{input_modalities:['text'],supported_reasoning_levels:[]}),{imageInput:false,reasoningEfforts:[],source:'catalog'});
+});
+
+test('partial catalog metadata retains a version for every verified fallback capability',()=>{
+ const p=load(),caps=p.siwcModelCapabilities('gpt-6.1-sol',{input_modalities:['text','image']});assert.equal(caps.source,'catalog');assert.equal(caps.verifiedAt,'2026-10-29');assert.deepEqual(caps.reasoningEfforts,['low','medium','high','xhigh','max']);
+});
+
+test('fresh image on a balanced tool followup stays on the original user input',()=>{
+ const p=load(),tools=[{name:'read_status',description:'상태',parameters:{type:'object'}}],call={type:'function_call',namespace:'modu_vision',name:'read_status',call_id:'call_image',arguments:'{}'},output={type:'function_call_output',call_id:'call_image',output:'준비됨'},image={mediaType:'image/png',base64:'iVBORw0KGgo='};
+ const input=[{role:'user',content:'원래 이미지 질문'},call,output],body=p.buildSiwcTextRequest({model:'gpt-6.1-sol',input,tools,image});
+ assert.equal(body.input[0].content[0].text,'원래 이미지 질문');assert.equal(body.input[0].content[1].type,'input_image');assert.equal(body.input[2].type,'function_call_output');
+ assert.throws(()=>p.buildSiwcTextRequest({model:'gpt-6.1-sol',input:[...input,{role:'assistant',content:'임의 끝'}],tools,image}));
+ assert.throws(()=>p.buildSiwcTextRequest({model:'gpt-6.1-sol',input:[input[0],call],tools,image}));
+});

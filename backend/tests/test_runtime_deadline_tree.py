@@ -54,6 +54,17 @@ print('owned leader result',flush=True)
 '''
 
 
+def publish_owned_stop(directory, nonce):
+    """Publish one complete private marker; never rewrite a visible one."""
+    target = directory / 'stop.json'
+    if target.exists():
+        return
+    staged = directory / ('stop-' + uuid.uuid4().hex + '.tmp')
+    with staged.open('x', encoding='utf-8') as out:
+        json.dump({'nonce': nonce}, out)
+    os.replace(staged, target)
+
+
 @contextmanager
 def owned_fixture(directory):
     directory.mkdir()
@@ -72,7 +83,7 @@ def owned_fixture(directory):
         if not (directory/'exit.json').exists():
             child=psutil.Process(identity['pid'])
             assert child.create_time()==identity['birth'] and child.cmdline()==identity['command']
-            (directory/'stop.json').write_text(json.dumps({'nonce':nonce}))
+            publish_owned_stop(directory, nonce)
             child.wait(timeout=3)
         assert json.loads((directory/'exit.json').read_text())=={
             'cause':'owned_cooperative_stop','exit_code':0,'nonce':nonce}
@@ -228,7 +239,7 @@ def test_unproven_live_leader_does_not_claim_timeout_termination(tmp_path,monkey
         if (directory/'registered.json').exists():
             identity=json.loads((directory/'registered.json').read_text());child=psutil.Process(identity['pid'])
             assert child.create_time()==identity['birth'] and child.cmdline()==identity['command']
-            (directory/'stop.json').write_text(json.dumps({'nonce':nonce}));child.wait(timeout=3)
+            publish_owned_stop(directory, nonce);child.wait(timeout=3)
             assert json.loads((directory/'exit.json').read_text())['cause']=='owned_cooperative_stop'
 
 

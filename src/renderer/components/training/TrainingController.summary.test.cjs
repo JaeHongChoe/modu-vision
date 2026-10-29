@@ -30,7 +30,7 @@ function fixture({warmParentsFailure = null, resumeFailure = null, deferResume =
     const m = new Module(filename, module); m.filename = filename; m.paths = Module._nodeModulePaths(path.dirname(filename)); cache.set(filename, m);
     const req = m.require.bind(m);
     m.require = name => {
-      if (name === './trainingStartSummary' || name === './modelTrainingOptions') return load(name.slice(2) + '.ts', true);
+      if (name === './trainingStartSummary' || name === './modelTrainingOptions' || name === './inputPreparation') return load(name.slice(2) + '.ts', true);
       if (name === 'react') return react;
       if (name.endsWith('/assistContext')) return load('../../stores/assistContext.ts', true);
       if (name.endsWith('/useScopedError')) return load('../common/useScopedError.ts', true);
@@ -40,7 +40,7 @@ function fixture({warmParentsFailure = null, resumeFailure = null, deferResume =
       if (name.endsWith('/useDatasetStore')) return { useDatasetStore: hook(data), readDatasetAuthority: () => 'authority' };
       if (name.endsWith('/useTrainingStore')) return { useTrainingStore: hook(training) };
       if (name.endsWith('/useComputeStore')) return { useComputeStore: hook(compute) };
-      if (name.endsWith('/services/api')) return { api: { training: { warmStartParents: async () => {if (warmParentsFailure) throw Error(warmParentsFailure); return { parents: [], total: 0 };} } }, request: async () => {if (deferResume) return new Promise((resolve, reject) => resumeReads.push({resolve, reject})); if (resumeFailure) throw Error(resumeFailure); return { states: [{checkpoint_path:'/resume/last.pt',device:'cuda',recipe:{backbone:'yolo26n',epochs:12},next_epoch:2,global_step:4}], excluded: [] };}, getApiPersistenceIdentity: () => 'local' };
+      if (name.endsWith('/services/api')) return { api: { training: { warmStartParents: async () => {if (warmParentsFailure) throw Error(warmParentsFailure); return { parents: [], total: 0 };} } }, request: async () => {if (deferResume) return new Promise((resolve, reject) => resumeReads.push({resolve, reject})); if (resumeFailure) throw Error(resumeFailure); return { states: [{checkpoint_path:'/resume/last.pt',device:'cuda',recipe:{backbone:'yolo26n',epochs:12},next_epoch:2,global_step:4}], excluded: [] };}, getApiPersistenceIdentity: () => compute.apiIdentity||'local' };
       if (name.endsWith('/autoRunChannel')) return { registerAutoRun: () => () => {}, registerTaskAutoRun: (kind, handler, settings) => {const record={handler,settings};taskHandlers.set(kind,record);return()=>{if(taskHandlers.get(kind)===record)taskHandlers.delete(kind);};} };
       if (name.endsWith('/datasetSplitCapability')) return { isSplitUnavailable: () => false };
       if (name.endsWith('/trainingComputeReadiness')) return { trainingComputeReadiness: () => ({ ready: true }) };
@@ -222,4 +222,20 @@ test('stale and paused task handlers refuse before dispatch and changing publish
   assert.match((await old({isCurrent:()=>false,isPaused:()=>false})).error,/바뀌/);
   assert.match((await old({isCurrent:()=>true,isPaused:()=>true})).error,/일시정지/);
   f.change('학습 모델 구조','yolo26s');await f.settle();assert.match((await old({isCurrent:()=>true,isPaused:()=>false})).error,/설정/);assert.equal(starts.length,0);f.unmount();
+});
+
+
+test('saved input rules reach current training settings and never cross source or labelset scope', async () => {
+  const f=fixture();f.project.task='classification';f.project.project.task='classification';f.data.datasetKey='/images\0classification';
+  const recipe={version:1,operations:[{op:'rotate90',turns:1}]};
+  f.training.inputRecipe=recipe;f.training.inputRecipeScope=JSON.stringify(['local','p','default','/images','classification']);
+  await f.settle();assert.deepEqual(f.summary().executionSettings.config_overrides.input_recipe,recipe);
+  f.project.project.active_labelset_id='other';await f.settle();assert.equal(f.summary().executionSettings.config_overrides.input_recipe,undefined);
+});
+
+test('a saved next-training recipe never crosses API transports for an identical project and source',async()=>{
+ const f=fixture();f.project.task=f.project.project.task='classification';f.data.datasetKey='/images\0classification';
+ const recipe={version:1,operations:[{op:'rotate90',turns:1}]};f.training.inputRecipe=recipe;f.training.inputRecipeScope=JSON.stringify(['local','p','default','/images','classification']);
+ await f.settle();assert.deepEqual(f.summary().executionSettings.config_overrides.input_recipe,recipe);
+ f.compute.apiIdentity='other-transport';await f.settle();assert.equal(f.summary().executionSettings.config_overrides.input_recipe,undefined);
 });

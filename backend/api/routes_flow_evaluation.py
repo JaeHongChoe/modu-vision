@@ -1,6 +1,6 @@
 """Separate saved whole-flow evaluation history, with immutable cohort inputs."""
 from pathlib import Path
-from typing import Optional
+from typing import Optional, Literal
 
 from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel, ConfigDict, Field, StrictBool
@@ -20,6 +20,7 @@ class CohortRequest(BaseModel):
     version_id: str = Field(pattern=r'^[0-9a-f]{32}$')
     name: str = Field(default='Held-out test cohort', min_length=1, max_length=200)
     relative_paths: list[str] | None = Field(default=None, min_length=1, max_length=5000)
+    label_truth_policy: Literal['folder-labels-v1'] | None = None
 
 
 class EvaluationRequest(BaseModel):
@@ -36,6 +37,25 @@ class FlowReviewRequest(BaseModel):
     reason: str = Field(min_length=8,max_length=2000)
     holdout_reviewed: bool
     expected_revision: str | None = Field(default=None,pattern=r'^flowapproval_[0-9a-f]{32}$')
+
+
+class FlowQualificationRequest(BaseModel):
+    model_config=ConfigDict(extra='forbid')
+    task_id:str=Field(pattern=r'^task_[a-f0-9]{32}$')
+    step_id:str=Field(pattern=r'^step_[a-f0-9]{32}$')
+    evaluation_id:str=Field(pattern=r'^eval_[a-f0-9]{32}$')
+    expected_revision:str|None=Field(default=None,pattern=r'^flowapproval_[0-9a-f]{32}$')
+
+
+@router.post('/qualifications')
+def qualify_flow(body:FlowQualificationRequest,request:Request):
+    from backend.engine.assistant_qualification import authorized_step
+    project=get_current_project(request);require_role(request,project,{'owner','reviewer','trainer'})
+    def check():return authorized_step(request,project,body.task_id,body.step_id,body.evaluation_id,'evaluate_flow')
+    authorization=check();account=getattr(request.state,'account_user',None)
+    return execute(lambda:whole_flow_approval.qualify_flow_policy(project,evaluation_id=body.evaluation_id,
+        **({'expected_revision':body.expected_revision} if 'expected_revision' in body.model_fields_set else {}),authorization=authorization,recheck=check,
+        authority_user_id=account['id'] if account else None,accounts=getattr(request.app.state,'accounts',None)))
 
 
 class FlowSelectionRequest(BaseModel):

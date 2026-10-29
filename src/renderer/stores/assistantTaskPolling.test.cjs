@@ -16,7 +16,7 @@ function fixture(t){
  const client={list:async()=>{calls.lists++;return[clone(task)];},get:async id=>{calls.reads++;assert.equal(id,task.id);return clone(task);},event:async()=>assert.fail('the store scheduler cannot write ledger events directly'),create:async()=>assert.fail('polling cannot propose a task')};
  let instance;
  class ControlledController {
-   constructor(deps){this.deps=deps;this.state={task:null,busy:false,loading:false,error:null};instance=this;}
+   constructor(deps){this.deps=deps;this.state={task:null,busy:false,loading:false,error:null};if(!instance)instance=this;}
    set(patch){this.state={...this.state,...patch};this.deps.onChange({...this.state});}
    async restore(){const rows=await this.deps.client.list();this.set({task:rows[0],busy:false,loading:false,error:null});return this.state.task;}
    async pollWaiting(){
@@ -38,7 +38,7 @@ function fixture(t){
  }
  const filename=path.join(__dirname,'useAssistantTaskStore.ts'),m=new Module(filename,module);m.filename=filename;m.paths=Module._nodeModulePaths(path.dirname(filename));const originalRequire=m.require.bind(m);
  const mocks={
-  './useProjectStore':{useProjectStore:{}},'./useDatasetStore':{useDatasetStore:{}},'./useComputeStore':{useComputeStore:{}},
+  './useProjectStore':{useProjectStore:{getState:()=>({project:null,projectDir:null})}},'./useDatasetStore':{useDatasetStore:{getState:()=>({})}},'./useComputeStore':{useComputeStore:{getState:()=>({})}},
   './useTrainingStore':{useTrainingStore:{getState:()=>({setNextSettings:()=>assert.fail('polling cannot restore settings')})}},
   '../services/assistantTasks/settingsRecovery':{trainingSettingsRecovery:()=>null},
   '../services/assistantTasks/client':{assistantTaskClient:client},
@@ -50,6 +50,12 @@ function fixture(t){
   // Any future direct provider/verification dependency in this store must be an explicit test failure.
   '../services/hostAdapter':{host:{assistant:providerForbidden}},
  };
+ const pureCache=new Map();function pure(filename){if(pureCache.has(filename))return pureCache.get(filename);const helper=new Module(filename,module);helper.filename=filename;helper._compile(ts.transpileModule(fs.readFileSync(filename,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText,filename);pureCache.set(filename,helper.exports);return helper.exports;}
+ mocks['../services/assistantTasks/types']=pure(path.resolve(__dirname,'../services/assistantTasks/types.ts'));
+ mocks['../services/assistantTasks/oneclickPlan']=pure(path.resolve(__dirname,'../services/assistantTasks/oneclickPlan.ts'));
+ mocks['../services/api']={getProjectContext:()=>null,getApiPersistenceIdentity:()=> 'synthetic-local'};
+ mocks['../services/assistantTasks/qualification']={qualifyCompletedTaskStep:async()=>assert.fail('job-only polling must not qualify an evaluation')};
+ mocks['./workflowEvidence']={subscribeWorkflowEvidence:()=>()=>{}};
  m.require=name=>Object.hasOwn(mocks,name)?mocks[name]:name.startsWith('.')?assert.fail('unexpected task-store dependency: '+name):originalRequire(name);
  m._compile(ts.transpileModule(fs.readFileSync(filename,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText,filename);
  const exported=m.exports,store=exported.useAssistantTaskStore;
@@ -109,11 +115,16 @@ function productionFixture(t,{alreadyWaiting=false}={}){
  }};
  const cache=new Map();function loadTs(filename){if(cache.has(filename))return cache.get(filename).exports;const m=new Module(filename,module);m.filename=filename;m.paths=Module._nodeModulePaths(path.dirname(filename));cache.set(filename,m);const base=m.require.bind(m);m.require=name=>name.startsWith('.')&&fs.existsSync(path.resolve(path.dirname(filename),name)+'.ts')?loadTs(path.resolve(path.dirname(filename),name)+'.ts'):base(name);m._compile(ts.transpileModule(fs.readFileSync(filename,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText,filename);return m.exports;}
  const controllerFile=path.resolve(__dirname,'../services/assistantTasks/controller.ts'),Controller=loadTs(controllerFile).AssistantTaskController,lease=loadTs(path.resolve(__dirname,'../services/assistantTasks/executionLease.ts'));
- class CapturedController extends Controller{constructor(deps){super(deps);instance=this;}}
+ class CapturedController extends Controller{constructor(deps){super(deps);if(!instance)instance=this;}}
  const config={account:'account-a',generation:1,ready:true},connection={config,configuring:false,busy:false,writing:false,pending:null};
  const forbidden=()=>{calls.provider++;assert.fail('provider must never be called by task observation/polling');};
  const filename=path.join(__dirname,'useAssistantTaskStore.ts'),m=new Module(filename,module);m.filename=filename;m.paths=Module._nodeModulePaths(__dirname);const originalRequire=m.require.bind(m);
- const mocks={'./useProjectStore':{useProjectStore:{}},'./useDatasetStore':{useDatasetStore:{}},'./useComputeStore':{useComputeStore:{}},'./useTrainingStore':{useTrainingStore:{getState:()=>({setNextSettings:()=>assert.fail('no settings restoration')})}},'../services/assistantTasks/settingsRecovery':{trainingSettingsRecovery:()=>null},'../services/assistantTasks/client':{assistantTaskClient:client},'../services/assistantTasks/controller':{AssistantTaskController:CapturedController},'../services/assistantTasks/connection':{taskConnectionKey:value=>value?.account||'none',taskConnectionGeneration:value=>value?.generation??0,taskConnectionReady:value=>value?.ready===true},'../services/assistantTasks/executionLease':lease,'../services/assistantTasks/runtime':{taskRuntimeBinding:()=> 'project',taskRuntimeGeneration:()=> 'generation',executeTaskAction:async(_step,control)=>{calls.executes++;entered(control);await actionDone;assert.equal(control.isAuthorityCurrent(),true);return{kind:'waiting_job',receipt:{job_id:'job_original_wait'}};},reconcileTaskAction:async(step,control)=>{calls.reconciles++;assert.equal(step.receipt.job_id,'job_original_wait');assert.equal(control.isAuthorityCurrent(),true);return{kind:'waiting_job',receipt:clone(step.receipt)};},taskActionCatalog:()=>[],inspectTaskScreen:()=>({})},'../services/assistantContext':{reducePaths:text=>text},'../services/hostAdapter':{host:{assistant:forbidden}}};
+ const mocks={'./useProjectStore':{useProjectStore:{getState:()=>({project:null,projectDir:null})}},'./useDatasetStore':{useDatasetStore:{getState:()=>({})}},'./useComputeStore':{useComputeStore:{getState:()=>({})}},'./useTrainingStore':{useTrainingStore:{getState:()=>({setNextSettings:()=>assert.fail('no settings restoration')})}},'../services/assistantTasks/settingsRecovery':{trainingSettingsRecovery:()=>null},'../services/assistantTasks/client':{assistantTaskClient:client},'../services/assistantTasks/controller':{AssistantTaskController:CapturedController},'../services/assistantTasks/connection':{taskConnectionKey:value=>value?.account||'none',taskConnectionGeneration:value=>value?.generation??0,taskConnectionReady:value=>value?.ready===true},'../services/assistantTasks/executionLease':lease,'../services/assistantTasks/runtime':{taskRuntimeBinding:()=> 'project',taskRuntimeGeneration:()=> 'generation',executeTaskAction:async(_step,control)=>{calls.executes++;entered(control);await actionDone;assert.equal(control.isAuthorityCurrent(),true);return{kind:'waiting_job',receipt:{job_id:'job_original_wait'}};},reconcileTaskAction:async(step,control)=>{calls.reconciles++;assert.equal(step.receipt.job_id,'job_original_wait');assert.equal(control.isAuthorityCurrent(),true);return{kind:'waiting_job',receipt:clone(step.receipt)};},taskActionCatalog:()=>[],inspectTaskScreen:()=>({})},'../services/assistantContext':{reducePaths:text=>text},'../services/hostAdapter':{host:{assistant:forbidden}}};
+ mocks['../services/assistantTasks/types']=loadTs(path.resolve(__dirname,'../services/assistantTasks/types.ts'));
+ mocks['../services/assistantTasks/oneclickPlan']=loadTs(path.resolve(__dirname,'../services/assistantTasks/oneclickPlan.ts'));
+ mocks['../services/api']={getProjectContext:()=>null,getApiPersistenceIdentity:()=> 'synthetic-local'};
+ mocks['../services/assistantTasks/qualification']={qualifyCompletedTaskStep:async()=>assert.fail('job-only polling must not qualify an evaluation')};
+ mocks['./workflowEvidence']={subscribeWorkflowEvidence:()=>()=>{}};
  m.require=name=>Object.hasOwn(mocks,name)?mocks[name]:name.startsWith('.')?assert.fail('unexpected production-store dependency '+name):originalRequire(name);m._compile(ts.transpileModule(fs.readFileSync(filename,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText,filename);const exported=m.exports,store=exported.useAssistantTaskStore;exported.configureTaskConnection(()=>connection);
  const settle=async()=>{for(let index=0;index<80;index++)await Promise.resolve();};
  return{store,controller:()=>instance,calls,timers,actionEntered,releaseAction,lease,get ledger(){return ledger;},get readSignal(){return readSignal;},deferObservation(){deferDisplay=true;return exported.assistantTaskTools.status();},releaseObservation(){releaseRead({...clone(ledger),revision:99});},setLedgerFailure(value){failLedger=value;},settle,

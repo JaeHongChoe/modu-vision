@@ -1,10 +1,11 @@
 /** The built-in assistant (docs/product-direction-easy-labeling-agent.md §4): a side panel that explains where the
- * person is stuck, opens the right screen, and runs the app's own tools — writes only after the person reads the preview
- * and confirms here. Mount it once; `useAssistantStore.getState().open()` shows it. Every step of the app works without
+ * person is stuck, opens the right screen, and runs the app's own tools within the user's scoped execution request.
+ * Legacy manual writes retain their explicit preview. Mount it once; `useAssistantStore.getState().open()` shows it. Every step of the app works without
  * it, offline or without an account; this panel sends only through an explicitly connected ChatGPT account.
  *
  * Simple-view rules: text never below 13px (text-xs), one primary send/confirm button;
  * all other controls are secondary workspace-buttons. */
+import type {AssistantAttachment} from '../../services/assistantAttachments';
 import React, { useEffect, useRef, useState } from 'react';
 import { useAssistantStore, assistantBridge } from '../../stores/useAssistantStore';
 import { ChatgptConnectionSetup } from './ChatgptConnectionSetup';
@@ -36,6 +37,14 @@ export const AssistantPanel: React.FC = () => {
   const planningNew=useAssistantTaskStore(state=>state.planningNew);
   const { close, ask, stop, decide, newConversation, stopConfigLoad, loadConfig } = useAssistantStore.getState();
   const [draft, setDraft] = useState('');
+  const [attachment,setAttachment]=useState<AssistantAttachment|null>(null);
+  const [attachmentError,setAttachmentError]=useState<string|null>(null);
+  const [readingImage,setReadingImage]=useState(false);
+  const [explainOnly,setExplainOnly]=useState(false);
+  const fileInput=useRef<HTMLInputElement>(null);
+  const attachmentGeneration=useRef(0);
+  const currentAttachmentBinding=useAssistantStore(state=>state.attachmentBinding?.());
+  useEffect(()=>{attachmentGeneration.current++;setAttachment(null);setAttachmentError(null);setReadingImage(false);},[isOpen,currentAttachmentBinding]);
   const list = useRef<HTMLOListElement>(null);
   const composer = useRef<HTMLTextAreaElement>(null);
   useEffect(() => { list.current?.lastElementChild?.scrollIntoView({ block: 'nearest' }); }, [items.length, pendingWrite]);
@@ -51,7 +60,27 @@ export const AssistantPanel: React.FC = () => {
   const connectionCurrent = () => { const now = useAssistantStore.getState(); return ready && now.config === config && now.config?.active === 'chatgpt' && !now.configuring && now.configReadStatus !== 'unverified'; };
   // The typed question is cleared only when it is actually handed over; while settings load it stays in the composer.
   const canHandOver = () => { const now = useAssistantStore.getState(); return connectionCurrent() && !now.busy && !now.pending && !now.writing; };
-  const submit = () => { const text = draft.trim(); if (!text || !canHandOver()) return; setDraft(''); void ask(text); };
+  const submit = () => {
+    const text=draft.trim();if(!text||!canHandOver()||readingImage)return;
+    const image=attachment;setDraft('');if(image)setAttachment(null);attachmentGeneration.current++;
+    void Promise.resolve(ask(text,{...(image?{attachment:image}:{}),explainOnly})).then(accepted=>{
+      if(accepted===false&&connectionCurrent()){setDraft(value=>value||text);if(image&&(!image.binding||image.binding===useAssistantStore.getState().attachmentBinding()))setAttachment(image);}
+    });
+  };
+  const chooseImage=async(file?:File)=>{
+    if(!file||!connectionCurrent()||busy||writing||pendingWrite||!active?.supportsImages)return;
+    const generation=++attachmentGeneration.current;setReadingImage(true);setAttachmentError(null);
+    try{const image=await useAssistantStore.getState().prepareAttachment(file);if(generation===attachmentGeneration.current&&connectionCurrent())setAttachment(image);}
+    catch(cause){if(generation===attachmentGeneration.current)setAttachmentError(cause instanceof Error?cause.message:'이미지를 읽지 못했습니다.');}
+    finally{if(generation===attachmentGeneration.current)setReadingImage(false);}
+  };
+  const chooseCurrentImage=async()=>{
+    if(!connectionCurrent()||busy||writing||pendingWrite||!active?.supportsImages)return;
+    const generation=++attachmentGeneration.current;setReadingImage(true);setAttachmentError(null);
+    try{const image=await useAssistantStore.getState().currentImageAttachment();if(generation===attachmentGeneration.current&&connectionCurrent())setAttachment(image);}
+    catch(cause){if(generation===attachmentGeneration.current)setAttachmentError(cause instanceof Error?cause.message:'현재 이미지를 읽지 못했습니다.');}
+    finally{if(generation===attachmentGeneration.current)setReadingImage(false);}
+  };
   const preparedNewRequest = () => {
     if(!canHandOver()||useAssistantStore.getState().items!==items||!useAssistantTaskStore.getState().planningNew)return;
     newConversation();
@@ -59,7 +88,7 @@ export const AssistantPanel: React.FC = () => {
   };
   const confirm = (accepted: boolean) => { const now = useAssistantStore.getState(); if (!pending || now.pending !== pending || !connectionCurrent() || now.writing) return; void decide(accepted); };
   const primary = pending ? { label: '확인하고 실행', run: () => confirm(true), disabled: configuring || writing || !ready }
-    : { label: writing ? '실행 중…' : configuring ? '설정 확인 중…' : busy ? '보내는 중…' : '보내기', run: submit, disabled: busy || configuring || !ready || !draft.trim() };
+    : { label: writing ? '실행 중…' : configuring ? '설정 확인 중…' : busy ? '보내는 중…' : '보내기', run: submit, disabled: busy || configuring || readingImage || !ready || !draft.trim() };
 
   return (
     <aside aria-label="도우미" className="fixed right-0 top-0 z-40 flex h-full w-[26rem] max-w-full flex-col border-l border-slate-700 bg-[#0F141C] text-sm text-slate-100 shadow-2xl">
@@ -68,7 +97,7 @@ export const AssistantPanel: React.FC = () => {
         <button type="button" className="workspace-button" onClick={close}>닫기</button>
       </header>
       <div className="flex-1 space-y-3 overflow-y-auto px-4 py-3">
-        <p className="text-xs text-slate-300">도우미 없이도 모든 단계를 쓸 수 있습니다. 작업 계획을 확인하면 도우미가 화면을 조작하며 진행합니다. 승인·배포·정답 확정은 사람이 직접 합니다.</p>
+        <p className="text-xs text-slate-300">도우미 없이도 모든 단계를 쓸 수 있습니다. 작업을 요청하면 준비된 데이터와 라벨로 이어서 진행합니다. 자료가 없거나 오류가 나면 필요한 내용을 알려 줍니다. 언제든 멈출 수 있습니다.</p>
         {!bridge && <p role="alert" className="text-amber-200">이 화면(브라우저)에서는 도우미를 쓸 수 없습니다. 데스크톱 앱에서 여세요.</p>}
         {bridge && (configReadStatus === 'waiting' || configReadStatus === 'unverified') && (
           <section aria-label="연결 상태 확인" className="workspace-section space-y-2">
@@ -110,11 +139,31 @@ export const AssistantPanel: React.FC = () => {
         {chatgpt && !account?.usagePaused && items.some(item => item.kind === 'error' && item.code === 'rate_limited') && <p role="status" className="text-xs text-amber-200">ChatGPT 사용 한도를 확인하세요. <a href="https://chatgpt.com/settings/usage" target="_blank" rel="noopener noreferrer" className="workspace-button inline-block">ChatGPT 사용량 관리</a></p>}
         <textarea ref={composer} aria-label="도우미에게 묻기" rows={3} value={draft} disabled={!ready || Boolean(pending)}
           onChange={event => setDraft(event.target.value)}
+          onPaste={event=>{const file=Array.from(event.clipboardData.files).find(item=>item.type.startsWith('image/'));if(file&&active?.supportsImages){event.preventDefault();void chooseImage(file);}}}
           onKeyDown={event => { if (event.key === 'Enter' && !event.shiftKey && !event.nativeEvent.isComposing) { event.preventDefault(); if (!busy) submit(); } }}
           placeholder={chatgpt&&account?.usagePaused ? 'ChatGPT 사용량을 확인한 뒤 요청 재개를 허용하세요.' : ready ? '예: 이 자료로 불량 검사 만들어줘' : 'ChatGPT 계정을 연결하고 모델을 선택하면 물어볼 수 있습니다.'}
           className="w-full resize-none rounded border border-slate-600 bg-slate-900 px-2 py-1.5 text-slate-100" />
-        <p className="text-xs text-slate-300">ChatGPT 연결은 현재 텍스트 질문만 지원합니다. 이미지 전송은 지원하지 않습니다.</p>
-        <p className="text-xs text-slate-300">대화만 비워도 저장된 계획은 남습니다. 다른 작업을 시작하려면 계획의 ‘이 계획 멈추고 새 요청’을 선택하세요.</p>
+        {chatgpt&&<section aria-label="질문에 이미지 첨부" className="space-y-2">
+          <div className="flex flex-wrap gap-2">
+            <input ref={fileInput} type="file" aria-label="도우미 이미지 파일 선택" accept="image/png,image/jpeg,image/webp" className="sr-only"
+              disabled={!ready||busy||writing||readingImage||!active?.supportsImages}
+              onChange={async event=>{const file=event.target.files?.[0];event.target.value='';await chooseImage(file);}} />
+            <button type="button" className="workspace-button" disabled={!ready||busy||writing||readingImage||!active?.supportsImages} onClick={()=>fileInput.current?.click()}>이미지 첨부</button>
+            <button type="button" className="workspace-button" disabled={!ready||busy||writing||readingImage||!active?.supportsImages} onClick={()=>void chooseCurrentImage()}>현재 이미지 첨부</button>
+          </div>
+          <p className="text-xs text-slate-300">PNG·JPEG·WebP · 1장 · 5MB 이하. 붙여넣기도 가능합니다.</p>
+          {!active?.supportsImages&&<p role="status" className="text-xs text-slate-300">이미지 입력을 지원하는 모델을 선택하세요. 지원 정보가 없는 모델에는 이미지를 보내지 않습니다.</p>}
+          {readingImage&&<p role="status" aria-busy="true">첨부 이미지를 준비하고 있습니다.</p>}
+          {attachment&&<div className="workspace-record flex items-center gap-2 p-2">
+            <img src={attachment.previewUrl} alt="첨부한 이미지" className="h-20 w-20 shrink-0 rounded object-contain" onError={()=>{setAttachmentError('이미지 파일을 열지 못했습니다. 다른 이미지를 선택하세요.');setAttachment(null);}} />
+            <span className="min-w-0 flex-1 break-all text-xs">{attachment.fileName}</span>
+            <button type="button" className="workspace-button" onClick={()=>{attachmentGeneration.current++;setAttachment(null);setAttachmentError(null);}}>첨부 해제</button>
+          </div>}
+          {attachment&&<p className="text-xs text-slate-300">보내기를 누르면 이 이미지와 질문을 선택한 ChatGPT 모델에 전송합니다.</p>}
+          {attachmentError&&<p role="alert" className="text-xs text-[var(--workspace-danger)]">{attachmentError}</p>}
+        </section>}
+        <label className="flex items-center gap-2 text-xs text-slate-300"><input type="checkbox" checked={explainOnly} disabled={busy||writing} onChange={event=>setExplainOnly(event.target.checked)}/>설명만 받기 · 작업은 실행하지 않음</label>
+        <p className="text-xs text-slate-300">대화만 비워도 저장된 계획은 기록으로 남습니다. 새 작업은 대화로 요청하면 준비 상태를 확인해 이어 갑니다.</p>
         {writing && <p role="status" className="text-xs text-amber-200">확인한 작업을 실행 중입니다. 결과가 대화와 실행 기록에 남으면 다시 묻거나 설정을 바꿀 수 있습니다.</p>}
         <div className="flex flex-wrap items-center gap-2">
           <button type="button" className={`workspace-button${chatgpt&&account?.usagePaused||taskStatus&&!planningNew?'':' workspace-button--primary'}`} disabled={primary.disabled} onClick={primary.run}>{primary.label}</button>

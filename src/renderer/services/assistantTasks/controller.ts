@@ -6,13 +6,17 @@ import {AssistantTaskRunner, type TaskRunnerDeps} from './runner';
 import {taskFeedback} from './feedback';
 import {acquireExecutionLease,releaseExecutionLease} from './executionLease';
 import type {AssistantTaskClient} from './client';
-import type {AssistantTask, TaskActionResult, TaskControl, TaskStep} from './types';
+import type {AssistantTask, TaskActionResult, TaskControl, TaskStep, TaskExecutionRequest} from './types';
+import {EXECUTION_POLICY_VERSION,hasPendingTaskQuality} from './types';
 
 export interface TaskHistoryItem {id:string;goal:string;status:AssistantTask['status'];updated_at:string;contextMatches:boolean}
 export interface TaskControllerState { planningNew:boolean;history:TaskHistoryItem[];readPending:boolean;task:AssistantTask|null; busy:boolean; loading:boolean; error:string|null;contextMatches:boolean;settingsRecoveryLabel:string|null }
 export interface TaskControllerDeps {
   client:AssistantTaskClient;
   readTimeoutMs?:number;
+  leaseOwner?:'assistant'|'automatic';
+  authorizationCurrent?():boolean;
+  unavailableMessage?:string;
   binding():string;
   /** Stable connected account/model identity; no credentials or transient UI object identity. */
   connection():string;
@@ -25,8 +29,10 @@ export interface TaskControllerDeps {
   reconcile(step:TaskStep,control:TaskControl):Promise<TaskActionResult>;
   onChange(state:TaskControllerState):void;
   runnerFactory?:(deps:TaskRunnerDeps)=>Pick<AssistantTaskRunner,'run'|'pause'>;
+  afterStep?:TaskRunnerDeps['afterStep'];
 }
 type OwnedTaskRead={abort:AbortController;version:number;ownsLoading:boolean;retired?:'superseded'|'stopped'};
+type OwnedExecutionAbort={taskId:string;signal:AbortSignal;listener:()=>void;pausing:boolean};
 const copy=<T>(value:T):T=>JSON.parse(JSON.stringify(value)) as T;
 const stable=(value:unknown):string=>JSON.stringify(value,(_key,item:unknown)=>item&&typeof item==='object'&&!Array.isArray(item)
   ?Object.fromEntries(Object.entries(item).sort(([a],[b])=>a.localeCompare(b))):item);
@@ -35,10 +41,10 @@ const immutablePlan=(task:AssistantTask)=>stable({goal:task.goal,hash:task.plan_
 const bindingConnection=(binding:string):string|null=>{
   try{const parts=JSON.parse(binding);return Array.isArray(parts)&&parts.length===2&&typeof parts[0]==='string'&&typeof parts[1]==='string'?parts[1]:null;}catch{return null;}
 };
-const preservesApproval=(before:AssistantTask,after:AssistantTask)=>before.approval!==null
+const preservesApproval=(before:AssistantTask,after:AssistantTask)=>stable(before.authorization??null)===stable(after.authorization??null)&&(before.approval!==null
   ?stable(before.approval)===stable(after.approval)
   :after.approval===null||Boolean(after.approval&&after.approval.plan_sha256===before.plan_sha256
-    &&after.approval.binding===before.binding&&typeof after.approval.confirmed_at==='string'&&after.approval.confirmed_at.trim());
+    &&after.approval.binding===before.binding&&typeof after.approval.confirmed_at==='string'&&after.approval.confirmed_at.trim()));
 const message=(cause:unknown)=>cause instanceof Error?cause.message:'작업 상태를 확인하지 못했습니다.';
 const unresolved=(task:AssistantTask|null)=>Boolean(task&&(['running','waiting_job'].includes(task.status)||task.steps.some(step=>['running','uncertain','waiting_job'].includes(step.status))));
 
@@ -49,15 +55,40 @@ export class AssistantTaskController {
   private historySelection=false;
   private historyBindings=new Map<string,string>();
   private activeRead:OwnedTaskRead|null=null;
+  private executionAbort:OwnedExecutionAbort|null=null;
   constructor(private readonly deps:TaskControllerDeps){}
   private set(next:Partial<TaskControllerState>){
     this.state={...this.state,...next};
     this.state.contextMatches=!this.state.task||this.state.task.binding===this.binding();
     this.state.settingsRecoveryLabel=this.recovery(this.state.task)?.label??null;
+    const owned=this.executionAbort;
+    if(owned&&(!this.state.task||this.state.task.id!==owned.taskId
+      ||this.state.task.status==='failed'||this.state.task.status==='completed'&&!hasPendingTaskQuality(this.state.task)))this.clearExecutionAbort();
+    else if(owned?.signal.aborted&&!owned.pausing&&!this.state.busy&&!this.state.loading
+      &&!['draft','paused','completed','failed'].includes(this.state.task?.status??''))
+      void Promise.resolve().then(()=>this.pauseAbortedExecution(owned));
     this.deps.onChange(copy(this.state));
   }
+  private clearExecutionAbort(){const owned=this.executionAbort;this.executionAbort=null;owned?.signal.removeEventListener('abort',owned.listener);}
+  private ownExecutionAbort(taskId:string,signal?:AbortSignal){
+    this.clearExecutionAbort();if(!signal)return;
+    const owned:OwnedExecutionAbort={taskId,signal,pausing:false,listener:()=>{void this.pauseAbortedExecution(owned);}};
+    this.executionAbort=owned;signal.addEventListener('abort',owned.listener,{once:true});
+    if(signal.aborted)owned.listener();
+  }
+  private executionAllowed(taskId:string){return this.deps.authorizationCurrent?.()!==false
+    &&!(this.executionAbort?.taskId===taskId&&this.executionAbort.signal.aborted);}
+  private async pauseAbortedExecution(owned:OwnedExecutionAbort){
+    if(this.executionAbort!==owned||this.state.task?.id!==owned.taskId||owned.pausing)return;
+    if(!this.runner&&this.state.loading)return;
+    owned.pausing=true;
+    try{await this.pause();}
+    catch(cause){if(this.executionAbort===owned&&this.state.task?.id===owned.taskId)this.set({error:message(cause)});}
+    finally{owned.pausing=false;}
+  }
   private recovery(task:AssistantTask|null){
-    if(!task?.approval||task.approval.plan_sha256!==task.plan_sha256||task.binding===this.binding())return null;
+    const grant=task?.authorization??task?.approval;
+    if(!task||!grant||grant.plan_sha256!==task.plan_sha256||task.binding===this.binding())return null;
     try{
       const parts=JSON.parse(task.binding);
       return Array.isArray(parts)&&parts.length===2&&parts[1]===this.deps.connection()&&typeof parts[0]==='string'
@@ -65,7 +96,7 @@ export class AssistantTaskController {
     }catch{return null;}
   }
   private binding(){return JSON.stringify([this.deps.binding(),this.deps.connection()]);}
-  private requireConnection(){if(!this.deps.ready())throw new Error('ChatGPT 연결과 현재 로그인 상태를 확인하세요.');}
+  private requireConnection(){if(!this.deps.ready())throw new Error(this.deps.unavailableMessage??'ChatGPT 연결과 현재 로그인 상태를 확인하세요.');}
   canPollWaiting(){return !this.historySelection&&!this.state.planningNew;}
   ownsExecution(){return this.state.busy||unresolved(this.state.task);}
   blocksOtherWrites(){return this.ownsExecution()||(!this.state.planningNew&&['draft','ready','waiting_human'].includes(this.state.task?.status||''));}
@@ -121,8 +152,15 @@ export class AssistantTaskController {
     return `진행 결과를 먼저 확인하세요: ${diagnosticText(step?.label??task.goal,120)}. 실행 중이거나 결과가 불확실한 작업은 새 요청으로 바꿀 수 없습니다. 기존 외부 작업은 계속될 수 있습니다.`;
   }
 
-  async propose(input:unknown):Promise<AssistantTask>{
+  async propose(input:unknown,executionRequest?:TaskExecutionRequest):Promise<AssistantTask>{
     this.requireConnection();
+    const executionCurrent=()=>executionRequest?.signal?.aborted!==true&&this.deps.authorizationCurrent?.()!==false;
+    if(!executionCurrent())throw new Error('실행 요청이 중지되어 작업을 시작하지 않았습니다.');
+    if(executionRequest&&!['user_request','oneclick'].includes(executionRequest.source))throw new Error('실행 요청 출처가 올바르지 않습니다.');
+    if(executionRequest&&!this.state.planningNew&&['ready','waiting_human'].includes(this.state.task?.status||'')&&!unresolved(this.state.task)){
+      const held=this.state.task!;
+      if(!await this.prepareNewRequest(held.id,held.revision,true))throw new Error(this.state.error||'이전 작업을 안전하게 멈추지 못했습니다.');
+    }
     if(this.state.loading||this.ownsExecution()||(!this.state.planningNew&&['ready','waiting_human'].includes(this.state.task?.status||'')))
       throw new Error('진행 중인 작업을 일시정지하고 결과를 확인한 뒤 새 계획을 요청하세요.');
     if(!input||typeof input!=='object'||Array.isArray(input)||Object.keys(input).some(key=>!['goal','steps'].includes(key)))
@@ -130,13 +168,36 @@ export class AssistantTaskController {
     const value=input as {goal:unknown;steps:unknown};
     const plan=validateTaskPlan({goal:value.goal,steps:value.steps,binding:this.binding()});
     const version=this.beginOperation(),authority=this.contextAuthority();
+    let ownedTaskId:string|null=null;
+    const abort=()=>{if(ownedTaskId&&this.state.task?.id===ownedTaskId)void this.runner?.pause().catch(()=>undefined);};
+    executionRequest?.signal?.addEventListener('abort',abort,{once:true});
     this.set({loading:true,readPending:false,error:null});
     try {
       const task=await this.deps.client.create(plan);
+      ownedTaskId=task.id;
       if(!authority())throw new Error('연결이 바뀌어 이전 계획을 화면에 적용하지 않았습니다.');
-      this.historySelection=false;this.set({task,planningNew:false});return task;
+      this.historySelection=false;this.set({task,planningNew:false});
+      this.ownExecutionAbort(task.id,executionRequest?.signal);
+      if(!executionRequest)return task;
+      if(!executionCurrent())return task;
+      const authorized=await this.deps.client.event(task.id,{type:'authorize',authorization_source:executionRequest.source,
+        expected_revision:task.revision,binding:task.binding});
+      if(!authority())throw new Error('연결이 바뀌어 요청한 작업을 실행하지 않았습니다.');
+      const grant=authorized.authorization;
+      if(authorized.id!==task.id||authorized.plan_sha256!==task.plan_sha256||authorized.binding!==task.binding
+        ||authorized.status!=='ready'||authorized.approval!==null||!grant||grant.source!==executionRequest.source
+        ||grant.plan_sha256!==task.plan_sha256||grant.binding!==task.binding||grant.policy_version!==EXECUTION_POLICY_VERSION
+        ||!grant.authorized_at||!grant.scope?.actor_id||!grant.scope.workspace_id
+        ||stable(grant.allowed_steps)!==stable(task.steps.map(step=>step.id)))
+        throw new Error('저장된 실행 권한과 요청한 계획이 다릅니다. 다시 실행하지 않았습니다.');
+      this.set({task:authorized,loading:false});
+      if(!executionCurrent()){
+        const paused=await this.deps.client.event(authorized.id,{type:'pause',expected_revision:authorized.revision,binding:authorized.binding,message:'실행 요청이 일시정지되어 다음 작업을 시작하지 않았습니다.'});
+        if(authority())this.set({task:paused});return paused;
+      }
+      return await this.drive(authorized,this.deps.connection(),executionRequest.signal)??authorized;
     }catch(cause){if(authority())this.set({error:message(cause)});throw cause;}
-    finally{if(version===this.version)this.set({loading:false});}
+    finally{executionRequest?.signal?.removeEventListener('abort',abort);if(version===this.version)this.set({loading:false});}
   }
 
   async restore(id?:string):Promise<AssistantTask|null>{
@@ -181,11 +242,11 @@ export class AssistantTaskController {
   }
 
   /** A person's explicit request changes intent only after its shown record is safely held. */
-  async prepareNewRequest(id:string,revision:number):Promise<boolean>{
+  async prepareNewRequest(id:string,revision:number,ownExecutionRequest=false):Promise<boolean>{
     try{this.requireConnection();}catch(cause){this.set({error:message(cause)});return false;}
     const task=this.state.task;
     if(!task||task.id!==id||task.revision!==revision){this.set({error:'새 요청을 준비할 계획이 바뀌었습니다. 현재 기록을 다시 확인하세요.'});return false;}
-    if(this.state.busy||this.state.loading||!this.deps.mayStart()){this.set({error:'진행 중인 작업과 상태 확인이 끝난 뒤 새 요청을 준비하세요.'});return false;}
+    if(this.state.busy||this.state.loading||(!ownExecutionRequest&&!this.deps.mayStart())){this.set({error:'진행 중인 작업과 상태 확인이 끝난 뒤 새 요청을 준비하세요.'});return false;}
     if(unresolved(task)){this.set({error:this.unresolvedMessage(task)});return false;}
     const version=this.beginOperation(),authority=this.contextAuthority();
     this.set({loading:true,readPending:false,error:null});
@@ -215,6 +276,7 @@ export class AssistantTaskController {
   /** Called with the card's captured identity/revision, never by a model tool. */
   async approve(id:string,revision:number):Promise<AssistantTask|null>{
     this.requireConnection();
+    if(this.state.task?.id===id&&this.state.task.status==='draft'&&this.executionAbort?.taskId===id&&this.executionAbort.signal.aborted)this.clearExecutionAbort();
     if(this.state.planningNew)throw new Error('새 요청을 준비 중입니다. 이전 계획을 다시 선택한 뒤 확인하세요.');
     const task=this.state.task;
     if(!task||task.id!==id||task.revision!==revision||task.status!=='draft')throw new Error('확인할 작업 계획이 바뀌었습니다. 현재 계획을 다시 읽으세요.');
@@ -234,20 +296,25 @@ export class AssistantTaskController {
 
   async resume():Promise<AssistantTask|null>{
     this.requireConnection();
+    if(this.state.task?.status==='paused'&&this.executionAbort?.taskId===this.state.task.id&&this.executionAbort.signal.aborted)this.clearExecutionAbort();
+    if(this.deps.authorizationCurrent?.()===false)return this.state.task;
     if(this.state.planningNew)throw new Error('새 요청을 준비 중입니다. 이전 계획을 다시 선택한 뒤 이어 가세요.');
     const task=this.state.task;
+    if(task&&!this.executionAllowed(task.id))return task;
     if(!task||this.state.loading||this.state.busy||!this.deps.mayStart())return task;
     if(task.binding!==this.binding())throw new Error('프로젝트·자료·연결이 달라졌습니다. 새 상태에 맞는 계획을 요청하세요.');
     const connection=this.deps.connection(),version=this.beginOperation(),authority=this.authority(),generation=this.deps.generation?.();
     this.set({loading:true,readPending:false,error:null});
     try{
       const current=await this.read(signal=>this.deps.client.get(task.id,signal),true);
+      if(this.deps.authorizationCurrent?.()===false)return this.state.task;
       if(!authority()||!Object.is(generation,this.deps.generation?.()))throw new Error('연결이 바뀌었습니다.');
       if(current.revision!==task.revision){this.set({task:current});return current;}
       if(current.binding!==this.binding())throw new Error('프로젝트·자료가 달라졌습니다. 현재 상태를 다시 확인하세요.');
       const next=current.status==='paused'||current.status==='waiting_human'
         ?await this.deps.client.event(task.id,{type:'resume',confirmed:true,expected_revision:current.revision,binding:current.binding}):current;
       if(!authority()||!Object.is(generation,this.deps.generation?.()))throw new Error('연결이 바뀌어 실행하지 않았습니다.');
+      if(this.deps.authorizationCurrent?.()===false)return this.state.task;
       this.historySelection=false;this.set({task:next,loading:false});return await this.drive(next,connection);
     }catch(cause){if(authority())this.set({error:message(cause)});throw cause;}
     finally{if(version===this.version)this.set({loading:false});}
@@ -278,15 +345,34 @@ export class AssistantTaskController {
 
   async pollWaiting():Promise<AssistantTask|null>{
     const task=this.state.task;
-    if(!task||!this.canPollWaiting()||this.state.loading||task.status!=='waiting_job'||this.state.busy||!this.deps.ready()||!this.deps.mayStart())return task;
+    if(!task||!this.executionAllowed(task.id)||!this.canPollWaiting()||this.state.loading
+      ||(task.status!=='waiting_job'&&!hasPendingTaskQuality(task))||task.status==='paused'||this.state.busy||!this.deps.ready()||!this.deps.mayStart())return task;
     if(task.binding!==this.binding())return this.pause();
     return this.drive(task,this.deps.connection());
   }
 
-  private async drive(task:AssistantTask,connection:string):Promise<AssistantTask|null>{
-    if(this.state.busy)return this.state.task;
+  /** Evidence changes may recheck an app-authorized missing-input wait; explicit pauses remain inert. */
+  async recheckInputs():Promise<AssistantTask|null>{
+    const task=this.state.task,step=task?.steps.find(row=>row.id===task.current_step_id);
+    if(!task?.authorization||!this.executionAllowed(task.id)||task.status!=='waiting_human'||step?.receipt?.not_started!==true
+      ||!['waiting_input','waiting_resource'].includes(String(step.receipt.reason_code))||this.state.busy||this.state.loading
+      ||this.historySelection||this.state.planningNew||task.binding!==this.binding()||!this.deps.ready()||!this.deps.mayStart())return task;
+    const version=this.beginOperation(),authority=this.contextAuthority(),connection=this.deps.connection();
+    this.set({loading:true,error:null});
+    try{
+      const fresh=await this.read(signal=>this.deps.client.get(task.id,signal),true);
+      if(!authority()||fresh.revision!==task.revision||immutablePlan(fresh)!==immutablePlan(task)||!preservesApproval(task,fresh))return task;
+      const next=await this.deps.client.event(task.id,{type:'recheck',expected_revision:fresh.revision,binding:fresh.binding});
+      if(!authority())return null;
+      this.set({task:next,loading:false});return await this.drive(next,connection);
+    }catch(cause){if(authority())this.set({error:message(cause)});return task;}
+    finally{if(version===this.version)this.set({loading:false});}
+  }
+
+  private async drive(task:AssistantTask,connection:string,signal?:AbortSignal):Promise<AssistantTask|null>{
+    if(this.state.busy||!this.executionAllowed(task.id)||signal?.aborted)return this.state.task;
     this.requireConnection();
-    const lease=acquireExecutionLease('assistant');
+    const lease=acquireExecutionLease(this.deps.leaseOwner??'assistant');
     if(!lease){this.set({error:'다른 자동 진행이 실행 중입니다. 해당 진행이 멈춘 뒤 저장 결과를 확인하고 이어 가세요.'});return null;}
     this.set({busy:true,error:null});
     const version=this.version,connectionGeneration=this.deps.connectionGeneration?.();
@@ -318,20 +404,24 @@ export class AssistantTaskController {
           }catch(cause){if(claiming||attempt===1)throw cause;}
         }
       };
-      guard();const result=await run(step,{isPaused:control.isPaused,isCurrent:()=>connectionCurrent()&&control.isCurrent(),isAuthorityCurrent:connectionCurrent,priorModelJobId:control.priorModelJobId,checkpoint});
+      guard();if(signal?.aborted||!this.executionAllowed(task.id))throw new Error('실행 요청이 중지되어 다음 작업을 시작하지 않았습니다.');
+      const result=await run(step,{isPaused:control.isPaused,isCurrent:()=>connectionCurrent()&&control.isCurrent(),isAuthorityCurrent:connectionCurrent,priorModelJobId:control.priorModelJobId,checkpoint});
       guard();
       // Only a verified app-owned transition may update the runtime half; it cannot replace the account/model half.
       return result.bindingAfter?{...result,bindingAfter:JSON.stringify([result.bindingAfter,connection])}:result;
     };
     const deps:TaskRunnerDeps={
       read:async id=>{guard();const record=await this.deps.client.get(id);guard();return record;},
-      event:async(id,event)=>{guard();return this.deps.client.event(id,event);},
+      event:async(id,event)=>{guard();if(event.type==='begin_step'&&(signal?.aborted||!this.executionAllowed(task.id)))throw new Error('실행 요청이 중지되어 다음 작업을 시작하지 않았습니다.');return this.deps.client.event(id,event);},
       binding:()=>this.binding(),generation:this.deps.generation,
       execute:wrap(this.deps.execute),reconcile:wrap(this.deps.reconcile),
       onChange:record=>{if(connectionCurrent())this.set({task:record});},
+      afterStep:async(record,step)=>{guard();if(signal?.aborted||!this.executionAllowed(task.id))throw new Error('실행 요청이 중지되어 품질 판정은 대기 상태로 남겼습니다.');
+        const result=await this.deps.afterStep?.(record,step);guard();return result;},
     };
     const runner=this.deps.runnerFactory?.(deps)??new AssistantTaskRunner(deps);this.runner=runner;
-    try{const result=await runner.run(task);if(connectionCurrent()){this.set({task:result});return result;}return null;}
+    try{const result=await runner.run(task);if(connectionCurrent()){
+      this.set({task:result,...(signal?.aborted&&hasPendingTaskQuality(result)?{error:'실행 요청이 중지되었습니다. 저장된 평가의 품질 판정은 다시 확인할 때까지 대기합니다.'}:{})});return result;}return null;}
     catch(cause){if(connectionCurrent())this.set({error:message(cause)});return null;}
     finally{if(this.runner===runner)this.runner=null;releaseExecutionLease(lease);this.set({busy:false});}
   }
@@ -352,7 +442,7 @@ export class AssistantTaskController {
   }
 
   /** Account/model changes hide old results immediately; never transfer a running task to a new connection. */
-  invalidateConnection(){this.beginOperation();this.historySelection=false;this.historyBindings.clear();void this.runner?.pause().catch(()=>undefined);this.set({task:null,planningNew:false,history:[],readPending:false,loading:false,error:null});}
+  invalidateConnection(){this.clearExecutionAbort();this.beginOperation();this.historySelection=false;this.historyBindings.clear();void this.runner?.pause().catch(()=>undefined);this.set({task:null,planningNew:false,history:[],readPending:false,loading:false,error:null});}
 
   summary():Record<string,unknown>{
     if(this.state.planningNew)return {...taskFeedback(null,{contextMatches:true}),planning_new:true,active_requested_plan:false,new_request_context_trusted:true,held_history_available:Boolean(this.state.task)};

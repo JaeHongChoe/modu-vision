@@ -34,7 +34,7 @@
     "src/renderer/components/inference/PackageLibraryPanel.tsx": "e6eaa53f27415cd1be5e10e5b620565762bd43bdd4f3265d4ea33d5fc000b3b8",
     "src/renderer/components/runtime/RuntimeServicePanel.tsx": "8e6f6defd490e4a055a09f143da98f3b2d1c8cd33c3e869ab08c49b8090d5144",
     "src/renderer/components/flowchart/FlowGraphNavigator.tsx": "656832c214f41742d5bc0f66c9f8983c5fb6892cfaf3b42b48ee353f282da20a",
-    "src/renderer/components/training/TrainingController.tsx": "733e81e5b2070ff6ea485c8097311f0e5a9ab02cee102a767afcfe32dec92ed2",
+    "src/renderer/components/training/TrainingController.tsx": "ee5e6eb4a38a68c179ed8c21c9eb69dd403c2e32b34c26de862333fff390d456",
     "src/renderer/components/wizard/WizardHeader.tsx": "5e986fcc5a24f47adc1036793d5e833b95da7d6c2e43c899c5d3a463199829f4",
     "src/renderer/components/training/PatchClassificationWorkbench.tsx": "1e1ffa525e9db32c058d89620a13cf219f9f5deed943466d8a20c71641aa4cc5",
     "src/renderer/components/training/PatchRecipePreview.tsx": "fb0b91b076e0512583cd955a9a2bc134275db03145961a488c89ce2e1c63f542",
@@ -9982,61 +9982,15 @@
           "source": "src/renderer/components/training/TrainingController.tsx",
           "scenarios": {
             "success": {
-              "state": "verified",
-              "evidence": [
-                {
-                  "task": "S4-01",
-                  "source_sha": "0eadf8c9ee87e894597286fdc85bed625771e132",
-                  "kind": "click",
-                  "action": "선택 설정으로 학습 시작",
-                  "expected": "Start actual DINO CPU training only after valid model input dimensions.",
-                  "observed": "Native65px input disabled start; valid64px submitted the exact two-epoch CPU/head-only/pretrained recipe. Actual training completed with three synthetic classes and matching original pretrained SHA.",
-                  "reviewer": "Automated execution reviewer review of exact observed control; human model quality, independent and release acceptance pending",
-                  "test": "scripts/e2e/dino-classification-closure.spec.ts::native authentic three-class DINO classification learns evaluates reopens and exports parity",
-                  "receipt": "2026-10-07-app-execution-4d092424b43e11540f90.json",
-                  "receipt_sha256": "079adfc76deef6ff64e2b1c39d66328e0574288e6d504eb0d62dc6c6b5d163a9",
-                  "artifacts": [
-                    {
-                      "id": "screenshot-0",
-                      "sha256": "f189852df1924e27613e506d3c8b6a4deea9cac191f857fa761320a3a87396ec"
-                    },
-                    {
-                      "id": "screenshot-1",
-                      "sha256": "239c060eab448f393019f5d939543ef842083eef3f20cbb2563b77173e3e13a1"
-                    }
-                  ]
-                }
-              ]
+              "state": "pending",
+              "reason": "2026-10-29 saved input recipe path changes the training-start input. Historical execution remains in docs/verification/receipts/2026-10-29-training-input-action-source-provenance-delta.json; no current native DINO training requalification is claimed."
             },
             "empty": {
               "state": "pending"
             },
             "invalid": {
-              "state": "verified",
-              "evidence": [
-                {
-                  "task": "S4-01",
-                  "source_sha": "0eadf8c9ee87e894597286fdc85bed625771e132",
-                  "kind": "click",
-                  "action": "선택 설정으로 학습 시작",
-                  "expected": "Start actual DINO CPU training only after valid model input dimensions.",
-                  "observed": "Native65px input disabled start; valid64px submitted the exact two-epoch CPU/head-only/pretrained recipe. Actual training completed with three synthetic classes and matching original pretrained SHA.",
-                  "reviewer": "Automated execution reviewer review of exact observed control; human model quality, independent and release acceptance pending",
-                  "test": "scripts/e2e/dino-classification-closure.spec.ts::native authentic three-class DINO classification learns evaluates reopens and exports parity",
-                  "receipt": "2026-10-07-app-execution-4d092424b43e11540f90.json",
-                  "receipt_sha256": "079adfc76deef6ff64e2b1c39d66328e0574288e6d504eb0d62dc6c6b5d163a9",
-                  "artifacts": [
-                    {
-                      "id": "screenshot-0",
-                      "sha256": "f189852df1924e27613e506d3c8b6a4deea9cac191f857fa761320a3a87396ec"
-                    },
-                    {
-                      "id": "screenshot-1",
-                      "sha256": "239c060eab448f393019f5d939543ef842083eef3f20cbb2563b77173e3e13a1"
-                    }
-                  ]
-                }
-              ]
+              "state": "pending",
+              "reason": "2026-10-29 saved input recipe path changes the training-start input. Historical execution remains in docs/verification/receipts/2026-10-29-training-input-action-source-provenance-delta.json; no current native DINO training requalification is claimed."
             },
             "error": {
               "state": "pending"
@@ -10205,7 +10159,7 @@
           }
         }
       ],
-      "remaining": "Only explicit listed controls and scenarios have executed. Other actions, human truth, manufacturing quality, hardware and whole-feature acceptance remain pending."
+      "remaining": "Only explicit listed controls and scenarios have executed. Other actions, human truth, manufacturing quality, hardware and whole-feature acceptance remain pending. 2026-10-29: current native DINO start dimensions need execution with the saved input recipe; immutable prior evidence is preserved in 2026-10-29-training-input-action-source-provenance-delta.json."
     },
     {
       "id": "F026",
@@ -10574,31 +10528,8 @@
           "source": "src/renderer/components/training/TrainingController.tsx",
           "scenarios": {
             "success": {
-              "state": "verified",
-              "evidence": [
-                {
-                  "task": "S4-02",
-                  "source_sha": "0eadf8c9ee87e894597286fdc85bed625771e132",
-                  "kind": "click",
-                  "action": "선택 설정으로 학습 시작",
-                  "expected": "Train real DINO dense segmentation using explicit CPU and input recipe.",
-                  "observed": "Native two-epoch training completed with authentic pretrained SHA and paired mask augmentation; actual pixel metrics and original-coordinate tiled package controls passed. Human mask truth/quality unapproved.",
-                  "reviewer": "Automated execution reviewer review of exact observed control; human model quality, independent and release acceptance pending",
-                  "test": "scripts/e2e/dino-segmentation-closure.spec.ts::native authentic DINO dense masks train evaluate tile Blob reopen and export",
-                  "receipt": "2026-10-07-app-execution-bef7a8ebe227d39ccc1a.json",
-                  "receipt_sha256": "d01f64cca4df8b68f1be1b6578eb90549387fe6798cddd05a84a28d171fe9953",
-                  "artifacts": [
-                    {
-                      "id": "screenshot-0",
-                      "sha256": "cedf6f4d99219642f8f3bed251c0c976bb541bfefaf6bf760036568c7f7be098"
-                    },
-                    {
-                      "id": "screenshot-1",
-                      "sha256": "98043c5c215699d1a082ebb1b80e23619aca4bffdc4309bd05a46a0874f733ca"
-                    }
-                  ]
-                }
-              ]
+              "state": "pending",
+              "reason": "2026-10-29 saved input recipe path changes the training-start input. Historical execution remains in docs/verification/receipts/2026-10-29-training-input-action-source-provenance-delta.json; no current native DINO training requalification is claimed."
             },
             "empty": {
               "state": "pending"
@@ -10721,7 +10652,7 @@
           }
         }
       ],
-      "remaining": "Only explicit listed controls and scenarios have executed. Other actions, human truth, manufacturing quality, hardware and whole-feature acceptance remain pending."
+      "remaining": "Only explicit listed controls and scenarios have executed. Other actions, human truth, manufacturing quality, hardware and whole-feature acceptance remain pending. 2026-10-29: current native DINO start dimensions need execution with the saved input recipe; immutable prior evidence is preserved in 2026-10-29-training-input-action-source-provenance-delta.json."
     },
     {
       "id": "F028",

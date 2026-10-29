@@ -2,19 +2,19 @@
 
 ## Product context
 
-The audience is Korean-speaking people preparing images, reviewing labels, training models and checking inspection results in Electron or the local browser. The task assistant reduces menu discovery while keeping human truth and approval decisions explicit. Interface locale is Korean; counts use `ko-KR`. The task card formats no timestamps and introduces no timezone/calendar policy. Locale alone does not establish a deployment market. Accessibility target is WCAG 2.2 AA; source/component checks do not establish a full accessibility audit.
+The audience is Korean-speaking people preparing images, reviewing labels, training models and checking inspection results in Electron or the local browser. The task assistant reduces menu discovery and runs scoped user work continuously when inputs are ready. Automated policy decisions and human truth/review records remain distinct. Interface locale is Korean; counts use `ko-KR`. The task card formats no timestamps and introduces no timezone/calendar policy. Locale alone does not establish a deployment market. Accessibility target is WCAG 2.2 AA; source/component checks do not establish a full accessibility audit.
 
 ## Business-context sources
 
 | Domain / scope | Authoritative source | Source type | Reviewed date |
 | --- | --- | --- | --- |
-| Task plan, action scope, human stops, privacy and completion | `docs/superpowers/specs/2026-10-27-task-performing-assistant-design.md` | Current task design and DTO contract | 2026-10-27 |
+| Task plan, execution authorization, input rules, privacy and completion | `docs/superpowers/specs/2026-10-29-continuous-assistant-training-design.md` | Current user-request execution contract; supersedes routine human gates in the older task design | 2026-10-29 |
 | Task validation, durable execution and recovery | `src/renderer/services/assistantTasks/{types,catalog,controller,runner}.ts`; `backend/engine/assistant_tasks.py` | Domain implementation and API guards | 2026-10-27 |
 | Permission and selected project authority | `backend/api/shared_authorization.py`; task runtime's existing app guards | Server authorization and domain implementation | 2026-10-27 |
 | Established Korean workflow and truth/approval separation | `docs/product-direction-easy-labeling-agent.md`, current sections and dated QA caveat | Product direction | 2026-10-27 |
 | Beginner guidance and evidence boundaries | `docs/superpowers/specs/2026-10-26-final-ux-guidance-design.md` | Workflow design | 2026-10-27 |
 
-Deletion/retention changes, billing, legal copy, new external data transfer and production deployment are outside this task-card contract. This file grants no permission for those operations.
+Deletion/retention changes, billing, legal copy and production deployment are outside this task-card contract. Selected image transfer to the visibly connected ChatGPT account is specified in the current design above. This file grants no permission for those operations.
 
 ## Visual contract
 
@@ -32,9 +32,11 @@ Only capabilities touched by the assistant task card are resolved here. Existing
 | Screen navigation | Parent callback and existing wizard navigation | Action catalog / runtime stage mapping | Open related, review or result stage | Task-card callback tests; integrated navigation check |
 | Status / error feedback | Inline task-card status and alerts | Task/step state and controller error | polite status / persistent alert | Task-card state and escaping tests |
 | Dialog | `components/common/WorkspaceDialog.tsx` | Existing workspace primitive | App-owned modal; persistent assistant is non-modal | Existing dialog consumers and integrated keyboard check |
+| Select/Listbox | Native HTML select in assistant connection settings and Stage3 input preparation | Current model capabilities / supported operation contract | OS popup geometry and native keyboard behavior are accepted | Setup and training preparation state tests; integrated browser check pending |
+| Image upload | Native file input plus AssistantPanel attachment preview | Selected local file; assistantImagePreparation | PNG/JPEG/WebP one image; paste and current-image choice use same binding | Attachment/normalization/lifecycle tests; actual account image receipt pending |
 | Scrollbar | Application `index.css`, light theme adapter | Existing runtime baseline; DESIGN.md migration note | Task list may add stable gutter geometry | Computed style / narrow integrated check; known global baseline gap |
 
-The task card owns no table selection, select/listbox, date picker, search, CRUD form, toast, clipboard or upload interaction. It must not create local equivalents of existing owners when those capabilities are added later.
+The task card owns no table selection, date picker, search, CRUD form or toast interaction. The assistant composer owns the selected-image input; its existing connection settings and Stage3 use native selectors as recorded above. It must not create local equivalents of existing owners when those capabilities are added later.
 
 ## Step 5 preparation contract
 
@@ -56,11 +58,11 @@ The existing flow version/cohort/model selectors remain native selects: OS-owned
 
 | Operation | Trigger | Pending | Success destination / feedback | Failure recovery | Focus outcome | Source ref |
 | --- | --- | --- | --- | --- | --- | --- |
-| Plan confirmation | “계획 확인하고 실행” on a displayed draft | Disable during state load, busy, unavailable connection or competing work | Controller receives the displayed immutable ID/revision; runner updates real state | Reject stale authority/revision; keep error and current plan visible | Keep current native control; no modal | Task spec; controller `approve` |
+| Manual plan confirmation | “계획 확인하고 실행” on a manually prepared or legacy draft; user-request automatic tasks are authorized and driven by the controller | Disable during state load, busy, unavailable connection or competing work | Controller receives the displayed immutable ID/revision; runner updates real state | Reject stale authority/revision; keep error and current plan visible | Keep current native control; no modal | Task spec; controller `approve` |
 | Start approved plan | Ready task's “작업 시작” | Same connection/ownership guards | Run approved plan through controller | Show controller error and saved task | Keep card context | Controller `resume` |
 | Pause | “작업 일시정지” | Remains available while runner is busy; unavailable during state loading | Stop the next assistant action; show paused record | Keep error visible; never claim a background job was cancelled | Keep card context | Runner `pause`; controller `pause` |
-| Human review | “검토 화면 열기” | Navigation disabled while state unsettled | Open the real relevant stage; no automatic truth/adoption | Display human stop and recorded reason | Parent navigation owns screen focus | Task spec; runtime action guards |
-| Continue after review | Explicit “검토 결과 확인하고 이어하기” | Prevent duplicate dispatch | Controller reads current record and guards before continuing | Stay at the human stop if conditions still fail | Keep navigation choice available | Controller `resume`; runner |
+| Required input | Specific input/error/reconciliation guidance; routine review is not a gate in automatic tasks | Navigation disabled while state unsettled | Open the real relevant stage; no automatic truth/adoption | Display human stop and recorded reason | Parent navigation owns screen focus | Task spec; runtime action guards |
+| Continue after input or explicit pause | Recheck current prerequisites before continuing | Prevent duplicate dispatch | Controller reads current record and guards before continuing | Stay at the human stop if conditions still fail | Keep navigation choice available | Controller `resume`; runner |
 | Job wait / failed read | “저장 결과 확인” | Disable concurrent read | Refresh saved status; job wait never means success by itself | Show inline error; do not blindly retry an action | Keep card context | Task spec; controller/runner |
 | Resume uncertain / paused work | “저장 결과 확인 후 이어하기” or equivalent paused action | Prevent concurrent resume | Read and reconcile saved results before continuing unresolved actions | Preserve uncertainty until evidence exists | Keep card context | Task spec; runner reconciliation |
 | Restore | Empty card's “저장된 작업 불러오기” | Show loading status and disable action | Display the current actor/context's saved task or honest empty state | Keep read error and retry action visible | Keep card context | Controller `restore` |
@@ -83,7 +85,7 @@ The task card adds no dialog, toast or native `alert`/`confirm`/`prompt`. Shared
 - Connection loss, logout, competing writes and loading disable mutation/resume controls with a visible explanation. A controller owns recovery and state invalidation.
 - Pause stops later assistant actions. An already-started training job continues independently; cancellation stays in its existing training workflow.
 - Waiting for a job, waiting for a person, paused and uncertain are separate states with separate next actions. Failed work offers a saved-result read, not an automatic retry.
-- No automatic model approval, draft adoption, truth confirmation, operational deployment or background-job cancellation is introduced by the card.
+- The card can display task-scoped automatic execution and policy qualification. It does not invent human approval, adopt unmaterialized drafts, declare model predictions as independent truth, mark untested devices accepted, or cancel background jobs.
 
 ## Validation and sensitive-value handling
 
@@ -104,3 +106,13 @@ This initial contract covers the assistant task workflow and records existing sh
 - Component tests cover primary hierarchy, disabled callback guards, captured approval identity, navigation/continue separation, pause semantics, receipt allowlisting, bounded plan and malicious-text escaping.
 - Canonical siblings: `AssistantPanel.tsx` for action hierarchy, Korean copy and sidebar geometry; `WorkspaceDialog.tsx` for shared button/focus language.
 - Component/source verification is not integrated browser operation, real provider execution, actual model quality, field-data acceptance or human usability evidence. Those claims require separate receipts.
+
+## Continuous assistant, image and reasoning contract (2026-10-29)
+
+User-request and one-click tasks carry explicit automatic execution authorization bound to the authenticated actor/project, immutable plan and policy. Advice-only turns do not authorize tasks. Job waits, missing inputs, errors, uncertain outcomes and explicit pauses remain distinct; no repeated general review checkpoint blocks ready data/labels.
+
+AssistantPanel owns one-image attachment/paste/current-image selection and a visible external recipient disclosure. Explicit Send consumes a byte/context/account-bound grant. Unsupported/unknown image models remain disabled; context changes discard stale attachments/results. Attachment preparation is local and does not transmit pixels.
+
+ChatgptConnectionSetup owns the native reasoning-effort select; OS popup behavior is accepted, matching its native account/model selectors. Only documented or catalog-supported values are shown. Nonsecret account/model UI preferences live in assistantPreferences; credentials and image content do not. Active-turn effort is frozen; account/model changes invalidate pending requests.
+
+Stage3 TrainingInputPreparation reuses workspace section/buttons, native numeric/select controls and actual same-source preview. Deterministic classification/segmentation input rules are separate from train-only augmentation; supported-family checks and saved recipe identity govern execution. Existing Stage5 remains trained-model inspection/decision construction.

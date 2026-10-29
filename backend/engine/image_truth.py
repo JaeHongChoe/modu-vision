@@ -119,8 +119,20 @@ def _read_row(row, scope, participating_tasks=None):
     if record and not invalidated:
         result.update(verdict=record['verdict'], defect_classes=record['defect_classes'], reviewer=record['reviewer'],
                       unknown_reason='explicit_unknown' if record['verdict'] == 'UNKNOWN' else None)
+    result['label_provenance'] = None
+    # A selected label policy has its own history and never becomes a reviewer declaration.
+    if not history and not prior and scope['task'] != 'mixed':
+        derived = row.get('label_truth', {}).get(digest(_semantic_scope(scope)), [])
+        if derived:
+            candidate = copy.deepcopy(derived[-1])
+            result['label_provenance'] = candidate
+            if candidate['binding'] != image_binding(row):
+                result.update(invalidated=True, unknown_reason='source_or_labels_changed')
+            else:
+                result.update(verdict=candidate['verdict'], defect_classes=candidate['defect_classes'], unknown_reason=None)
     # Only binding and declaration identity affect evidence; metadata tags and approval do not.
     evidence={key: result[key] for key in ('scope','binding','truth_revision','verdict','defect_classes','invalidated','declaration')}
+    if result['label_provenance'] is not None: evidence['label_provenance'] = result['label_provenance']
     if prior:evidence['prior_scoped_declarations_sha256']=result['prior_scoped_declarations_sha256']
     if participants:
         # Keep these dependencies even when compatible mixed truth takes
@@ -141,6 +153,32 @@ def read_truth(project, image_path, *, task, classes, class_roles=None, particip
     with dm.metadata_transaction(project['project_dir'], project['source_dataset_dir'], project['annotations_dir']) as ledger:
         row = dm._ensure(ledger, project['project_dir'], project['source_dataset_dir'], image, project['annotations_dir'])
         return _read_row(row, scope, participating_tasks)
+
+
+def derive_folder_truth(project, image_path, *, task, classes, policy_version, class_roles=None):
+    """Use existing class labels under a named policy, with no prediction or reviewer input."""
+    if policy_version != 'folder-labels-v1' or task not in {'classification', 'anomaly'}:
+        raise ValueError('Unsupported folder-label truth policy')
+    from backend.engine.dataset_inventory import folder_label_split
+    from backend.engine.class_overrides import read_class_overrides, effective_class
+    scope = truth_scope(project, task, classes, class_roles)
+    image = _safe_image(project, image_path)
+    label, _ = folder_label_split(image.relative_to(Path(project['source_dataset_dir']).resolve()), task)
+    label, _ = effective_class(image, label, read_class_overrides(Path(project['source_dataset_dir'])) if task == 'classification' else {})
+    role = scope['class_semantics']['roles'].get(label)
+    with dm.metadata_transaction(project['project_dir'], project['source_dataset_dir'], project['annotations_dir']) as ledger:
+        row = dm._ensure(ledger, project['project_dir'], project['source_dataset_dir'], image, project['annotations_dir'])
+        if label not in classes or role not in {'normal', 'defect'} or _truth_history(row, scope):
+            return _read_row(row, scope)
+        value = {'decision_source': 'policy', 'source_kind': 'folder_label', 'policy_version': policy_version,
+                 'scope': scope, 'binding': image_binding(row), 'folder_label': label,
+                 'verdict': 'OK' if role == 'normal' else 'NG', 'defect_classes': [] if role == 'normal' else [label]}
+        value['sha256'] = digest(value)
+        history = row.setdefault('label_truth', {}).setdefault(digest(_semantic_scope(scope)), [])
+        if not history or history[-1] != value:
+            history.append(value)
+            dm._event(row, 'policy:'+policy_version, 'label_truth_derived', {'truth_sha256': value['sha256']})
+        return _read_row(row, scope)
 
 
 def declare_truth(project, image_path, *, task, classes, verdict, reviewer, expected_revision,

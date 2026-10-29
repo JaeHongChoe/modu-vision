@@ -10,7 +10,7 @@ function load(file, mocks = {}) {
   const m = new Module(file, module);
   m.filename = file; m.paths = Module._nodeModulePaths(path.dirname(file));
   const original = m.require.bind(m);
-  m.require = name => name in mocks ? mocks[name] : original(name);
+  m.require = name => name in mocks ? mocks[name] : name.startsWith('.')&&fs.existsSync(path.resolve(path.dirname(file),name)+'.ts')?load(path.resolve(path.dirname(file),name)+'.ts',mocks):original(name);
   m._compile(ts.transpileModule(fs.readFileSync(file, 'utf8'), {compilerOptions: {
     module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022,
     jsx: ts.JsxEmit.React, esModuleInterop: true,
@@ -125,8 +125,23 @@ test('completed work shows bounded saved identifiers and counts without paths, a
   assert.match(text(tree), /job_24/); assert.match(text(tree), /project_9/); assert.match(text(tree), /flow_v3/);
   assert.match(text(tree), /평가 자료 수.*18/); assert.match(text(tree), /정답 미확정.*2/);
   assert.ok(!/\/private|PRIVATE_IMAGE|PRIVATE_PREDICTION/.test(text(tree)));
-  assert.match(text(tree), /최종 승인.*직접/);
+  assert.match(text(tree), /품질 기준 충족과 운영 배포 상태.*저장된 근거/);
   primary(tree)[0].props.onClick(); assert.deepEqual(navigated, [4]);
+});
+test('machine input and resource waits name their actual reason without a routine human review gate',()=>{
+ for(const [code,label] of [['waiting_input','입력 필요'],['waiting_resource','실행 자원 대기'],['failed','작업 오류']]){
+  const row=step({status:'waiting_human',receipt:{not_started:true,reason_code:code}});
+  const tree=render({task:task({status:'waiting_human',current_step_id:row.id,steps:[row]})});
+  assert.match(text(tree),new RegExp(label));assert.doesNotMatch(text(tree),/계획 확인하고 실행/);
+ }
+});
+test('persisted policy assessments show quality status and reasons separately from completed evaluation',()=>{
+ for(const [status,label] of [['not_qualified','품질 기준 미달'],['input_needed','품질 판정 입력 필요'],['qualified','품질 기준 충족'],['pending','품질 판정 결과 확인 중']]){
+  const row=step({action:'evaluate_model',status:'completed',receipt:{evaluation_id:'evaluation_a',quality_assessment:{status,decision_source:'policy',reasons:['recall below configured bound']}}});
+  const tree=render({task:task({status:'completed',authorization:{source:'user_request'},steps:[row]})});
+  assert.match(text(tree),new RegExp(label));assert.match(text(tree),/recall below configured bound/);
+  if(status==='pending')assert.match(text(primary(tree)[0]),/품질 판정/);
+ }
 });
 
 test('empty, loading and error states give an accessible restore action with connection guards', () => {
@@ -170,7 +185,7 @@ test('an oversized human review plan cannot continue through a secondary action'
 
 test('cancelled folder choice offers folder selection through explicit resume and gives its message first', () => {
   const calls = [], message = '자료 폴더 선택을 취소했습니다. 사용할 폴더를 선택하세요.';
-  const tree = render({task: task({status: 'waiting_human', current_step_id: 's1', message, steps: [step({action: 'import_dataset', status: 'waiting_human', args: {}, receipt: {not_started: true}})]}), onResume: () => calls.push('resume'), onNavigate: () => calls.push('navigate')});
+  const tree = render({task: task({status: 'waiting_human', current_step_id: 's1', message, steps: [step({action: 'import_dataset', status: 'waiting_human', args: {}, receipt: {not_started: true, reason_code: 'waiting_input'}})]}), onResume: () => calls.push('resume'), onNavigate: () => calls.push('navigate')});
   assert.equal(text(primary(tree)[0]), '폴더 선택하고 이어하기');
   const status = nodes(tree).find(node => node.props?.role === 'status');
   assert.equal(text([].concat(status.props.children).flat(Infinity)[0]), message);

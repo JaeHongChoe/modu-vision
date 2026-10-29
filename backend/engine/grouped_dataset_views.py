@@ -138,7 +138,11 @@ class ManifestSegmentationDataset:
                 else:raise ValueError(f'Unsupported segmentation region: {kind}')
         size=self.image_size
         if size is None and max(h,w)>self.max_dim:scale=self.max_dim/max(h,w);size=(max(16,int(w*scale)),max(16,int(h*scale)))
-        if size:rgb=cv2.resize(rgb,size);mask=cv2.resize(mask,size,interpolation=cv2.INTER_NEAREST)
+        if getattr(self,"input_recipe",None):
+            from backend.engine.input_preparation import prepare_input
+            if mask.shape!=(h,w):mask=cv2.resize(mask,(w,h),interpolation=cv2.INTER_NEAREST)
+            rgb,mask,_=prepare_input(rgb,self.input_recipe,task="segmentation",target=mask,image_size=size)
+        elif size:rgb=cv2.resize(rgb,size);mask=cv2.resize(mask,size,interpolation=cv2.INTER_NEAREST)
         elif mask.shape!=(h,w):mask=cv2.resize(mask,(w,h),interpolation=cv2.INTER_NEAREST)
         tensor=torch.from_numpy(rgb.transpose(2,0,1).copy()).float()/255
         mask_tensor=torch.from_numpy(mask.astype(np.int64)).long()

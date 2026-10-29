@@ -55,8 +55,11 @@ export type AssistantApiKeyProviderId = 'openai-compatible' | 'anthropic';
 export type AssistantProviderId = AssistantApiKeyProviderId | 'chatgpt';
 /** OpenAI-compatible request format: Chat Completions or Responses. */
 export type AssistantApiFormat = 'chat' | 'responses';
-export interface AssistantProviderPublic {provider:AssistantProviderId;baseUrl:string;model:string;format:AssistantApiFormat|null;hasKey:boolean;supportsImages:boolean;label:string;ready?:boolean;connectionAuthority?:string}
-export interface AssistantChatgptAccount {recordId:string;label:string;model:string;signedIn:boolean;planUsageEnabled:boolean;planUsageAcknowledged?:boolean;usagePaused?:boolean}
+export type AssistantReasoningEffort = 'none'|'minimal'|'low'|'medium'|'high'|'xhigh'|'max'|'ultra';
+export interface AssistantModelCapabilities {imageInput:boolean|null;reasoningEfforts:AssistantReasoningEffort[]|null;source:'catalog'|'verified_contract'|'unknown';verifiedAt?:string}
+export interface AssistantModel {id:string;label:string;capabilities?:AssistantModelCapabilities}
+export interface AssistantProviderPublic {provider:AssistantProviderId;baseUrl:string;model:string;format:AssistantApiFormat|null;hasKey:boolean;supportsImages:boolean;label:string;ready?:boolean;connectionAuthority?:string;capabilities?:AssistantModelCapabilities}
+export interface AssistantChatgptAccount {recordId:string;label:string;model:string;signedIn:boolean;planUsageEnabled:boolean;planUsageAcknowledged?:boolean;usagePaused?:boolean;capabilities?:AssistantModelCapabilities}
 export interface AssistantChatgptRecoveryState {available:boolean;reason:'none'|'active_owner'|'unverifiable_owner'|'unsafe_store'|'closed'|'encryption_unavailable'|'stale_owner'|'unavailable_authority';ticket?:string}
 export interface AssistantChatgptState {accounts:AssistantChatgptAccount[];active:string|null;encryptionAvailable:boolean;status:'idle'|'waiting'|'exchanging'|'connected'|'error';error?:AssistantError;remoteRevocationConfirmed?:boolean;authority?:string;recovery?:AssistantChatgptRecoveryState}
 export interface AssistantConfigState {providers:AssistantProviderPublic[];active:AssistantProviderId|null;encryptionAvailable:boolean;chatgpt?:AssistantChatgptState}
@@ -70,7 +73,7 @@ export type AssistantMessage =
      /** The provider's own blocks for this turn (Anthropic thinking/tool_use), sent back unchanged; opaque here. */ replay?:unknown}
   | {role:'tool';toolCallId:string;name:string;content:string;isError?:boolean};
 export interface AssistantImageInput {grantId:string;imageIdentity:string;mediaType:'image/png'|'image/jpeg'|'image/webp';base64:string}
-export interface AssistantSendInput {requestId:string;context:Record<string,unknown>;messages:AssistantMessage[];tools:AssistantToolSpec[];image?:AssistantImageInput}
+export interface AssistantSendInput {requestId:string;context:Record<string,unknown>;messages:AssistantMessage[];tools:AssistantToolSpec[];image?:AssistantImageInput;reasoningEffort?:AssistantReasoningEffort}
 export type AssistantErrorCode = 'no_provider'|'no_key'|'storage_unavailable'|'bad_key'|'forbidden'|'billing'|'not_found'|'bad_request'
   |'rate_limited'|'overloaded'|'server'|'network'|'timeout'|'cancelled'|'bad_response'|'invalid_input'|'image_refused';
 export interface AssistantErrorDiagnostics {providerCode?:string;param?:string;bodyShape:'error_object'|'oauth_error'|'detail'|'other'|'response_error'|'stream_error'}
@@ -78,7 +81,7 @@ export interface AssistantError {code:AssistantErrorCode;reason:string;action:st
 export type AssistantSendResult =
   | {ok:true;text:string;toolCalls:AssistantToolCall[];replay?:unknown;stop:'end'|'tool'|'length';requestId?:string}
   | {ok:false;error:AssistantError};
-export type AssistantModelList = {ok:true;models:{id:string;label:string}[]} | {ok:false;error:AssistantError};
+export type AssistantModelList = {ok:true;models:AssistantModel[]} | {ok:false;error:AssistantError};
 export type AssistantImageGrant = {ok:true;grantId:string;message:string;providerLabel:string;expiresAt:number} | {ok:false;error:AssistantError};
 export interface AssistantBridge {
   getState:()=>Promise<AssistantConfigState>;
@@ -90,7 +93,7 @@ export interface AssistantBridge {
   send:(input:AssistantSendInput)=>Promise<AssistantSendResult>;
   cancel:(requestId:string)=>Promise<boolean>;
   /** Step one of an image question: names the provider for the person's confirmation; no pixels move yet. */
-  imageIntent:(input:{fileName:string;imageIdentity:string})=>Promise<AssistantImageGrant>;
+  imageIntent:(input:{fileName:string;imageIdentity:string;context?:Record<string,unknown>})=>Promise<AssistantImageGrant>;
   /** Arms the run-id header on the one backend write a confirmed tool makes; endRun disarms it. */
   beginRun:(runId:string,tool:string)=>Promise<boolean>;
   endRun:(runId:string)=>Promise<void>;

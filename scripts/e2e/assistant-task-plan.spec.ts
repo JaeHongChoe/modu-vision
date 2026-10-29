@@ -145,6 +145,8 @@ test('task plan approval persists real actions; pause, human resume and reload r
     await assistant.getByLabel('ChatGPT 모델', {exact: true}).selectOption('fixture-model');
     await initialRestore;
     const ask = async (text: string) => {
+      // This scenario preserves the optional manual-plan route; direct work requests are tested separately.
+      await assistant.getByRole('checkbox', {name:'설명만 받기 · 작업은 실행하지 않음',exact:true}).check();
       await assistant.getByRole('textbox', {name: '도우미에게 묻기', exact: true}).fill(text);
       await assistant.getByRole('button', {name: '보내기', exact: true}).click();
       await expect(assistant.getByRole('textbox', {name: '도우미에게 묻기', exact: true})).toBeEnabled();
@@ -232,6 +234,10 @@ test('task plan approval persists real actions; pause, human resume and reload r
     await page.reload();
     await login();
     await expect(page.getByTitle('프로젝트 관리', {exact: true})).toContainText(project.name);
+    // The remembered last task action is stage 3. Verify that restored view
+    // before ordinary navigation, rather than clicking the initial stage-1
+    // placeholder while project/ticket preparation is still being accepted.
+    await expect(page.locator('#workflow-training')).toBeVisible();
     await page.getByRole('navigation', {name: '작업 단계 (Workflow Stages)', exact: true}).getByRole('button', {name: /^01 데이터 준비/}).click();
     await expect(page.getByRole('button', {name: '전체 (20)', exact: true})).toBeVisible();
     await reconnectAssistant();
@@ -346,6 +352,7 @@ test('task plan approval persists real actions; pause, human resume and reload r
     await expect(card()).toContainText('이전 폴더 선택 대기');
     await expect(card()).toContainText('폴더 선택 필요');
     const question = 'TASK_PLAN_FIXTURE_RECOVERY 이전 계획은 기록으로 남기고 현재 합성 자료로 새 계획을 준비해 주세요.';
+    await assistant.getByRole('checkbox', {name:'설명만 받기 · 작업은 실행하지 않음',exact:true}).check();
     await assistant.getByRole('textbox', {name: '도우미에게 묻기', exact: true}).fill(question);
     const beforeNewRequest = ledger().filter(row => row.route === '/v1/responses').length;
     const beforeRecoveryImports = importWrites.length, beforeRecoverySplits = splitWrites.length;
@@ -475,6 +482,7 @@ test('native task plan uses the actual app window and persists prepared settings
   const assistant = page.getByRole('complementary', {name: '도우미', exact: true});
   const card = assistant.getByRole('region', {name: '도우미 작업', exact: true});
   await expect(card).toHaveAttribute('aria-busy', 'false');
+  await assistant.getByRole('checkbox', {name:'설명만 받기 · 작업은 실행하지 않음',exact:true}).check();
   await assistant.getByRole('textbox', {name: '도우미에게 묻기', exact: true}).fill('합성 자료의 CPU 배치 8 설정을 준비해 주세요.');
   await assistant.getByRole('button', {name: '보내기', exact: true}).click();
   await expect(card.getByRole('button', {name: '계획 확인하고 실행', exact: true})).toBeEnabled();

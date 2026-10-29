@@ -1,6 +1,6 @@
-/** Offline SIWC protocol building blocks, deliberately NOT imported by providers/service/IPC/UI.
+/** SIWC protocol building blocks used by the main-process connection and service boundary.
  * No fetch, listener, browser, credential files or automatic retries. All transport and trusted JWKS are supplied.
- * Live integration, discovery/JWKS acquisition, protected persistence and user consent remain separate work.
+ * Discovery/JWKS acquisition, protected persistence and user consent live in their owning modules.
  * Contracts checked 2026-10-24 against official OpenAI documentation:
  * https://developers.openai.com/siwc/token-sharing-open-source/sign-in
  * https://developers.openai.com/siwc/token-sharing-open-source/profiles-and-sessions
@@ -12,7 +12,7 @@
  * https://developers.openai.com/api/reference/resources/responses/methods/create (phase and reasoning defaults)
  */
 import crypto, {type JsonWebKey} from 'node:crypto';
-import type {AssistantErrorDiagnostics, AssistantToolSpec} from '../../types/electron';
+import type {AssistantErrorDiagnostics, AssistantModelCapabilities, AssistantReasoningEffort, AssistantToolSpec} from '../../types/electron';
 import {redactOutgoingText, redactOutgoingValue} from './redact';
 
 const ISSUER = 'https://auth.openai.com', RESOURCE = 'https://api.openai.com/v1';
@@ -208,6 +208,33 @@ export class SiwcTokenSession {
 }
 
 const NAMESPACE = 'modu_vision';
+const EFFORTS = new Set<AssistantReasoningEffort>(['none','minimal','low','medium','high','xhigh','max','ultra']);
+/** Exact official model contracts checked 2026-10-29. Never infer capabilities from prefixes or choose a model.
+ * Sources: https://developers.openai.com/api/docs/models/{gpt-6.1-sol,gpt-6.1-terra,gpt-6-astra,gpt-6-sol,gpt-6-luna}
+ * SIWC route limitations still apply independently: image inputs supported, Files upload API unsupported. */
+const VERIFIED_EFFORTS:Record<string,AssistantReasoningEffort[]>={
+  'gpt-6.1-sol':['low','medium','high','xhigh','max'],'gpt-6-astra':['low','medium','high','xhigh','max'],
+  'gpt-6.1-terra':['none','low','medium','high','xhigh','max'],'gpt-6-sol':['none','low','medium','high','xhigh','max'],
+  'gpt-6-luna':['none','low','medium','high','xhigh','max'],
+};
+export function siwcModelCapabilities(model:string,metadata?:unknown):AssistantModelCapabilities {
+  const row=object(metadata),verified=Object.hasOwn(VERIFIED_EFFORTS,model)?VERIFIED_EFFORTS[model]:undefined;
+  const modalities=row.input_modalities,levels=row.supported_reasoning_levels;
+  const hasModalities=modalities!==undefined,hasLevels=levels!==undefined;
+  const imageInput=hasModalities?Array.isArray(modalities)&&modalities.length<=16&&modalities.every(v=>typeof v==='string'&&v.length<=32)?modalities.includes('image'):null:verified?true:null;
+  let reasoningEfforts:AssistantReasoningEffort[]|null=verified?[...verified]:null;
+  if(hasLevels){const values=Array.isArray(levels)?levels.map(v=>typeof v==='string'?v:object(v).effort):null;
+    reasoningEfforts=values&&values.length<=EFFORTS.size&&values.every(v=>EFFORTS.has(v))&&new Set(values).size===values.length?values:null;}
+  return {imageInput,reasoningEfforts,source:hasModalities||hasLevels?'catalog':verified?'verified_contract':'unknown',...(verified&&(!hasModalities||!hasLevels)?{verifiedAt:'2026-10-29'}:{})};
+}
+/** Bounded in-memory image only: no URL fetching, file IDs, filesystem paths or Files uploads. */
+export function siwcImagePart(value:unknown):{mediaType:'image/png'|'image/jpeg'|'image/webp';base64:string} {
+  const image=object(value);
+  if(!['image/png','image/jpeg','image/webp'].includes(image.mediaType)||typeof image.base64!=='string'||image.base64.length>Math.ceil(5*1024*1024/3)*4
+    ||!image.base64.length||image.base64.length%4!==0||!/^[A-Za-z0-9+/]+={0,2}$/.test(image.base64))return fail('invalid_image');
+  const bytes=Buffer.from(image.base64,'base64');if(bytes.length>5*1024*1024||bytes.toString('base64')!==image.base64)return fail('invalid_image');
+  return {mediaType:image.mediaType,base64:image.base64};
+}
 const STREAM_OUTPUT_LIMIT = 128;
 const nameOK = (value: unknown): value is string => typeof value === 'string' && /^[a-z][a-z0-9_]{1,63}$/.test(value);
 function toolNames(tools: AssistantToolSpec[]) {
@@ -242,7 +269,7 @@ function replayItem(raw:unknown, names:Set<string>, ids:Set<string>):Json {
     fields(row,['type','role','content','id','status','phase']);if(row.role!=='assistant'||!Array.isArray(row.content)||row.content.length>128)fail('invalid_input');
     const content=row.content.map((raw:unknown)=>{const part=object(raw);
       if(part.type==='output_text'){fields(part,['type','text','annotations','logprobs']);if(!textField(part.text))fail('invalid_input');
-        // This text-only client requests no hosted tools or log probabilities. An empty provider-default field is safe.
+        // This client requests no hosted tools or log probabilities. An empty provider-default field is safe.
         for(const field of ['annotations','logprobs'])if(part[field]!==undefined&&part[field]!==null&&(!Array.isArray(part[field])||part[field].length))fail('invalid_input');
         return {...clone(part),text:redactOutgoingText(part.text)};
       }
@@ -257,10 +284,11 @@ function replayItem(raw:unknown, names:Set<string>, ids:Set<string>):Json {
   return fail('invalid_input');
 }
 /** Text/history subset only. No images, hosted tools, custom arbitrary fields or execution is enabled here. */
-export function buildSiwcTextRequest(input: {model: string; instructions?: string; input: unknown[]; tools: AssistantToolSpec[]}) {
+export function buildSiwcTextRequest(input: {model: string; instructions?: string; input: unknown[]; tools: AssistantToolSpec[];image?:{mediaType:string;base64:string};reasoningEffort?:AssistantReasoningEffort}) {
   const names = toolNames(input.tools), ids = new Set<string>(), outstanding = new Set<string>();
   if (!nonempty(input.model, 200) || !Array.isArray(input.input) || !input.input.length) fail('invalid_request');
   if (input.instructions !== undefined && !nonempty(input.instructions, 100000)) fail('invalid_request');
+  if(input.reasoningEffort!==undefined&&!EFFORTS.has(input.reasoningEffort))fail('invalid_request');
   const sanitized:unknown[]=[];
   for (const item of input.input) {
     const row = object(item);
@@ -279,7 +307,13 @@ export function buildSiwcTextRequest(input: {model: string; instructions?: strin
     }
   }
   if (outstanding.size) fail('invalid_input');
+  if(input.image!==undefined){const image=siwcImagePart(input.image),last=object(sanitized[sanitized.length-1]);
+    if(last.role!=='user'&&last.type!=='function_call_output')fail('invalid_image');
+    const user=[...sanitized].reverse().map(object).find(row=>row.role==='user');
+    if(!user||typeof user.content!=='string')return fail('invalid_image');
+    user.content=[{type:'input_text',text:user.content},{type:'input_image',image_url:`data:${image.mediaType};base64,${image.base64}`}];}
   return {model: input.model, ...(input.instructions ? {instructions: redactOutgoingText(input.instructions)} : {}), input: sanitized, store: false, stream: true, include: ['reasoning.encrypted_content'],
+    ...(input.reasoningEffort!==undefined?{reasoning:{effort:input.reasoningEffort}}:{}),
     ...(input.tools.length ? {tools: [{type: 'namespace', name: NAMESPACE, description: 'Modu Vision application tools',
       tools: clone(input.tools).map(tool => ({type: 'function', name: tool.name, description: tool.description, parameters: tool.parameters}))}]} : {})};
 }

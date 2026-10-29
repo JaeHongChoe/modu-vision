@@ -7,6 +7,7 @@ This is controlled process interruption, never physical power-loss evidence.
 import asyncio
 import hashlib
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from functools import wraps
 import json
 import os
 from pathlib import Path
@@ -33,6 +34,313 @@ from backend.tests.runtime_release_fixture import real_classification_checkpoint
 
 _identity_now = time.monotonic
 _IDENTITY_NOTE = 'Original daemon identity failure observations: '
+
+
+
+class _OwnedDaemonTrace:
+    """Bounded stored facts for exactly the first two original daemon handles."""
+    _PHASES = ('init', 'leader_matches', 'observe')
+    _FLAGS = ('group_present', 'session_present', 'root_unknown', 'command_unavailable',
+              'pending_present', 'pending_empty', 'admission_refused')
+    _COUNTS = ('sequence', 'leader_argc', 'registered_count', 'unknown_count', 'remaining_count')
+
+    def __init__(self, handles):
+        self.handles, self._records = handles, {}
+
+    def _index(self, process):
+        return next((index for index, original in enumerate(self.handles[:2]) if process is original), None)
+
+    @staticmethod
+    def _integer(value, *, signed=False):
+        lower = -(1 << 31) if signed else 0
+        return value if type(value) is int and lower <= value < (1 << 31) else None
+
+    @classmethod
+    def _safe_row(cls, row):
+        if type(row) is not dict:
+            return None
+        leader = row.get('leader_state')
+        value = {'phase': row.get('phase') if row.get('phase') in cls._PHASES else 'unavailable',
+                 'leader_state': leader if leader in ('none', 'empty', 'nonempty', 'unavailable') else 'unavailable',
+                 'returncode': cls._integer(row.get('returncode'), signed=True)}
+        value.update({key: cls._integer(row.get(key)) for key in cls._COUNTS})
+        value.update({key: row.get(key) if type(row.get(key)) is bool else None for key in cls._FLAGS})
+        return value
+
+    @classmethod
+    def sanitize(cls, stored):
+        source = stored if type(stored) is dict else {}
+        initial = cls._safe_row(source.get('initial'))
+        classification = 'unclassified'
+        if initial and initial['leader_state'] == 'empty':
+            classification = 'initial_empty_command_observed'
+        elif initial and initial['leader_state'] == 'none' and initial['pending_present'] is True:
+            classification = 'initial_pending_anchor_observed'
+        calls = source.get('calls');calls = calls if type(calls) is dict else {}
+        last = source.get('last');last = last if type(last) is list else []
+        return {'schema': 'modu-vision.daemon-passive-stored-trace/v1',
+            'non_atomic': True, 'ownership_verified': False, 'classification': classification,
+            'initial': initial, 'first_new_unknown': cls._safe_row(source.get('first_new_unknown')),
+            'last': [cls._safe_row(row) for row in last[-8:]],
+            'calls': {phase: cls._integer(calls.get(phase)) for phase in cls._PHASES}}
+
+    def capture(self, owner, phase):
+        data = vars(owner)
+        process = data.get('process')
+        index = self._index(process)
+        if index is None:
+            return
+        process_data = vars(process)
+        ledger = self._records.setdefault(index, {'initial': None, 'first_new_unknown': None,
+            'last': [], 'calls': {name: 0 for name in self._PHASES}, 'previous_unknown': None, 'sequence': 0})
+        ledger['sequence'] += 1
+        ledger['calls'][phase] += 1
+        leader = data.get('leader');argc = None
+        state = 'none' if leader is None else 'unavailable'
+        if type(leader) in (tuple, list) and len(leader) == 2 and type(leader[1]) in (tuple, list):
+            argc = len(leader[1]);state = 'nonempty' if argc else 'empty'
+        unknown = data.get('unknown');pid = process_data.get('pid')
+        count = lambda value, types: len(value) if type(value) in types else None
+        row = self._safe_row({'phase': phase, 'sequence': ledger['sequence'],
+            'leader_state': state, 'leader_argc': argc, 'returncode': process_data.get('returncode'),
+            'group_present': data.get('group') is not None, 'session_present': data.get('session') is not None,
+            'registered_count': count(data.get('members'), (dict,)),
+            'unknown_count': count(unknown, (set, frozenset)),
+            'remaining_count': count(data.get('remaining'), (set, frozenset)),
+            'root_unknown': pid in unknown if type(pid) is int and type(unknown) in (set, frozenset) else None,
+            'command_unavailable': data.get('_leader_command_unavailable'),
+            'pending_present': data['_leader_pending'] is not None if '_leader_pending' in data else None,
+            'pending_empty': data.get('_leader_pending_empty'),
+            'admission_refused': data.get('_leader_admission_refused')})
+        if phase == 'init' and ledger['initial'] is None:
+            ledger['initial'] = row
+        previous = ledger['previous_unknown']
+        if (ledger['first_new_unknown'] is None and type(previous) is int
+                and type(row['unknown_count']) is int and row['unknown_count'] > previous):
+            ledger['first_new_unknown'] = row
+        ledger['previous_unknown'] = row['unknown_count']
+        ledger['last'] = (ledger['last'] + [row])[-8:]
+
+    def wrap(self, original, phase):
+        @wraps(original)
+        def observed(owner, *args, **kwargs):
+            try:
+                return original(owner, *args, **kwargs)
+            finally:
+                try:self.capture(owner, phase)
+                except BaseException:pass  # A diagnostic must not replace result/exception.
+        return observed
+
+    def for_handle(self, process):
+        index = self._index(process)
+        return self.sanitize(self._records[index]) if index in self._records else None
+
+
+def _owned_daemon_outcome_note(outcome, passive_trace=None):
+    """Failure-only stored observations, never new OS reads or raw private bytes."""
+    try:
+        source = outcome if type(outcome) is dict else {}
+        ownership = source.get('ownership')
+        ownership = ownership if type(ownership) is dict else {}
+        def integer(value):
+            return value if type(value) is int and -(1 << 31) <= value < (1 << 31) else None
+        def pids(value):
+            return [pid for pid in value[:8] if type(pid) is int and 0 < pid < (1 << 31)] if type(value) is list else []
+        registered = ownership.get('registered_members')
+        registered = registered if type(registered) is list else []
+        note = {'schema': 'modu-vision.daemon-outcome-failure-summary/v1',
+            'non_atomic': True, 'ownership_verified': False,
+            'status': source.get('status') if source.get('status') in ('completed', 'uncertain', 'timeout', 'cancelled') else 'unavailable',
+            'returncode': integer(source.get('returncode')),
+            'leader_returncode': integer(source.get('leader_returncode')),
+            'pid': integer(source.get('pid')),
+            'registered_member_count': len(registered),
+            'registered_member_pids': pids([row.get('pid') for row in registered[:8] if type(row) is dict]),
+            'unknown_members': pids(ownership.get('unknown_members')),
+            'remaining_members': pids(ownership.get('remaining_members')),
+            'ownership_flags': {key: ownership.get(key) if type(ownership.get(key)) is bool else None
+                for key in ('leader_exit_confirmed', 'observation_failed', 'group_exit_verified',
+                            'process_tree_exit_verified', 'recovery_required', 'termination_attempted',
+                            'termination_failed')}}
+        if passive_trace is not None:
+            note['passive_trace'] = _OwnedDaemonTrace.sanitize(passive_trace)
+        return 'Original owned daemon outcome (no new authority): ' + json.dumps(note, allow_nan=False, separators=(',', ':'))
+    except BaseException:
+        return 'Original owned daemon outcome summary unavailable; original assertion retained'
+
+
+def test_owned_daemon_outcome_failure_summary_is_bounded_and_redacts_private_bytes():
+    outcome = {'status': 'uncertain', 'returncode': 1, 'leader_returncode': 0, 'pid': 733,
+        'stdout': 'PRIVATE-STDOUT', 'stderr': 'PRIVATE-STDERR',
+        'private_diagnostics': '/PRIVATE-DIAGNOSTICS',
+        'ownership': {'registered_members': [{'pid': 800 + index, 'birth': 42.5,
+            'command': ['PRIVATE-TOKEN', '/PRIVATE-PATH']} for index in range(100)],
+            'unknown_members': list(range(900, 1000)), 'remaining_members': list(range(1000, 1100)),
+            'observation_failed': False, 'leader_exit_confirmed': True}}
+    note = _owned_daemon_outcome_note(outcome)
+    value = json.loads(note.split(': ', 1)[1])
+    assert len(note.encode()) < 4096 and 'PRIVATE-' not in note
+    assert value['non_atomic'] is True and value['ownership_verified'] is False
+    assert value['status'] == 'uncertain' and value['returncode'] == 1 and value['leader_returncode'] == 0
+    assert value['registered_member_count'] == 100
+    assert value['registered_member_pids'] == list(range(800, 808))
+    assert value['unknown_members'] == list(range(900, 908))
+    assert value['remaining_members'] == list(range(1000, 1008))
+
+
+
+class _StoredDaemonProcess:
+    def __init__(self, pid):
+        self.pid, self.returncode = pid, None
+        self.args = ['PRIVATE-TOKEN', '/PRIVATE-PATH']
+
+    def poll(self):
+        raise AssertionError('Passive diagnostics may not poll')
+
+    def status(self):
+        raise AssertionError('Passive diagnostics may not query status')
+
+    def cmdline(self):
+        raise AssertionError('Passive diagnostics may not query command')
+
+    def create_time(self):
+        raise AssertionError('Passive diagnostics may not query birth')
+
+
+def _stored_daemon_owner(process, leader):
+    return SimpleNamespace(process=process, leader=leader, group=process.pid, session=process.pid,
+        members={}, unknown=set(), remaining=set(), _leader_command_unavailable=False,
+        _leader_pending=None, _leader_pending_empty=False, _leader_admission_refused=False)
+
+
+def test_passive_daemon_trace_calls_original_once_returns_exact_values_and_ignores_other_handles(monkeypatch):
+    factory = globals().get('_OwnedDaemonTrace')
+    assert factory is not None, 'Bounded stored-state passive trace is missing'
+    first, second, impostor = (_StoredDaemonProcess(733), _StoredDaemonProcess(734), _StoredDaemonProcess(733))
+    handles = [first, second, impostor]
+    trace, calls, traps = factory(handles), [], []
+    leader_result, observe_result = object(), object()
+
+    def forbidden(*_args, **_kwargs):
+        traps.append(True)
+        raise AssertionError('No new OS observation is permitted')
+
+    monkeypatch.setattr(psutil, 'Process', forbidden)
+    monkeypatch.setattr(runtime_deadline, '_group_members', forbidden)
+
+    class Group:
+        def __init__(self, process, module):
+            calls.append(('init', process))
+            self.__dict__.update(vars(_stored_daemon_owner(process, (42.5, ['PRIVATE-TOKEN']))))
+
+        def leader_matches(self):
+            calls.append(('leader_matches', self.process))
+            return leader_result
+
+        def observe(self):
+            calls.append(('observe', self.process))
+            self.unknown.add(self.process.pid)
+            return observe_result
+
+    for method, phase in (('__init__', 'init'), ('leader_matches', 'leader_matches'), ('observe', 'observe')):
+        monkeypatch.setattr(Group, method, trace.wrap(getattr(Group, method), phase))
+    owner, other = Group(first, None), Group(impostor, None)
+    assert owner.leader_matches() is leader_result and owner.observe() is observe_result
+    assert other.leader_matches() is leader_result and other.observe() is observe_result
+    assert calls == [('init', first), ('init', impostor), ('leader_matches', first), ('observe', first),
+                     ('leader_matches', impostor), ('observe', impostor)]
+    assert owner.unknown == {733} and other.unknown == {733} and traps == []
+    stored = trace.for_handle(first)
+    assert stored['initial']['leader_state'] == 'nonempty' and stored['initial']['leader_argc'] == 1
+    assert stored['first_new_unknown']['root_unknown'] is True
+    assert stored['calls'] == {'init': 1, 'leader_matches': 1, 'observe': 1}
+    assert trace.for_handle(second) is None and trace.for_handle(impostor) is None
+
+
+def test_passive_daemon_trace_retains_initial_first_unknown_last_eight_and_no_private_values():
+    factory = globals().get('_OwnedDaemonTrace')
+    assert factory is not None, 'Bounded stored-state passive trace is missing'
+    process = _StoredDaemonProcess(733)
+    trace = factory([process])
+    owner = _stored_daemon_owner(process, (42.5, []))
+    original = lambda _owner: None
+    trace.wrap(original, 'init')(owner)
+    owner.leader = (42.5, ['PRIVATE-TOKEN', '/PRIVATE-PATH'])
+    owner.members = {str(i): {'command': ['PRIVATE-MEMBER']} for i in range(1000)}
+    for index in range(100):
+        owner.unknown.add(733 + index)
+        owner.remaining = set(range(index))
+        trace.wrap(original, 'observe')(owner)
+    process.returncode = 0
+    trace.wrap(original, 'leader_matches')(owner)
+    stored = trace.for_handle(process)
+    assert stored['initial']['leader_state'] == 'empty' and stored['initial']['leader_argc'] == 0
+    assert stored['first_new_unknown']['unknown_count'] == 1
+    assert stored['first_new_unknown']['registered_count'] == 1000
+    assert len(stored['last']) == 8 and stored['last'][-1]['returncode'] == 0
+    assert stored['last'][-1]['unknown_count'] == 100 and stored['calls']['observe'] == 100
+    assert stored['classification'] == 'initial_empty_command_observed'
+    outcome = {'status': 'uncertain', 'returncode': 1, 'leader_returncode': 0, 'pid': 733,
+               'ownership': {'registered_members': [], 'unknown_members': [733]}}
+    stored['PRIVATE-FIELD'] = '/PRIVATE-PATH'
+    stored['last'].append({'phase': 'PRIVATE-TOKEN', 'leader_state': '/PRIVATE-PATH'})
+    note = _owned_daemon_outcome_note(outcome, stored)
+    assert len(note.encode()) < 8192 and 'PRIVATE-' not in note
+    value = json.loads(note.split(': ', 1)[1])
+    assert value['passive_trace']['non_atomic'] is True and value['passive_trace']['ownership_verified'] is False
+    assert len(value['passive_trace']['last']) <= 8
+    assert trace.for_handle(process)['initial']['leader_state'] == 'empty'
+
+
+@pytest.mark.parametrize('initial,pending,expected', [
+    (None, False, 'unclassified'),
+    ((42.5, ['PRIVATE-TOKEN']), False, 'unclassified'),
+    (None, True, 'initial_pending_anchor_observed'),
+])
+def test_passive_daemon_trace_classifies_only_initial_stored_facts(initial, pending, expected):
+    factory = globals().get('_OwnedDaemonTrace')
+    assert factory is not None, 'Bounded stored-state passive trace is missing'
+    process = _StoredDaemonProcess(733)
+    trace = factory([process])
+    owner = _stored_daemon_owner(process, initial)
+    if pending:
+        owner._leader_pending = (42.5, ('PRIVATE-TOKEN',), 123, process.pid)
+    trace.wrap(lambda _owner: None, 'init')(owner)
+    owner.leader = (42.5, [])  # Later empty metadata cannot rewrite the initial fact.
+    owner.unknown.add(process.pid)
+    owner._leader_pending_empty = True
+    owner._leader_admission_refused = True
+    trace.wrap(lambda _owner: False, 'observe')(owner)
+    stored = trace.for_handle(process)
+    assert stored['classification'] == expected
+    assert stored['last'][-1]['pending_empty'] is True and stored['last'][-1]['admission_refused'] is True
+    assert stored['initial']['pending_present'] is pending
+
+
+def test_passive_daemon_trace_diagnostic_failure_does_not_replace_original_result_or_exception(monkeypatch):
+    factory = globals().get('_OwnedDaemonTrace')
+    assert factory is not None, 'Bounded stored-state passive trace is missing'
+    process = _StoredDaemonProcess(733)
+    owner = _stored_daemon_owner(process, None)
+    trace = factory([process])
+    result, original_error, calls = object(), ValueError('synthetic original error'), []
+
+    def failed_capture(*_args):
+        raise AssertionError('Synthetic diagnostic failure')
+
+    def original(_owner):
+        calls.append(True)
+        return result
+
+    def raising(_owner):
+        calls.append(False)
+        raise original_error
+
+    monkeypatch.setattr(trace, 'capture', failed_capture)
+    assert trace.wrap(original, 'observe')(owner) is result
+    with pytest.raises(ValueError) as caught:
+        trace.wrap(raising, 'observe')(owner)
+    assert caught.value is original_error and calls == [True, False]
 
 
 def _identity_for_daemon_test(process, state, case_deadline):
@@ -298,6 +606,61 @@ def _prepare_daemon_command(process, command, deadline):
         time.sleep(min(.025, max(0, deadline - time.monotonic())))
 
 
+@pytest.mark.parametrize('boundary,want', [
+    ('registered_zombie_empty_command', 'exited'),
+    ('live_original_command', 'live'),
+    ('zombie_original_command', 'exited'),
+    ('live_empty_command', 'unknown'),
+    ('live_changed_command', 'unknown'),
+    ('zombie_changed_command', 'unknown'),
+    ('zombie_changed_birth', 'unknown'),
+])
+def test_registered_cpu_member_exit_keeps_live_and_foreign_identity_refusals(tmp_path, monkeypatch, boundary, want):
+    """Linux may return [] for a real zombie; empty live/foreign work is unproven."""
+    if os.name != 'posix':
+        pytest.skip('Original unreaped POSIX child exit boundary')
+    from backend.tests.test_runtime_deadline_identity import cooperative_leader
+
+    original_command = psutil.Process.cmdline
+    with cooperative_leader(tmp_path / boundary) as fixture:
+        process = runtime_deadline.subprocess.Popen(fixture['command'], cwd=fixture['directory'],
+            stdin=runtime_deadline.subprocess.DEVNULL, stdout=runtime_deadline.subprocess.DEVNULL,
+            stderr=runtime_deadline.subprocess.DEVNULL, start_new_session=True)
+        fixture.update(owner=SimpleNamespace(process=process), original_cmdline=original_command)
+        end = time.monotonic() + 3
+        registration = fixture['directory'] / 'registered.json'
+        _poll(registration.exists, bool, end, 'Original CPU child did not register')
+        identity = json.loads(registration.read_text())
+        original = psutil.Process(process.pid)
+        assert identity['nonce'] == fixture['nonce'] and identity['pid'] == process.pid
+        assert identity['birth'] == original.create_time()
+        assert identity['command'] == original_command(original) == fixture['command']
+        assert original.ppid() == os.getpid() and original.status() != psutil.STATUS_ZOMBIE
+        assert os.getpgid(process.pid) == os.getsid(process.pid) == process.pid
+        if boundary.startswith(('registered_zombie', 'zombie')):
+            (fixture['directory'] / 'stop.json').write_text(json.dumps({'nonce': fixture['nonce']}))
+            _poll(original.status, lambda state: state == psutil.STATUS_ZOMBIE, end,
+                  'Original cooperative CPU child did not reach unreaped zombie boundary')
+            assert process.returncode is None  # Do not reap or substitute its result.
+        observed_status = original.status()
+        if boundary == 'zombie_changed_birth':
+            identity = {**identity, 'birth': identity['birth'] - 1}
+
+        def read_command(owner):
+            if owner.pid != process.pid:
+                return original_command(owner)
+            # Preserve the actual OS status/birth/handle. Only model the Linux
+            # [] cmdline read; macOS instead raises ZombieProcess here.
+            assert owner.status() == observed_status
+            if 'original_command' in boundary:
+                return fixture['command']
+            return ['controlled-foreign-command'] if 'changed_command' in boundary else []
+
+        monkeypatch.setattr(psutil.Process, 'cmdline', read_command)
+        owner = SimpleNamespace(module=psutil)
+        assert runtime_deadline._OwnedGroup.member_state(owner, identity) == want
+
+
 def test_owned_real_cpu_daemon_restarts_committed_inbox_result_and_replays_outbox_once(tmp_path, monkeypatch):
     if os.name != 'posix':
         pytest.skip('POSIX owned-process interruption; Windows native scope is separately waived')
@@ -447,6 +810,10 @@ def test_owned_real_cpu_daemon_restarts_committed_inbox_result_and_replays_outbo
     # Observer only: the original production Popen handle and arguments are
     # returned unchanged. No inference/HTTP/store function is substituted.
     monkeypatch.setattr(runtime_deadline.subprocess, 'Popen', observe_real_launch)
+    passive_trace = _OwnedDaemonTrace(handles)
+    for method, phase in (('__init__', 'init'), ('leader_matches', 'leader_matches'), ('observe', 'observe')):
+        monkeypatch.setattr(runtime_deadline._OwnedGroup, method,
+                            passive_trace.wrap(getattr(runtime_deadline._OwnedGroup, method), phase))
     def api(path, post=False, deadline=None, require200=True):
         stop = min(case_deadline - 10, time.monotonic() + 10, deadline if deadline is not None else case_deadline)
         async def request():
@@ -536,7 +903,7 @@ def test_owned_real_cpu_daemon_restarts_committed_inbox_result_and_replays_outbo
         first_thread = attempts[0][0]
         first_thread.join(min(10, max(0, case_deadline - time.monotonic())))
         assert not first_thread.is_alive() and not failures
-        assert outcomes[0]['status'] == 'completed' and outcomes[0]['returncode'] == -signal.SIGKILL
+        assert outcomes[0]['status'] == 'completed' and outcomes[0]['returncode'] == -signal.SIGKILL, _owned_daemon_outcome_note(outcomes[0], passive_trace.for_handle(first))
         assert outcomes[0]['pid'] == first.pid and not outcomes[0].get('private_diagnostics')
         assert owned_inspection_process(identity, state) is None
         assert _raw_state(state / 'inspection_service.sqlite3') == raw
@@ -569,7 +936,7 @@ def test_owned_real_cpu_daemon_restarts_committed_inbox_result_and_replays_outbo
         assert api('/v1/runtime/shutdown', post=True)['status'] == 'stopping'
         attempts[1][0].join(min(10, max(0, case_deadline - time.monotonic())))
         assert not attempts[1][0].is_alive() and not failures
-        assert outcomes[1]['status'] == 'completed' and outcomes[1]['returncode'] == 0
+        assert outcomes[1]['status'] == 'completed' and outcomes[1]['returncode'] == 0, _owned_daemon_outcome_note(outcomes[1], passive_trace.for_handle(second))
         assert outcomes[1]['pid'] == second.pid and not outcomes[1].get('private_diagnostics')
         assert owned_inspection_process(identity2, state) is None
         assert _sha(image) == image_sha and _sha(checkpoint) == checkpoint_sha

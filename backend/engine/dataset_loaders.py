@@ -440,7 +440,9 @@ class ClassificationDataset(Dataset):
         image_size: Optional[Tuple[int, int]] = None,
         max_dim: int = 1600,
         ignore_saved_split: bool = False,
+        input_recipe: Optional[dict] = None,
     ):
+        self.input_recipe = input_recipe
         self.root_dir = Path(root_dir)
         self.split = split
         self.val_split = val_split
@@ -570,7 +572,10 @@ class ClassificationDataset(Dataset):
         rgb = _read_image_rgb(img_path)
         h, w = rgb.shape[:2]
 
-        if self.image_size:
+        if self.input_recipe:
+            from backend.engine.input_preparation import prepare_input
+            rgb, _, _ = prepare_input(rgb, self.input_recipe, image_size=self.image_size)
+        elif self.image_size:
             # The flow inspection node and evaluation resize through the same helper.
             rgb = resize_model_input(rgb, self.image_size)
         elif self.max_dim and max(h, w) > self.max_dim:
@@ -929,7 +934,9 @@ class SegmentationDataset(Dataset):
         transform: Optional[Callable] = None,
         image_size: Optional[Tuple[int, int]] = None,
         max_dim: int = 1600,
+        input_recipe: Optional[dict] = None,
     ):
+        self.input_recipe = input_recipe
         self.transform = transform
         self.image_size = image_size
         self.max_dim = max_dim
@@ -984,7 +991,10 @@ class SegmentationDataset(Dataset):
         if mask_np.shape != (h, w):
             mask_np = cv2.resize(mask_np, (w, h), interpolation=cv2.INTER_NEAREST)
 
-        if self.image_size:
+        if self.input_recipe:
+            from backend.engine.input_preparation import prepare_input
+            rgb, mask_np, _ = prepare_input(rgb, self.input_recipe, task="segmentation", target=mask_np, image_size=self.image_size)
+        elif self.image_size:
             rgb = cv2.resize(rgb, self.image_size, interpolation=cv2.INTER_LINEAR)
             mask_np = cv2.resize(mask_np, self.image_size, interpolation=cv2.INTER_NEAREST)
         elif self.max_dim and max(h, w) > self.max_dim:

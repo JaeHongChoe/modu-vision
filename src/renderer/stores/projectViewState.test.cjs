@@ -35,6 +35,44 @@ test('a stage chosen while the first sync is in flight is kept and remembered, n
  values.clear();const plain=load('./useProjectStore.ts',{...mocks,'../services/api':{...mocks['../services/api'],api:{project:{...mocks['../services/api'].api.project,getCurrent:async()=>project}}}}).useProjectStore;
  await plain.getState().syncCurrentProject();assert.equal(plain.getState().activeStep,1);
 });
+for(const scenario of ['fresh-current-step','fresh-different-step','existing-project'])test(`a stage choice during asset preparation survives the accepted ${scenario} view`,async()=>{
+ const values=new Map(),storage={getItem:key=>values.get(key)||null,setItem:(key,value)=>values.set(key,value)};
+ globalThis.localStorage=storage;
+ load('./projectViewState.ts').rememberProjectStep(storage,project,'local',3);
+ const state=value=>({getState:()=>value,setState:update=>Object.assign(value,update)});
+ let entered,release;const preparing=new Promise(resolve=>entered=resolve),held=new Promise(resolve=>release=resolve);
+ const mocks={'../services/api':{api:{project:{getCurrent:async()=>project,list:async()=>({projects:[]}),prepareContext:async()=>{entered();await held;},acceptContext(_project,apply){apply?.();}}},getApiPersistenceIdentity:()=> 'local'},'./useAnnotationStore':{useAnnotationStore:state({setImages:async()=>true,setTask(){},isDirty:false})},'../services/datasetWorkflow':{},'./useDatasetStore':{useDatasetStore:state({setFolderPath(){},isLoading:false,isSplitting:false,isGenerating:false,ensureImported:async()=>{}})},'./useFlowchartStore':{useFlowchartStore:state({})},'./useTrainingStore':{useTrainingStore:state({})},'./useInspectionRunStore':{useInspectionRunStore:state({})},'./useModelAssistRunStore':{useModelAssistRunStore:state({activeOperations:0})}};
+ const app=load('./useProjectStore.ts',mocks).useProjectStore;
+ if(scenario==='existing-project')app.setState({project,projectDir:project.project_dir,activeStep:3});
+ const syncing=app.getState().syncCurrentProject();
+ try{
+  await preparing;
+  const selected=scenario==='fresh-different-step'?5:1;
+  await app.getState().setStep(selected);
+  release();await syncing;
+  assert.equal(app.getState().activeStep,selected,'the later explicit choice wins at the actual acceptance boundary');
+  const fresh=load('./useProjectStore.ts',mocks).useProjectStore;
+  await fresh.getState().syncCurrentProject();
+  assert.equal(fresh.getState().activeStep,selected,'the chosen stage remains the saved project view');
+ }finally{release();await syncing;}
+});
+for(const selection of ['another-project','cleared-project'])test(`late asset preparation cannot restore a ${selection} selection or its dataset`,async()=>{
+ const values=new Map();globalThis.localStorage={getItem:key=>values.get(key)||null,setItem:(key,value)=>values.set(key,value)};
+ const state=value=>({getState:()=>value,setState:update=>Object.assign(value,update)});
+ let entered,release;const preparing=new Promise(resolve=>entered=resolve),held=new Promise(resolve=>release=resolve),population=[];
+ const mocks={'../services/api':{api:{project:{getCurrent:async()=>project,list:async()=>({projects:[]}),prepareContext:async()=>{entered();await held;},acceptContext(_project,apply){population.push('accept');apply?.();}}},getApiPersistenceIdentity:()=> 'local'},'./useAnnotationStore':{useAnnotationStore:state({setImages:async()=>{population.push('images');return true;},setTask(){},isDirty:false})},'../services/datasetWorkflow':{},'./useDatasetStore':{useDatasetStore:state({setFolderPath(){population.push('folder');},isLoading:false,isSplitting:false,isGenerating:false,ensureImported:async()=>{population.push('import');}})},'./useFlowchartStore':{useFlowchartStore:state({})},'./useTrainingStore':{useTrainingStore:state({})},'./useInspectionRunStore':{useInspectionRunStore:state({})},'./useModelAssistRunStore':{useModelAssistRunStore:state({activeOperations:0})}};
+ const app=load('./useProjectStore.ts',mocks).useProjectStore;app.setState({project,projectDir:project.project_dir,activeStep:3});
+ const syncing=app.getState().syncCurrentProject();
+ try{
+  await preparing;
+  const selected=selection==='another-project'?{...project,id:'new-project',project_dir:'/new-project',source_dataset_dir:'/new-source'}:null;
+  app.setState({project:selected,projectDir:selected?.project_dir??null,activeStep:4});
+  release();await syncing;
+  assert.equal(app.getState().project,selected);assert.equal(app.getState().activeStep,4);
+  assert.deepEqual(population,[],'a retired selection cannot publish old context, images, folder or import');
+  assert.match(app.getState().projectError,/프로젝트 선택이 바뀌었습니다/);
+ }finally{release();await syncing;}
+});
 
 test('language selection survives a fresh store and rejects corrupt preferences',()=>{
  const values=new Map();globalThis.localStorage={getItem:k=>values.get(k)??null,setItem:(k,v)=>values.set(k,v)};

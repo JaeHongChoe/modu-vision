@@ -44,7 +44,13 @@ function savedResult(value: unknown): Record<string, unknown> | null {
   for (const key of ['images','total','samples','known','unknown','processed','generated','succeeded','failed','reviewed','accepted','rejected','errors']) {
     const count = number(receipt[key]); if (count !== null) result[key] = count;
   }
-  for (const key of ['not_started','human_review_verified','truth_review_required','adopted','imported','created']) if (typeof receipt[key] === 'boolean') result[key] = receipt[key];
+  for (const key of ['not_started','human_review_verified','truth_review_required','quality_passed','adopted','imported','created']) if (typeof receipt[key] === 'boolean') result[key] = receipt[key];
+  if(['waiting_input','waiting_resource','waiting_job','failed','needs_reconciliation'].includes(String(receipt.reason_code)))result.reason_code=receipt.reason_code;
+  if(['input_needed','not_qualified','qualified'].includes(String(receipt.quality_status)))result.quality_status=receipt.quality_status;
+  const quality=record(receipt.quality_assessment);
+  if(quality&&['pending','qualified','not_qualified','input_needed'].includes(String(quality.status)))result.quality_assessment={
+    status:quality.status,decision_source:'policy',...(identifier(quality.assessment_id)?{assessment_id:identifier(quality.assessment_id)}:{}),
+    reasons:(Array.isArray(quality.reasons)?quality.reasons:[]).slice(0,3).map(value=>diagnosticText(value,180)).filter(Boolean)};
   if (['idle','queued','preparing','transferring','running','stopping','syncing','cancelling','completed','completed_with_errors','failed','aborted','interrupted','stopped'].includes(String(receipt.status))) result.status = receipt.status;
   if (typeof receipt.report_path === 'string' && receipt.report_path) result.report_saved = true;
   const settings = record(receipt.settings);
@@ -80,7 +86,7 @@ function compactResult(full: Record<string, unknown>, action: string): Record<st
   const detail = record(full.diagnostics);
   const identities = action === 'evaluate_flow' ? ['evaluation_id','cohort_id','version_id'] : action === 'inspect_test' ? ['run_id']
     : action === 'generate_label_drafts' ? ['batch_id','job_id'] : action === 'save_flow' ? ['version_id','pipeline_id','job_id'] : ['job_id','evaluation_id'];
-  return {...Object.fromEntries([...identities,'status','not_started','truth_review_required','reevaluation_verified','current_result','historical_result']
+  return {...Object.fromEntries([...identities,'status','not_started','reason_code','quality_status','quality_passed','quality_assessment','truth_review_required','reevaluation_verified','current_result','historical_result']
     .filter(key => Object.hasOwn(full, key)).map(key => [key, full[key]])),
     ...(detail ? {diagnostics: {source: detail.source, errors: Array.isArray(detail.errors) ? detail.errors.slice(0, 1).map(minimalError) : [],
       reasons: Array.isArray(detail.reasons) ? detail.reasons.slice(0, 1).map(reason => diagnosticText(reason, 80)) : []}} : {}), details_omitted: true};

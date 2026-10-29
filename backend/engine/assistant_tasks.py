@@ -27,13 +27,14 @@ MAX_BODY_BYTES = 65536
 MAX_RECEIPT_BYTES = 16384
 MAX_RECORD_BYTES = 512 * 1024
 MAX_TASKS = 256
-ACTIONS = frozenset(('create_project', 'import_dataset', 'save_split', 'configure_training',
+ACTIONS = frozenset(('create_project', 'import_dataset', 'save_split', 'configure_training', 'configure_input_recipe',
     'generate_label_drafts', 'start_training', 'evaluate_model', 'save_flow',
     'evaluate_flow', 'inspect_test', 'export_report', 'open_step'))
 # Only an action allowed to alter the selected project/source/settings can
 # advance the opaque local execution fence. The original approval stays fixed.
-BINDING_ACTIONS = frozenset(('create_project', 'import_dataset', 'save_split', 'configure_training', 'start_training'))
-EVENTS = frozenset(('approve', 'begin_step', 'complete_step', 'wait_step', 'pause',
+BINDING_ACTIONS = frozenset(('create_project', 'import_dataset', 'save_split', 'configure_training', 'configure_input_recipe', 'start_training'))
+EXECUTION_POLICY_VERSION = 'continuous-execution-v1'
+EVENTS = frozenset(('approve', 'authorize', 'recheck', 'quality_result', 'begin_step', 'complete_step', 'wait_step', 'pause',
                     'resume', 'fail_step', 'reconcile_step', 'record_evidence'))
 STATUSES = frozenset(('draft', 'ready', 'running', 'waiting_human', 'waiting_job',
                      'paused', 'needs_reconciliation', 'failed', 'completed'))
@@ -157,6 +158,13 @@ def _args(action, args):
         if 'preset' in args: _enum(args['preset'], {'fast', 'precision'})
         if 'device' in args: _enum(args['device'], {'auto', 'cpu', 'cuda', 'mps'})
         if 'batch_size' in args: _number(args['batch_size'], 1, 128, integer=True)
+    elif action == 'configure_input_recipe':
+        _object(args, ('input_recipe',))
+        from backend.engine.input_preparation import canonical_recipe
+        try:
+            if canonical_recipe(args['input_recipe']) is None: raise ValueError('A recipe is required')
+        except (ValueError, TypeError, KeyError) as exc:
+            raise TaskError(str(exc)) from exc
     elif action == 'generate_label_drafts':
         _object(args, (), ('mode', 'job_id', 'threshold', 'prompt'))
         if 'mode' in args: _enum(args['mode'], {'trained', 'phrase'})
@@ -200,11 +208,12 @@ def validate_plan(value):
 
 def validate_event(value):
     _object(value, ('type', 'binding', 'expected_revision'),
-            ('step_id', 'attempt_id', 'receipt', 'message', 'binding_after', 'wait_kind', 'confirmed'))
+            ('step_id', 'attempt_id', 'receipt', 'message', 'binding_after', 'wait_kind', 'confirmed', 'authorization_source'))
     _enum(value['type'], EVENTS)
     _text(value['binding'], 16384)
     _number(value['expected_revision'], 1, 2**53-1, integer=True)
     if 'confirmed' in value and type(value['confirmed']) is not bool: raise TaskError('Confirmation must be a boolean')
+    if 'authorization_source' in value: _enum(value['authorization_source'], {'user_request', 'oneclick'})
     if 'message' in value: _text(value['message'], 2000, minimum=0)
     if 'binding_after' in value: _text(value['binding_after'], 16384)
     if 'wait_kind' in value: _enum(value['wait_kind'], {'human', 'job'})
@@ -226,21 +235,22 @@ def validate_event(value):
         if len(_canonical(_json(value['receipt']))) > MAX_RECEIPT_BYTES: raise TaskError('Task receipt exceeds 16 KiB')
     kind = value['type']
     extras = {
-        'approve': {'confirmed', 'message'}, 'pause': {'message'}, 'resume': {'confirmed', 'message'},
+        'approve': {'confirmed', 'message'}, 'authorize': {'authorization_source', 'message'}, 'recheck': {'message'}, 'pause': {'message'}, 'resume': {'confirmed', 'message'},
         'begin_step': {'step_id', 'attempt_id', 'message'},
         'complete_step': {'step_id', 'attempt_id', 'receipt', 'message', 'binding_after'},
         'wait_step': {'step_id', 'attempt_id', 'receipt', 'message', 'wait_kind', 'binding_after'},
         'fail_step': {'step_id', 'attempt_id', 'message'},
         'record_evidence': {'step_id', 'attempt_id', 'receipt', 'message'},
+        'quality_result': {'step_id', 'attempt_id', 'receipt'},
         'reconcile_step': {'step_id', 'attempt_id', 'receipt', 'message', 'binding_after', 'wait_kind'},
     }
     if value.keys() - {'type', 'binding', 'expected_revision'} - extras[kind]:
         raise TaskError('Task event fields do not match this transition')
-    if kind in {'begin_step', 'complete_step', 'wait_step', 'fail_step', 'reconcile_step', 'record_evidence'}:
+    if kind in {'begin_step', 'complete_step', 'wait_step', 'fail_step', 'reconcile_step', 'record_evidence', 'quality_result'}:
         if not all(key in value for key in ('step_id', 'attempt_id')): raise TaskError('Step and attempt identifiers are required')
     elif any(key in value for key in ('step_id', 'attempt_id', 'receipt', 'binding_after', 'wait_kind')):
         raise TaskError('This task event cannot modify a step')
-    if kind in {'complete_step', 'wait_step'} and 'receipt' not in value:
+    if kind in {'complete_step', 'wait_step', 'quality_result'} and 'receipt' not in value:
         raise TaskError('Verified action receipts are required')
     if kind == 'record_evidence' and not value.get('receipt'):
         raise TaskError('Partial execution evidence requires a nonempty receipt')
@@ -290,7 +300,7 @@ def _completion_evidence(receipt):
     if 'not_started' in receipt and type(receipt['not_started']) is not bool:
         raise TaskError('The not_started marker must be a boolean')
     observations = {key: value for key, value in receipt.items()
-                    if key not in {'not_started', 'status', 'message', 'error', 'unstarted_claim', 'unstarted_claim_history'}}
+                    if key not in {'not_started', 'status', 'message', 'error', 'reason_code', 'unstarted_claim', 'unstarted_claim_history'}}
     if receipt.get('not_started') is True or not any(value is not None and value != '' and value != {} and value != [] for value in observations.values()):
         raise TaskError('Completion or job waiting requires verified action evidence')
 
@@ -400,7 +410,7 @@ class TaskLedger:
             original = validate_plan(stored['plan'])
             task = stored['task']
             _object(task, ('schema_version', 'id', 'revision', 'status', 'goal', 'plan_sha256', 'binding', 'steps',
-                           'approval', 'current_step_id', 'message', 'created_at', 'updated_at'))
+                           'approval', 'current_step_id', 'message', 'created_at', 'updated_at'), ('authorization',))
             sha = hashlib.sha256(_canonical(original)).hexdigest()
             if (stored['scope'] != scope.document() or task['id'] != identifier or task['schema_version'] != 1
                 or task['plan_sha256'] != sha or task['goal'] != original['goal']
@@ -416,6 +426,15 @@ class TaskLedger:
                 _object(approval, ('plan_sha256', 'binding', 'confirmed_at'))
                 if approval['plan_sha256'] != sha or approval['binding'] != original['binding'] or not approval['confirmed_at']:
                     raise ValueError('grant changed')
+            authorization = task.get('authorization')
+            if authorization is not None:
+                _object(authorization, ('source', 'scope', 'plan_sha256', 'binding', 'policy_version', 'authorized_at', 'allowed_steps'))
+                if (authorization['source'] not in {'user_request', 'oneclick'} or authorization['scope'] != scope.document()
+                    or authorization['plan_sha256'] != sha or authorization['binding'] != original['binding']
+                    or authorization['policy_version'] != EXECUTION_POLICY_VERSION or approval is not None
+                    or authorization['allowed_steps'] != [step['id'] for step in task['steps']]):
+                    raise ValueError('execution authorization changed')
+                _text(authorization['authorized_at'], 64)
             _text(task['created_at'], 64)
             _text(task['updated_at'], 64)
             if task['message'] is not None: _text(task['message'], 2000, minimum=0)
@@ -445,9 +464,9 @@ class TaskLedger:
             active = next((step for step in task['steps'] if step['id'] == task['current_step_id']), None)
             if task['current_step_id'] is not None and active is None: raise ValueError('unknown active step')
             if task['status'] == 'draft':
-                if approval is not None or task['current_step_id'] is not None or any(step['status'] != 'pending' for step in task['steps']):
+                if approval is not None or authorization is not None or task['current_step_id'] is not None or any(step['status'] != 'pending' for step in task['steps']):
                     raise ValueError('unapproved execution')
-            elif approval is None: raise ValueError('missing approval')
+            elif approval is None and authorization is None: raise ValueError('missing execution grant')
             if task['status'] == 'completed':
                 if active is not None or any(step['status'] != 'completed' for step in task['steps']):
                     raise ValueError('incomplete completion')
@@ -491,7 +510,7 @@ class TaskLedger:
         timestamp = _now()
         task = {'schema_version': 1, 'id': 'task_'+uuid.uuid4().hex, 'revision': 1,
             'status': 'draft', 'goal': original['goal'], 'plan_sha256': hashlib.sha256(_canonical(original)).hexdigest(),
-            'binding': original['binding'], 'approval': None, 'current_step_id': None, 'message': None,
+            'binding': original['binding'], 'approval': None, 'authorization': None, 'current_step_id': None, 'message': None,
             'created_at': timestamp, 'updated_at': timestamp,
             'steps': [{**copy.deepcopy(step), 'id': 'step_'+uuid.uuid4().hex, 'status': 'pending',
                        'attempt_id': None, 'receipt': None, 'error': None} for step in original['steps']]}
@@ -519,32 +538,60 @@ class TaskLedger:
             task = stored['task']
             _conflict(task['revision'] == event['expected_revision'], 'Task revision changed; read the latest task')
             _conflict(task['binding'] == event['binding'], 'Task execution context changed')
-            self._transition(task, event)
+            self._transition(task, event, scope)
             task['revision'] += 1
             task['updated_at'] = _now()
             self._write(folder, stored)
             return copy.deepcopy(task)
 
     @staticmethod
-    def _transition(task, event):
+    def _transition(task, event, scope=None):
         kind = event['type']
         status = task['status']
+        if kind == 'quality_result':
+            step = next((row for row in task['steps'] if row['id'] == event['step_id']), None)
+            assessment = event['receipt'].get('quality_assessment')
+            _conflict(task.get('authorization') is not None and step is not None and step['status'] == 'completed'
+                      and step['attempt_id'] == event['attempt_id'] and step['action'] in {'evaluate_model', 'evaluate_flow'}
+                      and isinstance(assessment, dict) and set(event['receipt']) == {'quality_assessment'}
+                      and assessment.get('evaluation_id') == (step['receipt'] or {}).get('evaluation_id')
+                      and assessment.get('decision_source') == 'policy' and assessment.get('status') in {'qualified', 'not_qualified', 'input_needed'}
+                      and re.fullmatch(r'quality_[a-f0-9]{32}', str(assessment.get('assessment_id'))),
+                      'Quality observations require a matching completed evaluation and durable policy assessment')
+            step['receipt'] = _merge_evidence(step['receipt'], event['receipt'])
+            return
         _conflict(status != 'completed', 'A completed task cannot run again')
         active = next((step for step in task['steps'] if step['id'] == task['current_step_id']), None)
         if active and active['status'] == 'waiting_human' and status != 'needs_reconciliation':
-            _conflict(kind in {'pause', 'resume'}, 'Human waiting steps require explicit confirmed resume before any further transition')
+            _conflict(kind in {'pause', 'resume', 'recheck'}, 'Human waiting steps require explicit confirmed resume before any further transition')
         if kind == 'approve':
             _conflict(status == 'draft' and event.get('confirmed') is True and task['approval'] is None,
                       'A person must confirm this draft plan')
             task['approval'] = {'plan_sha256': task['plan_sha256'], 'binding': task['binding'], 'confirmed_at': _now()}
             task['status'] = 'ready'
+        elif kind == 'authorize':
+            _conflict(status == 'draft' and task['approval'] is None and task.get('authorization') is None
+                      and event.get('authorization_source') in {'user_request', 'oneclick'} and scope is not None,
+                      'Only a new execution request can authorize a draft plan')
+            task['authorization'] = {'source': event['authorization_source'], 'scope': scope.document(),
+                'plan_sha256': task['plan_sha256'], 'binding': task['binding'],
+                'allowed_steps': [step['id'] for step in task['steps']],
+                'policy_version': EXECUTION_POLICY_VERSION, 'authorized_at': _now()}
+            task['status'] = 'ready'
+        elif kind == 'recheck':
+            receipt = active['receipt'] if active else None
+            _conflict(status == 'waiting_human' and task.get('authorization') is not None
+                      and active is not None and active['status'] == 'waiting_human' and receipt
+                      and receipt.get('not_started') is True and receipt.get('reason_code') in {'waiting_input', 'waiting_resource'},
+                      'Only an authorized no-effect prerequisite wait can be rechecked automatically')
+            task['status'] = 'needs_reconciliation'
         elif kind == 'pause':
             _conflict(status not in {'draft', 'failed', 'paused'}, 'This task cannot be paused')
             task['status'] = 'paused'
             for step in task['steps']:
                 if step['status'] == 'running': step['status'] = 'uncertain'
         elif kind == 'resume':
-            _conflict(task['approval'] is not None and status in {'paused', 'running', 'waiting_human', 'waiting_job', 'needs_reconciliation'},
+            _conflict((task['approval'] is not None or task.get('authorization') is not None) and status in {'paused', 'running', 'waiting_human', 'waiting_job', 'needs_reconciliation'},
                       'This task cannot be resumed without a confirmed plan')
             active = next((step for step in task['steps'] if step['id'] == task['current_step_id']), None)
             if active:
@@ -554,7 +601,7 @@ class TaskLedger:
                 task['status'] = 'needs_reconciliation'
             else: task['status'] = 'ready'
         else:
-            _conflict(task['approval'] is not None, 'The task plan has not been confirmed')
+            _conflict(task['approval'] is not None or task.get('authorization') is not None, 'The task plan has no execution authorization')
             step = next((item for item in task['steps'] if item['id'] == event['step_id']), None)
             _conflict(step is not None, 'Unknown plan step')
             if kind == 'begin_step':

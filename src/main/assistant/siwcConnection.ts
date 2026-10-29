@@ -5,16 +5,16 @@
 import type {MaybePromise} from './keyStore';
 import http, {type Server} from 'node:http';
 import {createHash, type JsonWebKey} from 'node:crypto';
-import type {AssistantChatgptRecoveryState, AssistantError, AssistantMessage, AssistantToolSpec} from '../../types/electron';
+import type {AssistantChatgptRecoveryState, AssistantError, AssistantMessage, AssistantModel, AssistantModelCapabilities, AssistantReasoningEffort, AssistantToolSpec} from '../../types/electron';
 import {ProviderError, assistantError, type Completion} from './providers';
 import {acceptAuthorizationTokens, buildSiwcTextRequest, createAuthorizationAttempt, readSiwcResponse, siwcResponseError,
-  SiwcProtocolError, SiwcTokenSession, type SiwcIdentity, type SiwcTokens} from './siwcProtocol';
+  siwcModelCapabilities, SiwcProtocolError, SiwcTokenSession, type SiwcIdentity, type SiwcTokens} from './siwcProtocol';
 
 const AUTH = 'https://auth.openai.com', API = 'https://api.openai.com/v1';
 const DISCOVERY = `${AUTH}/.well-known/openid-configuration`, TOKEN = `${AUTH}/api/accounts/oauth/token`;
 const MODEL_CATALOG_MAX_BYTES = 2 * 1024 * 1024;
 const TEXT_COMPLETION_TIMEOUT_MS = 90_000;
-type Account = {recordId:string;label:string;model:string;signedIn:boolean;planUsageEnabled:boolean;planUsageAcknowledged?:boolean;usagePaused?:boolean};
+type Account = {recordId:string;label:string;model:string;signedIn:boolean;planUsageEnabled:boolean;planUsageAcknowledged?:boolean;usagePaused?:boolean;capabilities?:AssistantModelCapabilities};
 export interface SiwcConnectionStore {
   state():MaybePromise<{accounts:Account[];active:string|null;encryptionAvailable:boolean}>;
   peekState?():MaybePromise<{accounts:Account[];active:string|null;encryptionAvailable:boolean}>;
@@ -110,9 +110,10 @@ export class SiwcConnection {
   private blocked=new Set<string>();
   private unsafeCredentials=new Set<string>();
   private listed=new Map<string,Set<string>>();
+  private catalog=new Map<string,Map<string,AssistantModelCapabilities>>();
   private connected=new Set<(recordId:string)=>MaybePromise<void>>();
   /** Receipts bind exact validated provider output to this recipient authority. Renderer-supplied opaque data is never trusted. */
-  private replayReceipts=new Map<string,string>();
+  private replayReceipts=new Map<string,{authority:string;request:string}>();
   private discovered:Discovery|null=null;
   private jwks:{keys:JsonWebKey[]}|null=null;
   constructor(private readonly deps:{store:SiwcConnectionStore;openExternal:(url:string)=>Promise<unknown>|unknown;fetchImpl?:typeof fetch;now?:()=>number;timeoutMs?:number;attemptTimeoutMs?:number;credentialOwner?:SiwcCredentialOwner}) {
@@ -124,11 +125,12 @@ export class SiwcConnection {
   }
   async state():Promise<SiwcConnectionState> {
     if(this.disposed)return {accounts:[],active:null,encryptionAvailable:false,status:'idle'};
-    try {const raw=(await this.store.peekState?.())??(await this.store.state()),state={...raw,accounts:raw.accounts.map(a=>this.blocked.has(a.recordId)?{...a,signedIn:false,planUsageEnabled:false}:a)},signed=state.accounts.some(a=>a.recordId===state.active&&a.signedIn);
+    try {const raw=(await this.store.peekState?.())??(await this.store.state()),state={...raw,accounts:raw.accounts.map(a=>({...a,capabilities:this.capabilities(a.recordId,a.model),...(this.blocked.has(a.recordId)?{signedIn:false,planUsageEnabled:false}:{})}))},signed=state.accounts.some(a=>a.recordId===state.active&&a.signedIn);
       if(this.disposed)return {accounts:[],active:null,encryptionAvailable:false,status:'idle'};
       return {...state,status:this.status==='idle'&&signed?'connected':this.status,...(this.error?{error:{...this.error}}:{}),...(this.revocation!==undefined?{remoteRevocationConfirmed:this.revocation}:{})};
     } catch(error) {let recovery:AssistantChatgptRecoveryState|undefined;try{recovery=(await this.store.recoveryStatus?.());}catch{}return {accounts:[],active:null,encryptionAvailable:false,status:'error',error:siwcConnectionError(error),...(recovery?{recovery}:{})};}
   }
+  private capabilities(recordId:string,model:string):AssistantModelCapabilities {return structuredClone(this.catalog.get(recordId)?.get(model)??siwcModelCapabilities(model));}
   /** The only signal that may make ChatGPT the chosen recipient: a login that was saved and activated (never a start or a failure). */
   onConnected(listener:(recordId:string)=>MaybePromise<void>):()=>void {this.connected.add(listener);return ()=>{this.connected.delete(listener);};}
   /** Opaque recipient binding; no user identity, token or stable subject appears in this value. */
@@ -143,7 +145,12 @@ export class SiwcConnection {
   private closeAttempt() {const attempt=this.attempt;this.attempt=null;if(!attempt)return;clearTimeout(attempt.timer);attempt.controller.abort();attempt.server.close();attempt.server.closeIdleConnections();}
   private invalidate() {this.revision++;this.generation++;this.replayReceipts.clear();this.closeAttempt();this.stopRequests();this.error=undefined;this.revocation=undefined;}
   private replayFingerprint(replay:unknown):string {if(!Array.isArray(replay))throw protocol('invalid_input');return createHash('sha256').update(JSON.stringify(replay)).digest('hex');}
-  private receipt(replay:unknown, binding:string) {const hash=this.replayFingerprint(replay);this.replayReceipts.set(hash,binding);if(this.replayReceipts.size>128)this.replayReceipts.delete(this.replayReceipts.keys().next().value!);}
+  private requestFingerprint(input:unknown[],body:{model:string;instructions?:string;tools?:unknown;reasoning?:unknown}):string {
+    const canonical=(value:unknown):unknown=>Array.isArray(value)?value.map(canonical):value&&typeof value==='object'
+      ?Object.fromEntries(Object.keys(value).sort().map(key=>[key,canonical((value as Record<string,unknown>)[key])])):value;
+    return createHash('sha256').update(JSON.stringify(canonical({model:body.model,instructions:body.instructions,tools:body.tools,reasoning:body.reasoning,input}))).digest('hex');
+  }
+  private receipt(replay:unknown, binding:string,request:string) {const hash=this.replayFingerprint(replay);this.replayReceipts.set(hash,{authority:binding,request});if(this.replayReceipts.size>128)this.replayReceipts.delete(this.replayReceipts.keys().next().value!);}
   private failure(error:unknown) {this.status='error';this.error=siwcConnectionError(error);}
   private async operation<T>(run:(signal:AbortSignal)=>Promise<T>, options:{signal?:AbortSignal;timeoutMs?:number}={}):Promise<T> {
     this.assertOpen();const ms=options.timeoutMs??this.timeoutMs;if(!Number.isInteger(ms)||ms<1||ms>120000)throw protocol('invalid_timeout');
@@ -298,28 +305,34 @@ export class SiwcConnection {
       }finally{owned.refresh=null;}})();}
     const next=await owned.refresh;if(signal.aborted||!ownerCurrent()||this.disposed)throw protocol('cancelled');if(!next.planUsageEnabled)throw protocol('plan_scope_missing');return next;
   }
-  async listModels():Promise<{id:string;label:string}[]> {
+  async listModels():Promise<AssistantModel[]> {
     const current=this.currentOperation();
     let responseId:string|undefined;
     try {const account=(await this.account()),binding=(await this.authority());current();return await this.operation(async signal=>{const token=await this.access(account.recordId,signal,this.timeoutMs);
         current();if(signal.aborted||(await this.authority())!==binding)throw protocol('cancelled');const response=await this.request(`${API}/models`,{method:'GET',headers:{Accept:'application/json',Authorization:`Bearer ${token.accessToken}`}},signal);responseId=requestId(response);const raw=await this.json(response,signal,MODEL_CATALOG_MAX_BYTES);
         if(response.status!==200)throw this.httpError(response.status,raw);const list=obj(raw).models;if(!Array.isArray(list)||list.length>1000)throw protocol('bad_response');
-        const names=new Set<string>(),models:{id:string;label:string}[]=[];
+        const names=new Set<string>(),models:AssistantModel[]=[],capabilities=new Map<string,AssistantModelCapabilities>();
         for(const value of list){const row=obj(value);if(row.visibility!=='list')continue;if(!validModel(row.slug)||names.has(row.slug))throw protocol('bad_response');names.add(row.slug);
-          const label=typeof row.display_name==='string'&&row.display_name.trim().length>0&&row.display_name.length<=200?row.display_name.replace(/[\u0000-\u001f\u007f]/g,' ').trim():row.slug;models.push({id:row.slug,label});}
-        current();if(signal.aborted||(await this.authority())!==binding)throw protocol('cancelled');this.listed.set(account.recordId,names);return models;
+          const label=typeof row.display_name==='string'&&row.display_name.trim().length>0&&row.display_name.length<=200?row.display_name.replace(/[\u0000-\u001f\u007f]/g,' ').trim():row.slug,caps=siwcModelCapabilities(row.slug,row);capabilities.set(row.slug,caps);models.push({id:row.slug,label,capabilities:caps});}
+        current();if(signal.aborted||(await this.authority())!==binding)throw protocol('cancelled');this.listed.set(account.recordId,names);this.catalog.set(account.recordId,capabilities);return models;
       });}catch(error){throw new ProviderError({...siwcConnectionError(error),...(responseId?{requestId:responseId}:{})});}
   }
-  async complete(input:{system:string;messages:AssistantMessage[];tools:AssistantToolSpec[];signal?:AbortSignal;timeoutMs?:number}):Promise<Completion> {
+  async complete(input:{system:string;messages:AssistantMessage[];tools:AssistantToolSpec[];signal?:AbortSignal;timeoutMs?:number;image?:{mediaType:'image/png'|'image/jpeg'|'image/webp';base64:string};reasoningEffort?:AssistantReasoningEffort}):Promise<Completion> {
     const current=this.currentOperation();
     let responseId:string|undefined,accountId:string|undefined;
-    try {if(obj(input).image!==undefined)throw new ProviderError(assistantError('image_refused'));const account=(await this.account(true)),binding=(await this.authority()),timeoutMs=input.timeoutMs??this.deps.timeoutMs??TEXT_COMPLETION_TIMEOUT_MS;
+    try {const account=(await this.account(true)),binding=(await this.authority()),timeoutMs=input.timeoutMs??this.deps.timeoutMs??TEXT_COMPLETION_TIMEOUT_MS,caps=this.capabilities(account.recordId,account.model);
+      if(input.image!==undefined&&caps.imageInput!==true)throw new ProviderError(assistantError('image_refused',{detail:'model_image_capability_unconfirmed'}));
+      if(input.reasoningEffort!==undefined&&!caps.reasoningEfforts?.includes(input.reasoningEffort))throw new ProviderError(assistantError('invalid_input',{detail:'model_reasoning_effort_unsupported'}));
       current();const accessTimeoutMs=Math.min(timeoutMs,this.timeoutMs);
-      accountId=account.recordId;const history:unknown[]=[];
-      for(const message of input.messages){if(message.role==='user')history.push({role:'user',content:message.text});else if(message.role==='tool')history.push({type:'function_call_output',call_id:message.toolCallId,output:message.content});
-        else if(message.replay!==undefined){if(this.replayReceipts.get(this.replayFingerprint(message.replay))!==binding)throw protocol('invalid_input');history.push(...structuredClone(message.replay as unknown[]));}
-        else {if(message.text)history.push({role:'assistant',content:message.text});for(const call of message.toolCalls||[])history.push({type:'function_call',namespace:'modu_vision',name:call.name,call_id:call.id,arguments:JSON.stringify(call.arguments)});}}
-      const body=buildSiwcTextRequest({model:account.model,instructions:input.system,input:history,tools:input.tools});
+      accountId=account.recordId;const history:unknown[]=[],receipts:{request:string;start:number;messageIndex:number}[]=[];
+      const imageFollowup=input.image!==undefined&&input.messages[input.messages.length-1]?.role==='tool';
+      let lastUser=-1;input.messages.forEach((message,index)=>{if(message.role==='user')lastUser=index;});
+      for(const [messageIndex,message] of input.messages.entries()){if(message.role==='user')history.push({role:'user',content:message.text});else if(message.role==='tool')history.push({type:'function_call_output',call_id:message.toolCallId,output:message.content});
+        else if(message.replay!==undefined){const receipt=this.replayReceipts.get(this.replayFingerprint(message.replay));if(receipt?.authority!==binding)throw protocol('invalid_input');receipts.push({request:receipt.request,start:history.length,messageIndex});history.push(...structuredClone(message.replay as unknown[]));}
+        else {if(imageFollowup&&messageIndex>lastUser&&message.toolCalls?.length)throw protocol('invalid_input');if(message.text)history.push({role:'assistant',content:message.text});for(const call of message.toolCalls||[])history.push({type:'function_call',namespace:'modu_vision',name:call.name,call_id:call.id,arguments:JSON.stringify(call.arguments)});}}
+      const body=buildSiwcTextRequest({model:account.model,instructions:input.system,input:history,tools:input.tools,image:input.image,reasoningEffort:input.reasoningEffort});
+      if(imageFollowup){const currentReceipts=receipts.filter(receipt=>receipt.messageIndex>lastUser);
+        if(!currentReceipts.length||currentReceipts.some(receipt=>receipt.request!==this.requestFingerprint(body.input.slice(0,receipt.start),body)))throw protocol('invalid_input');}
       return await this.operation(async signal=>{
         const token=await this.operation(accessSignal=>this.access(account.recordId,accessSignal,accessTimeoutMs),{signal,timeoutMs:accessTimeoutMs});
         current();if(signal.aborted||(await this.authority())!==binding)throw protocol('cancelled');
@@ -332,7 +345,7 @@ export class SiwcConnection {
         async function* source(){const reader=stream.getReader();try{while(true){const part=await reader.read();if(part.done)return;yield part.value;}}finally{try{void reader.cancel().catch(()=>undefined);}catch{}}}
         const result=await readSiwcResponse(source(),{tools:input.tools,signal,timeoutMs,httpStatus:response.status});current();if(signal.aborted||(await this.authority())!==binding)throw protocol('cancelled');
         if(result.text===''&&result.toolCalls.length===0)throw new SiwcProtocolError('empty_response','fix_request',response.status);
-        this.receipt(result.replay,binding);
+        this.receipt(result.replay,binding,this.requestFingerprint(body.input,body));
         return {text:result.text,toolCalls:result.toolCalls,replay:result.replay,stop:result.toolCalls.length?'tool':'end'};
       },{signal:input.signal,timeoutMs});
     }catch(error){if(accountId&&error instanceof SiwcProtocolError&&error.code==='subscription_sharing_usage_limit_exceeded'){(await this.store.setUsagePaused(accountId,true));if(this.deps.credentialOwner)this.deps.credentialOwner.revision++;this.stopRequests();}throw new ProviderError({...siwcConnectionError(error),...(responseId?{requestId:responseId}:{})});}

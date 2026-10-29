@@ -4,6 +4,7 @@
  */
 
 import { create } from 'zustand';
+import type {FixedInputRecipe} from '../components/training/inputPreparation';
 import type { HardwareStats, TrainingPreset, VisionTask } from '../types';
 import { api } from '../services/api';
 import { useComputeStore } from './useComputeStore';
@@ -92,6 +93,10 @@ const observationFields = (job: any) => ({
 });
 
 interface TrainingState {
+  inputRecipe: FixedInputRecipe | null;
+  inputRecipeScope: string | null;
+  inputRecipeSha256: string | null;
+  setInputRecipe: (scope:string, recipe:FixedInputRecipe|null, sha256:string|null)=>void;
   jobId: string | null;
   warmStartParentJobId: string | null;
   jobComputeProfileId: string | null;
@@ -167,6 +172,8 @@ async function waitForStoppedJob(jobId: string): Promise<TrainingStatus> {
 // 시작/중단 요청, 상태 조회, 실시간 이벤트를 이 저장소의 단일 작업 상태로 모은다.
 export const useTrainingStore = create<TrainingState>((set, get) => ({
   jobId: null,
+  inputRecipe: null, inputRecipeScope: null, inputRecipeSha256: null,
+  setInputRecipe: (inputRecipeScope,inputRecipe,inputRecipeSha256)=>set({inputRecipeScope,inputRecipe,inputRecipeSha256}),
   warmStartParentJobId: null,
   jobComputeProfileId: null,
   jobComputeLabel: 'This computer',

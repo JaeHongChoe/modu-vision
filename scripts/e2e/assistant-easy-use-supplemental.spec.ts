@@ -115,7 +115,23 @@ test('ChatGPT prefill updates an already open split bar without saving; draft im
   await assistant.getByRole('textbox', {name: '도우미에게 묻기', exact: true}).fill('지금 열린 이미지를 설명해 주세요.');
   await expect(assistant.getByRole('button', {name: '이미지와 함께 묻기', exact: true})).toHaveCount(0);
   await expect(assistant.getByRole('group', {name: '이미지 보내기 확인', exact: true})).toHaveCount(0);
-  await expect(assistant).toContainText('현재 텍스트 질문만 지원합니다');
+  // This recipient is explicitly not image-capable. The new multimodal UI must
+  // refuse its pixels while preserving the text-only prefill above, rather than
+  // claiming that every ChatGPT model is text-only.
+  const imageControls=assistant.getByRole('region', {name: '질문에 이미지 첨부', exact: true});
+  await expect(imageControls).toContainText('지원 정보가 없는 모델에는 이미지를 보내지 않습니다.');
+  await expect(assistant.getByLabel('도우미 이미지 파일 선택', {exact: true})).toBeDisabled();
+  await expect(assistant.getByRole('button', {name: '이미지 첨부', exact: true})).toBeDisabled();
+  await expect(assistant.getByRole('button', {name: '현재 이미지 첨부', exact: true})).toBeDisabled();
+  const pastedImage=fs.readFileSync(originalFiles[0].path);
+  await assistant.getByRole('textbox', {name: '도우미에게 묻기', exact: true}).evaluate((element, bytes) => {
+    const clipboard=new DataTransfer();
+    clipboard.items.add(new File([new Uint8Array(bytes)],'unsupported-model-fixture.png',{type:'image/png'}));
+    element.dispatchEvent(new ClipboardEvent('paste',{clipboardData:clipboard,bubbles:true,cancelable:true}));
+  },Array.from(pastedImage));
+  await expect(assistant.getByAltText('첨부한 이미지', {exact: true})).toHaveCount(0);
+  await expect(assistant.getByRole('button', {name: '첨부 해제', exact: true})).toHaveCount(0);
+  await expect(assistant.getByRole('textbox', {name: '도우미에게 묻기', exact: true})).toHaveValue('지금 열린 이미지를 설명해 주세요.');
   const nextAnnotations=page.waitForResponse(response=>new URL(response.url()).pathname.startsWith('/api/annotations/')
     && new URL(response.url()).searchParams.get('file_path')?.endsWith('NG-01.png')===true && response.request().method()==='GET');
   await page.getByLabel('Next image or page', {exact: true}).click();
@@ -123,6 +139,8 @@ test('ChatGPT prefill updates an already open split bar without saving; draft im
   await expect(page.locator('[data-labeling-filmstrip]')).toContainText('2 / 20');
   await expect(page.locator('[data-labeling-filmstrip] .border-blue-500 img')).toHaveAttribute('alt','NG-01.png');
   await expect(assistant.getByRole('group', {name: '이미지 보내기 확인', exact: true})).toHaveCount(0);
+  await expect(assistant.getByRole('button', {name: '현재 이미지 첨부', exact: true})).toBeDisabled();
+  await expect(assistant.getByAltText('첨부한 이미지', {exact: true})).toHaveCount(0);
   const bridgeReadback = await page.evaluate(() => {
     const state = (window as unknown as {__assistantSupplemental: {sent: AssistantSendInput[]; intents: unknown[]}}).__assistantSupplemental;
     return {calls: state.sent.length, imageSends: state.sent.filter(call => call.image).length, intents: state.intents.length};
@@ -132,13 +150,14 @@ test('ChatGPT prefill updates an already open split bar without saving; draft im
   expect(writes.some(row => /\/api\/(training\/start|label-suggestions\/batches|labeling-jobs)/.test(row.path))).toBe(false);
   expect(sha(fs.readFileSync(splitFile))).toBe(savedSplitSha);
   for (const file of originalFiles) expect(sha(fs.readFileSync(file.path))).toBe(file.sha256);
-  await evidence.screenshot(page, 'chatgpt-text-only-after-actual-next-image');
+  await evidence.screenshot(page, 'chatgpt-unsupported-model-refuses-image-after-actual-next-image');
   evidence.note('assistant_easy_use_supplemental', {
     actual_browser_renderer_backend_stores: true, native_electron_qa: false, fake_provider_bridge_only: true,
     project_id: project.id, synthetic_images: originalFiles, saved_split: saved.split, saved_split_file: splitFile,
     saved_split_sha256: savedSplitSha, visible_prefill_percent: 70, saved_assignments_unchanged: true,
     original_label_exchange_opened_from_draft_ui: true, import_applied: false,
-    chatgpt_text_only_after_actual_next_image: true, image_intents_created: 0, bridge: bridgeReadback,
+    unsupported_chatgpt_model_refuses_current_and_pasted_image: true,
+    pasted_synthetic_image_sha256: sha(pastedImage), image_intents_created: 0, bridge: bridgeReadback,
     provider_network_requests: externalRequests.length, page_errors: pageErrors, renderer_writes: writes,
     training_or_model_execution: false, detection_metrics_ui: 'not_run_in_classification_fixture; covered by focused real React SSR tests',
   });

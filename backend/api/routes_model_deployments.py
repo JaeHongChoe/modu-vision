@@ -111,6 +111,14 @@ def _store(project: dict[str, Any]):
         );
         CREATE INDEX IF NOT EXISTS deployment_history_idx
             ON revisions(source_dataset_path, task, created_at);
+        CREATE TABLE IF NOT EXISTS policy_qualifications (
+            revision_id TEXT PRIMARY KEY, qualification_key TEXT UNIQUE NOT NULL, payload TEXT NOT NULL
+        );
+        CREATE TABLE IF NOT EXISTS policy_active_revisions (
+            source_dataset_path TEXT NOT NULL, task TEXT NOT NULL,
+            revision_id TEXT NOT NULL REFERENCES policy_qualifications(revision_id),
+            PRIMARY KEY(source_dataset_path,task)
+        );
     """)
     try:
         with conn:
@@ -120,6 +128,8 @@ def _store(project: dict[str, Any]):
 
 
 def _active(conn: sqlite3.Connection, source: Path, task: Task) -> dict[str, Any] | None:
+    qualified=conn.execute('SELECT q.payload FROM policy_active_revisions a JOIN policy_qualifications q ON a.revision_id=q.revision_id WHERE a.source_dataset_path=? AND a.task=?',(str(source),task)).fetchone()
+    if qualified:return json.loads(qualified[0])
     row = conn.execute("""
         SELECT revisions.* FROM active_revisions JOIN revisions
         ON revisions.revision_id = active_revisions.revision_id
@@ -339,6 +349,7 @@ def approve_candidate(payload: ApprovalRequest, request: Request):
         if current["status"] != "ready" or current["comparison_sha256"] != assessment["comparison_sha256"]:
             raise HTTPException(status_code=409, detail={"status": "needs_review", "reasons": current["reasons"] or ["Comparison evidence changed during approval"]})
         conn.execute("INSERT INTO revisions VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", tuple(revision.values()))
+        conn.execute('DELETE FROM policy_active_revisions WHERE source_dataset_path=? AND task=?',(str(source),payload.task))
         conn.execute("""INSERT INTO active_revisions VALUES (?, ?, ?)
             ON CONFLICT(source_dataset_path, task) DO UPDATE SET revision_id = excluded.revision_id""",
             (str(source), payload.task, revision["revision_id"]),
@@ -382,6 +393,7 @@ def rollback_approval(payload: RollbackRequest, request: Request):
             "reason": payload.reason.strip(), "created_at": _now(),
         }
         conn.execute("INSERT INTO revisions VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", tuple(revision.values()))
+        conn.execute('DELETE FROM policy_active_revisions WHERE source_dataset_path=? AND task=?',(str(source),payload.task))
         conn.execute("UPDATE active_revisions SET revision_id = ? WHERE source_dataset_path = ? AND task = ?",
                      (revision["revision_id"], str(source), payload.task))
     return {"revision": revision, "field_runtime_applied": False}
@@ -395,6 +407,11 @@ def verified_approval_revision(
         return None
     with _store(project) as conn:
         row = conn.execute("SELECT * FROM revisions WHERE revision_id = ?", (revision_id,)).fetchone()
+        qualified=conn.execute('SELECT payload FROM policy_qualifications WHERE revision_id=?',(revision_id,)).fetchone() if row is None else None
+    if qualified:
+        from backend.engine.model_deployments import verify_policy_qualification
+        record=verify_policy_qualification(project,json.loads(qualified[0]))
+        return record if record and record.get('revision_id')==revision_id and (expected_task is None or record['task']==expected_task) else None
     if (row is None or row["source_dataset_path"] != project.get("source_dataset_dir")
             or (expected_task is not None and row["task"] != expected_task)):
         return None
@@ -425,6 +442,11 @@ def verified_approval_revision(
         except (ValueError, OSError, KeyError, TypeError):
             return None
     return dict(row)
+
+
+def qualify_candidate_policy(project,policy,evaluation_id,**options):
+    from backend.engine.model_deployments import qualify_candidate_policy as qualify
+    return qualify(project,policy,evaluation_id,**options)
 
 
 def verified_release_revision(
@@ -522,5 +544,6 @@ def approve_specialized(payload: SpecializedApprovalRequest, request: Request):
                     "restored_from_revision_id": None, "action": "approve_specialized", "reviewer": payload.reviewer.strip(),
                     "reason": payload.reason.strip() + " | quality_bounds=" + json.dumps({"minimum": payload.minimum_metrics, "maximum": payload.maximum_metrics, "minimum_sample_count": payload.minimum_sample_count}, sort_keys=True), "created_at": _now()}
         conn.execute("INSERT INTO revisions VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", tuple(revision.values()))
+        conn.execute('DELETE FROM policy_active_revisions WHERE source_dataset_path=? AND task=?',(str(source),payload.task))
         conn.execute("INSERT INTO active_revisions VALUES (?, ?, ?) ON CONFLICT(source_dataset_path, task) DO UPDATE SET revision_id=excluded.revision_id", (str(source), payload.task, revision["revision_id"]))
     return {"revision": revision, "field_runtime_applied": False}

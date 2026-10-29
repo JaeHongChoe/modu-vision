@@ -29,6 +29,52 @@ _NEXT_LINES = {215: 216, 223: 224, 224: 210, 229: 226, 309: 310}
 _PHASES = {382: 'wait_observation', 401: 'interrupted_cleanup_observation', 404: 'final_observation'}
 
 
+# Additive exact-source cohort: the original d985 maps above stay historical.
+# The reviewed registered-zombie exit fix adds six lines before these sites.
+_REGISTERED_EXIT_RUNTIME_SHA256 = '2a2f1dfe2c7e96811eff8a23c68abb72e8843770bf9efa431ee9097217136a7c'
+_REGISTERED_EXIT_SITES = {
+    ('observe', 221): 'leader_identity_unproven',
+    ('observe', 229): 'unregistered_without_live_leader',
+    ('observe', 230): 'foreign_session_row',
+    ('observe', 235): 'registered_identity_unproven',
+    ('_terminate_owned', 315): 'termination_leader_unproven',
+}
+_REGISTERED_EXIT_NEXT_LINES = {221: 222, 229: 230, 230: 216, 235: 232, 315: 316}
+_REGISTERED_EXIT_PHASES = {388: 'wait_observation', 407: 'interrupted_cleanup_observation', 410: 'final_observation'}
+
+# Pending admission changes observation, not the five original unknown.add sites.
+# Unresolved admission without an add must keep first_unknown absent.
+_PENDING_ADMISSION_RUNTIME_SHA256 = '4f1cc56eca4943cd9992b585da05187e380f278736cf179b49552c8f173f1452'
+_PENDING_ADMISSION_SITES = {
+    ('observe', 288): 'leader_identity_unproven',
+    ('observe', 296): 'unregistered_without_live_leader',
+    ('observe', 297): 'foreign_session_row',
+    ('observe', 302): 'registered_identity_unproven',
+    ('_terminate_owned', 382): 'termination_leader_unproven',
+}
+_PENDING_ADMISSION_NEXT_LINES = {288: 289, 296: 297, 297: 283, 302: 299, 382: 383}
+_PENDING_ADMISSION_PHASES = {455: 'wait_observation', 474: 'interrupted_cleanup_observation', 477: 'final_observation'}
+_RUNTIME_COHORTS = {
+    RUNTIME_SHA256: {
+        'sites': _SITES, 'next_lines': _NEXT_LINES, 'phases': _PHASES,
+        'observe_leader_line': 199,
+        'member_returns': {189: 'reader_unavailable', 193: 'birth_or_command_mismatch', 196: 'reader_error'},
+    },
+    _REGISTERED_EXIT_RUNTIME_SHA256: {
+        'sites': _REGISTERED_EXIT_SITES, 'next_lines': _REGISTERED_EXIT_NEXT_LINES, 'phases': _REGISTERED_EXIT_PHASES,
+        'observe_leader_line': 205,
+        'member_returns': {189: 'reader_unavailable', 193: 'birth_or_command_mismatch', 199: 'birth_or_command_mismatch', 202: 'reader_error'},
+    },
+    _PENDING_ADMISSION_RUNTIME_SHA256: {
+        'sites': _PENDING_ADMISSION_SITES, 'next_lines': _PENDING_ADMISSION_NEXT_LINES, 'phases': _PENDING_ADMISSION_PHASES,
+        'observe_leader_line': 272, 'leader_facts_line': 241,
+        # Original OS tuple is already read at164; pending may clear it at170.
+        'initial_command_line': 165,
+        'member_returns': {256: 'reader_unavailable', 260: 'birth_or_command_mismatch', 266: 'birth_or_command_mismatch', 269: 'reader_error'},
+    },
+}
+
+
 def _normalized_code(code):
     """Normalize filename only; retain bytecode, constants, flags and line mapping."""
     constants = tuple(_normalized_code(value) if type(value) is CodeType else value for value in code.co_consts)
@@ -99,12 +145,28 @@ class Observer:
         self._refused = False
         self._outcome = 'not_captured'
         self._unconfirmed = False
+        self._runtime_source_sha256 = None
+        self._sites, self._next_lines, self._phases = {}, {}, {}
+        self._observe_leader_line = None
+        self._leader_facts_line = 176
+        self._initial_command_line = None
+        self._member_returns = {}
         if sys.implementation.name != 'cpython' or sys.version_info[:2] != (3, 13):
             self._disable('interpreter_unsupported'); return
         if type(nodeid) is not str or nodeid != NODEID or type(point) is not str or point != 'after_canary_result':
             self._disable('selection_mismatch'); return
-        if type(runtime_source) is not bytes or hashlib.sha256(runtime_source).hexdigest() != RUNTIME_SHA256:
+        source_sha = hashlib.sha256(runtime_source).hexdigest() if type(runtime_source) is bytes else None
+        cohort = _RUNTIME_COHORTS.get(source_sha)
+        if cohort is None:
             self._disable('source_pin_mismatch'); return
+        self._runtime_source_sha256 = source_sha
+        self._sites = dict(cohort['sites'])
+        self._next_lines = dict(cohort['next_lines'])
+        self._phases = dict(cohort['phases'])
+        self._observe_leader_line = cohort['observe_leader_line']
+        self._leader_facts_line = cohort.get('leader_facts_line', 176)
+        self._initial_command_line = cohort.get('initial_command_line')
+        self._member_returns = dict(cohort['member_returns'])
         if type(test_source) is not bytes:
             self._disable('test_ast_pin_mismatch'); return
         try:
@@ -125,7 +187,7 @@ class Observer:
             for node in ast.walk(tree):
                 if isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute) and node.func.attr == 'add' and isinstance(node.func.value, ast.Attribute) and node.func.value.attr == 'unknown':
                     add_lines.append(node.lineno)
-            if sorted(add_lines) != [215, 223, 224, 229, 309]:
+            if sorted(add_lines) != sorted(line for _, line in self._sites):
                 self._disable('ast_map_mismatch'); return
             expected = compile(tree, '<pinned-runtime>', 'exec')
             owned = module._OwnedGroup
@@ -233,7 +295,7 @@ class Observer:
             if parent is None:
                 break
             if self._role(parent.f_code) == 'execute_owned_process' and id(parent) == self._execution:
-                return _PHASES.get(parent.f_lineno, 'unmapped')
+                return self._phases.get(parent.f_lineno, 'unmapped')
             parent = parent.f_back
         return 'unmapped'
 
@@ -275,7 +337,8 @@ class Observer:
             self._disable('owner_shape_unavailable'); return None
         relation = 'original_leader' if candidate == leader else 'registered_member' if candidate in members else 'other'
         row_equal = None
-        if frame.f_lineno in (215, 223, 224):
+        reason = self._sites[(role, frame.f_lineno)]
+        if reason in ('leader_identity_unproven', 'unregistered_without_live_leader', 'foreign_session_row'):
             row = values.get('row')
             observed = row.get('session') if type(row) is dict else None
             expected = fields.get('session')
@@ -283,13 +346,13 @@ class Observer:
                 row_equal = observed == expected
         parent_state = self._frames.get(id(frame), {})
         fact_key = 'termination_leader' if role == '_terminate_owned' else 'scan_leader'
-        facts = parent_state.get(fact_key, {}) if frame.f_lineno != 229 else {}
+        facts = parent_state.get(fact_key, {}) if reason != 'registered_identity_unproven' else {}
         return {'line': frame.f_lineno, 'count': 0, 'facts': {
-            'reason': _SITES[(role, frame.f_lineno)], 'relation': relation,
+            'reason': reason, 'relation': relation,
             'phase': self._phase(frame, role), 'row_session_equal': row_equal,
             'birth_equal': facts.get('birth_equal'), 'command_equal': facts.get('command_equal'),
             'command_empty': facts.get('command_empty'),
-            'member_identity': parent_state.get('member_identity', 'not_captured') if frame.f_lineno == 229 else 'not_captured',
+            'member_identity': parent_state.get('member_identity', 'not_captured') if reason == 'registered_identity_unproven' else 'not_captured',
         }}
 
     def _event(self, role, frame, event, arg):
@@ -319,7 +382,7 @@ class Observer:
             state.pop('pending')
             unknown = fields.get('unknown') if fields is not None else None
             valid = type(unknown) is set and id(unknown) == self._unknown
-            next_valid = event == 'return' or frame.f_lineno == _NEXT_LINES[pending['line']]
+            next_valid = event == 'return' or frame.f_lineno == self._next_lines[pending['line']]
             if not valid or not next_valid:
                 self._unconfirmed = True
             elif len(unknown) == 1:
@@ -330,9 +393,13 @@ class Observer:
             state['exception_pending'] = True
         elif event == 'line':
             state['exception_pending'] = False
-            if fields is not None and role == 'leader_matches' and frame.f_lineno == 176:
+            if fields is not None and role == '__init__' and frame.f_lineno == self._initial_command_line:
+                captured = fields.get('leader')
+                if type(captured) is tuple and len(captured) == 2:
+                    self._initial_command = _command_shape(captured[1]) or 'not_captured'
+            if fields is not None and role == 'leader_matches' and frame.f_lineno == self._leader_facts_line:
                 state['facts'] = self._facts(frame, fields)
-            if fields is not None and (role, frame.f_lineno) in _SITES:
+            if fields is not None and (role, frame.f_lineno) in self._sites:
                 candidate = self._candidate(frame, role, fields)
                 if candidate is not None:
                     state['pending'] = candidate
@@ -341,19 +408,20 @@ class Observer:
                 unknown = fields.get('unknown')
                 if type(unknown) is set:
                     self._unknown = id(unknown)
-                    captured = fields.get('leader')
-                    self._initial_command = 'absent' if captured is None else _command_shape(captured[1]) if type(captured) is tuple and len(captured) == 2 else 'not_captured'
+                    if self._initial_command == 'not_captured':
+                        captured = fields.get('leader')
+                        self._initial_command = 'absent' if captured is None else _command_shape(captured[1]) if type(captured) is tuple and len(captured) == 2 else 'not_captured'
             elif fields is not None and role == 'leader_matches' and type(arg) is bool:
                 parent = frame.f_back
                 parent_state = self._frames.get(id(parent), {}) if parent is not None else {}
-                if parent is not None and self._role(parent.f_code) == 'observe' and parent.f_lineno == 199:
+                if parent is not None and self._role(parent.f_code) == 'observe' and parent.f_lineno == self._observe_leader_line:
                     parent_state['scan_leader'] = state.get('facts', {})
                 elif parent is not None and self._role(parent.f_code) == '_terminate_owned':
                     parent_state['termination_leader'] = state.get('facts', {})
             elif role == 'member_state' and type(arg) is str and arg == 'unknown':
                 parent = frame.f_back
                 parent_state = self._frames.get(id(parent), {}) if parent is not None else {}
-                parent_state['member_identity'] = {189: 'reader_unavailable', 193: 'birth_or_command_mismatch', 196: 'reader_error'}.get(frame.f_lineno, 'not_captured')
+                parent_state['member_identity'] = self._member_returns.get(frame.f_lineno, 'not_captured')
             if fields is not None and type(fields.get('unknown')) is set:
                 self._unknown_count = min(len(fields['unknown']), 1001)
                 remaining = fields.get('remaining')
@@ -371,7 +439,7 @@ class Observer:
     def public_record(self):
         return {'schema_version': 1, 'diagnostic_only': True, 'release_qualified': False,
                 'process_tree_exit_verified': False, 'selection': 'actual_canary_after_result',
-                'runtime_source_sha256': RUNTIME_SHA256, 'original_test_ast_sha256': TEST_AST_SHA256,
+                'runtime_source_sha256': self._runtime_source_sha256, 'original_test_ast_sha256': TEST_AST_SHA256,
                 'instrumentation_status': self._status, 'owner_count': min(self._owners, 2),
                 'initial_command': self._initial_command, 'ownership_refusal_observed': self._refused,
                 'outcome': self._outcome, 'unknown_count': self._unknown_count,

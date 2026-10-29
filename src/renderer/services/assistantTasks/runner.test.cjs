@@ -24,7 +24,7 @@ function task(actions=['start_training']) {
 /** In-memory durable boundary, with CAS and persisted transitions; action effects are outside this ledger. */
 function harness(initial=task()) {
   let saved=copy(initial),binding=saved.binding;
-  const calls=[],changes=[],effects=[];
+  const calls=[],changes=[],effects=[],assessments=new Map();
   const deps={read:async id=>{assert.equal(id,saved.id);return copy(saved);},binding:()=>binding,
     event:async (id,event)=>{
       assert.equal(id,saved.id); assert.equal(event.expected_revision,saved.revision); assert.equal(event.binding,saved.binding); calls.push(copy(event));
@@ -48,13 +48,53 @@ function harness(initial=task()) {
         saved.status=active?'needs_reconciliation':'ready';
       }
       if(event.type==='fail_step'){step.status='failed';saved.status='failed';}
+      if(event.type==='quality_result'){assert.equal(step.status,'completed');step.receipt.quality_assessment=copy(assessments.get(event.assessment_id));}
       saved.message=event.message??null;saved.revision++;return copy(saved);
     },
     execute:async step=>{effects.push(step.id);return {kind:'completed',receipt:{job_id:'job-one'}};},
     onChange:value=>changes.push(copy(value)),
   };
-  return {deps,calls,changes,effects,get saved(){return saved;},set saved(v){saved=copy(v);},setBinding:v=>{binding=v;}};
+  return {deps,calls,changes,effects,assessments,get saved(){return saved;},set saved(v){saved=copy(v);},setBinding:v=>{binding=v;}};
 }
+
+test('an execution request grant runs without fabricating human approval and rejects altered provenance',async()=>{
+  const initial=task(['open_step']);initial.approval=null;
+  initial.authorization={source:'user_request',scope:{workspace_id:'w',actor_id:'a'},plan_sha256:initial.plan_sha256,binding:initial.binding,policy_version:'continuous-execution-v1',authorized_at:'now',allowed_steps:initial.steps.map(row=>row.id)};
+  const h=harness(initial),result=await new AssistantTaskRunner(h.deps).run(initial);
+  assert.equal(result.status,'completed');assert.equal(result.approval,null);assert.deepEqual(h.effects,['step-0']);
+  for(const change of ['source','policy_version','plan_sha256']){
+    const invalid=copy(initial);invalid.authorization[change]='invalid';const rejected=harness(invalid);
+    await new AssistantTaskRunner(rejected.deps).run(invalid);assert.deepEqual(rejected.effects,[],change);
+  }
+});
+test('policy qualification observes the persisted completed evaluation before the next action dispatch',async()=>{
+ const h=harness(task(['evaluate_model','save_flow'])),order=[];
+ h.deps.execute=async step=>{order.push(step.action);return{kind:'completed',receipt:{job_id:'j',evaluation_id:'evaluation_a'}};};
+ h.deps.afterStep=async(current,step)=>{assert.equal(h.saved.steps.find(row=>row.id===step.id).status,'completed');assert.equal(current.revision,h.saved.revision);order.push('qualify:'+step.action);};
+ await new AssistantTaskRunner(h.deps).run(h.saved);
+ assert.deepEqual(order,['evaluate_model','qualify:evaluate_model','save_flow','qualify:save_flow']);
+});
+test('lost qualification responses remain durable pending and reload retries only policy before later steps',async()=>{
+ const initial=task(['evaluate_model','save_flow']);initial.approval=null;initial.authorization={source:'user_request',scope:{workspace_id:'w',actor_id:'a'},plan_sha256:initial.plan_sha256,binding:initial.binding,policy_version:'continuous-execution-v1',authorized_at:'now',allowed_steps:initial.steps.map(row=>row.id)};
+ const h=harness(initial),order=[];let failed=false;
+ h.deps.execute=async step=>{order.push(step.action);return{kind:'completed',receipt:{job_id:'j',evaluation_id:'evaluation_a'}};};
+ h.deps.afterStep=async(_task,step)=>{if(step.action!=='evaluate_model')return;order.push('qualify');assert.equal(h.saved.steps[0].status,'completed');
+  if(!failed){failed=true;throw Error('qualification response lost');}
+  const assessment={assessment_id:'quality_'+'a'.repeat(32),evaluation_id:'evaluation_a',status:'not_qualified',decision_source:'policy',reasons:['recall below bound']};h.assessments.set(assessment.assessment_id,assessment);return assessment;};
+ await assert.rejects(new AssistantTaskRunner(h.deps).run(h.saved),/response lost/);
+ assert.equal(h.saved.steps[0].receipt.quality_assessment?.status,'pending');assert.equal(h.saved.steps[1].status,'pending');
+ const final=await new AssistantTaskRunner(h.deps).run(h.saved);assert.equal(final.status,'completed');
+ assert.deepEqual(order,['evaluate_model','qualify','qualify','save_flow']);assert.equal(final.steps[0].receipt.quality_assessment.status,'not_qualified');
+});
+test('a completed final evaluation still reconciles its pending quality result after reload',async()=>{
+ const initial=task(['evaluate_model']);initial.approval=null;initial.authorization={source:'oneclick',scope:{workspace_id:'w',actor_id:'a'},plan_sha256:initial.plan_sha256,binding:initial.binding,policy_version:'continuous-execution-v1',authorized_at:'now',allowed_steps:initial.steps.map(row=>row.id)};
+ const h=harness(initial);let inference=0,qualification=0;
+ h.deps.execute=async()=>{inference++;return{kind:'completed',receipt:{evaluation_id:'evaluation_a',job_id:'j'}};};
+ const assessment={assessment_id:'quality_'+'b'.repeat(32),evaluation_id:'evaluation_a',status:'input_needed',decision_source:'policy',reasons:['configure quality policy']};
+ h.deps.afterStep=async()=>{qualification++;if(qualification===1)throw Error('response lost');h.assessments.set(assessment.assessment_id,assessment);return assessment;};
+ await assert.rejects(new AssistantTaskRunner(h.deps).run(h.saved),/response lost/);assert.equal(h.saved.status,'completed');
+ const final=await new AssistantTaskRunner(h.deps).run(h.saved);assert.equal(inference,1);assert.equal(qualification,2);assert.equal(final.steps[0].receipt.quality_assessment.status,'input_needed');
+});
 
 test('only a matching human grant executes and begin intent is durable before a side effect',async()=>{
   assert.equal(typeof AssistantTaskRunner,'function');

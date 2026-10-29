@@ -13,6 +13,61 @@ function fixture(){
  return {c,client,deps,calls,states,get task(){return task;},setConnection:v=>{connection=v;},setReady:v=>{ready=v;},setRuntime:v=>{runtime=v;},finish:()=>resolve(),get executions(){return executions;}};
 }
 const proposal={goal:'자료 확인',steps:[{action:'open_step',args:{step:1},label:'자료 확인'}]};
+test('actual execution intent authorizes and runs the saved plan while advice remains draft',async()=>{
+ const f=fixture(),event=f.client.event;
+ f.client.event=async(id,value)=>{const result=await event(id,value);if(value.type==='authorize'){
+   f.task.status='ready';f.task.authorization={source:value.authorization_source,scope:{workspace_id:'w',actor_id:'a'},binding:f.task.binding,plan_sha256:f.task.plan_sha256,policy_version:'continuous-execution-v1',authorized_at:'now',allowed_steps:f.task.steps.map(row=>row.id)};return structuredClone(f.task);
+ }return result;};
+ const running=f.c.propose(proposal,{source:'user_request'});await new Promise(r=>setImmediate(r));
+ assert.equal(f.executions,1);assert.equal(f.task.approval,null);assert.equal(f.task.authorization.source,'user_request');
+ assert.equal(f.calls.filter(row=>row[0]==='event')[0][1].type,'authorize');
+ await f.finish();await running;assert.equal(f.c.state.task.status,'completed');
+});
+test('only an authorized no-effect input wait is automatically rechecked and explicit pauses stay paused',async()=>{
+ const f=fixture();await f.c.propose(proposal);f.task.authorization={source:'user_request',scope:{workspace_id:'w',actor_id:'a'},binding:f.task.binding,plan_sha256:f.task.plan_sha256,policy_version:'continuous-execution-v1',authorized_at:'now',allowed_steps:['step_1']};
+ f.task.status='waiting_human';f.task.current_step_id='step_1';Object.assign(f.task.steps[0],{status:'waiting_human',attempt_id:'a',receipt:{not_started:true,reason_code:'waiting_input'}});f.c.state.task=structuredClone(f.task);
+ const original=f.client.event;f.client.event=async(id,value)=>{const saved=await original(id,value);if(value.type==='recheck'){f.task.status='needs_reconciliation';return structuredClone(f.task);}return saved;};
+ assert.equal(typeof f.c.recheckInputs,'function');const pending=f.c.recheckInputs();await new Promise(r=>setImmediate(r));assert.equal(f.executions,1);assert.equal(f.calls.at(-1)[1].type,'recheck');assert.equal(f.calls.at(-1)[1].confirmed,undefined);await f.finish();await pending;
+ f.task.status='paused';f.c.state.task=structuredClone(f.task);await f.c.recheckInputs();assert.equal(f.executions,1);
+});
+for(const phase of ['create','authorize'])test(`stopping GPT while ${phase} awaits never dispatches the newly proposed plan`,async()=>{
+ const f=fixture(),signal=new AbortController();let release;const gate=new Promise(resolve=>{release=resolve;});
+ const create=f.client.create,event=f.client.event;
+ f.client.create=async plan=>{if(phase==='create')await gate;return create(plan);};
+ f.client.event=async(id,value)=>{const result=await event(id,value);if(value.type==='authorize'){
+  Object.assign(f.task,{status:'ready',authorization:{source:value.authorization_source,scope:{workspace_id:'w',actor_id:'a'},binding:f.task.binding,plan_sha256:f.task.plan_sha256,policy_version:'continuous-execution-v1',authorized_at:'now',allowed_steps:f.task.steps.map(row=>row.id)}});
+  if(phase==='authorize')await gate;return structuredClone(f.task);
+ }if(value.type==='pause'){f.task.status='paused';return structuredClone(f.task);}return result;};
+ const pending=f.c.propose(proposal,{source:'user_request',signal:signal.signal});await new Promise(setImmediate);signal.abort();release();await new Promise(setImmediate);
+ if(f.executions)await f.finish();await pending;
+ assert.equal(f.executions,0);assert.equal(f.task.status,phase==='create'?'draft':'paused');
+ if(phase==='create')assert.equal(f.calls.filter(row=>row[0]==='event').length,0);
+});
+function waitingSignalFixture(){
+ const f=fixture(),event=f.client.event;let runs=0;
+ f.client.event=async(id,value)=>{await event(id,value);if(value.type==='authorize'){
+  f.task.status='ready';f.task.authorization={source:value.authorization_source,scope:{workspace_id:'w',actor_id:'a'},binding:f.task.binding,plan_sha256:f.task.plan_sha256,policy_version:'continuous-execution-v1',authorized_at:'now',allowed_steps:f.task.steps.map(row=>row.id)};
+ }if(value.type==='pause')f.task.status='paused';return structuredClone(f.task);};
+ f.deps.runnerFactory=()=>({run:async()=>{runs++;f.task.status='waiting_job';f.task.current_step_id=f.task.steps[0].id;Object.assign(f.task.steps[0],{status:'waiting_job',attempt_id:'waiting-attempt',receipt:{job_id:'external-job'},error:null});return structuredClone(f.task);},pause:async()=>null});
+ return{...f,get task(){return f.task;},get runs(){return runs;}};
+}
+test('the same GPT turn stop after propose returns waiting_job persists pause before another poll can continue',async()=>{
+ const f=waitingSignalFixture(),abort=new AbortController();await f.c.propose(proposal,{source:'user_request',signal:abort.signal});assert.equal(f.runs,1);
+ abort.abort();await new Promise(setImmediate);await f.c.pollWaiting();
+ assert.equal(f.runs,1);assert.equal(f.c.state.task.status,'paused');assert.equal(f.task.steps[0].receipt.job_id,'external-job');
+ assert.equal(f.calls.filter(row=>row[0]==='event'&&row[1].type==='pause').length,1);
+});
+test('an invalidated old turn signal cannot pause a new scope owned waiting task',async()=>{
+ const f=waitingSignalFixture(),old=new AbortController();await f.c.propose(proposal,{source:'user_request',signal:old.signal});
+ f.c.invalidateConnection();f.setConnection('account-b');const fresh=new AbortController();await f.c.propose(proposal,{source:'user_request',signal:fresh.signal});
+ old.abort();await new Promise(setImmediate);assert.equal(f.c.state.task.status,'waiting_job');assert.equal(f.runs,2);assert.equal(f.calls.filter(row=>row[0]==='event'&&row[1].type==='pause').length,0);
+});
+test('a later explicit approval can start the inert draft left by a stopped GPT request',async()=>{
+ const f=fixture(),abort=new AbortController(),create=f.client.create;let release;
+ f.client.create=async plan=>{await new Promise(resolve=>{release=resolve;});return create(plan);};
+ const pending=f.c.propose(proposal,{source:'user_request',signal:abort.signal});await new Promise(setImmediate);abort.abort();release();await pending;
+ const approved=f.c.approve(ID,1);await new Promise(setImmediate);assert.equal(f.executions,1);await f.finish();await approved;
+});
 test('proposal prepares an immutable local plan without executing or approving it',async()=>{
  const f=fixture();await f.c.propose(proposal);assert.equal(f.executions,0);assert.equal(f.calls.length,1);assert.deepEqual(f.calls[0][1].binding,JSON.stringify(['project1','account-model-1']));
  assert.equal(f.c.state.task.status,'draft');assert.equal(f.c.state.busy,false);

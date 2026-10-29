@@ -338,3 +338,23 @@ test('the confirmed draft write carries the model its preview showed',async()=>{
  models=[{jobId:'job_b',task:'classification',dataState:'current',createdAt:null},...models];await h.conversation.decide(true);
  assert.deepEqual(batches,[['job_a',0.5]]);assert.equal(h.logged.find(e=>e.tool==='generate_label_drafts').result,'ok');
 });
+
+
+test('an image task renews one-shot grants for stateless tool followups and freezes reasoning/context',async()=>{
+ const h=harness([answer('',[call('r1','read_status')]),answer('확인했습니다.')]);const intents=[];h.bridge.imageIntent=async input=>{intents.push(input);return{ok:true,grantId:'followup',providerLabel:'ChatGPT',expiresAt:999,message:'same image'};};
+ const image={grantId:'grant',imageIdentity:'a'.repeat(64),mediaType:'image/png',base64:'AAAA'};
+ await h.conversation.ask('이 이미지로 작업을 진행해줘',image,{reasoningEffort:'high',allowImageTools:true,context:{step:2,selected:'frozen'}});
+ assert.equal(h.sent.length,2);
+ assert.equal(h.sent[0].image.base64,'AAAA');assert.equal(h.sent[1].image.base64,'AAAA');assert.equal(h.sent[1].image.grantId,'followup');assert.equal(intents.length,1);assert.equal(intents[0].imageIdentity,image.imageIdentity);assert.deepEqual(intents[0].context,{step:2,selected:'frozen'});
+ assert.ok(h.sent[0].tools.some(t=>t.name==='read_status'));
+ assert.ok(h.sent.every(row=>row.reasoningEffort==='high'));
+ assert.ok(h.sent.every(row=>row.context.selected==='frozen'));
+ assert.ok(h.conversation.messages.some(row=>row.role==='tool'));
+ assert.ok(!JSON.stringify(h.conversation.messages).includes('AAAA'));
+});
+
+test('cancelling while a followup image grant is pending sends no late pixels',async()=>{
+ const h=harness([answer('',[call('r1','read_status')]),answer('late')]);let release,entered;const begun=new Promise(r=>entered=r);h.bridge.imageIntent=()=>{entered();return new Promise(r=>release=r);};
+ const asking=h.conversation.ask('현재 이미지를 확인해줘',{grantId:'initial',imageIdentity:'a'.repeat(64),mediaType:'image/png',base64:'AAAA'},{allowImageTools:true});
+ await begun;h.conversation.invalidate();release({ok:true,grantId:'late',providerLabel:'ChatGPT',message:'late'});await asking;assert.equal(h.sent.length,1);assert.ok(!h.events.some(e=>e.kind==='assistant'&&e.text==='late'));
+});

@@ -478,6 +478,8 @@ def _evaluate_classification(
     ckpt = torch.load(model_pt, map_location=device, weights_only=False)
     state_dict = ckpt["model_state_dict"] if "model_state_dict" in ckpt else ckpt
 
+    from backend.engine.input_preparation import saved_recipe, prepare_input
+    input_recipe = saved_recipe(meta, ckpt, "classification")
     classes = meta.get("classes") or ckpt.get("classes") or val_ds.classes
     class_to_idx = {name: idx for idx, name in enumerate(classes)}
     num_classes = len(classes)
@@ -512,7 +514,7 @@ def _evaluate_classification(
             target_idx = class_to_idx.get(cname, 0)
 
             rgb = _read_image_rgb(img_path)
-            resized = resize_model_input(rgb, img_size)  # the same resize as training and the flow inspection node
+            resized = prepare_input(rgb, input_recipe, image_size=img_size)[0] if input_recipe else resize_model_input(rgb, img_size)
             img_t = torch.from_numpy(resized.transpose(2, 0, 1)).float().unsqueeze(0) / 255.0
             img_t = img_t.to(device)
 
@@ -839,6 +841,8 @@ def _evaluate_segmentation(
 
     ckpt = torch.load(model_pt, map_location=device, weights_only=False)
     state_dict = ckpt["model_state_dict"] if "model_state_dict" in ckpt else ckpt
+    from backend.engine.input_preparation import saved_recipe
+    val_ds.input_recipe = saved_recipe(meta, ckpt, "segmentation")
     seg_preset = meta.get("preset", "fast")
     model = build_segmentation_model(model_name=meta.get("model_name", ckpt.get("model_name", "unet")),
                                      num_classes=num_classes, preset=seg_preset, pretrained=False).to(device)
@@ -917,7 +921,12 @@ def _evaluate_segmentation(
                 return 'data:image/png;base64,'+base64.b64encode(buffer.getvalue()).decode('ascii')
             test_predictions[-1]['pixel_evidence'].update(prediction_mask=index_mask_png(pred_mask),truth_mask=index_mask_png(gt_mask))
             if source_size and getattr(val_ds, 'transform', None) is None:
-                test_predictions[-1]['pixel_evidence']['mapping'] = {'kind': 'full_image_resize', 'source_size': source_size}
+                if val_ds.input_recipe:
+                    from backend.engine.input_preparation import prepare_input, recipe_sha256
+                    _,_,geometry=prepare_input(_read_image_rgb(img_p),val_ds.input_recipe,task='segmentation',image_size=img_size)
+                    test_predictions[-1]['pixel_evidence']['mapping']={'kind':'fixed_input_recipe','source_size':source_size,'geometry':geometry,'input_recipe_sha256':recipe_sha256(val_ds.input_recipe)}
+                else:
+                    test_predictions[-1]['pixel_evidence']['mapping'] = {'kind': 'full_image_resize', 'source_size': source_size}
             test_predictions[-1]['class_scores']={name:float(probs[i].max().item()) for i,name in enumerate(classes)}
             test_predictions[-1]['ground_truth_classes']=[name for i,name in enumerate(classes) if np.any(gt_mask==i)]
 

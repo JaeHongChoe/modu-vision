@@ -100,7 +100,7 @@ function ocrProjectSwitchHarness() {
   const compute = {profiles: [], selectedProfileId: null, transportRevision: 0, isLoaded: true, isLoading: false, probeResults: {}};
   const store = Object.assign(selector => selector ? selector(state) : state, {getState: () => state});
   const dataset = {folderPath: '', totalImages: 0, split: {train: 0, val: 0, test: 0}, datasetKey: '', isLoading: false, isSplitting: false};
-  const training = {jobId: '', status: 'idle', preset: 'default', recoverActiveJob: async () => {}, refreshCurrentJob: async () => {}};
+  const training = {inputRecipe: null, inputRecipeScope: null, inputRecipeSha256: null, jobId: '', status: 'idle', preset: 'default', recoverActiveJob: async () => {}, refreshCurrentJob: async () => {}};
   const requests = [];
   const request = async url => {
     if (url === '/api/ocr/datasets') return {datasets: []};
@@ -114,7 +114,7 @@ function ocrProjectSwitchHarness() {
     react, 'react/jsx-runtime': {jsx, jsxs: jsx, Fragment: 'fragment'}, 'lucide-react': {},
     '../../stores/useProjectStore': {useProjectStore: store},
     '../../stores/useDatasetStore': {useDatasetStore: Object.assign(() => dataset, {getState: () => dataset}), readDatasetAuthority: () => 'owned'},
-    '../../stores/useTrainingStore': {useTrainingStore: () => training},
+    '../../stores/useTrainingStore': {useTrainingStore: Object.assign(selector => selector ? selector(training) : training, {getState: () => training})},
     '../../stores/useComputeStore': {useComputeStore: Object.assign(() => compute, {getState: () => compute})},
     '../../services/api': {api: {ocr: {models: async () => ({models: []})}}, request, getApiPersistenceIdentity: () => 'local'},
     '../../services/modelExecution': {},
@@ -140,7 +140,7 @@ function ocrProjectSwitchHarness() {
   for (const name of ['../common/OperatorGuidanceBanner', '../common/GuardrailBanner', '../common/LedAnnunciator',
     './OscilloscopeLossCurve', './HardwareTelemetryPanel', './RecipePresetSelector', './RotatedDetectionPanel',
     './DefectGANWorkbench', './EnhancementWorkbench', './ModelFamilyCatalog', './DinoSyntheticOptions',
-    './PatchClassificationWorkbench', './RotationWorkbench', './AutoDLWorkbench', './TrainingPreparationPanel',
+    './PatchClassificationWorkbench', './RotationWorkbench', './AutoDLWorkbench', './TrainingPreparationPanel', './TrainingInputPreparation',
     './JobProgressView', '../runtime/OperationsObservabilityPanel']) mocks[name] = {};
   const {WarmStartSelector} = load('WarmStartSelector.tsx', mocks);
   mocks['./WarmStartSelector'] = {WarmStartSelector};

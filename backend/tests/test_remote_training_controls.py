@@ -76,16 +76,79 @@ def test_remote_queued_recovery_restores_priority_before_any_launch(tmp_path,mon
     assert all(row['launch_spec']['max_runtime_s']==.3 for row in captured)
 
 
-def test_actual_cpu_worker_budget_survives_coordinator_spec_transfer_and_observation(tmp_path,monkeypatch):
+@pytest.mark.parametrize('expiry_boundary', ['cold_preparation', 'after_first_optimizer_step'])
+def test_actual_cpu_worker_budget_survives_coordinator_spec_transfer_and_observation(tmp_path,monkeypatch,expiry_boundary):
     import hashlib
+    import types
     import torch
     from backend.tests.test_rotation import rotation_data
+    from backend.engine import rotation, runtime_budget
     from backend.engine.rotation import write_rotation_manifest
     from backend.tests.test_remote_coordinator import FakeRemote
     from backend.api.routes_training import JobRecord,_job_observation
     from backend.remote.coordinator import run_remote_training
     from backend.remote.profiles import ComputeProfile
+    from backend.remote import worker
     from backend.remote.worker import run_train
+    # Only the budget's clock and scheduler are controlled. Real CPU setup can
+    # exceed .2s on a cold hosted runner; elapsed wall time cannot prove a batch
+    # ran. At each owned boundary run the ORIGINAL watchdog closure at exactly
+    # the transferred deadline. Training, gradients, status and expiry stay real.
+    clock={'now':0.0};watchdogs=[];transferred_limits=[];forwards=[];updates=[]
+    class DeferredWatchdog:
+        def __init__(self, *, target, daemon, name):
+            assert daemon and name=='FamilyRuntimeBudget'
+            self.target=target;self.name=name;self.fired=0;self.running=False;self.joined=False
+        def start(self):
+            watchdogs.append(self)
+        def fire(self):
+            assert self.fired==0 and clock['now']==transferred_limits[0]
+            self.fired+=1;self.running=True
+            try:self.target()
+            finally:self.running=False
+        def join(self, timeout):
+            assert not self.running
+            self.joined=True
+        def is_alive(self):return self.running
+    monkeypatch.setattr(runtime_budget,'time',types.SimpleNamespace(monotonic=lambda:clock['now'],time=time.time))
+    monkeypatch.setattr(runtime_budget,'threading',types.SimpleNamespace(
+        Event=threading.Event,Lock=threading.Lock,Thread=DeferredWatchdog))
+    def expire_at_owned_boundary():
+        assert clock['now']==0.0 and transferred_limits==[.2] and len(watchdogs)==1
+        clock['now']=transferred_limits[0]
+        watchdogs[0].fire()
+    original_forward=rotation.RotationNet.forward
+    def actual_forward(model, images):
+        result=original_forward(model,images)
+        assert images.device.type==result.device.type=='cpu' and torch.isfinite(result).all()
+        forwards.append(tuple(images.shape))
+        return result
+    monkeypatch.setattr(rotation.RotationNet,'forward',actual_forward)
+    original_step=torch.optim.AdamW.step
+    def actual_optimizer_step(optimizer, *args, **kwargs):
+        parameters=[p for group in optimizer.param_groups for p in group['params']]
+        before=[p.detach().clone() for p in parameters]
+        assert all(p.device.type=='cpu' and p.grad is not None and torch.isfinite(p.grad).all() for p in parameters)
+        result=original_step(optimizer,*args,**kwargs)
+        assert any(not torch.equal(prior,p.detach()) for prior,p in zip(before,parameters))
+        updates.append(True)
+        return result
+    monkeypatch.setattr(torch.optim.AdamW,'step',actual_optimizer_step)
+    original_progress=worker._TrainingStatusCallback.on_epoch_end
+    def actual_progress(callback, *args, **kwargs):
+        result=original_progress(callback,*args,**kwargs)
+        assert forwards and updates==[True]
+        assert callback.writer._payload['current_epoch']>0
+        expire_at_owned_boundary()
+        return result
+    if expiry_boundary=='after_first_optimizer_step':
+        monkeypatch.setattr(worker._TrainingStatusCallback,'on_epoch_end',actual_progress)
+    else:
+        original_train=worker._FamilyTrainer.train
+        def cold_preparation(trainer, job_id):
+            expire_at_owned_boundary()
+            return original_train(trainer,job_id)
+        monkeypatch.setattr(worker._FamilyTrainer,'train',cold_preparation)
     monkeypatch.setenv('VISION_AI_STUDIO_USER_DATA_DIR',str(tmp_path/'user'))
     source=tmp_path/'source';write_rotation_manifest(source,rotation_data(source))
     originals={p.name:hashlib.sha256(p.read_bytes()).hexdigest() for p in source.iterdir()}
@@ -97,13 +160,20 @@ def test_actual_cpu_worker_budget_survives_coordinator_spec_transfer_and_observa
     workers=[]
     class ActualCPU(FakeRemote):
         def launch(self, profile, argv, run_id):
-            workers.append(run_train(self.root/'runs'/run_id/'spec.json'))
+            spec=self.root/'runs'/run_id/'spec.json'
+            transferred_limits.append(json.loads(spec.read_text())['max_runtime_s'])
+            workers.append(run_train(spec))
             return 'owned-in-process-cpu-worker'
     torch.set_num_threads(1)
     result=run_remote_training(record,profile,transport=ActualCPU(Path(profile.remote_root)),device='cpu',
         config_overrides={'epochs':500,'image_size':32,'batch_size':2,'width':8})
     assert result['status']=='aborted' and result['stop_reason']=='time_limit' and result['worker_exit_confirmed'], result
-    assert len(workers)==1 and workers[0]['current_epoch']>0
+    assert len(workers)==1
+    if expiry_boundary=='after_first_optimizer_step':
+        assert workers[0]['current_epoch']>0 and forwards==[(2,3,32,32)] and updates==[True]
+    else:
+        assert workers[0]['current_epoch']==0 and forwards==[] and updates==[]
+    assert len(watchdogs)==1 and watchdogs[0].fired==1 and watchdogs[0].joined and not watchdogs[0].is_alive()
     assert workers[0]['budget']=={'max_runtime_s':.2}
     assert not Path(record.output_dir).joinpath('best_model.pt').exists()
     record.status='aborted';record.result=result;record.error={'message':result['error']}

@@ -24,10 +24,16 @@ PARAMETERLESS_SIX = {
     'backend/engine/rotation.py': {'size': 20800, 'sha256': '6fd1d70540d08263f46d1165dddd3e0ca1071abf2c1723bf2aa7572e9bd82899'},
     'backend/engine/segmentation_evidence.py': {'size': 8992, 'sha256': 'a25ff47aab794f516d8573c66d3a7d624368b1835c1baa23357bacd1efc207d4'},
 }
-CURRENT_FILES = {
+COLD_SCHEMA_SEVEN = {
     **PARAMETERLESS_SIX,
     'backend/engine/flowchart_engine.py': {'size': 149170, 'sha256': 'aa2b99d4e8fd2d76e6123f98f89e8fc670b8107139f9ad7571187de85e9e833a'},
     'backend/engine/flowchart_schema.py': {'size': 2873, 'sha256': '37f10afcb3637ce1222597a695a074724484ea88571d3885914a0155d31e707c'},
+}
+CURRENT_FILES = {
+    **COLD_SCHEMA_SEVEN,
+    'backend/engine/flowchart_engine.py': {'size': 150814, 'sha256': '8773a5b5a687d214041fc33957560a644e71496fa0ce2f2463dc3b92d86e07c2'},
+    'backend/engine/model_backbones.py': {'size': 19313, 'sha256': 'bd2d6efa3734751ada7b073cef3f7c1ba8bc63e278717aebceadabc827382c2d'},
+    'backend/engine/input_preparation.py': {'size': 7463, 'sha256': '7981f99900c0310a978d08f4b38f39bc19f312adb0e13ea71e1b9d9b185b7efa'},
 }
 
 
@@ -59,7 +65,7 @@ def test_current_actual_source_binds_only_an_unused_passive_prepared_record(tmp_
     proof = capture._verify_fixed_source_files(ROOT)
     assert {name: {key: row[key] for key in ('size', 'sha256')}
             for name, row in proof['files'].items()} == CURRENT_FILES
-    assert selector.cohort is capture.COLD_SCHEMA_CAPTURE_COHORT
+    assert selector.cohort is capture.INPUT_PREPARATION_CAPTURE_COHORT
     assert capture._pins_dictionary(selector.cohort) == CURRENT_FILES
     assert proof['actual_installer_runtime_or_required_call_accepted'] is False
 
@@ -88,7 +94,7 @@ def test_current_actual_source_binds_only_an_unused_passive_prepared_record(tmp_
     assert owner.attempt is None and owner.finished is False and admission._active == 0
     assert not any(name == 'torch' or name.startswith('torch.') or name in
                    {'backend.engine.rotation', 'backend.engine.model_backbones',
-                    'backend.engine.flowchart_engine'} for name in set(sys.modules) - modules_before)
+                    'backend.engine.flowchart_engine', 'backend.engine.input_preparation'} for name in set(sys.modules) - modules_before)
 
 
 @pytest.mark.parametrize('changed', sorted(CURRENT_FILES))
@@ -104,27 +110,29 @@ def test_one_byte_drift_in_any_current_producer_refuses_before_prepared(tmp_path
     assert http.bind_original_flow_http_capture(selector) is None
 
 
+@pytest.mark.parametrize('dependency', ('flowchart_schema.py', 'input_preparation.py'))
 @pytest.mark.parametrize('changed', ('missing', 'symlink'))
-def test_schema_dependency_cannot_be_omitted_or_aliased_before_prepared(tmp_path, changed):
+def test_source_dependency_cannot_be_omitted_or_aliased_before_prepared(tmp_path, changed, dependency):
     source = _source_copy(tmp_path.resolve() / 'source')
-    schema = source / 'backend/engine/flowchart_schema.py'
+    schema = source / 'backend/engine' / dependency
     schema.unlink()
     if changed == 'symlink':
-        schema.symlink_to(ROOT / 'backend/engine/flowchart_schema.py')
+        schema.symlink_to(ROOT / 'backend/engine' / dependency)
     app, _, selector = _startup(source)
     assert selector is None
     assert getattr(app.state, 'required_retained_flow_capture', None) is None
     assert http.bind_original_flow_http_capture(selector) is None
 
 
-def test_exact_current_cohort_rechecks_schema_bytes_after_selector_binding(tmp_path):
+@pytest.mark.parametrize('dependency', ('flowchart_schema.py', 'input_preparation.py'))
+def test_exact_current_cohort_rechecks_dependency_bytes_after_selector_binding(tmp_path, dependency):
     source = _source_copy(tmp_path.resolve() / 'source')
     _, _, selector = _startup(source)
     assert selector is not None
-    schema = source / 'backend/engine/flowchart_schema.py'
+    schema = source / 'backend/engine' / dependency
     body = schema.read_bytes()
-    schema.write_bytes(body.replace(b'max_workers: int', b'max_workers: str', 1))
-    assert schema.stat().st_size == CURRENT_FILES['backend/engine/flowchart_schema.py']['size']
+    schema.write_bytes(bytes([body[0] ^ 1]) + body[1:])
+    assert schema.stat().st_size == CURRENT_FILES['backend/engine/' + dependency]['size']
     with pytest.raises(ValueError, match='source custody'):
         capture._fixed_source_cohort(source, selector.cohort)
     assert selector.used is False and selector.issued is None
@@ -141,11 +149,12 @@ def test_unknown_source_does_not_activate_a_selector_or_prepared_record(tmp_path
 def test_new_exact_cohort_keeps_historical_source_and_profile_bindings():
     cohort = capture._cohort_for_data(PROFILE, PROFILE_SHA, CURRENT_FILES)
     assert dict(cohort['source_pins']) == CURRENT_FILES
-    assert cohort['source_pins'] is capture.COLD_SCHEMA_PRODUCER_SOURCE_PINS
+    assert cohort['source_pins'] is capture.INPUT_PREPARATION_PRODUCER_SOURCE_PINS
     historical = (capture.PRODUCER_SOURCE_PINS, capture.CURRENT_PRODUCER_SOURCE_PINS,
                   capture.COMBINED_PRODUCER_SOURCE_PINS,
-                  capture.PARAMETERLESS_ROTATION_PRODUCER_SOURCE_PINS)
-    assert tuple(row['source_pins'] for row in capture.RETAINED_CAPTURE_COHORTS[:4]) == historical
+                  capture.PARAMETERLESS_ROTATION_PRODUCER_SOURCE_PINS,
+                  capture.COLD_SCHEMA_PRODUCER_SOURCE_PINS)
+    assert tuple(row['source_pins'] for row in capture.RETAINED_CAPTURE_COHORTS[:5]) == historical
     legacy_rotation = {
         'size': 20447, 'sha256': 'b02622ed1c444272950b5f1f52523a29df096d71b8f257fc27903e380a492b45'}
     combined = {**PARAMETERLESS_SIX, 'backend/engine/rotation.py': legacy_rotation}
@@ -155,7 +164,7 @@ def test_new_exact_cohort_keeps_historical_source_and_profile_bindings():
         'size': 148262, 'sha256': 'e62c8461a0f57d4ce8b4e49f5a0dbf21f50e25515e627f5cff778225cdcf1a70'},
         'backend/engine/flow_package_runtime.py': {
             'size': 35583, 'sha256': 'a55ca0b694d398bebe30af4916ccd43e0ab7ea115a9ae080af3bc313abcfeeec'}}
-    for index, pins in enumerate((legacy, observer, combined, PARAMETERLESS_SIX)):
+    for index, pins in enumerate((legacy, observer, combined, PARAMETERLESS_SIX, COLD_SCHEMA_SEVEN)):
         retained = capture.RETAINED_CAPTURE_COHORTS[index]
         assert dict(historical[index]) == pins
         assert capture._cohort_for_data(retained['profile_id'], retained['execution_profile_sha256'], pins) is retained
@@ -166,15 +175,22 @@ def test_new_exact_cohort_keeps_historical_source_and_profile_bindings():
             capture._cohort_for_data(profile, digest, CURRENT_FILES)
 
 
-@pytest.mark.parametrize('changed', ('missing-schema', 'old-engine-with-schema', 'changed-schema'))
+@pytest.mark.parametrize('changed', ('missing-schema', 'old-engine-with-schema', 'changed-schema', 'missing-input-preparation',
+                                              'old-backbone', 'changed-input-preparation'))
 def test_new_cohort_rejects_incomplete_or_mixed_source_declarations(changed):
     pins = {name: dict(row) for name, row in CURRENT_FILES.items()}
     if changed == 'missing-schema':
         del pins['backend/engine/flowchart_schema.py']
     elif changed == 'old-engine-with-schema':
         pins['backend/engine/flowchart_engine.py'] = dict(PARAMETERLESS_SIX['backend/engine/flowchart_engine.py'])
-    else:
+    elif changed == 'changed-schema':
         pins['backend/engine/flowchart_schema.py']['sha256'] = '0' * 64
+    elif changed == 'missing-input-preparation':
+        del pins['backend/engine/input_preparation.py']
+    elif changed == 'old-backbone':
+        pins['backend/engine/model_backbones.py'] = dict(COLD_SCHEMA_SEVEN['backend/engine/model_backbones.py'])
+    else:
+        pins['backend/engine/input_preparation.py']['sha256'] = '0' * 64
     with pytest.raises(ValueError, match='coupled retained source/profile'):
         capture._cohort_for_data(PROFILE, PROFILE_SHA, pins)
 

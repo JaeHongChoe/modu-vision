@@ -5,16 +5,16 @@ import { currentAssistContext, subscribeAssistContext } from '../../stores/assis
 import { useDatasetStore } from '../../stores/useDatasetStore';
 import { useProjectStore } from '../../stores/useProjectStore';
 import { useTrainingStore } from '../../stores/useTrainingStore';
-import { bumpWorkflowEvidence } from '../../stores/workflowEvidence';
 import { WorkspaceDialog } from '../common/WorkspaceDialog';
-import { ACTION_TEXT, PERSON_STOPS, missedStillShown, runAutoProgress, type AutoChoices, type AutoDeps, type AutoRunState, type TruthConfirm } from './autoProgress';
+import { ACTION_TEXT, PERSON_STOPS, missedStillShown, type AutoChoices, type AutoRunState, type TruthConfirm } from './autoProgress';
 import { useAnnotationStore } from '../../stores/useAnnotationStore';
 import { useEffect, useState, useSyncExternalStore } from 'react';
 import { focusWorkflowTarget, type WorkflowStep } from './workflowReadiness';
 import { useComputeStore } from '../../stores/useComputeStore';
 import { taskPreviewScope } from './TaskChangeImpactDialog';
-import { acquireExecutionLease, executionLeaseOwner, releaseExecutionLease } from '../../services/assistantTasks/executionLease';
-import { defaultAppSplit, performAutoAppAction } from '../../services/assistantTasks/appActions';
+import { executionLeaseOwner } from '../../services/assistantTasks/executionLease';
+import { defaultAppSplit } from '../../services/assistantTasks/appActions';
+import {startOneclickTask,pauseOneclickTask} from '../../stores/useAssistantTaskStore';
 import { currentTrainingSummary, subscribeTrainingSummary, trainingSummaryLine, trainingSummaryScope, type TrainingStartSummary, type TrainingSummaryProfile } from '../training/trainingStartSummary';
 
 export const AUTO_TITLE = '자동 진행';
@@ -31,19 +31,6 @@ export function defaultsLine(input: { task: string | null | undefined; trainRati
     + `학습은 3단계에 보이는 설정 · ${trainingSummaryLine(input)} · 검사는 시험 이미지`;
 }
 
-/** The app's own calls behind each automatic action (the same ones a person's clicks make). */
-function appDeps(cancelled: () => boolean): AutoDeps {
-  return {
-    snapshot: () => currentAssistContext(),
-    setStep: async (step) => { await useProjectStore.getState().setStep(step as WorkflowStep); },
-    refresh: () => bumpWorkflowEvidence(),
-    act: performAutoAppAction,
-    sleep: (ms) => new Promise((resolve) => setTimeout(resolve, ms)),
-    cancelled,
-    now: () => Date.now(),
-  };
-}
-
 interface AutoProgressState {
   run: AutoRunState | null;
   cancelRequested: boolean;
@@ -56,23 +43,36 @@ interface AutoProgressState {
 export const useAutoProgressStore = create<AutoProgressState>((set, get) => ({
   run: null,
   cancelRequested: false,
-  start: (choices) => {
+  start: (_choices) => {
     if (get().run?.state === 'running') return;
-    const token = acquireExecutionLease('automatic');
     const fail = (reason: string) => set({cancelRequested: false, run: {state: 'failed',
       stop: {reason, step: useProjectStore.getState().activeStep}, log: [{at: Date.now(), text: reason, tone: 'error'}]}});
-    if (!token) {
+    if (executionLeaseOwner()!==null) {
       fail(executionLeaseOwner() === 'assistant' ? '도우미 작업이 진행 중입니다. 끝나거나 일시정지한 뒤 자동 진행을 다시 시작하세요.'
         : '다른 자동 진행이 실행 중입니다. 현재 진행이 끝난 뒤 다시 시작하세요.');
       return;
     }
-    void (async () => {
-      try { set({ cancelRequested: false }); await runAutoProgress(appDeps(() => get().cancelRequested), (run) => set({ run }), { choices }); }
-      catch (cause) { fail(cause instanceof Error ? cause.message : '자동 진행 상태를 확인하지 못했습니다. 현재 화면의 안내를 확인하세요.'); }
-      finally { releaseExecutionLease(token); }
-    })();
+    set({cancelRequested:false,run:{state:'running',log:[],stop:null}});
+    void startOneclickTask((task,error)=>{
+      if(error){fail(error);return;}if(!task)return;
+      const active=task.steps.find(row=>row.id===task.current_step_id);
+      const stopped=['waiting_human','failed','needs_reconciliation'].includes(task.status);
+      const qualityMissing=task.steps.some(row=>row.receipt?.quality_status==='input_needed');
+      const text=task.status==='completed'&&qualityMissing?'시험 검사 실행 완료 · 정확도·미검 검증은 독립 정답 입력이 필요합니다.':task.message||`${task.steps.filter(row=>row.status==='completed').length}/${task.steps.length}개 작업 완료`;
+      const previous=get().run?.log??[];
+      const log=previous.at(-1)?.text===text?previous:[...previous,{at:Date.now(),text,tone:task.status==='failed'?'error' as const:stopped?'stop' as const:task.status==='completed'?'done' as const:'info' as const}];
+      for(const step of task.steps){
+        const quality=step.receipt?.quality_assessment as {status?:string;reasons?:string[]}|undefined;
+        const labels:Record<string,string>={qualified:'품질 기준 충족',not_qualified:'품질 기준 미달',input_needed:'품질 판정 입력 필요',pending:'품질 판정 결과 확인 중'};
+        if(!quality?.status||!labels[quality.status])continue;
+        const qualityText=`${step.action==='evaluate_model'?'모델':'검사 흐름'} ${labels[quality.status]}${quality.reasons?.length?' · '+quality.reasons.slice(0,2).join(' · '):''}`;
+        if(!log.some(row=>row.text===qualityText))log.push({at:Date.now(),text:qualityText,tone:quality.status==='qualified'?'done':'info'});
+      }
+      set({run:{state:task.status==='completed'?'done':task.status==='paused'?'cancelled':task.status==='failed'?'failed':stopped?'stopped':'running',log,
+        stop:stopped?{reason:text,step:active?.action==='start_training'?3:active?.action==='evaluate_model'?4:active?.action==='inspect_test'?6:active?.action==='evaluate_flow'||active?.action==='save_flow'?5:useProjectStore.getState().activeStep}:null}});
+    }).catch(cause=>fail(cause instanceof Error?cause.message:'자동 진행 상태를 확인하지 못했습니다.'));
   },
-  cancel: () => set({ cancelRequested: true }),
+  cancel: () => {set({cancelRequested:true});void pauseOneclickTask().catch(cause=>set({run:{state:'failed',log:[],stop:{reason:cause instanceof Error?cause.message:'일시정지 기록을 확인하지 못했습니다.',step:useProjectStore.getState().activeStep}}}));},
 }));
 
 /** The truth stop cleared in place: the person names themself and presses once; the run then goes on by itself. The same
@@ -155,7 +155,7 @@ export function AutoProgressDialog({ onClose }: { onClose: () => void }) {
     await useProjectStore.getState().setStep(run.stop.step as WorkflowStep);
     focusWorkflowTarget(run.stop.target);
   };
-  return <WorkspaceDialog title={AUTO_TITLE} description="사람이 꼭 해야 하는 곳까지 단계를 차례로 진행합니다. 끝난 단계는 다시 하지 않습니다." onClose={onClose}>
+  return <WorkspaceDialog title={AUTO_TITLE} description="준비된 데이터와 라벨로 학습부터 시험 검사까지 이어서 진행합니다. 끝난 단계는 다시 하지 않습니다." onClose={onClose}>
     <div className="space-y-3 text-sm text-slate-200">
       <p aria-label="자동 진행 기본값" className="rounded border border-slate-600 bg-slate-900/60 p-2">{defaultsLine({ task, trainRatio, device, preset: training.preset, selectedProfileId: compute.selectedProfileId, profile, computeLoaded: compute.isLoaded, live })}</p>
       <button type="button" className="workspace-button" disabled={running || project.isProjectBusy || dataset.isLoading} onClick={goToTrainingSettings}>학습 설정 확인·변경 (3단계)</button>
@@ -164,7 +164,7 @@ export function AutoProgressDialog({ onClose }: { onClose: () => void }) {
         <summary className="cursor-pointer">자세히 · 자동으로 하는 것과 멈추는 곳</summary>
         <p className="mt-2 font-semibold text-slate-100">자동으로 하는 것</p>
         <ul className="mt-1 list-disc pl-5">{Object.values(ACTION_TEXT).map((text) => <li key={text}>{text}</li>)}</ul>
-        <p className="mt-2 font-semibold text-slate-100">항상 멈추는 곳 (사람이 합니다)</p>
+        <p className="mt-2 font-semibold text-slate-100">필요한 입력이나 조건</p>
         <ul className="mt-1 list-disc pl-5">{PERSON_STOPS.map((text) => <li key={text}>{text}</li>)}</ul>
         <p className="mt-2 text-slate-400">분할·흐름 저장도 기존과 같은 저장 기록과 버전이 남습니다. 학습 설정이나 분할 비율을 바꾸려면 먼저 그 단계에서 바꾼 뒤 시작하세요.</p>
       </details>

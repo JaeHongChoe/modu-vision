@@ -75,7 +75,7 @@ function refuseEditsMadeDuringSelection(): void {
  * visible project change in one synchronous step, before any dataset, annotation or flow read for it. A
  * refused or stale acceptance binds nothing, so the UI and the API both stay on the previous project.
  */
-async function acceptSelectedProject(project: ProjectConfig, view: { activeStep?: WizardStep } = {}): Promise<void> {
+async function acceptSelectedProject(project: ProjectConfig, view: { activeStep?: WizardStep } | (() => { activeStep?: WizardStep }) = {}): Promise<void> {
   const startedProject=useProjectStore.getState().project,startedDir=useProjectStore.getState().projectDir;
   await api.project.prepareContext?.(project);
   if(useProjectStore.getState().project!==startedProject||useProjectStore.getState().projectDir!==startedDir)
@@ -104,7 +104,8 @@ async function acceptSelectedProject(project: ProjectConfig, view: { activeStep?
       if (useFlowchartStore.getState().selectedImage) useFlowchartStore.getState().setSelectedImage(null);
     }
     useProjectStore.setState({
-      project, projectName: project.name, projectDir: project.project_dir, task: project.task, ...view,
+      project, projectName: project.name, projectDir: project.project_dir, task: project.task,
+      ...(typeof view === 'function' ? view() : view),
     });
   });
 }
@@ -385,8 +386,14 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
   sharedSessionChanging: false,
 
   setStep: async (step) => {
-    if (step === get().activeStep) return;
     const apiIdentity = getApiPersistenceIdentity();
+    if (step === get().activeStep) {
+      // An explicit click on the initial step is still a choice. A pending
+      // project restore must not replace it with an older remembered stage.
+      stepChoices += 1;
+      rememberProjectStep(viewStorage(), get().project, apiIdentity, step);
+      return;
+    }
     const startedScope = projectViewScope(get().project, apiIdentity);
     if (get().activeStep === 2 && useAnnotationStore.getState().isDirty) {
       const saved = await useAnnotationStore.getState().saveAnnotations();
@@ -562,10 +569,13 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
       const identity = getApiPersistenceIdentity();
       // A stage the user chose while the app's first sync was in flight is kept (and remembered for this project)
       // instead of the stage remembered from an earlier session.
-      const chosenMeanwhile = !previous && stepChoices !== choicesAtStart;
-      await acceptSelectedProject(project, { activeStep: chosenMeanwhile || (previous && projectViewScope(previous, identity) === projectViewScope(project, identity))
-        ? get().activeStep : readProjectStep(viewStorage(), project, identity) });
-      if (chosenMeanwhile) rememberProjectStep(viewStorage(), project, identity, get().activeStep);
+      // Asset-ticket preparation in acceptSelectedProject can await again.
+      // Resolve the view in its synchronous accepted commit, so a later stage
+      // choice in the same scope cannot be overwritten by this earlier read.
+      const chosenMeanwhile = () => !previous && stepChoices !== choicesAtStart;
+      await acceptSelectedProject(project, () => ({ activeStep: chosenMeanwhile() || (previous && projectViewScope(previous, identity) === projectViewScope(project, identity))
+        ? get().activeStep : readProjectStep(viewStorage(), project, identity) }));
+      if (chosenMeanwhile()) rememberProjectStep(viewStorage(), project, identity, get().activeStep);
       await applyProject(project, previous, true);
       if (project.source_dataset_dir && get().activeStep !== 1) {
         // Later stages also need the daemon's restored source and effective split;

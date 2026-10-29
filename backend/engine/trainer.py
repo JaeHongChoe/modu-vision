@@ -330,7 +330,10 @@ class UnifiedAutoMLTrainer:
         preset_key = preset.lower().strip()
         self.preset_key = preset_key
         self.config = PRESET_CONFIGS.get(preset_key, PRESET_CONFIGS["fast"])
-        self.overrides = config_overrides or {}
+        self.overrides = dict(config_overrides or {})
+        from backend.engine.input_preparation import canonical_recipe
+        if self.overrides.get("input_recipe") is not None:
+            self.overrides["input_recipe"] = canonical_recipe(self.overrides["input_recipe"], self.task)
         self.warm_start = warm_start
         from backend.engine.model_backbones import validate_training_controls
         validate_training_controls(self.task, self.preset_key, self.overrides)
@@ -396,6 +399,7 @@ class UnifiedAutoMLTrainer:
                 val_ds = ClassificationDataset(
                     root_dir=self.dataset_path, split="val", image_size=optimal_size
                 )
+                train_ds.input_recipe = val_ds.input_recipe = self.overrides.get("input_recipe")
                 classes = train_ds.classes
                 num_classes = max(2, len(classes))
                 backbone = str(self.overrides.get('backbone', self.config.backbone_classification))
@@ -468,6 +472,7 @@ class UnifiedAutoMLTrainer:
                     # (e.g. the synthetic generator's) otherwise fails at its first class id above 1. Warm start
                     # checks a parent against the same list (dataset_loaders.segmentation_folder_classes).
                     classes = mask_folder_classes(self.dataset_path, [mask for _, mask in train_ds.samples + val_ds.samples])
+                train_ds.input_recipe = val_ds.input_recipe = self.overrides.get("input_recipe")
                 model = build_segmentation_model(num_classes=len(classes), preset=self.preset_key,
                     model_name=str(self.overrides.get('model_name', self.config.backbone_segmentation)),
                     pretrained=self.warm_start is None and not self.overrides.get('resume_checkpoint') and bool(self.overrides.get('pretrained', True)),
@@ -836,6 +841,8 @@ class UnifiedAutoMLTrainer:
             "distributed_world_size":current_distributed_context().world_size,
             "training_config": self._training_config(),
         }
+        from backend.engine.input_preparation import bind_recipe
+        meta.update(bind_recipe(self.overrides.get("input_recipe"), self.task))
         if self.task in {"detection", "segmentation"}:
             # New candidates identify the loader contract, allowing historical
             # impact checks to distinguish image-only augmentation results.
@@ -967,6 +974,7 @@ def infer(
     if img_np.ndim == 3 and img_np.shape[2] == 4:
         img_np = cv2.cvtColor(img_np, cv2.COLOR_RGBA2RGB)
 
+    sidecar_meta = dict(meta)
     orig_h, orig_w = img_np.shape[:2]
 
     if task.lower().strip() == "patch_classification":
@@ -992,7 +1000,13 @@ def infer(
     meta = {**ckpt_meta, **meta}
 
     img_size = tuple(meta.get("image_size", [256, 256]))
-    resized_img = resize_model_input(img_np, img_size)
+    from backend.engine.input_preparation import saved_recipe, prepare_input, restore_mask
+    input_recipe = saved_recipe(sidecar_meta if meta_path.exists() else ckpt, ckpt, task.lower().strip())
+    input_geometry = None
+    if input_recipe:
+        resized_img, _, input_geometry = prepare_input(img_np, input_recipe, task=task.lower().strip(), image_size=img_size)
+    else:
+        resized_img = resize_model_input(img_np, img_size)
     img_t = torch.from_numpy(resized_img.transpose(2, 0, 1)).float().unsqueeze(0) / 255.0
     img_t = img_t.to(dev)
 
@@ -1093,7 +1107,7 @@ def infer(
             pred_mask = torch.argmax(logits, dim=1)[0].cpu().numpy().astype(np.uint8)
 
         # 클래스 번호는 보간하면 다른 번호가 생기므로 최근접으로 복원하고, 아래 확률 맵만 연속값으로 보간한다.
-        mask_orig = cv2.resize(pred_mask, (orig_w, orig_h), interpolation=cv2.INTER_NEAREST)
+        mask_orig = restore_mask(pred_mask, input_geometry) if input_geometry else cv2.resize(pred_mask, (orig_w, orig_h), interpolation=cv2.INTER_NEAREST)
         color_mask = np.zeros_like(overlay)
         color_mask[mask_orig > 0] = [255, 40, 40]
         cv2.addWeighted(color_mask, 0.4, overlay, 0.6, 0, overlay)
@@ -1104,7 +1118,11 @@ def infer(
 
         probs = torch.softmax(logits, dim=1)[0]
         mask_dev = torch.as_tensor(mask_orig, device=dev)
-        if mask_dev.shape != probs.shape[1:]:
+        if input_geometry:
+            probs_spatial = torch.as_tensor(np.stack([restore_mask(channel.cpu().numpy(), input_geometry, continuous=True) for channel in probs]), device=dev)
+            observed = restore_mask(np.ones(pred_mask.shape, dtype=np.uint8), input_geometry).astype(bool)
+            probs_spatial[0, ~torch.as_tensor(observed, device=dev)] = 1.0
+        elif mask_dev.shape != probs.shape[1:]:
             probs_spatial = F.interpolate(probs.unsqueeze(0), size=(orig_h, orig_w), mode="bilinear", align_corners=False)[0]
         else:
             probs_spatial = probs

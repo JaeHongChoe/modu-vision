@@ -4,13 +4,14 @@ import json
 import os
 from pathlib import Path
 import sys
+from types import SimpleNamespace
 import uuid
 
 import psutil
 import pytest
 
 from backend.engine import runtime_deadline as runtime
-from backend.tests.test_runtime_deadline_tree import _CHILD, owned_fixture, assert_live, refuse_scope
+from backend.tests.test_runtime_deadline_tree import _CHILD, owned_fixture, assert_live, refuse_scope, publish_owned_stop
 
 
 pytestmark = pytest.mark.skipif(os.name != 'posix', reason='Original unreaped POSIX child identity boundary')
@@ -35,7 +36,7 @@ def cooperative_leader(directory):
             # The actual fixture command is checked with the original reader;
             # a controlled parent reader never changes the child command.
             assert fixture['original_cmdline'](process) == identity['command']
-            (directory / 'stop.json').write_text(json.dumps({'nonce': nonce}))
+            publish_owned_stop(directory, nonce)
             owner.process.wait(timeout=3)
         if owner is not None:
             assert owner.process.returncode == 0
@@ -50,7 +51,8 @@ def identity_boundary(monkeypatch, fixture, mode, *, stop_on_observation=True):
     original_birth = psutil.Process.create_time
     original_session = os.getsid
     original_group = runtime._group_members
-    fixture.update(original_cmdline=original_cmdline, comparisons=[], observed_rows=[], returned_rows=[])
+    fixture.update(original_cmdline=original_cmdline, comparisons=[], observed_rows=[], returned_rows=[],
+                   session_faults=0, census_active=False)
 
     def initialize(owner, *args, **kwargs):
         original_init(owner, *args, **kwargs)
@@ -59,7 +61,8 @@ def identity_boundary(monkeypatch, fixture, mode, *, stop_on_observation=True):
 
     def selected(pid):
         owner = fixture.get('owner')
-        return owner is not None and pid == owner.process.pid and (fixture['directory'] / 'registered.json').exists()
+        return (owner is not None and pid == owner.process.pid
+                and (mode == 'empty_with_child' or (fixture['directory'] / 'registered.json').exists()))
 
     def command(process):
         actual = original_cmdline(process)
@@ -77,15 +80,23 @@ def identity_boundary(monkeypatch, fixture, mode, *, stop_on_observation=True):
 
     def session(pid):
         actual = original_session(pid)
-        return actual + 1 if mode == 'changed_session' and selected(pid) else actual
+        if mode == 'changed_session' and not fixture['census_active'] and selected(pid):
+            fixture['session_faults'] += 1
+            return actual + 1
+        return actual
 
     def group(identifier):
-        rows = original_group(identifier)
+        fixture['census_active'] = True
+        try:
+            rows = original_group(identifier)
+        finally:
+            fixture['census_active'] = False
         owner = fixture.get('owner')
-        if owner is not None and selected(owner.process.pid) and (fixture['comparisons'] or mode == 'changed_session'):
+        boundary_observed = fixture['session_faults'] > 0 if mode == 'changed_session' else bool(fixture['comparisons'])
+        if owner is not None and selected(owner.process.pid) and boundary_observed:
             fixture['observed_rows'].append({pid: dict(row) for pid, row in rows.items()})
             if stop_on_observation and (mode != 'empty_then_changed_command' or len(fixture['observed_rows']) >= 2):
-                (fixture['directory'] / 'stop.json').write_text(json.dumps({'nonce': fixture['nonce']}))
+                publish_owned_stop(fixture['directory'], fixture['nonce'])
             if mode == 'observation_error':
                 raise PermissionError('controlled original group reader refusal')
             if mode == 'reused_after_reap':
@@ -109,6 +120,82 @@ def identity_boundary(monkeypatch, fixture, mode, *, stop_on_observation=True):
     monkeypatch.setattr(runtime.os, 'getsid', session)
     monkeypatch.setattr(runtime, '_group_members', group)
     monkeypatch.setattr(runtime.os, 'killpg', forbidden_signal)
+
+
+@pytest.fixture
+def fixture_phase(monkeypatch, tmp_path):
+    """Control registration visibility between readers without a scheduling race.
+
+    This tests the reader fixture's stop/activation boundary only. Literal
+    synthetic readers perform no process lookup, launch, signal or OS query;
+    the existing integration cases below still use actual owned children.
+    """
+    directory = tmp_path / 'fixture-phase'
+    directory.mkdir()
+    process = SimpleNamespace(pid=733, returncode=None)
+    fixture = {'directory': directory, 'nonce': 'owned-fixture-phase'}
+    calls = []
+
+    def initialize(owner, original_process, _module):
+        calls.append(original_process)
+        owner.process = original_process
+        owner.group = owner.session = 733
+        owner.leader = (42.5, tuple(psutil.Process.cmdline(original_process)))
+
+    monkeypatch.setattr(runtime._OwnedGroup, '__init__', initialize)
+    monkeypatch.setattr(psutil.Process, 'cmdline', lambda _process: ['phase-owned-command'])
+    monkeypatch.setattr(psutil.Process, 'create_time', lambda _process: 42.5)
+    monkeypatch.setattr(runtime.os, 'getsid', lambda _pid: 733)
+    monkeypatch.setattr(runtime, '_group_members', lambda _group: {733: {'state': 'S', 'session': 733}})
+    return SimpleNamespace(fixture=fixture, process=process, calls=calls)
+
+
+@pytest.mark.parametrize('census_reads_session', [False, True])
+def test_changed_session_fixture_cannot_stop_before_actual_fault_is_observed(monkeypatch, fixture_phase, census_reads_session):
+    case = fixture_phase
+    if census_reads_session:
+        # The supported macOS ps census queries getsid itself. That census
+        # metadata must not be mistaken for the leader identity fault.
+        monkeypatch.setattr(runtime, '_group_members',
+            lambda _group: {733: {'state': 'S', 'session': runtime.os.getsid(733)}})
+    identity_boundary(monkeypatch, case.fixture, 'changed_session')
+    owner = runtime._OwnedGroup(case.process, None)
+    assert case.calls == [case.process] and owner.leader == (42.5, ('phase-owned-command',))
+    assert runtime.os.getsid(733) == 733
+    # Exact hosted-compatible ordering: registration becomes visible after the
+    # unchanged session read, before the following census. No fault occurred.
+    (case.fixture['directory'] / 'registered.json').write_text('{}')
+    assert runtime._group_members(733) == {733: {'state': 'S', 'session': 733}}
+    assert case.fixture['session_faults'] == 0
+    assert not (case.fixture['directory'] / 'stop.json').exists()
+    assert runtime.os.getsid(733) == 734
+    assert case.fixture['session_faults'] == 1
+    assert runtime._group_members(733) == {733: {'state': 'S', 'session': 733}}
+    assert json.loads((case.fixture['directory'] / 'stop.json').read_text()) == {'nonce': 'owned-fixture-phase'}
+
+
+def test_child_fixture_withholds_argv_from_first_post_init_before_registration(monkeypatch, fixture_phase):
+    case = fixture_phase
+    identity_boundary(monkeypatch, case.fixture, 'empty_with_child', stop_on_observation=False)
+    owner = runtime._OwnedGroup(case.process, None)
+    assert case.calls == [case.process] and owner.leader == (42.5, ('phase-owned-command',))
+    assert not (case.fixture['directory'] / 'registered.json').exists()
+    assert psutil.Process.cmdline(case.process) == []
+    assert case.fixture['comparisons'] == [{'pid': 733, 'actual_command': ['phase-owned-command'],
+        'returned_command': [], 'original_returncode': None}]
+    assert case.fixture['observed_rows'] == []
+
+
+@pytest.mark.parametrize('mode', ['empty_at_exit', 'persistent_empty', 'changed_command',
+    'empty_then_changed_command', 'changed_birth', 'changed_session', 'foreign_session_row',
+    'missing_session_row', 'observation_error', 'reused_after_reap'])
+def test_other_fixture_modes_retain_registration_activation(monkeypatch, fixture_phase, mode):
+    case = fixture_phase
+    identity_boundary(monkeypatch, case.fixture, mode)
+    owner = runtime._OwnedGroup(case.process, None)
+    assert owner.leader == (42.5, ('phase-owned-command',))
+    assert psutil.Process.cmdline(case.process) == ['phase-owned-command']
+    assert case.fixture['comparisons'] == [] and case.fixture['observed_rows'] == []
 
 
 def execute(fixture, event, *, deadline=2000):
@@ -168,6 +255,8 @@ def test_unavailable_fact_cannot_mask_foreign_or_unproven_identity(monkeypatch, 
         with handle.running() as event:
             outcome = execute(fixture, event)
         record(fixture, outcome, mode)
+        if mode == 'changed_session':
+            assert fixture['session_faults'] > 0, 'No changed session was actually observed'
         assert outcome['status'] == 'uncertain' and outcome['returncode'] != 0
         assert outcome['leader_returncode'] == 0
         assert outcome['ownership']['observation_failed'] or outcome['pid'] in outcome['ownership']['unknown_members']
