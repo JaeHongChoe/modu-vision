@@ -5,6 +5,7 @@ Popen, process census, wait/deadline loop and cooperative child remain real.
 These controls do not establish the cause of a historical hosted failure.
 """
 from contextlib import contextmanager
+import hashlib
 import json
 import os
 from pathlib import Path
@@ -16,6 +17,7 @@ import psutil
 import pytest
 
 from backend.engine import runtime_deadline as runtime
+from backend.tests.test_runtime_deadline_tree import publish_owned_stop
 
 
 pytestmark = pytest.mark.skipif(os.name != 'posix', reason='Original POSIX child admission boundary')
@@ -60,7 +62,7 @@ def cooperative_case(directory, *, child=False):
                            original_cmdline=psutil.Process.cmdline)
     case.command = [sys.executable, '-I', '-B', str(script), str(directory), case.nonce]
     def stop():
-        (directory / 'stop.json').write_text(json.dumps({'nonce': case.nonce}))
+        publish_owned_stop(directory, case.nonce)
     case.stop = stop
     try:
         yield case
@@ -221,6 +223,63 @@ def execute(case, event, deadline=2000):
         cwd=case.directory, cancel_event=event,
         env={'PATH': os.defpath, 'LANG': 'C.UTF-8', 'PYTHONDONTWRITEBYTECODE': '1',
              'CUDA_VISIBLE_DEVICES': '', 'NVIDIA_VISIBLE_DEVICES': 'none'})
+
+
+def test_fixture_stop_marker_is_complete_at_first_child_visibility(tmp_path, monkeypatch):
+    """A real reader must never see the first publication as truncated JSON."""
+    with cooperative_case(tmp_path / 'stop-publication') as case:
+        initial_empty_reader(monkeypatch, case, 0)
+        source = case.directory / 'cooperative.py'
+        source_sha = hashlib.sha256(source.read_bytes()).hexdigest()
+        stop = case.directory / 'stop.json'
+        original_open = Path.open
+        observation = {'direct_stop_open': False}
+
+        def publication_boundary(path, *args, **kwargs):
+            handle = original_open(path, *args, **kwargs)
+            mode = args[0] if args else kwargs.get('mode', 'r')
+            if path == stop and mode == 'w' and not observation['direct_stop_open']:
+                # The old direct publication has opened/truncated the real
+                # destination but has not written a byte yet. Let the original
+                # owned reader observe that exact boundary, inside its frame.
+                observation['direct_stop_open'] = True
+                case.owner.process.wait(timeout=1)
+            return handle
+
+        monkeypatch.setattr(Path, 'open', publication_boundary)
+        handle = runtime.CancellableExecution()
+        with handle.running() as event:
+            outcome = execute(case, event)
+        proof = {**observation, 'actual_returncode': case.owner.process.returncode,
+                 'actual_JSONDecodeError': 'JSONDecodeError' in outcome['stderr'],
+                 'fixture_source_unchanged': hashlib.sha256(source.read_bytes()).hexdigest() == source_sha}
+        (case.directory / 'stop-publication-probe.json').write_text(json.dumps(proof))
+        assert proof['fixture_source_unchanged']
+        if observation['direct_stop_open']:
+            assert proof['actual_returncode'] == 1 and proof['actual_JSONDecodeError']
+        assert outcome['status'] == 'completed' and outcome['returncode'] == 0, proof
+        assert json.loads(stop.read_text()) == {'nonce': case.nonce}
+
+
+def test_shared_stop_marker_never_reopens_or_replaces_an_existing_publication(tmp_path, monkeypatch):
+    publish_owned_stop(tmp_path, 'owned-idempotent-nonce')
+    marker = tmp_path / 'stop.json'
+    before = marker.stat()
+    original_open, original_replace = Path.open, os.replace
+    def open_once(path, *args, **kwargs):
+        mode = args[0] if args else kwargs.get('mode', 'r')
+        assert path != marker or mode not in ('w', 'x', 'a'), 'Existing stop marker reopened for writing'
+        return original_open(path, *args, **kwargs)
+    def replace_once(source, target, *args, **kwargs):
+        assert target != marker, 'Existing stop marker replaced again'
+        return original_replace(source, target, *args, **kwargs)
+    monkeypatch.setattr(Path, 'open', open_once)
+    monkeypatch.setattr(os, 'replace', replace_once)
+    publish_owned_stop(tmp_path, 'owned-idempotent-nonce')
+    after = marker.stat()
+    assert (after.st_dev, after.st_ino, after.st_mtime_ns, after.st_size) == (
+        before.st_dev, before.st_ino, before.st_mtime_ns, before.st_size)
+    assert json.loads(marker.read_text()) == {'nonce': 'owned-idempotent-nonce'}
 
 
 @pytest.mark.parametrize('empty_count,mode', [(1, 'restore'), (3, 'restore'),
