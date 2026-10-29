@@ -18,7 +18,9 @@ export function subscribeWorkflowProgress(listener: Listener): () => void { list
  * panel publishes on every result change and clears its scope when the source changes or it closes (a clear for
  * another scope leaves the counts alone); the footer reads its own scope only. inspected counts the images the run is
  * done with, failed ones included (failed, present when there are any). */
-export type InspectionProgress = {inspected: number; total: number; ng: number; failed?: number};
+export type InspectionProgress = {inspected: number; total: number; ng: number; failed?: number;
+  /** Saved run lifecycle and the panel's current execution, independent of finished row counts. */
+  status?: 'running' | 'completed' | 'stopped'; isRunning?: boolean};
 const inspectionListeners = new Set<Listener>();
 let inspection: {scope: string; counts: InspectionProgress} | null = null;
 
@@ -27,7 +29,8 @@ export function publishInspectionProgress(scope: string, counts: InspectionProgr
   else {
     if (inspection && inspection.scope === scope && inspection.counts.inspected === counts.inspected
       && inspection.counts.total === counts.total && inspection.counts.ng === counts.ng
-      && (inspection.counts.failed ?? 0) === (counts.failed ?? 0)) return;
+      && (inspection.counts.failed ?? 0) === (counts.failed ?? 0)
+      && inspection.counts.status === counts.status && inspection.counts.isRunning === counts.isRunning) return;
     inspection = {scope, counts: {...counts}};
   }
   for (const listener of inspectionListeners) listener();

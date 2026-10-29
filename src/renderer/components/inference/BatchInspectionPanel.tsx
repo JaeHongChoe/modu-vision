@@ -290,6 +290,8 @@ export const BatchInspectionPanel: React.FC = () => {
     setIsRunning(true);
     useInspectionRunStore.getState().setRunning(true);
     setReport(null);
+    // Retire the previous completion before the footer renders alongside this new run's first report effect.
+    publishInspectionProgress(JSON.stringify([sourceFolder, startedSource.projectDir, sourceTask]), {inspected: 0, total: 0, ng: 0, isRunning: true});
     setSelectedPath(null);
     setFilter('all');
     setError(null);
@@ -410,8 +412,9 @@ export const BatchInspectionPanel: React.FC = () => {
     if (publishedScope.current !== progressScope) { publishedScope.current = progressScope; return; }
     const counts = report ? summarizeBatch(report.rows) : null;
     // A failed image is done too, as in the header's n/total; the footer names the failures instead of showing them as waiting.
-    publishInspectionProgress(progressScope, counts ? {inspected: counts.processed + counts.errors, total: counts.total, ng: counts.ng, ...(counts.errors ? {failed: counts.errors} : {})} : null);
-  }, [report, progressScope]);
+    publishInspectionProgress(progressScope, counts ? {status: report!.status, isRunning, inspected: counts.processed + counts.errors, total: counts.total, ng: counts.ng, ...(counts.errors ? {failed: counts.errors} : {})}
+      : isRunning ? {inspected: 0, total: 0, ng: 0, isRunning} : null);
+  }, [report, isRunning, progressScope]);
   // A new result replaces the counts in place; only a source change or closing the panel clears them.
   useEffect(() => () => publishInspectionProgress(progressScope, null), [progressScope]);
   const visibleRows = filterBatchRows(rows, filter);

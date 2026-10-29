@@ -26,8 +26,10 @@ export const LocalProjectGate:React.FC<{projects:ProjectChoice[];mode:BrowserPro
   const [selection,setSelection]=useState(''),[error,setError]=useState(''),[recoverable,setRecoverable]=useState(false),[pending,setPending]=useState(false);
   const blocked=busy||pending||(mode!=='shared'&&mode!=='local_host');
   const select=async(id:string)=>{
-    if(blocked||!id)return;
-    setSelection(id);setError('');setRecoverable(false);setPending(true);
+    if(blocked)return;
+    setSelection(id);setError('');setRecoverable(false);
+    if(!id)return;
+    setPending(true);
     try{await onSelect(id);}catch(reason){
       const value=reason as {status?:number;code?:string;message?:string};
       setRecoverable(mode==='local_host'&&value?.status===409&&value.code==='local_project_location_recovery_required');

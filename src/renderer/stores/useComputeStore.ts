@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { api, getApiPersistenceIdentity, getProjectContext } from '../services/api';
+import { api, getApiPersistenceIdentity, getProjectContext, localBrowserComputeOnlyReady } from '../services/api';
 import type { ComputeProfile, ComputeProfileInput, ComputeProbeResult } from '../services/api';
 
 interface ComputeState {
@@ -59,6 +59,13 @@ export const useComputeStore = create<ComputeState>((set, get) => ({
     const epoch=transportEpoch;
     loadingPromise = (async () => {
       try {
+        if(await localBrowserComputeOnlyReady()){
+          if(epoch!==transportEpoch)return;
+          set({profiles:[],selectedProfileId:null,isLoaded:true,isLoading:false,
+            loadError:null,error:null,probeResults:{}});
+          return;
+        }
+        if(epoch!==transportEpoch)return;
         const [profileResponse, selectionResponse] = await Promise.all([
           api.compute.listProfiles(), api.compute.getSelection(),
         ]);

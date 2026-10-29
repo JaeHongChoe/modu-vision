@@ -54,7 +54,7 @@
     "src/renderer/components/runtime/PortableUpdatePanel.tsx": "4f747509c427ab35d41745d3da7f26e50a3c3f3a93acdca35beb5fee9145796b",
     "src/renderer/components/evaluation/ModelComparisonPanel.tsx": "c30311e73388c1c6d6b8b14cb390ddfc5242a4cb7df9adb96b764f5642276daf",
     "src/renderer/components/dataset/CaptureIntakePanel.tsx": "b46bf30976ef479073158efa2779c223f939fb17ba53c4586516205cc4001501",
-    "src/renderer/components/inference/BatchInspectionPanel.tsx": "d7c3c3a2bb790d92727d9eacc4b92ec2765ce2f2598154b7783f9cdcee993516",
+    "src/renderer/components/inference/BatchInspectionPanel.tsx": "985e087c0fddf7d938a9d3ea0dc24ab4ed1a61fd7a0fb40c0860f02ca37256c4",
     "src/renderer/components/flowchart/IntermediateCropDrawer.tsx": "9e05b534b05fd79b814f4cec0948c0d831ba768ec573c73ca13b4199cc6ea3db",
     "src/renderer/components/runtime/RuntimePackPanel.tsx": "3a8796d3740ad710eb2c1285ad8448940fcdbdf014408c1daf4bab594ba45805"
   },

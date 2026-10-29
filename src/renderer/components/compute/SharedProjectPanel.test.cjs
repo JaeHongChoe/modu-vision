@@ -10,7 +10,7 @@ for(const operation of ['activate','login','disconnect','login_inventory_failure
   const api={compute:{listProfiles:()=>new Promise(resolve=>pending.push({server,resolve})),getSelection:async()=>({compute_profile_id:`${server}-gpu`})}};
   // This transport-only fixture already supplies accepted team context to the panel.
   // Null-context automatic loading is exercised through the real API in computeContextReadiness.
-  const compute=load(path.resolve(__dirname,'../../stores/useComputeStore.ts'),{'../services/api':{api,getApiPersistenceIdentity:()=>`shared:https://${server}.example`,getProjectContext:()=>({workspace_id:'fixture',project_id:`${server}-project`,actor_id:'user',mode:'team'})}});
+  const compute=load(path.resolve(__dirname,'../../stores/useComputeStore.ts'),{'../services/api':{api,localBrowserComputeOnlyReady:async()=>false,getApiPersistenceIdentity:()=>`shared:https://${server}.example`,getProjectContext:()=>({workspace_id:'fixture',project_id:`${server}-project`,actor_id:'user',mode:'team'})}});
   const store=compute.useComputeStore;
   const oldLoad=store.getState().load();
   const unsubscribe=store.subscribe((state,previous)=>{if(state.transportRevision!==previous.transportRevision)void state.load();});

@@ -16,7 +16,8 @@ export type StepFourProgress = { samples: number; escapes: number; overkills: nu
 export type StepFiveProgress = { versionId: string; evaluated: boolean; unsaved: boolean; reevaluate?: boolean };
 /** Step 6: the batch inspection the step shows: images done so far (failed ones included), images in the run, images
  *  judged NG, and images that failed (present only when some did). */
-export type StepSixProgress = { inspected: number; total: number; ng: number; failed?: number };
+export type StepSixProgress = { inspected: number; total: number; ng: number; failed?: number;
+  status?: 'running' | 'completed' | 'stopped'; isRunning?: boolean };
 /** One number line per step; the footer tells them apart by the action's stage (step 2's shape stays exactly three keys). */
 export type ReadinessProgress = StepTwoProgress | StepThreeProgress | StepFourProgress | StepFiveProgress | StepSixProgress;
 export type ReadinessAction = { stage: WorkflowStep; status: 'ready' | 'blocked' | 'checking' | 'unknown'; completedInputs: string[]; missingInputs: string[]; nextAction: { label: string; step: WorkflowStep; kind?: 'refresh' | 'details'; target?: string };
@@ -135,7 +136,15 @@ export function getNextAction(input: ReadinessContext): ReadinessAction {
   if(!flow)return result('blocked',['저장 버전과 현재 정답에 일치하는 전체 플로우 평가 필요'],'검사 흐름 평가 확인 (5단계)',5,'flow-area-evaluate');
   completedInputs.push('현재 입력과 일치하는 전체 플로우 평가');
   if(stage===5)return result('ready',[],'검사 결과 확인 (6단계)',6,'workflow-package');
-  return result('unknown',['검사 결과까지 확인했습니다. 현장에 쓰려면 플로우 승인, 패키지 만들기, 대상 장치 확인을 차례로 진행하세요.'],'승인·패키지·대상 확인',6,'workflow-package');
+  const inspection=input.inspection;
+  if(inspection?.isRunning===true)return result('checking',['검사가 진행 중입니다. 저장된 실행 결과가 확정될 때까지 진행 상태를 확인하세요.'],'검사 진행 상태 보기',6,'workflow-package');
+  if(!inspection)return result('unknown',['현재 원본으로 검사를 실행하고 저장된 결과를 확인하세요.'],'검사 시작 버튼으로 이동',6,'workflow-package');
+  if(inspection.status==='stopped')return result('blocked',['검사가 중단되었습니다. 저장된 검사 기록과 중단 원인을 확인한 뒤 다시 실행하세요.'],'중단된 검사 확인',6,'workflow-package');
+  // Complete rows can precede finish persistence, and a reopened running record has no active runtime here.
+  if(inspection.status!=='completed'||inspection.isRunning!==false)return result('unknown',['저장된 검사의 완료 상태를 확인해야 합니다. 검사 기록과 오류를 먼저 확인하세요.'],'검사 상태 확인',6,'workflow-package');
+  const failed=count(inspection.failed);
+  if(failed)return result('blocked',[`검사에 실패한 이미지 ${failed}장이 있습니다. 저장된 결과에서 오류를 확인하세요.`],'실패한 검사 이미지 확인',6,'workflow-package');
+  return result('unknown',['검사 실행이 완료되어 저장된 결과를 확인할 수 있습니다. 모델 품질과 현장 사용·배포 승인은 별도로 판단해야 합니다. 현장에 쓰려면 플로우 승인, 패키지 만들기, 대상 장치 확인을 차례로 진행하세요.'],'승인·패키지·대상 확인',6,'workflow-package');
 }
 
 /** Step 2's counts, when the task counts labels per image: confirmed = labeled by a person or adopted, drafts =

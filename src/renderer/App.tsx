@@ -76,17 +76,24 @@ function StudioApp() {
   const firstRunLabel=language==='ko'?(demo?.state==='running'?'처음 시작 · 예제 만드는 중':'처음 시작 안내'):(demo?.state==='running'?'Getting started · building example':'Getting started');
 
   useEffect(() => {
+    let active = true;
+    let statusRevision = 0;
     let unsubStatus: (() => void) | undefined;
     let unsubCrash: (() => void) | undefined;
     let stopHealthProbe: (() => void) | undefined;
 
     // 1. Hook Electron preload IPC events if running under Electron
     if (typeof window !== 'undefined' && window.api) {
-      window.api.getBackendStatus().then(setBackendStatus).catch(console.error);
-
       unsubStatus = window.api.onBackendStatusChange?.((newStatus) => {
+        if (!active) return;
+        statusRevision += 1;
         setBackendStatus(newStatus);
       });
+      // A live event supersedes the initial snapshot; a disposed effect owns no status update.
+      const initialStatusRevision = statusRevision;
+      window.api.getBackendStatus().then(status => {
+        if (active && statusRevision === initialStatusRevision) setBackendStatus(status);
+      }).catch(console.error);
 
       unsubCrash = window.api.onBackendCrashed?.((crashData) => {
         showError({
@@ -131,6 +138,7 @@ function StudioApp() {
     });
 
     return () => {
+      active = false;
       if (unsubStatus) unsubStatus();
       if (unsubCrash) unsubCrash();
       if (stopHealthProbe) stopHealthProbe();

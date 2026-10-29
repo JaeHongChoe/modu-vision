@@ -408,13 +408,36 @@ test('step 5 names the saved version and whether its whole-flow evaluation is cu
  assert.equal(differs.nextAction.label,'보이는 검사 흐름 저장·평가 (5단계)');assert.deepEqual(differs.progress,{versionId:'v1234567890',evaluated:true,unsaved:false});
 });
 
+const inspectedFlow={...base,stage:6,flowVersionId:'v',flowMatchesSaved:true,evidence:{...base.evidence,impact:{...base.evidence.impact,flows:[{version_id:'v',state:'current',scope_matches:true}]}}};
+// Count totals cannot prove finish persistence, active execution, stopping or a saved error-free result.
+for(const row of [
+ {name:'no saved run',inspection:null,status:'unknown',label:/검사 시작/,reason:/검사를 실행/},
+ {name:'counts without saved lifecycle',inspection:{inspected:12,total:12,ng:0},status:'unknown',label:/검사 상태/,reason:/완료 상태.*확인/},
+ {name:'preparing a new run before any rows arrive',inspection:{inspected:0,total:0,ng:0,isRunning:true},status:'checking',label:/진행 상태/,reason:/진행 중/},
+ {name:'unknown saved lifecycle',inspection:{inspected:12,total:12,ng:0,status:'unknown',isRunning:false},status:'unknown',label:/검사 상태/,reason:/완료 상태.*확인/},
+ {name:'completed without runtime confirmation',inspection:{inspected:12,total:12,ng:0,status:'completed'},status:'unknown',label:/검사 상태/,reason:/완료 상태.*확인/},
+ {name:'zero of twelve running',inspection:{inspected:0,total:12,ng:0,status:'running',isRunning:true},status:'checking',label:/진행 상태/,reason:/진행 중/},
+ {name:'twelve of twelve still running',inspection:{inspected:12,total:12,ng:0,status:'running',isRunning:true},status:'checking',label:/진행 상태/,reason:/진행 중/},
+ {name:'completed report while runtime still finalizing',inspection:{inspected:12,total:12,ng:0,status:'completed',isRunning:true},status:'checking',label:/진행 상태/,reason:/진행 중/},
+ {name:'saved running record without active runtime',inspection:{inspected:12,total:12,ng:0,status:'running',isRunning:false},status:'unknown',label:/검사 상태/,reason:/완료 상태.*확인/},
+ {name:'stopped run',inspection:{inspected:4,total:12,ng:0,status:'stopped',isRunning:false},status:'blocked',label:/중단.*검사/,reason:/중단/},
+ {name:'completed with failed images',inspection:{inspected:12,total:12,ng:0,failed:2,status:'completed',isRunning:false},status:'blocked',label:/실패.*이미지/,reason:/실패.*2장/},
+ {name:'clean saved completion',inspection:{inspected:12,total:12,ng:0,status:'completed',isRunning:false},status:'unknown',label:/승인·패키지·대상/,reason:/검사.*완료/},
+])test('step 6 lifecycle guidance: '+row.name,()=>{
+ const result=load().getNextAction({...inspectedFlow,inspection:row.inspection});
+ assert.equal(result.status,row.status);assert.match(result.nextAction.label,row.label);assert.equal(result.nextAction.step,6);
+ assert.match(result.missingInputs.join(' '),row.reason);
+ if(row.inspection?.status!=='completed'||row.inspection?.isRunning!==false||row.inspection?.failed)assert.doesNotMatch(result.missingInputs.join(' '),/검사 결과까지 확인했습니다/);
+ else assert.match(result.missingInputs.join(' '),/모델 품질.*승인|품질.*배포.*승인/);
+});
+
 test('step 6 counts the inspection the panel shows for this source and nothing without one',()=>{
  const {getNextAction,progressLine}=load();
  const flows=[{version_id:'v',state:'current',scope_matches:true}];
  const six={...base,stage:6,flowVersionId:'v',flowMatchesSaved:true,evidence:{...base.evidence,impact:{...base.evidence.impact,flows}}};
  assert.equal(getNextAction(six).progress,undefined);
  assert.equal(getNextAction({...six,inspection:{inspected:0,total:0,ng:0}}).progress,undefined,'an empty run counts nothing');
- const inspected=getNextAction({...six,inspection:{inspected:40,total:40,ng:3}});
+ const inspected=getNextAction({...six,inspection:{inspected:40,total:40,ng:3,status:'completed',isRunning:false}});
  assert.equal(inspected.nextAction.label,'승인·패키지·대상 확인');assert.deepEqual(inspected.progress,{inspected:40,total:40,ng:3});
  assert.equal(progressLine(6,inspected.progress,true),' · 검사 40장 · 불량 3장');
  assert.equal(progressLine(6,{inspected:12,total:40,ng:1},true),' · 검사 12/40장 · 불량 1장','a run still going shows how far it is');
@@ -605,6 +628,23 @@ test('a new inspection result replaces the step-6 counts in place; only its own 
  // Done images match the header's processed + errors, and the failures travel with them.
  assert.match(panel,/inspected: counts\.processed \+ counts\.errors, total: counts\.total, ng: counts\.ng, \.\.\.\(counts\.errors \? \{failed: counts\.errors\} : \{\}\)/);
  assert.match(panel,/const progress = summary\.total \? summary\.processed \+ summary\.errors : 0;/);
+});
+
+test('status-only inspection transitions notify subscribers and remain confined to their source',()=>{
+ const filename=path.join(__dirname,'..','..','stores','workflowProgress.ts'),m=new Module(filename,module);
+ m._compile(ts.transpileModule(fs.readFileSync(filename,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText,filename);
+ const {publishInspectionProgress,inspectionProgressFor,subscribeInspectionProgress}=m.exports;
+ let notified=0;subscribeInspectionProgress(()=>notified++);
+ const counts={inspected:12,total:12,ng:0};
+ publishInspectionProgress('own',{...counts,status:'running',isRunning:true});
+ publishInspectionProgress('own',{...counts,status:'completed',isRunning:true});
+ assert.equal(notified,2,'persisted lifecycle transition is visible without a row-count change');
+ publishInspectionProgress('own',{...counts,status:'completed',isRunning:false});
+ assert.equal(notified,3,'runtime finish is visible without a row-count change');
+ assert.deepEqual(inspectionProgressFor('own'),{...counts,status:'completed',isRunning:false});
+ assert.equal(inspectionProgressFor('other'),null,'another source cannot inherit the completed run');
+ publishInspectionProgress('other',null);assert.equal(notified,3);
+ publishInspectionProgress('own',{...counts,status:'completed',isRunning:false});assert.equal(notified,3,'identical lifecycle stays silent');
 });
 
 test('a failed training job guides the person to its error details instead of a ready start action',()=>{

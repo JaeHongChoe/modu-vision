@@ -201,6 +201,24 @@ saving. Shared-project failures keep their existing inline `role="alert"`.
 
 Written status distinguishes planned, running, waiting for a person, waiting for a job, paused, uncertain, failed and completed. Badges support that text with semantic tones. Inline errors persist beside the affected work. Loading uses plain status text and `aria-busy`; the card introduces no animated loader or skeleton.
 
+Stage 6 guidance follows the saved inspection run status together with the current
+execution state. A complete row count while the run is still active or its final
+save is unconfirmed is not completion. Missing, running, stopped, failed-row and
+confirmed completed records retain distinct guidance in the current source scope.
+A completed inspection records execution results; model quality and operational
+approval remain separate.
+
+Local browser compute readiness may omit administrator-only SSH discovery only
+for a live same-origin nonadministrator session, its accepted matching local
+actor/project context and native registration/path, and a current native projects
+capability. Restored membership keys are resolved through the authenticated native
+catalog, preserving the workspace and logical project identity. Unknown native
+capability, remote or ordinary shared-server contexts and administrators keep their existing
+discovery path. Backend training/project permissions and all SSH mutations remain
+authoritative. Initial native status snapshots cannot overwrite newer status
+events or apply after their effect has been disposed; genuine later failures and
+new backend processes still update the screen.
+
 ### Buttons and actions
 
 Every task-card button uses `workspace-button`. Exactly one action in a card uses `workspace-button--primary`; the parent assistant coordinates this with its composer and other pending actions. Use the normal `2.25rem` minimum height, visible focus ring, wrapped labels and shared disabled recipe. A disabled handler must also reject an invoked callback. Pause is a safe workflow action and never borrows danger styling from training cancellation.

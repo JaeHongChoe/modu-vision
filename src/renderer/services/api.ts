@@ -683,7 +683,8 @@ export interface ContextRequestOptions extends RequestInit {
   responseType?: 'json' | 'blob';
 }
 type LocalHostTransport = {available:()=>boolean;canProjects:()=>boolean;canProjectAssets?:()=>boolean;requestHeaders:(url:string,method:string,body?:unknown)=>Record<string,string>;projectChanged:()=>void;prepareRequest?:(url?:string,method?:string,body?:unknown)=>Promise<void>;socketProtocols?:(url:string)=>string[];prepareSocketProtocols?:(url:string)=>Promise<string[]>;generation:()=>number;acceptResponseHeaders:(path:string,method:string,headers:Headers,body?:unknown)=>void};
-type BrowserSessionTransport={authenticated:()=>boolean;revision:()=>number;requestOptions:(url:string,method:string)=>{credentials?:RequestCredentials;headers?:Record<string,string>};invalidate:()=>void};
+type BrowserSessionTransport={authenticated:()=>boolean;revision:()=>number;requestOptions:(url:string,method:string)=>{credentials?:RequestCredentials;headers?:Record<string,string>};invalidate:()=>void;
+  connection?:()=>{server_url:string;project_id?:string;user:{id:string;administrator:unknown}}|null};
 let browserSessionTransport:BrowserSessionTransport|null=null;
 /** The browser entrypoint installs its memory authority; a retained cookie alone cannot hydrate the Studio. */
 export function setBrowserSessionTransport(adapter:BrowserSessionTransport):void {browserSessionTransport=adapter;}
@@ -696,6 +697,9 @@ let localHostTransport:LocalHostTransport|null=null;
 export function setLocalHostTransport(adapter:LocalHostTransport):void {if(localHostTransport!==adapter){boundAssetTicket=null;localAssetPolicyActive=false;}localHostTransport=adapter;}
 let boundProjectContext:ProjectContext|null=null;
 let acceptedLocalContext:ProjectContext|null=null;
+type AcceptedLocalProject={context:ProjectContext;nativeRegistration:boolean;registrationId:string|null;workspaceId:string|null;projectDir:string|null;
+  transport:string|null;host:LocalHostTransport|null;session:BrowserSessionTransport|null;sessionRevision:number|undefined};
+let acceptedLocalProject:AcceptedLocalProject|null=null;
 type RemoteTransport={connection:()=>{transport_url:string;server_url:string;remote_id?:string;authority_epoch?:number}|null;assetUrl:(path:string)=>string;socketUrl:(path:string,context?:ProjectContext)=>string};
 let remoteTransport:RemoteTransport|null=null;
 export function setRemoteTransport(value:RemoteTransport):void {remoteTransport=value;}
@@ -707,6 +711,51 @@ export function getHostProjectState():HostProjectState {
   return {local,generation:contextGeneration,...(connection?.remote_id&&Number.isSafeInteger(connection.authority_epoch)?{remote:{remote_id:connection.remote_id,authority_epoch:connection.authority_epoch!}}:{})};
 }
 export function getLocalProjectContext():ProjectContext|null {return acceptedLocalContext?{...acceptedLocalContext}:null;}
+/** A verified localhost native project can execute locally without reading the
+ * administrator's SSH configuration. This is renderer readiness only: every
+ * training/compute request retains its backend account and project checks. */
+export async function localBrowserComputeOnlyReady():Promise<boolean> {
+  const owner=browserSessionTransport,host=localHostTransport;
+  const eligible=():boolean=>{
+    const origin=secureBrowserOrigin(),connection=owner?.connection?.(),context=boundProjectContext;
+    return !!(origin&&owner&&host&&owner===browserSessionTransport&&host===localHostTransport
+      &&host.available()&&getHostProjectState().local&&sharedBase===origin
+      &&connection&&connection.server_url===origin
+      &&(connection.user.administrator===false||connection.user.administrator===0)
+      &&context&&acceptedLocalContext&&sameContext(context,acceptedLocalContext)
+      &&connection.user.id===context.actor_id&&connection.project_id);
+  };
+  if(!eligible()||!owner||!host)return false;
+  const projectRevision=contextGeneration,sessionRevision=owner.revision(),project=acceptedLocalProject;
+  const selectedKey=owner.connection?.()?.project_id;
+  const requireCurrent=():void=>{
+    if(owner!==browserSessionTransport||host!==localHostTransport||projectRevision!==contextGeneration
+      ||sessionRevision!==owner.revision()||selectedKey!==owner.connection?.()?.project_id||project!==acceptedLocalProject)
+      throw new Error('계정 또는 프로젝트가 바뀌었습니다. 현재 프로젝트에서 다시 확인하세요.');
+  };
+  // Acceptance retires the previous native tab. Negotiate its replacement using
+  // the existing discovery path; no approval, SSH selection or model is started.
+  try{await host.prepareRequest?.();}catch{/* Unknown native capability falls back to ordinary SSH discovery. */}
+  requireCurrent();
+  if(!eligible()||!host.canProjects())return false;
+  const context=boundProjectContext!;
+  if(!project?.nativeRegistration)return selectedKey===context.project_id;
+  if(!project.registrationId||!project.projectDir||project.workspaceId!==context.workspace_id
+    ||project.host!==host||project.session!==owner||project.sessionRevision!==sessionRevision
+    ||project.transport!==sharedBase||!sameContext(project.context,context))return false;
+  // Membership keys differ from manifest IDs for restored copies. Resolve the
+  // accepted registration through the ordinary authenticated native catalog;
+  // no SSH configuration, selection, asset grant or project change is requested.
+  const catalog=await api.project.list();
+  requireCurrent();
+  if(!eligible()||!host.canProjects())return false;
+  type Registration={id?:string;permission_key?:string;project_id?:string;registration_id?:string;workspace_id?:string;
+    path?:string;project_dir?:string;context?:ProjectContext};
+  return (catalog.projects as Registration[]).some(row=>row&&row.permission_key===selectedKey
+    &&row.id===context.project_id&&row.project_id===context.project_id&&row.registration_id===project.registrationId
+    &&row.workspace_id===context.workspace_id&&row.path===project.projectDir&&row.project_dir===project.projectDir
+    &&sameContext(row.context??null,context));
+}
 export function getRemoteSocketUrl(path:string,context:ProjectContext):string|null {return remoteBase()?remoteTransport?.socketUrl(path,context)??null:null;}
 export async function getLocalBrowserSocketProtocols(url:string):Promise<string[]> {
   if(remoteBase()||!localHostTransport)return [];
@@ -744,7 +793,7 @@ function validContext(value:unknown):value is ProjectContext {
 export function setProjectContext(context:ProjectContext|null):void {
   if(context&&!validContext(context))throw new Error('프로젝트 요청 문맥을 확인하세요.');
   if(sameContext(boundProjectContext,context))return;
-  boundAssetTicket=null;boundProjectContext=context?{...context}:null;contextGeneration++;if(!remoteBase()){acceptedLocalContext=boundProjectContext?{...boundProjectContext}:null;localHostTransport?.projectChanged();}notifyContext();
+  boundAssetTicket=null;boundProjectContext=context?{...context}:null;contextGeneration++;if(!remoteBase()){acceptedLocalContext=boundProjectContext?{...boundProjectContext}:null;acceptedLocalProject=null;localHostTransport?.projectChanged();}notifyContext();
 }
 export function getProjectContext():ProjectContext|null {
   return boundProjectContext?{...boundProjectContext}:null;
@@ -770,7 +819,7 @@ function secureBrowserOrigin():string|null {
 export function setSharedApiBase(base:string|null,options?:BrowserRequestOptions):void {
   browserRequestOptions=base?options:undefined;
   if(sharedBase===base)return;
-  sharedBase=base;localAssetPolicyActive=false;boundAssetTicket=null;boundProjectContext=null;contextGeneration++;notifyContext();
+  sharedBase=base;localAssetPolicyActive=false;boundAssetTicket=null;boundProjectContext=null;acceptedLocalProject=null;contextGeneration++;notifyContext();
 }
 function localProjectAssetsRequired():boolean {
   const origin=secureBrowserOrigin();
@@ -815,9 +864,13 @@ function acceptProjectContext(project:ProjectConfig,apply?:()=>void):void {
       ||candidate.context.project_id!==project.id)
     throw new Error('프로젝트 선택 문맥이 바뀌었습니다. 현재 서버의 프로젝트를 다시 확인하세요.');
   if(localProjectAssetsRequired()&&!validAssetTicket(candidate.assetTicket,candidate.context))throw new Error('프로젝트 이미지 읽기 티켓 준비가 필요합니다.');
-  const previous=boundProjectContext,previousTicket=boundAssetTicket;
+  const previous=boundProjectContext,previousTicket=boundAssetTicket,previousLocalProject=acceptedLocalProject;
   boundProjectContext={...candidate.context};boundAssetTicket=candidate.assetTicket??null;
-  try{apply?.();}catch(error){boundProjectContext=previous;boundAssetTicket=previousTicket;throw error;}
+  if(!remoteBase())acceptedLocalProject={context:{...candidate.context},nativeRegistration:project.registration_id!==undefined||project.workspace_id!==undefined,
+    registrationId:project.registration_id??null,
+    workspaceId:project.workspace_id??null,projectDir:project.project_dir??null,transport:sharedBase,
+    host:localHostTransport,session:browserSessionTransport,sessionRevision:browserSessionTransport?.revision()};
+  try{apply?.();}catch(error){boundProjectContext=previous;boundAssetTicket=previousTicket;acceptedLocalProject=previousLocalProject;throw error;}
   if(!unchanged){contextGeneration++;if(!remoteBase()){acceptedLocalContext={...candidate.context};localHostTransport?.projectChanged();}notifyContext();}
 }
 /** Stable storage binding; credentials, tokens and the local process port are excluded. */
