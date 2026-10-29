@@ -222,5 +222,5 @@ setLocalHostTransport({available:()=>browserHost.available(),canProjects:()=>bro
 
 setBrowserHost(browserHost);
 
-setBrowserSessionTransport({authenticated:()=>browserSession.connection()!==null,revision:()=>browserSession.revision(),requestOptions:(...args)=>browserSession.requestOptions(...args),invalidate:()=>browserSession.invalidate()});
+setBrowserSessionTransport({authenticated:()=>browserSession.connection()!==null,revision:()=>browserSession.revision(),requestOptions:(...args)=>browserSession.requestOptions(...args),invalidate:()=>browserSession.invalidate(),connection:()=>browserSession.connection()});
 browserSession.subscribe(()=>{if(!browserSession.connection())browserHost.reset();});
