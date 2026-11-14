@@ -19,6 +19,23 @@ READINESS_CI_CONTROLS = (
     'backend/tests/test_managed_service_initial_identity.py',
 )
 
+ANNOTATION_LOAD_CONTROL = 'backend/tests/test_annotation_load_source_spelling.py'
+
+
+def _annotation_load_predecessor_command(workflow):
+    """Validate this one additive selector before recovering the pinned command."""
+    steps = workflow['jobs']['source']['steps']
+    selected = [step for step in steps if step.get('name') == 'CPU contract and recovery regressions']
+    assert len(selected) == 1, 'Annotation load coverage requires the original CPU step exactly once'
+    cpu = selected[0]
+    assert set(cpu) == {'name', 'env', 'run'}, 'Annotation load coverage cannot gate or soften the CPU step'
+    insertion = ('backend/tests/test_annotation_save_source_spelling.py '
+                 + ANNOTATION_LOAD_CONTROL + ' backend/tests/test_annotation_recovery.py ')
+    assert cpu['run'].count(insertion) == 1, 'Annotation load coverage must retain its exact ordered insertion'
+    assert sum(step.get('run', '').split().count(ANNOTATION_LOAD_CONTROL) for step in steps) == 1, \
+        'Annotation load coverage must execute exactly once in full CI'
+    return cpu['run'].replace(ANNOTATION_LOAD_CONTROL + ' ', '', 1)
+
 
 def ci_module():
     spec = importlib.util.spec_from_file_location('ci_lane_receipt', ROOT / 'scripts/write_ci_receipt.py')
@@ -273,7 +290,9 @@ def test_cpu_and_browser_ci_have_independent_original_bounds_and_complete_comman
         'backend/tests/test_labelset_blank_name_boundary.py',
         'backend/tests/test_runtime_spawn_diagnostic.py',
     )
-    command = cpu_step['run']
+    # Only the separately checked read-alias selector is new. All historical
+    # contiguous blocks, command bytes and hashes below keep their original pins.
+    command = _annotation_load_predecessor_command(workflow)
     readiness_cli = 'python -m pytest -q --junitxml="$MV_CI_RECORD_DIR/ci-pytest.xml" '
     readiness_insertion = ' '.join(READINESS_CI_CONTROLS) + ' '
     assert command.startswith(readiness_cli + readiness_insertion), 'Readiness CI controls must be the exact first ordered block after pytest options'
@@ -566,6 +585,54 @@ def test_saved_brush_summary_regressions_run_in_full_cpu_and_changed_file_fast_s
         assert reference in related.select_pytest([reference]), f'Changed regression must reach fast CI: {reference}'
 
 
+def test_annotation_load_addition_reaches_full_and_changed_file_fast_selection_once():
+    workflow = yaml.safe_load((ROOT / '.github/workflows/ci.yml').read_text())
+    _annotation_load_predecessor_command(workflow)
+    related = related_module()
+    assert related.full_pytest_references().count(ANNOTATION_LOAD_CONTROL) == 1
+    selected = related.select_pytest([ANNOTATION_LOAD_CONTROL])
+    assert selected.count(ANNOTATION_LOAD_CONTROL) == 1
+    shards = [related.shard(selected, index, 6) for index in range(1, 7)]
+    assert sum(part.count(ANNOTATION_LOAD_CONTROL) for part in shards) == 1
+    assert related.select_pytest([], extra=[ANNOTATION_LOAD_CONTROL]).count(ANNOTATION_LOAD_CONTROL) == 1
+
+
+@pytest.mark.parametrize('damage', [
+    'missing', 'duplicate', 'moved', 'conditional', 'continue_on_error',
+    'filtered_command', 'original_selector_removed', 'original_budget_changed',
+])
+def test_annotation_load_normalization_rejects_missing_moved_or_weakened_coverage(monkeypatch, damage):
+    path = ROOT / '.github/workflows/ci.yml'
+    original_read = Path.read_text
+    workflow = yaml.safe_load(original_read(path))
+    job = workflow['jobs']['source']
+    cpu = next(step for step in job['steps'] if step.get('name') == 'CPU contract and recovery regressions')
+    if damage == 'missing':
+        cpu['run'] = cpu['run'].replace(ANNOTATION_LOAD_CONTROL + ' ', '', 1)
+    elif damage == 'duplicate':
+        cpu['run'] += ' ' + ANNOTATION_LOAD_CONTROL
+    elif damage == 'moved':
+        cpu['run'] = cpu['run'].replace(ANNOTATION_LOAD_CONTROL + ' ', '', 1) + ' ' + ANNOTATION_LOAD_CONTROL
+    elif damage == 'conditional':
+        cpu['if'] = 'false'
+    elif damage == 'continue_on_error':
+        cpu['continue-on-error'] = True
+    elif damage == 'filtered_command':
+        cpu['run'] = cpu['run'].replace('pytest -q ', 'pytest -q -k source_spelling ', 1)
+    elif damage == 'original_selector_removed':
+        cpu['run'] = cpu['run'].replace('backend/tests/test_service_s5_07.py', '', 1)
+    else:
+        job['timeout-minutes'] += 1
+    controlled = yaml.safe_dump(workflow, sort_keys=False)
+    def read_text(file, *args, **kwargs):
+        return controlled if file == path else original_read(file, *args, **kwargs)
+    monkeypatch.setattr(Path, 'read_text', read_text)
+    for guard in (test_cpu_and_browser_ci_have_independent_original_bounds_and_complete_commands,
+                  test_owned_startup_controls_are_an_additive_full_lane_step):
+        with pytest.raises(AssertionError):
+            guard()
+
+
 def test_fast_selection_only_picks_full_lane_references_and_specs(tmp_path):
     related = related_module()
     references = related.full_pytest_references()
@@ -705,8 +772,10 @@ def test_owned_startup_controls_are_an_additive_full_lane_step():
         'run': 'python -m pytest -q --junitxml="$MV_CI_RECORD_DIR/ci-startup-identity-pytest.xml" '
                + ' '.join(OWNED_STARTUP_CONTROLS),
     }
-    # Pin every original mapping, command, order, permission, trigger and bound
-    # to the pre-insertion de9 qualification after removing only the new step.
+    # Verify the later read-alias addition independently, then remove exactly
+    # that selector and the owned-startup step before the unchanged de9 pin.
+    cpu = next(step for step in steps if step.get('name') == 'CPU contract and recovery regressions')
+    cpu['run'] = _annotation_load_predecessor_command(workflow)
     workflow['jobs']['source']['steps'] = steps[:index] + steps[index + 1:]
     preserved = json.dumps(workflow, sort_keys=True, separators=(',', ':')).encode()
     assert hashlib.sha256(preserved).hexdigest() == '65b71ef1a39e25ff2a6d458b3d3835e922ad2417242b7a5956a945a07a406697', \

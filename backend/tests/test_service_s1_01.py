@@ -154,15 +154,8 @@ def test_renderer_request_captures_explicit_context_before_async_port_resolution
     root = Path(__file__).resolve().parents[2]
     script = r'''
 const assert = require('node:assert/strict');
-const fs = require('node:fs');
-const ts = require('typescript');
-const Module = require('node:module');
-const filename = process.cwd() + '/src/renderer/services/api.ts';
-const loaded = new Module(filename); loaded.paths = module.paths;
-loaded._compile(ts.transpileModule(fs.readFileSync(filename, 'utf8'), {
-  compilerOptions: {module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022}
-}).outputText, filename);
-const client = loaded.exports;
+const load = require('./backend/tests/renderer_ts_fixture.cjs').createRendererLoader(process.cwd());
+const client = load('src/renderer/services/api.ts');
 let releasePort; const calls = [];
 global.window = {api: {getBackendPort: () => new Promise(resolve => {releasePort = resolve;})}};
 global.fetch = async (url, options) => {
@@ -424,15 +417,14 @@ def test_websocket_explicit_context_selects_origin_even_when_legacy_pointer_diff
 def test_renderer_socket_rebinds_only_committed_context_and_ignores_old_frames():
     root = Path(__file__).resolve().parents[2]
     script = r'''
-const fs=require('node:fs'),path=require('node:path'),Module=require('node:module'),assert=require('node:assert/strict');
-const root=process.cwd(),ts=require(path.join(root,'node_modules/typescript'));
-function load(relative,mocks={}){const name=path.join(root,relative),m=new Module(name,module);m.filename=name;m.paths=Module._nodeModulePaths(path.dirname(name));const req=m.require.bind(m);m.require=k=>mocks[k]||req(k);m._compile(ts.transpileModule(fs.readFileSync(name,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText,name);return m.exports;}
+const assert=require('node:assert/strict');
+const load=require('./backend/tests/renderer_ts_fixture.cjs').createRendererLoader(process.cwd());
 const api=load('src/renderer/services/api.ts');
 const context=(id,workspace='workspace')=>({workspace_id:workspace,project_id:id,actor_id:'actor',mode:'local'});
 const sockets=[];
 global.WebSocket=class {static OPEN=1;static CONNECTING=0;readyState=0;constructor(url){this.url=url;sockets.push(this);}send(){}close(){this.readyState=3;this.onclose?.();}};
 global.window={api:{getBackendPort:async()=>8123}};
-const telemetry=load('src/renderer/services/websocket.ts',{'./api':api}).telemetryService;
+const telemetry=load('src/renderer/services/websocket.ts').telemetryService;
 // S1-10 announces every (re)connection so the app catches up from the job event cursor; data frames are counted apart.
 const received=[],announced=[];telemetry.subscribe((event,data)=>event==='telemetry_connected'?announced.push(data):received.push({event,data}));
 const settle=()=>new Promise(resolve=>setImmediate(resolve));
@@ -529,9 +521,9 @@ def test_websocket_conflicting_explicit_header_and_query_rejected(tmp_path):
 def test_renderer_discovery_candidates_commit_only_after_ui_acceptance():
     root = Path(__file__).resolve().parents[2]
     script = r'''
-const fs=require('node:fs'),path=require('node:path'),Module=require('node:module'),assert=require('node:assert/strict');
-const root=process.cwd(),ts=require(path.join(root,'node_modules/typescript')),name=path.join(root,'src/renderer/services/api.ts');
-const moduleFile=new Module(name,module);moduleFile.filename=name;moduleFile.paths=Module._nodeModulePaths(path.dirname(name));moduleFile._compile(ts.transpileModule(fs.readFileSync(name,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText,name);const client=moduleFile.exports;
+const assert=require('node:assert/strict');
+const load=require('./backend/tests/renderer_ts_fixture.cjs').createRendererLoader(process.cwd());
+const client=load('src/renderer/services/api.ts');
 const context=id=>({workspace_id:'workspace',project_id:id,actor_id:'actor',mode:'local'});
 let server='second';const calls=[];global.window={api:{getBackendPort:async()=>8123}};
 global.fetch=async(url,options)=>{const captured=JSON.parse(new Headers(options.headers).get('X-Vision-Context')||'null');calls.push(captured);const received=url.endsWith('/api/project/current')?context(server):captured;return {ok:true,status:200,headers:new Headers({'X-Vision-Context':JSON.stringify(received)}),json:async()=>({id:received.project_id,project_dir:'/fixture/'+received.project_id})};};
@@ -551,3 +543,48 @@ global.fetch=async(url,options)=>{const captured=JSON.parse(new Headers(options.
 '''
     result = subprocess.run(['node','-e',script],cwd=root,capture_output=True,text=True,encoding='utf-8',errors='replace',timeout=20)
     assert result.returncode == 0,result.stdout + result.stderr
+
+
+def test_renderer_fixture_loads_real_trace_dependency_and_shared_api_instance():
+    """The fixture must execute the embedded SDK, not hide an import behind a stub."""
+    root = Path(__file__).resolve().parents[2]
+    script = r'''
+const assert = require('node:assert/strict');
+const {trace} = require('@opentelemetry/api');
+const globalProvider = trace.getTracerProvider();
+const load = require('./backend/tests/renderer_ts_fixture.cjs').createRendererLoader(process.cwd());
+const client = load('src/renderer/services/api.ts');
+const tracing = load('src/renderer/services/localTrace.ts');
+assert.equal(load('src/renderer/services/api.ts'), client, 'transitive imports share the same fixture module');
+assert.equal(trace.getTracerProvider(), globalProvider, 'the real local SDK never installs a global provider');
+const calls = [];
+global.window = {api: {getBackendPort: async () => 8123}};
+global.fetch = async (url, options) => {
+  calls.push({url, headers: new Headers(options.headers)});
+  return {ok: true, status: 200, headers: new Headers(), json: async () => ({tasks: []})};
+};
+(async () => {
+  client.setProjectContext({workspace_id:'workspace', project_id:'fixture-project', actor_id:'actor', mode:'local'});
+  const parent = tracing.localTrace.begin('assistant.jobs');
+  await client.request('/api/training-workspace/tasks', {traceParent: parent});
+  parent.end('ok');
+  const doc = tracing.localTrace.read();
+  assert.equal(doc.sdk, 'opentelemetry-js-2.12.0');
+  assert.equal(doc.export_errors, 0);
+  assert.equal(doc.spans.length, 2, 'the real API and parent each export an ended span');
+  const child = doc.spans.find(row => row.operation === 'api.training');
+  assert.ok(child);
+  assert.equal(child.parent_span_id, parent.spanId);
+  assert.equal(child.trace_id, parent.traceId);
+  assert.equal(child.coverage, 'explicit_parent');
+  assert.equal(child.status, 'ok');
+  assert.equal(child.code, 200);
+  assert.ok(child.duration_ms >= 0);
+  assert.equal(calls[0].headers.get('traceparent'), `00-${child.trace_id}-${child.span_id}-01`);
+  assert.doesNotMatch(JSON.stringify(doc), /fixture-project|8123|training-workspace/);
+  assert.equal(trace.getTracerProvider(), globalProvider);
+})().catch(error => {console.error(error); process.exitCode=1;});
+'''
+    result = subprocess.run(['node', '-e', script], cwd=root, capture_output=True, text=True,
+                            encoding='utf-8', errors='replace', timeout=20)
+    assert result.returncode == 0, result.stdout + result.stderr

@@ -38,7 +38,8 @@ Files: ModelFamilyCatalog.tsx and focused tests; dataset/importChecklist.ts and 
 ## Task 4: Pilot delivery and final candidate verification
 - [x] Update manual/pilot matrix and blank study record across all catalog families, with exact verified/unverified boundaries.
 - [x] Run integrated renderer/types/provenance/evidence checks plus focused browser paths and independent review.
-- [ ] Publish candidate branch/draft PR and start exact-head full once after fast success; record run ids.
+- [x] Publish candidate branch/draft PR #30; original branches preserved.
+- [ ] Start exact-head full once after fast success; record run ids. First fast failed fixture integration checks; repaired locally and pending new-head CI.
 - [x] Inspect isolated package feasibility and execute safe candidate smoke when dependencies permit. Record actual artifact scope; do not replace live services.
 
 ## Execution boundary

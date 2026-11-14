@@ -39,6 +39,15 @@
 
 호환 범위 안에서 Electron 44.11.3, Vite 6.4.6 및 관련 의존성을 갱신했습니다. npm 감사의 영향 패키지 항목은 **16개(critical 2/high 6/moderate 8) → 6개(moderate)**입니다. 6개는 minimatch와 이를 사용하는 패키징 도구에 남아 있습니다. 감사 숫자를 줄이려고 builder를 하향하거나 검증하지 않은 major override를 적용하지 않았습니다. 개발 의존성의 Electron도 실제 배포 엔진이므로 무시하지 않았습니다.
 
+## 첫 원격 CI에서 발견한 검증 연결 문제
+
+`0b53bd10`의 fast run [43598127304](https://github.com/JaeHongChoe/modu-vision/actions/runs/43598127304)는 9 job 성공/2 job 실패로 끝났습니다. 웹 보안·Studio CLI·내장 OSS 별도 workflow는 모두 성공했습니다. 실패 5개 테스트는 숨기거나 재시도해 통과 처리하지 않았습니다.
+
+- Renderer API를 한 파일만 변환하던 Python/Node fixture가 새 `localTrace.ts`를 찾지 못해 문맥·권한 검사 전에 실패한 3건을 재현했습니다. fixture별 cache를 사용하는 실제 TypeScript 모듈 로더로 고치고, 실제 OpenTelemetry의 부모/자식 span·요청 헤더·전역 provider 보존도 검사합니다. 기존 문맥/소켓/프로젝트 수락 단언은 유지했습니다. 해당 모듈 **29개**, 기존 SDK **5개**가 통과했습니다.
+- 추가한 라벨 별칭 테스트의 위치를 기존 CI 목록 보존 검사가 인정하지 못한 2건을 재현했습니다. 정확히 한 번의 검증된 추가만 옛 workflow와 비교할 때 정규화합니다. **기존 여섯 SHA·workflow 명령·시간 상한은 바꾸지 않았습니다.** 누락·중복·이동·조건부 실행·실패 무시·선택 축소 등의 변형을 거절하며, full/fast/한 shard 선택을 검증했습니다. 해당 모듈 **59개**가 통과했습니다.
+
+독립 검토에서 남은 중요 지적은 없습니다. 이 후속은 테스트 준비와 보존 검사만 수정하며 제품 실행 코드·의존성·동결 backend bytes는 바꾸지 않습니다. 새 commit의 원격 결과는 별도 확인하며, 이전 실패가 사라졌다고 간주하지 않습니다.
+
 ## 배포 및 고객 검증의 남은 조건
 
 1. **정확한 후보 commit의 원격 fast/full CI**: 결과를 별도 기록합니다. 로컬 검사로 전체 회귀 성공을 대신하지 않습니다.
