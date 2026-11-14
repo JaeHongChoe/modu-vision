@@ -554,11 +554,11 @@ test('a current filtered gallery retains its full-class fallback',async()=>{
 });
 for(const viewMode of ['simple','full'])for(const completion of ['zero','valid','imbalanced','failure'])test(`${viewMode} pending metadata hides stale advice and ${completion} restores only current guidance`,async()=>{
  const h=harness({holdImport:true});h.project.language='ko';h.project.viewMode=viewMode;h.ready();
- const oldText=renderedText(h.render());for(const oldAdvice of ['라벨이 아직 없습니다','부족한 클래스: NG 1장','극심한 클래스 불균형'])assert.ok(oldText.includes(oldAdvice),oldAdvice);
+ const oldText=renderedText(h.render());for(const oldAdvice of ['학습에 쓸 라벨 이미지 100장입니다.','2단계에서 모델에 필요한 정답','부족한 클래스: NG 1장','극심한 클래스 불균형'])assert.ok(oldText.includes(oldAdvice),oldAdvice);
  const refresh=h.store.getState().annotationsChanged();
  const pendingText=renderedText(h.render());
  assert.match(pendingText,/데이터 정보를 확인하는 중/);
- for(const stale of ['분할을 아직 적용하지 않았습니다','극심한 클래스 불균형','분할 예상','적용된 분할 집계 확인 중','저장된 분할','라벨이 아직 없습니다','부족한 클래스','이미지가 없는 클래스','가장 많은 클래스','아래는 바뀔 분할의 예상'])assert.equal(pendingText.includes(stale),false,stale);
+ for(const stale of ['분할을 아직 적용하지 않았습니다','극심한 클래스 불균형','분할 예상','적용된 분할 집계 확인 중','저장된 분할','학습에 쓸 라벨 이미지','부족한 클래스','이미지가 없는 클래스','가장 많은 클래스','아래는 바뀔 분할의 예상'])assert.equal(pendingText.includes(stale),false,stale);
  const button=renderedNodes(h.render()).find(n=>n.type==='button'&&renderedText(n)==='이 비율로 나누기');assert.equal(button.props.disabled,true);
  if(completion==='failure')h.imports[0].reject(Error('summary unavailable'));
  else h.imports[0].resolve({...h.summary,split:completion==='zero'?{train:0,val:0,test:0}:h.summary.split,classes:completion==='imbalanced'?{OK:99,NG:1}:{OK:3},split_state:completion==='zero'?'stale':'saved'});
@@ -566,7 +566,7 @@ for(const viewMode of ['simple','full'])for(const completion of ['zero','valid',
  assert.equal(text.includes('분할을 아직 적용하지 않았습니다'),completion==='zero');
  assert.equal(text.includes('극심한 클래스 불균형'),completion==='imbalanced');
  const completedButton=renderedNodes(h.render()).find(n=>n.type==='button'&&renderedText(n)==='이 비율로 나누기');assert.equal(completedButton.props.disabled,completion==='failure');
- if(completion==='failure'){assert.match(text,/summary unavailable/);for(const stale of ['분할 예상','저장된 분할','라벨이 아직 없습니다','부족한 클래스','가장 많은 클래스','아래는 바뀔 분할의 예상'])assert.equal(text.includes(stale),false,stale);}
+ if(completion==='failure'){assert.match(text,/summary unavailable/);for(const stale of ['분할 예상','저장된 분할','학습에 쓸 라벨 이미지','부족한 클래스','가장 많은 클래스','아래는 바뀔 분할의 예상'])assert.equal(text.includes(stale),false,stale);}
  if(completion==='imbalanced')assert.ok(text.includes('부족한 클래스: NG 1장'),'completed current class advice returns');
  h.unmount();
 });

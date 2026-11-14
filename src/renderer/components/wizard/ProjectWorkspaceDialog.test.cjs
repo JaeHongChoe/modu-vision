@@ -32,7 +32,7 @@ test('the refusal the dialog shows is the one a project switch gets, and it foll
 function render(refusal,{busy=false}={}){
  const state={project:current,recentProjects:[{...current},other],isProjectBusy:busy,projectError:null,loadRecentProjects:async()=>{},clearProjectError(){},createProject:async()=>false,openProject:async()=>false,backupProject:async()=>null,restoreProject:async()=>false};
  const icons=new Proxy({},{get:(_,name)=>name==='__esModule'?true:()=>null});
- const {ProjectWorkspaceDialog}=load('ProjectWorkspaceDialog.tsx',{'lucide-react':icons,'../onboarding/projectPurpose':load('../onboarding/projectPurpose.ts',{}),
+ const {ProjectWorkspaceDialog}=load('ProjectWorkspaceDialog.tsx',{'../common/useWorkspaceDialogFocus':{useWorkspaceDialogFocus:()=>()=>{}},'lucide-react':icons,'../onboarding/projectPurpose':load('../onboarding/projectPurpose.ts',{}),
   '../../stores/useProjectStore':{useProjectStore:()=>state,projectSwitchRefusal:()=>refusal,subscribeProjectSwitchRefusal:()=>()=>{}},
   '../../services/hostAdapter':{host:{can:()=>false,unavailableReason:()=> '로컬 파일 선택 연결을 확인하세요.'}},'./ArtifactRetentionPanel':{ArtifactRetentionPanel:()=>null},'../../services/api':{api:{project:{}}}});
  return renderToStaticMarkup(react.createElement(ProjectWorkspaceDialog,{onClose(){}}));
@@ -59,7 +59,7 @@ function createFixture({viewMode='simple',refusal=null,busy=false,initialTab='cr
  const state={project:current,recentProjects:[],viewMode,isProjectBusy:busy,projectError:null,loadRecentProjects:async()=>{},clearProjectError(){},
   createProject:async data=>{created.push(data);return true;},openProject:async()=>false,backupProject:async()=>null,restoreProject:async()=>false};
  const icons=new Proxy({},{get:(_,name)=>name==='__esModule'?true:()=>null});
- const mocks={react:hooks,'lucide-react':icons,'../../stores/useProjectStore':{useProjectStore:()=>state,projectSwitchRefusal:()=>refusal,subscribeProjectSwitchRefusal:()=>()=>{}},
+ const mocks={react:hooks,'../common/useWorkspaceDialogFocus':{useWorkspaceDialogFocus:()=>()=>{}},'lucide-react':icons,'../../stores/useProjectStore':{useProjectStore:()=>state,projectSwitchRefusal:()=>refusal,subscribeProjectSwitchRefusal:()=>()=>{}},
   '../../services/hostAdapter':{host:{can:()=>false,unavailableReason:()=> '선택 불가'}},'./ArtifactRetentionPanel':{ArtifactRetentionPanel:()=>null},'../../services/api':{api:{project:{}}}};
  if(fs.existsSync(path.join(__dirname,'../onboarding/projectPurpose.ts')))mocks['../onboarding/projectPurpose']=load('../onboarding/projectPurpose.ts',{});
  const {ProjectWorkspaceDialog}=load('ProjectWorkspaceDialog.tsx',mocks);
@@ -146,4 +146,71 @@ test('simple sidebar keeps the complete current path inside a closed keyboard-op
  assert.ok(pathDetails);assert.ok(!pathDetails.props.open);assert.ok(descendants(pathDetails).some(node=>node.type==='summary'));
  const full=createFixture({viewMode:'full'});const fullAside=full.all().find(node=>node.type==='aside');
  assert.ok(nodeText(fullAside).includes('/projects/a'));assert.equal(descendants(fullAside).filter(node=>node.type==='details').length,0);
+});
+
+
+test('project dialog owns Escape and keeps busy Escape and backdrop guarded',()=>{
+ for(const busy of [false,true]){
+  const f=createFixture({busy});const tree=f.render();
+  const dialog=f.all().find(node=>node.props?.role==='dialog');
+  let prevented=0,stopped=0;
+  dialog.props.onKeyDown({key:'Escape',preventDefault(){prevented++;},stopPropagation(){stopped++;}});
+  assert.equal(f.closed(),busy?0:1);assert.equal(prevented,1);assert.equal(stopped,1);
+  const target={};tree.props.onMouseDown({target,currentTarget:target});
+  assert.equal(f.closed(),busy?0:2);
+ }
+});
+
+test('shared modal focus skips closed disclosure content with retained rectangles and restores a disconnected opener fallback',t=>{
+ const previousGlobals=Object.fromEntries(['document','HTMLElement','HTMLDetailsElement','getComputedStyle'].map(key=>[key,globalThis[key]]));
+ t.after(()=>{for(const [key,value] of Object.entries(previousGlobals)){if(value===undefined)delete globalThis[key];else globalThis[key]=value;}});
+ class Element {
+  constructor(tagName='BUTTON'){this.tagName=tagName;this.children=[];this.isConnected=true;this.hidden=false;}
+  closest(){return this.tagName==='DIV'?this:this.parentElement?.closest();}
+  getClientRects(){return[{}];}
+  contains(node){return node===this||this.children.some(child=>child.contains(node));}
+  focus(){document.activeElement=this;}
+  append(child){this.children.push(child);child.parentElement=this;}
+ }
+ class Details extends Element {constructor(){super('DETAILS');this.open=false;}}
+ globalThis.HTMLElement=Element;globalThis.HTMLDetailsElement=Details;globalThis.getComputedStyle=()=>({visibility:'visible'});
+ const opener=new Element(),fallback=new Element(),dialog=new Element('DIV'),close=new Element(),details=new Details(),summary=new Element('SUMMARY'),hiddenPath=new Element('INPUT');
+ dialog.append(close);dialog.append(details);details.append(summary);details.append(hiddenPath);
+ dialog.querySelector=()=>close;dialog.querySelectorAll=()=>[close,summary,hiddenPath];
+ globalThis.document={body:new Element('BODY'),activeElement:opener};
+ let cleanup;const {useWorkspaceDialogFocus}=load('../common/useWorkspaceDialogFocus.ts',{react:{useLayoutEffect:effect=>{cleanup=effect();}}});
+ const keydown=useWorkspaceDialogFocus({current:dialog},{restoreTarget:()=>fallback});
+ assert.equal(document.activeElement,close);
+ let prevented=0;keydown({key:'Tab',target:close,shiftKey:true,preventDefault(){prevented++;}});
+ assert.equal(document.activeElement,summary,'retained rectangles never make the hidden input the last control');assert.equal(prevented,1);
+ details.open=true;close.focus();keydown({key:'Tab',target:close,shiftKey:true,preventDefault(){}});
+ assert.equal(document.activeElement,hiddenPath,'opening the disclosure adds its input to the boundary');
+ opener.isConnected=false;cleanup();assert.equal(document.activeElement,fallback);
+});
+
+test('a portalled child modal keeps a middle-control Tab when React bubbles it to its parent modal',t=>{
+ const keys=['document','HTMLElement','HTMLDetailsElement','getComputedStyle'];const previous=Object.fromEntries(keys.map(key=>[key,globalThis[key]]));
+ t.after(()=>{for(const key of keys){if(previous[key]===undefined)delete globalThis[key];else globalThis[key]=previous[key];}});
+ class Element {
+  constructor(owner){this.owner=owner;this.children=[];this.isConnected=true;}
+  getClientRects(){return[{}];}
+  closest(){return this.owner;}
+  contains(node){return node===this||this.children.includes(node);}
+  focus(){document.activeElement=this;}
+ }
+ globalThis.HTMLElement=Element;globalThis.HTMLDetailsElement=class extends Element{};globalThis.getComputedStyle=()=>({visibility:'visible'});
+ const outer=new Element(),inner=new Element();outer.owner=outer;inner.owner=inner;
+ const outerFirst=new Element(outer),outerLast=new Element(outer),innerFirst=new Element(inner),innerMiddle=new Element(inner),innerLast=new Element(inner);
+ outer.children=[outerFirst,outerLast];inner.children=[innerFirst,innerMiddle,innerLast];
+ outer.querySelectorAll=()=>outer.children;inner.querySelectorAll=()=>inner.children;
+ globalThis.document={activeElement:innerMiddle};
+ const {useWorkspaceDialogFocus}=load('../common/useWorkspaceDialogFocus.ts',{react:{useLayoutEffect(){}}});
+ const parentKeydown=useWorkspaceDialogFocus({current:outer}),childKeydown=useWorkspaceDialogFocus({current:inner});
+ let prevented=0;const event={key:'Tab',target:innerMiddle,shiftKey:false,defaultPrevented:false,preventDefault(){this.defaultPrevented=true;prevented++;}};
+ childKeydown(event);parentKeydown(event);
+ assert.equal(document.activeElement,innerMiddle,'parent must leave the child nonboundary Tab to the browser');assert.equal(prevented,0);
+ innerLast.focus();event.target=innerLast;childKeydown(event);parentKeydown(event);
+ assert.equal(document.activeElement,innerFirst,'child still wraps its own Tab boundary');assert.equal(prevented,1);
+ outerFirst.focus();event.target=outerFirst;event.defaultPrevented=false;event.shiftKey=true;parentKeydown(event);
+ assert.equal(document.activeElement,outerLast,'parent still wraps after child ownership ends');
 });

@@ -141,3 +141,19 @@ Keep at least three points, offer undo, and explain refused edits in the row's
 live status. Point controls provide keyboard alternatives and do not forward
 unselected-point Delete/Backspace to whole-shape deletion. Typed text and modal
 dialogs own their keys. See `docs/labeling-precision.md` for actions.
+
+## Multi-model pilot clarity and terminology (2026-11-14)
+
+The capability API remains the source for all ten model-family prerequisites,
+devices, execution stages and missing dependencies. The selected-family summary
+is visible before details and never grants readiness or starts work. Original
+photo count and trainable labeled count are distinct in the import checklist;
+zero usable annotations route to labeling without promising a valid split.
+
+JargonTooltip is a rich non-modal help popover, not a passive ARIA tooltip.
+Radix Popover owns named button activation, focus entry/return, Escape/outside
+close and viewport collision. Content opened inside a workspace dialog portals
+within that dialog's focus scope. Help never changes a recipe or starts a job.
+The existing Korean/English dictionary remains the content owner. Keyboard and
+axe checks cover scoped pilot surfaces; they are not whole-product accessibility
+or human usability certification.

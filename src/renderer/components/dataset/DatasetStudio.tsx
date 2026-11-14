@@ -415,7 +415,7 @@ export const DatasetStudio: React.FC = () => {
   const splitInfo = metadataReady ? splitStatus({ mode: calibrator.mode, splitState, locked: splitUnavailableForTask })
     : { label: isLoading ? '확인 중' : '확인 필요', description: metadataNotice, foldable: false, tone: 'neutral' };
   const splitFolded = simpleView && splitInfo.foldable && !splitOpen;
-  const checklist = metadataReady ? (importChecks({ task, totalImages: totalImages || 0, classes: classes || {}, split: split || { train: 0, val: 0, test: 0 },
+  const checklist = metadataReady ? (importChecks({ task, sourceImages, totalImages: totalImages || 0, classes: classes || {}, split: split || { train: 0, val: 0, test: 0 },
     splitState: splitState ?? null, classSplitCounts: classSplitCounts ?? null, corrupted: corruptedImages?.length ?? 0,
     excludedUndecodable: excludedUndecodable ?? null, labelsMissing: Boolean(labelsMissing), expectedLayout: expectedLayout || '',
     splitLocked: splitUnavailableForTask }) as ReturnType<typeof importChecks> | null) ?? [] : [];

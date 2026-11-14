@@ -8,7 +8,9 @@ import { defineConfig } from '@playwright/test';
 process.env.MV_E2E_RUN_ID ||= `${new Date().toISOString().replace(/[:.]/g, '-')}-${process.pid}`;
 const artifactRoot = process.env.MV_E2E_ARTIFACT_DIR
   ? path.resolve(process.env.MV_E2E_ARTIFACT_DIR)
-  : path.join(os.tmpdir(), 'modu-vision-e2e');
+  // Only the harness-selected OS temporary base is canonicalized. Explicit
+  // artifact paths keep their spelling and all product linked-root guards.
+  : path.join(fs.realpathSync(os.tmpdir()), 'modu-vision-e2e');
 const runDir = path.join(artifactRoot, process.env.MV_E2E_RUN_ID);
 // Playwright empties its output folder; a reused run id would erase evidence.
 // The runner claims the directory once; workers inherit the exact claimed path.

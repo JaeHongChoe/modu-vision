@@ -12,6 +12,11 @@ test.use({actionTimeout: 10_000});
 const harness = require('./fixtures/harness.cjs');
 const sha = (raw: Buffer | string) => crypto.createHash('sha256').update(raw).digest('hex');
 const clone = <T,>(value: T): T => JSON.parse(JSON.stringify(value));
+// Compare an existing file's canonical identity, not a platform-specific alias spelling.
+const fileIdentity = (value: unknown): string | null => {
+  if (typeof value !== 'string' || !value) return null;
+  try { return fs.realpathSync(value); } catch { return null; }
+};
 type Point = [number, number];
 type Context = {page: Page; request: APIRequestContext; renderer: RendererServer; workspace: Workspace; evidence: Evidence};
 const square: Point[] = [[40, 40], [180, 40], [180, 180], [40, 180]];
@@ -48,7 +53,8 @@ async function editor(c: Context, names = ['part']) {
     return JSON.parse(bytes.toString('utf8'));
   };
   const project = await api('/api/project/create', {name: 'Owned polygon precision ' + names.join('-'), task: 'segmentation'});
-  expect(path.dirname(project.project_dir)).toBe(w.projects);
+  // macOS /var is a symlink to /private/var; compare the actual owned directory identity.
+  expect(fs.realpathSync(path.dirname(project.project_dir))).toBe(fs.realpathSync(w.projects));
   await api('/api/project/update', {source_dataset_dir: source}, 'PUT');
   await api('/api/dataset/import', {folder_path: source, task: 'segmentation', validate_images: true});
   const protectedBefore = {source: tree(source), models: tree(project.models_dir), reports: tree(project.reports_dir)};
@@ -108,13 +114,13 @@ async function editor(c: Context, names = ['part']) {
     const before = await read(index);
     const response = page.waitForResponse(r => new URL(r.url()).origin === renderer.origin
       && new URL(r.url()).pathname === '/api/annotations/save' && r.request().method() === 'POST'
-      && r.request().postDataJSON()?.image_path === images[index].file, {timeout: 10_000});
+      && fileIdentity(r.request().postDataJSON()?.image_path) === fs.realpathSync(images[index].file), {timeout: 10_000});
     await expect(saveButton).toBeEnabled(); await saveButton.click();
     const reply = await response; expect(reply.status(), await reply.text()).toBe(200); expect(await reply.finished()).toBeNull();
     const posted = reply.request().postDataJSON(), value = await reply.json();
     if (posted.lease_token) e.redact(posted.lease_token);
     expect(posted.expected_revision).toBe(before.metadata.revision);
-    expect(posted.image_path).toBe(images[index].file); expect(value.status).toBe('saved'); expect(value.mask_generated).toBe(true);
+    expect(fileIdentity(posted.image_path)).toBe(fs.realpathSync(images[index].file)); expect(value.status).toBe('saved'); expect(value.mask_generated).toBe(true);
     await expect(saveButton).toContainText('저장됨');
     const stored = await read(index); geometry(stored, expected);
     expect(stored.metadata.revision).toBe(value.metadata.revision);
@@ -125,11 +131,11 @@ async function editor(c: Context, names = ['part']) {
   const switchImage = async (direction: 'Next' | 'Previous', index: number) => {
     const loaded = page.waitForResponse(r => new URL(r.url()).origin === renderer.origin
       && new URL(r.url()).pathname === '/api/annotations/' + images[index].name
-      && new URL(r.url()).searchParams.get('file_path') === images[index].file
+      && fileIdentity(new URL(r.url()).searchParams.get('file_path')) === fs.realpathSync(images[index].file)
       && r.request().method() === 'GET', {timeout: 10_000});
     await page.getByRole('button', {name: direction + ' image or page', exact: true}).click();
     const response = await loaded; expect(response.status()).toBe(200); expect(await response.finished()).toBeNull();
-    expect((await response.json()).metadata.file_path).toBe(images[index].file);
+    expect(fileIdentity((await response.json()).metadata.file_path)).toBe(fs.realpathSync(images[index].file));
     await expect(page.getByText('기존 라벨을 불러오는 중입니다.', {exact: true})).toHaveCount(0);
     await expect(page.getByText(/기존 라벨 조회 실패:/)).toHaveCount(0);
   };

@@ -352,3 +352,12 @@ LearningJourneyPanel is a compact read-only projection of existing oneclick/assi
 The simple header gives project/utilities one row and the four goals their own rail, with quiet internal substeps. Short windows may wrap rather than overlap status and controls. The footer names the current internal task instead of showing a conflicting six-step fraction; a neutral status line and quiet secondary controls leave the recommended navigation action visually primary. `workspace-button--quiet` shares the base button's focus and disabled behavior in both themes.
 
 Simple project creation uses two columns of native radio choices at desktop widths, then one selected preparation note. Description/storage and the current project path are native closed disclosures; entered values remain mounted. The create action fits the verified 1100×780 and 1440×900 views. After a failed operation, reveal the alert with a small scroll margin without taking keyboard focus or discarding inputs. Without a current task, an empty original-image source shows stage guidance alone; a real task stays visible even when its data is temporarily unavailable.
+
+### Multi-model pilot guidance
+
+The selected model's result, data prerequisite and execution conditions remain
+visible above optional technical details. All model families remain reachable.
+Use existing workspace record tokens; uncertainty and missing dependencies use
+plain text with the existing warning tone. Do not present catalog support as
+field quality approval. Rich terminology help opens by an explicit help button,
+uses the existing steel popup surface and keeps keyboard focus recoverable.

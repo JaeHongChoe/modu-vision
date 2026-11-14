@@ -25,6 +25,14 @@
 
 현재 **0.1.0 개발 버전**입니다. 기능 구현과 자동 검사, 대상 OS의 설치·서명, 실제 장비·모델 품질의 확인 범위는 [배포 지원 표](docs/release-platform-matrix.md)와 [검증 근거](docs/service-upgrade-evidence.json)에서 구분합니다.
 
+## 초보자용 다중 모델 파일럿 후보
+
+사진에서 **얻고 싶은 결과**로 시작하고, 선택한 모델에 필요한 자료와 실행 위치를 먼저 확인합니다. 분류·영역 분할·객체 검출·이상 탐지부터 OCR·회전 보정 등 **10개 모델 계열**을 유지합니다. 자세한 설정은 펼쳐 보고, 용어 설명은 키보드로도 열고 닫을 수 있습니다.
+
+![선택한 모델의 결과·필요한 자료·실행 위치를 먼저 안내하는 간단히 보기](docs/verification/assets/multimodel-pilot/model-guidance.png)
+
+위 화면은 격리된 검증 프로젝트입니다. [모델별 조건과 검증 범위](docs/pilot-model-matrix.md), [사용자 파일럿 절차](docs/pilot-playbook.md), [이번 변경의 검사 결과와 남은 배포 조건](docs/verification/2026-11-14-multimodel-pilot.md)을 함께 제공합니다. **모든 모델의 현장 성능이나 설치본 배포를 승인한 상태는 아닙니다.**
+
 ## 빠른 시작
 
 | 사용 방식 | 시작 방법 | 준비할 것 |

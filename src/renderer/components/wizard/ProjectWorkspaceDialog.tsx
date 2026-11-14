@@ -6,6 +6,7 @@ import { projectSwitchRefusal, subscribeProjectSwitchRefusal, useProjectStore } 
 import { host } from '../../services/hostAdapter';
 import { ArtifactRetentionPanel } from './ArtifactRetentionPanel';
 import { api, getProjectContextGeneration } from '../../services/api';
+import { useWorkspaceDialogFocus } from '../common/useWorkspaceDialogFocus';
 
 type Tab = 'recent' | 'create' | 'open' | 'backup' | 'restore' | 'retention' | 'template' | 'recovery';
 
@@ -85,16 +86,14 @@ export const ProjectWorkspaceDialog: React.FC<Props> = ({ onClose, initialTab = 
 
   useEffect(() => {
     void loadRecentProjects();
-    dialogRef.current?.focus();
   }, [loadRecentProjects]);
 
-  useEffect(() => {
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape' && !isProjectBusy) onClose();
-    };
-    window.addEventListener('keydown', onKeyDown);
-    return () => window.removeEventListener('keydown', onKeyDown);
-  }, [isProjectBusy, onClose]);
+  const containFocus = useWorkspaceDialogFocus(dialogRef, {
+    initialFocus: initialTab === 'create' ? 'input[data-project-name]' : 'button',
+    // The guide unmounts its launcher and restores its menu before this dialog mounts.
+    // Return to the persistent project opener rather than that unrelated menu.
+    restoreTarget: () => document.getElementById('workflow-project'),
+  });
 
   // Native choices are negotiated with the current host; typed paths remain available.
   const pickPaths = host.can('pickPaths');
@@ -155,10 +154,16 @@ export const ProjectWorkspaceDialog: React.FC<Props> = ({ onClose, initialTab = 
     <div className="fixed inset-0 z-[90] flex items-center justify-center bg-[#05080E]/80 px-5 py-8" onMouseDown={(event) => {
       if (event.target === event.currentTarget && !isProjectBusy) onClose();
     }}>
-      <div ref={dialogRef} tabIndex={-1} role="dialog" aria-modal="true" aria-label="프로젝트 관리" className="flex max-h-full w-full max-w-[830px] flex-col overflow-hidden rounded-xl border border-[#314158] bg-[#111927] shadow-[0_32px_100px_rgba(0,0,0,0.55)] outline-none">
+      <div ref={dialogRef} onKeyDown={event => {
+        if (event.key === 'Escape') {
+          event.preventDefault(); event.stopPropagation();
+          if (!isProjectBusy) onClose();
+        }
+        containFocus(event);
+      }} tabIndex={-1} role="dialog" aria-modal="true" aria-label="프로젝트 관리" className="flex max-h-full w-full max-w-[830px] flex-col overflow-hidden rounded-xl border border-[#314158] bg-[#111927] shadow-[0_32px_100px_rgba(0,0,0,0.55)] outline-none">
         <div className={`flex items-start justify-between border-b border-[#314158] bg-[#172236] ${full ? 'px-7 py-6' : 'px-6 py-4'}`}>
           <div>
-            <div className="mb-2 flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.2em] text-cyan-300">
+            <div className="mb-2 flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.2em]" style={{ color: 'var(--workspace-accent)' }}>
               <Layers3 className="h-3.5 w-3.5" /> WORKSPACE
             </div>
             <h2 className="text-xl font-semibold tracking-tight text-white">프로젝트 관리</h2>
@@ -238,7 +243,7 @@ export const ProjectWorkspaceDialog: React.FC<Props> = ({ onClose, initialTab = 
             {tab === 'create' && (
               <form noValidate onSubmit={submitCreate} className={full ? 'space-y-4' : 'space-y-3'}>
                 <div><h3 className="text-sm font-semibold text-slate-100">새 프로젝트</h3><p className="mt-1 text-xs text-slate-500">{full ? '작업 이름과 검사 유형을 정합니다.' : '사진에서 어떤 결과를 얻고 싶은지 골라 주세요.'}</p></div>
-                <label className="block text-xs font-medium text-slate-300">프로젝트 이름 <span className="text-cyan-300">*</span><input autoFocus value={name} maxLength={100} onChange={(event) => setName(event.target.value)} placeholder="예: 세라믹 표면 결함 검사" className="mt-1.5 w-full rounded-md border border-[#40516A] bg-[#0D1420] px-3 py-2.5 text-sm text-white outline-none placeholder:text-slate-400 focus:border-cyan-500" /></label>
+                <label className="block text-xs font-medium text-slate-300">프로젝트 이름 <span className="text-cyan-300">*</span><input data-project-name value={name} maxLength={100} onChange={(event) => setName(event.target.value)} placeholder="예: 세라믹 표면 결함 검사" className="focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--workspace-focus)] mt-1.5 w-full rounded-md border border-[#40516A] bg-[#0D1420] px-3 py-2.5 text-sm text-white outline-none placeholder:text-slate-400 focus:border-cyan-500" /></label>
                 {full ? <label className="block text-xs font-medium text-slate-300">검사 유형<select value={task} onChange={(event) => setTask(event.target.value as VisionTask)} className="mt-1.5 w-full rounded-md border border-[#40516A] bg-[#0D1420] px-3 py-2.5 text-sm text-white outline-none focus:border-cyan-500">{Object.entries(taskLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label> :
                   <fieldset className="min-w-0 space-y-2" aria-describedby="project-purpose-help">
                     <legend className="mb-2 text-sm font-semibold text-[var(--workspace-text)]">어떤 결과가 필요한가요?</legend>

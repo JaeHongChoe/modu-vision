@@ -1,5 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
+import { pathToFileURL } from 'node:url';
 import { expect, test } from './test';
 
 // Smoke checks for the harness itself. Product behaviour belongs to the task
@@ -43,7 +44,9 @@ test('electron starts its own backend in an isolated profile', { tag: '@electron
   expect(backend.health.status).toBe('ok');
   const window = electronSession.window;
   await expect(window.getByRole('navigation', { name: '프로젝트 작업 공간' })).toBeVisible();
-  expect(window.url()).toMatch(/^file:.*\/dist\/index\.html$/);
+  const expectedWindow = pathToFileURL(path.join(electronSession.appDir, 'dist', 'index.html'));
+  expectedWindow.searchParams.set('view', 'full');
+  expect(window.url()).toBe(expectedWindow.href);
   expect(fs.existsSync(path.join(workspace.userData, 'projects')), 'supervisor uses the temporary profile').toBe(true);
   await evidence.screenshot(window, 'electron-shell');
 });

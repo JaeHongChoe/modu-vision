@@ -116,9 +116,9 @@ export const JARGON_DICTIONARY: Record<string, JargonEntry> = {
     termKo: '인공지능 학습 보폭 (학습률)',
     category: 'training',
     categoryLabelKo: '학습 파라미터',
-    definitionKo: 'AI 모델이 불량 패턴을 학습하면서 두뇌의 신경망 연결 가중치를 한 번에 얼마나 크게 바꿀지 결정하는 보폭 크기입니다.',
-    shopFloorMeaningKo: '보폭이 너무 크면 최적의 결함 판정 기준을 훌쩍 지나쳐버리고, 너무 작으면 세월아 네월아 학습이 멈춥니다. 코사인 스케줄링은 처음엔 시원하게 학습하다가 끝으로 갈수록 미세 정밀 튜닝합니다.',
-    recommendedValueKo: '고속 프로토타입 1e-3, 고정밀 양산 모드 5e-4(Cosine Annealing). 본 시스템의 AutoML이 자동 최적화합니다.',
+    definitionKo: '한 번 학습할 때 모델의 값을 얼마나 크게 바꿀지 정하는 수치입니다. 작은 값은 조금씩, 큰 값은 크게 조정합니다.',
+    shopFloorMeaningKo: '너무 크면 학습 결과가 흔들리고, 너무 작으면 개선이 느릴 수 있습니다. 학습 중 손실 변화와 따로 남겨 둔 검증 사진의 결과를 함께 확인하세요.',
+    recommendedValueKo: '처음에는 선택한 학습 방식의 기본값을 쓰세요. 값을 바꾼 후보는 같은 시험 사진으로 비교해야 합니다. 기본값이나 자동 탐색만으로 현장 품질이 보장되지는 않습니다.',
     tag: '학습속도조율',
   },
   epochs: {

@@ -593,7 +593,11 @@ def get_annotations(image_id: str, dir_path: Optional[str] = Query(None), file_p
         if not studio_json.exists() and not Path(file_path).with_suffix(".json").exists():
             from backend.engine.annotation_formats import source_annotations_for_image
             try:
-                imported = source_annotations_for_image(source, Path(file_path))
+                # Binding accepts equivalent dataset ancestors (e.g. /var and
+                # /private/var). Use that same spelling for source-relative
+                # conversion, retaining internal entry names and their labels.
+                _, source_image = metadata_engine._visible_path(source, file_path)
+                imported = source_annotations_for_image(source, source_image)
             except (ValueError, KeyError, TypeError, OSError) as exc:
                 raise HTTPException(status_code=422, detail=f"원본 라벨 형식을 변환할 수 없습니다 ({exc}). 지원하는 형식으로 바꾸거나 이 이미지에 직접 라벨을 다세요.") from exc
             if imported is not None:

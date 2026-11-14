@@ -97,3 +97,18 @@ test('newly labeled saved data directs re-splitting through the Korean action us
  const missing=byId(importChecks({...base,split:{train:0,val:0,test:0}}),'split');
  assert.equal(missing.action,'apply_split');assert.equal(missing.level,'block');assert.match(missing.text,/이 비율로 나누기/);
 });
+
+test('source photos with zero trainable labels direct annotation, not import or premature split',()=>{
+ for(const [task,annotation] of [['detection',/박스/],['segmentation',/마스크|다각형/],['rotated_detection',/회전 박스/]]){
+ const checks=importChecks({...base,task,sourceImages:12,totalImages:0,classes:{},labelsMissing:true,split:{train:0,val:0,test:0}});
+ assert.equal(byId(checks,'no_images'),undefined);const labels=byId(checks,'labels_missing');assert.equal(labels.action,'label');assert.equal(labels.level,'block');assert.match(labels.text,/원본 12장.*학습에 쓸 라벨 이미지 0장/);assert.match(labels.text,annotation);
+ assert.equal(checks.some(check=>check.action==='reimport'||check.action==='apply_split'),false);
+ }
+});
+test('zero labeled detection count still asks for labels if labelsMissing flag is absent',()=>{
+ const checks=importChecks({...base,task:'detection',sourceImages:5,totalImages:0,labelsMissing:false});assert.equal(byId(checks,'labels_missing').action,'label');
+});
+test('zero originals still means import; classification guards survive explicit source count',()=>{
+ assert.equal(byId(importChecks({...base,sourceImages:0,totalImages:0}),'no_images').action,'reimport');
+ assert.equal(byId(importChecks({...base,sourceImages:48,classes:{OK:48}}),'classes').level,'block');
+});
