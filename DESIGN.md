@@ -46,6 +46,16 @@ components:
 
 # Vision AI Studio Design System
 
+### Polygon precision controls
+
+`LabelingCanvas` owns point selection and the point-control row;
+`PolygonVertexControls` reuses workspace record/button tokens and Korean labels.
+The row is separate from the image viewport, and first-selection drag defers
+its appearance until pointer release. `MaskLayerControls` belongs to the image
+viewport so it cannot cover the point controls. Compact native icon buttons
+have accessible names, titles and keyboard activation. No new palette or font
+is introduced; a selected point inverts the existing outline/fill and grows.
+
 ## Overview
 
 This as-built context combines the existing assistant task slice with the shared

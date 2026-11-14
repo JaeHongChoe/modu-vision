@@ -18,7 +18,6 @@ import { LabelingToolbar } from './LabelingToolbar';
 import { CategorySelector } from './CategorySelector';
 import { ClassificationClassPicker } from './ClassificationClassPicker';
 import { LabelingCanvas } from './LabelingCanvas';
-import { MaskLayerControls } from './MaskLayerControls';
 import { AnnotationList } from './AnnotationList';
 import { ImageFilmstrip } from './ImageFilmstrip';
 import { ModelAssistPanel } from './ModelAssistPanel';
@@ -165,7 +164,6 @@ export const LabelingStudio: React.FC = () => {
       <div ref={workAreaRef} id="labeling-canvas" className="flex-[1_1_248px] flex overflow-hidden relative" data-labeling-work-area>
         <div className="flex-1 relative h-full bg-[#0B0E14]">
           <LabelingCanvas />
-          <MaskLayerControls />
         </div>
         <AnnotationList />
         {currentImage && annotationLoadStatus !== 'ready' && (

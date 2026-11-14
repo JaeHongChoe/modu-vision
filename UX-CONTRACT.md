@@ -116,3 +116,15 @@ AssistantPanel owns one-image attachment/paste/current-image selection and a vis
 ChatgptConnectionSetup owns the native reasoning-effort select; OS popup behavior is accepted, matching its native account/model selectors. Only documented or catalog-supported values are shown. Nonsecret account/model UI preferences live in assistantPreferences; credentials and image content do not. Active-turn effort is frozen; account/model changes invalidate pending requests.
 
 Stage3 TrainingInputPreparation reuses workspace section/buttons, native numeric/select controls and actual same-source preview. Deterministic classification/segmentation input rules are separate from train-only augmentation; supported-family checks and saved recipe identity govern execution. Existing Stage5 remains trained-model inspection/decision construction.
+
+## Polygon point editing
+
+The existing annotation store, save API and team/review contracts remain the
+authority. Point selection is ephemeral and bound to the current project,
+labelset, image, annotation, tool and geometry. First-selection drag must not
+move the canvas when point controls become visible. During an external viewport reflow, drag deltas remain bound to the initial client position and scale. Preserve both geometry
+aliases and bounding box together; do not change metadata on geometry edits.
+Keep at least three points, offer undo, and explain refused edits in the row's
+live status. Point controls provide keyboard alternatives and do not forward
+unselected-point Delete/Backspace to whole-shape deletion. Typed text and modal
+dialogs own their keys. See `docs/labeling-precision.md` for actions.
