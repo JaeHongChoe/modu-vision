@@ -14,7 +14,8 @@ function fixture() {
   const training = { preset: 'precision', nextDevice: 'cpu', nextBatchSize: null };
   const compute = { profiles: [], selectedProfileId: null, transportRevision: 1, isLoaded: true, isLoading: false, loadError: null };
   let authority = 'local:context-1', children, closes = 0;
-  const steps = [];
+  const steps = [], starts = [];
+  const progress = require('zustand').create(() => ({task:null,contextMatches:true,error:null}));
   project.setStep = async step => { steps.push(step); project.activeStep = step; };
   const hook = state => Object.assign(selector => selector ? selector(state) : state, { getState: () => state });
   const cache = new Map();
@@ -26,11 +27,12 @@ function fixture() {
     cache.set(filename, m);
     const req = m.require.bind(m);
     m.require = name => {
+      if (name === 'zustand') return {create: initialize => {const store=require('zustand/vanilla').createStore(initialize);return Object.assign(selector=>selector?selector(store.getState()):store.getState(),store);}};
       if (name.endsWith('/useProjectStore')) return { useProjectStore: hook(project) };
       if (name.endsWith('/useDatasetStore')) return { useDatasetStore: hook(dataset) };
       if (name.endsWith('/useTrainingStore')) return { useTrainingStore: hook(training) };
       if (name.endsWith('/useComputeStore')) return { useComputeStore: hook(compute) };
-      if (name.endsWith('/useAssistantTaskStore')) return {startOneclickTask:async()=>null,pauseOneclickTask:async()=>{}};
+      if (name.endsWith('/useAssistantTaskStore')) return {useOneclickTaskProgressStore:progress,startOneclickTask:async()=>{starts.push('start');return null;},pauseOneclickTask:async()=>{}};
       if (name.endsWith('/useEvaluationStore') || name.endsWith('/useFlowchartStore')) return {};
       if (name.endsWith('/useAnnotationStore')) return { useAnnotationStore: hook({ reviewerName: '' }) };
       if (name.endsWith('/services/api')) return { api: {}, subscribeProjectContext: () => () => {} };
@@ -55,7 +57,8 @@ function fixture() {
   const dialog = load(path.join(__dirname, 'AutoProgressDialog.tsx'));
   const nodes = value => Array.isArray(value) ? value.flatMap(nodes) : value && typeof value === 'object' ? [value, ...nodes(value.props?.children)] : [];
   const text = value => value == null || typeof value === 'boolean' ? '' : typeof value === 'object' ? Array.isArray(value) ? value.map(text).join('') : text(value.props?.children) : String(value);
-  return { project, dataset, training, compute, steps, helper,
+  return { project, dataset, training, compute, steps, helper, starts, progress, store:dialog.useAutoProgressStore,
+    buttons: () => nodes(children).filter(node => node.type === 'button'),
     setAuthority(value) { authority = value; },
     scope() { return helper().trainingSummaryScope(JSON.stringify([authority, project.projectDir, project.project.id, project.project.active_labelset_id, project.project.source_dataset_dir]), {
       task: project.task, folderPath: dataset.folderPath, datasetKey: dataset.datasetKey, preset: training.preset,
@@ -139,4 +142,12 @@ test('a settings navigation finishing after a project switch cannot close the ne
   f.project.project.id = 'project-2'; f.project.activeStep = 3;
   resolve(); await pending;
   assert.equal(f.closes(), 0);
+});
+
+test('completed primary explicitly starts a new plan instead of promising a read-only result check',()=>{
+ const f=fixture();f.progress.setState({task:{id:'done',status:'completed'},contextMatches:true});
+ f.store.setState({run:{state:'done',log:[{at:1,text:'기존 완료 기록',tone:'done'}],stop:null}});
+ const html=f.render();assert.match(html,/새 계획으로 다시 실행/);assert.doesNotMatch(html,/다시 확인하기/);
+ const button=f.buttons().find(node=>node.props.className.includes('workspace-button--primary'));button.props.onClick();
+ assert.deepEqual(f.starts,['start'],'explicit new execution still uses the one existing controller');
 });

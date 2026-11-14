@@ -37,6 +37,7 @@ import { createCatchUp, createJobEventStream } from './services/jobEventFeed';
 import { AssistantPanel } from './components/assistant/AssistantPanel';
 import { useAssistantStore } from './stores/useAssistantStore';
 import { FirstUseStudyObserver } from './components/onboarding/FirstUseStudyPanel';
+import { LearningJourneyPanel } from './components/onboarding/LearningJourneyPanel';
 
 // S1-10: after every (re)connection the app reads the job events it may have missed and re-reads its job if needed.
 const jobEventStream = createJobEventStream();
@@ -67,6 +68,7 @@ function StudioApp() {
   const { updateFromTelemetry } = useTrainingStore();
   const [workspace,setWorkspace]=useState<'studio'|'operator'>('studio');
   const [utility,setUtility]=useState<'tasks'|'delivery'|null>(null);
+  const [workspaceRequest,setWorkspaceRequest]=useState<{tab:'recent'|'create';nonce:number}>();
   const transportRevision=useComputeStore(s=>s.transportRevision);
   const project=useProjectStore(s=>s.project);
   const {onboarding,open:firstRunOpen,demo,setOpen:setFirstRunOpen,dismiss:dismissFirstRun}=useFirstRunStore();
@@ -188,7 +190,7 @@ function StudioApp() {
       {/* Precision Industrial Header Frame */}
       {/* 간단히 보기: the first-run guide, the workspace switch, the task center and packages join the header's 더 보기 menu
           (the only menu). 모두 보기 keeps the workspace row below, as it was. */}
-      <WizardHeader completedSteps={doneSteps} simpleControls={<button className={MENU_ITEM} onClick={()=>setFirstRunOpen(true)}>{firstRunLabel}</button>}
+      <WizardHeader workspaceRequest={workspaceRequest} completedSteps={doneSteps} simpleControls={<button className={MENU_ITEM} onClick={()=>setFirstRunOpen(true)}>{firstRunLabel}</button>}
         simpleMenu={<>
             {workspace==='operator'
               ?<button className={MENU_ITEM} onClick={()=>setWorkspace('studio')}>{language==='ko'?'모델·플로우 작업':'Models and flows'}</button>
@@ -212,6 +214,7 @@ function StudioApp() {
         <button className="workspace-button whitespace-nowrap" onClick={()=>setWorkspace('studio')}>{language==='ko'?'모델·플로우 작업으로 돌아가기':'Back to models and flows'}</button>
       </div>}
       {exampleProject&&<p role="note" aria-label="예제 프로젝트" className="shrink-0 border-b border-amber-700/60 bg-amber-950/30 px-4 py-1.5 text-xs text-amber-200">예제 프로젝트 · {EXAMPLE_NOTICE}</p>}
+      {viewMode==='simple' && workspace==='studio' && <LearningJourneyPanel/>}
       {/* Primary Inspection Studio Workspace with 1px Hairline Grid Containment */}
       <main key={transportRevision} className="flex-1 min-h-0 flex overflow-hidden bg-[#0B0E14]">
         {workspace==='studio' && activeStep === 1 && <DatasetStudio />}
@@ -231,7 +234,8 @@ function StudioApp() {
       {/* The assistant (product direction 4): a drawer that is null while closed; every step works without it. */}
       <AssistantPanel />
       {firstRunOpen&&<WorkspaceDialog title="처음 시작하기" onClose={()=>setFirstRunOpen(false)}>
-        <FirstRunStudio onClose={()=>setFirstRunOpen(false)} onDismiss={()=>void dismissFirstRun()}/>
+        <FirstRunStudio onClose={()=>setFirstRunOpen(false)} onDismiss={()=>void dismissFirstRun()}
+          onOpenWorkspace={tab=>{setFirstRunOpen(false);setWorkspace('studio');setWorkspaceRequest(previous=>({tab,nonce:(previous?.nonce??0)+1}));}}/>
       </WorkspaceDialog>}
       {utility&&<WorkspaceDialog key={`${utility}:${transportRevision}`} title={utility==='tasks'?'작업 센터':'패키지·장치·설치·진단'} onClose={()=>setUtility(null)}>
         {utility==='tasks'?<TaskCenter initialOpen onNavigate={()=>{setUtility(null);setWorkspace('studio');}}/>:<ProductDeliveryWorkspace onNavigate={step=>{setUtility(null);setWorkspace('studio');void useProjectStore.getState().setStep(step);}}/>}

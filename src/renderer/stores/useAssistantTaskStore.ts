@@ -127,6 +127,10 @@ export const assistantTaskTools={
 };
 
 let oneclickPoll:ReturnType<typeof setTimeout>|null=null;
+/** Read-only presentation of the existing controller; this store does not start or poll work. */
+export const useOneclickTaskProgressStore=create<TaskControllerState>(()=>({
+  task:null,busy:false,loading:false,error:null,contextMatches:true,settingsRecoveryLabel:null,planningNew:false,history:[],readPending:false,
+}));
 let oneclickObserver:((task:AssistantTask|null,error:string|null)=>void)|null=null;
 let oneclickCancelled=false;
 let oneclickRequestGeneration=0;
@@ -139,6 +143,7 @@ const oneclickController=new AssistantTaskController({
   afterStep:qualifyCompletedTaskStep,
   authorizationCurrent:()=>!oneclickCancelled,
   onChange:state=>{
+    useOneclickTaskProgressStore.setState(state);
     oneclickObserver?.(state.task,state.error);
     if(oneclickPoll!==null){clearTimeout(oneclickPoll);oneclickPoll=null;}
     if(!oneclickCancelled&&(state.task?.status==='waiting_job'||hasPendingTaskQuality(state.task))&&state.task?.status!=='paused'&&!state.busy&&!state.loading&&!state.error){
@@ -186,4 +191,4 @@ export async function pauseOneclickTask():Promise<void>{
 }
 subscribeWorkflowEvidence(()=>{void controller.recheckInputs();void oneclickController.recheckInputs();});
 for(const store of [useProjectStore,useDatasetStore,useTrainingStore,useComputeStore])
-  store.subscribe?.(()=>{refreshOneclickContext();void controller.recheckInputs();void oneclickController.recheckInputs();});
+  store.subscribe?.(()=>{refreshOneclickContext();oneclickController.refreshContext();void controller.recheckInputs();void oneclickController.recheckInputs();});

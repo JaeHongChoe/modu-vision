@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { Archive, ArchiveRestore, ArrowRight, Clock3, FolderOpen, FolderPlus, HardDrive, Layers3, X } from 'lucide-react';
 import type { VisionTask } from '../../types';
+import { PROJECT_PURPOSES, purposeToTask, type ProjectPurpose } from '../onboarding/projectPurpose';
 import { projectSwitchRefusal, subscribeProjectSwitchRefusal, useProjectStore } from '../../stores/useProjectStore';
 import { host } from '../../services/hostAdapter';
 import { ArtifactRetentionPanel } from './ArtifactRetentionPanel';
@@ -17,11 +18,12 @@ const taskLabels: Record<VisionTask, string> = {
 
 interface Props {
   onClose: () => void;
+  initialTab?: 'recent' | 'create';
 }
 
-export const ProjectWorkspaceDialog: React.FC<Props> = ({ onClose }) => {
+export const ProjectWorkspaceDialog: React.FC<Props> = ({ onClose, initialTab = 'recent' }) => {
   const {
-    project, recentProjects, isProjectBusy, projectError, loadRecentProjects,
+    project, viewMode, recentProjects, isProjectBusy, projectError, loadRecentProjects,
     clearProjectError, createProject, openProject,
     backupProject, restoreProject, recoverProject,
   } = useProjectStore();
@@ -29,9 +31,12 @@ export const ProjectWorkspaceDialog: React.FC<Props> = ({ onClose }) => {
   // actions wait, disabled and with the reason shown, instead of being offered and then refused after the click.
   const switchRefusal = useSyncExternalStore(subscribeProjectSwitchRefusal, projectSwitchRefusal, projectSwitchRefusal);
   const locked = isProjectBusy || switchRefusal !== null;
-  const [tab, setTab] = useState<Tab>('recent');
+  const [tab, setTab] = useState<Tab>(initialTab);
   const [name, setName] = useState('');
   const [task, setTask] = useState<VisionTask>('classification');
+  const [purpose, setPurpose] = useState<ProjectPurpose | null>(null);
+  const full = viewMode === 'full';
+  const createTask = full ? task : purposeToTask(purpose);
   const [description, setDescription] = useState('');
   const [createPath, setCreatePath] = useState('');
   const [openPath, setOpenPath] = useState('');
@@ -100,9 +105,9 @@ export const ProjectWorkspaceDialog: React.FC<Props> = ({ onClose }) => {
 
   const submitCreate = async (event: React.FormEvent) => {
     event.preventDefault();
-    if (!name.trim()) return;
+    if (!name.trim() || !createTask || locked) return;
     const created = await createProject({
-      name: name.trim(), task, description: description.trim(),
+      name: name.trim(), task: createTask, description: description.trim(),
       ...(createPath.trim() ? { project_dir: createPath.trim() } : {}),
     });
     if (created) onClose();
@@ -214,12 +219,30 @@ export const ProjectWorkspaceDialog: React.FC<Props> = ({ onClose }) => {
 
             {tab === 'create' && (
               <form onSubmit={submitCreate} className="space-y-4">
-                <div><h3 className="text-sm font-semibold text-slate-100">새 프로젝트</h3><p className="mt-1 text-xs text-slate-500">작업 이름과 검사 유형을 정합니다.</p></div>
+                <div><h3 className="text-sm font-semibold text-slate-100">새 프로젝트</h3><p className="mt-1 text-xs text-slate-500">{full ? '작업 이름과 검사 유형을 정합니다.' : '사진에서 어떤 결과를 얻고 싶은지 골라 주세요.'}</p></div>
                 <label className="block text-xs font-medium text-slate-300">프로젝트 이름 <span className="text-cyan-300">*</span><input autoFocus value={name} maxLength={100} onChange={(event) => setName(event.target.value)} placeholder="예: 세라믹 표면 결함 검사" className="mt-1.5 w-full rounded-md border border-[#40516A] bg-[#0D1420] px-3 py-2.5 text-sm text-white outline-none placeholder:text-slate-400 focus:border-cyan-500" /></label>
-                <label className="block text-xs font-medium text-slate-300">검사 유형<select value={task} onChange={(event) => setTask(event.target.value as VisionTask)} className="mt-1.5 w-full rounded-md border border-[#40516A] bg-[#0D1420] px-3 py-2.5 text-sm text-white outline-none focus:border-cyan-500">{Object.entries(taskLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>
+                {full ? <label className="block text-xs font-medium text-slate-300">검사 유형<select value={task} onChange={(event) => setTask(event.target.value as VisionTask)} className="mt-1.5 w-full rounded-md border border-[#40516A] bg-[#0D1420] px-3 py-2.5 text-sm text-white outline-none focus:border-cyan-500">{Object.entries(taskLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label> :
+                  <fieldset className="min-w-0 space-y-2" aria-describedby="project-purpose-help">
+                    <legend className="mb-2 text-sm font-semibold text-[var(--workspace-text)]">어떤 결과가 필요한가요?</legend>
+                    {PROJECT_PURPOSES.map(choice => <label key={choice.id} className="workspace-section flex cursor-pointer items-start gap-3 text-sm">
+                      <input type="radio" name="project-purpose" value={choice.id} checked={purpose === choice.id}
+                        onChange={() => setPurpose(choice.id)} className="mt-1 shrink-0 accent-[var(--workspace-accent)]" />
+                      <span className="min-w-0"><strong className="block text-[var(--workspace-text)]">{choice.title}</strong>
+                        <span className="workspace-description block">{choice.example}</span>
+                        <span className="workspace-description block">준비할 것: {choice.preparation}</span></span>
+                    </label>)}
+                    <label className="workspace-section flex cursor-pointer items-center gap-3 text-sm text-[var(--workspace-text)]">
+                      <input type="radio" name="project-purpose" value="unsure" checked={purpose === 'unsure'} onChange={() => setPurpose('unsure')} className="accent-[var(--workspace-accent)]" />
+                      아직 모르겠어요
+                    </label>
+                    <p id="project-purpose-help" role={purpose === 'unsure' ? 'status' : undefined} className="workspace-description text-sm">
+                      {purpose === 'unsure' ? '사진 전체에 이름 하나를 붙이려면 종류, 사각형으로 위치와 수를 보려면 위치와 개수, 경계를 따라 칠하려면 모양을 고르세요. 정상 사진을 기준으로 차이를 찾으려면 정상과 다른 부분을 고르세요. 원하는 결과를 고른 뒤 만들 수 있습니다.' : '목적을 고르면 필요한 검사 유형이 연결됩니다. 사진을 불러와도 정답이 자동 확정되지는 않습니다.'}
+                    </p>
+                  </fieldset>}
+
                 <label className="block text-xs font-medium text-slate-300">설명 <span className="font-normal text-slate-500">선택</span><textarea value={description} onChange={(event) => setDescription(event.target.value)} rows={2} placeholder="검사 대상과 목적을 기록하세요" className="mt-1.5 w-full resize-none rounded-md border border-[#40516A] bg-[#0D1420] px-3 py-2 text-sm text-white outline-none placeholder:text-slate-400 focus:border-cyan-500" /></label>
                 <label className="block text-xs font-medium text-slate-300">저장 폴더 <span className="font-normal text-slate-500">비우면 기본 위치에 생성</span><div className="mt-1.5 flex gap-2"><input value={createPath} onChange={(event) => setCreatePath(event.target.value)} placeholder="기본 프로젝트 폴더 사용" className="min-w-0 flex-1 rounded-md border border-[#40516A] bg-[#0D1420] px-3 py-2.5 font-mono text-xs text-white outline-none placeholder:text-slate-400 focus:border-cyan-500" /><button type="button" disabled={!pickPaths} title={pickTitle} onClick={() => void selectDirectory(true)} className="rounded-md border border-[#40516A] px-3 text-xs text-slate-200 hover:bg-[#25354A]">찾기</button></div></label>
-                <button type="submit" disabled={!name.trim() || locked} className="flex w-full items-center justify-center gap-2 rounded-md bg-cyan-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-cyan-500 disabled:cursor-not-allowed disabled:opacity-40"><FolderPlus className="h-4 w-4" />{isProjectBusy ? '만드는 중...' : '프로젝트 만들기'}</button>
+                <button type="submit" disabled={!name.trim() || !createTask || locked} className="flex w-full items-center justify-center gap-2 rounded-md bg-cyan-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-cyan-500 disabled:cursor-not-allowed disabled:opacity-40"><FolderPlus className="h-4 w-4" />{isProjectBusy ? '만드는 중...' : '프로젝트 만들기'}</button>
               </form>
             )}
 

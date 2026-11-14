@@ -32,7 +32,7 @@ test('the refusal the dialog shows is the one a project switch gets, and it foll
 function render(refusal,{busy=false}={}){
  const state={project:current,recentProjects:[{...current},other],isProjectBusy:busy,projectError:null,loadRecentProjects:async()=>{},clearProjectError(){},createProject:async()=>false,openProject:async()=>false,backupProject:async()=>null,restoreProject:async()=>false};
  const icons=new Proxy({},{get:(_,name)=>name==='__esModule'?true:()=>null});
- const {ProjectWorkspaceDialog}=load('ProjectWorkspaceDialog.tsx',{'lucide-react':icons,
+ const {ProjectWorkspaceDialog}=load('ProjectWorkspaceDialog.tsx',{'lucide-react':icons,'../onboarding/projectPurpose':load('../onboarding/projectPurpose.ts',{}),
   '../../stores/useProjectStore':{useProjectStore:()=>state,projectSwitchRefusal:()=>refusal,subscribeProjectSwitchRefusal:()=>()=>{}},
   '../../services/hostAdapter':{host:{can:()=>false,unavailableReason:()=> '로컬 파일 선택 연결을 확인하세요.'}},'./ArtifactRetentionPanel':{ArtifactRetentionPanel:()=>null},'../../services/api':{api:{project:{}}}});
  return renderToStaticMarkup(react.createElement(ProjectWorkspaceDialog,{onClose(){}}));
@@ -49,4 +49,66 @@ test('another project is offered only when switching to it would not be refused,
  assert.ok(!idle.includes(READING));
  // While a switch itself runs, its own busy state speaks; the refusal line is not repeated under it.
  assert.ok(!render(READING,{busy:true}).includes(READING));
+});
+
+// Exercise submitted payloads and native controls, including direct handler calls while a guard is active.
+function createFixture({viewMode='simple',refusal=null,busy=false,initialTab='create'}={}){
+ let cursor=0,closed=0;const slots=[],created=[];
+ const hooks={...react,useEffect(){},useRef:()=>({current:null}),useSyncExternalStore:(_subscribe,snapshot)=>snapshot(),
+  useState(initial){const i=cursor++;if(!(i in slots))slots[i]=typeof initial==='function'?initial():initial;return[slots[i],value=>{slots[i]=typeof value==='function'?value(slots[i]):value;}];}};
+ const state={project:current,recentProjects:[],viewMode,isProjectBusy:busy,projectError:null,loadRecentProjects:async()=>{},clearProjectError(){},
+  createProject:async data=>{created.push(data);return true;},openProject:async()=>false,backupProject:async()=>null,restoreProject:async()=>false};
+ const icons=new Proxy({},{get:(_,name)=>name==='__esModule'?true:()=>null});
+ const mocks={react:hooks,'lucide-react':icons,'../../stores/useProjectStore':{useProjectStore:()=>state,projectSwitchRefusal:()=>refusal,subscribeProjectSwitchRefusal:()=>()=>{}},
+  '../../services/hostAdapter':{host:{can:()=>false,unavailableReason:()=> '선택 불가'}},'./ArtifactRetentionPanel':{ArtifactRetentionPanel:()=>null},'../../services/api':{api:{project:{}}}};
+ if(fs.existsSync(path.join(__dirname,'../onboarding/projectPurpose.ts')))mocks['../onboarding/projectPurpose']=load('../onboarding/projectPurpose.ts',{});
+ const {ProjectWorkspaceDialog}=load('ProjectWorkspaceDialog.tsx',mocks);
+ const nodes=tree=>{const list=[];const walk=n=>{if(!n||typeof n!=='object')return;list.push(n);react.Children.forEach(n.props?.children,walk);};walk(tree);return list;};
+ const render=()=>{cursor=0;return ProjectWorkspaceDialog({initialTab,onClose:()=>closed++});};
+ const all=()=>nodes(render());
+ const button=label=>all().find(n=>n.type==='button'&&react.Children.toArray(n.props.children).some(child=>child===label));
+ const field=placeholder=>all().find(n=>n.type==='input'&&n.props.placeholder===placeholder);
+ const createTab=()=>{button('새 프로젝트').props.onClick();};
+ const submit=()=>all().find(n=>n.type==='form').props.onSubmit({preventDefault(){}});
+ return{render,all,button,field,created,state,submit,createTab,closed:()=>closed};
+}
+
+test('simple creation requires an explicit purpose and unsure stays unselected with explanatory help',async()=>{
+ const f=createFixture();f.createTab();f.field('예: 세라믹 표면 결함 검사').props.onChange({target:{value:' My inspection '}});
+ assert.equal(f.button('프로젝트 만들기').props.disabled,true,'a project name must not silently select classification');
+ await f.submit();assert.deepEqual(f.created,[]);
+ const unsure=f.all().find(n=>n.type==='input'&&n.props.type==='radio'&&n.props.value==='unsure');
+ assert.ok(unsure,'unsure is an explicit help choice');unsure.props.onChange({target:{value:'unsure'}});
+ assert.ok(f.all().some(n=>n.props?.role==='status'),'help remains visible after choosing unsure');
+ await f.submit();assert.deepEqual(f.created,[],'help must not infer a task');
+});
+
+test('each result choice creates the explicitly mapped existing task with the entered project fields',async()=>{
+ for(const [purpose,task] of [['kind','classification'],['location','detection'],['shape','segmentation'],['difference','anomaly']]){
+  const f=createFixture();f.createTab();f.field('예: 세라믹 표면 결함 검사').props.onChange({target:{value:' Inspection '}});
+  const choices=f.all().filter(n=>n.type==='input'&&n.props.type==='radio');
+  const choice=choices.find(n=>n.props.value===purpose);assert.ok(choice,'missing result choice '+purpose);
+  choice.props.onChange({target:{value:purpose}});
+  f.field('기본 프로젝트 폴더 사용').props.onChange({target:{value:' /projects/new '}});
+  assert.equal(f.button('프로젝트 만들기').props.disabled,false);
+  await f.submit();assert.deepEqual(f.created,[{name:'Inspection',task,description:'',project_dir:'/projects/new'}]);assert.equal(f.closed(),1);
+ }
+});
+
+test('initial workspace destination opens create directly and full mode retains its technical task selection',async()=>{
+ const f=createFixture({viewMode:'full'});
+ assert.ok(f.field('예: 세라믹 표면 결함 검사'),'initial create request opens the form');
+ f.field('예: 세라믹 표면 결함 검사').props.onChange({target:{value:'Advanced'}});
+ const select=f.all().find(n=>n.type==='select');assert.ok(select);assert.equal(select.props.value,'classification');
+ assert.equal(f.all().filter(n=>n.type==='input'&&n.props.type==='radio').length,0);
+ select.props.onChange({target:{value:'segmentation'}});await f.submit();
+ assert.deepEqual(f.created,[{name:'Advanced',task:'segmentation',description:''}]);
+});
+
+test('create submit preserves busy and project-switch refusals even when invoked directly',async()=>{
+ for(const options of [{busy:true},{refusal:READING}]){
+  const f=createFixture({viewMode:'full',...options});f.createTab();
+  f.field('예: 세라믹 표면 결함 검사').props.onChange({target:{value:'Guarded'}});
+  await f.submit();assert.deepEqual(f.created,[]);
+ }
 });

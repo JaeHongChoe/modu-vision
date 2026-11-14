@@ -60,27 +60,22 @@ export const RecipePresetSelector: React.FC<RecipePresetSelectorProps> = ({
       </div>
 
       {/* Recipe Cards View */}
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         {/* Recipe A: Fast Prototype Card */}
-        <div
-          role="button"
-          tabIndex={isTraining ? -1 : 0}
+        <div className="min-w-0">
+        <button
+          type="button"
+          disabled={isTraining}
           onClick={() => !isTraining && setPreset('fast')}
-          onKeyDown={(event) => {
-            if (!isTraining && (event.key === 'Enter' || event.key === ' ')) {
-              event.preventDefault();
-              setPreset('fast');
-            }
-          }}
           aria-disabled={isTraining}
           aria-pressed={preset === 'fast'}
-          className={`p-4 rounded-[4px] border transition-all cursor-pointer relative text-left ${
+          className={`w-full p-4 rounded-[4px] border transition-all cursor-pointer relative text-left ${
             preset === 'fast'
               ? 'border-[#3B82F6] bg-[#1A212E] ring-1 ring-[#3B82F6]'
               : 'border-[#2B3547] bg-[#131822] hover:bg-[#1A212E] hover:border-[#475569] text-slate-400'
           } ${isTraining ? 'cursor-not-allowed opacity-80' : ''}`}
         >
-          <div className="flex items-center justify-between mb-2">
+          <div className="flex flex-wrap items-center justify-between gap-2 pr-4 mb-2">
             <div className="flex items-center space-x-2">
               <span className="w-2 h-2 rounded-full bg-amber-400" />
               <span className="font-bold text-xs text-slate-100 uppercase tracking-wide">
@@ -95,13 +90,19 @@ export const RecipePresetSelector: React.FC<RecipePresetSelectorProps> = ({
           <p className="text-[11px] text-slate-400 mb-3 leading-relaxed">
             {language === 'ko'
               ? simpleView
-                ? '처음 학습할 때 고르세요. 짧게 학습해서 이 데이터로 불량을 찾을 수 있는지 먼저 확인합니다.'
+                ? '처음 학습할 때 고르세요. 짧게 학습한 뒤 처음 보는 사진으로 결과와 틀린 사례를 확인합니다.'
                 : '신속한 결함 검출 가능성 타진을 위한 고속 수렴 레시피. 가벼운 데이터 증강 및 빠른 웜업 학습률을 적용합니다.'
               : 'Rapid defect feasibility screening preset with light augmentation and fast warmup learning rate.'}
           </p>
 
+          {preset === 'fast' && (
+            <div className="absolute top-2 right-2 text-blue-400">
+              <CheckCircle2 className="w-4 h-4" />
+            </div>
+          )}
+        </button>
           {!simpleView && (
-          <div className="flex flex-wrap gap-1.5 text-[10px] font-mono text-slate-300">
+          <div className="mt-2 flex flex-wrap gap-1.5 text-[10px] font-mono text-slate-300">
             <span className="bg-[#0B0E14] px-2 py-0.5 rounded-[2px] border border-[#2B3547] tabular-nums">
               <JargonTooltip termKey="learning_rate">학습률 0.001</JargonTooltip>
             </span>
@@ -112,34 +113,23 @@ export const RecipePresetSelector: React.FC<RecipePresetSelectorProps> = ({
             <span className="bg-[#0B0E14] px-2 py-0.5 rounded-[2px] border border-[#2B3547]">가능성 확인용</span>
           </div>
           )}
-
-          {preset === 'fast' && (
-            <div className="absolute top-2 right-2 text-blue-400">
-              <CheckCircle2 className="w-4 h-4" />
-            </div>
-          )}
         </div>
 
         {/* Recipe B: High Precision Card */}
-        <div
-          role="button"
-          tabIndex={isTraining ? -1 : 0}
+        <div className="min-w-0">
+        <button
+          type="button"
+          disabled={isTraining}
           onClick={() => !isTraining && setPreset('precision')}
-          onKeyDown={(event) => {
-            if (!isTraining && (event.key === 'Enter' || event.key === ' ')) {
-              event.preventDefault();
-              setPreset('precision');
-            }
-          }}
           aria-disabled={isTraining}
           aria-pressed={preset === 'precision'}
-          className={`p-4 rounded-[4px] border transition-all cursor-pointer relative text-left ${
+          className={`w-full p-4 rounded-[4px] border transition-all cursor-pointer relative text-left ${
             preset === 'precision'
               ? 'border-[#3B82F6] bg-[#1A212E] ring-1 ring-[#3B82F6]'
               : 'border-[#2B3547] bg-[#131822] hover:bg-[#1A212E] hover:border-[#475569] text-slate-400'
           } ${isTraining ? 'cursor-not-allowed opacity-80' : ''}`}
         >
-          <div className="flex items-center justify-between mb-2">
+          <div className="flex flex-wrap items-center justify-between gap-2 pr-4 mb-2">
             <div className="flex items-center space-x-2">
               <span className="w-2 h-2 rounded-full bg-emerald-400" aria-hidden="true" />
               <span className="font-bold text-xs text-slate-100 uppercase tracking-wide">
@@ -154,13 +144,19 @@ export const RecipePresetSelector: React.FC<RecipePresetSelectorProps> = ({
           <p className="text-[11px] text-slate-400 mb-3 leading-relaxed">
             {language === 'ko'
               ? simpleView
-                ? '빠른 학습으로 가능성을 확인한 뒤 고르세요. 시간이 더 걸리지만 더 정확한 모델을 만듭니다.'
+                ? '빠른 학습 결과와 비교할 후보를 만듭니다. 시간이 더 걸릴 수 있으며, 더 정확해지는지는 같은 시험 사진으로 확인해야 합니다.'
                 : '더 큰 입력 이미지와 강한 증강으로 후보를 학습합니다. 양산 적용 여부는 별도 시험 데이터와 현장 검증으로 판단하세요.'
               : 'Train with larger input images and stronger augmentation. Validate on separate test data and the production line before use.'}
           </p>
 
+          {preset === 'precision' && (
+            <div className="absolute top-2 right-2 text-blue-400">
+              <CheckCircle2 className="w-4 h-4" />
+            </div>
+          )}
+        </button>
           {!simpleView && (
-          <div className="flex flex-wrap gap-1.5 text-[10px] font-mono text-slate-300">
+          <div className="mt-2 flex flex-wrap gap-1.5 text-[10px] font-mono text-slate-300">
             <span className="bg-[#0B0E14] px-2 py-0.5 rounded-[2px] border border-[#2B3547] tabular-nums">
               <JargonTooltip termKey="learning_rate">학습률 0.0005 · 서서히 감소</JargonTooltip>
             </span>
@@ -170,12 +166,6 @@ export const RecipePresetSelector: React.FC<RecipePresetSelectorProps> = ({
             </span>
             <span className="bg-[#0B0E14] px-2 py-0.5 rounded-[2px] border border-[#2B3547]">후보 모델용</span>
           </div>
-          )}
-
-          {preset === 'precision' && (
-            <div className="absolute top-2 right-2 text-blue-400">
-              <CheckCircle2 className="w-4 h-4" />
-            </div>
           )}
         </div>
       </div>

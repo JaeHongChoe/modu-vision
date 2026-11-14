@@ -20,7 +20,7 @@ function fixture({warmParentsFailure = null, resumeFailure = null, deferResume =
   const data = { folderPath: '/images', totalImages: 10, split: { train: 6, val: 2, test: 2 }, isLoading: false, isSplitting: false,
     importError: null, splitError: null, splitSupported: true, splitUnavailableReason: null, datasetKey: '/images\0detection', sourceAuthority: 'authority', splitState: 'saved', classes: {}, classSplitCounts: null };
   const training = { jobId: null, status: 'idle', isTraining: false, isRecoveringTraining: false, preset: 'fast', nextDevice: 'cpu', nextBatchSize: null,
-    setPreset() {}, lossHistory: [], hardware: {}, startTraining: async () => assert.fail('summary never starts training'), stopTraining: async () => {},
+    setPreset() {}, lossHistory: [], hardware: {}, bestMetric: null, startTraining: async () => assert.fail('summary never starts training'), stopTraining: async () => {},
     recoverActiveJob: async () => {}, refreshCurrentJob: async () => {}, reconnectCurrentJob: async () => {}, setNextSettings() {} };
   const compute = { profiles: [], selectedProfileId: null, transportRevision: 1, isLoaded: true, isLoading: false, loadError: null, error: null, probeResults: {}, probePendingId: null, probeProfile: async () => {} };
   const authority = () => JSON.stringify([project.projectDir, project.project.id, project.project.source_dataset_dir, project.project.active_labelset_id]);
@@ -32,6 +32,7 @@ function fixture({warmParentsFailure = null, resumeFailure = null, deferResume =
     m.require = name => {
       if (name === './trainingStartSummary' || name === './modelTrainingOptions' || name === './inputPreparation') return load(name.slice(2) + '.ts', true);
       if (name === 'react') return react;
+      if (name === 'react/jsx-runtime') return {jsx: (type, props, key) => ({type, props, key}), jsxs: (type, props, key) => ({type, props, key}), Fragment: 'Fragment'};
       if (name.endsWith('/assistContext')) return load('../../stores/assistContext.ts', true);
       if (name.endsWith('/useScopedError')) return load('../common/useScopedError.ts', true);
       if (real) return req(name);
@@ -43,10 +44,10 @@ function fixture({warmParentsFailure = null, resumeFailure = null, deferResume =
       if (name.endsWith('/services/api')) return { api: { training: { warmStartParents: async () => {if (warmParentsFailure) throw Error(warmParentsFailure); return { parents: [], total: 0 };} } }, request: async () => {if (deferResume) return new Promise((resolve, reject) => resumeReads.push({resolve, reject})); if (resumeFailure) throw Error(resumeFailure); return { states: [{checkpoint_path:'/resume/last.pt',device:'cuda',recipe:{backbone:'yolo26n',epochs:12},next_epoch:2,global_step:4}], excluded: [] };}, getApiPersistenceIdentity: () => compute.apiIdentity||'local' };
       if (name.endsWith('/autoRunChannel')) return { registerAutoRun: () => () => {}, registerTaskAutoRun: (kind, handler, settings) => {const record={handler,settings};taskHandlers.set(kind,record);return()=>{if(taskHandlers.get(kind)===record)taskHandlers.delete(kind);};} };
       if (name.endsWith('/datasetSplitCapability')) return { isSplitUnavailable: () => false };
-      if (name.endsWith('/trainingComputeReadiness')) return { trainingComputeReadiness: () => ({ ready: true }) };
+      if (name.endsWith('/trainingComputeReadiness')) return load('../../utils/trainingComputeReadiness.ts', true);
       if (name === './useTaskHandoff') return { useTaskHandoff: () => null };
       if (name === './useSelectedCoreJob') return { useSelectedCoreJob: () => ({ job: null, error: null }) };
-      if (name === './TrainingSchedulingSettings') return { defaultTrainingScheduling: {}, trainingSchedulingOptions: () => ({}), TrainingSchedulingSettings: 'TrainingSchedulingSettings' };
+      if (name === './TrainingSchedulingSettings') return load('TrainingSchedulingSettings.tsx', true);
       if (name.endsWith('/errorActions')) return { trainingPresetBatchSize: () => 8 };
       if (name === './trainingLog') return { trainingLogLines: () => [] };
       if (name.endsWith('/TaskChangeImpactDialog')) return { taskPreviewScope: authority, TaskChangeImpactDialog: 'TaskChangeImpactDialog' };
@@ -54,12 +55,12 @@ function fixture({warmParentsFailure = null, resumeFailure = null, deferResume =
       return new Proxy({}, { get: (_, key) => String(key) });
     };
     m._compile(ts.transpileModule(fs.readFileSync(filename, 'utf8'), { compilerOptions: {
-      module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, jsx: ts.JsxEmit.React, esModuleInterop: true,
+      module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, jsx: ts.JsxEmit.ReactJSX, esModuleInterop: true,
     } }).outputText, filename);
     return m.exports;
   }
   const h = load('trainingStartSummary.ts', true), shared = load('../../stores/assistContext.ts', true), { TrainingController } = load('TrainingController.tsx');
-  const nodes = value => Array.isArray(value) ? value.flatMap(nodes) : value && typeof value === 'object' ? [value, ...nodes(value.props?.children)] : [];
+  const nodes = value => Array.isArray(value) ? value.flatMap(nodes) : value && typeof value === 'object' ? [value, ...nodes(typeof value.type === 'function' ? value.type(value.props) : value.props?.children)] : [];
   function render() { cursor = 0; tree = TrainingController(); }
   const scope = () => h.trainingSummaryScope(authority(), { task: project.task, folderPath: data.folderPath, datasetKey: data.datasetKey,
     preset: training.preset, nextDevice: training.nextDevice, nextBatchSize: training.nextBatchSize, selectedProfileId: compute.selectedProfileId,
@@ -69,6 +70,24 @@ function fixture({warmParentsFailure = null, resumeFailure = null, deferResume =
     async settle() { for (let i = 0; i < 8; i++) { render(); effects.splice(0).forEach(effect => effect()); await new Promise(setImmediate); } },
     change(label, value) { const field = nodes(tree).find(node => node.props?.['aria-label'] === label); assert.ok(field, label); field.props.onChange({ target: { value } }); },
     summary: () => h.currentTrainingSummary(scope()),
+    preparation: () => nodes(tree).find(node => node.type === 'TrainingPreparationPanel')?.props,
+    dom() {
+      const elements = []; let focused = null;
+      function materialize(value, parent = null) {
+        if (Array.isArray(value)) return value.forEach(child => materialize(child, parent));
+        if (!value || typeof value !== 'object') return;
+        if (typeof value.type === 'function') return materialize(value.type(value.props), parent);
+        const element = {tagName: String(value.type).toUpperCase(), key: value.key, props: value.props, parentElement: parent, open: Boolean(value.props.open),
+          focus() {focused = this;}, scrollIntoView() {},
+          querySelector(selector) {return elements.find(candidate => {
+            let owner = candidate.parentElement; while (owner && owner !== this) owner = owner.parentElement;
+            return owner === this && (selector === 'details' ? candidate.tagName === 'DETAILS' : selector === 'button:not(:disabled)' ? candidate.tagName === 'BUTTON' && !candidate.props.disabled : false);
+          }) || null;}};
+        elements.push(element); materialize(value.props.children, element);
+      }
+      materialize(tree);
+      return {getElementById: id => elements.find(element => element.props.id === id) || null, focused: () => focused, elements};
+    },
     alerts: () => nodes(tree).filter(node => node.props?.role === 'alert').map(node => nodes(node).flatMap(child => child.props?.children || []).filter(value => typeof value === 'string').join('')),
     start() { const button = nodes(tree).find(node => node.type === 'button' && nodes(node).some(child => child.props?.children?.includes?.('선택 설정으로 학습 시작'))); assert.ok(button); assert.equal(button.props.disabled, false); return button.props.onClick(); },
     unmount() { slots.forEach(slot => slot?.cleanup?.()); },
@@ -238,4 +257,51 @@ test('a saved next-training recipe never crosses API transports for an identical
  const recipe={version:1,operations:[{op:'rotate90',turns:1}]};f.training.inputRecipe=recipe;f.training.inputRecipeScope=JSON.stringify(['local','p','default','/images','classification']);
  await f.settle();assert.deepEqual(f.summary().executionSettings.config_overrides.input_recipe,recipe);
  f.compute.apiIdentity='other-transport';await f.settle();assert.equal(f.summary().executionSettings.config_overrides.input_recipe,undefined);
+});
+
+
+test('preparation recovery opens the actual model, scheduling and compute controls and preserves the start guard', async () => {
+  const previousDocument = global.document;
+  try {
+    for (const [setup, expected] of [
+      [async f => {f.change('수동 학습 횟수', '0');}, 'training-model-settings'],
+      [async f => {f.change('학습 시간 제한 (분)', '-1');}, 'training-scheduling-settings'],
+      [async f => {f.compute.selectedProfileId = 'gpu'; f.compute.profiles = [{id: 'gpu', name: 'GPU 서버'}];}, 'training-compute-settings'],
+      [async f => {f.training.isRecoveringTraining = true;}, 'training-current-status'],
+    ]) {
+      const f = fixture(); let probeCalls = 0; f.compute.probeProfile = async () => {probeCalls++;};
+      await f.settle(); await setup(f); await f.settle();
+      const before = f.preparation(); assert.ok(before.inputBlocker); assert.equal(typeof before.onResolveBlocker, 'function');
+      const dom = f.dom(); global.document = dom; before.onResolveBlocker();
+      const target = dom.getElementById(expected); assert.ok(target, expected); assert.equal(probeCalls, 0, 'recovery opens the existing probe control without running it');
+      let parent = target.parentElement; while (parent) {if (parent.tagName === 'DETAILS') assert.equal(parent.open, true); parent = parent.parentElement;}
+      if (expected === 'training-scheduling-settings') assert.equal(target.querySelector('details').open, true);
+      if (expected === 'training-compute-settings') assert.equal(dom.focused(), target.querySelector('button:not(:disabled)'));
+      else assert.equal(dom.focused(), target);
+      const button = dom.elements.find(element => element.tagName === 'BUTTON' && element.props['aria-describedby'] === 'training-start-reason');
+      assert.equal(button?.props.disabled, true, 'navigation does not clear the actual blocking condition'); f.unmount();
+    }
+  } finally {global.document = previousDocument;}
+});
+
+
+test('simple training opens with preparation while optional transforms stay mounted in a closed disclosure; full view keeps its original order', async () => {
+  const f = fixture(); await f.settle();
+  const simple = f.dom().elements;
+  const find = (rows, name) => rows.find(node => node.tagName === name.toUpperCase());
+  const preparation = find(simple, 'TrainingPreparationPanel'), catalog = find(simple, 'ModelFamilyCatalog'), input = find(simple, 'TrainingInputPreparation');
+  assert.ok(simple.indexOf(preparation) < simple.indexOf(catalog)); assert.ok(simple.indexOf(catalog) < simple.indexOf(input));
+  assert.equal(input.parentElement.tagName, 'DETAILS'); assert.equal(input.parentElement.open, false);
+  assert.equal(input.parentElement.props.children[0].props.children, '사진 변환 설정 (선택)');
+  assert.ok(input.parentElement.key, 'the editor disclosure has stable React identity when reordered');
+  assert.equal(input.props.disabled, false);
+  const identity = input.parentElement.key;
+  f.project.viewMode = 'full'; await f.settle();
+  const full = f.dom().elements, fullInput = find(full, 'TrainingInputPreparation');
+  assert.ok(full.indexOf(fullInput) < full.indexOf(find(full, 'ModelFamilyCatalog')));
+  assert.ok(full.indexOf(find(full, 'ModelFamilyCatalog')) < full.indexOf(find(full, 'TrainingPreparationPanel')));
+  assert.equal(fullInput.parentElement.tagName, 'DETAILS'); assert.equal(fullInput.parentElement.open, true);
+  assert.equal(fullInput.parentElement.key, identity, 'view changes move the existing editor instead of replacing its wrapper');
+  assert.equal(fullInput.parentElement.props.children[0].props.hidden, true, 'full view does not add a new disclosure heading');
+  f.training.isTraining = true; await f.settle(); assert.equal(find(f.dom().elements, 'TrainingInputPreparation').props.disabled, true); f.unmount();
 });

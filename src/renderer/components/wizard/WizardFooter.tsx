@@ -9,6 +9,7 @@ import { openUnlabeledImage } from '../labeling/unlabeledImage';
 import { assistPanelErrors, subscribeAssistContext } from '../../stores/assistContext';
 import { AUTO_TITLE, AutoProgressDialog, useAutoProgressStore } from './AutoProgressDialog';
 import { useAssistantStore } from '../../stores/useAssistantStore';
+import { navigationActionLabel } from './beginnerJourney';
 
 /** One place for the step's state: what is done, what blocks the next action, how to clear it, and the one button
  * that does it. Moving between steps is a quiet arrow at each end so the primary action stands alone. */
@@ -39,6 +40,7 @@ export const WizardFooter = () => {
     await setStep(readiness.nextAction.step);if(readiness.nextAction.target==='labeling-canvas')await openUnlabeledImage();focusWorkflowTarget(readiness.nextAction.target);
   };
   const ko=language==='ko';
+  const actionLabel=navigationActionLabel(readiness.nextAction,ko);
   const labels=ko?{ready:'입력 준비됨',blocked:'다음 할 일',checking:'확인 중',unknown:'확인 필요'}:{ready:'Inputs ready',blocked:'Next to do',checking:'Checking',unknown:'Needs a check'};
   const blocker=readiness.missingInputs[0];
   // The step's one number line (step 2: confirmed/drafts/remaining; 3: epochs and time; 4: accuracy and misses; 5: saved version; 6: inspected images).
@@ -58,16 +60,16 @@ export const WizardFooter = () => {
         <button className="workspace-button" onClick={()=>{setExpanded(false);useAssistantStore.getState().open();}}>{ko?'도우미에게 묻기':'Ask the assistant'}</button></div>
     </section>}
     {/* One line at 1280px and wider: the status text truncates (its title holds the full text) so the canvas keeps its height. */}
-    <div className="flex items-center gap-2 whitespace-nowrap">
+    <div className="flex flex-wrap items-center gap-2">
       <button className="workspace-button" disabled={activeStep===1} onClick={()=>move(activeStep-1)} aria-label="이전 단계 보기" title={ko?'이전 단계 (Alt+←)':'Previous step (Alt+←)'}><ArrowLeft className="h-3 w-3"/></button>
       <span className="font-mono text-slate-400">{activeStep}/6</span>
-      <div role="status" aria-live="polite" title={blocker?`${blocker} → ${readiness.nextAction.label}${progress}`:progress?`${ko?`다음: ${readiness.nextAction.label}`:`Next: ${readiness.nextAction.label}`}${progress}`:undefined} className={`flex min-w-0 flex-1 items-center gap-x-3 rounded border px-3 py-0.5 ${tone}`}>
+      <div role="status" aria-live="polite" title={blocker?`${blocker} → ${actionLabel}${progress}`:progress?`${ko?`다음: ${actionLabel}`:`Next: ${actionLabel}`}${progress}`:undefined} className={`flex min-w-0 flex-1 items-center gap-x-3 rounded border px-3 py-0.5 ${tone}`}>
         <span className="whitespace-nowrap font-semibold">{labels[readiness.status]}</span>
-        <span className="min-w-0 flex-1 truncate">{blocker?(readiness.status==='ready'?blocker:`${blocker} → ${readiness.nextAction.label}`):(ko?`다음: ${readiness.nextAction.label}`:`Next: ${readiness.nextAction.label}`)}{progress&&<span className="text-slate-400" aria-live="off">{progress}</span>}<span className="sr-only">{ko?` · 완료 입력 ${readiness.completedInputs.length}`:` · ${readiness.completedInputs.length} inputs done`}</span></span>
+        <span className="min-w-0 flex-1 truncate">{blocker?(readiness.status==='ready'?blocker:`${blocker} → ${actionLabel}`):(ko?`다음: ${actionLabel}`:`Next: ${actionLabel}`)}{progress&&<span className="text-slate-400" aria-live="off">{progress}</span>}<span className="sr-only">{ko?` · 완료 입력 ${readiness.completedInputs.length}`:` · ${readiness.completedInputs.length} inputs done`}</span></span>
         <button className="workspace-button min-h-0 whitespace-nowrap py-0.5" aria-expanded={expanded} onClick={()=>setExpanded(value=>!value)}>{ko?(expanded?'자세히 닫기':'왜 그런가요?'):(expanded?'Close details':'Why?')}</button>
       </div>
-      <button className="workspace-button whitespace-nowrap" aria-haspopup="dialog" onClick={()=>setAutoOpen(true)}>{autoRunning?`${AUTO_TITLE} 중…`:AUTO_TITLE}</button>
-      <AsyncAction className="workspace-button--primary whitespace-nowrap" aria-label={`권장 행동: ${readiness.nextAction.label}`} onClick={()=>void action()}>{readiness.nextAction.label}</AsyncAction>
+      <button className="workspace-button whitespace-nowrap" aria-haspopup="dialog" onClick={()=>setAutoOpen(true)}>{ko?(autoRunning?`${AUTO_TITLE} 상태 보기`:`${AUTO_TITLE} 설정 열기`):(autoRunning?'View automatic progress':'Open automatic-run setup')}</button>
+      <AsyncAction className="workspace-button--primary whitespace-nowrap" aria-label={`${ko?'권장 행동':'Suggested action'}: ${actionLabel}`} onClick={()=>void action()}>{actionLabel}</AsyncAction>
       <button className="workspace-button" disabled={activeStep===6} onClick={()=>move(activeStep+1)} aria-label="다음 단계 보기" title={ko?'다음 단계 (Alt+→)':'Next step (Alt+→)'}><ArrowRight className="h-3 w-3"/></button>
     </div>
     {autoOpen&&<AutoProgressDialog onClose={()=>setAutoOpen(false)}/>}

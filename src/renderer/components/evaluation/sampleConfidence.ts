@@ -27,5 +27,5 @@ export function accuracyNote(right: number, total: number): string {
 export function smallTestWarning(total: number): string | null {
   if (total <= 0 || total >= RELIABLE_TEST_IMAGES) return null;
   return `시험 이미지가 ${total}장뿐이라 한 장마다 정확도가 ${Math.round(100 / total)}%p씩 움직이고, 추천 점수도 크게 흔들릴 수 있습니다. `
-    + `${RELIABLE_TEST_IMAGES}장 이상으로 평가하면 믿을 만해집니다.`;
+    + `사진 수를 늘려도 품질이 보장되지는 않습니다. 실제 사용할 조건과 불량 종류를 포함한 독립된 사진으로 확인하세요.`;
 }

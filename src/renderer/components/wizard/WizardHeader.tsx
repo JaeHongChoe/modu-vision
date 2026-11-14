@@ -1,7 +1,8 @@
 /**
  * src/renderer/components/wizard/WizardHeader.tsx
  *
- * The app header a first-time user reads. 간단히 보기 is one row: the project, the six steps, 모두 보기 and one 더 보기
+ * The app header a first-time user reads. 간단히 보기 groups the six steps into four goals and keeps the active goal's
+ * internal steps reachable. It shows the project, 모두 보기 and one 더 보기
  * menu that holds everything else (where work runs, the inspection type, history, technical details, the theme, the
  * language and the items App adds). 모두 보기 keeps its two rows: the project, where work runs, history and language
  * on the first; the inspection type and the six steps on the second. Port numbers, driver names and acceleration
@@ -33,6 +34,8 @@ import { ProvenancePanel } from '../common/ProvenancePanel';
 import { TaskChangeImpactDialog, taskPreviewScope } from './TaskChangeImpactDialog';
 import type { VisionTask } from '../../types';
 import { ThumbnailDiagnostics } from '../common/ThumbnailDiagnostics';
+import { BEGINNER_GOALS, beginnerGoalComplete, beginnerGoalEntry, beginnerGoalForStep } from './beginnerJourney';
+import type { WorkflowStep } from './workflowReadiness';
 
 const CONTROL = 'rounded border border-[#3B4B63] bg-[#0B0E14] px-2.5 py-1.5 text-sm text-slate-100 hover:bg-[#1B2537] disabled:opacity-50';
 const QUIET = 'rounded border border-transparent px-2.5 py-1.5 text-sm text-slate-200 hover:border-[#3B4B63] hover:bg-[#1B2537]';
@@ -44,9 +47,16 @@ const MENU_ITEM = 'workspace-button justify-start whitespace-nowrap';
 
 /** App adds its own items to the simple view's 더 보기 menu: `simpleControls` (the first-run guide) and `simpleMenu`
  * (the workspace switch, the task center, packages) render after the header's own items, by their usual names. */
-export const WizardHeader: React.FC<{ simpleControls?: React.ReactNode; simpleMenu?: React.ReactNode; completedSteps?: readonly number[] }> = ({ simpleControls, simpleMenu, completedSteps = [] } = {}) => {
+export const WizardHeader: React.FC<{ simpleControls?: React.ReactNode; simpleMenu?: React.ReactNode; completedSteps?: readonly number[]; workspaceRequest?: { tab: 'recent' | 'create'; nonce: number } }> = ({ simpleControls, simpleMenu, completedSteps = [], workspaceRequest } = {}) => {
   const [showComputePanel, setShowComputePanel] = useState(false);
   const [showProjectPanel, setShowProjectPanel] = useState(false);
+  const [projectInitialTab, setProjectInitialTab] = useState<'recent' | 'create'>('recent');
+  useEffect(() => {
+    if (!workspaceRequest) return;
+    setProjectInitialTab(workspaceRequest.tab);
+    setShowProjectPanel(true);
+  }, [workspaceRequest?.tab, workspaceRequest?.nonce]);
+  const openProjectPanel = () => { setProjectInitialTab('recent'); setShowProjectPanel(true); };
   const [showProvenance, setShowProvenance] = useState(false);
   const [taskFailure, setTaskFailure] = useState<{ scope: string; message: string } | null>(null);
   const {
@@ -238,7 +248,7 @@ export const WizardHeader: React.FC<{ simpleControls?: React.ReactNode; simpleMe
       </span>
     </label>
   );
-  const stepBar = (
+  const fullStepBar = (
     <nav className="flex flex-wrap items-stretch overflow-hidden rounded border border-[#2B3547] bg-[#0B0E14]" aria-label={ko ? '작업 단계 (Workflow Stages)' : 'Workflow Stages'}>
       {steps.map((s) => {
         const Icon = s.icon;
@@ -270,6 +280,47 @@ export const WizardHeader: React.FC<{ simpleControls?: React.ReactNode; simpleMe
       })}
     </nav>
   );
+  const activeGoal = beginnerGoalForStep(activeStep);
+  const stepBar = full ? fullStepBar : (
+    <nav className="flex flex-wrap items-center gap-x-3 gap-y-1" aria-label={ko ? '작업 단계 (Workflow Stages)' : 'Workflow Stages'}>
+      <div role="group" aria-label={ko ? '네 가지 목표' : 'Four goals'} className="flex min-w-0 flex-wrap gap-1">
+        {BEGINNER_GOALS.map((goal, index) => {
+          const isActive = goal.id === activeGoal.id;
+          const isDone = beginnerGoalComplete(goal, completedSteps) && !isActive;
+          return <button
+            key={goal.id}
+            type="button"
+            data-beginner-goal={goal.id}
+            data-completed={isDone}
+            aria-label={ko ? goal.nameKo : goal.nameEn}
+            aria-current={isActive ? 'true' : undefined}
+            aria-describedby={isDone ? `beginner-goal-${goal.id}-done` : undefined}
+            onClick={() => setStep(beginnerGoalEntry(goal, activeStep, completedSteps))}
+            className="workspace-button min-h-8 px-2 py-1"
+            style={isActive ? { borderColor: 'var(--workspace-accent)', background: 'var(--workspace-inset)', color: 'var(--workspace-accent)' } : undefined}
+          >
+            <span className="font-mono tabular-nums" aria-hidden="true">{index + 1}</span>
+            <span>{ko ? goal.nameKo : goal.nameEn}</span>
+            {isDone && <><Check className="h-4 w-4" style={{ color: 'var(--workspace-success)' }} aria-hidden="true" /><span id={`beginner-goal-${goal.id}-done`} className="sr-only">{ko ? '관련 단계 완료 확인됨' : 'All related steps confirmed complete'}</span></>}
+          </button>;
+        })}
+      </div>
+      <div role="group" aria-label={ko ? `${activeGoal.nameKo}의 세부 작업` : `${activeGoal.nameEn} steps`} className="flex w-full min-w-0 flex-wrap items-center gap-1">
+        <span className="mr-1 text-xs" style={{ color: 'var(--workspace-muted)' }}>{ko ? '세부 작업' : 'Steps'}</span>
+        {steps.filter(s => activeGoal.steps.includes(s.num as WorkflowStep)).map(s => {
+          const isActive = s.num === activeStep;
+          const isDone = completedSteps.includes(s.num) && !isActive;
+          return <button key={s.num} type="button" data-beginner-step={s.num} aria-current={isActive ? 'step' : undefined}
+            onClick={() => setStep(s.num as WorkflowStep)} className="workspace-button min-h-8 px-2 py-0.5"
+            style={isActive ? { borderColor: 'var(--workspace-accent)', color: 'var(--workspace-accent)' } : undefined}>
+            <span className="font-mono tabular-nums">{String(s.num).padStart(2, '0')}</span>
+            <span>{ko ? s.nameKo : s.nameEn}</span>{ko && <span className="sr-only">({s.legacyKo})</span>}
+            {isDone && <><Check className="h-3 w-3" style={{ color: 'var(--workspace-success)' }} aria-hidden="true" /><span className="sr-only">{ko ? '끝남' : 'done'}</span></>}
+          </button>;
+        })}
+      </div>
+    </nav>
+  );
   const modelLocation = activeStep >= 4 && jobId && (
     <span className="rounded border border-[#364357] px-2.5 py-1 text-sm text-slate-300">
       {ko ? '현재 모델 위치' : 'Current model location'}: <strong className="text-white">{resultLocation}</strong>
@@ -280,7 +331,7 @@ export const WizardHeader: React.FC<{ simpleControls?: React.ReactNode; simpleMe
     {taskProposal && <TaskChangeImpactDialog nextTask={taskProposal.task} scope={taskProposal.scope} onClose={()=>setTaskProposal(null)} onResult={outcome=>{setTaskProposal(null);if(!outcome.ok)setTaskFailure({scope:taskScope(),message:outcome.error});}}/>}
     <header className="bg-[#0B0E14] border-b border-[#2B3547] text-slate-200 select-none">
       {/* Row 1 (draggable). 모두 보기: the project, where work runs, history, language. 간단히 보기: the whole header —
-          the project, the six steps, 모두 보기 and the 더 보기 menu. */}
+          the project, the four goals and their substeps, 모두 보기 and the 더 보기 menu. */}
       <div
         data-wizard-header-row="project"
         className={`flex min-h-11 flex-wrap items-center justify-between gap-x-3 gap-y-1 ${full ? 'border-b border-[#2B3547] ' : ''}bg-[#0E121A] py-1 ${window.api?.platform === 'darwin' ? 'pl-24 pr-4' : 'px-4'}`}
@@ -290,12 +341,12 @@ export const WizardHeader: React.FC<{ simpleControls?: React.ReactNode; simpleMe
           {/* 간단히 보기 drops the wordmark below 1440px so the project, the steps and the two toggles fit one row. */}
           <span className={`text-sm font-bold tracking-wide text-slate-100${full ? '' : ' hidden min-[1440px]:inline'}`}>Vision AI Studio</span>
           {/* The footer's '프로젝트 만들기·열기' and the first-run guide's '프로젝트 관리 열기' open this through focusWorkflowTarget. */}
-          <button type="button" id="workflow-project" aria-haspopup="dialog" aria-expanded={showProjectPanel} data-workflow-open-on-focus onClick={() => setShowProjectPanel(true)} title={ko ? '프로젝트 관리' : 'Manage projects'} className={`group flex max-w-xs items-center gap-1.5 ${QUIET}`}>
+          <button type="button" id="workflow-project" aria-haspopup="dialog" aria-expanded={showProjectPanel} data-workflow-open-on-focus onClick={openProjectPanel} title={ko ? '프로젝트 관리' : 'Manage projects'} className={`group flex max-w-xs items-center gap-1.5 ${QUIET}`}>
             <FolderKanban className="h-4 w-4 shrink-0 text-cyan-400" aria-hidden="true" />
             <span className="truncate font-semibold">{projectName}</span>
             <ChevronDown className="h-3.5 w-3.5 shrink-0 text-slate-400" aria-hidden="true" />
           </button>
-          {projectError && <button type="button" onClick={() => setShowProjectPanel(true)} title={projectError} className="max-w-[220px] truncate rounded border border-red-700/60 bg-red-950/40 px-2.5 py-1.5 text-sm text-red-200">{ko ? '프로젝트 오류 · 자세히' : 'Project error · details'}</button>}
+          {projectError && <button type="button" onClick={openProjectPanel} title={projectError} className="max-w-[220px] truncate rounded border border-red-700/60 bg-red-950/40 px-2.5 py-1.5 text-sm text-red-200">{ko ? '프로젝트 오류 · 자세히' : 'Project error · details'}</button>}
           {full && runOn}
           {full && serversButton}
           {full && loadingNote}
@@ -304,8 +355,7 @@ export const WizardHeader: React.FC<{ simpleControls?: React.ReactNode; simpleMe
           {!full && engineProblem && engineChip}
         </div>
 
-        {/* 간단히 보기: the six steps share the row. On a narrow window the bar moves to a line of its own, and when even
-            that line is too short its steps wrap inside it instead of running past the window edge. */}
+        {/* The four goals and the active goal's substeps wrap inside the available width. */}
         {!full && <div className="ml-auto flex min-w-0 items-center" style={noDrag}>{stepBar}</div>}
 
         {/* 간단히 보기 keeps this group at the right edge even when it wraps alone onto the next line, so the 더 보기
@@ -393,7 +443,7 @@ export const WizardHeader: React.FC<{ simpleControls?: React.ReactNode; simpleMe
       )}
       {taskError && <p id="task-change-error" role="alert" className="border-t border-rose-900/50 bg-rose-950/30 px-4 py-2 text-sm text-rose-200">{taskError}</p>}
       {showComputePanel && <ComputeServerPanel onClose={() => setShowComputePanel(false)} />}
-      {showProjectPanel && <ProjectWorkspaceDialog onClose={() => setShowProjectPanel(false)} />}
+      {showProjectPanel && <ProjectWorkspaceDialog initialTab={projectInitialTab} onClose={() => setShowProjectPanel(false)} />}
       {showProvenance && <ProvenancePanel onClose={() => setShowProvenance(false)} />}
     </header>
   </>);

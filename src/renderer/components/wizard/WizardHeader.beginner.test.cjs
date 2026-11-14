@@ -5,8 +5,8 @@ const react=require('react'),{renderToStaticMarkup}=require('react-dom/server');
 function load(file,mocks){const name=path.resolve(__dirname,file);const mod=new Module(name,module);mod.filename=name;mod.paths=Module._nodeModulePaths(path.dirname(name));const original=mod.require.bind(mod);mod.require=ref=>ref in mocks?mocks[ref]:original(ref);mod._compile(ts.transpileModule(fs.readFileSync(name,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022,jsx:ts.JsxEmit.React,esModuleInterop:true}}).outputText,name);return mod.exports;}
 const Icon=()=>null;
 const icons=new Proxy({},{get:(_,name)=>name==='__esModule'?true:Icon});
-function header({activeStep=2,language='ko',device='mps',technical=false,selectedProfileId=null,viewMode}={},extra={}){
- const projectState={activeStep,setStep:async()=>{},task:'classification',language,setLanguage(){},backendStatus:{healthy:true,port:57944,device,deviceName:'Apple GPU'},projectName:'예제 프로젝트',projectError:null,isProjectBusy:false,technicalDetails:technical,setTechnicalDetails(){},project:{id:'p1'},projectDir:'/p',viewMode};
+function header({activeStep=2,language='ko',device='mps',technical=false,selectedProfileId=null,viewMode,setStep=async()=>{}}={},extra={}){
+ const projectState={activeStep,setStep,task:'classification',language,setLanguage(){},backendStatus:{healthy:true,port:57944,device,deviceName:'Apple GPU'},projectName:'예제 프로젝트',projectError:null,isProjectBusy:false,technicalDetails:technical,setTechnicalDetails(){},project:{id:'p1'},projectDir:'/p',viewMode};
  const projectStore=Object.assign(select=>select?select(projectState):projectState,{getState:()=>projectState});
  const computeState={profiles:[{id:'gpu-a',name:'GPU 서버 A'}],selectedProfileId,isLoaded:true,isLoading:false,loadError:null,error:null,transportRevision:0,probeResults:{},load:async()=>{},selectTarget:async()=>{}};
  const computeStore=Object.assign(select=>select?select(computeState):computeState,{getState:()=>computeState});
@@ -21,11 +21,11 @@ function render({props,...state}={}){
 }
 // The header as an element tree under a hook stub (no DOM, no effects), so the 더 보기 menu's own handlers can be called.
 function mount(state){
- const states=[];let cursor=0;
- const stub={Fragment:'fragment',createElement:(type,props,...children)=>({type,props:{...props,children}}),useEffect(){},
+ const states=[],effects=[];let cursor=0,effectCursor=0,pending=[];
+ const stub={Fragment:'fragment',createElement:(type,props,...children)=>({type,props:{...props,children}}),useEffect(callback,deps){const i=effectCursor++,old=effects[i];if(!old||deps.some((value,j)=>!Object.is(value,old[j]))){effects[i]=deps;pending.push(callback);}},
   useState(initial){const index=cursor++;if(!(index in states))states[index]=initial;return[states[index],value=>{states[index]=typeof value==='function'?value(states[index]):value;}];}};
  const WizardHeader=header(state,{react:{__esModule:true,default:stub,...stub}});
- return()=>{cursor=0;return WizardHeader({});};
+ return(props={})=>{cursor=0;effectCursor=0;pending=[];const tree=WizardHeader(props);for(const effect of pending)effect();return tree;};
 }
 const nodes=value=>Array.isArray(value)?value.flatMap(nodes):value&&typeof value==='object'?[value,...nodes(value.props?.children)]:[];
 // The opening tag of the closest <div> before a marker: the group (or wrapper) the marked control sits in.
@@ -39,6 +39,55 @@ test('the active step is announced to assistive technology and the step list has
  assert.match(html,/aria-label="작업 단계[^"]*"/);
  assert.match(html,/aria-current="step"[^>]*>(?:(?!<\/button>).)*라벨링 &amp; AI/s);
  assert.equal((html.match(/aria-current="step"/g)||[]).length,1);
+});
+
+test('simple view has four goals, while every internal step remains reachable through its current goal',async()=>{
+ global.window={api:{platform:'darwin'}};
+ try{
+  const calls=[],state={activeStep:3,setStep:async step=>calls.push(step)};
+  const tree=mount(state)();
+  const goals=nodes(tree).filter(node=>node.type==='button'&&node.props['data-beginner-goal']);
+  assert.equal(goals.length,4);
+  assert.deepEqual(goals.map(node=>node.props['aria-label']),['사진 준비','AI에게 가르치기','처음 보는 사진으로 확인','검사에 사용']);
+  assert.equal(goals[1].props['aria-current'],'true','the goal is current without duplicating aria-current=step');
+  await goals[1].props.onClick();assert.deepEqual(calls,[3],'clicking the current goal retains its internal step');
+  const substeps=nodes(tree).filter(node=>node.type==='button'&&node.props['data-beginner-step']);
+  assert.deepEqual(substeps.map(node=>node.props['data-beginner-step']),[2,3]);
+  assert.equal(substeps[1].props['aria-current'],'step');
+  await substeps[0].props.onClick();assert.deepEqual(calls,[3,2],'navigation continues to use the existing setStep guard');
+  await goals[3].props.onClick();assert.deepEqual(calls,[3,2,5]);
+  const useSteps=nodes(mount({...state,activeStep:5})()).filter(node=>node.type==='button'&&node.props['data-beginner-step']);
+  assert.deepEqual(useSteps.map(node=>node.props['data-beginner-step']),[5,6]);
+  await useSteps[1].props.onClick();assert.deepEqual(calls,[3,2,5,6]);
+ }finally{delete global.window;}
+});
+
+test('goal completion uses every mapped evidence entry, never the position of the active step',()=>{
+ global.window={api:{platform:'darwin'}};
+ try{
+  const draw=mount({activeStep:6});
+  const goal=completed=>nodes(draw({completedSteps:completed})).find(node=>node.props?.['data-beginner-goal']==='teach');
+  assert.equal(goal([]).props['data-completed'],false);
+  assert.equal(goal([2]).props['data-completed'],false);
+  assert.equal(goal([2,3]).props['data-completed'],true);
+  const full=nodes(mount({activeStep:6,viewMode:'full'})({completedSteps:[2,3]}));
+  assert.equal(full.filter(node=>node.props?.['data-beginner-goal']).length,0);
+  assert.equal(full.find(node=>node.type==='nav').props.children[0].length,6,'full mode keeps six direct step buttons');
+ }finally{delete global.window;}
+});
+
+test('first-run workspace requests open the requested tab and can reopen it with a new nonce',()=>{
+ global.window={api:{platform:'darwin'}};
+ try{
+  const draw=mount(),request={tab:'create',nonce:1};
+  draw({workspaceRequest:request});let tree=draw({workspaceRequest:request});
+  let dialog=nodes(tree).find(node=>node.props?.initialTab==='create');
+  assert.ok(dialog,'the first-run new-project path opens the create tab');
+  dialog.props.onClose();tree=draw({workspaceRequest:request});
+  assert.equal(nodes(tree).some(node=>node.props?.initialTab==='create'),false,'a closed request does not reopen itself');
+  const again={tab:'recent',nonce:2};draw({workspaceRequest:again});tree=draw({workspaceRequest:again});
+  dialog=nodes(tree).find(node=>node.props?.initialTab==='recent');assert.ok(dialog,'the existing-project path opens saved projects');
+ }finally{delete global.window;}
 });
 
 test('console readouts (port, driver badges, RECIPE) are hidden until 기술 상세 is turned on',()=>{
@@ -59,7 +108,7 @@ test('the compute location is a labelled Korean control and a missing server is 
  assert.ok(!html.includes('Missing server'));
 });
 
-test('간단히 보기 is one row: the project, the six steps, 모두 보기 and a 더 보기 menu that keeps every control by name',()=>{
+test('간단히 보기 groups the goals and substeps beside the project, 모두 보기 and 더 보기',()=>{
  const html=render({props:{simpleControls:react.createElement('button',{type:'button'},'처음 시작 안내'),simpleMenu:react.createElement('button',{type:'button'},'운영자 검사 화면')}});
  assert.equal((html.match(/<nav /g)||[]).length,1);
  assert.ok(!html.includes('bg-[#131822] px-4 py-2'),'the second row renders only in 모두 보기');

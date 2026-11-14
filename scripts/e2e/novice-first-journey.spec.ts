@@ -1,0 +1,64 @@
+import {expect,test} from './fixtures/test';
+
+// Isolated project/fixture images only. These tests navigate and create a project; they never start model or GPT work.
+test('novice entry creates an explicit purpose and keeps all four goals reachable',async({page,request,renderer,evidence})=>{
+  page.setDefaultTimeout(20_000);
+  expect((await request.post(`${renderer.origin}/api/project/create`,{data:{name:'Novice starting workspace',task:'classification'}})).ok()).toBe(true);
+  await page.goto(renderer.url);
+  await expect(page.getByRole('button',{name:'Novice starting workspace'}).first()).toBeVisible();
+  await page.getByRole('button',{name:'간단히 보기',exact:true}).click();
+  await page.getByText('더 보기',{exact:true}).first().click();
+  await page.getByRole('button',{name:'처음 시작 안내',exact:true}).click();
+  const welcome=page.getByRole('dialog',{name:'처음 시작하기'});
+  await expect(welcome.getByRole('button',{name:'예제로 해보기',exact:true})).toBeVisible();
+  await expect(welcome.getByRole('button',{name:'만들어 둔 작업 이어가기',exact:true})).toBeVisible();
+  await evidence.screenshot(page,'novice-start');
+  await welcome.getByRole('button',{name:'만들어 둔 작업 이어가기',exact:true}).click();
+  await expect(page.getByRole('dialog',{name:'프로젝트 관리'}).getByRole('heading',{name:'최근 프로젝트',exact:true})).toBeVisible();
+  await page.getByRole('button',{name:'프로젝트 관리 닫기',exact:true}).click();
+  await page.getByText('더 보기',{exact:true}).first().click();
+  await page.getByRole('button',{name:'처음 시작 안내',exact:true}).click();
+  await welcome.getByRole('button',{name:'내 사진으로 만들기',exact:true}).click();
+  const project=page.getByRole('dialog',{name:'프로젝트 관리'});
+  await expect(project.getByText('어떤 결과가 필요한가요?',{exact:true})).toBeVisible();
+  await project.getByLabel(/프로젝트 이름/).fill('Novice precise shapes');
+  const create=project.getByRole('button',{name:'프로젝트 만들기',exact:true});
+  await expect(create).toBeDisabled();
+  await project.getByRole('radio',{name:'아직 모르겠어요'}).check();
+  await expect(create).toBeDisabled();
+  await expect(project.getByText(/사진 전체에 이름 하나를 붙이려면/)).toBeVisible();
+  await project.getByRole('radio',{name:/정확한 모양 표시하기/}).check();
+  await expect(create).toBeEnabled();
+  await evidence.screenshot(page,'novice-purpose');
+  await create.click();
+  await expect(project).not.toBeVisible();
+  const current=await (await request.get(`${renderer.origin}/api/project/current`)).json();
+  expect(current.project?.task??current.task).toBe('segmentation');
+  await expect(page.getByRole('button',{name:'Novice precise shapes'}).first()).toBeVisible();
+  for(const goal of ['사진 준비','AI에게 가르치기','처음 보는 사진으로 확인','검사에 사용']) {
+    await page.getByRole('button',{name:goal,exact:true}).click();
+    await expect(page.getByRole('button',{name:goal,exact:true})).toHaveAttribute('aria-current','true');
+  }
+  await page.getByRole('button',{name:'AI에게 가르치기',exact:true}).click();
+  await page.getByRole('button',{name:/모델 학습/,exact:false}).first().click();
+  await expect(page.getByRole('heading',{name:'AI에게 가르칠 준비'})).toBeVisible();
+  await expect(page.getByRole('button',{name:'사진 준비 열기',exact:true})).toBeVisible();
+  await expect(page.getByText('사진·모델·실행 준비 자세히',{exact:true})).toBeVisible();
+  const transforms=page.locator('details').filter({has:page.locator('summary').filter({hasText:'사진 변환 설정 (선택)'})}).first();
+  await expect(transforms).not.toHaveAttribute('open','');
+  await expect(page.getByRole('button',{name:'+ 고정 ROI',exact:true})).not.toBeVisible();
+  await evidence.screenshot(page,'novice-training-empty');
+  await page.setViewportSize({width:1100,height:780});
+  await evidence.screenshot(page,'novice-training-compact');
+  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
+  await page.getByText('더 보기',{exact:true}).first().click();
+  await page.getByRole('button',{name:'어두운 화면',exact:true}).click();
+  await page.keyboard.press('Escape');
+  await expect(page.locator('html')).toHaveAttribute('data-theme','dark');
+  await expect.poll(()=>page.evaluate(()=>document.getAnimations().filter(animation=>animation instanceof CSSTransition&&animation.playState==='running').length)).toBe(0);
+  await evidence.screenshot(page,'novice-training-dark');
+  await page.getByRole('button',{name:'모두 보기',exact:true}).click();
+  await expect(page.getByRole('button',{name:'+ 고정 ROI',exact:true})).toBeVisible();
+  await expect(page.getByRole('button',{name:/검사 흐름 만들기/}).first()).toBeVisible();
+  evidence.note('scope','Real renderer and backend in isolated workspace. Purpose mapping and navigation only; no model/GPT execution or field quality acceptance.');
+});

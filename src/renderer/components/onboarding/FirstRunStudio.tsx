@@ -109,32 +109,59 @@ function appDeps(): DemoDeps {
 }
 
 /** The first-run guide: the order of a first project and a small example that runs on this computer's CPU. */
-export function FirstRunStudio({ onClose, onDismiss }: { onClose: () => void; onDismiss: () => void }) {
+export function FirstRunStudio({ onClose, onDismiss, onOpenWorkspace }: { onClose: () => void; onDismiss: () => void; onOpenWorkspace?: (tab: 'create' | 'recent') => void }) {
   const demo = useFirstRunStore(state => state.demo);
   const examples = useFirstRunStore(state => state.onboarding?.example_projects) || [];
   const running = demo?.state === 'running';
   const progress = useRef<HTMLOListElement>(null);
   const start = () => {
+    if (running) return;
     void runDemo(appDeps(), useFirstRunStore.getState().setDemo, { projectName: nextExampleName(DEMO_PROJECT_NAME, examples),
       takenNames: examples.map(row => row.name) }).then(() => useFirstRunStore.getState().load());
-    // The start button gives way to the progress list: keep keyboard focus inside the dialog.
+    // Move focus from the now-disabled start button to the progress list inside the dialog.
     requestAnimationFrame(() => progress.current?.focus());
   };
   const openExample = async (projectDir: string) => {
+    if (running) return;
     if (await useProjectStore.getState().openProject(projectDir)) setStep(6);
   };
-  const setStep = (step: 1 | 2 | 3 | 6) => { onClose(); void useProjectStore.getState().setStep(step); };
+  const setStep = (step: 1 | 2 | 3 | 6) => { if (running) return; onClose(); void useProjectStore.getState().setStep(step); };
+  const openWorkspace = (tab: 'create' | 'recent') => {
+    if (running) return;
+    onClose();
+    if (onOpenWorkspace) onOpenWorkspace(tab);
+    else focusWorkflowTarget('workflow-project');
+  };
   return <div className="space-y-5 text-sm text-slate-200">
-    <section aria-labelledby="first-run-order">
-      <h3 id="first-run-order" className="font-semibold text-slate-100">처음 프로젝트를 만드는 순서</h3>
+    <section aria-labelledby="first-run-start" className="space-y-3">
+      <h3 id="first-run-start" className="font-semibold text-[var(--workspace-text)]">어떻게 시작할까요?</h3>
+      <div className="grid gap-3 md:grid-cols-3">
+        <div className="workspace-section flex flex-col items-start gap-3">
+          <p className="workspace-description flex-1">사진이 없어도 합성 예제로 사진 준비부터 첫 시험 검사까지 해봅니다. 이 컴퓨터의 CPU를 사용합니다.</p>
+          <button type="button" className="workspace-button workspace-button--primary" disabled={running} onClick={start}>예제로 해보기</button>
+        </div>
+        <div className="workspace-section flex flex-col items-start gap-3">
+          <p className="workspace-description flex-1">내가 원하는 검사 결과를 고르고 새 프로젝트에 사진을 준비합니다.</p>
+          <button type="button" className="workspace-button" disabled={running} onClick={() => openWorkspace('create')}>내 사진으로 만들기</button>
+        </div>
+        <div className="workspace-section flex flex-col items-start gap-3">
+          <p className="workspace-description flex-1">최근 프로젝트를 다시 엽니다. 목록에 없으면 저장한 폴더에서 열 수 있습니다.</p>
+          <button type="button" className="workspace-button" disabled={running} onClick={() => openWorkspace('recent')}>만들어 둔 작업 이어가기</button>
+        </div>
+      </div>
+      <p className="workspace-description">{EXAMPLE_NOTICE}</p>
+      {running && <p role="status" className="workspace-description">예제를 진행하고 있습니다. 아래에서 단계별 결과를 확인하세요.</p>}
+    </section>
+    <details className="workspace-section">
+      <summary id="first-run-order" className="cursor-pointer font-semibold text-[var(--workspace-text)]">처음 프로젝트를 만드는 순서 자세히 보기</summary>
       {/* The first-project path (product direction 5.1 #2), the same order the example below walks and 자동 진행 follows. */}
       <ol className="mt-2 list-decimal space-y-2 pl-5 text-slate-300">
         <li><strong className="text-slate-100">작업 방식</strong> · 개인 모드는 이 컴퓨터에서 바로 시작합니다. 팀 서버는 상단 더 보기의 서버 관리에서 추가합니다.</li>
         <li><strong className="text-slate-100">프로젝트 만들기</strong> · 상단 프로젝트 이름을 눌러 새 프로젝트를 만듭니다.
-          <button type="button" className="workspace-button ml-2" disabled={running} onClick={() => { onClose(); focusWorkflowTarget('workflow-project'); }}>프로젝트 관리 열기</button></li>
+          <button type="button" className="workspace-button ml-2" disabled={running} onClick={() => openWorkspace('create')}>프로젝트 관리 열기</button></li>
         <li><strong className="text-slate-100">이미지 폴더 열기</strong> · 1단계에서 폴더를 열면 구조와 작업 종류를 알아보고 분할 비율을 추천합니다. '이 비율로 나누기'로 저장합니다.
           <button type="button" className="workspace-button ml-2" disabled={running} onClick={() => setStep(1)}>1단계로 이동</button></li>
-        <li><strong className="text-slate-100">라벨 달기·초안 검토</strong> · 분류는 폴더 이름이 정답입니다. 검출·분할은 20장 정도 직접 그리거나, 모델이 만든 초안을 보고 채택합니다.
+        <li><strong className="text-slate-100">라벨 달기·초안 검토</strong> · 분류는 폴더 이름이 정답입니다. 위치·모양을 찾는 작업은 대상의 위치나 영역을 직접 표시하거나, 모델이 만든 초안을 확인해 채택합니다.
           <button type="button" className="workspace-button ml-2" disabled={running} onClick={() => setStep(2)}>2단계로 이동</button></li>
         <li><strong className="text-slate-100">학습 시작</strong> · 3단계의 추천 설정 그대로 학습을 시작합니다.
           <button type="button" className="workspace-button ml-2" disabled={running} onClick={() => setStep(3)}>3단계로 이동</button></li>
@@ -142,18 +169,15 @@ export function FirstRunStudio({ onClose, onDismiss }: { onClose: () => void; on
         <li><strong className="text-slate-100">검사 흐름 저장</strong> · 5단계에서 모델 하나로 된 기본 흐름을 저장하고 평가합니다.</li>
         <li><strong className="text-slate-100">검사 실행</strong> · 6단계에서 검사하고 결과를 확인합니다.</li>
       </ol>
-      <p className="mt-2 text-slate-400">폴더를 연 뒤 하단의 '자동 진행'을 누르면 사람이 할 곳(정답 라벨, 초안 채택, 정답 확인, 승인)까지 이 순서로 이어서 진행합니다.</p>
-    </section>
+      <p className="mt-2 text-slate-400">폴더를 연 뒤 하단의 '자동 진행'을 누르면 준비된 작업을 순서대로 진행합니다. 입력이나 확인이 필요한 곳에서는 이유와 다음 행동을 안내합니다. 첫 시험 완료는 현장 품질 승인이나 배포를 뜻하지 않습니다.</p>
+    </details>
     <FirstUseStudyPanel />
-    <section aria-labelledby="first-run-example" className="rounded border border-slate-600 p-3">
-      <h3 id="first-run-example" className="font-semibold text-slate-100">예제로 먼저 해보기</h3>
-      <p className="mt-1 text-slate-300">이 컴퓨터에서 합성 표면 이미지 64장을 만들고, CPU로 짧게 학습해 검사 플로우를 저장한 뒤 테스트 이미지를 검사합니다. 네트워크·GPU·외부 계정이 필요 없습니다.</p>
-      <p className="mt-1 text-amber-200">{EXAMPLE_NOTICE}</p>
+    {(examples.length > 0 || (demo && demo.state !== 'idle')) && <section aria-labelledby="first-run-example" className="rounded border border-slate-600 p-3">
+      <h3 id="first-run-example" className="font-semibold text-slate-100">예제 진행과 결과</h3>
       {examples.length > 0 && !running && <ul aria-label="만들어 둔 예제 프로젝트" className="mt-3 space-y-1">{examples.map(row =>
         <li key={row.project_dir} className="flex items-center gap-2"><span className="text-slate-300">{row.name}</span>
           <button type="button" className="workspace-button" onClick={() => void openExample(row.project_dir)}>열기</button></li>)}</ul>}
-      {!running ? <button type="button" className="workspace-button workspace-button--primary mt-3" onClick={start}>
-        {demo?.state === 'failed' ? '예제 다시 만들기' : examples.length || demo?.state === 'ready' ? '예제 프로젝트 새로 만들기' : '예제 프로젝트 만들기'}</button> : null}
+      {!running && (examples.length > 0 || demo?.state === 'ready' || demo?.state === 'failed') && <p className="workspace-description mt-3">위의 '예제로 해보기'를 누르면 별도 이름의 새 예제 프로젝트를 만듭니다. 이전 예제는 그대로 남습니다.</p>}
       {demo && demo.state !== 'idle' && <ol ref={progress} tabIndex={-1} aria-label="예제 진행" className="mt-3 space-y-1">{demoStepRows(demo).map(row =>
         <li key={row.id} className={row.status === 'failed' ? 'text-amber-300' : row.status === 'done' ? 'text-emerald-300' : 'text-slate-300'}>
           {STATUS_MARK[row.status]} {row.label}{row.detail ? ` · ${row.detail}` : ''}</li>)}</ol>}
@@ -162,10 +186,10 @@ export function FirstRunStudio({ onClose, onDismiss }: { onClose: () => void; on
         <p className="text-emerald-300">{demoSummary(demo.result)}</p>
         <button type="button" className="workspace-button workspace-button--primary" onClick={() => { setStep(6); focusWorkflowTarget('workflow-inspection-history'); }}>검사 결과 보기 (6단계)</button>
       </div>}
-    </section>
+    </section>}
     <div className="flex justify-end gap-2">
-      <button type="button" className="workspace-button" disabled={running} onClick={onDismiss}>다음부터 보지 않기</button>
-      <button type="button" className="workspace-button" disabled={running} onClick={onClose}>닫기</button>
+      <button type="button" className="workspace-button" disabled={running} onClick={() => { if (!running) onDismiss(); }}>다음부터 보지 않기</button>
+      <button type="button" className="workspace-button" disabled={running} onClick={() => { if (!running) onClose(); }}>닫기</button>
     </div>
   </div>;
 }
