@@ -151,6 +151,8 @@ html[data-theme="light"] .workspace-button { color: #0F172A; background: #FFFFFF
 html[data-theme="light"] .workspace-button:hover:not(:disabled) { background: #E2E8F0; }
 html[data-theme="light"] .workspace-button--primary { color: #FFFFFF; background: #0369A1; border-color: #0369A1; }
 html[data-theme="light"] .workspace-button--primary:hover:not(:disabled) { background: #075985; }
+html[data-theme="light"] .workspace-button--quiet { color: var(--workspace-muted); background: transparent; border-color: transparent; }
+html[data-theme="light"] .workspace-button--quiet:hover:not(:disabled) { color: var(--workspace-text); background: var(--workspace-surface); border-color: var(--workspace-border); }
 html[data-theme="light"] .workspace-badge[data-tone="success"] { background: #D1FAE5; }
 html[data-theme="light"] .workspace-badge[data-tone="warning"] { background: #FEF3C7; }
 html[data-theme="light"] .workspace-badge[data-tone="danger"] { background: #FEE2E2; }

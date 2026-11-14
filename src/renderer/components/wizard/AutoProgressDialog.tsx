@@ -14,7 +14,7 @@ import { useComputeStore } from '../../stores/useComputeStore';
 import { taskPreviewScope } from './TaskChangeImpactDialog';
 import { executionLeaseOwner } from '../../services/assistantTasks/executionLease';
 import { defaultAppSplit } from '../../services/assistantTasks/appActions';
-import {startOneclickTask,pauseOneclickTask} from '../../stores/useAssistantTaskStore';
+import {startOneclickTask,pauseOneclickTask,useOneclickTaskProgressStore} from '../../stores/useAssistantTaskStore';
 import { currentTrainingSummary, subscribeTrainingSummary, trainingSummaryLine, trainingSummaryScope, type TrainingStartSummary, type TrainingSummaryProfile } from '../training/trainingStartSummary';
 
 export const AUTO_TITLE = '자동 진행';
@@ -39,14 +39,23 @@ interface AutoProgressState {
   cancel: () => void;
 }
 
+// Invalidates only late presentation errors; execution ownership remains with the existing controller.
+let presentationRevision = 0;
+let presentationScope: string | null = null;
+
 /** The run lives outside the dialog: closing the dialog does not stop it, and the footer button says it is running. */
 export const useAutoProgressStore = create<AutoProgressState>((set, get) => ({
   run: null,
   cancelRequested: false,
   start: (_choices) => {
     if (get().run?.state === 'running') return;
-    const fail = (reason: string) => set({cancelRequested: false, run: {state: 'failed',
-      stop: {reason, step: useProjectStore.getState().activeStep}, log: [{at: Date.now(), text: reason, tone: 'error'}]}});
+    let revision = ++presentationRevision;
+    presentationScope = taskPreviewScope();
+    const fail = (reason: string) => {
+      if (revision !== presentationRevision) return;
+      set({cancelRequested: false, run: {state: 'failed',
+        stop: {reason, step: useProjectStore.getState().activeStep}, log: [{at: Date.now(), text: reason, tone: 'error'}]}});
+    };
     if (executionLeaseOwner()!==null) {
       fail(executionLeaseOwner() === 'assistant' ? '도우미 작업이 진행 중입니다. 끝나거나 일시정지한 뒤 자동 진행을 다시 시작하세요.'
         : '다른 자동 진행이 실행 중입니다. 현재 진행이 끝난 뒤 다시 시작하세요.');
@@ -54,6 +63,9 @@ export const useAutoProgressStore = create<AutoProgressState>((set, get) => ({
     }
     set({cancelRequested:false,run:{state:'running',log:[],stop:null}});
     void startOneclickTask((task,error)=>{
+      const current = useOneclickTaskProgressStore.getState();
+      if (!current.contextMatches || (task && current.task?.id !== task.id)) return;
+      if (task) { revision = presentationRevision; presentationScope = taskPreviewScope(); }
       if(error){fail(error);return;}if(!task)return;
       const active=task.steps.find(row=>row.id===task.current_step_id);
       const stopped=['waiting_human','failed','needs_reconciliation'].includes(task.status);
@@ -72,8 +84,25 @@ export const useAutoProgressStore = create<AutoProgressState>((set, get) => ({
         stop:stopped?{reason:text,step:active?.action==='start_training'?3:active?.action==='evaluate_model'?4:active?.action==='inspect_test'?6:active?.action==='evaluate_flow'||active?.action==='save_flow'?5:useProjectStore.getState().activeStep}:null}});
     }).catch(cause=>fail(cause instanceof Error?cause.message:'자동 진행 상태를 확인하지 못했습니다.'));
   },
-  cancel: () => {set({cancelRequested:true});void pauseOneclickTask().catch(cause=>set({run:{state:'failed',log:[],stop:{reason:cause instanceof Error?cause.message:'일시정지 기록을 확인하지 못했습니다.',step:useProjectStore.getState().activeStep}}}));},
+  cancel: () => {
+    const revision = presentationRevision;
+    set({cancelRequested:true});
+    void pauseOneclickTask().catch(cause=>{
+      if (revision === presentationRevision) set({run:{state:'failed',log:[],stop:{reason:cause instanceof Error?cause.message:'일시정지 기록을 확인하지 못했습니다.',step:useProjectStore.getState().activeStep}}});
+    });
+  },
 }));
+
+// Retire only the displayed log when its controller loses the current context. An initial null-task read remains
+// pending so duplicate starts stay disabled. This subscription never pauses, resumes or dispatches a job.
+useOneclickTaskProgressStore.subscribe((current, previous) => {
+  const scopeChanged = presentationScope !== null && presentationScope !== taskPreviewScope();
+  if (scopeChanged || !current.contextMatches || (previous.task !== null && current.task === null)) {
+    ++presentationRevision;
+    presentationScope = null;
+    useAutoProgressStore.setState({run:null,cancelRequested:false});
+  }
+});
 
 /** The truth stop cleared in place: the person names themself and presses once; the run then goes on by itself. The same
  *  call as step 5's '라벨을 정답으로 확정' (each image gets its own dated declaration under the reviewer's name). */
@@ -155,7 +184,7 @@ export function AutoProgressDialog({ onClose }: { onClose: () => void }) {
     await useProjectStore.getState().setStep(run.stop.step as WorkflowStep);
     focusWorkflowTarget(run.stop.target);
   };
-  return <WorkspaceDialog title={AUTO_TITLE} description="준비된 데이터와 라벨로 학습부터 시험 검사까지 이어서 진행합니다. 끝난 단계는 다시 하지 않습니다." onClose={onClose}>
+  return <WorkspaceDialog title={AUTO_TITLE} description="준비된 데이터와 라벨로 학습부터 시험 검사까지 이어서 진행합니다. 같은 계획을 이어갈 때는 저장된 완료 결과를 사용합니다." onClose={onClose}>
     <div className="space-y-3 text-sm text-slate-200">
       <p aria-label="자동 진행 기본값" className="rounded border border-slate-600 bg-slate-900/60 p-2">{defaultsLine({ task, trainRatio, device, preset: training.preset, selectedProfileId: compute.selectedProfileId, profile, computeLoaded: compute.isLoaded, live })}</p>
       <button type="button" className="workspace-button" disabled={running || project.isProjectBusy || dataset.isLoading} onClick={goToTrainingSettings}>학습 설정 확인·변경 (3단계)</button>
@@ -171,9 +200,10 @@ export function AutoProgressDialog({ onClose }: { onClose: () => void }) {
       {run && run.log.length > 0 && <ol aria-label="자동 진행 기록" aria-live="polite" className="max-h-56 space-y-1 overflow-y-auto rounded border border-slate-700 p-2">
         {run.log.map((row, index) => <li key={`${row.at}-${index}`} className={TONE[row.tone]}>{row.text}</li>)}
       </ol>}
-      {run?.state === 'done' && <p role="status" className="text-emerald-300">끝까지 진행했습니다.</p>}
+      {run?.state === 'done' && <p role="status" className="text-emerald-300">요청한 실행이 끝났습니다. 결과를 확인하세요. 현장 품질 확인과 승인은 별도입니다. 새 계획으로 다시 실행하면 현재 자료와 설정으로 검사 흐름과 시험 검사를 다시 진행합니다.</p>}
+      {run?.state === 'cancelled' && <p role="status" className="text-slate-300">자동 진행을 일시정지했습니다. 아래에서 이어갈 수 있습니다. 이미 시작한 학습은 3단계에서 상태를 확인하세요.</p>}
       {run?.stop && !running && <div role={run.state === 'failed' ? 'alert' : 'status'} className="space-y-2 rounded border border-amber-600/70 bg-amber-950/30 p-2 text-amber-100">
-        <p>{run.state === 'failed' ? '멈췄습니다: ' : '여기서 사람이 필요합니다: '}{run.stop.reason}</p>
+        <p>{run.state === 'failed' ? '작업 중 문제가 생겼습니다: ' : '이어가려면 확인해 주세요: '}{run.stop.reason}</p>
         {run.stop.confirm && <TruthConfirmForm confirm={run.stop.confirm} task={task} onDone={() => start()} />}
         <div className="flex flex-wrap gap-2">
           {run.stop.deferDrafts && <button type="button" className="workspace-button" onClick={() => start({ deferDrafts: true })}>남은 초안은 두고 확정한 라벨 {run.stop.deferDrafts}장으로 학습까지 이어 가기</button>}
@@ -184,7 +214,7 @@ export function AutoProgressDialog({ onClose }: { onClose: () => void }) {
       <div className="flex justify-end gap-2">
         {running && <button type="button" className="workspace-button" disabled={cancelRequested} onClick={cancel}>{cancelRequested ? '멈추는 중…' : '자동 진행 멈추기'}</button>}
         <button type="button" className={run?.stop?.confirm && !running ? 'workspace-button' : 'workspace-button workspace-button--primary'} disabled={running} onClick={() => start()}>
-          {running ? '진행 중…' : resumable ? '멈춘 곳부터 이어 가기' : run?.state === 'done' ? '다시 확인하기' : '자동 진행 시작'}
+          {running ? '진행 중…' : resumable ? '멈춘 곳부터 이어 가기' : run?.state === 'done' ? '새 계획으로 다시 실행' : '자동 진행 시작'}
         </button>
       </div>
       {running && <p className="text-xs text-slate-400">창을 닫아도 계속 진행합니다. 진행 중인 학습은 '자동 진행 멈추기'로 멈추지 않습니다(3단계에서 멈춤).</p>}

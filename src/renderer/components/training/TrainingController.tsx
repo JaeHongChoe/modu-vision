@@ -302,6 +302,25 @@ export const TrainingController: React.FC = () => {
     : modelOptionsError || schedulingError || (!computeReady ? computeLoadError || selectedReadiness.reason || '실행 자원을 확인해야 합니다.' : null);
   // Data and class problems are fixed in step 1, so the notice's button goes there.
   const startNeedsData = !sourceReady || totalImages<1 || split.train<1 || split.val<1 || (task === 'classification' && (populatedClasses < 2 || !!classBlocker));
+  const startRecoveryStep:1|undefined=startNeedsData||splitMissesLabelled||splitState==='stale'||splitState==='automatic'?1:undefined;
+  const startRecoveryLabel=isRecoveringTraining?'현재 학습 상태 보기':modelOptionsError?'모델 설정 확인':schedulingError?'시간·대기열 설정 확인':'학습 위치 확인';
+  const resolveStartBlocker=()=>{
+    if(startRecoveryStep){void setStep(startRecoveryStep);return;}
+    const id=isRecoveringTraining?'training-current-status':modelOptionsError?'training-model-settings':schedulingError?'training-scheduling-settings':'training-compute-settings';
+    const target=document.getElementById(id);
+    if(!target)return;
+    // Open the existing controls without changing settings or running a probe/training operation.
+    for(let parent:HTMLElement|null=target;parent;parent=parent.parentElement){
+      if(parent.tagName==='DETAILS')(parent as HTMLDetailsElement).open=true;
+    }
+    if(id==='training-scheduling-settings'){
+      const details=target.querySelector<HTMLDetailsElement>('details');
+      if(details)details.open=true;
+    }
+    target.scrollIntoView({block:'nearest'});
+    const control=id==='training-compute-settings'?target.querySelector<HTMLButtonElement>('button:not(:disabled)'):null;
+    (control||target).focus();
+  };
   const startWarning = !startBlocker && thinClasses.length ? `${thinClasses.join(', ')}: 검증 이미지가 없는 클래스는 학습 중 확인되지 않고, 시험 이미지가 없는 클래스는 4단계에서 잴 수 없습니다. 학습은 시작할 수 있습니다. 이 클래스까지 확인하려면 1단계에서 이미지를 늘리거나 검증·시험 비율이 큰 분할로 다시 나누세요.` : null;
   const requiresSourcePartitions = isSplitUnavailable(task, splitSupported);
 
@@ -380,7 +399,7 @@ export const TrainingController: React.FC = () => {
   const currentPhase = jobPhase || status;
 
   const block = (
-        <div className="rounded border border-[#2B3547] bg-[#131822] p-3 text-xs">
+        <div id="training-compute-settings" tabIndex={-1} aria-label="학습 위치 설정" className="rounded border border-[#2B3547] bg-[#131822] p-3 text-xs">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="flex items-center gap-2">
               <Server className="h-4 w-4 text-blue-400" />
@@ -427,6 +446,14 @@ export const TrainingController: React.FC = () => {
           )}
         </div>
   );
+  // Keyed siblings preserve each editor's state when the view reorders the setup.
+  // Native details keeps the transform editor mounted while collapsed.
+  const inputPreparation=<details key="input-preparation" open={simpleView?undefined:true} className={simpleView?'rounded border border-[#2B3547] bg-[#111C2A] text-xs text-slate-200':undefined}>
+    <summary hidden={!simpleView} className="cursor-pointer px-3 py-2 text-sm text-slate-300">사진 변환 설정 (선택)</summary>
+    <TrainingInputPreparation task={task} imageSize={(modelOptions.image_size as number|number[]|undefined) ?? (preset==='precision'?512:256)} disabled={isTraining||Boolean(resumeState)} />
+  </details>;
+  const modelCatalog=<ModelFamilyCatalog key="model-catalog" selectedFamily={selectedFamily} onSelect={chooseFamily} disabled={isLoading||isSplitting||isProjectBusy} />;
+  const preparationPanel=selectedFamily===task&&<TrainingPreparationPanel key="core-preparation" inputBlocker={startBlocker?{message:startBlocker,step:startRecoveryStep,actionLabel:startRecoveryLabel}:null} onResolveBlocker={resolveStartBlocker} family={selectedFamily} model={syntheticAnomaly ? syntheticOptions.anomaly_backbone : selectedBackbone} preset={preset} checkpoint={pretrainedCheckpoint} onCheckpointChange={setPretrainedCheckpoint} device={nextDevice==='mps'||nextDevice==='cuda'||nextDevice==='cpu' ? nextDevice : 'auto'} config={modelOptions} warmStartJobId={warmParentId||undefined} trained={Boolean(completedJobId)} />;
   return (<>
     {taskProposal&&<TaskChangeImpactDialog nextTask={taskProposal.task} scope={taskProposal.scope} onClose={()=>setTaskProposal(null)} onResult={outcome=>{
       setTaskProposal(null);
@@ -436,13 +463,11 @@ export const TrainingController: React.FC = () => {
       if(!outcome.ok)setActionError(`모델 종류 변경 후 확인이 필요합니다: ${outcome.error}`);
     }}/>}
     <div id="workflow-training" tabIndex={-1} className="flex-1 flex flex-col h-full bg-[#0B0E14] text-slate-100 overflow-y-auto select-none">
-      {startBlocker&&<div className="workspace-record m-3 text-xs" role="note" aria-label="학습 시작 준비도"><p id="training-start-reason">학습 시작 보류: {startBlocker}</p><button className="workspace-button mt-2" onClick={()=>{if(startNeedsData)void setStep(1);else document.getElementById('workflow-training')?.focus();}}>{startNeedsData?'데이터·분할 확인 (1단계)':'실행 자원·학습 설정 확인 (3단계)'}</button></div>}
+      {startBlocker&&(!simpleView||selectedFamily!==task)&&<div className="workspace-record m-3 text-xs" role="note" aria-label="학습 시작 준비도"><p id="training-start-reason">학습 시작 보류: {startBlocker}</p><button className="workspace-button mt-2" onClick={resolveStartBlocker}>{startRecoveryStep?'데이터·분할 확인 (1단계)':startRecoveryLabel}</button></div>}
       {startWarning&&<div className="workspace-record m-3 text-xs" role="note" aria-label="학습 전 확인"><p className="text-amber-200">{startWarning}</p><button className="workspace-button mt-2" onClick={()=>void setStep(1)}>분할 확인 (1단계)</button></div>}
       <OperatorGuidanceBanner step={3} />
       <div className="max-w-7xl w-full mx-auto space-y-5 p-6">
-        <TrainingInputPreparation task={task} imageSize={(modelOptions.image_size as number|number[]|undefined) ?? (preset==='precision'?512:256)} disabled={isTraining||Boolean(resumeState)} />
-        <ModelFamilyCatalog selectedFamily={selectedFamily} onSelect={chooseFamily} disabled={isLoading||isSplitting||isProjectBusy} />
-        {selectedFamily===task&&<TrainingPreparationPanel family={selectedFamily} model={syntheticAnomaly ? syntheticOptions.anomaly_backbone : selectedBackbone} preset={preset} checkpoint={pretrainedCheckpoint} onCheckpointChange={setPretrainedCheckpoint} device={nextDevice==='mps'||nextDevice==='cuda'||nextDevice==='cpu' ? nextDevice : 'auto'} config={modelOptions} warmStartJobId={warmParentId||undefined} trained={Boolean(completedJobId)} />}
+        {simpleView?[preparationPanel,modelCatalog,inputPreparation]:[inputPreparation,modelCatalog,preparationPanel]}
         {remediationNotice&&<p role="status" className="rounded border border-cyan-800 bg-cyan-950/30 p-3 text-sm text-cyan-100">{remediationNotice}</p>}
         {selectedFamily === task && <>
         {/* The simple view keeps the training location behind one line unless a job is still in flight; 모두 보기 shows it as before. */}
@@ -534,7 +559,7 @@ export const TrainingController: React.FC = () => {
         {simpleView ? <details className="rounded border border-[#2B3547] bg-[#111C2A] text-xs text-slate-200">
           <summary className="cursor-pointer px-3 py-2 text-sm text-slate-300">고급 학습 설정 <span className="text-slate-500">모델 구조 · 이어서 학습 · 이전 모델에서 재학습 · 배치와 장치</span></summary>
           <div className="space-y-5 p-3 pt-0">
-        <div className="rounded border border-[#3B5269] bg-[#111C2A] p-3 text-xs text-slate-200">
+        <div id="training-model-settings" tabIndex={-1} aria-label="모델 학습 설정" className="rounded border border-[#3B5269] bg-[#111C2A] p-3 text-xs text-slate-200">
           <label className="font-semibold text-white">다음 학습 모델
             <select aria-label="학습 모델 구조" value={selectedBackbone} disabled={isTraining||!!resumeState} onChange={event => { setTrainingBackbone(event.target.value); setWarmParentId(''); }}
               className="mt-2 block w-full rounded border border-[#415970] bg-[#0B1520] px-2 py-2 font-normal">
@@ -586,10 +611,10 @@ export const TrainingController: React.FC = () => {
         </div>}
 
         <details className="rounded border border-slate-600 bg-[#111C2A] p-3 text-sm text-slate-200"><summary className="cursor-pointer">다음 학습 배치·로컬 장치 설정</summary><div className="mt-3 grid gap-3 sm:grid-cols-2"><label>배치 크기<input aria-label="다음 학습 배치 크기" type="number" min={1} max={128} disabled={isTraining} value={nextBatchSize ?? trainingPresetBatchSize(preset)} onChange={event=>setNextSettings({batchSize:Number(event.target.value)})} className="mt-1 w-full rounded border border-slate-600 bg-[#0B1520] p-2" /></label><label>로컬 장치<select aria-label="다음 학습 로컬 장치" disabled={isTraining} value={nextDevice || 'auto'} onChange={event=>setNextSettings({device:event.target.value})} className="mt-1 w-full rounded border border-slate-600 bg-[#0B1520] p-2"><option value="auto">자동 감지</option><option value="cpu">CPU</option><option value="mps">Apple Metal / MPS</option><option value="cuda">CUDA</option></select></label></div><p className="mt-2 text-slate-400">새 학습에 적용됩니다. 서버를 선택하면 서버 설정의 실행 장치를 사용합니다.</p></details>
-        <TrainingSchedulingSettings value={scheduling} onChange={setScheduling} remote={!!selectedProfileId} disabled={isTraining || isRecoveringTraining} error={schedulingError} />
+        <div id="training-scheduling-settings" tabIndex={-1} aria-label="학습 실행 예산과 대기열 설정"><TrainingSchedulingSettings value={scheduling} onChange={setScheduling} remote={!!selectedProfileId} disabled={isTraining || isRecoveringTraining} error={schedulingError} /></div>
           </div>
         </details> : <>
-        <div className="rounded border border-[#3B5269] bg-[#111C2A] p-3 text-xs text-slate-200">
+        <div id="training-model-settings" tabIndex={-1} aria-label="모델 학습 설정" className="rounded border border-[#3B5269] bg-[#111C2A] p-3 text-xs text-slate-200">
           <label className="font-semibold text-white">다음 학습 모델
             <select aria-label="학습 모델 구조" value={selectedBackbone} disabled={isTraining||!!resumeState} onChange={event => { setTrainingBackbone(event.target.value); setWarmParentId(''); }}
               className="mt-2 block w-full rounded border border-[#415970] bg-[#0B1520] px-2 py-2 font-normal">
@@ -641,7 +666,7 @@ export const TrainingController: React.FC = () => {
         </div>}
 
         <details className="rounded border border-slate-600 bg-[#111C2A] p-3 text-sm text-slate-200"><summary className="cursor-pointer">다음 학습 배치·로컬 장치 설정</summary><div className="mt-3 grid gap-3 sm:grid-cols-2"><label>배치 크기<input aria-label="다음 학습 배치 크기" type="number" min={1} max={128} disabled={isTraining} value={nextBatchSize ?? trainingPresetBatchSize(preset)} onChange={event=>setNextSettings({batchSize:Number(event.target.value)})} className="mt-1 w-full rounded border border-slate-600 bg-[#0B1520] p-2" /></label><label>로컬 장치<select aria-label="다음 학습 로컬 장치" disabled={isTraining} value={nextDevice || 'auto'} onChange={event=>setNextSettings({device:event.target.value})} className="mt-1 w-full rounded border border-slate-600 bg-[#0B1520] p-2"><option value="auto">자동 감지</option><option value="cpu">CPU</option><option value="mps">Apple Metal / MPS</option><option value="cuda">CUDA</option></select></label></div><p className="mt-2 text-slate-400">새 학습에 적용됩니다. 서버를 선택하면 서버 설정의 실행 장치를 사용합니다.</p></details>
-        <TrainingSchedulingSettings value={scheduling} onChange={setScheduling} remote={!!selectedProfileId} disabled={isTraining || isRecoveringTraining} error={schedulingError} />
+        <div id="training-scheduling-settings" tabIndex={-1} aria-label="학습 실행 예산과 대기열 설정"><TrainingSchedulingSettings value={scheduling} onChange={setScheduling} remote={!!selectedProfileId} disabled={isTraining || isRecoveringTraining} error={schedulingError} /></div>
         </>}
         {/* Dark Steel Execution Control Toolbar */}
         <div className="p-3 bg-[#131822] rounded-[4px] border border-[#2B3547] flex items-center justify-between">
@@ -672,7 +697,8 @@ export const TrainingController: React.FC = () => {
             )}
 
             {/* Live Progress & Status Annunciator */}
-            <div className="flex items-center space-x-3 text-xs">
+            <div id="training-current-status" tabIndex={-1} aria-label="현재 학습 상태" className="flex items-center space-x-3 text-xs">
+              {isRecoveringTraining&&<span role="status">이전 학습의 실행 상태를 확인하는 중입니다.</span>}
               <LedAnnunciator
                 state={getStatusLedState()}
                 size="md"

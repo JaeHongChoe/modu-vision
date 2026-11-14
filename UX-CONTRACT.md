@@ -116,3 +116,17 @@ AssistantPanel owns one-image attachment/paste/current-image selection and a vis
 ChatgptConnectionSetup owns the native reasoning-effort select; OS popup behavior is accepted, matching its native account/model selectors. Only documented or catalog-supported values are shown. Nonsecret account/model UI preferences live in assistantPreferences; credentials and image content do not. Active-turn effort is frozen; account/model changes invalidate pending requests.
 
 Stage3 TrainingInputPreparation reuses workspace section/buttons, native numeric/select controls and actual same-source preview. Deterministic classification/segmentation input rules are separate from train-only augmentation; supported-family checks and saved recipe identity govern execution. Existing Stage5 remains trained-model inspection/decision construction.
+
+## Novice first journey (2026-11-14)
+
+| Capability | Canonical owner | Rule |
+| --- | --- | --- |
+| Purpose choice | projectPurpose + ProjectWorkspaceDialog | Native radio choices map explicitly to existing VisionTask; no choice/unsure cannot create. Full technical selection remains. |
+| Beginner goals | beginnerJourney + WizardHeader | Groups [1], [2,3], [4], [5,6]; underlying setStep/save guards unchanged. Completion requires evidence for every member. |
+| Next navigation | WizardFooter + navigationActionLabel | Open/focus labels never claim to execute training/evaluation. Existing readiness remains shared with automation. |
+| Current task | LearningJourneyPanel + learningTaskProgress | Read controller snapshots, hide foreign context/new-request history, prefer unresolved work over completed records. Open the existing owner for details; no effects on mount. |
+| Preparation recovery | TrainingPreparationPanel + TrainingController | Current source and counts first; missing photos lead to import, labels to labeling, control errors to their actual settings. Preserve canStart and server guards. |
+
+FirstRunStudio delegates create/recent navigation through App's workspaceRequest to the existing ProjectWorkspaceDialog. Closing the guide does not implicitly start a job. First-trial completion is not human truth acceptance or field deployment. See docs/novice-first.md for user instructions and docs/superpowers/specs/2026-11-14-novice-first-design.md for scope.
+
+Simple creation keeps optional form fields mounted under a native disclosure and shows preparation for the selected purpose only. A failed operation reveals the existing alert without changing focus, inputs, active project or retry semantics. Only an explicit retry submits again. The simple header separates project utilities and goal navigation; narrow widths may wrap. The footer's quiet controls use the canonical `workspace-button--quiet` recipe and the existing readiness owner. Idle learning setup requires a positive original-image count; current task progress is never hidden merely because that count becomes zero.

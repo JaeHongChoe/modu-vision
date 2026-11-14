@@ -40,7 +40,7 @@ test('the footer has one primary action, one status block and quiet step arrows'
  assert.equal((footer.match(/workspace-button--primary/g)||[]).length,1);
  assert.match(footer,/role="status"/);assert.match(footer,/왜 그런가요\?/);assert.match(footer,/aria-label="다음 단계 보기"/);
  assert.ok(!footer.includes('>다음 단계 보기<'),'a second text button competes with the primary action');
- assert.match(footer,/\$\{blocker\} → \$\{readiness\.nextAction\.label\}/);
+ assert.match(footer,/\$\{blocker\} → \$\{actionLabel\}/);
 });
 
 test('the labeling screen starts folded in the simple view and the label set is one line until opened',()=>{
@@ -64,7 +64,7 @@ test('the simple view shows three data counts, two tiles and one folder button r
  const app=read('src/renderer/App.tsx');
  assert.match(app,/\{viewMode==='full'&&<nav/);assert.match(app,/운영자 검사 화면/);assert.match(app,/모델·플로우 작업/);
  const footer=read('src/renderer/components/wizard/WizardFooter.tsx');
- assert.match(footer,/다음: \$\{readiness\.nextAction\.label\}/);assert.match(footer,/sr-only">\{ko\?` · 완료 입력/);
+ assert.match(footer,/다음: \$\{actionLabel\}/);assert.match(footer,/sr-only">\{ko\?` · 완료 입력/);
  assert.ok(!footer.includes('`완료 입력 ${readiness.completedInputs.length} · `'),'the visible status no longer starts with a count');
 });
 
@@ -76,7 +76,7 @@ test('the simple view folds the step 3 training location, the step 4 comparison,
  const header=read('src/renderer/components/wizard/WizardHeader.tsx');
  assert.match(header,/simpleControls\?: React\.ReactNode; simpleMenu\?: React\.ReactNode/);assert.match(header,/\{simpleControls\}\s*\{simpleMenu\}/,'App items are 더 보기 items');assert.match(header,/\{simpleMenu\}\s*<\/div>\s*<\/details>\}/);
  const app=read('src/renderer/App.tsx');
- assert.match(app,/<WizardHeader completedSteps=\{doneSteps\} simpleControls=\{<button className=\{MENU_ITEM\}/);assert.match(app,/\{viewMode==='full'&&<nav/);
+ assert.match(app,/<WizardHeader\b[^\n]*completedSteps=\{doneSteps\}[^\n]*simpleControls=\{<button className=\{MENU_ITEM\}/);assert.match(app,/\{viewMode==='full'&&<nav/);
  const css=read('src/renderer/index.css');
  assert.match(css,/@media \(min-width: 1920px\) \{ html \{ font-size: 18px; \} \}/);assert.match(css,/@media \(min-width: 2400px\) \{ html \{ font-size: 20px; \} \}/);
 });
@@ -156,8 +156,7 @@ test('the simple view states the team review result in one sentence, never as a 
 test('step 3 in the simple view: one model heading, plain preset words, a finished run points to step 4',()=>{
  const catalog=read('src/renderer/components/training/ModelFamilyCatalog.tsx');
  assert.match(catalog,/\{simpleView \? '모델 종류' : '모델 학습 허브'\}/);assert.match(catalog,/aria-label="모델 학습 허브"/,'the region keeps its name');
- const prep=read('src/renderer/components/training/TrainingPreparationPanel.tsx');
- assert.match(prep,/<summary className="cursor-pointer">학습 순서·사전학습 파일<\/summary>/);assert.match(prep,/\{!simpleView&&<><p className="mt-3 text-slate-300">다음 행동/);
+ // Preparation visibility and recovery are exercised by TrainingPreparationPanel.novice.test.cjs.
  const presets=read('src/renderer/components/training/RecipePresetSelector.tsx');
  assert.match(presets,/처음 학습할 때 고르세요/);assert.match(presets,/\{showMatrix && !simpleView && \(/);
  const training=read('src/renderer/components/training/TrainingController.tsx');
