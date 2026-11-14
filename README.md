@@ -104,6 +104,8 @@ ChatGPT 연결에는 **텍스트·구조화된 앱 상태와 사용자가 첨부
 
 ## 주요 기능
 
+필요한 오픈소스 계산을 별도 서비스 없이 내부 엔진으로 사용하는 변경도 개발 중입니다. 저장된 분류 평가의 라벨 재확인 순위, Optuna 후보 탐색, 버전이 기록되는 검출 AP, 검사 흐름 키보드 조작, 로컬 호출 진단을 기존 UI·CLI·도우미에 연결합니다. [내재화 적용 범위와 사용법](docs/embedded-oss.md)을 참고하세요. 현재 설치 앱에 반영됐다는 뜻은 아닙니다.
+
 ### 데이터와 라벨링
 
 - 폴더·지원 LabelMe 형상 가져오기, 데이터셋 분할과 버전·원본 출처 관리
@@ -323,6 +325,7 @@ macOS 기본 빌더 설정은 `mac.identity: "-"`이며 실제 산출물의 서�
 | [검사 서비스·SDK](docs/api-integration.md) | 전체 플로우 패키지, Python·CLI·REST·C++·C# 연동 |
 | [학습 CLI·REST](docs/training-engine-cli-rest.md) | 외부 프로그램에서 학습 엔진 사용 |
 | [공통 CLI·GPT 기능 탐색](docs/studio-cli.md) | 실제 기능 목록·schema, 인증된 실행, 파일 전송·진단과 GPT 권한 구분 |
+| [내장 오픈소스 엔진](docs/embedded-oss.md) | 라벨 재확인, 적응형 탐색, 검출 AP 계산 기준, 키보드 편집과 로컬 진단 |
 | [배포 지원 표](docs/release-platform-matrix.md) | 네이티브 빌드, 서명, 설치와 복구 조건 |
 | [모델 라이선스 표](docs/model-license-matrix.md) | 사전학습·파생 모델과 가중치 배포 조건 |
 | [작업 계획](docs/service-upgrade-program.json) · [검증 근거](docs/service-upgrade-evidence.json) | 기능별 범위와 확인 상태 |

@@ -325,3 +325,11 @@ The scoped automatic mode replaces routine plan/review checkpoints for ready dat
 Stage3 adds TrainingInputPreparation as the first training section; the existing six-stage navigation and Stage5 inspection/decision role remain. It uses workspace surfaces/buttons and native bounded number/select fields, with a real source-bound before/after preview. No new palette or UI library is introduced.
 
 The assistant adds local single-image attachment/paste/current-image selection, thumbnail/removal, external recipient disclosure and supported-model reasoning effort. The sidebar remains nonmodal, keyboard reachable and 13px minimum. Native effort dropdown geometry is intentionally platform-owned, like existing account/model controls. No unsupported model or API provider is silently selected.
+
+## 2026-11-14 embedded engines
+
+Embedded engines use existing workspace sections, native selectors, status regions and saved review queues. Label-quality ranking is advisory: correctly predicted low-margin samples remain visible, changed historical basis has a written warning, and stale fresh-queue creation is refused. No generated score adopts or edits truth.
+
+Detection AP details disclose the saved calculation version and supported bbox scope. No-ground-truth AP is unavailable, rather than zero or perfect. Keep these technical details within the established evaluation-grain disclosure in simple view.
+
+Flow nodes retain native control behavior. Focused-node arrow movement uses the existing layout/history store, repeated keydowns form one undo group, and search navigation transfers actual focus to the node. Focus reveal scrolls only the canvas and never steals focus after a later Tab. Escape cancels a pending connection without consuming text-field editing keys. These operations preserve node IDs and semantic graph identity.

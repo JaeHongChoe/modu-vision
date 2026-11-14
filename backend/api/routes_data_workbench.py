@@ -41,12 +41,21 @@ class QueueRequest(BaseModel):
     model_config=ConfigDict(extra='forbid')
     evaluation_id:str|None=None
     comparison_id:str|None=None
+    analysis_id:str|None=None
+    mode:Literal['priority','label_quality']='priority'
+    top_n:int=Field(100,ge=1,le=100)
     threshold:float=Field(.5,ge=0,le=1)
     margin:float=Field(.05,ge=0,le=1)
     @model_validator(mode='after')
     def one_origin(self):
-        if bool(self.evaluation_id)==bool(self.comparison_id):raise ValueError('Choose exactly one saved evaluation or comparison')
+        if sum(bool(v) for v in (self.evaluation_id,self.comparison_id,self.analysis_id))!=1:raise ValueError('Choose exactly one saved evaluation, comparison or analysis')
+        if bool(self.analysis_id)!=(self.mode=='label_quality'):raise ValueError('Label quality mode requires analysis_id')
         return self
+
+
+class LabelQualityRequest(BaseModel):
+    model_config=ConfigDict(extra='forbid')
+    evaluation_id:str=Field(pattern=r'^evaluation_[0-9a-f]{32}$')
 
 
 class DerivedReviewRequest(BaseModel):
@@ -248,6 +257,19 @@ def _comparisons(project,source):
 
 
 def _validate_origin(project,source,queue):
+    if queue.get('mode')=='label_quality':
+        from backend.engine.classification_label_quality import read_analysis
+        with _annotations(project):analysis=read_analysis(project,source,queue['origin']['analysis_id'],historical=True)
+        if analysis['analysis_sha256']!=queue['origin'].get('analysis_sha256'):raise ValueError('Label quality queue analysis identity changed')
+        if analysis['evaluation_id']!=queue['origin'].get('evaluation_id') or analysis['evaluation_evidence_sha256']!=queue['origin'].get('evidence_sha256'):raise ValueError('Label quality queue evaluation identity changed')
+        top_n=queue.get('top_n')
+        if type(top_n) is not int or not 1<=top_n<=100 or len(queue['items'])!=len(analysis['items'][:top_n]):raise ValueError('Label quality queue ranked evidence changed')
+        for item,saved in zip(queue['items'],analysis['items'][:top_n]):
+            if any(item.get(key)!=value for key,value in saved.items() if key!='basis_changed') or item.get('analysis_id')!=analysis['id'] or item.get('analysis_sha256')!=analysis['analysis_sha256']:
+                raise ValueError('Label quality queue ranked evidence changed')
+        queue['basis_changed']=analysis['basis_changed']
+        for item in queue['items']:item['basis_changed']=analysis['basis_changed']
+        return queue
     if queue['origin'].get('flow_evaluation_id'):
         from backend.engine.flow_evaluation import read_evaluation
         origin=queue['origin'];record=read_evaluation(project,origin['flow_evaluation_id'])
@@ -267,7 +289,7 @@ def _validate_origin(project,source,queue):
 def review_evaluations(request:Request):
     project,source=_context(request)
     try:
-        rows=[{'kind':'evaluation','id':r['evaluation_id'],'evaluation_id':r['evaluation_id'],'created_at':r['created_at'],'job_id':r['result'].get('job_id'),'sample_count':len(r['result'].get('test_predictions',[])),'evidence_sha256':r['evidence_sha256']} for r in _evaluations(project,source)]
+        rows=[{'kind':'evaluation','id':r['evaluation_id'],'evaluation_id':r['evaluation_id'],'created_at':r['created_at'],'job_id':r['result'].get('job_id'),'sample_count':len(r['result'].get('test_predictions',[])),'evidence_sha256':r['evidence_sha256'],'label_quality_available':bool(project['task']=='classification' and r['result'].get('common_cohort') and all('class_scores' in item for item in r['result'].get('test_predictions',[])))} for r in _evaluations(project,source)]
         rows.extend({'kind':'comparison','id':r['comparison_id'],'comparison_id':r['comparison_id'],'created_at':datetime.fromisoformat(r['created_at'].replace('Z','+00:00')).timestamp() if isinstance(r['created_at'],str) else r['created_at'],'job_id':r.get('candidate_job_id'),'sample_count':len(r.get('images',[])),'evidence_sha256':r['evidence_sha256']} for r in _comparisons(project,source))
         return {'evaluations':sorted(rows,key=lambda r:r['created_at'],reverse=True)}
     except (ValueError,OSError) as exc:raise _error(exc) from exc
@@ -277,13 +299,36 @@ def review_evaluations(request:Request):
 def create_queue(req:QueueRequest,request:Request):
     project,source=_context(request)
     try:
+        if req.analysis_id:
+            from backend.api.routes_image_truth import require_role
+            require_role(request,project,{'owner','reviewer'})
+            with _annotations(project):return dw.create_label_quality_queue(project,source,req.analysis_id,req.top_n)
         key='comparison_id' if req.comparison_id else 'evaluation_id';identifier=req.comparison_id or req.evaluation_id
         record=next((r for r in (_comparisons(project,source) if req.comparison_id else _evaluations(project,source)) if r[key]==identifier),None)
         if record is None:raise ValueError('Saved evaluation or comparison is absent from the active source/task/labelset scope')
         origin={key:record[key],'evidence_sha256':record['evidence_sha256'],'job_id':record.get('candidate_job_id') if req.comparison_id else record['result'].get('job_id'),'step':4}
         predictions=record.get('images',[]) if req.comparison_id else record['result'].get('test_predictions',[])
         return dw.create_review_queue(project['project_dir'],source,project['task'],project.get('active_labelset_id','default'),predictions,origin,req.threshold,req.margin)
-    except (ValueError,OSError) as exc:raise _error(exc) from exc
+    except (ValueError,OSError,KeyError,TypeError) as exc:raise _error(exc) from exc
+
+
+@router.post('/label-quality-analyses')
+def analyze_label_quality(req:LabelQualityRequest,request:Request):
+    from backend.api.routes_image_truth import require_role
+    from backend.engine.classification_label_quality import create_analysis
+    project,source=_context(request);require_role(request,project,{'owner','reviewer'})
+    try:
+        with _annotations(project):return create_analysis(project,source,req.evaluation_id)
+    except (ValueError,OSError,KeyError,TypeError) as exc:raise _error(exc) from exc
+
+
+@router.get('/label-quality-analyses/{identifier}')
+def label_quality_analysis(identifier:str,request:Request):
+    from backend.engine.classification_label_quality import read_analysis
+    project,source=_context(request)
+    try:
+        with _annotations(project):return read_analysis(project,source,identifier,historical=True)
+    except (ValueError,OSError,KeyError,TypeError) as exc:raise _error(exc) from exc
 
 
 @router.get('/review-queues')
@@ -309,6 +354,11 @@ def queue(identifier:str,request:Request):
 def advance(identifier:str,req:AdvanceRequest,request:Request):
     project,source=_context(request)
     try:
-        _validate_origin(project,source,dw.read_review_queue(project['project_dir'],source,project['task'],project.get('active_labelset_id','default'),identifier))
-        return dw.advance_review_queue(project['project_dir'],source,project['task'],project.get('active_labelset_id','default'),identifier,req.expected_revision,req.relative_path,req.state,req.actor)
+        current=_validate_origin(project,source,dw.read_review_queue(project['project_dir'],source,project['task'],project.get('active_labelset_id','default'),identifier))
+        actor=req.actor
+        if current.get('mode')=='label_quality':
+            from backend.api.routes_image_truth import require_role
+            from backend.api.shared_authorization import request_actor
+            require_role(request,project,{'owner','reviewer'});actor=request_actor(request,req.actor)
+        return _validate_origin(project,source,dw.advance_review_queue(project['project_dir'],source,project['task'],project.get('active_labelset_id','default'),identifier,req.expected_revision,req.relative_path,req.state,actor))
     except (ValueError,OSError) as exc:raise _error(exc) from exc

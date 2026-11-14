@@ -1,3 +1,4 @@
+import {setLocalTraceScopeSource} from './localTrace';
 /** The assistant's tools wired to the app's real stores and services. Every write goes through the same store action or
  * service call the screen uses (and so the same backend role checks); the context is the footer's published picture
  * reduced by assistantContext.ts. */
@@ -111,6 +112,8 @@ const runtimeCommands = createAssistantCommandCatalog({
       && data.lastImportedKey === data.datasetKey && data.sourceAuthority === readDatasetAuthority());
   },
 });
+
+setLocalTraceScopeSource(commandScope);
 
 export const runtimeToolDeps: ToolDeps = {
   commands: runtimeCommands,

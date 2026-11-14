@@ -34,6 +34,7 @@ TASK_ACTIONS = {
     'POST /api/training/input-preparation/preview': 'configure_input_recipe',
     'POST /api/label-suggestions/generate': 'generate_label_drafts',
     'POST /api/label-suggestions/batches': 'generate_label_drafts',
+    'POST /api/data-workbench/label-quality-analyses': 'analyze_label_quality',
     'POST /api/training/start': 'start_training',
     'GET /api/evaluation/results': 'evaluate_model',
     'POST /api/flowchart/pipeline': 'save_flow',

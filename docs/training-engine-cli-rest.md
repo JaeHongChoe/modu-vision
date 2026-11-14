@@ -23,6 +23,8 @@ python -m backend.training_cli train --config-path /data/model-output/artifacts/
 
 Genuine DINOv3 and YOLO defaults are preserved. For an offline run, pass `pretrained_checkpoint` and its `pretrained_sha256` in `--config-json`. Missing/incompatible weights fail; the engine does not substitute random weights. CPU, MPS and CUDA selections are explicit and unavailable devices fail. Search exposes only controls applied by the selected family. `capabilities` lists each metric/direction, configuration field and search dimension.
 
+Adaptive candidate selection is embedded in the existing coordinator. `--search-strategy auto` (default) uses Optuna TPE for search budgets of at least eight trials; `deterministic` retains the original enumeration and `adaptive` requests TPE explicitly. Quick and fast-retrain modes stay deterministic. `--seed` pins proposal identity. The REST training requests expose the same `search_strategy` and `seed` fields. Candidate/epoch/time limits, existing cancellation and durable result validation still apply. Sampler version/domain/proposal receipts are stored; recipe replay starts a new study, not an exact optimizer continuation. See [embedded engines](embedded-oss.md).
+
 ## External labels
 
 Use a UTF-8 JSON object with `samples`. Image names are relative to the canonical source; every sample has an explicit `train`, `val` or `test` partition. Byte-identical images cannot cross partitions. Optional `source_sha256` pins supplied truth to exact source bytes. All three partitions must be nonempty.

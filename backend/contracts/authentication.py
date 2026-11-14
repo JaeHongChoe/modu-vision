@@ -68,7 +68,7 @@ def configure_browser_origins(app, origins):
     return {'allow_origins': checked, 'allow_credentials': True,
             'allow_methods': ['GET', 'HEAD', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
             'allow_headers': ['Content-Type', 'Authorization', 'X-Vision-CSRF',
-                             'X-Vision-Project', 'X-Vision-Context'],
+                             'X-Vision-Project', 'X-Vision-Context', 'traceparent', 'X-Vision-Trace-Scope'],
             'expose_headers': ['X-Vision-Context']}
 
 

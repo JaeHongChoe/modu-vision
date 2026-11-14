@@ -1,3 +1,4 @@
+import {localTrace, type LocalTraceHandle, type LocalTraceRow} from './localTrace';
 /** Read-only semantic projections for the assistant. Store observation is not a saved execution receipt. */
 import {getApiDiagnosticScope, getProjectContext, getProjectContextGeneration, request} from './api';
 import {apiDiagnosticFailures} from './apiDiagnostics';
@@ -12,7 +13,7 @@ import {useComputeStore} from '../stores/useComputeStore';
 import {useAnnotationStore} from '../stores/useAnnotationStore';
 import {useInspectionRunStore} from '../stores/useInspectionRunStore';
 
-export const APP_DIAGNOSTIC_SECTIONS = ['overview', 'project', 'dataset', 'training', 'evaluation', 'flow', 'inference', 'compute', 'requests', 'jobs'] as const;
+export const APP_DIAGNOSTIC_SECTIONS = ['overview', 'project', 'dataset', 'training', 'evaluation', 'flow', 'inference', 'compute', 'requests', 'jobs', 'traces'] as const;
 type Section = typeof APP_DIAGNOSTIC_SECTIONS[number];
 type SafeError = SafeDiagnosticError & {source: string; section: string; source_owner: 'unknown'};
 const number = (value: unknown) => typeof value === 'number' && Number.isFinite(value) ? value : null;
@@ -54,12 +55,12 @@ function currentErrors(): SafeError[] {
 function base(section: string, max: number) {
   return {section, observed_at: new Date().toISOString(), source_owner: 'unknown', partial: true, text_is_untrusted: true,
     limits: {max_characters: max, max_errors: max === 2000 ? 4 : 8, max_jobs: 6, max_requests: 8, request_history_capacity: 40,
-      coverage: 'registered_store_errors_and_scoped_request_failures', raw_logs: false}};
+      coverage: 'registered_store_errors_scoped_request_failures_and_local_sdk_spans', success_and_timing: true, async_jobs: 'unlinked', raw_logs: false}};
 }
 /** Keep valid JSON; report omissions rather than truncating serialized text. */
 function bounded(result: Record<string, unknown>, max: number): Record<string, unknown> {
   let omitted = typeof result.omitted === 'number' ? result.omitted : 0;
-  const lists = ['errors', 'requests', 'jobs'];
+  const lists = ['errors', 'requests', 'jobs', 'spans'];
   while (JSON.stringify({...result, omitted}).length > max) {
     const key = lists.find(name => Array.isArray(result[name]) && (result[name] as unknown[]).length);
     if (!key) break;
@@ -68,7 +69,7 @@ function bounded(result: Record<string, unknown>, max: number): Record<string, u
   return {...result, omitted};
 }
 /** Page metadata follows the rows actually emitted, including reductions needed for the JSON budget. */
-function paged(result: Record<string, unknown>, field: 'errors' | 'requests' | 'jobs', total: number, offset: number, backendErrors?: number): Record<string, unknown> {
+function paged(result: Record<string, unknown>, field: 'errors' | 'requests' | 'jobs' | 'spans', total: number, offset: number, backendErrors?: number): Record<string, unknown> {
   const fields = backendErrors === undefined ? [field] : [field, 'errors'];
   const update = () => {
     const emitted = (result[field] as unknown[]).length;
@@ -170,8 +171,9 @@ export async function readAppDiagnostics(section = 'overview', offset = 0): Prom
   if (!(APP_DIAGNOSTIC_SECTIONS as readonly string[]).includes(section)) return {...head, state: 'unsupported_section', sections: [...APP_DIAGNOSTIC_SECTIONS]};
   if (section === 'requests') {
     const rows = apiDiagnosticFailures(getApiDiagnosticScope()).slice().reverse();
-    return paged({...head, source_owner: 'current', requests: rows.slice(offset, offset + 8), successes_are_not_recorded: true}, 'requests', rows.length, offset);
+    return paged({...head, source_owner: 'current', requests: rows.slice(offset, offset + 8), failure_journal_only: true, success_and_timing_section: 'traces'}, 'requests', rows.length, offset);
   }
+  if (section === 'traces') return readTraceDiagnostics(head, offset);
   if (section !== 'jobs') {
     const errors = currentErrors().filter(row => row.section === section || row.section === 'panel');
     return paged({...head, data: sectionData(section as Section), errors: errors.slice(offset, offset + 8)}, 'errors', errors.length, offset);
@@ -181,8 +183,11 @@ export async function readAppDiagnostics(section = 'overview', offset = 0): Prom
   if (!before.sourceReady || !before.context || before.context.project_id !== before.project.project?.id)
     return {...head, ...empty, state: 'unavailable', reason: 'Current project/source authority is not confirmed.'};
   const captured = authority();
+  let observation: LocalTraceHandle | undefined;
+  try {observation = localTrace.begin('assistant.jobs');} catch { /* passive */ }
   try {
-    const response = await request<{source_dataset_path?: string; labelset_id?: string; tasks?: unknown[]; errors?: Array<{kind?: unknown; message?: unknown}>}>('/api/training-workspace/tasks', {method: 'GET'});
+    const response = await request<{source_dataset_path?: string; labelset_id?: string; tasks?: unknown[]; errors?: Array<{kind?: unknown; message?: unknown}>}>('/api/training-workspace/tasks', {method: 'GET', traceParent: observation});
+    observation?.end('ok');
     if (captured !== authority()) return {...head, ...empty, state: 'stale', reason: 'Project, actor, connection or session changed during the read.'};
     if (response.source_dataset_path !== before.data.folderPath || response.labelset_id !== (before.project.project?.active_labelset_id || 'default'))
       return {...head, ...empty, state: 'unavailable', reason: 'Backend snapshot source or labelset does not match.'};
@@ -190,9 +195,39 @@ export async function readAppDiagnostics(section = 'overview', offset = 0): Prom
     const backendErrors = Array.isArray(response.errors) ? response.errors : [];
     const errors = backendErrors.slice(offset, offset + 4).map(row => ({source: safeWord(row.kind), ...diagnosticError(row.message)}));
     return paged({...head, observed_at: new Date().toISOString(), source_owner: 'current', state: 'observed', jobs: rows.slice(offset, offset + 6).map(jobProjection),
-      errors, observed_from: 'project_scoped_backend_tasks', quality_accepted: false}, 'jobs', rows.length, offset, backendErrors.length);
+      errors, observed_from: 'project_scoped_backend_tasks', quality_accepted: false, async_jobs: 'unlinked'}, 'jobs', rows.length, offset, backendErrors.length);
   } catch (cause) {
+    observation?.end('error');
     if (captured !== authority()) return {...head, ...empty, state: 'stale'};
     return {...head, ...empty, state: 'unavailable', error: diagnosticError(cause)};
   }
+}
+
+function safeTraceRow(value: unknown, side: 'renderer' | 'backend'): (LocalTraceRow & {side: string}) | null {
+  if (!value || typeof value !== 'object') return null;
+  const row = value as Record<string, unknown>;
+  if (typeof row.operation !== 'string' || !/^(?:api\.(?:app_request|training|dataset|annotation|evaluation|flow|inspection|compute|assistant|project|account|provenance|local_trace|catalog|models)|assistant\.(?:read_app_command|jobs))$/.test(row.operation)
+    || typeof row.trace_id !== 'string' || !/^[a-f0-9]{32}$/.test(row.trace_id) || typeof row.span_id !== 'string' || !/^[a-f0-9]{16}$/.test(row.span_id)
+    || !['ok','error','cancelled'].includes(String(row.status)) || ![row.start_ms,row.end_ms,row.duration_ms].every(v => typeof v === 'number' && Number.isFinite(v) && v >= 0)) return null;
+  const parent = typeof row.parent_span_id === 'string' && /^[a-f0-9]{16}$/.test(row.parent_span_id) ? row.parent_span_id : null;
+  return {side, operation: row.operation, trace_id: row.trace_id, span_id: row.span_id, parent_span_id: parent,
+    start_ms: row.start_ms as number, end_ms: row.end_ms as number, duration_ms: row.duration_ms as number, status: row.status as LocalTraceRow['status'],
+    code: typeof row.code === 'number' && Number.isInteger(row.code) && row.code >= 100 && row.code <= 599 ? row.code : null, coverage: parent ? 'explicit_parent' : 'unlinked'};
+}
+async function readTraceDiagnostics(head: Record<string, unknown>, offset: number): Promise<Record<string, unknown>> {
+  const before = state(), captured = authority();
+  if (!before.sourceReady || !before.context || before.context.project_id !== before.project.project?.id)
+    return {...head, state: 'unavailable', spans: [], reason: 'Current project/source authority is not confirmed.', async_jobs: 'unlinked'};
+  const traceEpoch = localTrace.scopeToken();
+  let backend: Record<string, unknown> | null = null, backendError: SafeDiagnosticError | null = null;
+  try {backend = await request<Record<string, unknown>>('/api/local-trace', {method: 'GET'});} catch (cause) {backendError = diagnosticError(cause);}
+  if (captured !== authority() || traceEpoch !== localTrace.scopeToken()) return {...head, state: 'stale', spans: []};
+  const local = localTrace.read(), backendValid = backend?.sdk === 'opentelemetry-python-1.45.2' && Array.isArray(backend.spans);
+  const spans = [...local.spans.map(row => safeTraceRow(row, 'renderer')),
+    ...(backendValid ? (backend!.spans as unknown[]).slice(0, 256).map(row => safeTraceRow(row, 'backend')) : [])]
+    .filter((row): row is LocalTraceRow & {side: string} => row !== null).sort((a,b) => b.end_ms - a.end_ms);
+  return paged({...head, state: backendValid ? 'observed' : 'partial', source_owner: 'current', spans: spans.slice(offset, offset + 6),
+    renderer_sdk: local.sdk, backend_sdk: backendValid ? backend!.sdk : null, backend_error: backendError,
+    dropped_spans: local.dropped_spans + (backendValid ? number(backend!.dropped_spans) || 0 : 0), dropped_scopes: local.dropped_scopes,
+    export_errors: local.export_errors, async_jobs: 'unlinked', coverage: 'explicit_assistant_reads_and_request_roots'}, 'spans', spans.length, offset);
 }

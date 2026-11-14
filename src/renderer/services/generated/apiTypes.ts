@@ -896,6 +896,10 @@ export type KnownLengthCalibrationRequest = {
   reference_image_path?: string | null;
 };
 
+export type LabelQualityRequest = {
+  evaluation_id: string;
+};
+
 export type LabelSetCreateRequest = {
   name: string;
 };
@@ -1371,6 +1375,9 @@ export type QualityProfileRequest = {
 export type QueueRequest = {
   evaluation_id?: string | null;
   comparison_id?: string | null;
+  analysis_id?: string | null;
+  mode?: "priority" | "label_quality";
+  top_n?: number;
   threshold?: number;
   margin?: number;
 };
@@ -1629,6 +1636,7 @@ export type StartRequest = {
   seed?: number;
   reuse_search_id?: string | null;
   mode?: "quick" | "search" | "fast_retrain";
+  search_strategy?: "auto" | "deterministic" | "adaptive";
   budget?: Budget;
   search_space?: { [key: string]: unknown };
   base_config?: { [key: string]: unknown };
@@ -1968,6 +1976,8 @@ export type backend__api__routes_training_engine__TrainRequest = {
   output_dir: string;
   prepared_id?: string | null;
   mode?: "quick" | "search" | "fast_retrain";
+  search_strategy?: "auto" | "deterministic" | "adaptive";
+  seed?: number | null;
   preset?: "fast" | "precision";
   device?: string;
   config?: { [key: string]: unknown };
@@ -2017,6 +2027,7 @@ export interface ApiRequestBody {
   "POST /api/data-workbench/derived-adoptions": DerivedAdoptionRequest;
   "POST /api/data-workbench/derived/{identifier}/review": DerivedReviewRequest;
   "POST /api/data-workbench/diagnostics": DiagnosticRequest;
+  "POST /api/data-workbench/label-quality-analyses": LabelQualityRequest;
   "POST /api/data-workbench/review-queues": QueueRequest;
   "POST /api/data-workbench/review-queues/{identifier}/advance": AdvanceRequest;
   "POST /api/dataset/artifacts/ingest": DatasetArtifactIngestRequest;

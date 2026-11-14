@@ -37,6 +37,10 @@ interface CustomNodeProps {
   isDetectorOnly?: boolean;
   onSelect: () => void;
   onRemove?: () => void;
+  onMove?: (dx:number,dy:number) => void;
+  onMoveEnd?: () => void;
+  onCancel?: () => void;
+  onFocusNode?: (element:HTMLDivElement) => void;
   editingDisabled?: boolean;
   /** Called with the payloads of the output port the connection starts from. */
   onConnectStart?: (payloads: FlowPortPayload[]) => void;
@@ -80,6 +84,7 @@ export const CustomNode: React.FC<CustomNodeProps> = ({
   isDetectorOnly = false,
   onSelect,
   onRemove,
+  onMove,onMoveEnd,onCancel,onFocusNode,
   editingDisabled = false,
   onConnectStart,
   onConnectFinish,
@@ -171,8 +176,16 @@ export const CustomNode: React.FC<CustomNodeProps> = ({
       aria-label={`${nodeLabel} 노드 · ${isSelected ? '선택됨' : '선택 안됨'}`}
       tabIndex={0}
       data-flow-node-focus
+      aria-describedby="flow-keyboard-help"
+      onFocus={event=>{if(event.target===event.currentTarget)onFocusNode?.(event.currentTarget);}}
+      onKeyUp={event=>{if(event.target===event.currentTarget&&event.key.startsWith('Arrow'))onMoveEnd?.();}}
+      onBlur={()=>onMoveEnd?.()}
       onKeyDown={(event) => {
         if (event.target !== event.currentTarget || event.altKey || event.ctrlKey || event.metaKey) return;
+        if(event.key==='Escape'&&onCancel){event.preventDefault();event.stopPropagation();onMoveEnd?.();onCancel();return;}
+        const distance=event.shiftKey?50:10;
+        const deltas:Record<string,[number,number]>={ArrowLeft:[-distance,0],ArrowRight:[distance,0],ArrowUp:[0,-distance],ArrowDown:[0,distance]};
+        if(deltas[event.key]&&!editingDisabled&&onMove){event.preventDefault();onMove(...deltas[event.key]);return;}
         if (event.key === 'Enter' || event.key === ' ') {
           event.preventDefault(); onSelect();
         } else if (event.key === 'Delete' && !editingDisabled && onRemove) {

@@ -1,3 +1,4 @@
+import {localTrace, localTraceOperation, setLocalTraceScopeSource, type LocalTraceHandle} from './localTrace';
 import type { LabelSuggestionStats } from './generated/apiTypes';
 import type {ParentCandidate} from '../types/parentCandidate';
 /**
@@ -681,6 +682,8 @@ export interface ContextRequestOptions extends RequestInit {
   /** null discovers the server's current selection; an object pins this request. */
   projectContext?: ProjectContext | null;
   responseType?: 'json' | 'blob';
+  /** Explicit causality only; never an ambient active tool. */
+  traceParent?: LocalTraceHandle | null;
 }
 type LocalHostTransport = {available:()=>boolean;canProjects:()=>boolean;canProjectAssets?:()=>boolean;requestHeaders:(url:string,method:string,body?:unknown)=>Record<string,string>;projectChanged:()=>void;prepareRequest?:(url?:string,method?:string,body?:unknown)=>Promise<void>;socketProtocols?:(url:string)=>string[];prepareSocketProtocols?:(url:string)=>Promise<string[]>;generation:()=>number;acceptResponseHeaders:(path:string,method:string,headers:Headers,body?:unknown)=>void};
 type BrowserSessionTransport={authenticated:()=>boolean;revision:()=>number;requestOptions:(url:string,method:string)=>{credentials?:RequestCredentials;headers?:Record<string,string>};invalidate:()=>void;
@@ -1077,12 +1080,18 @@ export function getApiDiagnosticScope(): string {
 export function subscribeApiRequestFailures(listener: (failure: ApiRequestFailure) => void): () => void {
   requestFailureListeners.add(listener); return () => {requestFailureListeners.delete(listener);};
 }
+setLocalTraceScopeSource(getApiDiagnosticScope);
 /** Observation must never change the original request's result or thrown object. */
 export async function request<T>(path: string, options: ContextRequestOptions = {}): Promise<T> {
+  let observation: LocalTraceHandle | null = null;
+  try {observation = localTrace.begin(localTraceOperation(path), options.traceParent);} catch { /* passive */ }
   let scope: string | null = null;
   try {scope = getApiDiagnosticScope();} catch { /* observation cannot reject a request */ }
-  try {return await requestOwned<T>(path, options);}
+  try {const result = await requestOwned<T>(path, options, observation);observation?.end('ok');return result;}
   catch (cause) {
+    try {const status = cause && typeof cause === 'object' ? (cause as {status?:unknown}).status : undefined;
+      observation?.end(options.signal?.aborted || cause instanceof DOMException && cause.name === 'AbortError' ? 'cancelled' : 'error', typeof status === 'number' ? status : undefined);
+    } catch { /* passive */ }
     try {
       if (scope !== null && scope === getApiDiagnosticScope()) for (const listener of requestFailureListeners) {
         try {listener({scope, path:redactLocalAssetTicket(path), cause});} catch { /* diagnostics cannot mask an application failure */ }
@@ -1091,8 +1100,8 @@ export async function request<T>(path: string, options: ContextRequestOptions = 
     throw cause;
   }
 }
-async function requestOwned<T>(path: string, options: ContextRequestOptions = {}): Promise<T> {
-  const {projectContext,responseType='json',...fetchOptions}=options;
+async function requestOwned<T>(path: string, options: ContextRequestOptions = {}, observation?: LocalTraceHandle | null): Promise<T> {
+  const {projectContext,responseType='json',traceParent:_traceParent,...fetchOptions}=options;
   const selecting=['/api/project/current','/api/project/create','/api/project/open','/api/project/restore','/api/local-host/projects/select','/api/local-host/projects/recover'].includes(path)
     && projectContext===undefined;
   const generation=contextGeneration,transport=sharedBase,sessionOptions=browserRequestOptions;
@@ -1132,6 +1141,11 @@ async function requestOwned<T>(path: string, options: ContextRequestOptions = {}
   if(localOrigin===base)for(const [key,value] of Object.entries(localHostTransport?.requestHeaders(url,fetchOptions.method||'GET',fetchOptions.body)||{}))headers.set(key,value);
   const browserOptions=sessionOptions?.(url,fetchOptions.method||'GET')??browserSessionTransport?.requestOptions(url,fetchOptions.method||'GET')??{};
   for(const [key,value] of Object.entries(browserOptions.headers||{}))headers.set(key,value);
+  // The native/remote adapters do not forward these until that transport is verified.
+  if (observation && !remoteBase(transport) && !localHostTransport) {
+    headers.set('X-Vision-Trace-Scope', observation.scopeToken);
+    if (observation.linked) headers.set('traceparent', observation.traceparent);
+  }
   const response = await fetch(url, {
     ...browserOptions,
     ...fetchOptions,
@@ -1172,12 +1186,13 @@ async function requestOwned<T>(path: string, options: ContextRequestOptions = {}
     if(captured&&!sameContext(received,captured))throw new Error('요청과 응답의 프로젝트 문맥이 다릅니다.');
     receivedContext={...received};
   }
-  if (response.status === 204) return undefined as T;
-  if(responseType==='blob'){const blob=await response.blob();requireMemorySession();return blob as T;}
+  if (response.status === 204) {observation?.end('ok', response.status);return undefined as T;}
+  if(responseType==='blob'){const blob=await response.blob();requireMemorySession();observation?.end('ok', response.status);return blob as T;}
   const value:T=await response.json();
   requireMemorySession();
   if(localOrigin===base&&generation===contextGeneration&&transport===sharedBase&&localGeneration===localHostTransport?.generation())localHostTransport?.acceptResponseHeaders(url,fetchOptions.method||'GET',response.headers,value);
   if(receivedContext&&value&&typeof value==='object')contextCandidates.set(value,{context:receivedContext,generation,transport});
+  observation?.end('ok', response.status);
   return value;
 }
 

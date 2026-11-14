@@ -1,3 +1,4 @@
+import {localTrace, type LocalTraceHandle} from './localTrace';
 /** Lazy metadata discovery and a deliberately smaller observation surface. This adapter never executes API writes. */
 import {ACTION_CATALOG} from './assistantTasks/catalog';
 import {diagnosticText} from './assistantDiagnostics';
@@ -12,7 +13,7 @@ export interface CommandCatalogDeps {
   /** Opaque local identity including project/source/transport generations. Never returned to the provider. */
   scope(): string;
   canObserve(): boolean;
-  request(path: string, options: {method: 'GET'}): Promise<unknown>;
+  request(path: string, options: {method: 'GET'; traceParent?: LocalTraceHandle}): Promise<unknown>;
 }
 export const ASSISTANT_COMMAND_READ_ALLOWLIST = [
   'GET /health', 'GET /api/project/labelsets', 'GET /api/training/status',
@@ -118,13 +119,13 @@ export function createAssistantCommandCatalog(deps: CommandCatalogDeps): Assista
     const scope = deps.scope();
     return () => {if (current && !current() || scope !== deps.scope() || observation && !deps.canObserve()) throw stale();};
   };
-  const get = async (url: string, check: () => void, code: string): Promise<unknown> => {
+  const get = async (url: string, check: () => void, code: string, traceParent?: LocalTraceHandle): Promise<unknown> => {
     check();
-    try {const value = await deps.request(url, {method: 'GET'});check();return value;}
+    try {const value = await deps.request(url, {method: 'GET', ...(traceParent ? {traceParent} : {})});check();return value;}
     catch (cause) {check();if (cause instanceof CatalogRefusal) throw cause;throw new CatalogRefusal(code, '인증된 연결에서 관측 결과를 읽지 못했습니다. 현재 연결과 앱 진단을 확인하세요.');}
   };
-  const detail = async (id: string, check: () => void, schemas = true) => {
-    const document = catalogDocument(await get(`/api/automation/catalog?operation=${encodeURIComponent(id)}&schemas=${schemas}`, check, 'catalog_unavailable'));
+  const detail = async (id: string, check: () => void, schemas = true, traceParent?: LocalTraceHandle) => {
+    const document = catalogDocument(await get(`/api/automation/catalog?operation=${encodeURIComponent(id)}&schemas=${schemas}`, check, 'catalog_unavailable', traceParent));
     const rows = document.operations as unknown[];
     if (rows.length !== 1 || object(rows[0])?.id !== id) throw new CatalogRefusal('invalid_catalog', '요청한 기능의 상세 목록이 일치하지 않습니다.');
     return document;
@@ -151,12 +152,17 @@ export function createAssistantCommandCatalog(deps: CommandCatalogDeps): Assista
     },
     async read(args, current) {
       argumentsOnly(args, ['operation']);if (typeof args.operation !== 'string' || !SAFE_READ.has(args.operation)) throw denied();
-      const check = fence(current, true), document = await detail(args.operation, check, false), flags = {truncated: false};
-      const row = descriptor((document.operations as unknown[])[0], flags, false);
-      if (row.gpt_permission !== 'read') throw denied();
-      // The path is chosen from this constant allowlist, never from the server descriptor or model arguments.
-      const path = args.operation.slice(4), raw = await get(path, check, 'observation_unavailable');
-      return bound({...envelope(flags), operation: args.operation, observed_at: new Date().toISOString(), data: safeValue(raw, false, flags)}, flags);
+      let observation: LocalTraceHandle | undefined;
+      try {observation = localTrace.begin('assistant.read_app_command');} catch { /* passive */ }
+      try {
+        const check = fence(current, true), document = await detail(args.operation, check, false, observation), flags = {truncated: false};
+        const row = descriptor((document.operations as unknown[])[0], flags, false);
+        if (row.gpt_permission !== 'read') throw denied();
+        // The path is chosen from this constant allowlist, never from the server descriptor or model arguments.
+        const path = args.operation.slice(4), raw = await get(path, check, 'observation_unavailable', observation);
+        const result = bound({...envelope(flags), operation: args.operation, observed_at: new Date().toISOString(), data: safeValue(raw, false, flags)}, flags);
+        observation?.end('ok');return result;
+      } catch (cause) {observation?.end('error');throw cause;}
     },
   };
 }

@@ -53,6 +53,17 @@ test('full and default views preserve the directly visible technical metrics', (
   }
 });
 
+test('versioned AP discloses its supported scope and zero-ground-truth unavailability', () => {
+  const html = render({summary:{...summary,map50:null,metricContract:'detection-ap-v2',apAvailable:false},simple:true});
+  assert.match(html,/정답 객체가 없어 위치 품질을 계산하지 않았습니다/);
+  assert.match(html,/검출 AP 기준 v2/);
+  assert.match(html,/정답 객체가 있는 클래스/);
+  assert.match(html,/최대 100개/);
+  const legacy = render();
+  assert.match(legacy,/이전 계산 기준의 저장 결과/);
+  assert.doesNotMatch(legacy,/검출 AP 기준 v2/);
+});
+
 test('English simple view keeps plain image counts outside the closed technical details', () => {
   const html = render({ simple: true, language: 'en' });
   const details = html.match(/<details\b([^>]*)>([\s\S]*?)<\/details>/);

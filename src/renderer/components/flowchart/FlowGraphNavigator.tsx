@@ -1,4 +1,5 @@
 import {useEffect, useState, type RefObject} from 'react';
+import {focusFlowNodeInCanvas} from './flowKeyboard';
 import type {FlowNode} from '../../types';
 import {
   computeFlowchartMinimap, findFlowNodes, flowNodeScrollTarget, minimapScrollTarget,
@@ -39,6 +40,7 @@ export function FlowGraphNavigator({nodes, viewport, canvasRef, selectedNodeId, 
     if (disabled || !canvas) return;
     onSelect(node.id);
     canvas.scrollTo({...flowNodeScrollTarget(node, viewport, {width: canvas.clientWidth, height: canvas.clientHeight}), behavior: 'auto'});
+    focusFlowNodeInCanvas(canvas,node.id);
   };
   const pan = (point: {x: number; y: number}) => {
     const canvas = canvasRef.current;

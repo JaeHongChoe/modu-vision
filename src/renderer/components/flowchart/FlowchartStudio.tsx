@@ -43,6 +43,7 @@ import { ImageRoiEditor } from './ImageRoiEditor';
 import { FlowNodeDebugger } from './FlowNodeDebugger';
 import { FlowWorkspacePanel } from './FlowWorkspacePanel';
 import { FlowEvaluationPanel } from './FlowEvaluationPanel';
+import {createKeyboardNodeMovement,revealFlowNode,focusFlowNodeInCanvas,revealCurrentlyFocusedFlowNode} from './flowKeyboard';
 import { FlowGraphNavigator } from './FlowGraphNavigator';
 import { FlowInspectorPanel } from './FlowInspectorPanel';
 import { WorkflowImpactPanel } from '../common/WorkflowImpactPanel';
@@ -791,9 +792,15 @@ export const FlowchartStudio: React.FC = () => {
   };
 
   const focusFlowNode = (id: string) => requestAnimationFrame(() => {
-    canvasRef.current?.querySelector<HTMLElement>(`[data-flow-node-id="${CSS.escape(id)}"] [data-flow-node-focus]`)?.focus();
+    focusFlowNodeInCanvas(canvasRef.current,id);
   });
   const graphEditingDisabled = isLoading || editHeldBySave || isRunning || isVerifyingAction || flowOpening;
+  const [keyboardAnnouncement,setKeyboardAnnouncement]=useState('');
+  const keyboardMovement=useRef<ReturnType<typeof createKeyboardNodeMovement>|null>(null);
+  if(!keyboardMovement.current)keyboardMovement.current=createKeyboardNodeMovement(useFlowchartStore.getState,setKeyboardAnnouncement);
+  useEffect(()=>{if(graphEditingDisabled||activeTab!=='edit'||guidedView)keyboardMovement.current?.end();return()=>keyboardMovement.current?.end();},[graphEditingDisabled,activeTab,guidedView,scopeKey,pipeline?.id]);
+  useEffect(()=>{const end=()=>keyboardMovement.current?.end();window.addEventListener('blur',end);return()=>{window.removeEventListener('blur',end);end();};},[]);
+  const cancelGraphSelection=()=>{keyboardMovement.current?.end();setConnectionSourceId(null);setSelectedEdgeSelection(null);selectNode(null);setKeyboardAnnouncement('연결·선택을 취소했습니다.');};
 
   const addEditableNode = (nodeType: 'patch_split' | 'preprocess' | 'fixed_roi' | 'detection_crop' | 'inspection' | 'blob_measure' | 'measurement' | 'aggregate' | 'output') => {
     if (!pipeline || graphEditingDisabled) return;
@@ -1014,6 +1021,7 @@ export const FlowchartStudio: React.FC = () => {
 
   const beginNodeDrag = (event: React.PointerEvent<HTMLDivElement>, node: FlowNode) => {
     if (graphEditingDisabled || event.button !== 0 || (event.target as HTMLElement).closest('button, input, select')) return;
+    keyboardMovement.current?.end();
     // Pointer coordinates include display zoom as well as the graph transform.
     // Freeze the rendered scale for this drag, just like its graph viewport.
     const renderedScale = event.currentTarget.getBoundingClientRect().width / FLOW_NODE_WIDTH;
@@ -1532,6 +1540,8 @@ export const FlowchartStudio: React.FC = () => {
         </details> : <FlowGraphNavigator key={`${scopeKey}:${pipeline?.id}`} nodes={positionedNodes} viewport={displayViewport}
           canvasRef={canvasRef} selectedNodeId={selectedNodeId} disabled={dragViewport!==null||isRoiEditing||isLoading}
           onSelect={id=>{selectNode(id);setSelectedEdgeSelection(null);}} />}
+        <p id="flow-keyboard-help" className="shrink-0 px-3 py-1 text-xs text-[var(--workspace-muted)]">노드에 초점을 두고 방향키로 10만큼 이동 · Shift+방향키는 50만큼 이동 · Escape로 연결·선택 취소</p>
+        <p role="status" aria-live="polite" aria-atomic="true" className="sr-only">{keyboardAnnouncement}</p>
         <div className="min-h-[240px] shrink-0 flex-1 flex overflow-hidden">
           {simpleView && <button type="button" aria-expanded={paletteOpen} aria-controls="flow-node-palette" onClick={() => setPaletteOpen(open => !open)}
             title={paletteOpen ? '노드 목록 닫기' : '노드 목록 열기'}
@@ -1552,6 +1562,7 @@ export const FlowchartStudio: React.FC = () => {
           <div
             ref={canvasRef}
             aria-label="플로우 그래프 캔버스"
+            onKeyDown={event=>{if(event.key==='Escape'&&!event.altKey&&!event.ctrlKey&&!event.metaKey&&!(event.target as HTMLElement).closest('input,textarea,select,[contenteditable="true"]')){event.preventDefault();event.stopPropagation();cancelGraphSelection();}}}
             className="flow-canvas-grid min-h-0 min-w-0 flex-1 bg-[#0B0E14] overflow-auto relative"
           >
             <div
@@ -1625,6 +1636,10 @@ export const FlowchartStudio: React.FC = () => {
                         pipeline.nodes.some((item) => item.id === edge.target && item.data.node_type === 'decision'))}
                       isConnectionSource={connectionSourceId === node.id}
                       editingDisabled={graphEditingDisabled}
+                      onMove={(dx,dy)=>{keyboardMovement.current?.move(node.id,dx,dy,graphEditingDisabled);setSelectedEdgeSelection(null);requestAnimationFrame(()=>revealCurrentlyFocusedFlowNode(canvasRef.current,node.id));}}
+                      onMoveEnd={()=>keyboardMovement.current?.end()}
+                      onCancel={cancelGraphSelection}
+                      onFocusNode={element=>revealFlowNode(canvasRef.current,element)}
                       onRemove={node.data.node_type !== 'input' && node.data.node_type !== 'decision' ? () => deleteEditableNode(node.id) : undefined}
                       onSelect={() => { selectNode(node.id); setSelectedEdgeSelection(null); }}
                       onConnectStart={(payloads) => startConnection(node.id, payloads)}

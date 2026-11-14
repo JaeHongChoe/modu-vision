@@ -1,0 +1,37 @@
+{
+  "schema": "modu-vision.action-source-portability-provenance-delta/v1",
+  "scope": "Current embedded label-quality and keyboard source declarations; historical acceptance remains historical",
+  "source_declaration_only": true,
+  "historical_acceptance_rebound": false,
+  "historical_receipts_modified": false,
+  "new_GUI_executions": [],
+  "newly_verified_scenarios": [],
+  "parent_completion_credit": false,
+  "whole_current_GUI_suite_pending": true,
+  "base_commit": "fbc9e3b95717466601147ecf8ac05eca9d597a6c",
+  "historical_registry_sha256": "8ed1b40ad6532549e287f7499881e9402ed1c42653c6f8320d68e773e178781f",
+  "historical_records_canonical_sha256_before_and_after": "bd12281aa7acaf83ef682432d52ae5a39dbd8c3520e7afe644ad4048ca4bc5fe",
+  "current_source_table_changes": [
+    {
+      "relative": "src/renderer/components/flowchart/FlowchartStudio.tsx",
+      "historical_declaration_sha256": "b564b9f38776361efb9c458e0e39480123058ac19c01babef10ee49327734a3e",
+      "current_declaration_sha256": "3b2742e7159887496b04a70f59ba28b3f3d2b847f392fa7227c195ac5f6a5a46"
+    },
+    {
+      "relative": "src/renderer/components/labeling/SavedReviewQueuePanel.tsx",
+      "historical_declaration_sha256": "2255668df8dbac83f05da5ede7d8b3a7647f8ddfe62e4addcc78090cec6f5588",
+      "current_declaration_sha256": "9a79d290c9c1ac94ba0f62b2c09b7c30c97c96aac2f778a76f3902e4982837a0"
+    },
+    {
+      "relative": "src/renderer/components/flowchart/FlowGraphNavigator.tsx",
+      "historical_declaration_sha256": "656832c214f41742d5bc0f66c9f8983c5fb6892cfaf3b42b48ee353f282da20a",
+      "current_declaration_sha256": "7be4b6a2ae7f612b65c59bb2dd2188cab2c2403ee7f319525012697d02c8fe43"
+    },
+    {
+      "relative": "src/renderer/components/flowchart/CustomNode.tsx",
+      "historical_declaration_sha256": "97350539036826f52411bc8defe234d638e2c18fde5092a5f104af7557dd1828",
+      "current_declaration_sha256": "2ddb6c4744b43afd143745ae64899f0d2c42fbf9e8f6014df245bed5a615f217"
+    }
+  ],
+  "separate_owned_browser_evidence": "docs/verification/2026-11-14-embedded-oss.md"
+}

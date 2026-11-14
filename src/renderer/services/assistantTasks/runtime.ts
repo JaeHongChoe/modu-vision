@@ -19,6 +19,7 @@ import { applyAppSplit, evaluateAppModel, evaluateSavedFlow, saveSingleModelFlow
 import { taskActionCatalog as pureTaskActionCatalog, validateTaskAction } from './catalog';
 import type { TaskActionResult, TaskStep, TaskControl } from './types';
 import {diagnosticError, diagnosticText} from '../assistantDiagnostics';
+import type {LabelQualityAnalysis,SavedReviewQueue} from '../dataWorkbench';
 import {validateInputRecipe,inputPreparationScope,type FixedInputRecipe} from '../../components/training/inputPreparation';
 
 type Control = TaskControl;
@@ -314,6 +315,25 @@ export async function executeTaskAction(step: TaskStep, control: Control): Promi
           ...(bindingBefore !== taskRuntimeBinding() ? {bindingAfter: taskRuntimeBinding()} : {}),
           message: '학습 작업을 시작했습니다. 완료 기록을 확인한 뒤 다음 단계로 이어 갑니다.'};
       } finally {for (const cleanup of cleanups) cleanup?.();}
+    }
+    if (step.action === 'analyze_label_quality') {
+      check();
+      if(useProjectStore.getState().task!=='classification')throw new Error('저장된 공통 시험 분류 평가를 선택하세요.');
+      const evaluationId=String(args.evaluation_id);
+      dispatched=true;
+      const analysis=await request<LabelQualityAnalysis>('/api/data-workbench/label-quality-analyses',{method:'POST',body:JSON.stringify({evaluation_id:evaluationId})});
+      operationReceipt={...localScopeReceipt(),analysis_id:analysis.id,evaluation_id:evaluationId,analysis_sha256:analysis.analysis_sha256,advisory_only:true};
+      check(false);await control.checkpoint?.(operationReceipt);check();
+      const saved=await request<LabelQualityAnalysis>(`/api/data-workbench/label-quality-analyses/${encodeURIComponent(analysis.id)}`);check();
+      if(saved.id!==analysis.id||saved.analysis_sha256!==analysis.analysis_sha256||saved.evaluation_id!==evaluationId||saved.advisory_only!==true||saved.basis_changed)
+        return uncertain('저장된 라벨 재확인 분석의 범위·기준을 다시 확인하세요.',operationReceipt);
+      const queue=await request<SavedReviewQueue>('/api/data-workbench/review-queues',{method:'POST',body:JSON.stringify({analysis_id:analysis.id,mode:'label_quality',top_n:args.top_n??100})});
+      operationReceipt={...operationReceipt,review_queue_id:queue.id};check(false);await control.checkpoint?.(operationReceipt);check();
+      const reopened=await request<SavedReviewQueue>(`/api/data-workbench/review-queues/${encodeURIComponent(queue.id)}`);check(false);
+      if(reopened.id!==queue.id||reopened.mode!=='label_quality'||reopened.origin.analysis_id!==analysis.id||reopened.stale)
+        return uncertain('저장된 라벨 재확인 큐의 연결을 다시 확인하세요.',operationReceipt);
+      bumpWorkflowEvidence();
+      return {...completed({...operationReceipt,group_independence:saved.group_independence,items:reopened.items.length}),message:'라벨 재확인 참고 순위와 검토 큐를 저장했습니다. 과거 LOT·그룹 독립성은 확인되지 않았습니다. 라벨 수정·승인과 학습은 직접 선택할 때 진행합니다.'};
     }
     if (step.action === 'evaluate_model') {
       await navigate(4, control); check();

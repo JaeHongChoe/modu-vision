@@ -9,6 +9,14 @@ from pydantic import BaseModel
 CATALOG = '/api/automation/catalog'
 
 
+def test_label_quality_maps_to_existing_task_executor_without_raw_write_tool(app):
+    response = request(app, params={'limit': 1000})
+    operation = next(row for row in response.json()['operations']
+                     if row['id'] == 'POST /api/data-workbench/label-quality-analyses')
+    assert operation['assistant'] == {'mode': 'task', 'task_action': 'analyze_label_quality'}
+    assert operation['effect'] == 'execute'
+
+
 @pytest.fixture
 def app(tmp_path):
     from backend.main import create_app

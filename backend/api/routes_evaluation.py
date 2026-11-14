@@ -41,6 +41,7 @@ from backend.engine.detection import (
     checkpoint_detection_num_classes,
     foreground_class_names,
 )
+from backend.engine.detection.metrics import DETECTION_AP_V2
 from backend.engine.segmentation import (
     build_segmentation_model,
     compute_segmentation_metrics,
@@ -688,6 +689,7 @@ def _evaluate_detection(
     dataset_dir: Path,
     device: torch.device,
     cancel=None,
+    metric_contract=DETECTION_AP_V2,
 ) -> Dict[str, Any]:
     img_size = tuple(meta.get("image_size", [256, 256]))
     ckpt = torch.load(model_pt, map_location=device, weights_only=False)
@@ -715,6 +717,17 @@ def _evaluate_detection(
         raise HTTPException(status_code=422, detail=f"검출 평가의 클래스 목록이 모델과 맞지 않습니다: {exc}") from exc
     if len(val_ds) == 0:
         raise HTTPException(status_code=400, detail="검출을 평가할 이미지가 없습니다. 테스트 또는 검증 분할에 이미지를 넣으세요.")
+
+    canonical_ds = None
+    if metric_contract == DETECTION_AP_V2:
+        # Reuse the loader's original-image clipping, min-size and class rules
+        # instead of round-tripping truth through model-input float32 geometry.
+        # The frozen cohort independently uses this same original-size loader.
+        from copy import copy
+        canonical_ds = copy(val_ds)
+        canonical_ds.image_size = None
+        canonical_ds.max_dim = 0
+        canonical_ds.transform = None
 
     classes = list(val_ds.categories.values())
     num_classes = checkpoint_detection_num_classes(state_dict, classes)
@@ -753,8 +766,9 @@ def _evaluate_detection(
             out_scores = outputs[0]["scores"]
             out_labels = outputs[0]["labels"]
 
-            all_preds.append({"boxes": out_boxes, "scores": out_scores, "labels": out_labels})
-            all_targets.append({"boxes": target["boxes"], "labels": target["labels"]})
+            if metric_contract != DETECTION_AP_V2:
+                all_preds.append({"boxes": out_boxes, "scores": out_scores, "labels": out_labels})
+                all_targets.append({"boxes": target["boxes"], "labels": target["labels"]})
 
             high_conf = float(out_scores.max().item()) if len(out_scores) > 0 else 0.0
             top_label_idx = int(out_labels[out_scores.argmax()].item()) if len(out_scores) > 0 else 0
@@ -782,12 +796,29 @@ def _evaluate_detection(
                 "thumbnail_url": f"/api/dataset/thumbnail/{img_meta['file_name']}?file_path={img_path.resolve()}",
             })
             from backend.engine.evaluation_evidence import match_objects
-            scale_x=float(img_meta.get('width',img_size[0]))/img_size[0]
-            scale_y=float(img_meta.get('height',img_size[1]))/img_size[1]
+            source_width, source_height = img_meta.get('width',img_size[0]), img_meta.get('height',img_size[1])
+            original_target = None
+            if canonical_ds is not None:
+                original_image, original_target = canonical_ds[idx]
+                source_height, source_width = original_image.shape[-2:]
+                del original_image
+            scale_x=float(source_width)/img_size[0]
+            scale_y=float(source_height)/img_size[1]
             def original_box(box):return [float(v)*scale for v,scale in zip(box,(scale_x,scale_y,scale_x,scale_y))]
             predictions=[{'label':cm_classes[int(label)],'box':original_box(box.cpu().tolist()),'confidence':float(score)} for box,score,label in zip(out_boxes,out_scores,out_labels) if 0<=int(label)<num_cm]
-            truth=[{'label':cm_classes[int(label)],'box':original_box(box.cpu().tolist())} for box,label in zip(target['boxes'],target['labels']) if 0<=int(label)<num_cm]
-            test_predictions[-1]['object_evidence']={**match_objects(predictions,truth),'coordinate_space':'original_image','source_size':[img_meta.get('width'),img_meta.get('height')]}
+            truth=([{'label':cm_classes[int(label)],'box':[float(v) for v in box]} for box,label in zip(original_target['boxes'],original_target['labels']) if 0<=int(label)<num_cm]
+                   if original_target is not None else [{'label':cm_classes[int(label)],'box':original_box(box.cpu().tolist())} for box,label in zip(target['boxes'],target['labels']) if 0<=int(label)<num_cm])
+            test_predictions[-1]['object_evidence']={**match_objects(predictions,truth),'coordinate_space':'original_image','source_size':[source_width,source_height]}
+            if metric_contract == DETECTION_AP_V2:
+                # AP and its validator consume exactly the retained original
+                # evidence at the same float32 materialization boundary.
+                def ap_objects(objects, predicted=False):
+                    values={'boxes':torch.tensor([r['box'] for r in objects],dtype=torch.float32).reshape(-1,4),
+                            'labels':torch.tensor([cm_class_to_idx[r['label']] for r in objects],dtype=torch.int64)}
+                    if predicted:values['scores']=torch.tensor([r['confidence'] for r in objects],dtype=torch.float32)
+                    return values
+                all_preds.append(ap_objects(predictions, True))
+                all_targets.append(ap_objects(truth))
             test_predictions[-1]['ground_truth_classes']=sorted({row['label'] for row in truth})
 
     norm_matrix = [[0.0] * num_cm for _ in range(num_cm)]
@@ -797,7 +828,7 @@ def _evaluate_detection(
             norm_matrix[i][j] = round(matrix[i][j] / r_sum, 4)
 
     cat_map = {idx: name for idx, name in enumerate(cm_classes)}
-    map_res = evaluate_detections_map(all_preds, all_targets, num_classes=num_cm, class_names=cat_map)
+    map_res = evaluate_detections_map(all_preds, all_targets, num_classes=num_cm, class_names=cat_map, metric_contract=metric_contract)
 
     return {
         "metrics": {
@@ -806,6 +837,10 @@ def _evaluate_detection(
             "mAP_50_95": map_res.get("mAP_50_95", 0.0),
             "best_metric": meta.get("best_metric"),
             "class_ap50": map_res.get("class_ap50", {}),
+            "detection_metric_contract": metric_contract,
+            "detection_ap_available": map_res.get('available', True),
+            "detection_ap_unavailable_reason": map_res.get('unavailable_reason'),
+            "detection_ap_excluded_classes": map_res.get('excluded_classes', []),
         },
         "confusion_matrix": {
             "classes": cm_classes,

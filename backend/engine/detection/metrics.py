@@ -25,6 +25,44 @@ PALETTE = [
     (255, 224, 56),  # Yellow
 ]
 
+DETECTION_AP_LEGACY = 'detection-ap-legacy-v1'
+DETECTION_AP_V2 = 'detection-ap-v2'
+
+
+def bound_detection_ap_contract(spec, metrics):
+    """Unmarked historical inputs/results retain their original metric meaning."""
+    expected = spec.get('detection_metric_contract', DETECTION_AP_LEGACY)
+    if expected not in (DETECTION_AP_LEGACY, DETECTION_AP_V2): raise ValueError('Unknown detection AP metric contract')
+    if metrics.get('detection_metric_contract', DETECTION_AP_LEGACY) != expected:
+        raise ValueError('Detection AP metric contract differs from its frozen recipe')
+    return expected
+
+
+def _validate_v2_inputs(predictions, targets, num_classes):
+    if len(predictions) != len(targets): raise ValueError('Detection predictions and targets must have the same image count')
+    if num_classes is not None and (type(num_classes) is not int or num_classes < 1):
+        raise ValueError('Detection class count must include a valid background class')
+    for rows, prediction in ((predictions, True), (targets, False)):
+        for row in rows:
+            boxes, labels = row.get('boxes'), row.get('labels')
+            if (not isinstance(boxes, torch.Tensor) or not isinstance(labels, torch.Tensor)
+                    or boxes.ndim != 2 or boxes.shape[1] != 4 or labels.ndim != 1 or len(boxes) != len(labels)
+                    or not bool(torch.isfinite(boxes).all()) or not bool(torch.isfinite(labels).all())):
+                raise ValueError('Detection inputs require finite aligned box and label tensors')
+            if labels.dtype not in (torch.int8, torch.int16, torch.int32, torch.int64, torch.uint8):
+                raise ValueError('Detection class identifiers must be integers')
+            if len(boxes) and (not bool((boxes[:, 2:] > boxes[:, :2]).all()) or bool((labels < 0).any())
+                               or num_classes is not None and bool((labels >= num_classes).any())):
+                raise ValueError('Detection boxes/classes are outside the supported contract')
+            for key in ('iscrowd', 'ignore'):
+                if key in row and bool(torch.as_tensor(row[key]).any()):
+                    raise ValueError('Detection APv2 supports noncrowd, nonignored boxes only')
+            if prediction:
+                scores = row.get('scores')
+                if (not isinstance(scores, torch.Tensor) or scores.ndim != 1 or len(scores) != len(boxes)
+                        or not bool(torch.isfinite(scores).all()) or bool(((scores < 0) | (scores > 1)).any())):
+                    raise ValueError('Detection scores must be aligned finite probabilities')
+
 
 def safe_nms(
     boxes: torch.Tensor,
@@ -71,6 +109,7 @@ def evaluate_detections_map(
     iou_thresholds: Optional[List[float]] = None,
     num_classes: Optional[int] = None,
     class_names: Optional[Dict[int, str]] = None,
+    *, metric_contract: str = DETECTION_AP_LEGACY,
 ) -> Dict[str, Any]:
     """
     Calculates mAP@0.5 and mAP@0.5:0.95 across all evaluation samples.
@@ -82,8 +121,13 @@ def evaluate_detections_map(
         num_classes: Total number of classes (including background 0)
         class_names: Dict mapping category ID to class label name
     """
+    if metric_contract not in (DETECTION_AP_LEGACY, DETECTION_AP_V2): raise ValueError('Unknown detection AP metric contract')
+    version2 = metric_contract == DETECTION_AP_V2
+    if version2: _validate_v2_inputs(predictions, targets, num_classes)
     if iou_thresholds is None:
         iou_thresholds = [round(x, 2) for x in np.arange(0.50, 1.00, 0.05).tolist()]
+    if version2 and (0.50 not in iou_thresholds or any(isinstance(v, bool) or not isinstance(v, (int, float)) or not np.isfinite(v) or not 0 < v <= 1 for v in iou_thresholds)):
+        raise ValueError('Detection APv2 thresholds must be finite probabilities including 0.50')
 
     # Collect all present classes excluding background (class 0)
     all_classes = set()
@@ -97,7 +141,7 @@ def evaluate_detections_map(
 
     class_ids = [c for c in range(1, num_classes)] if num_classes is not None else sorted(list(all_classes))
 
-    if len(class_ids) == 0:
+    if len(class_ids) == 0 and not version2:
         return {"mAP_50": 0.0, "mAP_50_95": 0.0, "class_ap50": {}, "class_ap50_95": {}}
 
     # Organize ground truth by image and class
@@ -115,6 +159,20 @@ def evaluate_detections_map(
             total_gt_per_class[c] += len(boxes)
         gt_by_img.append(img_gt)
 
+    def get_cname(cid: int) -> str:
+        if class_names and cid in class_names: return class_names[cid]
+        return f'class_{cid}'
+
+    excluded = [get_cname(c) for c in class_ids if total_gt_per_class[c] == 0] if version2 else []
+    if version2:
+        class_ids = [c for c in class_ids if total_gt_per_class[c] > 0]
+        if len({get_cname(c) for c in class_ids}) != len(class_ids): raise ValueError('Detection AP class names must be unique')
+        if not class_ids:
+            return {'mAP_50': None, 'mAP_50_95': None, 'class_ap50': {}, 'class_ap50_95': {},
+                    'metric_contract': DETECTION_AP_V2, 'available': False,
+                    'unavailable_reason': 'no_ground_truth_objects', 'excluded_classes': excluded,
+                    'max_detections_per_image_class': 100, 'scope': 'bbox_all_areas_noncrowd_nonignored'}
+
     # Organize predictions by class across dataset
     preds_by_class: Dict[int, List[Tuple[float, int, torch.Tensor]]] = {c: [] for c in class_ids}
     for img_idx, p in enumerate(predictions):
@@ -131,6 +189,14 @@ def evaluate_detections_map(
     # Sort predictions descending by score
     for c in class_ids:
         preds_by_class[c].sort(key=lambda x: x[0], reverse=True)
+        if version2:
+            counts = {}
+            selected = []
+            for candidate in preds_by_class[c]:
+                image = candidate[1]
+                counts[image] = counts.get(image, 0) + 1
+                if counts[image] <= 100: selected.append(candidate)
+            preds_by_class[c] = selected
 
     aps_per_iou: Dict[float, Dict[int, float]] = {iou_th: {} for iou_th in iou_thresholds}
 
@@ -155,8 +221,18 @@ def evaluate_detections_map(
                     fp[p_idx] = 1.0
                     continue
 
-                ious = ops.box_iou(pred_box.unsqueeze(0), gt_boxes).squeeze(0)
+                # COCO computes bbox overlap in double precision. In float32
+                # exact threshold .70 becomes .699999988 and wrongly fails.
+                ious = ops.box_iou(pred_box.unsqueeze(0).double(), gt_boxes.double()).squeeze(0) if version2 else ops.box_iou(pred_box.unsqueeze(0), gt_boxes).squeeze(0)
+                if version2:
+                    # COCO searches the remaining noncrowd truth; a used best
+                    # match does not prevent choosing another qualifying GT.
+                    for matched in matched_gt[img_idx]: ious[matched] = -1
                 best_iou, best_gt_idx = torch.max(ious, dim=0)
+                if version2:
+                    # COCO accepts equal-IoU candidates while scanning in GT
+                    # order, so the last eligible GT wins an exact tie.
+                    best_gt_idx = torch.nonzero(ious == best_iou, as_tuple=False)[-1, 0]
                 best_iou = float(best_iou.item())
                 best_gt_idx = int(best_gt_idx.item())
 
@@ -172,11 +248,6 @@ def evaluate_detections_map(
             precisions = cum_tp / (cum_tp + cum_fp)
             aps_per_iou[iou_th][c] = compute_ap_coco(recalls, precisions)
 
-    def get_cname(cid: int) -> str:
-        if class_names and cid in class_names:
-            return class_names[cid]
-        return f"class_{cid}"
-
     ap50_per_class = {get_cname(c): aps_per_iou[0.50][c] for c in class_ids}
     mAP_50 = float(np.mean(list(aps_per_iou[0.50].values())))
 
@@ -186,12 +257,17 @@ def evaluate_detections_map(
     }
     mAP_50_95 = float(np.mean(list(ap50_95_per_class.values())))
 
-    return {
+    result = {
         "mAP_50": round(mAP_50, 4),
         "mAP_50_95": round(mAP_50_95, 4),
         "class_ap50": {k: round(v, 4) for k, v in ap50_per_class.items()},
         "class_ap50_95": {k: round(v, 4) for k, v in ap50_95_per_class.items()},
     }
+    if version2:
+        result.update(metric_contract=DETECTION_AP_V2, available=True, unavailable_reason=None,
+                      excluded_classes=excluded, max_detections_per_image_class=100,
+                      scope='bbox_all_areas_noncrowd_nonignored')
+    return result
 
 
 def draw_detection_overlays(

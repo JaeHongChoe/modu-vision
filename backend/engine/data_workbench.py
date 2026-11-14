@@ -379,3 +379,19 @@ def advance_review_queue(project,source,task,labelset_id,identifier,expected_rev
         row=queue['items'][queue['cursor']];row['state']=state;row['actor']=actor.strip();row['reviewed_at']=time.time()
         queue['cursor']+=1;queue['revision']+=1;queue['history'].append({'relative_path':relative,'state':state,'actor':actor.strip(),'at':time.time()})
         _write(path,queue);return queue
+
+
+def create_label_quality_queue(project,source,analysis_id,top_n=100):
+    """Dedicated margin order retains correctly predicted low-margin examples."""
+    from backend.engine.classification_label_quality import read_analysis
+    if type(top_n) is not int or not 1<=top_n<=100:raise ValueError('Label quality top_n must be 1..100')
+    analysis=read_analysis(project,source,analysis_id)
+    items=[{**copy.deepcopy(row),'priority':0,'state':'pending','analysis_id':analysis_id,'analysis_sha256':analysis['analysis_sha256']} for row in analysis['items'][:top_n]]
+    origin={'evaluation_id':analysis['evaluation_id'],'evidence_sha256':analysis['evaluation_evidence_sha256'],
+            'analysis_id':analysis_id,'analysis_sha256':analysis['analysis_sha256'],'job_id':analysis.get('job_id'),'step':4}
+    queue={'schema_version':1,'id':'review_'+uuid.uuid4().hex,'mode':'label_quality',
+           'scope':{'source':str(Path(source).resolve()),'task':project['task'],'labelset_id':project.get('active_labelset_id','default')},
+           'revision':1,'created_at':time.time(),'items':items,'cursor':0,'origin':origin,'history':[],
+           'advisory_only':True,'group_independence':analysis['group_independence'],'basis_changed':False,'top_n':top_n}
+    _write(_queue_path(project['project_dir'],source,queue['id']),queue,True)
+    return queue
