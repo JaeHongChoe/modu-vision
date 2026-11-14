@@ -21,7 +21,7 @@ test('a valid plan is copied and the catalog exposes only executable, non-author
   const input = plan(), result = catalog.validateTaskPlan(input);
   assert.deepEqual(result, input); result.steps[0].args.train_percent = 80;
   assert.equal(input.steps[0].args.train_percent, 70);
-  assert.deepEqual(catalog.taskActionCatalog().map(row => row.id), ['create_project','import_dataset','save_split','configure_training','configure_input_recipe','generate_label_drafts','start_training','evaluate_model','save_flow','evaluate_flow','inspect_test','export_report','open_step']);
+  assert.deepEqual(catalog.taskActionCatalog().map(row => row.id), ['create_project','import_dataset','save_split','configure_training','configure_input_recipe','generate_label_drafts','start_training','analyze_label_quality','evaluate_model','save_flow','evaluate_flow','inspect_test','export_report','open_step']);
 });
 
 test('unknown, forbidden and provider-issued approval fields never enter a plan', () => {
@@ -55,3 +55,5 @@ test('plan bounds refuse empty, oversized and non-JSON structures', () => {
   assert.throws(() => catalog.validateTaskPlan({...plan(),goal:'x'.repeat(4097)}));
   assert.throws(() => catalog.validateTaskAction('start_training',Object.create({confirmed:true})));
 });
+
+test('label quality action accepts only saved evaluation identity and bounded top count',()=>{assert.deepEqual(catalog.validateTaskAction('analyze_label_quality',{evaluation_id:'evaluation_'+'a'.repeat(32),top_n:7}),{evaluation_id:'evaluation_'+'a'.repeat(32),top_n:7});for(const args of [{evaluation_id:'/source/image.png'},{evaluation_id:'evaluation_'+'a'.repeat(32),top_n:101},{evaluation_id:'evaluation_'+'a'.repeat(32),approve:true}])assert.throws(()=>catalog.validateTaskAction('analyze_label_quality',args));});

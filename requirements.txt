@@ -17,6 +17,10 @@ pi-heif==1.4.0
 opencv-python-headless>=4.10.0.84
 scikit-learn>=1.5.0
 
+# Embedded candidate sampler and bounded local diagnostics (no collector service).
+optuna==5.0.0
+opentelemetry-sdk==1.45.2
+
 # Deep Learning Framework (PyTorch)
 # For Windows CUDA: pip install torch torchvision --index-url https://download.pytorch.org/whl/cu121
 # For standard CPU/MPS: pip install torch torchvision

@@ -39,6 +39,7 @@ class StartRequest(BaseModel):
     seed:int=Field(default=0,strict=True,ge=0,le=2147483647)
     reuse_search_id:str|None=None
     mode:Literal['quick','search','fast_retrain']='search'
+    search_strategy:Literal['auto','deterministic','adaptive']='auto'
     budget:Budget=Field(default_factory=Budget)
     search_space:dict=Field(default_factory=dict)
     base_config:dict=Field(default_factory=dict)
@@ -58,12 +59,13 @@ class StartRequest(BaseModel):
 
 @router.get('/capabilities')
 def capabilities():
+    from backend.engine.search_strategy import capabilities as sampling_capabilities
     return {'tasks':{task:{'architectures':list(spec.architectures),'metric_key':spec.metric_key,'direction':spec.direction,
             'search_defaults':spec.search_defaults or {'architectures':list(spec.architectures),'learning_rates':[3e-4,1e-3],
                 'weight_decays':[1e-4,.01],'image_sizes':[256],'batch_sizes':[8],'augmentation_profiles':['none','industrial']},
             'prepared_input':task in ('patch_classification','rotation','enhancement','ocr','rotated_detection','defect_gan'),
             'architecture_key':spec.architecture_key or ('model_name' if task=='segmentation' else 'backbone')} for task,spec in _RUNNERS.items()},
-            'augmentation_profiles':['none','photometric','industrial'],'modes':['quick','search','fast_retrain']}
+            'search_sampling':sampling_capabilities(),'augmentation_profiles':['none','photometric','industrial'],'modes':['quick','search','fast_retrain']}
 
 
 @router.post('/start')
@@ -105,19 +107,21 @@ def start(req:StartRequest,request:Request):
         validate_trial_controls(req.task,req.preset,req.base_config)
         if req.base_config.get('resume_checkpoint'):
             raise ValueError('Use direct training exact resume; AutoDL candidates require separate new model outputs')
-        from backend.engine.automated_trials import _space
-        next(_space(req.task,req.search_space,req.base_config,req.mode))
+        from backend.engine.search_strategy import CandidateSearch
+        from backend.engine.automated_trials import validated_domain
+        sampling=CandidateSearch(validated_domain(req.task,req.search_space,req.base_config,req.mode), req.base_config,
+            requested=req.search_strategy,mode=req.mode,max_trials=req.budget.max_trials,seed=req.seed).identity
         if req.compute_profile_id:
             from backend.remote.profiles import get_profile_store
             profile=get_profile_store().get(req.compute_profile_id)
             if profile is None:raise ValueError('Selected compute profile is unavailable')
             from backend.engine.remote_automated_trials import validate_remote_search
-            validate_remote_search(profile,req.task,req.preset,req.device,req.base_config,req.search_space,req.budget.model_dump(),warm_start=bool(req.parent_job_id))
+            validate_remote_search(profile,req.task,req.preset,req.device,req.base_config,req.search_space,req.budget.model_dump(),warm_start=bool(req.parent_job_id),mode=req.mode)
     except (ValueError,OSError,RuntimeError) as exc:raise HTTPException(422,str(exc)) from exc
     owner={'project_id':project['id'],'account_id':account['id'] if account else None}
     identifier=uuid.uuid4().hex;models=Path(project['models_dir']);event=threading.Event();key=(str(models.resolve()),identifier)
     submission={'search_id':identifier,'status':'queued','task':req.task,'mode':req.mode,'created_at':time.time(),'owner_pid':os.getpid(),'owner_instance':_PROCESS_INSTANCE,'owner_kind':'api',
-                'dataset_path':str(dataset),'source_dataset_path':str(source),'training_provenance':binding,'trials':[],'winner':None,'budget':req.budget.model_dump(),'device':req.device,'compute_profile_id':req.compute_profile_id}
+                'dataset_path':str(dataset),'source_dataset_path':str(source),'training_provenance':binding,'trials':[],'winner':None,'budget':req.budget.model_dump(),'device':req.device,'compute_profile_id':req.compute_profile_id,'search_strategy':req.search_strategy,'search_sampling':sampling,'seed':req.seed}
     _write(models/'automated_training'/identifier/'submission.json',submission)
     with _LOCK:_EVENTS[key]=event
     def execute():
@@ -125,7 +129,7 @@ def start(req:StartRequest,request:Request):
             return run_automated_training(task=req.task,dataset_path=dataset,source_dataset_path=source,models_dir=models,preset=req.preset,device=req.device,mode=req.mode,
                 budget=req.budget.model_dump(),search_space=req.search_space,base_config={**req.base_config,'objective':req.objective,'latency_weight':req.latency_weight},
                 epochs_per_trial=req.epochs_per_trial,parent_job_id=req.parent_job_id,cancel_event=event,search_id=identifier,training_binding=binding,owner_instance=_PROCESS_INSTANCE,
-                compute_profile_id=req.compute_profile_id,remote_owner=owner,seed=req.seed,reuse_search_id=req.reuse_search_id)
+                compute_profile_id=req.compute_profile_id,remote_owner=owner,seed=req.seed,reuse_search_id=req.reuse_search_id,search_strategy=req.search_strategy)
         except (ValueError,OSError,RuntimeError,KeyError,TypeError) as exc:
             failed={**submission,'status':'failed','error':str(exc)};_write(models/'automated_training'/identifier/'search.json',failed)
             if not req.background:raise HTTPException(422,str(exc)) from exc

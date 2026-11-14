@@ -28,7 +28,7 @@ MAX_RECEIPT_BYTES = 16384
 MAX_RECORD_BYTES = 512 * 1024
 MAX_TASKS = 256
 ACTIONS = frozenset(('create_project', 'import_dataset', 'save_split', 'configure_training', 'configure_input_recipe',
-    'generate_label_drafts', 'start_training', 'evaluate_model', 'save_flow',
+    'generate_label_drafts', 'start_training', 'analyze_label_quality', 'evaluate_model', 'save_flow',
     'evaluate_flow', 'inspect_test', 'export_report', 'open_step'))
 # Only an action allowed to alter the selected project/source/settings can
 # advance the opaque local execution fence. The original approval stays fixed.
@@ -176,6 +176,10 @@ def _args(action, args):
             raise TaskError('Phrase drafts require a prompt and no trained job')
         if args.get('mode') == 'trained' and 'prompt' in args:
             raise TaskError('Trained drafts cannot carry a phrase prompt')
+    elif action == 'analyze_label_quality':
+        _object(args, ('evaluation_id',), ('top_n',))
+        if type(args['evaluation_id']) is not str or re.fullmatch(r'evaluation_[0-9a-f]{32}',args['evaluation_id']) is None:raise TaskError('Saved evaluation ID is required')
+        if 'top_n' in args:_number(args['top_n'],1,100,integer=True)
     elif action in {'evaluate_model', 'save_flow'}:
         _object(args, (), ('job_id',))
         if 'job_id' in args: _text(args['job_id'], 256)

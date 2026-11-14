@@ -328,9 +328,11 @@ export const EvaluationStudio: React.FC = () => {
       verdicts: testPredictions.map((prediction) => computeSampleVerdict(prediction, confidenceThreshold, overkillAnalysis, classSemantics?.roles)),
       threshold: confidenceThreshold,
       map50: metrics.mAP_50,
+      metricContract: metrics.detection_metric_contract,
+      apAvailable: metrics.detection_ap_available,
     })
     : null,
-  [task, testPredictions, matrix, confidenceThreshold, overkillAnalysis, classSemantics, metrics.mAP_50]);
+  [task, testPredictions, matrix, confidenceThreshold, overkillAnalysis, classSemantics, metrics.mAP_50, metrics.detection_metric_contract, metrics.detection_ap_available]);
   const hasDefectSamples = testPredictions.some((p) => isDefectLabel(p.ground_truth, classSemantics?.roles));
   const hasNormalSamples = testPredictions.some((p) => isNormalLabel(p.ground_truth, classSemantics?.roles));
   const heldoutAnomalyTest = Boolean(metrics.anomaly_mode && metrics.evaluated_split === 'test');

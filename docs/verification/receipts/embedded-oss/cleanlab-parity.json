@@ -1,0 +1,7 @@
+{
+  "upstream": "cleanlab 2.9.0 official wheel exact unmodified function ASTs",
+  "cases": 17,
+  "max_absolute_difference": 0.0,
+  "runtime_package_installed": false,
+  "source_sha256": "3a76b231bd942a9922ee1fa7f92b57540fcea41f07c99211b2bae6979f2e793c"
+}

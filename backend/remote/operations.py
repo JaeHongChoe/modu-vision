@@ -701,8 +701,12 @@ def run_remote_evaluation(
     transport: SSHTransport | None = None,
 ) -> dict[str, Any]:
     from backend.api.routes_evaluation import EVALUATION_CONTRACT_VERSION
+    evaluation_spec = {"evaluation_contract_version": EVALUATION_CONTRACT_VERSION}
+    if context.task == "detection":
+        from backend.engine.detection.metrics import DETECTION_AP_V2
+        evaluation_spec["detection_metric_contract"] = DETECTION_AP_V2
     artifact = run_remote_operation(
-        context, "evaluate", {"evaluation_contract_version": EVALUATION_CONTRACT_VERSION}, "eval_results.json",
+        context, "evaluate", evaluation_spec, "eval_results.json",
         transport=transport, force_new=force_recompute,
     )
     result = json.loads(artifact.read_text(encoding="utf-8"))
@@ -712,6 +716,12 @@ def run_remote_evaluation(
     if type(version) is not int or version != EVALUATION_CONTRACT_VERSION:
         raise ArtifactValidationError("Remote evaluation contract version is missing or unsupported; re-run the evaluation")
     metrics = result.get("metrics")
+    if context.task == "detection":
+        from backend.engine.detection.metrics import bound_detection_ap_contract
+        try:
+            bound_detection_ap_contract(evaluation_spec, metrics if isinstance(metrics, dict) else {})
+        except ValueError as exc:
+            raise ArtifactValidationError(str(exc)) from exc
     split = metrics.get("evaluated_split") if isinstance(metrics, dict) else None
     if not isinstance(split, str) or split not in ("test", "val"):
         raise ArtifactValidationError("Remote evaluation has no explicit held-out test/val split")

@@ -40,7 +40,7 @@ const STEP_STATUS: Record<StepStatus, string> = {
   completed: '완료', failed: '실패', uncertain: '결과 확인 필요',
 };
 const STAGE: Record<ActionId, number> = {
-  create_project: 1, import_dataset: 1, save_split: 1, configure_training: 3, generate_label_drafts: 2,
+  create_project: 1, import_dataset: 1, save_split: 1, configure_training: 3, generate_label_drafts: 2, analyze_label_quality: 2,
   start_training: 3, configure_input_recipe:3,evaluate_model: 4, save_flow: 5, evaluate_flow: 5, inspect_test: 6, export_report: 4, open_step: 1,
 };
 const text = (value: unknown, limit = 200): string => typeof value === 'string' ? value.slice(0, limit) : '';

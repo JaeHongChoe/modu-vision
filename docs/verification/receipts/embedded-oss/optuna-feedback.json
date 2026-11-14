@@ -1,0 +1,537 @@
+{
+  "evidence_scope": "actual_Optuna_5.0.0_synthetic_objective_only_no_model_training_GPU_provider_or_network",
+  "library_version": "5.0.0",
+  "same_seed": 41,
+  "startup_proposals_identical": true,
+  "feedback_changes_later_proposals": true,
+  "positive_objective": {
+    "identity": {
+      "contract_version": 1,
+      "requested_strategy": "adaptive",
+      "resolved_strategy": "adaptive",
+      "domain_sha256": "aef6f715bec37dfef3005c4d896b299df1a14677d6fd791a3d0cf2767d3ad149",
+      "optuna_version": "5.0.0",
+      "sampler": "TPESampler",
+      "sampler_options": {
+        "n_startup_trials": 4,
+        "n_ei_candidates": 24,
+        "multivariate": false,
+        "constant_liar": false
+      },
+      "seed": 41,
+      "sampler_execution": "coordinator",
+      "continuation": "new_study_with_verified_completed_reuse",
+      "pruning": {
+        "available": false,
+        "reason": "No validated per-epoch heldout progress contract across model families"
+      }
+    },
+    "proposals": [
+      {
+        "config": {
+          "learning_rate": 8,
+          "width": 2
+        },
+        "objective": 10,
+        "proposal_ordinal": 0,
+        "proposal_source": "sampler",
+        "sampler_trial_number": 0
+      },
+      {
+        "config": {
+          "learning_rate": 2,
+          "width": 10
+        },
+        "objective": 12,
+        "proposal_ordinal": 1,
+        "proposal_source": "sampler",
+        "sampler_trial_number": 1
+      },
+      {
+        "config": {
+          "learning_rate": 14,
+          "width": 9
+        },
+        "objective": 23,
+        "proposal_ordinal": 2,
+        "proposal_source": "sampler",
+        "sampler_trial_number": 2
+      },
+      {
+        "config": {
+          "learning_rate": 0,
+          "width": 8
+        },
+        "objective": 8,
+        "proposal_ordinal": 3,
+        "proposal_source": "sampler",
+        "sampler_trial_number": 3
+      },
+      {
+        "config": {
+          "learning_rate": 6,
+          "width": 8
+        },
+        "objective": 14,
+        "proposal_ordinal": 4,
+        "proposal_source": "sampler",
+        "sampler_trial_number": 13
+      },
+      {
+        "config": {
+          "learning_rate": 0,
+          "width": 3
+        },
+        "objective": 3,
+        "proposal_ordinal": 5,
+        "proposal_source": "sampler",
+        "sampler_trial_number": 14
+      },
+      {
+        "config": {
+          "learning_rate": 0,
+          "width": 6
+        },
+        "objective": 6,
+        "proposal_ordinal": 6,
+        "proposal_source": "sampler",
+        "sampler_trial_number": 29
+      },
+      {
+        "config": {
+          "learning_rate": 13,
+          "width": 3
+        },
+        "objective": 16,
+        "proposal_ordinal": 7,
+        "proposal_source": "sampler",
+        "sampler_trial_number": 30
+      },
+      {
+        "config": {
+          "learning_rate": 9,
+          "width": 0
+        },
+        "objective": 9,
+        "proposal_ordinal": 8,
+        "proposal_source": "sampler",
+        "sampler_trial_number": 31
+      },
+      {
+        "config": {
+          "learning_rate": 1,
+          "width": 12
+        },
+        "objective": 13,
+        "proposal_ordinal": 9,
+        "proposal_source": "sampler",
+        "sampler_trial_number": 32
+      },
+      {
+        "config": {
+          "learning_rate": 7,
+          "width": 15
+        },
+        "objective": 22,
+        "proposal_ordinal": 10,
+        "proposal_source": "sampler",
+        "sampler_trial_number": 33
+      },
+      {
+        "config": {
+          "learning_rate": 0,
+          "width": 0
+        },
+        "objective": 0,
+        "proposal_ordinal": 11,
+        "proposal_source": "enumeration",
+        "sampler_trial_number": 50
+      },
+      {
+        "config": {
+          "learning_rate": 3,
+          "width": 0
+        },
+        "objective": 3,
+        "proposal_ordinal": 12,
+        "proposal_source": "sampler",
+        "sampler_trial_number": 51
+      },
+      {
+        "config": {
+          "learning_rate": 4,
+          "width": 3
+        },
+        "objective": 7,
+        "proposal_ordinal": 13,
+        "proposal_source": "sampler",
+        "sampler_trial_number": 52
+      },
+      {
+        "config": {
+          "learning_rate": 0,
+          "width": 13
+        },
+        "objective": 13,
+        "proposal_ordinal": 14,
+        "proposal_source": "sampler",
+        "sampler_trial_number": 53
+      },
+      {
+        "config": {
+          "learning_rate": 5,
+          "width": 4
+        },
+        "objective": 9,
+        "proposal_ordinal": 15,
+        "proposal_source": "sampler",
+        "sampler_trial_number": 54
+      },
+      {
+        "config": {
+          "learning_rate": 11,
+          "width": 11
+        },
+        "objective": 22,
+        "proposal_ordinal": 16,
+        "proposal_source": "sampler",
+        "sampler_trial_number": 55
+      },
+      {
+        "config": {
+          "learning_rate": 15,
+          "width": 14
+        },
+        "objective": 29,
+        "proposal_ordinal": 17,
+        "proposal_source": "sampler",
+        "sampler_trial_number": 56
+      },
+      {
+        "config": {
+          "learning_rate": 10,
+          "width": 1
+        },
+        "objective": 11,
+        "proposal_ordinal": 18,
+        "proposal_source": "sampler",
+        "sampler_trial_number": 57
+      },
+      {
+        "config": {
+          "learning_rate": 12,
+          "width": 5
+        },
+        "objective": 17,
+        "proposal_ordinal": 19,
+        "proposal_source": "sampler",
+        "sampler_trial_number": 58
+      },
+      {
+        "config": {
+          "learning_rate": 0,
+          "width": 7
+        },
+        "objective": 7,
+        "proposal_ordinal": 20,
+        "proposal_source": "sampler",
+        "sampler_trial_number": 59
+      },
+      {
+        "config": {
+          "learning_rate": 1,
+          "width": 1
+        },
+        "objective": 2,
+        "proposal_ordinal": 21,
+        "proposal_source": "enumeration",
+        "sampler_trial_number": 76
+      },
+      {
+        "config": {
+          "learning_rate": 0,
+          "width": 1
+        },
+        "objective": 1,
+        "proposal_ordinal": 22,
+        "proposal_source": "sampler",
+        "sampler_trial_number": 77
+      },
+      {
+        "config": {
+          "learning_rate": 10,
+          "width": 0
+        },
+        "objective": 10,
+        "proposal_ordinal": 23,
+        "proposal_source": "sampler",
+        "sampler_trial_number": 89
+      }
+    ]
+  },
+  "negative_objective": {
+    "identity": {
+      "contract_version": 1,
+      "requested_strategy": "adaptive",
+      "resolved_strategy": "adaptive",
+      "domain_sha256": "aef6f715bec37dfef3005c4d896b299df1a14677d6fd791a3d0cf2767d3ad149",
+      "optuna_version": "5.0.0",
+      "sampler": "TPESampler",
+      "sampler_options": {
+        "n_startup_trials": 4,
+        "n_ei_candidates": 24,
+        "multivariate": false,
+        "constant_liar": false
+      },
+      "seed": 41,
+      "sampler_execution": "coordinator",
+      "continuation": "new_study_with_verified_completed_reuse",
+      "pruning": {
+        "available": false,
+        "reason": "No validated per-epoch heldout progress contract across model families"
+      }
+    },
+    "proposals": [
+      {
+        "config": {
+          "learning_rate": 8,
+          "width": 2
+        },
+        "objective": -10,
+        "proposal_ordinal": 0,
+        "proposal_source": "sampler",
+        "sampler_trial_number": 0
+      },
+      {
+        "config": {
+          "learning_rate": 2,
+          "width": 10
+        },
+        "objective": -12,
+        "proposal_ordinal": 1,
+        "proposal_source": "sampler",
+        "sampler_trial_number": 1
+      },
+      {
+        "config": {
+          "learning_rate": 14,
+          "width": 9
+        },
+        "objective": -23,
+        "proposal_ordinal": 2,
+        "proposal_source": "sampler",
+        "sampler_trial_number": 2
+      },
+      {
+        "config": {
+          "learning_rate": 0,
+          "width": 8
+        },
+        "objective": -8,
+        "proposal_ordinal": 3,
+        "proposal_source": "sampler",
+        "sampler_trial_number": 3
+      },
+      {
+        "config": {
+          "learning_rate": 0,
+          "width": 0
+        },
+        "objective": 0,
+        "proposal_ordinal": 4,
+        "proposal_source": "enumeration",
+        "sampler_trial_number": 20
+      },
+      {
+        "config": {
+          "learning_rate": 14,
+          "width": 12
+        },
+        "objective": -26,
+        "proposal_ordinal": 5,
+        "proposal_source": "sampler",
+        "sampler_trial_number": 25
+      },
+      {
+        "config": {
+          "learning_rate": 9,
+          "width": 12
+        },
+        "objective": -21,
+        "proposal_ordinal": 6,
+        "proposal_source": "sampler",
+        "sampler_trial_number": 27
+      },
+      {
+        "config": {
+          "learning_rate": 10,
+          "width": 11
+        },
+        "objective": -21,
+        "proposal_ordinal": 7,
+        "proposal_source": "sampler",
+        "sampler_trial_number": 28
+      },
+      {
+        "config": {
+          "learning_rate": 5,
+          "width": 4
+        },
+        "objective": -9,
+        "proposal_ordinal": 8,
+        "proposal_source": "sampler",
+        "sampler_trial_number": 29
+      },
+      {
+        "config": {
+          "learning_rate": 11,
+          "width": 13
+        },
+        "objective": -24,
+        "proposal_ordinal": 9,
+        "proposal_source": "sampler",
+        "sampler_trial_number": 30
+      },
+      {
+        "config": {
+          "learning_rate": 14,
+          "width": 15
+        },
+        "objective": -29,
+        "proposal_ordinal": 10,
+        "proposal_source": "sampler",
+        "sampler_trial_number": 31
+      },
+      {
+        "config": {
+          "learning_rate": 1,
+          "width": 1
+        },
+        "objective": -2,
+        "proposal_ordinal": 11,
+        "proposal_source": "enumeration",
+        "sampler_trial_number": 48
+      },
+      {
+        "config": {
+          "learning_rate": 2,
+          "width": 2
+        },
+        "objective": -4,
+        "proposal_ordinal": 12,
+        "proposal_source": "enumeration",
+        "sampler_trial_number": 65
+      },
+      {
+        "config": {
+          "learning_rate": 6,
+          "width": 15
+        },
+        "objective": -21,
+        "proposal_ordinal": 13,
+        "proposal_source": "sampler",
+        "sampler_trial_number": 70
+      },
+      {
+        "config": {
+          "learning_rate": 3,
+          "width": 3
+        },
+        "objective": -6,
+        "proposal_ordinal": 14,
+        "proposal_source": "enumeration",
+        "sampler_trial_number": 87
+      },
+      {
+        "config": {
+          "learning_rate": 14,
+          "width": 7
+        },
+        "objective": -21,
+        "proposal_ordinal": 15,
+        "proposal_source": "sampler",
+        "sampler_trial_number": 88
+      },
+      {
+        "config": {
+          "learning_rate": 4,
+          "width": 4
+        },
+        "objective": -8,
+        "proposal_ordinal": 16,
+        "proposal_source": "enumeration",
+        "sampler_trial_number": 105
+      },
+      {
+        "config": {
+          "learning_rate": 15,
+          "width": 12
+        },
+        "objective": -27,
+        "proposal_ordinal": 17,
+        "proposal_source": "sampler",
+        "sampler_trial_number": 107
+      },
+      {
+        "config": {
+          "learning_rate": 15,
+          "width": 15
+        },
+        "objective": -30,
+        "proposal_ordinal": 18,
+        "proposal_source": "sampler",
+        "sampler_trial_number": 108
+      },
+      {
+        "config": {
+          "learning_rate": 12,
+          "width": 15
+        },
+        "objective": -27,
+        "proposal_ordinal": 19,
+        "proposal_source": "sampler",
+        "sampler_trial_number": 114
+      },
+      {
+        "config": {
+          "learning_rate": 5,
+          "width": 5
+        },
+        "objective": -10,
+        "proposal_ordinal": 20,
+        "proposal_source": "enumeration",
+        "sampler_trial_number": 131
+      },
+      {
+        "config": {
+          "learning_rate": 15,
+          "width": 14
+        },
+        "objective": -29,
+        "proposal_ordinal": 21,
+        "proposal_source": "sampler",
+        "sampler_trial_number": 147
+      },
+      {
+        "config": {
+          "learning_rate": 6,
+          "width": 6
+        },
+        "objective": -12,
+        "proposal_ordinal": 22,
+        "proposal_source": "enumeration",
+        "sampler_trial_number": 164
+      },
+      {
+        "config": {
+          "learning_rate": 7,
+          "width": 14
+        },
+        "objective": -21,
+        "proposal_ordinal": 23,
+        "proposal_source": "sampler",
+        "sampler_trial_number": 171
+      }
+    ]
+  }
+}

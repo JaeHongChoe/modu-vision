@@ -735,7 +735,22 @@ def _evaluate_model(spec: dict[str, Any], checkpoint: Path, metadata: dict[str, 
         "anomaly": routes_evaluation._evaluate_anomaly,
     }[task]
     effective_data = routes_evaluation._resolve_dataset_dir(data_path, task)
-    result = evaluator(checkpoint, metadata, effective_data, get_device(spec.get("device")))
+    if task == "detection":
+        from backend.engine.detection.metrics import DETECTION_AP_LEGACY, bound_detection_ap_contract
+        # Unmarked historical specs retain their original definition. New
+        # callers freeze v2 in the operation identity before this worker runs.
+        contract = spec.get("detection_metric_contract", DETECTION_AP_LEGACY)
+        try:
+            bound_detection_ap_contract(spec, {"detection_metric_contract": contract})
+        except ValueError as exc:
+            raise SnapshotValidationError(str(exc)) from exc
+        result = evaluator(checkpoint, metadata, effective_data, get_device(spec.get("device")), metric_contract=contract)
+        try:
+            bound_detection_ap_contract(spec, result.get("metrics", {}))
+        except ValueError as exc:
+            raise SnapshotValidationError(str(exc)) from exc
+    else:
+        result = evaluator(checkpoint, metadata, effective_data, get_device(spec.get("device")))
     for prediction in result.get("test_predictions", []):
         prediction["file_path"] = _snapshot_file_reference(prediction["file_path"], data_path)
         prediction.pop("thumbnail_url", None)

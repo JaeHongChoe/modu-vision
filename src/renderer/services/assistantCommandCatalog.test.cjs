@@ -16,7 +16,7 @@ test('detail loads schemas on demand and bridges supported actions into propose_
 });
 test('safe observation uses the exact operation and returned method, path, transport, effect and mode',async()=>{
  const f=fixture(url=>url.startsWith('/api/automation/')?catalog([operation()]):{status:'ok',token:'secret',account:{name:'Ada'},path:'/private/account.json',address:'https://private.invalid',nested:{password:'hidden'}});
- const value=await f.adapter.read({operation:'GET /health'});assert.equal(f.calls.length,2);assert.deepEqual(f.calls[1],['/health',{method:'GET'}]);assert.equal(value.data.status,'ok');assert.equal(value.truncated,false);for(const secret of ['secret','Ada','/private','private.invalid','hidden'])assert.ok(!JSON.stringify(value).includes(secret),secret);
+ const value=await f.adapter.read({operation:'GET /health'});assert.equal(f.calls.length,2);assert.equal(f.calls[1][0],'/health');assert.equal(f.calls[1][1].method,'GET');assert.match(f.calls[1][1].traceParent.traceparent,/^00-[a-f0-9]{32}-[a-f0-9]{16}-01$/);assert.equal(value.data.status,'ok');assert.equal(value.truncated,false);for(const secret of ['secret','Ada','/private','private.invalid','hidden'])assert.ok(!JSON.stringify(value).includes(secret),secret);
 });
 test('computing GETs, account reads, arbitrary headers and lookalikes never dispatch an operation',async()=>{
  for(const operation of ['GET /api/evaluation/auto-threshold','GET /api/accounts/me','GET /health?probe=1','GET /health/','POST /health','GET https://private.invalid/health']){

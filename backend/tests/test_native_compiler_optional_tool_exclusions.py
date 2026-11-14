@@ -36,9 +36,17 @@ def test_optional_tool_exclusions_preserve_the_whole_backend_command(
     # Collect the required codec once at its exact builder-command position.
     assert command.count('--collect-all=pi_heif') == 1
     assert command.index('--collect-all=pi_heif') == command.index('--collect-all=huggingface_hub') + 1
+    # Embedded libraries are additive; preserve every original argument below.
+    embedded = ('--collect-submodules=optuna.samplers',
+                '--copy-metadata=optuna', '--copy-metadata=opentelemetry-sdk',
+                '--copy-metadata=opentelemetry-api', '--copy-metadata=opentelemetry-semantic-conventions',
+                '--hidden-import=optuna.storages._in_memory',
+                '--hidden-import=opentelemetry.sdk.trace.export',
+                '--hidden-import=opentelemetry.trace.propagation.tracecontext')
+    for argument in embedded: assert command.count(argument) == 1
     remaining = [arg for arg in command if arg not in (
         '--exclude-module=panel', '--exclude-module=sphinx',
-        '--collect-all=pi_heif')]
+        '--collect-all=pi_heif', *embedded)]
     original = [
         sys.executable, '-m', 'PyInstaller', '--name', 'vision_ai_backend',
         '--onedir', '--clean', '--noconfirm', f'--distpath={output}',

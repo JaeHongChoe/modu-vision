@@ -37,6 +37,8 @@ export const ACTION_CATALOG: readonly TaskActionDefinition[] = [
   {id:'generate_label_drafts', title:'라벨 초안 만들기', description:'모델 또는 문구로 초안을 준비합니다. 채택과 정답 확정은 직접 합니다.', changesBinding:false,
     inputSchema:object({mode:enumeration(['trained','phrase']),job_id:job,threshold:{type:'number',minimum:0,maximum:1},prompt:string(2000)})},
   {id:'start_training', title:'학습 시작', description:'현재 화면의 검증된 설정으로 학습을 시작하고 작업 번호를 확인합니다.', changesBinding:true, inputSchema:object()},
+  {id:'analyze_label_quality',title:'라벨 재확인 순위',description:'저장된 공통 시험 분류 평가의 전체 확률로 참고 순위와 검토 큐를 저장합니다. 라벨 수정·승인은 하지 않습니다.',changesBinding:false,
+    inputSchema:object({evaluation_id:string(43,{pattern:'^evaluation_[0-9a-f]{32}$'}),top_n:{type:'integer',minimum:1,maximum:100}},['evaluation_id'])},
   {id:'evaluate_model', title:'모델 평가', description:'현재 원본과 정답에 묶인 모델 평가를 실행하고 결과를 확인합니다.', changesBinding:false, inputSchema:object({job_id:job})},
   {id:'save_flow', title:'검사 흐름 저장', description:'현재 모델을 쓰는 단일 모델 검사 흐름을 저장합니다.', changesBinding:false, inputSchema:object({job_id:job})},
   {id:'evaluate_flow', title:'검사 흐름 평가', description:'저장된 전체 검사 흐름을 평가합니다.', changesBinding:false, inputSchema:object()},

@@ -40,7 +40,7 @@ for _task in ('classification','patch_classification','segmentation'):
     CONFIG_FIELDS[_task].update({'train_mode','partial_blocks','use_amp','seed'})
 CONFIG_FIELDS['ocr'].add('recipe')
 for _task in TASKS:
-    CONFIG_FIELDS[_task].add('input_recipe')
+    CONFIG_FIELDS[_task].update({'input_recipe','seed'})
 _EVENTS={}
 _LOCK=threading.RLock()
 logger=logging.getLogger(__name__)
@@ -141,10 +141,11 @@ def workspace_scope(project):
     finally:reset_request_split_root(s);reset_request_annotation_root(a);reset_request_project_root(p)
 
 def capabilities():
+    from backend.engine.search_strategy import capabilities as sampling_capabilities
     from backend.engine.automated_trials import _RUNNERS
     from backend.engine.model_catalog import _device_kinds
     devices=list(_device_kinds())  # this computer's devices; MPS never off macOS (S1-05)
-    return {'schema_version':1,'tasks':{task:{'architectures':list(_RUNNERS[task].architectures),
+    return {'schema_version':1,'search_sampling':sampling_capabilities(),'tasks':{task:{'architectures':list(_RUNNERS[task].architectures),
         'search_dimensions':list(_RUNNERS[task].search_defaults or {'architectures':0,'learning_rates':0,'weight_decays':0,'image_sizes':0,'batch_sizes':0,'augmentation_profiles':0}),
         'metric_key':_RUNNERS[task].metric_key,'direction':_RUNNERS[task].direction,
         'config_fields':sorted(CONFIG_FIELDS[task]|{'objective','latency_weight'}),
@@ -321,8 +322,8 @@ def _prepared(output,identifier=None):
         validate_training_binding(record['training_binding'])
     return record
 
-def create_run(*,output_dir,prepared_id=None,mode='quick',preset='fast',device='cpu',config=None,search_space=None,budget=None,epochs_per_trial=1,parent_job_id=None,idempotency_key=None):
-    from backend.engine.automated_trials import _space,validated_budget
+def create_run(*,output_dir,prepared_id=None,mode='quick',preset='fast',device='cpu',config=None,search_space=None,budget=None,epochs_per_trial=1,parent_job_id=None,idempotency_key=None,search_strategy='auto',seed=None):
+    from backend.engine.automated_trials import validated_domain,validated_budget
     from backend.engine.runtime_device import resolve_runtime_device
     output=_root(output_dir);prepared=_prepared(output,prepared_id)
     if mode not in {'quick','search','fast_retrain'}:raise ValueError('Unsupported engine training mode')
@@ -336,16 +337,21 @@ def create_run(*,output_dir,prepared_id=None,mode='quick',preset='fast',device='
     from backend.engine.automated_trials import validate_trial_controls
     validate_trial_controls(prepared['task'],preset,controls)
     if prepared['task']=='anomaly' and controls.get('anomaly_method','dino_synthetic')!='dino_synthetic':raise ValueError('Measured anomaly training uses the genuine pretrained DINO synthetic detector')
-    next(_space(prepared['task'],search_space,controls,mode))
+    domain=validated_domain(prepared['task'],search_space,controls,mode)
     budget=validated_budget(budget or {'max_trials':4 if mode=='search' else 1,'max_total_epochs':epochs_per_trial*(4 if mode=='search' else 1),'max_seconds':600},epochs_per_trial)
+    from backend.engine.search_strategy import CandidateSearch
+    seed = controls.get('seed', 0) if seed is None else seed
+    if type(seed) is not int or not 0 <= seed <= 2147483647:raise ValueError('Search seed must be a bounded nonnegative integer')
+    sampling = CandidateSearch(domain,controls,
+        requested=search_strategy,mode=mode,max_trials=budget['max_trials'],seed=seed).identity
     identifier=uuid.uuid4().hex;resolved=str(resolve_runtime_device(device))
     spec={'output_dir':str(output),'prepared_id':prepared['prepared_id'],'mode':mode,'preset':preset,'device':device,'config':controls,
-        'search_space':search_space,'budget':budget,'epochs_per_trial':epochs_per_trial,'parent_job_id':parent_job_id}
+        'search_space':search_space,'budget':budget,'epochs_per_trial':epochs_per_trial,'parent_job_id':parent_job_id,'search_strategy':search_strategy,'seed':seed,'search_sampling':sampling}
     reserved=_reserve_run(output,identifier,spec,idempotency_key)
     if reserved!=identifier:return {**read_run(output,reserved),'idempotent_replay':True}
     record={'schema_version':1,'run_id':identifier,'status':'queued','task':prepared['task'],'prepared_id':prepared['prepared_id'],
         'source_dataset_path':prepared['source_dataset_path'],'dataset_path':prepared['dataset_path'],'output_dir':str(output),
-        'mode':mode,'preset':preset,'device':resolved,'config':controls,'search_space':search_space,
+        'mode':mode,'preset':preset,'device':resolved,'config':controls,'search_space':search_space,'search_strategy':search_strategy,'seed':seed,'search_sampling':sampling,
         'budget':budget,
         'epochs_per_trial':epochs_per_trial,'parent_job_id':parent_job_id,'created_at':time.time(),'owner_pid':os.getpid(),
         'owner_created_at':psutil.Process().create_time(),'winner':None,'artifacts':{}}
@@ -413,7 +419,7 @@ def execute_run(output,identifier,on_progress=None):
         token=_ledger_attempt(identifier)
         prepared=_prepared(output,record['prepared_id'])
         def progress(search):
-            record.update(search=search)
+            record.update(search=search,search_sampling=search['search_sampling'])
             if event.is_set() or (path.parent/'cancel_requested.json').is_file():event.set();record['status']='stopping'
             with _LOCK,_file_lock(path.parent/'.journal.lock'):_write(path,record)
             if on_progress:on_progress({'event':'progress','run_id':identifier,'status':record['status'],'trials':search['trials'],'epochs_consumed':search.get('epochs_consumed',0)})
@@ -421,15 +427,17 @@ def execute_run(output,identifier,on_progress=None):
             search=run_automated_training(task=record['task'],dataset_path=prepared['dataset_path'],source_dataset_path=prepared['source_dataset_path'],
                 models_dir=output/'models',mode=record['mode'],preset=record['preset'],device=record['device'],base_config=record['config'],
                 search_space=record['search_space'],budget=record['budget'],epochs_per_trial=record['epochs_per_trial'],parent_job_id=record['parent_job_id'],
-                training_binding=prepared['training_binding'],search_id=identifier,cancel_event=event,on_progress=progress,seed=record['config'].get('seed',0))
-        record.update(search=search,status=search['status'],winner=search['winner'],finished_at=time.time())
+                training_binding=prepared['training_binding'],search_id=identifier,cancel_event=event,on_progress=progress,seed=record.get('seed',record['config'].get('seed',0)),search_strategy=record.get('search_strategy','auto'))
+        record.update(search=search,search_sampling=search['search_sampling'],status=search['status'],winner=search['winner'],finished_at=time.time())
         with _LOCK,_file_lock(path.parent/'.journal.lock'):
             if event.is_set() or (path.parent/'cancel_requested.json').is_file():record.update(status='cancelled',winner=None)
             if record['status']=='completed':
                 delivery=output/'artifacts'/identifier;delivery.mkdir(parents=True,exist_ok=True)
                 checkpoint=Path(record['winner']['checkpoint_path']);shutil.copyfile(checkpoint,delivery/'model.pt');shutil.copyfile(checkpoint.with_name('model_meta.json'),delivery/'model_meta.json')
-                recipe={key:record[key] for key in ('task','output_dir','prepared_id','source_dataset_path','mode','preset','device','config','search_space','budget','epochs_per_trial','parent_job_id')}
+                recipe={key:record[key] for key in ('task','output_dir','prepared_id','source_dataset_path','mode','preset','device','config','search_space','budget','epochs_per_trial','parent_job_id','search_strategy','seed')}
                 recipe['config']=dict(record['winner']['config']);recipe['config'].pop('epochs',None)
+                recipe['search_sampling']=dict(search['search_sampling'])
+                recipe['winning_proposal']={key:record['winner'].get(key) for key in ('proposal_ordinal','proposal_source','sampler_trial_number')}
                 _write(delivery/'configuration.json',recipe)
                 record['artifacts']={name:_artifact(delivery/file) for name,file in [('model','model.pt'),('metadata','model_meta.json'),('configuration','configuration.json')]}
                 _write(delivery/'artifacts.json',record['artifacts'])
@@ -460,7 +468,7 @@ def _model(output,identifier):
 
 def configuration_recipe(document):
     if not isinstance(document,dict):raise ValueError('Reusable configuration must be a JSON object')
-    accepted={'output_dir','prepared_id','mode','device','preset','epochs_per_trial','parent_job_id','config','search_space','budget'}
+    accepted={'output_dir','prepared_id','mode','device','preset','epochs_per_trial','parent_job_id','config','search_space','budget','search_strategy','seed'}
     return {key:value for key,value in document.items() if key in accepted}
 
 def _publish(output,record,name,value):

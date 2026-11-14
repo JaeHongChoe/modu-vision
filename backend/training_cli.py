@@ -20,6 +20,8 @@ def parser():
     prepare.add_argument('--labels',help='Samples, COCO or LabelMe JSON file with explicit partitions');prepare.add_argument('--prepare-json',default='{}')
     train=commands.add_parser('train',help='Execute measured quick training, budgeted AutoDL or parent retraining')
     train.add_argument('--output');train.add_argument('--prepared-id');train.add_argument('--mode',choices=('quick','search','fast_retrain'))
+    train.add_argument('--search-strategy',choices=('auto','deterministic','adaptive'),help='Candidate sampling in the existing training coordinator')
+    train.add_argument('--seed',type=int,help='Reproducible candidate sampling seed')
     train.add_argument('--device',help='cpu, mps, cuda or cuda:N; unavailable device is an error');train.add_argument('--preset',choices=('fast','precision'))
     train.add_argument('--epochs',type=int);train.add_argument('--parent');train.add_argument('--config-json',help='Applied model/training controls as JSON')
     train.add_argument('--config-path',help='Reuse a delivered configuration.json and optionally override CLI fields')
@@ -59,7 +61,7 @@ def main(argv=None):
             # Delivered recipes include descriptive task/source fields; preparation
             # remains a separate explicit operation when inputs or truth change.
             recipe=engine.configuration_recipe(recipe)
-            mapping={'output':'output_dir','prepared_id':'prepared_id','mode':'mode','device':'device','preset':'preset','epochs':'epochs_per_trial','parent':'parent_job_id'}
+            mapping={'output':'output_dir','prepared_id':'prepared_id','mode':'mode','device':'device','preset':'preset','epochs':'epochs_per_trial','parent':'parent_job_id','search_strategy':'search_strategy','seed':'seed'}
             for flag,key in mapping.items():
                 if (value:=getattr(options,flag)) is not None:recipe[key]=value
             if options.config_json:recipe['config']=json.loads(options.config_json)

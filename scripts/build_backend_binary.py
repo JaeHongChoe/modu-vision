@@ -65,6 +65,9 @@ DEPENDENCIES = (
     ('pydantic', 'pydantic', True), ('python-multipart', 'python_multipart', True),
     ('httpx', 'httpx', True), ('psutil', 'psutil', True), ('numpy', 'numpy', True),
     ('cryptography','cryptography',True),
+    ('optuna', 'optuna', True),
+    ('opentelemetry-sdk', 'opentelemetry.sdk.trace', True),
+    ('opentelemetry-api', 'opentelemetry.trace', True),
     ('Pillow', 'PIL', True), ('pi-heif', 'pi_heif', True), ('opencv-python-headless', 'cv2', True),
     ('scikit-learn', 'sklearn', True), ('torch', 'torch', True),
     ('torchvision', 'torchvision', True), ('timm', 'timm', True),
@@ -309,6 +312,15 @@ def pyinstaller_command(root: Path, output: Path, target: str, *, native_path_gu
                f'--paths={root}', f'--paths={root / "backend"}',
                '--collect-all=timm', '--collect-all=ultralytics', '--collect-all=onnxruntime',
                '--collect-all=safetensors', '--collect-all=huggingface_hub', '--collect-all=pi_heif']
+    # Optuna's dynamically selected samplers are internal libraries. Do not
+    # collect optional dashboard/cloud/integration plugins from the build host.
+    command.append('--collect-submodules=optuna.samplers')
+    for distribution in ('optuna', 'opentelemetry-sdk', 'opentelemetry-api',
+                         'opentelemetry-semantic-conventions'):
+        command.append('--copy-metadata=' + distribution)
+    for module in ('optuna.storages._in_memory', 'opentelemetry.sdk.trace.export',
+                   'opentelemetry.trace.propagation.tracecontext'):
+        command.append('--hidden-import=' + module)
     # Global scientific environments may contain notebook/GUI/browser tooling.
     # They are not backend dependencies and can drag multi-GB SDKs into hooks.
     for module in ('IPython','notebook','jupyterlab','nbconvert','PyQt5','PyQt6','PySide2','PySide6',
@@ -386,6 +398,9 @@ def export_resource_files(root: Path) -> list[tuple[Path, str]]:
     guard_source = backend / 'engine' / '_runtime_path_guard.c'
     if guard_source.exists() or guard_source.is_symlink():
         resources.append((guard_source, 'backend/engine'))
+    if (backend / 'vendor' / 'cleanlab' / '__init__.py').exists():
+        for name in ('LICENSE', 'NOTICE', 'provenance.json'):
+            resources.append((root / 'third_party' / 'cleanlab' / name, 'third_party/cleanlab'))
     for source, _ in resources:
         if not source.is_file() or source.is_symlink() or any(parent.is_symlink() for parent in source.parents if parent != root and root in parent.parents):
             raise ValueError(f"Missing or unsafe export resource: {source.relative_to(root)}")

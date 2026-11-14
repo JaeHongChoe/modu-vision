@@ -108,6 +108,7 @@ from backend.api.routes_mask_exchange import router as mask_exchange_router
 from backend.api.routes_class_rename import router as class_rename_router
 from backend.api.routes_artifacts import router as artifacts_router
 from backend.api.routes_dicom import router as dicom_router
+from backend.api.routes_local_trace import router as local_trace_router
 from backend.api.routes_report import router as report_router
 from backend.api.routes_training import router as training_router, training_job_manager
 from backend.api.websocket_telemetry import broadcaster, router as telemetry_router
@@ -181,9 +182,16 @@ class ProjectContextMiddleware:
         # as `via: assistant` beside the person's own actor (attribution only, the role check above is unchanged).
         from backend.engine import assistant_run
         run_token = assistant_run.bind(assistant_run.run_id_from_headers(Headers(scope=scope)))
+        from backend.engine.local_trace import begin_request_trace
+        trace_observation = begin_request_trace(scope)
+        trace_status = None
+        trace_failed = False
+        trace_cancelled = False
         held_start = None
         selected_body = bytearray()
         async def emit_start(message):
+            nonlocal trace_status
+            trace_status = message.get('status')
             context = state.get('project_context')
             if context:
                 import json
@@ -215,7 +223,13 @@ class ProjectContextMiddleware:
             await send(message)
         try:
             await self.app(scope, receive, contextual_send)
+        except BaseException as cause:
+            trace_failed = True
+            trace_cancelled = isinstance(cause, asyncio.CancelledError)
+            raise
         finally:
+            if trace_observation is not None:
+                trace_observation.end('cancelled' if trace_cancelled else 'error' if trace_failed or trace_status is None or trace_status >= 400 else 'ok', trace_status)
             assistant_run.reset(run_token)
             current_project_context.reset(token)
 
@@ -572,7 +586,7 @@ def _admitted_create_app(project_dir: Optional[str] = None, shared_auth_dir: Opt
         "allow_origins": ["http://127.0.0.1:5173", "http://localhost:5173", "null"],
         "allow_credentials": False,
         "allow_methods": ["*"],
-        "allow_headers": ["Content-Type", "X-Vision-Token", "Authorization", "X-Vision-Project", "X-Vision-Context"],
+        "allow_headers": ["Content-Type", "X-Vision-Token", "Authorization", "X-Vision-Project", "X-Vision-Context", "traceparent", "X-Vision-Trace-Scope"],
         "expose_headers": ["X-Vision-Context"],
     }
     configured_origins = os.environ.get("MODU_BROWSER_ORIGINS", "")
@@ -746,6 +760,7 @@ def _admitted_create_app(project_dir: Optional[str] = None, shared_auth_dir: Opt
     app.include_router(inspections_router)
     app.include_router(export_router)
     app.include_router(report_router)
+    app.include_router(local_trace_router)
     app.include_router(telemetry_router)
     app.include_router(automation_router)
 

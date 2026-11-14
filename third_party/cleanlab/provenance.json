@@ -1,0 +1,15 @@
+{
+  "name": "cleanlab",
+  "version": "2.9.0",
+  "distribution": "cleanlab-2.9.0-py3-none-any.whl",
+  "distribution_sha256": "9a317d9ba547c388dd15fffec71fcf838cda1404ef4034b6865da78be6603f4e",
+  "source_path": "cleanlab/rank.py",
+  "source_sha256": "3a76b231bd942a9922ee1fa7f92b57540fcea41f07c99211b2bae6979f2e793c",
+  "source_url": "https://github.com/cleanlab/cleanlab/blob/v2.9.0/cleanlab/rank.py",
+  "license": "Apache-2.0",
+  "selected_functions": [
+    "get_self_confidence_for_each_label",
+    "get_normalized_margin_for_each_label"
+  ],
+  "modifications": "Selected NumPy-only function bodies; input validation occurs in the owning engine. Full cleanlab is not a runtime dependency."
+}

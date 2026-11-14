@@ -27,6 +27,8 @@ class TrainRequest(BaseModel):
     output_dir:str
     prepared_id:str|None=None
     mode:Literal['quick','search','fast_retrain']='quick'
+    search_strategy:Literal['auto','deterministic','adaptive']='auto'
+    seed:int|None=Field(default=None,strict=True,ge=0,le=2147483647)
     preset:Literal['fast','precision']='fast'
     device:str='cpu'
     config:dict=Field(default_factory=dict)
