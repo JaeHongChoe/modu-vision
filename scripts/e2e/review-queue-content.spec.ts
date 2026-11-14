@@ -17,7 +17,7 @@ async function exercise(page:Page,workspace:Workspace,evidence:Evidence,api:Api,
  await api('/api/project/update',{source_dataset_dir:source},'PUT');await api('/api/dataset/import',{folder_path:source,task:'segmentation'});
  const navigate=async()=>{if(url)await page.goto(url);else await page.reload();await expect(page.getByTitle('프로젝트 관리',{exact:true})).toContainText(project.name);await page.getByRole('navigation',{name:'Workflow Stages'}).getByRole('button').nth(1).click();
   const focus=page.getByRole('button',{name:'집중 편집',exact:true});if(await focus.getAttribute('aria-pressed')==='true')await focus.click();
-  await page.getByText('저장 검토 큐 · 오류·불일치·임계값 우선',{exact:true}).click();};
+  await page.getByText('저장 검토 큐 · 오류·불일치·라벨 재확인',{exact:true}).click();};
  await navigate();const panel=page.getByRole('region',{name:'저장된 검토 큐'}),create=panel.getByRole('button',{name:'우선순위 큐 저장',exact:true});
  await expect(create).toBeDisabled();await expect(panel).toContainText('4단계에서 현재 데이터의 평가를 저장하면 검토 큐를 만들 수 있습니다.');
  const fixture=JSON.parse(execFileSync(harness.resolvePython(),[path.join(harness.REPO_ROOT,'scripts/e2e/fixtures/review_queue_reports.py'),workspace.root,project.project_dir,source],{cwd:harness.REPO_ROOT,encoding:'utf8',timeout:30_000}));
@@ -70,7 +70,7 @@ async function queueCreateProjectHandoff(page:Page,w:Workspace,e:Evidence,native
  expect(A.fixture.record.result.test_predictions.map((r:any)=>r.image_sha256)).toEqual(A.inputs.map(row=>row.sha256));
  const enter=async(scope:typeof A)=>{
   await page.getByRole('navigation',{name:'Workflow Stages'}).getByRole('button').nth(1).click();const focus=page.getByRole('button',{name:'집중 편집',exact:true});if(await focus.getAttribute('aria-pressed')==='true')await focus.click();
-  const summary=page.getByText('저장 검토 큐 · 오류·불일치·임계값 우선',{exact:true});if(await summary.locator('..').getAttribute('open')===null)await summary.click();const panel=page.getByRole('region',{name:'저장된 검토 큐'});await expect(panel.getByRole('combobox',{name:'검토 큐 원본 평가',exact:true})).toHaveValue(scope.fixture.record.evaluation_id);return panel;
+  const summary=page.getByText('저장 검토 큐 · 오류·불일치·라벨 재확인',{exact:true});if(await summary.locator('..').getAttribute('open')===null)await summary.click();const panel=page.getByRole('region',{name:'저장된 검토 큐'});await expect(panel.getByRole('combobox',{name:'검토 큐 원본 평가',exact:true})).toHaveValue(scope.fixture.record.evaluation_id);return panel;
  };
  if(url)await page.goto(url);else await page.reload();await enter(B);await queueHandoffProject(page,A,origin);let panel=await enter(A);expect((await api('/api/data-workbench/review-queues')).queues).toEqual([]);
  const rootsA=queueRoots(A);await queueHandoffProject(page,B,origin);await enter(B);const rootsB=queueRoots(B),savedB=await api('/api/data-workbench/review-queues/'+B.queue.id);await queueHandoffProject(page,A,origin);panel=await enter(A);

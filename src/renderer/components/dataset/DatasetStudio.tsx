@@ -450,6 +450,11 @@ export const DatasetStudio: React.FC = () => {
           {SESSION_CHANGING_NOTICE}
         </div>
       )}
+      {simpleView && isLoading && (
+        <div role="status" className="border-b border-sky-800/50 bg-sky-950/20 px-4 py-2 text-xs text-sky-200">
+          {metadataNotice}
+        </div>
+      )}
       {/* Top Action Toolbar (Dark Steel Panel #131822) */}
       <div className="modu-stage-toolbar p-3 bg-[#131822] border-b border-[#2B3547] flex flex-wrap items-center justify-between gap-3">
         {/* Wrap tools so the mounted path picker and secondary menus are not clipped by a scroll container. */}

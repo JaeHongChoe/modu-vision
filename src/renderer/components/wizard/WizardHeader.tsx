@@ -387,7 +387,7 @@ export const WizardHeader: React.FC<{ simpleControls?: React.ReactNode; simpleMe
           >
             <summary className={`list-none cursor-pointer ${SIMPLE_CONTROL}`}>{ko ? '설정·도구' : 'Settings & tools'}</summary>
             <div
-              className="absolute right-0 z-30 mt-1 flex min-w-[260px] flex-col gap-1 overflow-y-auto rounded border border-[#3B4B63] bg-[#131822] p-2 shadow-xl *:shrink-0"
+              className="absolute right-0 z-[80] mt-1 flex min-w-[260px] flex-col gap-1 overflow-y-auto rounded border border-[#3B4B63] bg-[#131822] p-2 shadow-xl *:shrink-0"
               style={noDrag}
               onClick={(event) => { if ((event.target as Element).closest?.('button')) closeMenu(); }}
             >

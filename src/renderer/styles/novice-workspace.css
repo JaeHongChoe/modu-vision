@@ -2,7 +2,9 @@
    Scope layout to this shell; dialogs, canvas pixels and existing state remain independent. */
 .modu-studio { container: modu-shell / inline-size; background: var(--workspace-bg); color: var(--workspace-text); }
 .modu-studio--assistant-open { padding-right: 26rem; }
-.modu-header { flex: none; z-index: 30; border-bottom: 1px solid var(--workspace-border); background: var(--workspace-bg); }
+/* Header dialogs use the shared workspace overlay scale; a header stacking context
+   would trap their z-90 overlays below labeling's z-68/z-75 toolbars. */
+.modu-header { flex: none; border-bottom: 1px solid var(--workspace-border); background: var(--workspace-bg); }
 .modu-studio .modu-header [data-wizard-header-row="project"] { min-height: 66px; padding-block: 12px; background: var(--workspace-bg); border: 0; }
 .modu-wordmark { flex-shrink: 0; margin-right: 1.25rem; font-size: 1.3rem; font-weight: 750; letter-spacing: -.045em; color: var(--workspace-accent); }
 .modu-header [data-wizard-header-row="journey"] { padding: 8px 28px 12px; background: var(--workspace-bg) !important; border: 0; }
