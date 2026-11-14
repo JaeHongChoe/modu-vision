@@ -67,3 +67,15 @@
 - 후속 GUI 역사 선언은 184 → 194다. 기존 30개의 현재 테스트 해시를 갱신했고 10개는 조상 `1e54e49acb56686df5fda23ebb3937a3f219b9d5`의 정확한 옛 테스트 바이트로 연결했다. 기존 영수증·실행 소스·원본 테스트 해시·수락 상태는 보존한다. action source 바인딩은 실제 변경된 `WizardHeader.tsx`, `DatasetStudio.tsx` 두 곳만 갱신했다. 두 증빙 검사도 오류 0으로 통과했으며 207 actions, 1,011 valid references, 438 pending, accepted features/packages 0을 유지한다.
 
 이 후속의 원본 로그와 단계 상태는 `.superpowers/sdd/2026-11-15-novice-workspace-release/`에 보존한다. 원격 CI·실제 main 병합·동결 패키지 자격·설치 앱/웹 갱신은 각각 실제 결과를 확인한 뒤 기록한다. 현재 이 문단은 그 완료를 주장하지 않는다. 기존 현장 품질·초보자 사용성·실제 계정 검증의 한계도 유지한다.
+
+### 첫 통합 CI 이후 보완
+
+PR #31의 `49ebcec9` fast `43629673503`은 실패했다. CPU 6개 job과 browser 3/4는 성공했으나, 정적 job의 TS fixture 로더와 나머지 browser 3개 job에 옛 화면 접근 경로가 남아 있었다. security, embedded OSS, Studio CLI는 성공했다. full은 아직 시작하지 않았고, full 부재로 실패한 readiness gate도 재실행하지 않았다. 이 실패들을 최종 head의 성공으로 덮어 쓰지 않는다.
+
+- 로더는 실제 `workspaceSettings.ts`를 읽도록 고쳤다. 기존 20개 테스트 본문은 유지했고 20개 실패 → 20개 성공을 확인했다.
+- 컴퓨팅 서버 모달을 공개 닫기 버튼으로 닫은 뒤 헤더를 읽고, 테마·실행 대상은 실제 설정 메뉴를 열어 선택한다. 검사 화면의 새 제목과 독립된 도우미 열기 버튼으로 검사를 옮겼다. 진단 오류는 사진 영역의 alert로 범위를 명시해 다음 행동 패널과 중복되는 문구를 구분한다. 요청·권한·저장·원본·오류·시간 상한은 유지했다.
+- 관련 브라우저 고유 14개 케이스가 여러 집중 실행에서 통과했다. 실제 Electron 검사 서비스 수명 검사는 첫 병렬 실행에서 본문 전 시작 시간 초과 뒤, 같은 상한의 직렬 실행으로 1개 통과했다. 추가 도우미 native 검사는 backend healthy 이후에도 `electron.launch` 60초 연결 시간 초과로 본문에 진입하지 못했다. 이 시작 실패의 원인을 확정하거나 native 도우미 검사를 통과했다고 주장하지 않는다. 소유 프로세스는 종료됐고 로그를 보존했다. 실제 GPT 요청은 없다.
+- 현재 backend 소스 426개와 동결 파일의 바이트를 대조했다. 새 복사본의 첫 120초 diagnostics 실패를 보존하고, 별도 dyld 진단 관찰 후 동일 상한의 정식 diagnostics·시작·재시작 acceptance 성공을 확인했다. 성공 영수증은 새 복사본에만 붙였으며 cold-start 지연 원인이 해결됐다는 근거는 아니다.
+- 첫 macOS 디렉터리 패키징은 `react-remove-scroll-bar@2.3.8` 라이선스 원문 누락으로 afterPack에서 실패했다. npm 배포본에 LICENSE가 없고 저장소에 이미 고정된 upstream 보충 원문이 있으므로, 수집기가 정확한 버전·lock integrity·immutable blob·SHA256·1093바이트를 확인해 기존 원문을 포함하도록 보완했다. 다른 누락과 변조는 계속 거절한다. 라이선스 및 release-readiness 검사 31개와 실제 49개 패키지 수집(누락 0)이 통과했다. 이 결과는 macOS 앱 설치나 공개 배포 승인 완료를 뜻하지 않는다.
+
+원본 실패·합성 QA·새 검증 결과는 같은 SDD 폴더에 나란히 보존한다. 이 보완은 제품의 모델·계정 동작을 바꾸지 않으며 설치 앱과 기존 localhost 데이터는 아직 교체하지 않았다.

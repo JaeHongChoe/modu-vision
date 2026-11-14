@@ -152,6 +152,10 @@ test('browser account login automatically hydrates the mounted Header and accoun
       expect(JSON.parse(selects[0].body!)).toEqual({project_id: project.id});
       expect(rows('ui-reopen', '/api/accounts/select-project')).toHaveLength(0);
       expect(rows('ui-reopen', '/api/accounts/login')).toHaveLength(0);
+      // Return through the dialog's public close control before inspecting the header beneath its modal layer.
+      const serverDialog = page.getByRole('dialog', {name: '컴퓨팅 서버 관리', exact: true});
+      await serverDialog.getByRole('button', {name: '닫기', exact: true}).click();
+      await expect(serverDialog).toHaveCount(0);
       await openWorkspaceSettings(page);
       await expect(target).toHaveValue(profile.id);
       await expect(target).toBeEnabled();

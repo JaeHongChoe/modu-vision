@@ -2,6 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
 import {test, expect} from './fixtures/test';
+import {openWorkspaceSettings} from './fixtures/workspaceSettings';
 import {localAssistantBrowser} from './fixtures/localAssistantBrowser';
 import {expectBrowserLoginGate,chooseBrowserProject,browserLoginWithin} from './fixtures/browserGateLogin';
 import {png} from './qa/appFlow';
@@ -117,8 +118,7 @@ test('task plan approval persists real actions; pause, human resume and reload r
     await expect(page.getByTitle('프로젝트 관리', {exact: true})).toContainText(project.name);
     await expect(page.getByRole('button', {name: '전체 (20)', exact: true})).toBeVisible();
     const openAssistant = async () => {
-      await page.getByRole('button', {name: '왜 그런가요?', exact: true}).click();
-      await page.getByRole('button', {name: '도우미에게 묻기', exact: true}).click();
+      await page.getByRole('button', {name: '도우미 열기', exact: true}).click();
       return page.getByRole('complementary', {name: '도우미', exact: true});
     };
     let assistant = await openAssistant();
@@ -171,8 +171,10 @@ test('task plan approval persists real actions; pause, human resume and reload r
     for (const theme of ['light', 'dark']) {
       await assistant.getByRole('button', {name: '닫기', exact: true}).click();
       await page.setViewportSize({width: 1440, height: 900});
-      if (await page.locator('html').getAttribute('data-theme') !== theme)
+      if (await page.locator('html').getAttribute('data-theme') !== theme) {
+        await openWorkspaceSettings(page);
         await page.getByRole('button', {name: theme === 'light' ? '밝은 화면' : '어두운 화면', exact: true}).click();
+      }
       await expect(page.locator('html')).toHaveAttribute('data-theme', theme);
       assistant = await openAssistant();
       await page.setViewportSize({width: 390, height: 844});
@@ -477,8 +479,7 @@ test('native task plan uses the actual app window and persists prepared settings
   await page.reload();
   await expect(page.getByTitle('프로젝트 관리', {exact: true})).toContainText(project.name);
   await expect(page.getByRole('button', {name: '전체 (20)', exact: true})).toBeVisible();
-  await page.getByRole('button', {name: '왜 그런가요?', exact: true}).click();
-  await page.getByRole('button', {name: '도우미에게 묻기', exact: true}).click();
+  await page.getByRole('button', {name: '도우미 열기', exact: true}).click();
   const assistant = page.getByRole('complementary', {name: '도우미', exact: true});
   const card = assistant.getByRole('region', {name: '도우미 작업', exact: true});
   await expect(card).toHaveAttribute('aria-busy', 'false');

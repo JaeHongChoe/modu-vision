@@ -37,6 +37,34 @@ function licenseFiles(folder,depth=0){
   return result;
 }
 
+// This package omits LICENSE from its verified npm tarball. SOURCE.md already
+// declares the upstream supplement; keep that provenance distinct from npm bytes.
+const SCROLL_BAR_SUPPLEMENT=Object.freeze({
+  name:'react-remove-scroll-bar',version:'2.3.8',size:1093,
+  integrity:'sha512-9r+yi9+mgU33AKcj6IbT9oRCO78WriSj6t/cF8DWBZJ9aOGPOTEDvdUDz1FwKim7QXWwmHqtdHnRJfhAxEG46Q==',
+  sha256:'a79aae0c0f21990d9d963bb3c5a79cdcea9a46f8523ba55c58d7fe776b6ebc84',
+  upstream:'https://api.github.com/repos/theKashey/react-remove-scroll-bar/git/blobs/7c08c3990396ecefd90f99ff5d9a34f26f5b5616',
+  aggregate:'public/third-party/radix-popover/LICENSES.txt',provenance:'public/third-party/radix-popover/provenance.json',
+});
+function upstreamSupplement(project,name,entry){
+  const pin=SCROLL_BAR_SUPPLEMENT;
+  if(name!==pin.name||entry.version!==pin.version)return null;
+  if(entry.integrity!==pin.integrity||entry.license!=='MIT')throw new Error('upstream license supplement lock mismatch');
+  const records=JSON.parse(readSafe(path.join(project,pin.provenance),project));
+  if(!Array.isArray(records))throw new Error('invalid upstream license supplement provenance');
+  const matching=records.filter(row=>row.package===name&&row.version===entry.version);
+  if(matching.length!==1||matching[0].file!=='LICENSE'||matching[0].license!=='MIT'
+    ||matching[0].sha256!==pin.sha256||matching[0].source!==pin.upstream)throw new Error('upstream license supplement provenance mismatch');
+  const aggregate=readSafe(path.join(project,pin.aggregate),project);
+  const header=Buffer.from(`===== ${name}@${entry.version} / LICENSE =====\n`);
+  const at=aggregate.indexOf(header);
+  if(at<0||aggregate.indexOf(header,at+header.length)!==-1)throw new Error('upstream license supplement section mismatch');
+  const start=at+header.length,data=aggregate.subarray(start,start+pin.size);
+  if(data.length!==pin.size||digest(data)!==pin.sha256
+    ||!aggregate.subarray(start+pin.size).subarray(0,8).equals(Buffer.from('\n\n===== ')))throw new Error('upstream license supplement byte or size mismatch');
+  return {data,source:pin.aggregate+'#'+name+'@'+entry.version,upstream_source:pin.upstream};
+}
+
 function collectDesktopLicenses(project,destination){
   project=path.resolve(project);destination=path.resolve(destination);
   if(fs.existsSync(destination))throw new Error('license output already exists');
@@ -55,7 +83,8 @@ function collectDesktopLicenses(project,destination){
     const installed=JSON.parse(readSafe(path.join(folder,'package.json'),base));
     if(installed.name!==name||installed.version!==entry.version)throw new Error('installed license package version differs from lock: '+name);
     const files=licenseFiles(folder);
-    if(!files.length)throw new Error('missing full license text: '+name);
+    const supplement=files.length?null:upstreamSupplement(project,name,entry);
+    if(!files.length&&!supplement)throw new Error('missing full license text: '+name);
     if(name==='electron'){
       for(const leaf of ['LICENSE','LICENSES.chromium.html']){
         const runtime=path.join(folder,'dist',leaf);
@@ -64,12 +93,14 @@ function collectDesktopLicenses(project,destination){
       }
     }
     components.push({name,version:entry.version,license:entry.license||'UNKNOWN'});
-    for(const file of new Set(files)){
-      const data=readSafe(file,base);const hash=digest(data);
-      const relative=path.posix.join('texts',digest(name+'@'+entry.version).slice(0,16),hash.slice(0,16)+'-'+path.basename(file).replace(/[^A-Za-z0-9._-]/g,'_'));
-      inputs.push({data,row:{component:name+'@'+entry.version,path:relative,sha256:hash,size:data.length,
-                           source:path.posix.join('node_modules',path.relative(base,file).split(path.sep).join('/'))}});
-    }
+    const append=(data,filename,source,upstream_source)=>{
+      const hash=digest(data);
+      const relative=path.posix.join('texts',digest(name+'@'+entry.version).slice(0,16),hash.slice(0,16)+'-'+path.basename(filename).replace(/[^A-Za-z0-9._-]/g,'_'));
+      inputs.push({data,row:{component:name+'@'+entry.version,path:relative,sha256:hash,size:data.length,source,
+                           ...(upstream_source?{upstream_source}:{})}});
+    };
+    for(const file of new Set(files))append(readSafe(file,base),file,path.posix.join('node_modules',path.relative(base,file).split(path.sep).join('/')));
+    if(supplement)append(supplement.data,'LICENSE',supplement.source,supplement.upstream_source);
   }
   const parent=path.dirname(destination);fs.mkdirSync(parent,{recursive:true});
   let current=parent;

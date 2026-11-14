@@ -75,8 +75,7 @@ test('ChatGPT prefill updates an already open split bar without saving; draft im
     Object.assign(window, {__assistantSupplemental: {sent, intents}});
   });
   const openAssistant = async () => {
-    await page.getByRole('button', {name: '왜 그런가요?', exact: true}).click();
-    await page.getByRole('button', {name: '도우미에게 묻기', exact: true}).click();
+    await page.getByRole('button', {name: '도우미 열기', exact: true}).click();
     await expect(page.getByRole('complementary', {name: '도우미', exact: true})).toBeVisible();
   };
   await openAssistant();

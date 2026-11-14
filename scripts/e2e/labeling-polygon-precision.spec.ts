@@ -5,6 +5,7 @@ import type {APIRequestContext, Locator, Page} from '@playwright/test';
 import {test, expect, type Evidence, type RendererServer, type Workspace} from './fixtures/test';
 import {installDesktopHostShim} from './fixtures/desktop-host-shim';
 import {png} from './qa/appFlow';
+import {openWorkspaceSettings} from './fixtures/workspaceSettings';
 
 // New synthetic browser evidence only. Existing source-bound acceptance records
 // and installed applications are not inputs to this fixture.
@@ -256,8 +257,10 @@ test('keyboard polygon controls wrap insert and respect the three-point minimum 
   expect(bounds!.x).toBeGreaterThanOrEqual(0); expect(bounds!.x + bounds!.width).toBeLessThanOrEqual(760);
   const themes: string[] = [];
   for (const desired of ['dark', 'light']) {
-    if (await page.locator('html').getAttribute('data-theme') !== desired)
+    if (await page.locator('html').getAttribute('data-theme') !== desired) {
+      await openWorkspaceSettings(page);
       await page.getByRole('button', {name: desired === 'light' ? '밝은 화면' : '어두운 화면', exact: true}).click();
+    }
     await expect(page.locator('html')).toHaveAttribute('data-theme', desired); themes.push(desired);
     await expect(x.controls).toBeVisible(); await expect(control('점 삭제')).toBeDisabled();
     await evidence.screenshot(page, 'polygon-keyboard-minimum-narrow-' + desired);

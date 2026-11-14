@@ -37,8 +37,7 @@ test('assistant settings deadline, stop and reopen keep one read and reject reti
       resolveRead(structuredClone(config));
     }}});
   });
-  await page.getByRole('button', {name: '왜 그런가요?', exact: true}).click();
-  await page.getByRole('button', {name: '도우미에게 묻기', exact: true}).click();
+  await page.getByRole('button', {name: '도우미 열기', exact: true}).click();
   const panel = page.getByRole('complementary', {name: '도우미', exact: true});
   const connection = panel.locator('section[aria-label="연결 상태 확인"]');
   const pending = connection.getByRole('status').filter({hasText: '연결 상태를 확인하는 중입니다.'});
@@ -56,8 +55,7 @@ test('assistant settings deadline, stop and reopen keep one read and reject reti
   await expect(pending).toBeVisible();
   await panel.getByRole('button', {name: '닫기', exact: true}).click();
   await expect(panel).toHaveCount(0);
-  await page.getByRole('button', {name: '왜 그런가요?', exact: true}).click();
-  await page.getByRole('button', {name: '도우미에게 묻기', exact: true}).click();
+  await page.getByRole('button', {name: '도우미 열기', exact: true}).click();
   await expect(pending).toBeVisible();
   expect(await page.evaluate(() => (window as any).__assistantWaitQA.calls)).toEqual(['getState']);
   await stop.click();

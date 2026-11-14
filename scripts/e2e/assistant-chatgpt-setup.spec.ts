@@ -29,8 +29,7 @@ test('ChatGPT setup requires consent and explicit model selection; identity-only
     if(!window.api)throw Error('host shim missing');window.api.assistant=bridge;
     Object.assign(window,{__chatgptUI:{calls,completeIdentityOnly:()=>{config.chatgpt!.accounts=[{recordId:'qa-identity',label:'시험 계정 A',model:'',signedIn:true,planUsageEnabled:false},{recordId:'qa-plan',label:'시험 계정 B',model:'',signedIn:true,planUsageEnabled:true}];config.chatgpt!.active='qa-identity';config.chatgpt!.status='connected';sync();}}});
   });
-  await page.getByRole('button',{name:'왜 그런가요?',exact:true}).click();
-  await page.getByRole('button',{name:'도우미에게 묻기',exact:true}).click();
+  await page.getByRole('button',{name:'도우미 열기',exact:true}).click();
   const panel=page.getByRole('complementary',{name:'도우미',exact:true}),setup=panel.getByRole('region',{name:'ChatGPT 연결',exact:true});
   await expect(setup.getByRole('button',{name:'Continue with ChatGPT',exact:true})).toBeVisible();
   await expect(panel.getByText(/API 키 공급자 설정/)).toHaveCount(0);
