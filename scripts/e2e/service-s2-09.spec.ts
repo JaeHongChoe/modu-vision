@@ -1,3 +1,4 @@
+import {openWorkspaceSettings} from './fixtures/workspaceSettings';
 import fs from 'node:fs';
 import path from 'node:path';
 import { randomUUID } from 'node:crypto';
@@ -20,7 +21,7 @@ test('a job left running by a restart reads as interrupted in the task center an
 
   await page.goto(renderer.url);
   await expect(page.getByTitle('프로젝트 관리', { exact: true })).toContainText('S209 interrupted job');
-  await page.getByRole('button', { name: '작업 센터', exact: true }).click();
+  await openWorkspaceSettings(page); await page.getByRole('button',{name:'작업 센터 · 진행 중인 작업', exact: true }).click();
   const dialog = page.getByRole('dialog', { name: '작업 센터' });
   const saved = dialog.getByRole('combobox', { name: '저장 작업 다시 열기' });
   const option = saved.locator('option', { hasText: '실행 주체 없음 · 재개 확인 필요' });
@@ -148,7 +149,7 @@ for(const outcome of ['observed','refused'] as const)test(`local patch reconnect
  await view.getByRole('button',{name:'같은 로컬 작업 재연결',exact:true}).click();
  if(outcome==='observed'){await expect(view).toContainText('실행 중');await expect(view).toContainText('epoch 3/5');await expect(view.getByRole('button',{name:'같은 로컬 작업 재연결',exact:true})).toHaveCount(0);}
  else {await expect(page.getByRole('alert').filter({hasText:'이 작업에는 다시 연결할 수 없습니다.'})).toBeVisible();await expect(view).toContainText('연결 끊김 · 상태 미확인');
-  await page.getByRole('button',{name:'작업 센터',exact:true}).click();const dialog=page.getByRole('dialog',{name:'작업 센터'});await expect(dialog.getByRole('button',{name:'같은 로컬 작업 재연결',exact:true})).toBeVisible();
+  await openWorkspaceSettings(page); await page.getByRole('button',{name:'작업 센터 · 진행 중인 작업',exact:true}).click();const dialog=page.getByRole('dialog',{name:'작업 센터'});await expect(dialog.getByRole('button',{name:'같은 로컬 작업 재연결',exact:true})).toBeVisible();
   await dialog.getByRole('button',{name:'같은 로컬 작업 재연결',exact:true}).click();await expect(dialog.getByRole('alert').filter({hasText:'이 작업에는 다시 연결할 수 없습니다.'})).toBeVisible();}
  expect(calls).toEqual(Array.from({length:outcome==='refused'?2:1},()=>({path:'/api/training/reconnect',job_id:'job_local_patch_owned'})));expect(submits).toEqual([]);
  await evidence.screenshot(page,`s209-local-patch-${outcome}`);evidence.note('scope',{actual_renderer:true,actual_backend:true,local_worker_api:'controlled',training:false,server:false,optimizer_resume:false,calls,submits});

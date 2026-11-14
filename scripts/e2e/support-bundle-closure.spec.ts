@@ -1,3 +1,4 @@
+import {openWorkspaceSettings} from './fixtures/workspaceSettings';
 import fs from 'node:fs';import path from 'node:path';import crypto from 'node:crypto';import {execFileSync} from 'node:child_process';
 import type {Page} from '@playwright/test';import {test,expect,type Workspace,type Evidence} from './fixtures/test';
 const harness=require('./fixtures/harness.cjs');type Api=(route:string,body?:any)=>Promise<any>;type Download=(action:()=>Promise<unknown>,label:string)=>Promise<string>;test.use({actionTimeout:10_000});
@@ -5,7 +6,7 @@ async function exercise(page:Page,workspace:Workspace,evidence:Evidence,api:Api,
  await api('/api/project/create',{name:'Owned support privacy qualification',task:'classification'});const project=await api('/api/project/current');
  const fixture=JSON.parse(execFileSync(harness.resolvePython(),[path.join(harness.REPO_ROOT,'scripts/e2e/fixtures/support_bundle_error.py'),workspace.root,JSON.stringify(project)],{encoding:'utf8',timeout:15_000}));
  await api('/api/project/update',{source_dataset_dir:fixture.source});if(url)await page.goto(url);else await page.reload();
- const enter=async()=>{await page.getByRole('button',{name:'패키지·장치·진단',exact:true}).click();await page.getByRole('navigation',{name:'배포 운영 화면'}).getByRole('button',{name:'설치·진단',exact:true}).click();};await enter();
+ const enter=async()=>{await openWorkspaceSettings(page); await page.getByRole('button',{name:'패키지·장치·진단',exact:true}).click();await page.getByRole('navigation',{name:'배포 운영 화면'}).getByRole('button',{name:'설치·진단',exact:true}).click();};await enter();
  const panel=page.getByRole('group',{name:'문제 보고 자료',exact:true});const names=['버전·의존성','패키지','장치 실행','검사·오류'];for(const name of names)await panel.getByRole('checkbox',{name,exact:true}).uncheck();await expect(panel.getByRole('button',{name:'진단 자료 저장',exact:true})).toBeDisabled();
  const receipts:any[]=[];for(const [name,section,key] of [['검사·오류','operator_errors','operator_results'],['버전·의존성','installation','installation']]){
   for(const other of names)await panel.getByRole('checkbox',{name:other,exact:true}).uncheck();await panel.getByRole('checkbox',{name,exact:true}).check();

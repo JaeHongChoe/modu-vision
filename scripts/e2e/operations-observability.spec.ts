@@ -1,3 +1,4 @@
+import {openWorkspaceSettings} from './fixtures/workspaceSettings';
 import path from 'node:path';
 import {execFileSync} from 'node:child_process';
 import type {Page} from '@playwright/test';
@@ -16,7 +17,7 @@ async function exercise(page:Page,workspace:Workspace,evidence:Evidence,api:Api,
   const generate=(mode:string)=>JSON.parse(execFileSync(harness.resolvePython(),[path.join(harness.REPO_ROOT,'scripts/e2e/fixtures/observability_events.py'),workspace.root,JSON.stringify(context),mode],{cwd:harness.REPO_ROOT,env,encoding:'utf8',timeout:30_000}).trim());
   const training=generate('seed');
   if(url)await page.goto(url);else await page.reload();
-  await page.getByRole('button',{name:'운영자 검사',exact:true}).click();
+  await openWorkspaceSettings(page); await page.getByRole('button',{name:'운영자 검사 화면',exact:true}).click();
   const operator=page.getByRole('region',{name:'운영자 검사 작업 공간'});
   await operator.getByRole('button',{name:'검사 시작',exact:true}).click();
   await expect(operator).toContainText('승인 적용 기록과 실행 버전 일치',{timeout:60_000});
@@ -54,7 +55,7 @@ async function exercise(page:Page,workspace:Workspace,evidence:Evidence,api:Api,
   const completed=after.logs.items.find((row:any)=>row.job_id===inspection&&row.state==='completed');
   expect(completed.payload.execution_steps.length).toBeGreaterThan(0);expect(completed.trace_id).toBe(inspection);
   await panel.scrollIntoViewIfNeeded();await evidence.screenshot(page,`${native?'native':'browser'}-persistent-operations-logs`);
-  await page.reload();await page.getByRole('button',{name:'운영자 검사',exact:true}).click();
+  await page.reload();await openWorkspaceSettings(page); await page.getByRole('button',{name:'운영자 검사 화면',exact:true}).click();
   await page.getByText('운영 상태·영속 로그·내부 알림',{exact:true}).click();
   const reopened=page.getByRole('region',{name:'운영 관측과 알림'});
   await expect(reopened.getByLabel('내부 실패 알림',{exact:true})).toBeChecked();await expect(reopened).toContainText('저장된 내부 알림 1건');

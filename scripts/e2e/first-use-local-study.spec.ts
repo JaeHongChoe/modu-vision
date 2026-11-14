@@ -1,3 +1,4 @@
+import {openWorkspaceSettings} from './fixtures/workspaceSettings';
 import {execFileSync} from 'node:child_process';
 import crypto from 'node:crypto';
 import fs from 'node:fs';
@@ -46,7 +47,7 @@ test('local first-use study survives setup and guide closure, exports no private
   const guide = page.getByRole('dialog', {name: '처음 시작하기', exact: true});
   const study = guide.getByRole('region', {name: '처음 사용자 로컬 측정', exact: true});
   const openGuide = async () => {
-    if (!await guide.isVisible()) await page.getByRole('button', {name: '처음 시작 안내', exact: true}).click();
+    if (!await guide.isVisible()) { await openWorkspaceSettings(page); await page.getByRole('button',{name:'처음 시작 안내', exact: true}).click(); }
     if (!await study.isVisible()) await guide.getByText('시간·조작 수 직접 기록 (선택)', {exact: false}).click();
     await expect(study).toBeVisible();
   };

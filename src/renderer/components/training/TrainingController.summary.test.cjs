@@ -285,12 +285,12 @@ test('preparation recovery opens the actual model, scheduling and compute contro
 });
 
 
-test('simple training opens with preparation while optional transforms stay mounted in a closed disclosure; full view keeps its original order', async () => {
+test('training keeps purpose, preparation and mounted transforms in the same order across viewing modes', async () => {
   const f = fixture(); await f.settle();
   const simple = f.dom().elements;
   const find = (rows, name) => rows.find(node => node.tagName === name.toUpperCase());
   const preparation = find(simple, 'TrainingPreparationPanel'), catalog = find(simple, 'ModelFamilyCatalog'), input = find(simple, 'TrainingInputPreparation');
-  assert.ok(simple.indexOf(preparation) < simple.indexOf(catalog)); assert.ok(simple.indexOf(catalog) < simple.indexOf(input));
+  assert.ok(simple.indexOf(catalog) < simple.indexOf(preparation)); assert.ok(simple.indexOf(preparation) < simple.indexOf(input));
   assert.equal(input.parentElement.tagName, 'DETAILS'); assert.equal(input.parentElement.open, false);
   assert.equal(input.parentElement.props.children[0].props.children, '사진 변환 설정 (선택)');
   assert.ok(input.parentElement.key, 'the editor disclosure has stable React identity when reordered');
@@ -298,10 +298,57 @@ test('simple training opens with preparation while optional transforms stay moun
   const identity = input.parentElement.key;
   f.project.viewMode = 'full'; await f.settle();
   const full = f.dom().elements, fullInput = find(full, 'TrainingInputPreparation');
-  assert.ok(full.indexOf(fullInput) < full.indexOf(find(full, 'ModelFamilyCatalog')));
+  assert.ok(full.indexOf(find(full, 'TrainingPreparationPanel')) < full.indexOf(fullInput));
   assert.ok(full.indexOf(find(full, 'ModelFamilyCatalog')) < full.indexOf(find(full, 'TrainingPreparationPanel')));
   assert.equal(fullInput.parentElement.tagName, 'DETAILS'); assert.equal(fullInput.parentElement.open, true);
   assert.equal(fullInput.parentElement.key, identity, 'view changes move the existing editor instead of replacing its wrapper');
   assert.equal(fullInput.parentElement.props.children[0].props.hidden, true, 'full view does not add a new disclosure heading');
   f.training.isTraining = true; await f.settle(); assert.equal(find(f.dom().elements, 'TrainingInputPreparation').props.disabled, true); f.unmount();
+});
+
+test('advanced model fields retain their selected values across mode changes while running stop stays outside disclosures', async () => {
+  const f = fixture(); await f.settle();
+  f.change('학습 모델 구조', 'yolo26s');
+  f.change('수동 학습 횟수', '7'); await f.settle();
+  f.project.viewMode = 'full'; await f.settle();
+  let nodes = f.dom().elements;
+  assert.equal(nodes.find(node => node.props['aria-label'] === '학습 모델 구조').props.value, 'yolo26s');
+  assert.equal(nodes.find(node => node.props['aria-label'] === '수동 학습 횟수').props.value, '7');
+  f.project.viewMode = 'simple'; f.training.isTraining = true; f.training.status = 'training';
+  let stops = 0; f.training.stopTraining = async () => { stops++; }; await f.settle();
+  nodes = f.dom().elements;
+  const stop = nodes.find(node => node.tagName === 'BUTTON' && node.props.onClick?.name === 'handleAbort');
+  assert.ok(stop, 'running job exposes stop');
+  let parent = stop.parentElement; while (parent) { assert.notEqual(parent.tagName, 'DETAILS'); parent = parent.parentElement; }
+  assert.equal(stop.props.disabled, false); await stop.props.onClick(); assert.equal(stops, 1);
+  f.training.isStopRequestPending = true; await f.settle();
+  assert.equal(f.dom().elements.find(node => node.tagName === 'BUTTON' && node.props.onClick?.name === 'handleAbort').props.disabled, true);
+  f.unmount();
+});
+
+test('closing training location cannot hide transfer state or disconnected recovery while a job is active or recovering', async t => {
+  const priorWindow = global.window;
+  global.window = {setInterval: () => 1, clearInterval: () => {}};
+  t.after(() => { global.window = priorWindow; });
+  const f = fixture(); await f.settle();
+  f.training.jobId = 'remote-job'; f.training.jobComputeProfileId = 'server';
+  f.training.isTraining = true; f.training.status = 'transferring'; f.training.transferProgress = 43;
+  await f.settle();
+  const assertVisible = element => {
+    assert.ok(element, 'current job location and recovery remain mounted');
+    for (let owner = element.parentElement; owner; owner = owner.parentElement) {
+      assert.notEqual(owner.tagName, 'DETAILS', 'manually closing location settings cannot hide current state');
+    }
+  };
+  let nodes = f.dom().elements;
+  const current = nodes.find(node => node.props['aria-label'] === '현재 작업 위치와 복구');
+  assertVisible(current);
+  assert.ok(nodes.some(node => node.props.style?.width === '43%'), 'actual transfer progress remains rendered');
+  f.training.status = 'disconnected'; f.training.isRecoveringTraining = true;
+  let reconnected = 0; f.training.reconnectCurrentJob = async () => { reconnected++; }; await f.settle();
+  nodes = f.dom().elements;
+  const text = value => Array.isArray(value) ? value.map(text).join('') : value && typeof value === 'object' ? text(value.props?.children) : String(value ?? '');
+  const reconnect = nodes.find(node => node.tagName === 'BUTTON' && text(node.props.children).includes('연결 다시 확인'));
+  assertVisible(reconnect); await reconnect.props.onClick(); assert.equal(reconnected, 1);
+  f.unmount();
 });

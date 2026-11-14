@@ -65,7 +65,8 @@ test('step banners name the steps in plain Korean and keep the English code behi
  for(const jargon of ["'오토딥러닝 학습'","'인퍼런스 센터","'플로우차트 다중 모델 스튜디오'","오토라벨러'",'"completed" 상태'])assert.ok(!titles.includes(jargon),`step title still says ${jargon}`);
  assert.match(titles,/titleKo: '모델 학습'/);
  const banner=read('common/OperatorGuidanceBanner.tsx');
- assert.match(banner,/technicalDetails && <span/);
+ assert.match(banner,/technicalDetails&&isExpanded/);
+ assert.match(read('wizard/WizardHeader.tsx'),/setShowGlossary\(true\)/,'glossary remains available globally after standalone stage headers replace guidance');
 });
 
 test('the class bar shows the project classes as chips and offers example names only as dashed additions',()=>{

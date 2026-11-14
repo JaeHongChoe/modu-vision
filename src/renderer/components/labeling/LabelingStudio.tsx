@@ -32,7 +32,7 @@ import {AnnotationDraftRecovery} from './AnnotationDraftRecovery';
 import {EvidenceEditReturn} from './EvidenceEditReturn';
 import {WorkflowImpactPanel} from '../common/WorkflowImpactPanel';
 import {
-  FOCUS_SWITCH_NAME, NARROW_CANVAS_HEIGHT, focusStatus, narrowCanvasNotice, storedLabelingFocus, writeLabelingFocus,
+  FOCUS_SWITCH_NAME, LABELING_HELPER_PANELS, NARROW_CANVAS_HEIGHT, focusStatus, narrowCanvasNotice, storedLabelingFocus, writeLabelingFocus,
   type LabelingHelperPanel,
 } from './labelingLayout';
 import { SpecialistFamilyNote } from '../common/SpecialistFamilyNote';
@@ -104,12 +104,20 @@ export const LabelingStudio: React.FC = () => {
   useEffect(() => { reportPanelError('자동 추출', autoSelectError); return () => reportPanelError('자동 추출', null); }, [autoSelectError]);
 
   return (
-    <div className="flex flex-col h-full w-full bg-[#0B0E14] text-slate-200 overflow-hidden select-none">
+    <div className="flex flex-col h-full w-full bg-[var(--workspace-bg)] text-[var(--workspace-text)] overflow-hidden select-none">
       {/* Top Action Toolbar */}
       <LabelingToolbar classification={projectTask === 'classification'} />
       <EvidenceEditReturn />
-      <div data-surface="bar" className="flex shrink-0 items-center justify-end gap-2 border-b border-slate-800 px-3 py-0.5 text-[11px] text-slate-400">
-        {focus && <span>{focusStatus(focus)}</span>}
+      <div data-surface="bar" className="flex shrink-0 items-center justify-end gap-2 border-b border-[var(--workspace-border)] px-3 py-0.5 text-[11px] text-[var(--workspace-muted)]">
+        <h1 className="mr-auto shrink-0 text-sm font-semibold text-[var(--workspace-text)]">라벨 확인</h1>
+        {focus && <details className="modu-stage-disclosure relative" style={{border:0}}>
+          <summary className="cursor-pointer" style={{padding:'2px 4px',fontSize:11}}>라벨 보조 도구</summary>
+          <div className="absolute right-0 top-full z-40 w-64 space-y-2 rounded border border-[var(--workspace-border)] bg-[var(--workspace-surface)] p-3 shadow-lg">
+            <p className="sr-only">{focusStatus(focus)}</p>
+            <p className="flex flex-wrap gap-2">{LABELING_HELPER_PANELS.map(name => <span key={name}>{name}</span>)}</p>
+            <button type="button" className="workspace-button" onClick={toggleFocus}>보조 패널 펼치기</button>
+          </div>
+        </details>}
         {/* One line that never adds height to the row (it would take it from the canvas). */}
         {narrowNotice && <span id={narrowNoticeId} role="status" title={narrowNotice} className="min-w-0 truncate text-amber-200">{narrowNotice}</span>}
         <button type="button" aria-pressed={focus} onClick={toggleFocus} title={focus ? '보조 패널을 다시 보입니다' : '보조 패널을 접어 캔버스를 키웁니다'}

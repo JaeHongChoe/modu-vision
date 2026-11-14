@@ -1,3 +1,4 @@
+import {openWorkspaceSettings} from './workspaceSettings';
 import type {Page} from '@playwright/test';
 import {expect} from './test';
 
@@ -14,7 +15,7 @@ export async function expectBrowserLoginGate(page:Page,origin:string){
 /** After the gate accepts the account flow, inspect the existing management UI normally. */
 export async function openBrowserServerManagement(page:Page){
   await expect(page.getByRole('main',{name:'브라우저 계정 로그인',exact:true})).toHaveCount(0);
-  await page.getByRole('button',{name:'서버 관리',exact:true}).click();
+  await openWorkspaceSettings(page); await page.getByRole('button',{name:'서버 관리',exact:true}).click();
   await expect(page.getByRole('dialog',{name:'컴퓨팅 서버 관리',exact:true})).toBeVisible();
 }
 

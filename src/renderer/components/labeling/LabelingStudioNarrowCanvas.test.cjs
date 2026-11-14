@@ -290,3 +290,22 @@ test('Tailwind emits the strip and work area classes', async () => {
   assert.match(css, /\.flex-\\\[0_100_auto\\\] \{\s*flex: 0 100 auto/);
   assert.match(css, new RegExp(`\\.flex-\\\\\\[1_1_${layout.WORK_AREA_BASIS}px\\\\\\] \\{\\s*flex: 1 1 ${layout.WORK_AREA_BASIS}px`));
 });
+
+test('focused canvas keeps a compact title and names its folded tools in a keyboard disclosure', () => {
+  const f = fixture({height:600, stored:'1'});
+  try {
+    f.flush();
+    const {rows, named} = structure(f.tree());
+    assert.ok(rows.some(({node})=>node.type==='h1'&&node.props.children==='라벨 확인'));
+    const disclosure=rows.find(({node})=>node.type==='details'&&String(node.props.className).includes('modu-stage-disclosure'));
+    assert.ok(disclosure);
+    assert.ok(!disclosure.node.props.open);
+    const labels=rows.filter(row=>row.parents.includes(disclosure.node)&&row.node.type==='span').map(row=>row.node.props.children).join(' ');
+    for(const name of ['이미지 검토','파생 이미지','저장된 검토 대기열','워크플로 영향','모델 보조']) assert.ok(labels.includes(name),name);
+    assert.ok(named('TeamDataPanel').length && named('LabelingCanvas').length);
+    assert.ok(!named('LabelingCanvas')[0].parents.includes(disclosure.node));
+    const expand=rows.find(row=>row.parents.includes(disclosure.node)&&row.node.type==='button');
+    expand.node.props.onClick();f.flush();
+    assert.ok(f.panels().length>0,'the disclosure action reveals tools without changing the canvas owner');
+  } finally { f.unmount();f.restore(); }
+});

@@ -1,3 +1,4 @@
+import {openWorkspaceSettings} from './fixtures/workspaceSettings';
 import fs from 'node:fs';
 import path from 'node:path';
 import {createHash} from 'node:crypto';
@@ -136,7 +137,7 @@ test('delayed dataset picker keeps project and backend ownership and a fresh cho
     await evidence.screenshot(page, 'dataset-picker-project-handoff-fresh-owner-b');
 
     await holdPicker(page);
-    await page.getByRole('button', {name: '서버 관리', exact: true}).click();
+    await openWorkspaceSettings(page); await page.getByRole('button',{name:'서버 관리', exact: true}).click();
     await page.getByText('공동 작업 서버', {exact: true}).click();
     await page.getByLabel('공동 작업 서버 주소', {exact: true}).fill(host.origin + '/picker-shared');
     await page.getByLabel('공유 계정 이름', {exact: true}).fill('pickeradmin');

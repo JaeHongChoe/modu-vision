@@ -36,12 +36,9 @@ function FamilyCards({families, selectedFamily, onSelect, disabled}: {families: 
       <span className="block font-semibold text-white">{family.label}</span><span className="mt-1 block text-[11px] text-slate-400">{family.model}</span>
     </button>;
   if (full || !selectedFamily) return <div className="mt-4 grid gap-2 sm:grid-cols-2 xl:grid-cols-5">{families.map(card)}</div>;
-  const own = families.filter(family => family.task === selectedFamily), others = families.filter(family => family.task !== selectedFamily);
-  return <>
-    <div className="mt-4 grid gap-2 sm:grid-cols-2 xl:grid-cols-5">{own.map(card)}</div>
-    {!!others.length && <details className="mt-2"><summary className="cursor-pointer text-slate-400">다른 학습 종류 보기 ({others.length})</summary>
-      <div className="mt-2 grid gap-2 sm:grid-cols-2 xl:grid-cols-5">{others.map(card)}</div></details>}
-  </>;
+  return <details className="modu-stage-disclosure mt-3"><summary>모델 종류 선택 · 10종</summary>
+    <div className="mt-3 grid gap-2 sm:grid-cols-2 xl:grid-cols-3">{families.map(card)}</div>
+  </details>;
 }
 
 export function ModelFamilyCatalog({selectedFamily, onSelect, disabled=false}: {selectedFamily?: ModelFamily; onSelect?: (family: ModelFamily) => void; disabled?: boolean}) {
@@ -59,7 +56,7 @@ export function ModelFamilyCatalog({selectedFamily, onSelect, disabled=false}: {
       .finally(() => { if (current) setLoading(false); });
     return () => { current = false; };
   }, []);
-  return <section className="rounded-xl border border-[#344255] bg-[#131D2B] p-4 text-xs text-slate-200" aria-label="모델 학습 허브">
+  return <section className="modu-stage-summary p-4 text-sm" aria-label="모델 학습 허브">
     <h2 className="flex items-center gap-2 text-sm font-semibold"><Boxes className="h-4 w-4 text-cyan-300" />{simpleView ? '모델 종류' : '모델 학습 허브'}</h2>
     {!simpleView && <p className="mt-2 text-slate-400">검사 목적에 맞는 모델을 선택하고 정답 준비부터 완료 후보의 평가·배포까지 진행하세요.</p>}
     {loading ? <p role="status" className="mt-3">모델 종류를 확인 중입니다. 실행 지원은 아직 확인되지 않았습니다.</p>

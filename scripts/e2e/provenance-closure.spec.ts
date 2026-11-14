@@ -1,3 +1,4 @@
+import {openWorkspaceSettings} from './fixtures/workspaceSettings';
 import fs from 'node:fs';
 import path from 'node:path';
 import {execFileSync} from 'node:child_process';
@@ -17,7 +18,7 @@ async function exercise(page:Page,workspace:Workspace,evidence:Evidence,api:Api,
  await api('/api/dataset/split',{folder_path:workspace.dataset,task:'classification',train_ratio:0.5,val_ratio:0.5,seed:17});
  const fixture=JSON.parse(execFileSync(harness.resolvePython(),[path.join(harness.REPO_ROOT,'scripts/e2e/fixtures/provenance_binding.py'),workspace.root,project.project_dir],{cwd:harness.REPO_ROOT,encoding:'utf8',timeout:45_000}).trim());evidence.note('fixture',fixture);
  if(url)await page.goto(url);else await page.reload();
- await page.getByRole('button',{name:'데이터·판정 이력',exact:true}).click();
+ await openWorkspaceSettings(page); await page.getByRole('button',{name:'데이터·판정 이력',exact:true}).click();
  let dialog=page.getByRole('dialog',{name:'데이터·모델·판정 이력',exact:true});
  await dialog.getByLabel('검사 이미지',{exact:true}).selectOption(image);
  const traceRoute='/api/provenance?image_path='+encodeURIComponent(image);
@@ -45,7 +46,7 @@ async function exercise(page:Page,workspace:Workspace,evidence:Evidence,api:Api,
   await evidence.screenshot(page,`${native?'native':'browser'}-provenance-stale`);evidence.note('changed',changed);
  }finally{fs.writeFileSync(image,original);}
  await page.keyboard.press('Escape');await expect(dialog).toHaveCount(0);await page.reload();
- await page.getByRole('button',{name:'데이터·판정 이력',exact:true}).click();dialog=page.getByRole('dialog',{name:'데이터·모델·판정 이력',exact:true});await dialog.getByLabel('검사 이미지',{exact:true}).selectOption(image);
+ await openWorkspaceSettings(page); await page.getByRole('button',{name:'데이터·판정 이력',exact:true}).click();dialog=page.getByRole('dialog',{name:'데이터·모델·판정 이력',exact:true});await dialog.getByLabel('검사 이미지',{exact:true}).selectOption(image);
  await expect(dialog.getByRole('region',{name:'현재 검수·학습 적격성'})).toContainText('전체 적격 0장');
  const reopened=await api(traceRoute);expect(reopened.models[0].data_state).toBe('changed');expect(reopened.inspections[0].flow_version_id).toBe(fixture.flow_version_id);expect(reopened.inspections[0].image_sha256).toBe(fixture.image_sha256);expect(reopened.image.content_hash).toBe(fixture.image_sha256);
  await evidence.screenshot(page,`${native?'native':'browser'}-provenance-reopened`);

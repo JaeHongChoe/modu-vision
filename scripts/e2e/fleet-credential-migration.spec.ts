@@ -1,3 +1,4 @@
+import {openWorkspaceSettings} from './fixtures/workspaceSettings';
 import path from 'node:path';
 import {execFileSync} from 'node:child_process';
 import {test,expect,type Workspace,type Evidence} from './fixtures/test';
@@ -24,7 +25,7 @@ print(json.dumps({'targets':item.targets(),'owned_project':str(item.root.parent)
   expect(path.resolve(seeded.owned_project).startsWith(path.resolve(workspace.root)+path.sep)).toBe(true);
   expect(seeded.targets.every((target:any)=>target.credential_storage==='legacy_project_database'&&!('token' in target))).toBe(true);
   await navigate();
-  const open=async()=>{await page.getByRole('button',{name:'패키지·장치·진단',exact:true}).click();await page.getByText('중앙 · 현장 장비 모델 관리',{exact:true}).click();};
+  const open=async()=>{await openWorkspaceSettings(page); await page.getByRole('button',{name:'패키지·장치·진단',exact:true}).click();await page.getByText('중앙 · 현장 장비 모델 관리',{exact:true}).click();};
   await open();await page.getByLabel('현장 장비 선택',{exact:true}).selectOption(ids[0]);
   const section=page.getByRole('region',{name:'현장 장비 인증값 보관'});
   await expect(section).toContainText('프로젝트 안에 보관');

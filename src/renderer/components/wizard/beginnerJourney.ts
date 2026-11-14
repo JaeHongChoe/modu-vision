@@ -10,9 +10,9 @@ export type BeginnerGoal = {
 /** Presentation groups only. The six workflow steps and their save/authorization guards remain authoritative. */
 export const BEGINNER_GOALS: readonly BeginnerGoal[] = [
   { id: 'photos', nameKo: '사진 준비', nameEn: 'Prepare photos', steps: [1] },
-  { id: 'teach', nameKo: 'AI에게 가르치기', nameEn: 'Teach the AI', steps: [2, 3] },
-  { id: 'check', nameKo: '처음 보는 사진으로 확인', nameEn: 'Check unseen photos', steps: [4] },
-  { id: 'use', nameKo: '검사에 사용', nameEn: 'Use for inspection', steps: [5, 6] },
+  { id: 'teach', nameKo: 'AI 만들기', nameEn: 'Build AI', steps: [2, 3] },
+  { id: 'check', nameKo: '결과 확인', nameEn: 'Check results', steps: [4] },
+  { id: 'use', nameKo: '검사 사용', nameEn: 'Use for inspection', steps: [5, 6] },
 ];
 
 export function beginnerGoalForStep(step: WorkflowStep): BeginnerGoal {

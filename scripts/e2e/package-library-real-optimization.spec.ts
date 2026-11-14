@@ -1,3 +1,4 @@
+import {openWorkspaceSettings} from './fixtures/workspaceSettings';
 import fs from 'node:fs';
 import path from 'node:path';
 import {createHash} from 'node:crypto';
@@ -256,7 +257,7 @@ test('native actual OpenVINO job preserves full original package and reopens exa
   };
   const library = () => page.getByRole('region', {name: '저장된 검사 패키지 보관함', exact: true});
   const panel = () => page.getByRole('region', {name: 'Runtime 최적화와 양자화', exact: true});
-  const open = async () => {await page.getByRole('button', {name: '패키지·장치·진단', exact: true}).click(); await expect(library()).toBeVisible();};
+  const open = async () => {await openWorkspaceSettings(page); await page.getByRole('button',{name:'패키지·장치·진단', exact: true}).click(); await expect(library()).toBeVisible();};
   const close = async () => {await page.getByRole('button', {name: '패키지·장치·설치·진단 닫기', exact: true}).click(); await expect(library()).toHaveCount(0); await expect(panel()).toHaveCount(0); await settle();};
   let originalProject: any;
   try {

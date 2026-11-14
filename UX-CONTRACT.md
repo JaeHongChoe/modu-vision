@@ -157,3 +157,15 @@ within that dialog's focus scope. Help never changes a recipe or starts a job.
 The existing Korean/English dictionary remains the content owner. Keyboard and
 axe checks cover scoped pilot surfaces; they are not whole-product accessibility
 or human usability certification.
+
+
+## Selected novice workspace contract — 2026-11-14
+
+- The four-goal rail groups existing six steps; it must call `useProjectStore.setStep` and retain save-before-leave/authority checks. No parallel navigation state or inferred completion.
+- `main` stays keyed by transport revision; backend effects and automation stores live outside the layout. Folding a section cannot reset its active editors or stop a running task.
+- The right panel has exactly one recommended action. Navigation is named as opening/checking a screen; training, evaluation, inspection and deployment are distinct outcomes.
+- Required input summaries may be compact, but original reasons remain in named details. Errors and running/uncertain remote state with stop/reconnect controls must remain outside collapsed content.
+- Settings & tools contains first-run guidance, workspace switch, task center, technical details, theme/language, compute, provenance and the full glossary. Every specialist model family stays reachable through the training catalog.
+- The dataset path fallback remains mounted; an unsupported native-picker request reveals it. Imports preserve source ownership and errors. The gallery never relabels or crops source pixels for appearance.
+- Assistant close remains presentation-only; opening it does not send a question. Existing credential, image-consent and write-authority boundaries remain intact.
+- QA uses isolated profiles/synthetic examples. Screenshot and source-check results do not establish user acceptance or manufacturing model quality.

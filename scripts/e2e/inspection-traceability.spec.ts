@@ -1,3 +1,4 @@
+import {openWorkspaceSettings} from './fixtures/workspaceSettings';
 import fs from 'node:fs';
 import path from 'node:path';
 import {execFileSync} from 'node:child_process';
@@ -15,7 +16,7 @@ async function exercise(page:Page,workspace:Workspace,evidence:Evidence,api:Api,
  try{
   await api('/api/project/open',{project_dir:fixture.project.project_dir});
   if(url)await page.goto(url);else await page.reload();
-  await page.getByRole('button',{name:'운영자 검사',exact:true}).click();
+  await openWorkspaceSettings(page); await page.getByRole('button',{name:'운영자 검사 화면',exact:true}).click();
   const panel=page.getByRole('region',{name:'운영자 검사 작업 공간'});
   await panel.getByRole('button',{name:'검사 시작',exact:true}).click();
   await expect(panel).toContainText('승인 적용 기록과 실행 버전 일치',{timeout:60_000});
@@ -82,7 +83,7 @@ async function exercise(page:Page,workspace:Workspace,evidence:Evidence,api:Api,
   expect(exported.jobs.map((j:any)=>j.job_id).sort()).toEqual([first,second].sort());
   const csvPath=await download(()=>queue.getByRole('button',{name:'CSV 결과 내보내기',exact:true}).click(),'csv');
   expect(fs.readFileSync(csvPath,'utf8')).toContain(first);expect(fs.readFileSync(csvPath,'utf8')).toContain('reinspection_of');
-  await page.reload();await page.getByRole('button',{name:'운영자 검사',exact:true}).click();
+  await page.reload();await openWorkspaceSettings(page); await page.getByRole('button',{name:'운영자 검사 화면',exact:true}).click();
   await page.getByText('입력 대기열·실패 재처리',{exact:true}).click();
   const reopened=page.getByRole('region',{name:'검사 입력 대기열'});
   await reopened.getByLabel('조회할 부품 ID',{exact:true}).fill('PART-001');await reopened.getByRole('button',{name:'부품 이력 조회',exact:true}).click();

@@ -1,3 +1,4 @@
+import {openWorkspaceSettings} from './fixtures/workspaceSettings';
 import fs from 'node:fs';
 import path from 'node:path';
 import {createHash} from 'node:crypto';
@@ -27,7 +28,7 @@ async function projectViaUi(page:Page,projectDir:string){
  await expect(dialog).toHaveCount(0);
 }
 async function delivery(page:Page){
- await page.getByRole('button',{name:'패키지·장치·진단',exact:true}).click();
+ await openWorkspaceSettings(page); await page.getByRole('button',{name:'패키지·장치·진단',exact:true}).click();
  const panel=page.getByRole('region',{name:'검사 서비스 배포',exact:true});
  await expect(panel).toBeVisible();return panel;
 }

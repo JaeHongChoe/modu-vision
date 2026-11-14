@@ -1,3 +1,4 @@
+import {openWorkspaceSettings} from './fixtures/workspaceSettings';
 import path from 'node:path';
 import fs from 'node:fs';
 import crypto from 'node:crypto';
@@ -85,7 +86,7 @@ raise SystemExit(update.main(sys.argv[2:]))
  });
  await page.goto(renderer.url);
  const created=await page.request.post(renderer.origin+'/api/project/create',{data:{name:'Portable update review controls',task:'classification'}});expect(created.ok()).toBe(true);
- await page.reload();await page.getByRole('button',{name:'패키지·장치·진단',exact:true}).click();await page.getByRole('button',{name:'설치·진단',exact:true}).click();
+ await page.reload();await openWorkspaceSettings(page); await page.getByRole('button',{name:'패키지·장치·진단',exact:true}).click();await page.getByRole('button',{name:'설치·진단',exact:true}).click();
  const panel=page.getByRole('region',{name:'별도 portable 앱 업데이트'}),select=panel.getByRole('button',{name:'portable 설치 폴더 선택',exact:true});
  const bindCanary=async()=>{
   if(!await panel.getByLabel('검증 워크스페이스 ID',{exact:true}).isVisible())await panel.getByText('기준 이미지 검증 계획 연결',{exact:true}).click();
@@ -128,7 +129,7 @@ print(json.dumps({'user_ids':[u['id'] for u in AccountStore(root/'auth/accounts.
  expect(observed.canary_semantic_output.recognized_texts).toEqual(['A']);expect(observed.canary_runtime_execution.device).toBe('cpu');expect(observed.canary_runtime_execution.cpu_threads).toBe(1);
  for(const key of ['candidate_main_launch_verified','native_application_verified','frozen_backend_verified','owned_backend_execution_origin_verified','worker_process_tree_exit_verified','model_quality_verified','release_ready'])expect(observed.canary_receipt[key]).toBe(false);
  expect(execFileSync(observed.launch_argv[0],[],{encoding:'utf8'})).toBe('portable-qualified\n');
- await page.reload();await page.getByRole('button',{name:'패키지·장치·진단',exact:true}).click();await page.getByRole('button',{name:'설치·진단',exact:true}).click();await select.click();await expect(panel).toContainText('버전 1.0.0 · 데이터 세대 2');
+ await page.reload();await openWorkspaceSettings(page); await page.getByRole('button',{name:'패키지·장치·진단',exact:true}).click();await page.getByRole('button',{name:'설치·진단',exact:true}).click();await select.click();await expect(panel).toContainText('버전 1.0.0 · 데이터 세대 2');
  await page.setViewportSize({width:700,height:850});await panel.scrollIntoViewIfNeeded();await evidence.screenshot(page,'portable-update-reopen-new-writes');
  // A committed finish is idempotent, then two actual child exit boundaries
  // exercise the explicit pre-database abort and post-database finish controls.
@@ -153,7 +154,7 @@ print(json.dumps({'manifest':str(release/'release.json')}))
   if(boundary==='before_database'){await expect(abort).toBeVisible();await expect(abort).toBeDisabled();await confirm.check();await abort.click();await expect(panel).toContainText('버전 1.0.0 · 데이터 세대 2');}
   else{await expect(abort).toHaveCount(0);await confirm.check();await panel.getByRole('button',{name:'같은 업데이트 마무리',exact:true}).click();await expect(panel).toContainText('앱·데이터 전환 확인됨');await expect(select).toBeEnabled();await expect(panel).toContainText('버전 1.1.0 · 데이터 세대 3');}
  }
- await page.reload();await page.getByRole('button',{name:'패키지·장치·진단',exact:true}).click();await page.getByRole('button',{name:'설치·진단',exact:true}).click();await select.click();await expect(panel).toContainText('버전 1.1.0 · 데이터 세대 3');
+ await page.reload();await openWorkspaceSettings(page); await page.getByRole('button',{name:'패키지·장치·진단',exact:true}).click();await page.getByRole('button',{name:'설치·진단',exact:true}).click();await select.click();await expect(panel).toContainText('버전 1.1.0 · 데이터 세대 3');
  await evidence.screenshot(page,'portable-update-interruption-finish-reopen');
  evidence.note('portable_update_review',{actual_main_manager:true,actual_python_signed_update_and_forward_recovery:true,commands,source_changed_after_review_refused:true,controlled_application_entrypoint_executed:true,new_user_preserved:true,labels_preserved:observed.labels_preserved,database_fence:observed.database_fence,pre_database_abort_reopens_prior_pair:true,post_database_finish_reopens_new_pair:true,post_database_abort_absent:true,controlled_child_exit_boundaries:['before_database','after_database'],actual_staged_source_cpu_canary:true,generated_ocr_checkpoint:true,canary_semantic_output:observed.canary_semantic_output,canary_runtime_execution:observed.canary_runtime_execution,physical_power_loss:false,native_signatures:'controlled output only; not real publisher acceptance',renderer_host:'browser with controlled bridge',native_electron:false,windows:false,model_quality_approved:false,release_ready:false});
 });
@@ -161,7 +162,7 @@ print(json.dumps({'manifest':str(release/'release.json')}))
 test('native desktop refuses unprovisioned portable changes before opening a directory dialog',{tag:'@electron'},async({electronSession,evidence})=>{
  const status=await electronSession.waitForBackend(),page=electronSession.window;
  await page.evaluate(async port=>{const result=await fetch(`http://127.0.0.1:${port}/api/project/create`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:'Native portable refusal',task:'classification'})});if(!result.ok)throw Error('Project creation failed');},status.port);
- await page.reload();await page.getByRole('button',{name:'패키지·장치·진단',exact:true}).click();await page.getByRole('button',{name:'설치·진단',exact:true}).click();
+ await page.reload();await openWorkspaceSettings(page); await page.getByRole('button',{name:'패키지·장치·진단',exact:true}).click();await page.getByRole('button',{name:'설치·진단',exact:true}).click();
  const panel=page.getByRole('region',{name:'별도 portable 앱 업데이트'});await panel.getByRole('button',{name:'portable 설치 폴더 선택',exact:true}).click();
  await expect(panel.getByRole('alert')).toContainText('packaged application');await expect(panel.getByText('선택한 설치:',{exact:false})).toHaveCount(0);
  await evidence.screenshot(page,'native-portable-unprovisioned-refusal');evidence.note('portable_native_refusal',{actual_electron_main_preload_renderer:true,unprovisioned_development_refused:true,directory_dialog_opened:false,installation_or_database_modified:false,real_signed_installation_qualified:false});
@@ -191,7 +192,7 @@ test('controlled launch lifecycle UI preserves response-loss readback and durabl
   Object.assign((window as any).api,{getDistributionStatus:async()=>({app_version:'0.1.0',platform:'darwin',architecture:'arm64',signature:{status:'development',reason:'Controlled UI only',checked_at:'controlled'},update:{configured:false,configuration:null,status:'not_configured',release:null,automatic_update_available:false}}),selectPortableUpdateHome:()=>invoke('select'),inspectPortableUpdate:()=>invoke('inspect'),launchPortableUpdate:(expected:unknown)=>invoke('launch',[expected]),inspectPortableLaunch:(expected:unknown)=>invoke('launch-inspect',[expected])});
  });
  await page.goto(renderer.url);const created=await page.request.post(renderer.origin+'/api/project/create',{data:{name:'Controlled launch lifecycle UI',task:'classification'}});expect(created.ok()).toBe(true);
- const open=async()=>{await page.reload();await page.getByRole('button',{name:'패키지·장치·진단',exact:true}).click();await page.getByRole('button',{name:'설치·진단',exact:true}).click();};await open();
+ const open=async()=>{await page.reload();await openWorkspaceSettings(page); await page.getByRole('button',{name:'패키지·장치·진단',exact:true}).click();await page.getByRole('button',{name:'설치·진단',exact:true}).click();};await open();
  const panel=page.getByRole('region',{name:'별도 portable 앱 업데이트'}),launch=panel.getByRole('button',{name:'전환한 portable 앱 시작',exact:true}),refresh=panel.getByRole('button',{name:'portable 상태 다시 읽기',exact:true});
  await panel.getByRole('button',{name:'portable 설치 폴더 선택',exact:true}).click();await expect(panel).toContainText('앱 실행 기록 없음');await expect(launch).toBeEnabled();
  await launch.click();await expect(panel.getByRole('alert')).toContainText('Controlled launch response loss');await expect(launch).toBeDisabled();expect(requests).toBe(1);await panel.getByRole('alert').scrollIntoViewIfNeeded();await evidence.screenshot(page,'portable-launch-response-loss-no-retry');

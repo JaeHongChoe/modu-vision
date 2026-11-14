@@ -1,3 +1,4 @@
+import {openWorkspaceSettings} from './fixtures/workspaceSettings';
 import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
@@ -158,7 +159,7 @@ for (const scenario of cases) test(scenario.name, async ({page, renderer, worksp
     await expect(projects).toHaveCount(0); await expect(page.getByTitle('프로젝트 관리', {exact: true})).toContainText(project.name); await settle();
     ownedEmptyProject = await api('/api/project/current'); expect(ownedEmptyProject).toMatchObject({id: project.id, project_dir: project.project_dir, source_dataset_dir: null});
     const open = async () => {
-      await page.getByRole('button', {name: '패키지·장치·진단', exact: true}).click();
+      await openWorkspaceSettings(page); await page.getByRole('button',{name:'패키지·장치·진단', exact: true}).click();
       await page.getByRole('navigation', {name: '배포 운영 화면', exact: true}).getByRole('button', {name: '설치·진단', exact: true}).click(); await settle();
     };
     await open();

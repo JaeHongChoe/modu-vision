@@ -1,3 +1,4 @@
+import {openWorkspaceSettings} from './fixtures/workspaceSettings';
 import path from 'node:path';
 import {test,expect} from './fixtures/test';
 import {installDesktopHostShim} from './fixtures/desktop-host-shim';
@@ -25,7 +26,7 @@ test('optimization renderer refuses cached source and foreign poll responses bef
  const key='runtime-optimization:'+JSON.stringify([project.project_dir,packagePath,workspace.dataset,'classification']);
  await page.addInitScript(key=>localStorage.setItem(key,'cached'),key);
  await page.goto(renderer.url);
- await page.getByRole('button',{name:'패키지·장치·진단',exact:true}).click();
+ await openWorkspaceSettings(page); await page.getByRole('button',{name:'패키지·장치·진단',exact:true}).click();
  await page.getByRole('button',{name:'최적화로 이동',exact:true}).click();
  const panel=page.getByRole('region',{name:'Runtime 최적화와 양자화'});
  await expect(panel.getByRole('alert')).toContainText('패키지·원본 소스');
@@ -76,7 +77,7 @@ test('optimization lifecycle refuses missing input and failed submission, cancel
  await page.route('**/api/export/flow/optimization-jobs/*/approval-prerequisites',r=>{reviewRequests++;return answer(r,{approval_revision_ids:{}});});
  await page.route('**/api/export/flow/optimization-jobs/*/heldout-results/*',r=>{reviewRequests++;return answer(r,null);});
  const open=async()=>{
-  await page.getByRole('button',{name:'패키지·장치·진단',exact:true}).click();
+  await openWorkspaceSettings(page); await page.getByRole('button',{name:'패키지·장치·진단',exact:true}).click();
   await page.getByRole('button',{name:'최적화로 이동',exact:true}).click();
   return page.getByRole('region',{name:'Runtime 최적화와 양자화'});
  };

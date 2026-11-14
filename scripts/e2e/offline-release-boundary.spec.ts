@@ -1,7 +1,8 @@
+import {openWorkspaceSettings} from './fixtures/workspaceSettings';
 import type {Page} from '@playwright/test';
 import {test,expect} from './fixtures/test';
 async function installation(page:Page){
- await page.getByRole('button',{name:'패키지·장치·진단',exact:true}).click();
+ await openWorkspaceSettings(page); await page.getByRole('button',{name:'패키지·장치·진단',exact:true}).click();
  await page.getByRole('navigation',{name:'배포 운영 화면',exact:true}).getByRole('button',{name:'설치·진단',exact:true}).click();
 }
 test('unsupported browser host refuses offline verification without requesting a file',async({page,renderer,request,evidence})=>{

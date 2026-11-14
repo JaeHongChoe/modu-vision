@@ -361,3 +361,17 @@ Use existing workspace record tokens; uncertainty and missing dependencies use
 plain text with the existing warning tone. Do not present catalog support as
 field quality approval. Rich terminology help opens by an explicit help button,
 uses the existing steel popup surface and keeps keyboard focus recoverable.
+
+
+## 2026-11-14 — selected novice workspace (round 2, option 3)
+
+The user selected `docs/verification/assets/novice-workspace/selected-design.png`. This supersedes the earlier dense stage bands in the default simple view. It is an application workspace, not a landing page: photos and the active work surface occupy the larger left region; one next-action panel occupies the right.
+
+- Warm paper `#F7F8F3`, white surfaces, forest `#245B43` actions, dark ink `#22392E`; no new gradients or decorative illustrations. Dark mode retains the same hierarchy with green-neutral tokens. Existing explicit theme preferences are preserved.
+- Pretendard Variable remains the bundled Korean/Latin typeface. Stage titles use 26px desktop / 22px compact, body 14px, supporting text 13px. Technical identifiers remain selectable.
+- Four goals: 사진 준비 → AI 만들기 → 결과 확인 → 검사 사용. The six underlying steps and guarded navigation remain authoritative. Full view exposes the six-step rail.
+- One persistent next-action panel replaces the footer and duplicated journey banner. It describes the required input, offers a truthful navigation action, details, optional automatic progress, and assistant access. It does not start a model just because its button is pressed.
+- Image gallery uses original aspect ratios, plain captions, selected state and a shared filter toolbar. Data management, specialist setup, comparisons and exports use named disclosures. Current errors, run/stop and connection recovery remain visible.
+- Layout responds to the available content container, including the width reserved for the assistant drawer. Under 960px available width the next panel becomes a bounded lower area. Canvas and workspace retain independent scroll areas.
+
+This is source/UI validation. Installed app builds, running user web servers and model-performance acceptance are separate release work.

@@ -48,7 +48,7 @@ test('simple view has four goals, while every internal step remains reachable th
   const tree=mount(state)();
   const goals=nodes(tree).filter(node=>node.type==='button'&&node.props['data-beginner-goal']);
   assert.equal(goals.length,4);
-  assert.deepEqual(goals.map(node=>node.props['aria-label']),['사진 준비','AI에게 가르치기','처음 보는 사진으로 확인','검사에 사용']);
+  assert.deepEqual(goals.map(node=>node.props['aria-label']),['사진 준비','AI 만들기','결과 확인','검사 사용']);
   assert.equal(goals[1].props['aria-current'],'true','the goal is current without duplicating aria-current=step');
   await goals[1].props.onClick();assert.deepEqual(calls,[3],'clicking the current goal retains its internal step');
   const substeps=nodes(tree).filter(node=>node.type==='button'&&node.props['data-beginner-step']);
@@ -118,18 +118,18 @@ test('간단히 보기 has a compact project and utility row followed by its sep
  assert.match(html,/data-wizard-header-row="journey"/);
  const row=html.slice(0,menu),panel=html.slice(menu);
  for(const name of ['aria-label="실행 위치"','aria-label="검사 작업 종류"','aria-label="언어 전환 (KR / EN)"','>서버 관리<','>데이터·판정 이력<','>기술 상세<','>밝은 화면<','>처음 시작 안내<','>운영자 검사 화면<','role="status"'])assert.ok(panel.includes(name)&&!row.includes(name),`${name} is not (only) under 더 보기`);
- assert.match(panel,/<summary[^>]*>더 보기<\/summary>/);
+ assert.match(panel,/<summary[^>]*>설정·도구<\/summary>/);
  assert.ok(!html.includes('workspace-button--primary'),'the header carries no primary action');
  assert.match(html,/<summary class="[^"]*workspace-button[^"]*"/);assert.match(html,/aria-pressed="false"[^>]*class="workspace-button whitespace-nowrap"/,'simple-view controls use the shared secondary button');
 });
 
-test('모두 보기 keeps its two rows and the row controls outside any menu',()=>{
- const html=render({viewMode:'full'});
- assert.ok(!html.includes('<details'),'no 더 보기 menu in 모두 보기');
- const row2=html.indexOf('bg-[#131822] px-4 py-2');
- assert.ok(row2>0,'the second row is there');assert.equal((html.match(/<nav /g)||[]).length,1);assert.ok(row2<html.indexOf('<nav '),'the steps sit in the second row');
- for(const name of ['>서버 관리<','>데이터·판정 이력<','>기술 상세<','>간단히 보기<','aria-label="실행 위치"','aria-label="언어 전환 (KR / EN)"','role="status"'])assert.ok(html.indexOf(name)>0&&html.indexOf(name)<row2,`${name} is not in the first row`);
- assert.ok(html.indexOf('aria-label="검사 작업 종류"')>row2,'the inspection type stays in the second row');
+test('full view retains all six steps with one settings menu and no duplicate task selector',()=>{
+ const html=render({viewMode:'full',props:{simpleMenu:react.createElement('button',{type:'button'},'운영자 검사 화면')}});
+ assert.equal((html.match(/<details/g)||[]).length,1);
+ assert.equal((html.match(/<nav /g)||[]).length,1);
+ assert.equal((html.match(/aria-label="검사 작업 종류"/g)||[]).length,1);
+ for(const name of ['>서버 관리<','>데이터·판정 이력<','>기술 상세<','>간단히 보기<','aria-label="실행 위치"','aria-label="언어 전환 (KR / EN)"','>운영자 검사 화면<'])assert.ok(html.includes(name),`${name} remains available`);
+ assert.match(html,/data-wizard-header-row="steps"/);
 });
 
 // At the minimum window (1280, Windows padding) the row needs more than one line and 모두 보기 / 더 보기 wrap alone onto

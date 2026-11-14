@@ -1,3 +1,4 @@
+import {openWorkspaceSettings} from './fixtures/workspaceSettings';
 import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
@@ -107,7 +108,7 @@ async function exercise(page: Page, workspace: Workspace, evidence: Evidence, ap
   const details = page.locator('details').filter({has: page.locator('summary').filter({hasText: '작업 센터 · 현재 프로젝트'})}).first();
   const summary = details.locator('summary').first(), select = details.getByLabel('저장 작업 다시 열기', {exact: true});
   const open = async () => {
-    if (await details.count() === 0) await page.getByRole('navigation', {name: '프로젝트 작업 공간', exact: true}).getByRole('button', {name: '작업 센터', exact: true}).click();
+    if (await details.count() === 0) { await openWorkspaceSettings(page); await page.getByRole('navigation', {name: '프로젝트 작업 공간', exact: true}).getByRole('button', {name: '작업 센터 · 진행 중인 작업', exact: true}).click(); }
     else if (await details.getAttribute('open') === null) await summary.click();
   };
   const close = async () => {if (await details.getAttribute('open') !== null) await summary.click();};

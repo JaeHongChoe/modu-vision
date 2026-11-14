@@ -29,7 +29,7 @@ test('the footer says it opens training and waits for the existing navigation sa
  const h=mount({label:'모델 학습 시작 (3단계)',step:3,target:'workflow-training'},{save:()=>save,progress:' · 확정 12장'});
  try{
   const tree=h.render(),primary=h.primary(tree);
-  assert.equal(primary.props.children,'학습 화면 열기');assert.equal(primary.props['aria-label'],'권장 행동: 학습 화면 열기');
+  assert.equal(text(primary),'학습 화면 열기');assert.equal(primary.props['aria-label'],'권장 행동: 학습 화면 열기');
   primary.props.onClick();assert.deepEqual(h.calls,[['step',3]]);
   release();await new Promise(setImmediate);assert.deepEqual(h.calls,[['step',3],['focus','workflow-training']]);
   const status=nodes(tree).find(node=>node.props?.role==='status');assert.match(status.props.title,/학습 화면 열기.*확정 12장/);
@@ -58,7 +58,7 @@ test('the automatic-run entry says it opens setup or progress and only opens the
 test('simple footer names its internal task and gives only the recommended action visual priority',()=>{
  const h=mount({label:'데이터 가져오기',step:1,target:'workflow-data'},{activeStep:3,readiness:{status:'blocked',missingInputs:['현재 원본 이미지 가져오기 필요']}});
  try{
-  const tree=h.render();assert.match(text(tree),/세부 작업.*모델 학습/);assert.doesNotMatch(text(tree),/3\/6/);
+  const tree=h.render();assert.match(text(tree),/현재 작업.*모델 학습/);assert.doesNotMatch(text(tree),/3\/6/);
   const status=nodes(tree).find(node=>node.props?.role==='status');assert.doesNotMatch(status.props.className,/amber|bg-/,'status is not a full warning-colored bar');
   assert.match(text(status),/현재 원본 이미지 가져오기 필요/);
   assert.equal(nodes(tree).filter(node=>node.props?.className?.includes('workspace-button--primary')).length,1);
@@ -67,5 +67,7 @@ test('simple footer names its internal task and gives only the recommended actio
   for(const button of [previous,next,nodes(tree).find(node=>node.props?.['aria-haspopup']==='dialog'),nodes(tree).find(node=>node.props?.['aria-expanded']===false)])assert.match(button.props.className,/workspace-button--quiet/);
   previous.props.onClick();next.props.onClick();assert.deepEqual(h.calls,[['step',2],['step',4]],'quiet arrows still navigate internal steps');
  }finally{h.close();}
- const full=mount({label:'확인',step:3},{activeStep:3,viewMode:'full'});try{const tree=full.render();assert.match(text(tree),/3\/6/);assert.doesNotMatch(text(tree),/세부 작업/);assert.doesNotMatch(nodes(tree).find(node=>node.props?.['aria-label']==='이전 단계 보기').props.className,/workspace-button--quiet/);}finally{full.close();}
+ const full=mount({label:'확인',step:3},{activeStep:3,viewMode:'full'});try{const tree=full.render();assert.match(text(tree),/현재 작업.*모델 학습/);assert.equal(tree.type,'aside');assert.doesNotMatch(nodes(tree).find(node=>node.props?.['aria-label']==='이전 단계 보기').props.className,/workspace-button--quiet/);}finally{full.close();}
 });
+
+test('both view modes preserve an accessible next-action landmark and optional assistant entry',()=>{for(const viewMode of ['simple','full']){const h=mount({label:'확인',step:3},{viewMode});try{const tree=h.render();assert.equal(tree.type,'aside');assert.equal(tree.props['aria-label'],'다음 할 일');const assistant=nodes(tree).find(n=>n.type==='button'&&text(n)==='도우미 열기');assistant.props.onClick();assert.deepEqual(h.calls,[['assistant']]);assert.equal(nodes(tree).filter(n=>n.type==='AsyncAction').length,1);}finally{h.close();}}});

@@ -1,3 +1,4 @@
+import {openWorkspaceSettings} from './fixtures/workspaceSettings';
 import fs from 'node:fs';
 import path from 'node:path';
 import {execFileSync} from 'node:child_process';
@@ -13,7 +14,7 @@ async function exercise(page:Page,workspace:Workspace,evidence:Evidence,api:Api,
  try{
   await api('/api/project/open',{project_dir:fixture.project.project_dir});
   if(url)await page.goto(url);else await page.reload();
-  await page.getByRole('button',{name:'운영자 검사',exact:true}).click();
+  await openWorkspaceSettings(page); await page.getByRole('button',{name:'운영자 검사 화면',exact:true}).click();
   let panel=page.getByRole('region',{name:'운영자 검사 작업 공간',exact:true});
   await expect(panel).toContainText('중지됨');
   await panel.getByRole('button',{name:'검사 시작',exact:true}).click();
@@ -35,15 +36,16 @@ async function exercise(page:Page,workspace:Workspace,evidence:Evidence,api:Api,
   await panel.getByRole('button',{name:'검수 기록 저장',exact:true}).click();
   await expect(panel).toContainText('모델 OK · 운영 REVIEW');
   await page.keyboard.press('F1');await expect(panel.getByRole('complementary',{name:'작업자 도움말'})).toBeVisible();
-  await page.getByRole('button',{name:'언어 전환 (KR / EN)'}).click();
+  await openWorkspaceSettings(page); await page.getByRole('button',{name:'언어 전환 (KR / EN)'}).click();
   panel=page.getByRole('region',{name:'Operator inspection workspace',exact:true});
   await expect(panel.getByRole('complementary',{name:'Operator help'})).toContainText('Keyboard actions use the same permissions.');
   await expect(panel).toContainText('Model OK · Operator REVIEW');
   await expect(panel.getByLabel('Operator inspection image',{exact:true})).toHaveValue(image);
   await page.keyboard.press('Escape');await expect(panel.getByRole('complementary')).toHaveCount(0);
   await page.reload();
+  await openWorkspaceSettings(page);
   await expect(page.getByRole('button',{name:'언어 전환 (KR / EN)'})).toContainText('한국어');
-  await page.getByRole('button',{name:'Operator inspection',exact:true}).click();
+  await openWorkspaceSettings(page); await page.getByRole('button',{name:'Operator inspection',exact:true}).click();
   panel=page.getByRole('region',{name:'Operator inspection workspace',exact:true});
   await expect(panel).toContainText('Model OK · Operator REVIEW');
   await expect(panel.getByLabel('Operator inspection image',{exact:true})).toHaveValue(image);

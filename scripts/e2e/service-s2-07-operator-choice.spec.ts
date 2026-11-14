@@ -1,3 +1,4 @@
+import {openWorkspaceSettings} from './fixtures/workspaceSettings';
 import fs from 'node:fs';
 import type { APIRequestContext } from '@playwright/test';
 import { expect, test } from './fixtures/test';
@@ -37,7 +38,7 @@ test('operator choice restores exact identity, blocks changed content and remain
   await installDesktopHostShim(page, renderer.port);
   await page.goto(renderer.url);
   const open = async () => {
-    await page.getByRole('button', { name: '운영자 검사', exact: true }).click();
+    await openWorkspaceSettings(page); await page.getByRole('button',{name:'운영자 검사 화면', exact: true }).click();
     const panel = page.getByRole('region', { name: '운영자 검사 작업 공간' });
     await expect(panel).toBeVisible();
     await expect(panel.getByLabel('운영자 검사 이미지', { exact: true })).toBeEnabled();

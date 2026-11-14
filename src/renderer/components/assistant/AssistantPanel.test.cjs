@@ -165,7 +165,15 @@ test('the open drawer takes its own column instead of lying under the step bars'
  assert.ok(width,'the drawer is fixed to the right edge with one width');
  const app=fs.readFileSync(path.join(__dirname,'..','..','App.tsx'),'utf8');
  assert.match(app,/const assistantOpen = useAssistantStore\(s => s\.isOpen\);/);
- assert.ok(app.includes("font-sans${assistantOpen ? ' pr-["+width[1].slice(3,-1)+"]' : ''}"),'the root reserves the drawer width while it is open');
+ assert.match(app, /assistantOpen \? ' modu-studio--assistant-open' : ''/, 'open state selects the reserved desktop column');
+ const css=fs.readFileSync(path.join(__dirname,'..','..','styles','novice-workspace.css'),'utf8');
+ const reserved=/\.modu-studio--assistant-open \{ padding-right: ([0-9.]+rem); \}/.exec(css);
+ assert.ok(reserved, 'desktop layout reserves space for the fixed assistant');
+ assert.equal(reserved[1],width[1].slice(3,-1),'reserved desktop space equals the actual drawer width');
+ assert.match(css, /@media \(max-width: 959px\)[\s\S]*?\.modu-studio--assistant-open \{ padding-right: 0; \}/, 'compact layout explicitly switches to the drawer overlay');
+ assert.match(css, /\.modu-workspace-body \{[^}]*minmax\(0,1fr\)/, 'stage and action rail retain their own bounded grid');
+ assert.match(css, /container: modu-shell \/ inline-size/, 'available stage width accounts for the reserved assistant column');
+ assert.match(css, /@container modu-shell \(max-width: 959px\)/, 'the action rail stacks at the remaining content width');
 });
 
 test('ChatGPT readiness comes from the selected account and plan, never a key flag',()=>{

@@ -1,3 +1,4 @@
+import {openWorkspaceSettings} from './fixtures/workspaceSettings';
 import { expect, test } from './fixtures/test';
 
 test('project dialog contains keyboard focus and restores connected project opener after guide handoff', async ({ page, request, renderer, evidence }) => {
@@ -5,8 +6,7 @@ test('project dialog contains keyboard focus and restores connected project open
   await page.goto(renderer.url);
   await expect(page.locator('#workflow-project')).toContainText('Owned project keyboard');
   await page.getByRole('button', { name: '간단히 보기', exact: true }).click();
-  await page.getByText('더 보기', { exact: true }).first().click();
-  await page.getByRole('button', { name: '처음 시작 안내', exact: true }).click();
+  await openWorkspaceSettings(page); await page.getByRole('button',{name:'처음 시작 안내', exact: true }).click();
   await page.getByRole('dialog', { name: '처음 시작하기' }).getByRole('button', { name: '내 사진으로 만들기', exact: true }).click();
   const dialog = page.getByRole('dialog', { name: '프로젝트 관리', exact: true });
   const name = dialog.getByLabel(/프로젝트 이름/);

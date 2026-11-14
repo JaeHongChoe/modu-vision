@@ -1,3 +1,4 @@
+import {openWorkspaceSettings} from './fixtures/workspaceSettings';
 import {expect,test} from './fixtures/test';
 
 // Isolated project/fixture images only. These tests navigate and create a project; they never start model or GPT work.
@@ -8,8 +9,7 @@ test('novice entry creates an explicit purpose and keeps all four goals reachabl
   await page.goto(renderer.url);
   await expect(page.getByRole('button',{name:'Novice starting workspace'}).first()).toBeVisible();
   await page.getByRole('button',{name:'간단히 보기',exact:true}).click();
-  await page.getByText('더 보기',{exact:true}).first().click();
-  await page.getByRole('button',{name:'처음 시작 안내',exact:true}).click();
+  await openWorkspaceSettings(page); await page.getByRole('button',{name:'처음 시작 안내',exact:true}).click();
   const welcome=page.getByRole('dialog',{name:'처음 시작하기'});
   await expect(welcome.getByRole('button',{name:'예제로 해보기',exact:true})).toBeVisible();
   await expect(welcome.getByRole('button',{name:'만들어 둔 작업 이어가기',exact:true})).toBeVisible();
@@ -17,8 +17,7 @@ test('novice entry creates an explicit purpose and keeps all four goals reachabl
   await welcome.getByRole('button',{name:'만들어 둔 작업 이어가기',exact:true}).click();
   await expect(page.getByRole('dialog',{name:'프로젝트 관리'}).getByRole('heading',{name:'최근 프로젝트',exact:true})).toBeVisible();
   await page.getByRole('button',{name:'프로젝트 관리 닫기',exact:true}).click();
-  await page.getByText('더 보기',{exact:true}).first().click();
-  await page.getByRole('button',{name:'처음 시작 안내',exact:true}).click();
+  await openWorkspaceSettings(page); await page.getByRole('button',{name:'처음 시작 안내',exact:true}).click();
   await welcome.getByRole('button',{name:'내 사진으로 만들기',exact:true}).click();
   const project=page.getByRole('dialog',{name:'프로젝트 관리'});
   await expect(project.getByText('어떤 결과가 필요한가요?',{exact:true})).toBeVisible();
@@ -65,11 +64,11 @@ test('novice entry creates an explicit purpose and keeps all four goals reachabl
   expect(current.project?.task??current.task).toBe('segmentation');
   await expect(page.getByRole('button',{name:projectName}).first()).toBeVisible();
   await page.setViewportSize({width:1440,height:900});
-  for(const goal of ['사진 준비','AI에게 가르치기','처음 보는 사진으로 확인','검사에 사용']) {
+  for(const goal of ['사진 준비','AI 만들기','결과 확인','검사 사용']) {
     await page.getByRole('button',{name:goal,exact:true}).click();
     await expect(page.getByRole('button',{name:goal,exact:true})).toHaveAttribute('aria-current','true');
   }
-  await page.getByRole('button',{name:'AI에게 가르치기',exact:true}).click();
+  await page.getByRole('button',{name:'AI 만들기',exact:true}).click();
   await page.getByRole('button',{name:/모델 학습/,exact:false}).first().click();
   await expect(page.getByRole('heading',{name:'AI에게 가르칠 준비'})).toBeVisible();
   await expect(page.getByRole('region',{name:'처음 만드는 AI 진행'})).toHaveCount(0);
@@ -82,8 +81,7 @@ test('novice entry creates an explicit purpose and keeps all four goals reachabl
   await page.setViewportSize({width:1100,height:780});
   await evidence.screenshot(page,'novice-training-compact');
   expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
-  await page.getByText('더 보기',{exact:true}).first().click();
-  await page.getByRole('button',{name:'어두운 화면',exact:true}).click();
+  await openWorkspaceSettings(page); await page.getByRole('button',{name:'어두운 화면',exact:true}).click();
   await page.keyboard.press('Escape');
   await expect(page.locator('html')).toHaveAttribute('data-theme','dark');
   await expect.poll(()=>page.evaluate(()=>document.getAnimations().filter(animation=>animation instanceof CSSTransition&&animation.playState==='running').length)).toBe(0);

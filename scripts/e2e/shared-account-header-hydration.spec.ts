@@ -1,3 +1,4 @@
+import {openWorkspaceSettings} from './fixtures/workspaceSettings';
 import path from 'node:path';
 import type {Request} from '@playwright/test';
 import {test, expect} from './fixtures/test';
@@ -115,13 +116,14 @@ test('browser account login automatically hydrates the mounted Header and accoun
         expect(own[0].project).toBe(project.id);
         expect(JSON.parse(own[0].context!)).toEqual(context);
       }
+      await openWorkspaceSettings(page);
       await expect(target).toHaveValue(profile.id);
       await expect(target).toBeEnabled();
       await expect(target.locator(`option[value="${profile.id}"]`)).toHaveText(profile.name);
       await evidence.screenshot(page, 'account-login-header-auto-hydration');
 
       phase = 'ui-reopen';
-      await page.getByRole('button', {name: '서버 관리', exact: true}).click();
+      await openWorkspaceSettings(page); await page.getByRole('button',{name:'서버 관리', exact: true}).click();
       await expect(page.getByLabel('공동 작업 프로젝트', {exact: true})).toHaveValue(project.id);
       for (const route of accountReads) {
         await expect.poll(() => complete('ui-reopen', route, 200).length).toBe(1);
@@ -150,6 +152,7 @@ test('browser account login automatically hydrates the mounted Header and accoun
       expect(JSON.parse(selects[0].body!)).toEqual({project_id: project.id});
       expect(rows('ui-reopen', '/api/accounts/select-project')).toHaveLength(0);
       expect(rows('ui-reopen', '/api/accounts/login')).toHaveLength(0);
+      await openWorkspaceSettings(page);
       await expect(target).toHaveValue(profile.id);
       await expect(target).toBeEnabled();
       expect(mutations).toEqual([{method: 'POST', route: '/api/accounts/login'},

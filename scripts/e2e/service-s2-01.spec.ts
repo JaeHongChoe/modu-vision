@@ -1,3 +1,4 @@
+import {openWorkspaceSettings} from './fixtures/workspaceSettings';
 import { writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { expect, test } from './fixtures/test';
@@ -93,7 +94,7 @@ test('S2-01: a first start guides the order and builds the example end to end on
   await page.reload();
   await expect(page.getByRole('navigation', { name: '프로젝트 작업 공간' })).toBeVisible();
   await expect(guide).toHaveCount(0);
-  await page.getByRole('button', { name: '처음 시작 안내' }).click();
+  await openWorkspaceSettings(page); await page.getByRole('button',{name:'처음 시작 안내' }).click();
   await expect(guide.getByRole('list', { name: '만들어 둔 예제 프로젝트' })).toContainText('예제 · 표면 긁힘 분류');
   await expect(guide.getByRole('button', { name: '예제 프로젝트 새로 만들기' })).toBeVisible();
   await evidence.screenshot(page, 's201-04-guide-reopened');

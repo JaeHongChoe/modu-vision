@@ -1,3 +1,4 @@
+import {openWorkspaceSettings} from './fixtures/workspaceSettings';
 import fs from 'node:fs';
 import path from 'node:path';
 import Module from 'node:module';
@@ -126,7 +127,7 @@ test('portable abort failure retains the exact pre-database intent and explicit 
     expect(project.source_dataset_dir).toBeNull(); expect(fs.readdirSync(project.dataset_dir)).toEqual([]); datasetEmpty = true;
     expect(path.dirname(project.project_dir)).toBe(workspace.projects); expect(fs.realpathSync(project.project_dir)).toBe(project.project_dir);
     await page.goto(renderer.url); await expect(page.getByTitle('프로젝트 관리', {exact: true})).toContainText(project.name);
-    await page.getByRole('button', {name: '패키지·장치·진단', exact: true}).click();
+    await openWorkspaceSettings(page); await page.getByRole('button',{name:'패키지·장치·진단', exact: true}).click();
     await page.getByRole('navigation', {name: '배포 운영 화면'}).getByRole('button', {name: '설치·진단', exact: true}).click();
     const panel = page.getByRole('region', {name: '별도 portable 앱 업데이트', exact: true}), select = panel.getByRole('button', {name: 'portable 설치 폴더 선택', exact: true});
     await expect(select).toBeEnabled(); await expect(page.getByRole('group', {name: '선택형 런타임 팩', exact: true})).toContainText('이 프로젝트에 보관한 런타임 팩이 없습니다.');
@@ -168,7 +169,7 @@ test('portable abort failure retains the exact pre-database intent and explicit 
     const errorAPI = await unchanged(); await panel.scrollIntoViewIfNeeded(); await evidence.screenshot(page, 'portable-abort-error-original-intent-retained');
     const errorRecord = {complete_api_after: errorAPI, bridge_calls: [...bridgeCalls], runner_calls: [...fixture.commands], complete_stored_pre_database_state: JSON.parse(fs.readFileSync(fixture.stateFile, 'utf8'))};
     await page.reload(); await expect(page.getByTitle('프로젝트 관리', {exact: true})).toContainText(project.name);
-    await page.getByRole('button', {name: '패키지·장치·진단', exact: true}).click();
+    await openWorkspaceSettings(page); await page.getByRole('button',{name:'패키지·장치·진단', exact: true}).click();
     await page.getByRole('navigation', {name: '배포 운영 화면'}).getByRole('button', {name: '설치·진단', exact: true}).click();
     await expect(select).toBeEnabled(); await expect(panel.getByRole('alert')).toHaveCount(0); await expect(panel.getByText(/^선택한 설치:/)).toHaveCount(0);
     await expect(panel.getByRole('button', {name: 'portable 상태 다시 읽기', exact: true})).toBeDisabled(); await expect(abort).toHaveCount(0); expect(bridgeCalls).toHaveLength(2);

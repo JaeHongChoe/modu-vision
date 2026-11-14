@@ -1,3 +1,4 @@
+import {openWorkspaceSettings} from './fixtures/workspaceSettings';
 import AxeBuilder from '@axe-core/playwright';
 import type {Page} from '@playwright/test';
 import {expect,test} from './fixtures/test';
@@ -34,7 +35,7 @@ test('terminology help is keyboard accessible, stays in the viewport and returns
   await help.click();
   await expect(popup).toBeInViewport({ratio:1});
   await page.keyboard.press('Escape');
-  await page.getByRole('button',{name:'어두운 화면',exact:true}).click();
+  await openWorkspaceSettings(page); await page.getByRole('button',{name:'어두운 화면',exact:true}).click();
   await help.focus();
   await page.keyboard.press('Enter');
   await expect(popup).toBeInViewport({ratio:1});
@@ -55,8 +56,7 @@ test('novice entry and explicit purpose form have named controls and readable co
   await page.goto(renderer.url);
   await expect(page.getByRole('button',{name:'Accessible novice QA'}).first()).toBeVisible();
   await page.getByRole('button',{name:'간단히 보기',exact:true}).click();
-  await page.getByText('더 보기',{exact:true}).first().click();
-  await page.getByRole('button',{name:'처음 시작 안내',exact:true}).click();
+  await openWorkspaceSettings(page); await page.getByRole('button',{name:'처음 시작 안내',exact:true}).click();
   const welcome=page.getByRole('dialog',{name:'처음 시작하기'});
   await expect(welcome).toBeVisible();
   await expect.poll(()=>page.evaluate(()=>document.getAnimations().filter(a=>a instanceof CSSTransition&&a.playState==='running').length)).toBe(0);
@@ -72,7 +72,7 @@ test('novice entry and explicit purpose form have named controls and readable co
   expect(purposeResult.violations).toEqual([]);
   await evidence.screenshot(page,'pilot-purpose-accessible');
   await page.keyboard.press('Escape');
-  await page.getByRole('button',{name:'AI에게 가르치기',exact:true}).click();
+  await page.getByRole('button',{name:'AI 만들기',exact:true}).click();
   await page.getByRole('button',{name:/모델 학습/}).first().click();
   await expect(page.getByLabel('선택 모델 안내')).toContainText('필요한 자료');
   const catalogResult=await scan(page,'[aria-label="모델 학습 허브"]');

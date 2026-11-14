@@ -31,7 +31,7 @@ test('the header names the steps as work, keeps the older names for assistive te
  const header=read('src/renderer/components/wizard/WizardHeader.tsx');
  for(const name of ["nameKo: '데이터 준비'","nameKo: '라벨 달기'","nameKo: '모델 학습'","nameKo: '결과 평가'","nameKo: '검사 흐름 만들기'","nameKo: '검사 실행'"])assert.ok(header.includes(name),`missing ${name}`);
  assert.match(header,/legacyKo: '플로우차트'/);assert.match(header,/sr-only">\(\{s\.legacyKo\}\)/);
- assert.match(header,/full \? \(ko \? '간단히 보기'/);assert.match(header,/<summary[^>]*>\{ko \? '더 보기'/);
+ assert.match(header,/full \? \(ko \? '간단히 보기'/);assert.match(header,/<summary[^>]*>\{ko \? '설정·도구'/);
  assert.ok(header.indexOf("'서버 관리'")>0&&header.indexOf("'데이터·판정 이력'")>0,'the grouped controls stay reachable');
 });
 
@@ -40,67 +40,53 @@ test('the footer has one primary action, one status block and quiet step arrows'
  assert.equal((footer.match(/workspace-button--primary/g)||[]).length,1);
  assert.match(footer,/role="status"/);assert.match(footer,/왜 그런가요\?/);assert.match(footer,/aria-label="다음 단계 보기"/);
  assert.ok(!footer.includes('>다음 단계 보기<'),'a second text button competes with the primary action');
- assert.match(footer,/\$\{blocker\} → \$\{actionLabel\}/);
+ assert.match(footer, /className="modu-next-panel" aria-label=\{ko\?'다음 할 일'/);
+ assert.match(footer, /modu-next-panel__description.*blocker/);
 });
 
 test('the labeling screen starts folded in the simple view and the label set is one line until opened',()=>{
  const studio=read('src/renderer/components/labeling/LabelingStudio.tsx');
  assert.match(studio,/const focus = focusChoice \?\? viewMode === 'simple';/);assert.match(studio,/collapsed=\{viewMode === 'simple'\}/);
  const bar=read('src/renderer/components/labeling/LabelSetBar.tsx');assert.match(bar,/if \(collapsed\) return <details/);
- assert.match(read('src/renderer/App.tsx'),/viewMode==='full'&&<nav/,'the workspace row is a 모두 보기 row');
+ assert.doesNotMatch(read('src/renderer/App.tsx'), /viewMode==='full'&&<nav/, 'no duplicate studio workspace rail');
  assert.match(read('src/renderer/index.css'),/html\[lang="ko"\] body \{ word-break: keep-all;/);
 });
 
-test('the simple view shows three data counts, two tiles and one folder button row; the rest waits behind one line',()=>{
+test('the data workspace centers the gallery with named management and quiet source counts',()=>{
  const studio=read('src/renderer/components/dataset/DatasetStudio.tsx');
+ assert.match(studio,/data-dataset-management open=\{full\}/);assert.match(studio,/data-dataset-gallery/);
+ assert.match(studio,/원본 \$\{sourceImages\}장 · 학습 가능/);assert.match(studio,/aria-label=\{language === 'ko' \? '클래스 필터'/);
+ assert.match(studio,/id="workflow-data"/);assert.match(studio,/setShowGeneratorModal\(true\)/);assert.match(studio,/검증된 데이터 버전/);
  assert.match(studio,/\{!full && <DataReadinessPanel \/>\}/);assert.match(studio,/\{full && <DataReadinessPanel \/>\}/);
- assert.match(studio,/\{full \? <>\s*<button\s*onClick=\{\(\) => setShowGeneratorModal\(true\)\}/,'the generator and version dialogs wait under 더 보기');
- assert.match(studio,/\{full && <>\s*<div className="p-2\.5 bg-\[#1A212E\][^>]*>\s*<div className="flex items-center justify-between">\s*<span[^>]*>\s*\{language === 'ko' \? '적용된 학습 분할'/);
- assert.match(studio,/SPLIT_BADGE_KO\[img\.split\]/,'thumbnail badges read 학습/검증/시험/미분할 in Korean');
- const stats=read('src/renderer/components/dataset/DatasetStatisticsPanel.tsx');
- assert.match(stats,/\{full&&Object\.entries\(data\.assignments\)/);assert.match(stats,/분할별 이미지 보기/);
- const header=read('src/renderer/components/wizard/WizardHeader.tsx');
- assert.match(header,/\{full && <span role="status"/,'the engine badge is a 더 보기 line in the simple view');
- const app=read('src/renderer/App.tsx');
- assert.match(app,/\{viewMode==='full'&&<nav/);assert.match(app,/운영자 검사 화면/);assert.match(app,/모델·플로우 작업/);
- const footer=read('src/renderer/components/wizard/WizardFooter.tsx');
- assert.match(footer,/다음: \$\{actionLabel\}/);assert.match(footer,/sr-only">\{ko\?` · 완료 입력/);
- assert.ok(!footer.includes('`완료 입력 ${readiness.completedInputs.length} · `'),'the visible status no longer starts with a count');
+ assert.match(studio,/SPLIT_BADGE_KO\[img\.split\]/);
 });
 
-test('the simple view folds the step 3 training location, the step 4 comparison, the second header row and the workspace row; wide monitors get larger type',()=>{
+test('training location and current status remain reachable and comparison stays named with readable wide-screen text',()=>{
  const training=read('src/renderer/components/training/TrainingController.tsx');
- assert.match(training,/\{full \|\| \(jobId && status !== 'completed'\) \? block : <details/);assert.match(training,/<summary[^>]*><span[^>]*>학습 위치<\/span>/);
- const evaluation=read('src/renderer/components/evaluation/EvaluationStudio.tsx');
- assert.match(evaluation,/<summary[^>]*>현행 모델 · 후보 모델 비교<\/summary>/);assert.match(evaluation,/\{full \? <>\s*<div className="rounded border border-\[#3B5269\]/);
- const header=read('src/renderer/components/wizard/WizardHeader.tsx');
- assert.match(header,/simpleControls\?: React\.ReactNode; simpleMenu\?: React\.ReactNode/);assert.match(header,/\{simpleControls\}\s*\{simpleMenu\}/,'App items are 더 보기 items');assert.match(header,/\{simpleMenu\}\s*<\/div>\s*<\/details>\}/);
- const app=read('src/renderer/App.tsx');
- assert.match(app,/<WizardHeader\b[^\n]*completedSteps=\{doneSteps\}[^\n]*simpleControls=\{<button className=\{MENU_ITEM\}/);assert.match(app,/\{viewMode==='full'&&<nav/);
+ assert.match(training,/<details className="modu-stage-disclosure" open=\{full\}/);
+ assert.match(training, /id="training-current-status"/);assert.match(training, /target\.querySelector<HTMLButtonElement>/);
+ assert.match(training,/<summary>학습 위치/);assert.match(training,/id="training-compute-settings" tabIndex=\{-1\}/);
+ const evaluation=read('src/renderer/components/evaluation/EvaluationStudio.tsx');assert.match(evaluation,/현행 모델 · 후보 모델 비교/);
  const css=read('src/renderer/index.css');
  assert.match(css,/@media \(min-width: 1920px\) \{ html \{ font-size: 18px; \} \}/);assert.match(css,/@media \(min-width: 2400px\) \{ html \{ font-size: 20px; \} \}/);
 });
 
-test('간단히 보기 is one header row: the steps join the first row, the second row and the workspace row are 모두 보기 only, and every other control keeps its name under 더 보기',()=>{
+test('the header separates project utilities and four goals while keeping errors and keyboard menu recovery visible',()=>{
  const header=read('src/renderer/components/wizard/WizardHeader.tsx');
- assert.match(header,/\{!full && <div[^>]*>\{stepBar\}<\/div>\}/,'the step bar sits in the first row in the simple view');
- assert.match(header,/\{full && \(\s*<div(?: data-wizard-header-row="steps")? className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 bg-\[#131822\] px-4 py-2">\s*\{taskSelect\}\s*\{stepBar\}\s*\{modelLocation\}/,'모두 보기 keeps the second row and controls as they were, with its optional layout marker');
- const menu=header.slice(header.indexOf("{ko ? '더 보기' : 'More'}</summary>"),header.indexOf('</details>}'));
- // A problem (backend not answering, a chosen server not checked) is lifted into the row instead of hiding in the menu.
- assert.match(header,/\{\(full \|\| probeProblem\) && probeNote\}\s*\{!full && engineProblem && engineChip\}/);
- assert.match(header,/const engineProblem = !isHealthy;/);assert.match(header,/hidden min-\[1440px\]:inline'\}`\}>Vision AI Studio/);
- for(const item of ['{runOn}','{!engineProblem && engineChip}','{!probeProblem && probeNote}','{modelLocation}','{serversButton}','{taskSelect}','{historyButton}','{technicalButton}','{themeButton}','{languageButton}','{simpleControls}','{simpleMenu}'])assert.ok(menu.includes(item),`${item} is not a 더 보기 item`);
- assert.match(header,/\{computeAlert\}/);assert.ok(!menu.includes('{computeAlert}'),'the compute alert stays in the row, where it is announced');
- assert.match(header,/if \(event\.key !== 'Escape' \|\| !event\.currentTarget\.open\) return;/,'Escape closes the menu');
- assert.match(header,/document\.addEventListener\('pointerdown', onPointerDown\)/,'a click outside closes the menu');
- const app=read('src/renderer/App.tsx');
- assert.match(app,/workspace==='operator'\s*\?<button className=\{MENU_ITEM\} onClick=\{\(\)=>setWorkspace\('studio'\)\}>\{language==='ko'\?'모델·플로우 작업'/,'the operator screen reaches the studio from the same menu');
- assert.match(app,/document\.documentElement\.dataset\.view = viewMode/);
+ assert.match(header,/data-wizard-header-row="project"/);assert.match(header,/data-wizard-header-row="journey"/);
+ assert.match(header,/aria-label=\{ko \? '네 가지 목표' : 'Four goals'\}/);assert.match(header,/data-workspace-substeps role="group"/);
+ const menu=header.slice(header.indexOf("{ko ? '설정·도구' : 'Settings & tools'}</summary>"),header.indexOf('</details>',header.indexOf("{ko ? '설정·도구'")));
+ for(const item of ['{runOn}','{!engineProblem && engineChip}','{!probeProblem && probeNote}','{modelLocation}','{serversButton}','{taskSelect}','{historyButton}','{technicalButton}','{themeButton}','{languageButton}','{simpleControls}','{simpleMenu}'])assert.ok(menu.includes(item),item);
+ assert.match(header,/\{computeAlert\}/);assert.ok(!menu.includes('{computeAlert}'));
+ assert.match(header,/\{probeProblem && probeNote\}/);assert.match(header,/\{engineProblem && engineChip\}/);
+ assert.match(header,/if \(event\.key !== 'Escape' \|\| !event\.currentTarget\.open\) return;/);
+ assert.match(header,/querySelector\('summary'\)\?\.focus\(\)/);
+ assert.match(header,/document\.addEventListener\('pointerdown', onPointerDown\)/);
 });
 
 test('the operator screen in 간단히 보기 says where the user is and offers the way back; the view is on <html> before the first paint',()=>{
  const app=read('src/renderer/App.tsx');
- const row=app.slice(app.indexOf("{viewMode!=='full'&&workspace==='operator'&&<div"),app.indexOf('</div>}',app.indexOf("{viewMode!=='full'&&workspace==='operator'&&<div")));
+ const row=app.slice(app.indexOf("{workspace==='operator'&&<div"),app.indexOf('</div>}',app.indexOf("{workspace==='operator'&&<div")));
  assert.ok(row.length>0,'the simple view has no workspace row, so the operator screen needs its own line');
  assert.match(row,/운영자 검사 화면입니다/);assert.match(row,/<button className="workspace-button whitespace-nowrap" onClick=\{\(\)=>setWorkspace\('studio'\)\}>\{language==='ko'\?'모델·플로우 작업으로 돌아가기'/);
  assert.ok(!row.includes('workspace-button--primary'),'the way back is a secondary button');
@@ -133,13 +119,13 @@ test('the step bar keeps step numbers and marks finished steps with a check',()=
 
 test('the simple view gives every step a plain page header and moves each step\'s main action up',()=>{
  const banner=read('src/renderer/components/common/OperatorGuidanceBanner.tsx');
- for(const title of ["title: '데이터 준비'","title: '라벨 달기'","title: '모델 학습'","title: '결과 평가'","title: '검사 흐름 만들기'","title: '검사 실행'"])assert.ok(banner.includes(title),title);
- assert.match(banner,/if \(simpleView && isKo && simple\)/);
+ for(const title of ["title: '사진 준비'","title: '라벨 달기'","title: '모델 학습'","title: '결과 평가'","title: '검사 흐름 만들기'","title: '검사 실행'"])assert.ok(banner.includes(title),title);
+ assert.match(banner,/className=\{`modu-stage-header/);assert.match(banner,/technicalDetails&&isExpanded/);
  const training=read('src/renderer/components/training/TrainingController.tsx');assert.match(training,/고급 학습 설정/);
- const evaluation=read('src/renderer/components/evaluation/EvaluationStudio.tsx');assert.match(evaluation,/aria-label="평가 결과 한눈에 보기"/);assert.match(evaluation,/다른 모델이나 시험 이미지 묶음으로 다시 평가/);
+ const evaluation=read('src/renderer/components/evaluation/EvaluationStudio.tsx');assert.match(evaluation,/aria-label="평가 결과 한눈에 보기"/);assert.match(evaluation,/시험 사진에서 놓친 불량과 잘못 잡은 정상을 확인하세요/);
  const inference=read('src/renderer/components/inference/InferenceCenterStudio.tsx');
- assert.ok(inference.indexOf('<BatchInspectionPanel />')<inference.indexOf('{simpleView ? <details'),'exports follow the batch inspection');
- assert.match(inference,/현장 적용·내보내기 도구/);assert.match(inference,/\{exportActions\}\{packageNote\}\{advancedTools\}<\/div>\s*<\/details> : advancedTools\}/);
+ assert.ok(inference.indexOf('<BatchInspectionPanel />')<inference.indexOf('<details className="modu-stage-disclosure">',inference.indexOf('<BatchInspectionPanel />')),'exports follow the batch inspection');
+ assert.match(inference,/검사 흐름 패키지·모델 운영/);assert.match(inference,/단일 모델 시험·벤치마크·내보내기/);assert.match(inference,/\{exportActions\}\{advancedTools\}<\/div>/);assert.match(inference,/\{packageNote\}/);
  const studio=read('src/renderer/components/dataset/DatasetStudio.tsx');assert.match(studio,/`폴더: \$\{folderPath/);
 });
 
@@ -173,7 +159,7 @@ test('step 3 in the simple view: one model heading, plain preset words, a finish
 test('step 4 in the simple view: results first, reviewer tools and raw metrics one click away, Korean matrix labels',()=>{
  const evaluation=read('src/renderer/components/evaluation/EvaluationStudio.tsx');
  assert.match(evaluation,/<summary[^>]*>모델 승인 · 검사 서비스 · 평가 이력<\/summary>/);
- assert.match(evaluation,/\{!simpleView && <>\s*<ModelDeploymentPanel/,'the full view keeps the panels where they were');
+ assert.match(evaluation, /<details[^>]+open=\{!simpleView\}/, 'expert panels stay mounted in their disclosure');
  assert.ok(evaluation.indexOf('모델 승인 · 검사 서비스 · 평가 이력')>evaluation.indexOf('{metricGrid}'),'the folded tools come after the results');
  assert.match(evaluation,/자세한 품질 지표/);assert.match(evaluation,/!\(simpleView && testPredictions\.length > 0\)/);
  assert.match(evaluation,/simpleView \? '추천 점수 적용' : '평가 임계값 적용'/);
@@ -216,7 +202,8 @@ test('the simple view gives the bands above a work area one panel tone and the w
  assert.match(css,/html\[data-view="simple"\] \[data-surface="bar"\] \{ background-color: var\(--color-panel\); \}/);
  assert.match(css,/html\[data-view="simple"\] \[data-surface="page"\] \{ background-color: var\(--color-chassis\); \}/);
  assert.ok(css.indexOf("@import './styles/theme-light.css'")<css.indexOf('[data-surface="bar"]'),'after theme-light, so they win at equal weight');
- assert.match(read('src/renderer/styles/theme-light.css'),/--color-chassis: #F8FAFC; --color-panel: #FFFFFF;/);
+ assert.match(read('src/renderer/styles/theme-light.css'),/--color-chassis: #F7F8F3; --color-panel: #FFFFFF;/);
+ assert.match(read('src/renderer/styles/novice-workspace.css'),/\.modu-workspace-body \{ display: grid; grid-template-columns: minmax\(0,1fr\)/);
  const bars=['src/renderer/components/labeling/LabelingStudio.tsx','src/renderer/components/labeling/LabelSetBar.tsx','src/renderer/components/labeling/TeamDataPanel.tsx',
   'src/renderer/components/labeling/ClassificationClassPicker.tsx','src/renderer/components/labeling/CategorySelector.tsx','src/renderer/components/labeling/DraftReviewQueue.tsx',
   'src/renderer/components/labeling/ImageFilmstrip.tsx','src/renderer/components/common/SimpleViewFold.tsx','src/renderer/components/dataset/DatasetStatisticsPanel.tsx'];

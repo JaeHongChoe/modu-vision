@@ -1,3 +1,4 @@
+import {openWorkspaceSettings} from './fixtures/workspaceSettings';
 import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
@@ -264,7 +265,7 @@ test('HTTPS ZIP classification trains a real ResNet18 and restores its original 
       expect(imageSnapshot(restoredImages.items)).toEqual(savedImages);
       expect(restoredImages.items.filter((row: {label: string}) => row.label === 'OK')).toHaveLength(8);
       expect(restoredImages.items.filter((row: {label: string}) => row.label === 'NG')).toHaveLength(8);
-      await target.getByRole('button', {name: '작업 센터', exact: true}).click();
+      await openWorkspaceSettings(target); await target.getByRole('button',{name:'작업 센터 · 진행 중인 작업', exact: true}).click();
       const center = target.getByRole('dialog', {name: '작업 센터', exact: true});
       await center.getByLabel('저장 작업 다시 열기', {exact: true}).selectOption('training:local:' + jobId);
       const reloadedEvaluation = wire(target, '/api/evaluation/results', 'GET');

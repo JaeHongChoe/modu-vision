@@ -24,7 +24,7 @@ function load(filename, mocks) {
   return m.exports;
 }
 
-function harness({ holdSave = false, holdImport = false, holdImages = false, holdSplit = false, holdSummary = false, withImages = false, hostKind = 'desktop', importFailure, saveFailure, onInvalidate } = {}) {
+function harness({ holdSave = false, holdImport = false, holdImages = false, holdSplit = false, holdSummary = false, withImages = false, hostKind = 'desktop', hostCanPick = true, importFailure, saveFailure, onInvalidate } = {}) {
   let generation = 0, backend = 'A', port = 8001, cursor = 0;
   let context = {workspace_id: 'workspace', project_id: 'A', actor_id: 'actor', mode: 'local'};
   const project = { task: 'classification', language: 'en', projectDir: '/projects/A', backendPort: port,
@@ -119,7 +119,7 @@ function harness({ holdSave = false, holdImport = false, holdImages = false, hol
       useDatasetStore: Object.assign(selector => selector ? selector(store.getState()) : store.getState(), {getState: store.getState}) }
     : name === '../common/ScopedDatasetThumbnail' ? scopedThumbnail
     : name === '../../services/api' ? apiModule
-    : name === '../../services/hostAdapter' ? { host: { kind: () => hostKind, selectFolder: () => {
+    : name === '../../services/hostAdapter' ? { host: { kind: () => hostKind, can: () => hostCanPick, selectFolder: () => {
       const pending = deferred(); pickers.push(pending); return pending.promise;
     } }, hostErrorMessage: error => error.message }
     : name === '../runtime/useDeliveryScope' ? { useDeliveryScope: () => ({ key: `${backend}:${project.project.id}` }) }
@@ -146,7 +146,7 @@ function harness({ holdSave = false, holdImport = false, holdImages = false, hol
     } });
     store.setState({ folderPath: `/source/${id}`, datasetKey: `/source/${id}\0classification`, totalImages: 17, isLoading: false });
   };
-  return { store, downstream, api, ready: () => store.setState({sourceAuthority: datasetModule.readDatasetAuthority(), totalImages: 100, classes: {OK: 99, NG: 1}, split: {train: 80, val: 10, test: 10}, splitState: 'saved', labelsMissing: true, classSplitCounts: {OK: {train: 80, val: 10, test: 9}, NG: {train: 0, val: 0, test: 1}}}), project, shared, render, select, pickers, saves, imports, imageReads, imageRequests, imageResult, summaries, summaryReads, splits, summary, calls, move, changeAuthority,
+  return { nodes, store, downstream, api, ready: () => store.setState({sourceAuthority: datasetModule.readDatasetAuthority(), totalImages: 100, classes: {OK: 99, NG: 1}, split: {train: 80, val: 10, test: 10}, splitState: 'saved', labelsMissing: true, classSplitCounts: {OK: {train: 80, val: 10, test: 9}, NG: {train: 0, val: 0, test: 1}}}), project, shared, render, select, pickers, saves, imports, imageReads, imageRequests, imageResult, summaries, summaryReads, splits, summary, calls, move, changeAuthority,
     acceptAuthority: () => {generation++; context = {workspace_id: `workspace-${backend}`, project_id: project.project.id, actor_id: 'actor', mode: backend === 'A' ? 'local' : 'team'};},
     browserMarkup: () => {
       const node = nodes(render()).find(node => node.type === browserInput);
@@ -626,3 +626,33 @@ for (const boundary of ['project', 'bootstrap', 'labelset']) {
     } finally { h.unmount(); global.window = previous; }
   });
 }
+
+ test('simple data workspace centers gallery and keeps tools named while errors remain outside disclosures', () => {
+  const h = harness(); h.project.viewMode = 'simple'; h.project.language = 'ko'; h.ready();
+  h.store.setState({splitError: '분할 저장 실패', sourceSaveError: '원본 저장 실패'});
+  const tree = h.render(), nodes = h.nodes(tree);
+  const tools = nodes.find(node => node.type === 'details' && node.props['data-dataset-management']);
+  assert.ok(tools, 'management has a named secondary entry');
+  assert.equal(tools.props.open, false);
+  assert.ok(h.nodes(tools).some(node => node.type === 'summary'));
+  const folded = new Set(nodes.filter(node => node.type === 'details').flatMap(node => h.nodes(node)));
+  for (const error of ['분할 저장 실패', '원본 저장 실패']) {
+    assert.ok(nodes.some(node => node.props.role === 'alert' && h.nodes(node).some(child => child.props.children === error) && !folded.has(node)), error + ' stays visible');
+  }
+  assert.ok(nodes.some(node => node.props['data-dataset-gallery']));
+  assert.ok(nodes.some(node => node.props.id === 'workflow-data'));
+  assert.deepEqual(h.calls, [], 'presentation never mutates data'); h.unmount();
+});
+
+test('simple checklist is summarized with full checks mounted behind a named disclosure and path entry stays mounted', () => {
+ const h=harness({hostKind:'browser',hostCanPick:false});h.project.viewMode='simple';h.project.language='ko';h.ready();
+ let nodes=h.nodes(h.render());
+ const checks=nodes.find(node=>node.type==='details'&&node.props['data-dataset-checklist']);assert.ok(checks);assert.equal(checks.props.open,false);
+ assert.ok(h.nodes(checks).some(node=>node.props['data-check']==='labels_missing'));
+ const summary=nodes.find(node=>node.props['data-dataset-check-summary']);assert.ok(summary);assert.ok(!h.nodes(checks).includes(summary));assert.ok(summary.props.children.includes('학습에 필요한 라벨을 준비하세요.'));
+ const path=nodes.find(node=>node.type==='details'&&node.props['data-dataset-path']);assert.ok(path);assert.equal(path.props.open,false);assert.ok(h.nodes(path).some(node=>typeof node.type==='function'&&typeof node.props.onImport==='function'));
+ const button=nodes.find(node=>node.props.id==='workflow-data');button.props.onClick();
+ nodes=h.nodes(h.render());assert.equal(nodes.find(node=>node.props['data-dataset-path']).props.open,true);
+ assert.equal(h.pickers.length,0,'unsupported native picker is never called');assert.deepEqual(h.calls,[]);
+ h.project.viewMode='full';nodes=h.nodes(h.render());assert.equal(nodes.find(node=>node.props['data-dataset-checklist']).props.open,true,'full view opens the complete checklist');h.unmount();
+});

@@ -462,7 +462,8 @@ test('the footer line keeps step 2 wording, a shape from another step prints not
  const footer=fs.readFileSync(path.join(__dirname,'WizardFooter.tsx'),'utf8');
  assert.match(footer,/progressLine\(readiness\.stage,readiness\.progress,ko\)/);
  assert.ok(!footer.includes('progress.confirmed'),'the footer no longer formats step 2 by itself');
- assert.match(footer,/title=\{blocker\?`\$\{blocker\} → \$\{actionLabel\}\$\{progress\}`/,'the status title carries the full line for the truncated span');
+ assert.match(footer,/title=\{`\$\{actionLabel\}\$\{progress\}`/,'the status title carries the full progress line');
+ assert.match(footer,/modu-next-panel__description/,'blocking reason has a wrapping description, rather than a truncated footer');
 });
 
 test('the production hook feeds the training clock, the evaluation counts and the shown inspection into the number line',async()=>{

@@ -37,7 +37,6 @@ import { createCatchUp, createJobEventStream } from './services/jobEventFeed';
 import { AssistantPanel } from './components/assistant/AssistantPanel';
 import { useAssistantStore } from './stores/useAssistantStore';
 import { FirstUseStudyObserver } from './components/onboarding/FirstUseStudyPanel';
-import { LearningJourneyPanel } from './components/onboarding/LearningJourneyPanel';
 
 // S1-10: after every (re)connection the app reads the job events it may have missed and re-reads its job if needed.
 const jobEventStream = createJobEventStream();
@@ -185,7 +184,7 @@ function StudioApp() {
   }, [onboarding, project, setFirstRunOpen]);
 
   return (
-    <div data-labeling-layout={workspace === 'studio' && activeStep === 2 ? '' : undefined} className={`flex flex-col h-screen w-screen bg-[#0B0E14] text-slate-200 select-none overflow-hidden font-sans${assistantOpen ? ' pr-[26rem]' : ''}`}>
+    <div data-labeling-layout={workspace === 'studio' && activeStep === 2 ? '' : undefined} className={`modu-studio flex flex-col h-screen w-screen select-none overflow-hidden font-sans${assistantOpen ? ' modu-studio--assistant-open' : ''}`}>
       <FirstUseStudyObserver />
       {/* Precision Industrial Header Frame */}
       {/* 간단히 보기: the first-run guide, the workspace switch, the task center and packages join the header's 더 보기 menu
@@ -200,23 +199,15 @@ function StudioApp() {
             <button className={MENU_ITEM} onClick={()=>setUtility('delivery')}>{language==='ko'?'패키지·장치·진단':'Packages, devices and diagnostics'}</button>
         </>}/>
 
-      {viewMode==='full'&&<nav aria-label={language==='ko'?'프로젝트 작업 공간':'Project workspace'} className="flex shrink-0 items-center gap-2 border-b border-slate-700 bg-[#101722] px-4 py-1.5 text-xs">
-        <button className={`rounded px-3 py-1.5 ${workspace==='studio'?'bg-sky-950 text-sky-200':'text-slate-300'}`} aria-pressed={workspace==='studio'} onClick={()=>setWorkspace('studio')}>{language==='ko'?'모델·플로우 작업':'Models and flows'}</button>
-        <button className={`rounded px-3 py-1.5 ${workspace==='operator'?'bg-sky-950 text-sky-200':'text-slate-300'}`} aria-pressed={workspace==='operator'} onClick={()=>setWorkspace('operator')}>{language==='ko'?'운영자 검사':'Operator inspection'}</button>
-        <span className="flex-1"/>
-        <button className="rounded border border-slate-600 px-3 py-1.5" onClick={()=>setFirstRunOpen(true)}>{firstRunLabel}</button>
-        <button className="rounded border border-slate-600 px-3 py-1.5" onClick={()=>setUtility('tasks')}>{language==='ko'?'작업 센터':'Task center'}</button>
-        <button className="rounded border border-slate-600 px-3 py-1.5" onClick={()=>setUtility('delivery')}>{language==='ko'?'패키지·장치·진단':'Packages, devices and diagnostics'}</button>
-      </nav>}
       {/* 간단히 보기 has no workspace row, so the operator screen says where the user is and how to get back. */}
-      {viewMode!=='full'&&workspace==='operator'&&<div className="flex shrink-0 flex-wrap items-center gap-x-3 gap-y-1 border-b border-slate-700 bg-[#101722] px-4 py-1.5 text-xs text-slate-300">
+      {workspace==='operator'&&<div className="flex shrink-0 flex-wrap items-center gap-x-3 gap-y-1 border-b border-slate-700 bg-[#101722] px-4 py-1.5 text-xs text-slate-300">
         <span>{language==='ko'?'운영자 검사 화면입니다. 위의 작업 단계는 모델·플로우 작업에서 열립니다.':'Operator inspection screen. The steps above open in models and flows.'}</span>
         <button className="workspace-button whitespace-nowrap" onClick={()=>setWorkspace('studio')}>{language==='ko'?'모델·플로우 작업으로 돌아가기':'Back to models and flows'}</button>
       </div>}
       {exampleProject&&<p role="note" aria-label="예제 프로젝트" className="shrink-0 border-b border-amber-700/60 bg-amber-950/30 px-4 py-1.5 text-xs text-amber-200">예제 프로젝트 · {EXAMPLE_NOTICE}</p>}
-      {viewMode==='simple' && workspace==='studio' && <LearningJourneyPanel/>}
       {/* Primary Inspection Studio Workspace with 1px Hairline Grid Containment */}
-      <main key={transportRevision} className="flex-1 min-h-0 flex overflow-hidden bg-[#0B0E14]">
+      <div className={`modu-workspace-body${workspace === 'operator' ? ' modu-workspace-body--operator' : ''}`}>
+      <main key={transportRevision} className="modu-stage-content flex min-w-0 min-h-0 overflow-hidden">
         {workspace==='studio' && activeStep === 1 && <DatasetStudio />}
         {workspace==='studio' && activeStep === 2 && <LabelingTool />}
         {workspace==='studio' && activeStep === 3 && <TrainingController key={transportRevision}/>}
@@ -228,6 +219,7 @@ function StudioApp() {
 
       {/* Docked Telemetry & Navigation Footer */}
       {workspace==='studio'&&<WizardFooter />}
+      </div>
 
       {/* Global Industrial Fault Diagnostic Dialog */}
       <ErrorDiagnosticsModal />

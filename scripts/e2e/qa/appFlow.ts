@@ -1,3 +1,4 @@
+import {openWorkspaceSettings} from '../fixtures/workspaceSettings';
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { crc32, deflateSync } from 'node:zlib';
@@ -75,7 +76,7 @@ export const trainingStatus = (page: Page, value: string | RegExp) => page.getBy
 
 /** Open the Task Center dialog from the workspace bar (it lists this project's jobs with their cancel steps). */
 export async function openTaskCenter(page: Page) {
-  await page.getByRole('button', { name: '작업 센터', exact: true }).click();
+  await openWorkspaceSettings(page); await page.getByRole('button',{name:'작업 센터 · 진행 중인 작업', exact: true }).click();
   const dialog = page.getByRole('dialog', { name: '작업 센터' });
   await expect(dialog).toBeVisible();
   return dialog;

@@ -48,7 +48,6 @@ import { FlowGraphNavigator } from './FlowGraphNavigator';
 import { FlowInspectorPanel } from './FlowInspectorPanel';
 import { WorkflowImpactPanel } from '../common/WorkflowImpactPanel';
 import { ModelThresholdHint } from './ModelThresholdHint';
-import { OperatorGuidanceBanner } from '../common/OperatorGuidanceBanner';
 import {FlowEditorWorkspace, flowWorkspaceIdentity, type FlowWorkspaceTab} from './FlowEditorWorkspace';
 import {FlowPreparationPanel} from './FlowPreparationPanel';
 import {flowPreparationNext, flowPreparationSummary, hasReviewedFlowEvaluation} from './flowPreparation';
@@ -1152,9 +1151,7 @@ export const FlowchartStudio: React.FC = () => {
   };
 
   return (
-    <div className="min-h-0 flex-1 flex flex-col h-full bg-[#0B0E14] text-[#E2E8F0] overflow-y-auto overflow-x-hidden select-none">
-      {/* Every other step opens with its plain page header in the simple view; step 5 now does too. */}
-      {simpleView && <OperatorGuidanceBanner step={5} />}
+    <div className="min-h-0 flex-1 flex flex-col h-full bg-[var(--workspace-bg)] text-[var(--workspace-text)] overflow-y-auto overflow-x-hidden select-none">
       {guidedView&&<FlowPreparationPanel area={activeTab} {...preparation} exactSaved={exactSaved} evaluationCurrent={preparationEvaluationReady}
         busy={preparationBusy} loading={preparationLoading}
         problem={modelCheck.status==='blocked'?modelCheckMessage:graphError||actionValidationError
@@ -1176,7 +1173,7 @@ export const FlowchartStudio: React.FC = () => {
       </div>}
       <div hidden={guidedView} style={{display:guidedView?'none':'contents'}}><FlowEditorWorkspace area={activeTab} onAreaChange={setActiveTab} identity={identity} compact={simpleView}/></div>
       {/* Top Flowchart Toolbar (Dark Steel Panel) */}
-      <div hidden={guidedView} style={{display:guidedView?'none':undefined}} className="shrink-0 min-h-14 bg-[#131822] border-b border-[#2B3547] px-4 py-2 flex flex-wrap items-center justify-between gap-x-4 gap-y-2 text-xs">
+      <div hidden={guidedView} style={{display:guidedView?'none':undefined}} className="modu-stage-toolbar shrink-0 min-h-14 bg-[#131822] border-b border-[#2B3547] px-4 py-2 flex flex-wrap items-center justify-between gap-x-4 gap-y-2 text-xs">
         <div className="flex min-w-0 items-center gap-3">
           <div className="w-8 h-8 shrink-0 rounded-md bg-cyan-950/40 border border-cyan-800/70 flex items-center justify-center">
             <GitFork className="w-4 h-4 text-cyan-300" />

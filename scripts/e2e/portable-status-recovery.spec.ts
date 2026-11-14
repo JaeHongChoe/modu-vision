@@ -1,3 +1,4 @@
+import {openWorkspaceSettings} from './fixtures/workspaceSettings';
 import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
@@ -153,7 +154,7 @@ test('portable inspect error requires explicit same-identity retry and utility h
     expect(await api('/api/project/current')).toMatchObject({id: createdProject.id,
       project_dir: createdProject.project_dir, name: createdProject.name, task: 'classification', source_dataset_dir: null});
     const open = async () => {
-      await page.getByRole('button', {name: '패키지·장치·진단', exact: true}).click();
+      await openWorkspaceSettings(page); await page.getByRole('button',{name:'패키지·장치·진단', exact: true}).click();
       await page.getByRole('navigation', {name: '배포 운영 화면', exact: true}).getByRole('button', {name: '설치·진단', exact: true}).click();
       await expect(page.getByText('이 프로젝트에 보관한 런타임 팩이 없습니다.', {exact: true})).toBeVisible(); await settle();
     };

@@ -1,3 +1,4 @@
+import {openWorkspaceSettings} from './fixtures/workspaceSettings';
 import { expect, test } from './fixtures/test';
 
 // Actual mounted renderer. Synthetic project and controlled read-only receipts;
@@ -9,7 +10,7 @@ for(const viewport of [{width:1366,height:768},{width:1920,height:1080}])test(`s
   await expect(page.getByTitle('프로젝트 관리', { exact: true }), 'the backend current project opens on load').toContainText('S203 readiness fixture');
   for(let stage=1;stage<=6;stage++){
     await page.getByRole('navigation',{name:'Workflow Stages'}).getByRole('button').nth(stage-1).click();
-    const footer=page.getByRole('contentinfo');
+    const footer=page.getByRole('complementary',{name:'다음 할 일',exact:true});
     await expect(footer.getByRole('status')).toContainText(/완료 입력/,{timeout:5000});
     await expect(footer.getByRole('button',{name:/권장 행동:/})).toHaveCount(1);
     await expect(footer.getByRole('status')).toContainText(/부족|확인 필요|확인 중|다음 할 일/);
@@ -25,8 +26,8 @@ test('task change previews impact; cancel preserves task and confirm applies onc
   await expect(page.getByTitle('프로젝트 관리', { exact: true }), 'the backend current project opens on load').toContainText('S203 task fixture');
   let mutations=0;
   page.on('request',req=>{if(req.method()==='PUT'&&new URL(req.url()).pathname==='/api/project/update')mutations++;});
-  const selector=page.getByRole('combobox',{name:'검사 작업 종류'});
-  await selector.selectOption('segmentation');
+  const selector=page.getByLabel('검사 작업 종류',{exact:true});
+  await openWorkspaceSettings(page);await selector.selectOption('segmentation');
   const dialog=page.getByRole('dialog',{name:'검사 작업 변경 영향'});
   await expect(dialog).toBeVisible({timeout:5000});
   expect(mutations).toBe(0);
@@ -34,7 +35,7 @@ test('task change previews impact; cancel preserves task and confirm applies onc
   await expect(dialog).toContainText('이전 결과');
   await dialog.getByRole('button',{name:'취소',exact:true}).click();
   await expect(dialog).not.toBeVisible();expect(mutations).toBe(0);
-  await selector.selectOption('segmentation');
+  await openWorkspaceSettings(page);await selector.selectOption('segmentation');
   await dialog.getByRole('button',{name:'영향 확인 후 변경',exact:true}).click();
   await expect(dialog).not.toBeVisible();
   await expect(selector).toHaveValue('segmentation');expect(mutations).toBe(1);
@@ -45,8 +46,8 @@ test('task refusal preserves active selection and exposes the existing failure',
   expect((await request.post(`${renderer.origin}/api/project/create`,{data:{name:'S203 refused task fixture',task:'classification'}})).ok()).toBe(true);
   await page.goto(renderer.url);await expect(page.getByTitle('프로젝트 관리', { exact: true }), 'the backend current project opens on load').toContainText('S203 refused task fixture');
   await page.route('**/api/project/update',route=>route.fulfill({status:409,json:{detail:'S203 existing policy refuses task change'}}));
-  const selector=page.getByRole('combobox',{name:'검사 작업 종류'});
-  await selector.selectOption('segmentation');
+  const selector=page.getByLabel('검사 작업 종류',{exact:true});
+  await openWorkspaceSettings(page);await selector.selectOption('segmentation');
   await page.getByRole('dialog',{name:'검사 작업 변경 영향'}).getByRole('button',{name:'영향 확인 후 변경',exact:true}).click();
   await expect(selector).toHaveValue('classification');
   await expect(page.getByRole('alert').filter({hasText:'S203 existing policy refuses task change'}).first()).toBeVisible();
@@ -64,7 +65,7 @@ test('new readiness reply wins and failed read stays unverified',async({page,req
   });
   await page.goto(renderer.url);await expect(page.getByTitle('프로젝트 관리', { exact: true }), 'the backend current project opens on load').toContainText('S203 receipt order fixture');
   await page.getByRole('navigation',{name:'Workflow Stages'}).getByRole('button').nth(1).click();
-  const footer=page.getByRole('contentinfo');
+  const footer=page.getByRole('complementary',{name:'다음 할 일',exact:true});
   await expect.poll(()=>Boolean(release)).toBe(true);
   await footer.getByRole('button',{name:'왜 그런가요?',exact:true}).click();
   await footer.getByRole('button',{name:'현재 입력 다시 확인',exact:true}).click();
@@ -87,14 +88,16 @@ test('blocked training and deployment expose a visible recovery destination',asy
   await expect(train).toBeDisabled();
   await expect(page.getByLabel('학습 시작 준비도')).toContainText('학습 시작 보류');
   await page.getByRole('button',{name:'데이터·분할 확인 (1단계)',exact:true}).click();
-  await expect(page.getByRole('contentinfo')).toContainText('1/6');
-  await page.getByRole('button',{name:'패키지·장치·진단',exact:true}).click();
+  await expect(page.getByRole('complementary',{name:'다음 할 일',exact:true})).toContainText('사진 준비');
+  await expect(page.getByRole('navigation',{name:'Workflow Stages'}).getByRole('button').nth(0)).toHaveAttribute('aria-current','step');
+  await openWorkspaceSettings(page); await page.getByRole('button',{name:'패키지·장치·진단',exact:true}).click();
   const dialog=page.getByRole('dialog',{name:'패키지·장치·설치·진단',exact:true});
   await expect(dialog.getByRole('button',{name:'승인 패키지 적용',exact:true})).toBeDisabled();
   await expect(dialog).toContainText('적용 보류: 승인 포함 패키지가 필요합니다.');
   await dialog.getByRole('button',{name:'승인·패키지 확인 (6단계)',exact:true}).first().click();
   await expect(dialog).not.toBeVisible({timeout:5000});
-  await expect(page.getByRole('contentinfo')).toContainText('6/6');
+  await expect(page.getByRole('complementary',{name:'다음 할 일',exact:true})).toContainText('검사 실행');
+  await expect(page.getByRole('navigation',{name:'Workflow Stages'}).getByRole('button').nth(5)).toHaveAttribute('aria-current','step');
   await evidence.screenshot(page,'s203-recovery-visible');
 });
 
@@ -112,7 +115,7 @@ test('model family choice uses the same cancellable task impact preview',async({
   await page.route('**/api/project/update',route=>route.fulfill({status:409,json:{detail:'S203 family change refused'}}));
   await family.click();await dialog.getByRole('button',{name:'영향 확인 후 변경',exact:true}).click();
   await expect(dialog).not.toBeVisible();await expect(current).toHaveAttribute('aria-pressed','true');
-  await expect(page.getByRole('combobox',{name:'검사 작업 종류'})).toHaveValue('classification');
+  await expect(page.getByLabel('검사 작업 종류',{exact:true})).toHaveValue('classification');
   await expect(page.getByText(/모델 종류 변경 후 확인이 필요합니다:.*S203 family change refused/)).toBeVisible();
 });
 

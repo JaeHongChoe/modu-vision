@@ -1,3 +1,4 @@
+import {openWorkspaceSettings} from './fixtures/workspaceSettings';
 import fs from 'node:fs';
 import path from 'node:path';
 import {execFileSync} from 'node:child_process';
@@ -15,7 +16,7 @@ async function exercise(page:Page,workspace:Workspace,evidence:Evidence,api:Api,
   await api('/api/project/open',{project_dir:fixture.project.project_dir});
   await api('/api/product-delivery/operator/inputs',{mode:'folder',folder:fixture.source},'PUT');
   if(url)await page.goto(url);else await page.reload();
-  await page.getByRole('button',{name:'운영자 검사',exact:true}).click();
+  await openWorkspaceSettings(page); await page.getByRole('button',{name:'운영자 검사 화면',exact:true}).click();
   const panel=page.getByRole('region',{name:'운영자 검사 작업 공간'});
   await panel.getByRole('button',{name:'검사 시작',exact:true}).click();
   await expect(panel).toContainText('승인 적용 기록과 실행 버전 일치',{timeout:60_000});
@@ -64,7 +65,7 @@ async function exercise(page:Page,workspace:Workspace,evidence:Evidence,api:Api,
   const csvPath=await download(()=>queue.getByRole('button',{name:'CSV 결과 내보내기',exact:true}).click(),'csv');expect(fs.readFileSync(csvPath,'utf8')).toContain(replay.job_id);
   await queue.getByLabel('대기열 상태 필터',{exact:true}).selectOption('');await queue.getByRole('button',{name:'대기열 새로고침',exact:true}).click();
   await expect(queue).toContainText('/58');
-  await page.reload();await page.getByRole('button',{name:'운영자 검사',exact:true}).click();await page.getByText('입력 대기열·실패 재처리',{exact:true}).click();
+  await page.reload();await openWorkspaceSettings(page); await page.getByRole('button',{name:'운영자 검사 화면',exact:true}).click();await page.getByText('입력 대기열·실패 재처리',{exact:true}).click();
   await expect(page.getByRole('region',{name:'검사 입력 대기열'})).toContainText('/58');
   await page.getByRole('button',{name:'검사 중지',exact:true}).click();
   await expect(page.getByRole('region',{name:'검사 입력 대기열'})).toContainText('프로젝트 검사 서비스를 시작하면');

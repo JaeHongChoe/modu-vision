@@ -1259,8 +1259,8 @@
       "test": "scripts/e2e/dataset-picker-ownership.spec.ts::delayed dataset picker keeps project and backend ownership and a fresh choice succeeds",
       "recorded_test_source_sha256": "ecb44d117b2e3194a92db66085e959aebd232fc12f9610dac4406267d30c38d8",
       "retained_spec_commit": "a6218b69c5def3caae6ff976f3529b0af5a999d4",
-      "current_test_source_sha256": "89089ec240ca72bf39c517ee6394b30b3eb3a167c33e3288d75a2c126de905d7",
-      "reason": "Readiness panel states defect-named train files; gallery specs read the thumbnail path attribute"
+      "current_test_source_sha256": "021eb83a641f2c724d6bdb65ccbd70ef9261427545c7ddf77421934301189ff3",
+      "reason": "Readiness panel states defect-named train files; gallery specs read the thumbnail path attribute 2026-11-14 novice workspace UI locator migration: the current spec follows the named work-goal header and mounted stage disclosures. The receipt bytes/hash, execution source SHA, recorded original test hash and retained ancestor Git blob remain exact. This declaration supplies no new GUI execution, current-source success, native acceptance or model-quality evidence."
     },
     {
       "receipt": "2026-10-18-u007-roi-decoder-error-electron.json",
@@ -1521,6 +1521,326 @@
       "retained_spec_commit": "ed0500583fe054c3dae44818418920e6e1c5172e",
       "current_test_source_sha256": "ba5f5cafe25f63a9e6ad832d3e8889153196d746569688f89ef6a335a9bd4150",
       "reason": "2026-10-28 reviewed browser-CI repair updates current test declaration bytes for explicit owned project choice, source bindings or honest ZIP request wording as applicable. Exact original receipt bytes, execution source, recorded test hash and retained public Git blob remain unchanged. This history-only declaration supplies no new historical or current GUI execution, native/human acceptance, provider/model result or quality credit."
+    },
+    {
+      "receipt": "2026-10-08-history-scope-1728356-electron.json",
+      "receipt_sha256": "23c5402ea2dfb37ab555daefbc1b8a5c177868eeb8e8c77059a0038403ab3f17",
+      "execution_source_sha": "17283562e8a9ce5a2163bd4f7729be3e8bbb0575",
+      "test": "scripts/e2e/flow-history-scope-controls.spec.ts::native graph history stays scoped across empty queue reopen and project handoff",
+      "recorded_test_source_sha256": "00493a372f65b9bca15ebccbb18a13bf5cdcdbe5f776dcfb8f0a37335060cf60",
+      "retained_spec_commit": "b42855d3676196e819395d19a649e183c4d4b594",
+      "current_test_source_sha256": "9cfec6ffb3d1a97b03478eba440c302871cc6ad0ca2ce7fe686a49cb38dedf64",
+      "reason": "2026-11-14 novice workspace UI locator migration: the current spec follows the named work-goal header and mounted stage disclosures. The receipt bytes/hash, execution source SHA, recorded original test hash and retained ancestor Git blob remain exact. This declaration supplies no new GUI execution, current-source success, native acceptance or model-quality evidence."
+    },
+    {
+      "receipt": "2026-10-08-history-scope-1728356-browser.json",
+      "receipt_sha256": "682f3553c4986c5cea5c19b5bf03f376c48e846307c7ba3db320de77332e6ba7",
+      "execution_source_sha": "17283562e8a9ce5a2163bd4f7729be3e8bbb0575",
+      "test": "scripts/e2e/flow-history-scope-controls.spec.ts::empty scoped graph history reopens and hands off without accidental graph writes",
+      "recorded_test_source_sha256": "00493a372f65b9bca15ebccbb18a13bf5cdcdbe5f776dcfb8f0a37335060cf60",
+      "retained_spec_commit": "b42855d3676196e819395d19a649e183c4d4b594",
+      "current_test_source_sha256": "9cfec6ffb3d1a97b03478eba440c302871cc6ad0ca2ce7fe686a49cb38dedf64",
+      "reason": "2026-11-14 novice workspace UI locator migration: the current spec follows the named work-goal header and mounted stage disclosures. The receipt bytes/hash, execution source SHA, recorded original test hash and retained ancestor Git blob remain exact. This declaration supplies no new GUI execution, current-source success, native acceptance or model-quality evidence."
+    },
+    {
+      "receipt": "2026-10-07-app-execution-c47766b854fd038ec891.json",
+      "receipt_sha256": "862c8be88250e5825b51422219940bbb1ca1c3e1bba320482501895bc14ec028",
+      "execution_source_sha": "3ab27ae5353dc6d3c25a3061b705be05270c9e89",
+      "test": "scripts/e2e/converted-flow-review.spec.ts::native actual converted flow review, library reopen and managed IR execution",
+      "recorded_test_source_sha256": "7de69848995011f6e6e864c00fbd9c2d4e4136aced3d71b438b10f620d62bcf7",
+      "retained_spec_commit": "b42855d3676196e819395d19a649e183c4d4b594",
+      "current_test_source_sha256": "a33d2e5b2322404d27fb0c58cafe67fbd27801291ede75c87b3b89a25534e94e",
+      "reason": "2026-11-14 novice workspace UI locator migration: the current spec follows the named work-goal header and mounted stage disclosures. The receipt bytes/hash, execution source SHA, recorded original test hash and retained ancestor Git blob remain exact. This declaration supplies no new GUI execution, current-source success, native acceptance or model-quality evidence."
+    },
+    {
+      "receipt": "2026-10-07-optimization-binding-32160f4-electron.json",
+      "receipt_sha256": "6e8d9fdc48e510c39c9bd423471b81e559582d852651519be80f7f734caeee8f",
+      "execution_source_sha": "32160f461da846037a0f9af60dca247e7392adc9",
+      "test": "scripts/e2e/converted-flow-review.spec.ts::native actual converted flow review, library reopen and managed IR execution",
+      "recorded_test_source_sha256": "7de69848995011f6e6e864c00fbd9c2d4e4136aced3d71b438b10f620d62bcf7",
+      "retained_spec_commit": "b42855d3676196e819395d19a649e183c4d4b594",
+      "current_test_source_sha256": "a33d2e5b2322404d27fb0c58cafe67fbd27801291ede75c87b3b89a25534e94e",
+      "reason": "2026-11-14 novice workspace UI locator migration: the current spec follows the named work-goal header and mounted stage disclosures. The receipt bytes/hash, execution source SHA, recorded original test hash and retained ancestor Git blob remain exact. This declaration supplies no new GUI execution, current-source success, native acceptance or model-quality evidence."
+    },
+    {
+      "receipt": "2026-10-07-optimization-lifecycle-62b20cc-browser.json",
+      "receipt_sha256": "f58f3117ef274af9e8dce8a992099cbb5ca77876e472bd348435096bcda6d0ec",
+      "execution_source_sha": "62b20ccdb0e8106c50f31c0656e4f4507923db47",
+      "test": "scripts/e2e/runtime-optimization-binding.spec.ts::optimization lifecycle refuses missing input and failed submission, cancels exact job and reopens",
+      "recorded_test_source_sha256": "f9f75f5dc2ff8e9d4b5d35d14d5c5cb4c079cf031da4c6ee26c7a15e042a8edc",
+      "retained_spec_commit": "b42855d3676196e819395d19a649e183c4d4b594",
+      "current_test_source_sha256": "a6a38609d18b24ec6b19d771f237609f7d6c1fadc8a1670a3e572abeacb5037d",
+      "reason": "2026-11-14 novice workspace UI locator migration: the current spec follows the named work-goal header and mounted stage disclosures. The receipt bytes/hash, execution source SHA, recorded original test hash and retained ancestor Git blob remain exact. This declaration supplies no new GUI execution, current-source success, native acceptance or model-quality evidence."
+    },
+    {
+      "receipt": "2026-10-07-optimization-recovery-62b20cc-browser.json",
+      "receipt_sha256": "19fb9f583ba79dbceda6f3e882d0e2fab49f858c3da605ccfb150cf0bb347724",
+      "execution_source_sha": "62b20ccdb0e8106c50f31c0656e4f4507923db47",
+      "test": "scripts/e2e/runtime-optimization-binding.spec.ts::optimization renderer refuses cached source and foreign poll responses before review",
+      "recorded_test_source_sha256": "f9f75f5dc2ff8e9d4b5d35d14d5c5cb4c079cf031da4c6ee26c7a15e042a8edc",
+      "retained_spec_commit": "b42855d3676196e819395d19a649e183c4d4b594",
+      "current_test_source_sha256": "a6a38609d18b24ec6b19d771f237609f7d6c1fadc8a1670a3e572abeacb5037d",
+      "reason": "2026-11-14 novice workspace UI locator migration: the current spec follows the named work-goal header and mounted stage disclosures. The receipt bytes/hash, execution source SHA, recorded original test hash and retained ancestor Git blob remain exact. This declaration supplies no new GUI execution, current-source success, native acceptance or model-quality evidence."
+    },
+    {
+      "receipt": "2026-10-08-f099-ir-export-ed05005-electron.json",
+      "receipt_sha256": "63fbd952882afd3348b75c848f3406410e9eb73ddbe895fcd7a751ca46259863",
+      "execution_source_sha": "ed0500583fe054c3dae44818418920e6e1c5172e",
+      "test": "scripts/e2e/actual-ir-review-controls.spec.ts::native actual IR candidate review and library controls preserve exact original bindings",
+      "recorded_test_source_sha256": "ff630b7c878cd2bfc295f441eca3ca6400346c32a945b5b35ef1642ef549ca23",
+      "retained_spec_commit": "b42855d3676196e819395d19a649e183c4d4b594",
+      "current_test_source_sha256": "47e3575c39c638cfb0389c2dcb6b696cadcef46ce5f4db1794734d000c13078b",
+      "reason": "2026-11-14 novice workspace UI locator migration: the current spec follows the named work-goal header and mounted stage disclosures. The receipt bytes/hash, execution source SHA, recorded original test hash and retained ancestor Git blob remain exact. This declaration supplies no new GUI execution, current-source success, native acceptance or model-quality evidence."
+    },
+    {
+      "receipt": "2026-10-09-f099-library-b53eede-reopen-electron.json",
+      "receipt_sha256": "7e759add5224adda4406c1ce03ac7c6c25bf70ba09c1172e76fcfb4297498b48",
+      "execution_source_sha": "b53eede96175c2d70d731fbb585bc46c29cd9798",
+      "test": "scripts/e2e/converted-flow-review.spec.ts::native actual converted flow review, library reopen and managed IR execution",
+      "recorded_test_source_sha256": "7de69848995011f6e6e864c00fbd9c2d4e4136aced3d71b438b10f620d62bcf7",
+      "retained_spec_commit": "b42855d3676196e819395d19a649e183c4d4b594",
+      "current_test_source_sha256": "a33d2e5b2322404d27fb0c58cafe67fbd27801291ede75c87b3b89a25534e94e",
+      "reason": "2026-11-14 novice workspace UI locator migration: the current spec follows the named work-goal header and mounted stage disclosures. The receipt bytes/hash, execution source SHA, recorded original test hash and retained ancestor Git blob remain exact. This declaration supplies no new GUI execution, current-source success, native acceptance or model-quality evidence."
+    },
+    {
+      "receipt": "2026-10-09-f099-library-b53eede-controls-electron.json",
+      "receipt_sha256": "950ef673690bd45428a605f3939cdae438d4b779010366dd23c7fbcb0766ad8c",
+      "execution_source_sha": "b53eede96175c2d70d731fbb585bc46c29cd9798",
+      "test": "scripts/e2e/actual-ir-review-controls.spec.ts::native actual IR candidate review and library controls preserve exact original bindings",
+      "recorded_test_source_sha256": "ff630b7c878cd2bfc295f441eca3ca6400346c32a945b5b35ef1642ef549ca23",
+      "retained_spec_commit": "b42855d3676196e819395d19a649e183c4d4b594",
+      "current_test_source_sha256": "47e3575c39c638cfb0389c2dcb6b696cadcef46ce5f4db1794734d000c13078b",
+      "reason": "2026-11-14 novice workspace UI locator migration: the current spec follows the named work-goal header and mounted stage disclosures. The receipt bytes/hash, execution source SHA, recorded original test hash and retained ancestor Git blob remain exact. This declaration supplies no new GUI execution, current-source success, native acceptance or model-quality evidence."
+    },
+    {
+      "receipt": "2026-10-08-converted-service-3be69bb-electron.json",
+      "receipt_sha256": "6b75dde0b5240af2b51e0bdd5b2c6545f28f74544ddcefeec50bbd3f3711d44b",
+      "execution_source_sha": "3be69bbda8bc101c6f56f5bdb96f2312e9675244",
+      "test": "scripts/e2e/converted-service-controls.spec.ts::native reviewed OpenVINO CPU service preserves exact epoch through empty invalid error cancel and reopen",
+      "recorded_test_source_sha256": "62f13f8faeab8383e6479edc1e2418f36d54e57fcf76366634e833031a38dd7e",
+      "retained_spec_commit": "b42855d3676196e819395d19a649e183c4d4b594",
+      "current_test_source_sha256": "9dccf66af327ebdeb591797cd3e9c42f712434578047a9a56a4be7ea7dc03084",
+      "reason": "2026-11-14 novice workspace UI locator migration: the current spec follows the named work-goal header and mounted stage disclosures. The receipt bytes/hash, execution source SHA, recorded original test hash and retained ancestor Git blob remain exact. This declaration supplies no new GUI execution, current-source success, native acceptance or model-quality evidence."
+    },
+    {
+      "receipt": "2026-10-15-f099-exact-cancel-empty-error-handoff-root03-browser.json",
+      "receipt_sha256": "f979e824f7afe45e2aa65f9d2f8d3ff9e2515e69fcd74f3fd61a5e4a8179cbd1",
+      "execution_source_sha": "1bc21ab8360027a643b60f8c4149720073c5f83b",
+      "test": "scripts/e2e/runtime-optimization-exact-cancel-controls.spec.ts::optimization exact cancel has no empty POST, preserves owned 503 retry and fences A B A late receipt",
+      "recorded_test_source_sha256": "2f24aafee1fa33f7353db01faab12c7274f04f65691328d448d42f72b49996f7",
+      "retained_spec_commit": "b42855d3676196e819395d19a649e183c4d4b594",
+      "current_test_source_sha256": "6a798fa197f203b4cd692878bf2d819ce22d04535dc757bc9956e9f138411ceb",
+      "reason": "2026-11-14 novice workspace UI locator migration: the current spec follows the named work-goal header and mounted stage disclosures. The receipt bytes/hash, execution source SHA, recorded original test hash and retained ancestor Git blob remain exact. This declaration supplies no new GUI execution, current-source success, native acceptance or model-quality evidence."
+    },
+    {
+      "receipt": "2026-10-07-fleet-credential-migration-electron.json",
+      "receipt_sha256": "9393680616c04bc4f26f1c03396d5860986421455631f91b8f78d5e25388ff39",
+      "execution_source_sha": "14d926fc908227368644f95a354b3ab40725bacc",
+      "test": "scripts/e2e/fleet-credential-migration.spec.ts::native fleet credential migration and lost response recovery",
+      "recorded_test_source_sha256": "213eed4206705e368c1d605e85ff93edacd066235bd7f6576e896b24bf4672b4",
+      "retained_spec_commit": "b42855d3676196e819395d19a649e183c4d4b594",
+      "current_test_source_sha256": "701a0664f2f28f4bf50820fca40c11b0594f149ce5eafcb1d3bf7b2dfc3fe7cd",
+      "reason": "2026-11-14 novice workspace UI locator migration: the current spec follows the named work-goal header and mounted stage disclosures. The receipt bytes/hash, execution source SHA, recorded original test hash and retained ancestor Git blob remain exact. This declaration supplies no new GUI execution, current-source success, native acceptance or model-quality evidence."
+    },
+    {
+      "receipt": "2026-10-09-task-center-read-refusal-0726d1d-electron.json",
+      "receipt_sha256": "7fa795b6a0445bb9a9909670dc4177094b9d5bd08e469d4aeb98bf2ac3c8d7dd",
+      "execution_source_sha": "0726d1ddcba7b7c8198f6c29befe3c6aa2d2cf85",
+      "test": "scripts/e2e/task-center-empty-read-refusal.spec.ts::source Electron empty task center keeps project after invalid read and exact503",
+      "recorded_test_source_sha256": "a6ec58eac8ce8dcfcc84de7264a30a015b32810a6fb45eb7576817902441af36",
+      "retained_spec_commit": "b42855d3676196e819395d19a649e183c4d4b594",
+      "current_test_source_sha256": "3a6e1fd42aaff9400411ae1d5a24cacbfbd94469fe507510bd7d38ea05e1cabb",
+      "reason": "2026-11-14 novice workspace UI locator migration: the current spec follows the named work-goal header and mounted stage disclosures. The receipt bytes/hash, execution source SHA, recorded original test hash and retained ancestor Git blob remain exact. This declaration supplies no new GUI execution, current-source success, native acceptance or model-quality evidence."
+    },
+    {
+      "receipt": "2026-10-09-task-center-read-refusal-0726d1d-browser.json",
+      "receipt_sha256": "4db746ac5047ff48f13937356ca0513dedc1ff5d44d5e94598dc7414a93b6718",
+      "execution_source_sha": "0726d1ddcba7b7c8198f6c29befe3c6aa2d2cf85",
+      "test": "scripts/e2e/task-center-empty-read-refusal.spec.ts::empty task center refuses foreign scope and exact read503 before explicit reopen",
+      "recorded_test_source_sha256": "a6ec58eac8ce8dcfcc84de7264a30a015b32810a6fb45eb7576817902441af36",
+      "retained_spec_commit": "b42855d3676196e819395d19a649e183c4d4b594",
+      "current_test_source_sha256": "3a6e1fd42aaff9400411ae1d5a24cacbfbd94469fe507510bd7d38ea05e1cabb",
+      "reason": "2026-11-14 novice workspace UI locator migration: the current spec follows the named work-goal header and mounted stage disclosures. The receipt bytes/hash, execution source SHA, recorded original test hash and retained ancestor Git blob remain exact. This declaration supplies no new GUI execution, current-source success, native acceptance or model-quality evidence."
+    },
+    {
+      "receipt": "2026-10-07-support-bundle-5284df6-electron.json",
+      "receipt_sha256": "725fda7dee92d30e93d75b918825a5bc1f1ee2a9d4eef5bbe0acc6d6cdd4251b",
+      "execution_source_sha": "5284df6e979d4d4ceadc0a8256b5a90176adbbe6",
+      "test": "scripts/e2e/support-bundle-closure.spec.ts::native support button downloads exact selected sanitized persisted bundles",
+      "recorded_test_source_sha256": "2bf6961284fa1e39aac8de45fe33522959dbcfa1e80bcbd39723620c4dfcfb94",
+      "retained_spec_commit": "b42855d3676196e819395d19a649e183c4d4b594",
+      "current_test_source_sha256": "2246ec6e918cf98f187fc34efcec6d20e54429f059fc07a17ccd709e2c5e87c3",
+      "reason": "2026-11-14 novice workspace UI locator migration: the current spec follows the named work-goal header and mounted stage disclosures. The receipt bytes/hash, execution source SHA, recorded original test hash and retained ancestor Git blob remain exact. This declaration supplies no new GUI execution, current-source success, native acceptance or model-quality evidence."
+    },
+    {
+      "receipt": "2026-10-07-diagnostic-controls-5284df6-browser.json",
+      "receipt_sha256": "5086451c4984fd3fec682a06a3eea68282b672871502f707d8b8accc90c5e123",
+      "execution_source_sha": "5284df6e979d4d4ceadc0a8256b5a90176adbbe6",
+      "test": "scripts/e2e/diagnostic-download-controls.spec.ts::diagnostic controls preserve exact bundles through cancellation transport failure retry and reopen",
+      "recorded_test_source_sha256": "e1fa994590d4f4722aaa7cf793782e22415630ee19c35ea14acdb0ee7ec0b87f",
+      "retained_spec_commit": "b42855d3676196e819395d19a649e183c4d4b594",
+      "current_test_source_sha256": "8ecc975e21eef576b86d6073d979f7cea7077d6c476436ddbe09519da82e780f",
+      "reason": "2026-11-14 novice workspace UI locator migration: the current spec follows the named work-goal header and mounted stage disclosures. The receipt bytes/hash, execution source SHA, recorded original test hash and retained ancestor Git blob remain exact. This declaration supplies no new GUI execution, current-source success, native acceptance or model-quality evidence."
+    },
+    {
+      "receipt": "2026-10-07-diagnostic-controls-5284df6-electron.json",
+      "receipt_sha256": "d61cdc6ed22ac34d6f2e0786bcb71429188763154e82107ccf374b705e96c7ca",
+      "execution_source_sha": "5284df6e979d4d4ceadc0a8256b5a90176adbbe6",
+      "test": "scripts/e2e/diagnostic-download-controls.spec.ts::native diagnostic controls preserve exact bundles through cancellation transport failure retry and reopen",
+      "recorded_test_source_sha256": "e1fa994590d4f4722aaa7cf793782e22415630ee19c35ea14acdb0ee7ec0b87f",
+      "retained_spec_commit": "b42855d3676196e819395d19a649e183c4d4b594",
+      "current_test_source_sha256": "8ecc975e21eef576b86d6073d979f7cea7077d6c476436ddbe09519da82e780f",
+      "reason": "2026-11-14 novice workspace UI locator migration: the current spec follows the named work-goal header and mounted stage disclosures. The receipt bytes/hash, execution source SHA, recorded original test hash and retained ancestor Git blob remain exact. This declaration supplies no new GUI execution, current-source success, native acceptance or model-quality evidence."
+    },
+    {
+      "receipt": "2026-10-09-portable-source-diagnostic-primary-7e6fa7e-browser.json",
+      "receipt_sha256": "4b491eb35589d648a4eb47191379eda41e0e510ea744574e03e1df6fd3d19752",
+      "execution_source_sha": "7e6fa7e79d75227cee28dc623bdbfcadd7425ef3",
+      "test": "scripts/e2e/portable-update-review.spec.ts::portable review binds actual signed bytes and preserves new writes through app recovery",
+      "recorded_test_source_sha256": "87579d5b61650e882ca2506889002e7d4e3360afdfac884a4154b94942ccad29",
+      "retained_spec_commit": "b42855d3676196e819395d19a649e183c4d4b594",
+      "current_test_source_sha256": "3160ac33bcfd5afd1592f41c2d9694f21a0bd537cf4a2bcd80c449f211c1c9e9",
+      "reason": "2026-11-14 novice workspace UI locator migration: the current spec follows the named work-goal header and mounted stage disclosures. The receipt bytes/hash, execution source SHA, recorded original test hash and retained ancestor Git blob remain exact. This declaration supplies no new GUI execution, current-source success, native acceptance or model-quality evidence."
+    },
+    {
+      "receipt": "2026-10-09-s6-portable-home-5870b2c-browser.json",
+      "receipt_sha256": "6fd27f35e494ee7baad0ad419009464273155299349ab1a837d40f61b2a3f140",
+      "execution_source_sha": "5870b2c1ae48089ac3e165eac635fd229b33b5e1",
+      "test": "scripts/e2e/portable-home-refusal.spec.ts::portable home actual choice refuses current parent child and linked scopes before the read-only runner",
+      "recorded_test_source_sha256": "3235958c05cd4fafb306cc32f2435dcfaeb90ba900b76baa694e690bea1d36ce",
+      "retained_spec_commit": "b42855d3676196e819395d19a649e183c4d4b594",
+      "current_test_source_sha256": "25b0e72e9cf27bd011b6953c2730848d432fb2c03a658980ceb76596486c5c71",
+      "reason": "2026-11-14 novice workspace UI locator migration: the current spec follows the named work-goal header and mounted stage disclosures. The receipt bytes/hash, execution source SHA, recorded original test hash and retained ancestor Git blob remain exact. This declaration supplies no new GUI execution, current-source success, native acceptance or model-quality evidence."
+    },
+    {
+      "receipt": "2026-10-08-portable-native-refusal-fbcdc7a-electron.json",
+      "receipt_sha256": "8b75ba0c109d77882f72ffe7cf6bd2f306eba8c18c3bb078896889a188b8a887",
+      "execution_source_sha": "fbcdc7aea3cf87ea592b4c3e6fc0e5870187d083",
+      "test": "scripts/e2e/portable-update-review.spec.ts::native desktop refuses unprovisioned portable changes before opening a directory dialog",
+      "recorded_test_source_sha256": "87579d5b61650e882ca2506889002e7d4e3360afdfac884a4154b94942ccad29",
+      "retained_spec_commit": "b42855d3676196e819395d19a649e183c4d4b594",
+      "current_test_source_sha256": "3160ac33bcfd5afd1592f41c2d9694f21a0bd537cf4a2bcd80c449f211c1c9e9",
+      "reason": "2026-11-14 novice workspace UI locator migration: the current spec follows the named work-goal header and mounted stage disclosures. The receipt bytes/hash, execution source SHA, recorded original test hash and retained ancestor Git blob remain exact. This declaration supplies no new GUI execution, current-source success, native acceptance or model-quality evidence."
+    },
+    {
+      "receipt": "2026-10-19-portable-selection-handoff-1d208d2-browser.json",
+      "receipt_sha256": "8f0a52fb7ca52ccea29df2330fb7572b56614b3e1f4b2df28e647a7479a6e1b5",
+      "execution_source_sha": "1d208d2083cf8c1e353a724e4f6bc80f2a5e0174",
+      "test": "scripts/e2e/portable-pending-handoff.spec.ts::owned portable home selection handoff never adopts a retired response",
+      "recorded_test_source_sha256": "ae3661c4353cd0938e6cb0fa754b5215298bfce955ad4858fcd4833fc90ef79d",
+      "retained_spec_commit": "b42855d3676196e819395d19a649e183c4d4b594",
+      "current_test_source_sha256": "e372e1ca63b52cbe739d646d9201854d23453b87cf8c213dbad6a7d97cb0a509",
+      "reason": "2026-11-14 novice workspace UI locator migration: the current spec follows the named work-goal header and mounted stage disclosures. The receipt bytes/hash, execution source SHA, recorded original test hash and retained ancestor Git blob remain exact. This declaration supplies no new GUI execution, current-source success, native acceptance or model-quality evidence."
+    },
+    {
+      "receipt": "2026-10-08-portable-native-layout-75af77c-browser.json",
+      "receipt_sha256": "809e0ff3024f51cccc1579445a82ec7135c62fac33b704df26c9c9f84ee3d7ac",
+      "execution_source_sha": "75af77cfafed0c243889a1871ceb1c963924b4b4",
+      "test": "scripts/e2e/native-update-layout.spec.ts::macOS native layout review shows signed internal links and refuses changed installed targets",
+      "recorded_test_source_sha256": "4111e50c32f7ff900584cc46fbc49a169acfc9313c6e814b27bc79ea0c584823",
+      "retained_spec_commit": "b42855d3676196e819395d19a649e183c4d4b594",
+      "current_test_source_sha256": "cef600b8bdefb26e3cb15e4830870629491b6046780bc9ac9c91c49695fbd1c2",
+      "reason": "2026-11-14 novice workspace UI locator migration: the current spec follows the named work-goal header and mounted stage disclosures. The receipt bytes/hash, execution source SHA, recorded original test hash and retained ancestor Git blob remain exact. This declaration supplies no new GUI execution, current-source success, native acceptance or model-quality evidence."
+    },
+    {
+      "receipt": "2026-10-09-browser-context-efc159c-portable-status-recovery-browser.json",
+      "receipt_sha256": "2de5a07be2aafd5b93f0cec6bbdc83c22a7f3c0e346f6d31d385cced1223b623",
+      "execution_source_sha": "efc159c490387decae0b2b6feee93053533f6885",
+      "test": "scripts/e2e/portable-status-recovery.spec.ts::portable inspect error requires explicit same-identity retry and utility handoff preserves original state",
+      "recorded_test_source_sha256": "605db49b00dd2674cf3f5458bab138d2b2f2e7ff851b1d192fd631f8708c3f99",
+      "retained_spec_commit": "b42855d3676196e819395d19a649e183c4d4b594",
+      "current_test_source_sha256": "2c58f308e7f0c7ac4393c47e3d0910da90da0a6ba194dbe64ff0182002c4dd16",
+      "reason": "2026-11-14 novice workspace UI locator migration: the current spec follows the named work-goal header and mounted stage disclosures. The receipt bytes/hash, execution source SHA, recorded original test hash and retained ancestor Git blob remain exact. This declaration supplies no new GUI execution, current-source success, native acceptance or model-quality evidence."
+    },
+    {
+      "receipt": "2026-10-19-portable-inspect-reopen-1d208d2-browser.json",
+      "receipt_sha256": "cdaf314e0150b0207fa824963d02e6270cc66307e64371809682fd6a5d5a8a81",
+      "execution_source_sha": "1d208d2083cf8c1e353a724e4f6bc80f2a5e0174",
+      "test": "scripts/e2e/portable-pending-handoff.spec.ts::portable inspect state requires explicit same-home read after renderer reopen",
+      "recorded_test_source_sha256": "ae3661c4353cd0938e6cb0fa754b5215298bfce955ad4858fcd4833fc90ef79d",
+      "retained_spec_commit": "b42855d3676196e819395d19a649e183c4d4b594",
+      "current_test_source_sha256": "e372e1ca63b52cbe739d646d9201854d23453b87cf8c213dbad6a7d97cb0a509",
+      "reason": "2026-11-14 novice workspace UI locator migration: the current spec follows the named work-goal header and mounted stage disclosures. The receipt bytes/hash, execution source SHA, recorded original test hash and retained ancestor Git blob remain exact. This declaration supplies no new GUI execution, current-source success, native acceptance or model-quality evidence."
+    },
+    {
+      "receipt": "2026-10-19-portable-finish-handoff-1d208d2-browser.json",
+      "receipt_sha256": "779825d87a7fec83df90db5655a898448b1d3e203a2814d04475c9688ac7fbe9",
+      "execution_source_sha": "1d208d2083cf8c1e353a724e4f6bc80f2a5e0174",
+      "test": "scripts/e2e/portable-pending-handoff.spec.ts::portable finish handoff preserves one original intent without replay",
+      "recorded_test_source_sha256": "ae3661c4353cd0938e6cb0fa754b5215298bfce955ad4858fcd4833fc90ef79d",
+      "retained_spec_commit": "b42855d3676196e819395d19a649e183c4d4b594",
+      "current_test_source_sha256": "e372e1ca63b52cbe739d646d9201854d23453b87cf8c213dbad6a7d97cb0a509",
+      "reason": "2026-11-14 novice workspace UI locator migration: the current spec follows the named work-goal header and mounted stage disclosures. The receipt bytes/hash, execution source SHA, recorded original test hash and retained ancestor Git blob remain exact. This declaration supplies no new GUI execution, current-source success, native acceptance or model-quality evidence."
+    },
+    {
+      "receipt": "2026-10-19-portable-forward-handoff-1d208d2-browser.json",
+      "receipt_sha256": "eeab1136c15bbdefce8ea27ed83333f87ed8bf5c1df4ef6a9d0d5cb92c15fe8a",
+      "execution_source_sha": "1d208d2083cf8c1e353a724e4f6bc80f2a5e0174",
+      "test": "scripts/e2e/portable-pending-handoff.spec.ts::portable forward handoff preserves one original intent without replay",
+      "recorded_test_source_sha256": "ae3661c4353cd0938e6cb0fa754b5215298bfce955ad4858fcd4833fc90ef79d",
+      "retained_spec_commit": "b42855d3676196e819395d19a649e183c4d4b594",
+      "current_test_source_sha256": "e372e1ca63b52cbe739d646d9201854d23453b87cf8c213dbad6a7d97cb0a509",
+      "reason": "2026-11-14 novice workspace UI locator migration: the current spec follows the named work-goal header and mounted stage disclosures. The receipt bytes/hash, execution source SHA, recorded original test hash and retained ancestor Git blob remain exact. This declaration supplies no new GUI execution, current-source success, native acceptance or model-quality evidence."
+    },
+    {
+      "receipt": "2026-10-09-s6-portable-abort-c2f2e5f-browser.json",
+      "receipt_sha256": "ccad28641ec99d04d20e7c101f8a64e2330f274fccbe3f574cc101a9234a72e7",
+      "execution_source_sha": "c2f2e5fb52341ae9fcc13f6701d9ff3cc09d4193",
+      "test": "scripts/e2e/portable-abort-recovery.spec.ts::portable abort failure retains the exact pre-database intent and explicit reopen restores its disabled recovery",
+      "recorded_test_source_sha256": "66dbbb47bdcdea8cbc82df6d414c63ca1c68ddfcb658aa498321ccd5b379cb92",
+      "retained_spec_commit": "b42855d3676196e819395d19a649e183c4d4b594",
+      "current_test_source_sha256": "cebc53e563642a6d7342b9ad0ce7b076947a7a7322f3e8cc2774cf0e7502d42a",
+      "reason": "2026-11-14 novice workspace UI locator migration: the current spec follows the named work-goal header and mounted stage disclosures. The receipt bytes/hash, execution source SHA, recorded original test hash and retained ancestor Git blob remain exact. This declaration supplies no new GUI execution, current-source success, native acceptance or model-quality evidence."
+    },
+    {
+      "receipt": "2026-10-08-portable-launch-lifecycle-fbcdc7a-browser.json",
+      "receipt_sha256": "e123d86668f51b0d4b12121ae7bdff3cf6ee3fa2a81b5e5e0f2f276cc1e19ae0",
+      "execution_source_sha": "fbcdc7aea3cf87ea592b4c3e6fc0e5870187d083",
+      "test": "scripts/e2e/portable-update-review.spec.ts::controlled launch lifecycle UI preserves response-loss readback and durable state across reopening",
+      "recorded_test_source_sha256": "87579d5b61650e882ca2506889002e7d4e3360afdfac884a4154b94942ccad29",
+      "retained_spec_commit": "b42855d3676196e819395d19a649e183c4d4b594",
+      "current_test_source_sha256": "3160ac33bcfd5afd1592f41c2d9694f21a0bd537cf4a2bcd80c449f211c1c9e9",
+      "reason": "2026-11-14 novice workspace UI locator migration: the current spec follows the named work-goal header and mounted stage disclosures. The receipt bytes/hash, execution source SHA, recorded original test hash and retained ancestor Git blob remain exact. This declaration supplies no new GUI execution, current-source success, native acceptance or model-quality evidence."
+    },
+    {
+      "receipt": "2026-10-07-runtime-pack-5284df6-browser.json",
+      "receipt_sha256": "04e45d18fa6c2988f63e25f05be51eaec5a1c00bf028c67ed0994316925a71ab",
+      "execution_source_sha": "5284df6e979d4d4ceadc0a8256b5a90176adbbe6",
+      "test": "scripts/e2e/runtime-pack-installation.spec.ts::runtime packs install inertly and preserve reviewed pin through refusal tamper and reopen",
+      "recorded_test_source_sha256": "0ced8c247a56791e1cc98f4445fe5961e62febbdc51921a9b070cc723867f92c",
+      "retained_spec_commit": "b42855d3676196e819395d19a649e183c4d4b594",
+      "current_test_source_sha256": "9b3cba5c4a2b9b9101f668d83bae560fd316c3da3b250f7843fb254cb4cb7692",
+      "reason": "2026-11-14 novice workspace UI locator migration: the current spec follows the named work-goal header and mounted stage disclosures. The receipt bytes/hash, execution source SHA, recorded original test hash and retained ancestor Git blob remain exact. This declaration supplies no new GUI execution, current-source success, native acceptance or model-quality evidence."
+    },
+    {
+      "receipt": "2026-10-07-runtime-pack-5284df6-electron.json",
+      "receipt_sha256": "25105105e7595962cdc7f28f2e814294d601836655daa3c00a808047676a390f",
+      "execution_source_sha": "5284df6e979d4d4ceadc0a8256b5a90176adbbe6",
+      "test": "scripts/e2e/runtime-pack-installation.spec.ts::native runtime packs install inertly and preserve reviewed pin through refusal tamper and reopen",
+      "recorded_test_source_sha256": "0ced8c247a56791e1cc98f4445fe5961e62febbdc51921a9b070cc723867f92c",
+      "retained_spec_commit": "b42855d3676196e819395d19a649e183c4d4b594",
+      "current_test_source_sha256": "9b3cba5c4a2b9b9101f668d83bae560fd316c3da3b250f7843fb254cb4cb7692",
+      "reason": "2026-11-14 novice workspace UI locator migration: the current spec follows the named work-goal header and mounted stage disclosures. The receipt bytes/hash, execution source SHA, recorded original test hash and retained ancestor Git blob remain exact. This declaration supplies no new GUI execution, current-source success, native acceptance or model-quality evidence."
+    },
+    {
+      "receipt": "2026-10-09-s6-runtime-picker-5870b2c-browser.json",
+      "receipt_sha256": "fd762dbe7542211c53c8407b4e6510976a3436eb65a2ac9db64b6bb1d1ea5b25",
+      "execution_source_sha": "5870b2c1ae48089ac3e165eac635fd229b33b5e1",
+      "test": "scripts/e2e/runtime-pack-picker-cancel.spec.ts::runtime pack source and inventory null choices preserve exact inputs before any POST",
+      "recorded_test_source_sha256": "a92ee42e85d111ad63405e5cfba48ebf6d973e249df18e90a905ea0e9dde4aec",
+      "retained_spec_commit": "b42855d3676196e819395d19a649e183c4d4b594",
+      "current_test_source_sha256": "cc866de952d2f17b5be1dbdcf173377b06de3621f99eb4a2d9ca69468aa43a8e",
+      "reason": "2026-11-14 novice workspace UI locator migration: the current spec follows the named work-goal header and mounted stage disclosures. The receipt bytes/hash, execution source SHA, recorded original test hash and retained ancestor Git blob remain exact. This declaration supplies no new GUI execution, current-source success, native acceptance or model-quality evidence."
+    },
+    {
+      "receipt": "2026-10-09-s6-runtime-picker-5870b2c-electron.json",
+      "receipt_sha256": "d0de35c3b77e6bb739d0e51d926e74c32da57de8665182541c8d4ba33d9a64b2",
+      "execution_source_sha": "5870b2c1ae48089ac3e165eac635fd229b33b5e1",
+      "test": "scripts/e2e/runtime-pack-picker-cancel.spec.ts::native runtime pack original preload IPC null choices preserve exact inputs before any POST",
+      "recorded_test_source_sha256": "a92ee42e85d111ad63405e5cfba48ebf6d973e249df18e90a905ea0e9dde4aec",
+      "retained_spec_commit": "b42855d3676196e819395d19a649e183c4d4b594",
+      "current_test_source_sha256": "cc866de952d2f17b5be1dbdcf173377b06de3621f99eb4a2d9ca69468aa43a8e",
+      "reason": "2026-11-14 novice workspace UI locator migration: the current spec follows the named work-goal header and mounted stage disclosures. The receipt bytes/hash, execution source SHA, recorded original test hash and retained ancestor Git blob remain exact. This declaration supplies no new GUI execution, current-source success, native acceptance or model-quality evidence."
     }
   ]
 }
