@@ -1,12 +1,12 @@
 // A first-time user's header: the current step is announced, plain Korean names replace console jargon,
-// port/driver readouts stay behind "기술 상세" until asked for, and 간단히 보기 is one row with a 더 보기 menu.
+// port/driver readouts stay behind "기술 상세" until asked for, and 간단히 보기 separates utilities from its goal rail.
 const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path'),Module=require('node:module'),ts=require('typescript'),test=require('node:test');
 const react=require('react'),{renderToStaticMarkup}=require('react-dom/server');
 function load(file,mocks){const name=path.resolve(__dirname,file);const mod=new Module(name,module);mod.filename=name;mod.paths=Module._nodeModulePaths(path.dirname(name));const original=mod.require.bind(mod);mod.require=ref=>ref in mocks?mocks[ref]:original(ref);mod._compile(ts.transpileModule(fs.readFileSync(name,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022,jsx:ts.JsxEmit.React,esModuleInterop:true}}).outputText,name);return mod.exports;}
 const Icon=()=>null;
 const icons=new Proxy({},{get:(_,name)=>name==='__esModule'?true:Icon});
-function header({activeStep=2,language='ko',device='mps',technical=false,selectedProfileId=null,viewMode,setStep=async()=>{}}={},extra={}){
- const projectState={activeStep,setStep,task:'classification',language,setLanguage(){},backendStatus:{healthy:true,port:57944,device,deviceName:'Apple GPU'},projectName:'예제 프로젝트',projectError:null,isProjectBusy:false,technicalDetails:technical,setTechnicalDetails(){},project:{id:'p1'},projectDir:'/p',viewMode};
+function header({activeStep=2,language='ko',device='mps',healthy=true,technical=false,selectedProfileId=null,viewMode,projectName='예제 프로젝트',setStep=async()=>{}}={},extra={}){
+ const projectState={activeStep,setStep,task:'classification',language,setLanguage(){},backendStatus:{healthy,port:57944,device,deviceName:'Apple GPU'},projectName,projectError:null,isProjectBusy:false,technicalDetails:technical,setTechnicalDetails(){},project:{id:'p1'},projectDir:'/p',viewMode};
  const projectStore=Object.assign(select=>select?select(projectState):projectState,{getState:()=>projectState});
  const computeState={profiles:[{id:'gpu-a',name:'GPU 서버 A'}],selectedProfileId,isLoaded:true,isLoading:false,loadError:null,error:null,transportRevision:0,probeResults:{},load:async()=>{},selectTarget:async()=>{}};
  const computeStore=Object.assign(select=>select?select(computeState):computeState,{getState:()=>computeState});
@@ -108,13 +108,14 @@ test('the compute location is a labelled Korean control and a missing server is 
  assert.ok(!html.includes('Missing server'));
 });
 
-test('간단히 보기 groups the goals and substeps beside the project, 모두 보기 and 더 보기',()=>{
+test('간단히 보기 has a compact project and utility row followed by its separate goal rail',()=>{
  const html=render({props:{simpleControls:react.createElement('button',{type:'button'},'처음 시작 안내'),simpleMenu:react.createElement('button',{type:'button'},'운영자 검사 화면')}});
  assert.equal((html.match(/<nav /g)||[]).length,1);
  assert.ok(!html.includes('bg-[#131822] px-4 py-2'),'the second row renders only in 모두 보기');
  assert.equal((html.match(/<details/g)||[]).length,1);
  const steps=html.indexOf('<nav '),menu=html.indexOf('<details'),toggle=html.indexOf('>모두 보기<');
- assert.ok(html.indexOf('title="프로젝트 관리"')<steps&&steps<toggle&&toggle<menu,'project, steps, 모두 보기, then 더 보기');
+ assert.ok(html.indexOf('title="프로젝트 관리"')<toggle&&toggle<menu&&menu<steps,'project and utilities precede the goal rail in reading and tab order');
+ assert.match(html,/data-wizard-header-row="journey"/);
  const row=html.slice(0,menu),panel=html.slice(menu);
  for(const name of ['aria-label="실행 위치"','aria-label="검사 작업 종류"','aria-label="언어 전환 (KR / EN)"','>서버 관리<','>데이터·판정 이력<','>기술 상세<','>밝은 화면<','>처음 시작 안내<','>운영자 검사 화면<','role="status"'])assert.ok(panel.includes(name)&&!row.includes(name),`${name} is not (only) under 더 보기`);
  assert.match(panel,/<summary[^>]*>더 보기<\/summary>/);
@@ -134,21 +135,48 @@ test('모두 보기 keeps its two rows and the row controls outside any menu',()
 // At the minimum window (1280, Windows padding) the row needs more than one line and 모두 보기 / 더 보기 wrap alone onto
 // the next one. justify-between puts a lone item at the line start, and the menu panel, anchored at the group's right
 // edge, then opened at x=-89 with every item cut off.
-test('간단히 보기 keeps 모두 보기 and 더 보기 at the right edge when they wrap alone, so the menu opens inside the window',()=>{
+test('간단히 보기 keeps utilities anchored right and long project names shrink without adding another utility row',()=>{
  const simple=render(),full=render({viewMode:'full'});
  assert.match(divBefore(simple,'>모두 보기<'),/class="[^"]*\bml-auto\b/,'the simple-view group is pushed to the right edge on any line');
- assert.match(divBefore(simple,'<nav '),/class="[^"]*\bml-auto\b/,'the step bar shares the free space, so one line keeps its spacing');
+ global.window={api:{platform:'darwin'}};
+ try{
+  const tree=mount({projectName:'아주 긴 프로젝트 이름 '.repeat(15)})();
+  const projectRow=nodes(tree).find(node=>node.props?.['data-wizard-header-row']==='project');
+  assert.match(projectRow.props.className,/sm:flex-nowrap/,'the desktop utility row does not wrap the menu below the goals');
+  assert.equal(nodes(projectRow).some(node=>node.type==='nav'),false,'goal navigation has its own full-width row');
+  const project=nodes(projectRow).find(node=>node.props?.id==='workflow-project');
+  assert.match(project.props.className,/min-w-0/,'long names may shrink to their existing truncation');
+ }finally{delete global.window;}
  assert.match(simple,/<details class="relative"><summary/,'the panel is still anchored to the 더 보기 group');assert.match(simple,/<div class="absolute right-0 /);
  assert.equal(divBefore(full,'>간단히 보기<'),'<div class="flex flex-wrap items-center gap-2" style="-webkit-app-region:no-drag">','모두 보기 keeps its group as it was');
+});
+
+test('very narrow simple headers allow project and offline guidance to wrap outside the menu',()=>{
+ const html=render({healthy:false,projectName:'긴 프로젝트 이름 '.repeat(15)}),menu=html.indexOf('<details');
+ assert.match(html.slice(0,menu),/role="status"[^>]*>.*연결 중/s,'offline guidance remains visible without opening the menu');
+ global.window={api:{platform:'darwin'}};
+ try{
+  const tree=mount({healthy:false})(),row=nodes(tree).find(node=>node.props?.['data-wizard-header-row']==='project');
+  assert.match(row.props.className,/(?:^|\s)flex-wrap(?:\s|$)/,'small windows can wrap utility groups');
+  const projectGroup=row.props.children.find(node=>node?.type==='div');
+  assert.match(projectGroup.props.className,/(?:^|\s)flex-wrap(?:\s|$)/,'status chips can wrap within the project group');
+  assert.match(projectGroup.props.className,/sm:flex-nowrap/,'desktop projects and status stay on one line');
+ }finally{delete global.window;}
 });
 
 // The step wrapper was shrink-0, so the bar kept its one-line width (951px with five finished steps) and its own
 // flex-wrap never applied: at 1024 px with macOS padding '06 검사 실행' ran past the overflow-hidden app frame.
 test('the simple-view step bar may shrink to the window width, so its steps wrap inside it instead of running past the edge',()=>{
- const wrapper=divBefore(render({props:{completedSteps:[1,2,3,4,5]},activeStep:6}),'<nav ');
- assert.match(wrapper,/class="[^"]*\bmin-w-0\b/,'the wrapper can shrink below its one-line width');
- assert.doesNotMatch(wrapper,/\bshrink-0\b/,'a shrink-0 wrapper keeps the bar at its one-line width');
  assert.match(render(),/<nav class="flex flex-wrap /,'the bar wraps its steps once it is narrower than one line');
+ global.window={api:{platform:'darwin'}};
+ try{
+  const tree=mount()(),wrapper=nodes(tree).find(node=>node.props?.['data-wizard-header-row']==='journey');
+  assert.match(wrapper.props.className,/\bmin-w-0\b/,'the wrapper can shrink below its one-line width');
+  assert.doesNotMatch(wrapper.props.className,/\bshrink-0\b/,'a shrink-0 wrapper keeps the bar at its one-line width');
+  const group=nodes(tree).find(node=>node.props?.role==='group'&&String(node.props['aria-label']).includes('세부 작업'));
+  assert.doesNotMatch(group.props.className,/w-full/,'internal steps fit beside the four goals instead of forcing a third row');
+  for(const button of nodes(group).filter(node=>node.type==='button'))assert.match(button.props.className,/workspace-button--quiet/,'substeps are visually subordinate');
+ }finally{delete global.window;}
 });
 
 // Choosing an item used to close the menu with focus still on that (now hidden) item: a dialog opened from it returned

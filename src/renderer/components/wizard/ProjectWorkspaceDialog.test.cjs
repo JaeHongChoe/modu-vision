@@ -112,3 +112,38 @@ test('create submit preserves busy and project-switch refusals even when invoked
   await f.submit();assert.deepEqual(f.created,[]);
  }
 });
+
+const descendants=tree=>{const rows=[];const walk=node=>{if(!node||typeof node!=='object')return;rows.push(node);react.Children.forEach(node.props?.children,walk);};walk(tree);return rows;};
+const nodeText=node=>react.Children.toArray(node?.props?.children).map(child=>typeof child==='object'?nodeText(child):String(child)).join('');
+
+test('simple purpose guidance shows only the selected preparation and changes with the explicit choice',()=>{
+ const f=createFixture();
+ const help=()=>f.all().find(node=>node.props?.id==='project-purpose-help');
+ assert.ok(help());assert.doesNotMatch(nodeText(help()),/종류별 사진|대상마다 사각형|영역의 모양/);
+ const select=value=>f.all().find(node=>node.type==='input'&&node.props.value===value).props.onChange();
+ select('shape');assert.match(nodeText(help()),/해당 영역의 모양을 표시/);assert.doesNotMatch(nodeText(help()),/대상마다 사각형/);
+ assert.equal(f.all().filter(node=>node.type==='span'&&nodeText(node).includes('준비할 것:')).length,0,'requirements do not repeat inside every choice');
+ select('location');assert.match(nodeText(help()),/대상마다 사각형과 종류/);assert.doesNotMatch(nodeText(help()),/해당 영역의 모양/);
+ select('unsure');assert.equal(f.button('프로젝트 만들기').props.disabled,true);assert.equal(help().props.role,'status');
+});
+
+test('simple optional inputs stay mounted in a closed disclosure and preserve entered values through purpose changes',async()=>{
+ const f=createFixture();const optional=()=>f.all().find(node=>node.type==='details'&&descendants(node).some(child=>child.type==='textarea'));
+ assert.ok(optional(),'optional inputs are a native disclosure');assert.ok(!optional().props.open);
+ assert.ok(descendants(optional()).some(node=>node.type==='input'&&node.props.placeholder==='기본 프로젝트 폴더 사용'));
+ f.field('예: 세라믹 표면 결함 검사').props.onChange({target:{value:'Compact'}});
+ f.all().find(node=>node.type==='textarea').props.onChange({target:{value:' Kept description '}});
+ f.field('기본 프로젝트 폴더 사용').props.onChange({target:{value:' /projects/compact '}});
+ for(const purpose of ['shape','location'])f.all().find(node=>node.type==='input'&&node.props.value===purpose).props.onChange();
+ await f.submit();assert.deepEqual(f.created,[{name:'Compact',task:'detection',description:'Kept description',project_dir:'/projects/compact'}]);
+ assert.ok(!optional().props.open,'rerenders do not force optional fields open');
+ const full=createFixture({viewMode:'full'});assert.equal(full.all().filter(node=>node.type==='details'&&descendants(node).some(child=>child.type==='textarea')).length,0,'full mode retains visible options');
+});
+
+test('simple sidebar keeps the complete current path inside a closed keyboard-operable disclosure',()=>{
+ const f=createFixture();const aside=f.all().find(node=>node.type==='aside');
+ const pathDetails=descendants(aside).find(node=>node.type==='details'&&nodeText(node).includes('/projects/a'));
+ assert.ok(pathDetails);assert.ok(!pathDetails.props.open);assert.ok(descendants(pathDetails).some(node=>node.type==='summary'));
+ const full=createFixture({viewMode:'full'});const fullAside=full.all().find(node=>node.type==='aside');
+ assert.ok(nodeText(fullAside).includes('/projects/a'));assert.equal(descendants(fullAside).filter(node=>node.type==='details').length,0);
+});

@@ -2,7 +2,7 @@
  * src/renderer/components/wizard/WizardHeader.tsx
  *
  * The app header a first-time user reads. 간단히 보기 groups the six steps into four goals and keeps the active goal's
- * internal steps reachable. It shows the project, 모두 보기 and one 더 보기
+ * internal steps reachable. A compact project/utility row sits above the goal rail. It shows 모두 보기 and one 더 보기
  * menu that holds everything else (where work runs, the inspection type, history, technical details, the theme, the
  * language and the items App adds). 모두 보기 keeps its two rows: the project, where work runs, history and language
  * on the first; the inspection type and the six steps on the second. Port numbers, driver names and acceleration
@@ -282,7 +282,7 @@ export const WizardHeader: React.FC<{ simpleControls?: React.ReactNode; simpleMe
   );
   const activeGoal = beginnerGoalForStep(activeStep);
   const stepBar = full ? fullStepBar : (
-    <nav className="flex flex-wrap items-center gap-x-3 gap-y-1" aria-label={ko ? '작업 단계 (Workflow Stages)' : 'Workflow Stages'}>
+    <nav className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2" aria-label={ko ? '작업 단계 (Workflow Stages)' : 'Workflow Stages'}>
       <div role="group" aria-label={ko ? '네 가지 목표' : 'Four goals'} className="flex min-w-0 flex-wrap gap-1">
         {BEGINNER_GOALS.map((goal, index) => {
           const isActive = goal.id === activeGoal.id;
@@ -305,15 +305,15 @@ export const WizardHeader: React.FC<{ simpleControls?: React.ReactNode; simpleMe
           </button>;
         })}
       </div>
-      <div role="group" aria-label={ko ? `${activeGoal.nameKo}의 세부 작업` : `${activeGoal.nameEn} steps`} className="flex w-full min-w-0 flex-wrap items-center gap-1">
+      <div role="group" aria-label={ko ? `${activeGoal.nameKo}의 세부 작업` : `${activeGoal.nameEn} steps`} className="flex min-w-0 flex-wrap items-center gap-1">
         <span className="mr-1 text-xs" style={{ color: 'var(--workspace-muted)' }}>{ko ? '세부 작업' : 'Steps'}</span>
         {steps.filter(s => activeGoal.steps.includes(s.num as WorkflowStep)).map(s => {
           const isActive = s.num === activeStep;
           const isDone = completedSteps.includes(s.num) && !isActive;
           return <button key={s.num} type="button" data-beginner-step={s.num} aria-current={isActive ? 'step' : undefined}
-            onClick={() => setStep(s.num as WorkflowStep)} className="workspace-button min-h-8 px-2 py-0.5"
-            style={isActive ? { borderColor: 'var(--workspace-accent)', color: 'var(--workspace-accent)' } : undefined}>
-            <span className="font-mono tabular-nums">{String(s.num).padStart(2, '0')}</span>
+            onClick={() => setStep(s.num as WorkflowStep)} className="workspace-button workspace-button--quiet min-h-8 px-2 py-0.5"
+            style={isActive ? { color: 'var(--workspace-accent)', boxShadow: 'inset 0 -2px 0 var(--workspace-accent)' } : undefined}>
+            <span className="sr-only">{String(s.num).padStart(2, '0')} </span>
             <span>{ko ? s.nameKo : s.nameEn}</span>{ko && <span className="sr-only">({s.legacyKo})</span>}
             {isDone && <><Check className="h-3 w-3" style={{ color: 'var(--workspace-success)' }} aria-hidden="true" /><span className="sr-only">{ko ? '끝남' : 'done'}</span></>}
           </button>;
@@ -330,18 +330,18 @@ export const WizardHeader: React.FC<{ simpleControls?: React.ReactNode; simpleMe
   return (<>
     {taskProposal && <TaskChangeImpactDialog nextTask={taskProposal.task} scope={taskProposal.scope} onClose={()=>setTaskProposal(null)} onResult={outcome=>{setTaskProposal(null);if(!outcome.ok)setTaskFailure({scope:taskScope(),message:outcome.error});}}/>}
     <header className="bg-[#0B0E14] border-b border-[#2B3547] text-slate-200 select-none">
-      {/* Row 1 (draggable). 모두 보기: the project, where work runs, history, language. 간단히 보기: the whole header —
-          the project, the four goals and their substeps, 모두 보기 and the 더 보기 menu. */}
+      {/* Row 1 (draggable). 모두 보기: the project, where work runs, history, language. 간단히 보기: a shrinking
+          project name and fixed utility controls; the goal rail has the full next row. */}
       <div
         data-wizard-header-row="project"
-        className={`flex min-h-11 flex-wrap items-center justify-between gap-x-3 gap-y-1 ${full ? 'border-b border-[#2B3547] ' : ''}bg-[#0E121A] py-1 ${window.api?.platform === 'darwin' ? 'pl-24 pr-4' : 'px-4'}`}
+        className={`flex min-h-11 ${full ? 'flex-wrap ' : 'flex-wrap sm:flex-nowrap '}items-center justify-between gap-x-3 gap-y-1 ${full ? 'border-b border-[#2B3547] ' : ''}bg-[#0E121A] py-1 ${window.api?.platform === 'darwin' ? 'pl-24 pr-4' : 'px-4'}`}
         style={{ WebkitAppRegion: 'drag' } as React.CSSProperties}
       >
-        <div className="flex flex-wrap items-center gap-2" style={noDrag}>
-          {/* 간단히 보기 drops the wordmark below 1440px so the project, the steps and the two toggles fit one row. */}
+        <div className={full ? 'flex flex-wrap items-center gap-2' : 'flex min-w-0 flex-1 flex-wrap items-center gap-2 sm:flex-nowrap'} style={noDrag}>
+          {/* Hide the wordmark on smaller simple-view windows to leave room for the project and utility controls. */}
           <span className={`text-sm font-bold tracking-wide text-slate-100${full ? '' : ' hidden min-[1440px]:inline'}`}>Vision AI Studio</span>
           {/* The footer's '프로젝트 만들기·열기' and the first-run guide's '프로젝트 관리 열기' open this through focusWorkflowTarget. */}
-          <button type="button" id="workflow-project" aria-haspopup="dialog" aria-expanded={showProjectPanel} data-workflow-open-on-focus onClick={openProjectPanel} title={ko ? '프로젝트 관리' : 'Manage projects'} className={`group flex max-w-xs items-center gap-1.5 ${QUIET}`}>
+          <button type="button" id="workflow-project" aria-haspopup="dialog" aria-expanded={showProjectPanel} data-workflow-open-on-focus onClick={openProjectPanel} title={ko ? '프로젝트 관리' : 'Manage projects'} className={`group flex ${full ? '' : 'min-w-0 '}max-w-xs items-center gap-1.5 ${QUIET}`}>
             <FolderKanban className="h-4 w-4 shrink-0 text-cyan-400" aria-hidden="true" />
             <span className="truncate font-semibold">{projectName}</span>
             <ChevronDown className="h-3.5 w-3.5 shrink-0 text-slate-400" aria-hidden="true" />
@@ -355,12 +355,9 @@ export const WizardHeader: React.FC<{ simpleControls?: React.ReactNode; simpleMe
           {!full && engineProblem && engineChip}
         </div>
 
-        {/* The four goals and the active goal's substeps wrap inside the available width. */}
-        {!full && <div className="ml-auto flex min-w-0 items-center" style={noDrag}>{stepBar}</div>}
-
-        {/* 간단히 보기 keeps this group at the right edge even when it wraps alone onto the next line, so the 더 보기
-            menu, which opens leftward from it, stays inside the window. */}
-        <div className={`flex flex-wrap items-center gap-2${full ? '' : ' ml-auto'}`} style={noDrag}>
+        {/* Utilities stay right-aligned; narrow windows may wrap them below the project without moving the menu
+            anchor to the left edge. Desktop simple view keeps the utility row together. */}
+        <div className={`flex flex-wrap items-center gap-2${full ? '' : ' ml-auto shrink-0'}`} style={noDrag}>
           {full && <span role="status" className={`rounded border px-2.5 py-1 text-sm ${engineTone}`}>{engineLabel}</span>}
           <button type="button" aria-pressed={full} onClick={() => setViewMode(full ? 'simple' : 'full')} className={full ? `${CONTROL} ${PRESSED}` : SIMPLE_CONTROL} title={ko ? (full ? '처음 쓰는 사람에게 필요한 항목만 보입니다' : '모든 설정과 관리 항목이 보입니다') : undefined}>
             {full ? (ko ? '간단히 보기' : 'Simple view') : (ko ? '모두 보기' : 'Show everything')}
@@ -419,6 +416,8 @@ export const WizardHeader: React.FC<{ simpleControls?: React.ReactNode; simpleMe
           {full && languageButton}
         </div>
       </div>
+
+      {!full && <div data-wizard-header-row="journey" className="min-w-0 border-t px-4 py-1.5" style={{ ...noDrag, borderColor: 'var(--workspace-border)', background: 'var(--workspace-inset)' }}>{stepBar}</div>}
 
       {/* Row 2 (모두 보기): the inspection type and the six steps. Labels wrap on a narrow window instead of being cut off. */}
       {full && (

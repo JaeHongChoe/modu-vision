@@ -40,6 +40,8 @@
 .workspace-button:disabled { opacity: .55; cursor: not-allowed; }
 .workspace-button--primary { color: #e8f7ff; background: #0f4c6b; border-color: #38a3d1; font-weight: 650; }
 .workspace-button--primary:hover:not(:disabled) { background: #156288; }
+.workspace-button--quiet { color: var(--workspace-muted); background: transparent; border-color: transparent; }
+.workspace-button--quiet:hover:not(:disabled) { color: var(--workspace-text); background: var(--workspace-surface); border-color: var(--workspace-border); }
 .workspace-button:focus-visible, .workspace-field :is(input, select, textarea):focus-visible, .workspace-section summary:focus-visible { outline: 2px solid var(--workspace-focus); outline-offset: 3px; }
 .workspace-badge { display: inline-flex; align-items: center; gap: .4rem; padding: .2rem .6rem; border: 1px solid currentColor; border-radius: 999px; color: var(--workspace-muted); font-size: var(--workspace-font-small); font-weight: 550; }
 .workspace-badge[data-tone="success"] { color: var(--workspace-success); background: #153528; }

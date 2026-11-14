@@ -37,6 +37,7 @@ export const ProjectWorkspaceDialog: React.FC<Props> = ({ onClose, initialTab = 
   const [purpose, setPurpose] = useState<ProjectPurpose | null>(null);
   const full = viewMode === 'full';
   const createTask = full ? task : purposeToTask(purpose);
+  const selectedPurpose = PROJECT_PURPOSES.find(choice => choice.id === purpose);
   const [description, setDescription] = useState('');
   const [createPath, setCreatePath] = useState('');
   const [openPath, setOpenPath] = useState('');
@@ -75,6 +76,12 @@ export const ProjectWorkspaceDialog: React.FC<Props> = ({ onClose, initialTab = 
   const recoveryAction=async(action:()=>Promise<void>)=>{const generation=++recoveryGeneration.current,context=getProjectContextGeneration();setRecoveryBusy(true);setRecoveryError('');try{await action();}catch(error){if(generation===recoveryGeneration.current&&context===getProjectContextGeneration())setRecoveryError(error instanceof Error?error.message:String(error));}finally{if(generation===recoveryGeneration.current)setRecoveryBusy(false);}};
   const [backupMessage, setBackupMessage] = useState('');
   const dialogRef = useRef<HTMLDivElement>(null);
+  const projectErrorRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    // A failed submit may add a message below the compact form's fold. Reveal it without taking keyboard focus.
+    if (projectError && !isProjectBusy) projectErrorRef.current?.scrollIntoView({block: 'nearest'});
+  }, [projectError, isProjectBusy]);
 
   useEffect(() => {
     void loadRecentProjects();
@@ -138,12 +145,18 @@ export const ProjectWorkspaceDialog: React.FC<Props> = ({ onClose, initialTab = 
     if (await restoreProject(archivePath.trim(), restorePath.trim())) onClose();
   };
 
+  // Optional controls remain mounted in the simple disclosure, so closing it never resets entered values.
+  const createOptionalFields = <>
+                <label className="block text-xs font-medium text-slate-300">설명 <span className="font-normal text-slate-500">선택</span><textarea value={description} onChange={(event) => setDescription(event.target.value)} rows={2} placeholder="검사 대상과 목적을 기록하세요" className="mt-1.5 w-full resize-none rounded-md border border-[#40516A] bg-[#0D1420] px-3 py-2 text-sm text-white outline-none placeholder:text-slate-400 focus:border-cyan-500" /></label>
+                <label className="block text-xs font-medium text-slate-300">저장 폴더 <span className="font-normal text-slate-500">비우면 기본 위치에 생성</span><div className="mt-1.5 flex gap-2"><input value={createPath} onChange={(event) => setCreatePath(event.target.value)} placeholder="기본 프로젝트 폴더 사용" className="min-w-0 flex-1 rounded-md border border-[#40516A] bg-[#0D1420] px-3 py-2.5 font-mono text-xs text-white outline-none placeholder:text-slate-400 focus:border-cyan-500" /><button type="button" disabled={!pickPaths} title={pickTitle} onClick={() => void selectDirectory(true)} className="rounded-md border border-[#40516A] px-3 text-xs text-slate-200 hover:bg-[#25354A]">찾기</button></div></label>
+  </>;
+
   return (
     <div className="fixed inset-0 z-[90] flex items-center justify-center bg-[#05080E]/80 px-5 py-8" onMouseDown={(event) => {
       if (event.target === event.currentTarget && !isProjectBusy) onClose();
     }}>
       <div ref={dialogRef} tabIndex={-1} role="dialog" aria-modal="true" aria-label="프로젝트 관리" className="flex max-h-full w-full max-w-[830px] flex-col overflow-hidden rounded-xl border border-[#314158] bg-[#111927] shadow-[0_32px_100px_rgba(0,0,0,0.55)] outline-none">
-        <div className="flex items-start justify-between border-b border-[#314158] bg-[#172236] px-7 py-6">
+        <div className={`flex items-start justify-between border-b border-[#314158] bg-[#172236] ${full ? 'px-7 py-6' : 'px-6 py-4'}`}>
           <div>
             <div className="mb-2 flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.2em] text-cyan-300">
               <Layers3 className="h-3.5 w-3.5" /> WORKSPACE
@@ -154,13 +167,18 @@ export const ProjectWorkspaceDialog: React.FC<Props> = ({ onClose, initialTab = 
           <button type="button" onClick={onClose} disabled={isProjectBusy} aria-label="프로젝트 관리 닫기" className="rounded-md border border-[#3A4A60] p-1.5 text-slate-300 hover:bg-[#27364A] disabled:opacity-50"><X className="h-4 w-4" /></button>
         </div>
 
-        <div className="grid min-h-0 flex-1 grid-cols-[220px_minmax(0,1fr)]">
-          <aside className="border-r border-[#314158] bg-[#101722] p-4">
+        <div className={`grid min-h-0 flex-1 ${full ? 'grid-cols-[220px_minmax(0,1fr)]' : 'grid-cols-[196px_minmax(0,1fr)]'}`}>
+          <aside className={`border-r border-[#314158] bg-[#101722] ${full ? 'p-4' : 'min-h-0 overflow-y-auto p-3'}`}>
             <div className="mb-2 px-3 text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-500">현재 작업</div>
             <div className="mb-5 rounded-lg border border-cyan-700/40 bg-cyan-950/20 p-3">
               <div className="truncate text-sm font-semibold text-white" title={project?.name}>{project?.name || '연결 중'}</div>
               <div className="mt-1.5 flex items-center gap-1.5 text-[11px] text-cyan-300"><span className="h-1.5 w-1.5 rounded-full bg-cyan-400" />{project ? taskLabels[project.task] : '대기'}</div>
-              <div className="mt-3 break-all font-mono text-[10px] leading-4 text-slate-500">{project?.project_dir || '—'}</div>
+              {full ? <div className="mt-3 break-all font-mono text-[10px] leading-4 text-slate-500">{project?.project_dir || '—'}</div> :
+                <details className="workspace-disclosure mt-2 text-[13px] text-[var(--workspace-muted)]">
+                  <summary className="focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--workspace-focus)]">프로젝트 위치</summary>
+                  <p className="mt-1 select-text break-all font-mono leading-5">{project?.project_dir || '—'}</p>
+                </details>}
+
             </div>
             {/* What a first run needs comes first; backup, restore, retention and templates sit under 고급. */}
             {([
@@ -182,7 +200,7 @@ export const ProjectWorkspaceDialog: React.FC<Props> = ({ onClose, initialTab = 
             ))}
           </aside>
 
-          <div className="min-h-0 overflow-y-auto p-7">
+          <div className={`min-h-0 overflow-y-auto ${full ? 'p-7' : 'p-5'}`}>
             {tab === 'recent' && (
               <section>
                 <div className="mb-4 flex items-baseline justify-between">
@@ -204,11 +222,11 @@ export const ProjectWorkspaceDialog: React.FC<Props> = ({ onClose, initialTab = 
             )}
 
             {tab === 'template' && (
-              <form onSubmit={createFromTemplate} className="space-y-4">
+              <form noValidate onSubmit={createFromTemplate} className="space-y-4">
                 <h3 className="text-sm font-semibold text-slate-100">프로젝트 설정 템플릿</h3>
                 <p className="text-xs leading-5 text-slate-400">검사 유형·학습 프리셋·태그 색상·보존 정책을 새 프로젝트에서 재사용합니다. 원본·모델·검사 기록·권한은 포함되지 않습니다. 전체 작업을 이동하려면 프로젝트 백업을 사용하세요.</p>
                 <button type="button" disabled={templateBusy || isProjectBusy} onClick={() => void loadTemplate()} className="rounded border border-slate-600 px-3 py-2 text-xs text-slate-200 disabled:opacity-40">현재 설정을 템플릿으로 읽기</button>
-                <label className="block text-xs text-slate-300">템플릿 JSON<textarea aria-label="프로젝트 설정 템플릿 JSON" value={templateText} onChange={(event) => { ++templateGeneration.current; setTemplateBusy(false); setTemplateText(event.target.value); }} rows={10} className="mt-1 w-full rounded border border-slate-600 bg-slate-950 p-2 font-mono text-xs text-white" /></label>
+                <label className="block text-xs text-slate-300">템플릿 JSON<textarea aria-label="프로젝트 설정 템플릿 JSON" value={templateText} onChange={(event) => { ++templateGeneration.current; setTemplateBusy(false); setTemplateText(event.target.value); }} rows={10} className="mt-1 w-full resize-none rounded border border-slate-600 bg-slate-950 p-2 font-mono text-xs text-white" /></label>
                 <p className="text-xs text-slate-500">JSON을 복사해 다른 환경에서 붙여 넣을 수 있습니다. 서버에서 형식과 내용 해시를 검증합니다.</p>
                 <label className="block text-xs text-slate-300">새 프로젝트 이름<input aria-label="템플릿 새 프로젝트 이름" value={name} maxLength={100} onChange={(event) => setName(event.target.value)} className="mt-1 w-full rounded border border-slate-600 bg-slate-950 p-2 text-white" /></label>
                 <label className="block text-xs text-slate-300">새 프로젝트 폴더 · 비우면 기본 위치<input aria-label="템플릿 새 프로젝트 폴더" value={createPath} onChange={(event) => setCreatePath(event.target.value)} className="mt-1 w-full rounded border border-slate-600 bg-slate-950 p-2 text-white" /></label>
@@ -218,36 +236,43 @@ export const ProjectWorkspaceDialog: React.FC<Props> = ({ onClose, initialTab = 
             )}
 
             {tab === 'create' && (
-              <form onSubmit={submitCreate} className="space-y-4">
+              <form noValidate onSubmit={submitCreate} className={full ? 'space-y-4' : 'space-y-3'}>
                 <div><h3 className="text-sm font-semibold text-slate-100">새 프로젝트</h3><p className="mt-1 text-xs text-slate-500">{full ? '작업 이름과 검사 유형을 정합니다.' : '사진에서 어떤 결과를 얻고 싶은지 골라 주세요.'}</p></div>
                 <label className="block text-xs font-medium text-slate-300">프로젝트 이름 <span className="text-cyan-300">*</span><input autoFocus value={name} maxLength={100} onChange={(event) => setName(event.target.value)} placeholder="예: 세라믹 표면 결함 검사" className="mt-1.5 w-full rounded-md border border-[#40516A] bg-[#0D1420] px-3 py-2.5 text-sm text-white outline-none placeholder:text-slate-400 focus:border-cyan-500" /></label>
                 {full ? <label className="block text-xs font-medium text-slate-300">검사 유형<select value={task} onChange={(event) => setTask(event.target.value as VisionTask)} className="mt-1.5 w-full rounded-md border border-[#40516A] bg-[#0D1420] px-3 py-2.5 text-sm text-white outline-none focus:border-cyan-500">{Object.entries(taskLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label> :
                   <fieldset className="min-w-0 space-y-2" aria-describedby="project-purpose-help">
                     <legend className="mb-2 text-sm font-semibold text-[var(--workspace-text)]">어떤 결과가 필요한가요?</legend>
-                    {PROJECT_PURPOSES.map(choice => <label key={choice.id} className="workspace-section flex cursor-pointer items-start gap-3 text-sm">
-                      <input type="radio" name="project-purpose" value={choice.id} checked={purpose === choice.id}
-                        onChange={() => setPurpose(choice.id)} className="mt-1 shrink-0 accent-[var(--workspace-accent)]" />
-                      <span className="min-w-0"><strong className="block text-[var(--workspace-text)]">{choice.title}</strong>
-                        <span className="workspace-description block">{choice.example}</span>
-                        <span className="workspace-description block">준비할 것: {choice.preparation}</span></span>
-                    </label>)}
-                    <label className="workspace-section flex cursor-pointer items-center gap-3 text-sm text-[var(--workspace-text)]">
+                    <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                      {PROJECT_PURPOSES.map(choice => <label key={choice.id} className="workspace-section flex cursor-pointer items-start gap-2 text-sm hover:border-[var(--workspace-accent)] focus-within:outline focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-[var(--workspace-focus)]"
+                        style={{padding: 'var(--workspace-space-3)', borderColor: purpose === choice.id ? 'var(--workspace-accent)' : undefined}}>
+                        <input type="radio" name="project-purpose" value={choice.id} checked={purpose === choice.id}
+                          onChange={() => setPurpose(choice.id)} className="mt-1 shrink-0 accent-[var(--workspace-accent)]" />
+                        <span className="min-w-0"><strong className="block text-[var(--workspace-text)]">{choice.title}</strong>
+                          <span className="workspace-description block text-[13px] leading-5">{choice.example}</span></span>
+                      </label>)}
+                    </div>
+                    <label className="flex cursor-pointer items-center gap-2 py-1 text-sm text-[var(--workspace-muted)]">
                       <input type="radio" name="project-purpose" value="unsure" checked={purpose === 'unsure'} onChange={() => setPurpose('unsure')} className="accent-[var(--workspace-accent)]" />
                       아직 모르겠어요
                     </label>
-                    <p id="project-purpose-help" role={purpose === 'unsure' ? 'status' : undefined} className="workspace-description text-sm">
-                      {purpose === 'unsure' ? '사진 전체에 이름 하나를 붙이려면 종류, 사각형으로 위치와 수를 보려면 위치와 개수, 경계를 따라 칠하려면 모양을 고르세요. 정상 사진을 기준으로 차이를 찾으려면 정상과 다른 부분을 고르세요. 원하는 결과를 고른 뒤 만들 수 있습니다.' : '목적을 고르면 필요한 검사 유형이 연결됩니다. 사진을 불러와도 정답이 자동 확정되지는 않습니다.'}
-                    </p>
+                    <div id="project-purpose-help" role={purpose ? 'status' : undefined} className={selectedPurpose ? 'workspace-record text-[13px] leading-5' : 'workspace-description text-[13px] leading-5'} style={selectedPurpose ? {padding: 'var(--workspace-space-3)'} : undefined}>
+                      {selectedPurpose ? <><strong className="text-[var(--workspace-text)]">준비할 것</strong><p className="mt-1 text-[var(--workspace-muted)]">{selectedPurpose.preparation}</p></> : purpose === 'unsure' ?
+                        '사진 전체에 이름 하나를 붙이려면 종류, 사각형으로 위치와 수를 보려면 위치와 개수, 경계를 따라 칠하려면 모양을 고르세요. 정상 사진을 기준으로 차이를 찾으려면 정상과 다른 부분을 고르세요.' :
+                        '원하는 결과를 하나 선택하세요. 선택하면 준비할 사진과 정답을 안내합니다.'}
+                    </div>
                   </fieldset>}
 
-                <label className="block text-xs font-medium text-slate-300">설명 <span className="font-normal text-slate-500">선택</span><textarea value={description} onChange={(event) => setDescription(event.target.value)} rows={2} placeholder="검사 대상과 목적을 기록하세요" className="mt-1.5 w-full resize-none rounded-md border border-[#40516A] bg-[#0D1420] px-3 py-2 text-sm text-white outline-none placeholder:text-slate-400 focus:border-cyan-500" /></label>
-                <label className="block text-xs font-medium text-slate-300">저장 폴더 <span className="font-normal text-slate-500">비우면 기본 위치에 생성</span><div className="mt-1.5 flex gap-2"><input value={createPath} onChange={(event) => setCreatePath(event.target.value)} placeholder="기본 프로젝트 폴더 사용" className="min-w-0 flex-1 rounded-md border border-[#40516A] bg-[#0D1420] px-3 py-2.5 font-mono text-xs text-white outline-none placeholder:text-slate-400 focus:border-cyan-500" /><button type="button" disabled={!pickPaths} title={pickTitle} onClick={() => void selectDirectory(true)} className="rounded-md border border-[#40516A] px-3 text-xs text-slate-200 hover:bg-[#25354A]">찾기</button></div></label>
-                <button type="submit" disabled={!name.trim() || !createTask || locked} className="flex w-full items-center justify-center gap-2 rounded-md bg-cyan-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-cyan-500 disabled:cursor-not-allowed disabled:opacity-40"><FolderPlus className="h-4 w-4" />{isProjectBusy ? '만드는 중...' : '프로젝트 만들기'}</button>
+                {full ? createOptionalFields : <details className="workspace-disclosure workspace-section" style={{padding: 'var(--workspace-space-3)'}}>
+                  <summary className="text-[13px] text-[var(--workspace-text)]">설명·저장 위치 <span className="font-normal text-[var(--workspace-muted)]">· 선택 · {createPath.trim() ? '지정한 위치 사용' : '기본 위치 사용'}</span></summary>
+                  <div className="mt-3 space-y-3">{createOptionalFields}</div>
+                </details>}
+
+                <button type="submit" disabled={!name.trim() || !createTask || locked} className={full ? 'flex w-full items-center justify-center gap-2 rounded-md bg-cyan-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-cyan-500 disabled:cursor-not-allowed disabled:opacity-40' : 'workspace-button workspace-button--primary w-full'}><FolderPlus className="h-4 w-4" />{isProjectBusy ? '만드는 중...' : '프로젝트 만들기'}</button>
               </form>
             )}
 
             {tab === 'open' && (
-              <form onSubmit={submitOpen} className="space-y-5">
+              <form noValidate onSubmit={submitOpen} className="space-y-5">
                 <div><h3 className="text-sm font-semibold text-slate-100">기존 프로젝트 열기</h3><p className="mt-1 text-xs leading-5 text-slate-500">project.json이 있는 폴더를 선택하세요. 이미지 데이터 폴더는 데이터 관리 단계에서 엽니다.</p></div>
                 <label className="block text-xs font-medium text-slate-300">프로젝트 폴더<div className="mt-1.5 flex gap-2"><input value={openPath} onChange={(event) => setOpenPath(event.target.value)} placeholder="/path/to/project" className="min-w-0 flex-1 rounded-md border border-[#40516A] bg-[#0D1420] px-3 py-2.5 font-mono text-xs text-white outline-none placeholder:text-slate-400 focus:border-cyan-500" /><button type="button" disabled={!pickPaths} title={pickTitle} onClick={() => void selectDirectory(false)} className="rounded-md border border-[#40516A] px-3 text-xs text-slate-200 hover:bg-[#25354A]">찾기</button></div></label>
                 <div className="flex items-start gap-2 rounded-md border border-[#32465B] bg-[#152232] p-3 text-xs leading-5 text-slate-400"><HardDrive className="mt-0.5 h-4 w-4 shrink-0 text-cyan-400" /><span>프로젝트 폴더를 열면 저장된 작업 유형과 연결한 원본 데이터 경로를 불러옵니다.</span></div>
@@ -256,7 +281,7 @@ export const ProjectWorkspaceDialog: React.FC<Props> = ({ onClose, initialTab = 
             )}
 
             {tab === 'backup' && (
-              <form onSubmit={submitBackup} className="space-y-4">
+              <form noValidate onSubmit={submitBackup} className="space-y-4">
                 <div><h3 className="text-sm font-semibold text-slate-100">프로젝트 전체 백업</h3><p className="mt-1 text-xs leading-5 text-slate-400">현재 프로젝트의 라벨셋·분할·버전·모델·검사 이력과 연결된 원본 이미지 파일을 한 파일에 담습니다. 파일별 SHA-256을 기록하며 원본은 변경하지 않습니다.</p></div>
                 <label className="block text-xs font-medium text-slate-300">백업 파일 저장 폴더<div className="mt-1.5 flex gap-2"><input value={backupFolder} onChange={(event) => setBackupFolder(event.target.value)} placeholder="백업 ZIP을 저장할 폴더" className="min-w-0 flex-1 rounded-md border border-[#40516A] bg-[#0D1420] px-3 py-2.5 font-mono text-xs text-white outline-none focus:border-cyan-500" /><button type="button" disabled={!pickPaths} title={pickTitle} onClick={async () => { const path = await host.selectFolder({ purpose: 'project-backup', title: '프로젝트 백업 저장 폴더' }); if (path) setBackupFolder(path); }} className="rounded-md border border-[#40516A] px-3 text-xs text-slate-200 hover:bg-[#25354A]">찾기</button></div></label>
                 <div className="rounded-md border border-[#33465B] bg-[#142236] p-3 text-[11px] leading-5 text-slate-400">원본 데이터는 최대 2 GB, 전체 백업은 최대 4 GB입니다. 프로젝트와 원본 데이터 폴더 바깥을 저장 위치로 선택하세요. 백업 중에는 파일이 바뀌지 않아야 합니다.</div>
@@ -268,7 +293,7 @@ export const ProjectWorkspaceDialog: React.FC<Props> = ({ onClose, initialTab = 
             {tab === 'retention' && project && <ArtifactRetentionPanel projectId={project.id} />}
 
             {tab === 'restore' && (
-              <form onSubmit={submitRestore} className="space-y-4">
+              <form noValidate onSubmit={submitRestore} className="space-y-4">
                 <div><h3 className="text-sm font-semibold text-slate-100">백업에서 새 프로젝트 복원</h3><p className="mt-1 text-xs leading-5 text-slate-400">백업의 모든 파일을 검증한 후 새 폴더에 복원합니다. 원본 프로젝트와 기존 이미지 폴더는 덮어쓰지 않습니다.</p></div>
                 <label className="block text-xs font-medium text-slate-300">백업 파일<div className="mt-1.5 flex gap-2"><input value={archivePath} onChange={(event) => setArchivePath(event.target.value)} placeholder=".mvision.zip 파일 경로" className="min-w-0 flex-1 rounded-md border border-[#40516A] bg-[#0D1420] px-3 py-2.5 font-mono text-xs text-white outline-none focus:border-cyan-500" /><button type="button" disabled={!pickPaths} title={pickTitle} onClick={async () => { const path = await host.selectFile({ purpose: 'project-restore-archive', title: '프로젝트 백업 파일', filters: [{ name: 'Modu Vision 백업', extensions: ['zip'] }] }); if (path) setArchivePath(path); }} className="rounded-md border border-[#40516A] px-3 text-xs text-slate-200 hover:bg-[#25354A]">찾기</button></div></label>
                 <label className="block text-xs font-medium text-slate-300">새 프로젝트 폴더<div className="mt-1.5 flex gap-2"><input value={restorePath} onChange={(event) => setRestorePath(event.target.value)} placeholder="아직 존재하지 않는 새 폴더 경로" className="min-w-0 flex-1 rounded-md border border-[#40516A] bg-[#0D1420] px-3 py-2.5 font-mono text-xs text-white outline-none focus:border-cyan-500" /><button type="button" disabled={!pickPaths} title={pickTitle} onClick={async () => { const path = await host.selectFolder({ purpose: 'project-restore-target', title: '복원할 새 프로젝트의 상위 폴더' }); if (path) setRestorePath(`${path.replace(/[\\/]+$/, '')}/restored-project`); }} className="rounded-md border border-[#40516A] px-3 text-xs text-slate-200 hover:bg-[#25354A]">상위 폴더</button></div></label>
@@ -286,7 +311,7 @@ export const ProjectWorkspaceDialog: React.FC<Props> = ({ onClose, initialTab = 
             </section>}
 
             {switchRefusal && !isProjectBusy && <p className="mt-5 rounded-md border border-amber-700/40 bg-amber-950/20 px-3 py-2 text-xs leading-5 text-amber-200">{switchRefusal}</p>}
-            {projectError && <div role="alert" className="mt-5 rounded-md border border-red-700/60 bg-red-950/30 px-3 py-2 text-xs leading-5 text-red-200">{projectError}</div>}
+            {projectError && <div ref={projectErrorRef} role="alert" className="mt-5 scroll-m-2 rounded-md border border-red-700/60 bg-red-950/30 px-3 py-2 text-xs leading-5 text-red-200">{projectError}</div>}
           </div>
         </div>
       </div>

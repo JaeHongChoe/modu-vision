@@ -1,8 +1,9 @@
 const test=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path'),Module=require('node:module'),ts=require('typescript');
 const nodes=value=>Array.isArray(value)?value.flatMap(nodes):value&&typeof value==='object'?[value,...nodes(value.props?.children)]:[];
+const text=value=>Array.isArray(value)?value.map(text).join(''):value&&typeof value==='object'?text(value.props?.children):typeof value==='string'||typeof value==='number'?String(value):'';
 function mount(nextAction,options={}){
  const calls=[],states=[],effects=[],listeners=new Map();let cursor=0,effectCursor=0,pending=[],modal=false;
- const state={activeStep:options.activeStep||2,language:options.language||'ko',setStep:async step=>{calls.push(['step',step]);await options.save?.();}};
+ const state={activeStep:options.activeStep||2,language:options.language||'ko',viewMode:options.viewMode||'simple',setStep:async step=>{calls.push(['step',step]);await options.save?.();}};
  const readiness={stage:state.activeStep,status:'ready',missingInputs:[],completedInputs:['사진 가져오기'],nextAction,...options.readiness};
  const react={useState(initial){const i=cursor++;if(!(i in states))states[i]=typeof initial==='function'?initial():initial;return[states[i],value=>{states[i]=typeof value==='function'?value(states[i]):value;}];},useEffect(fn,deps){const i=effectCursor++,old=effects[i];if(!old||deps.some((value,j)=>!Object.is(value,old.deps[j])))pending.push(()=>{old?.cleanup?.();effects[i]={deps,cleanup:fn()};});}};
  const jsx=(type,props)=>({type,props});
@@ -53,4 +54,18 @@ test('the automatic-run entry says it opens setup or progress and only opens the
  for(const run of [null,{state:'running'}]){
   const h=mount({label:'확인',step:2},{run});try{const button=nodes(h.render()).find(node=>node.type==='button'&&node.props['aria-haspopup']==='dialog');assert.equal(button.props.children,run?'원클릭 자동 진행 상태 보기':'원클릭 자동 진행 설정 열기');button.props.onClick();assert.ok(nodes(h.render()).some(node=>node.type==='AutoProgressDialog'));assert.deepEqual(h.calls,[]);}finally{h.close();}
  }
+});
+test('simple footer names its internal task and gives only the recommended action visual priority',()=>{
+ const h=mount({label:'데이터 가져오기',step:1,target:'workflow-data'},{activeStep:3,readiness:{status:'blocked',missingInputs:['현재 원본 이미지 가져오기 필요']}});
+ try{
+  const tree=h.render();assert.match(text(tree),/세부 작업.*모델 학습/);assert.doesNotMatch(text(tree),/3\/6/);
+  const status=nodes(tree).find(node=>node.props?.role==='status');assert.doesNotMatch(status.props.className,/amber|bg-/,'status is not a full warning-colored bar');
+  assert.match(text(status),/현재 원본 이미지 가져오기 필요/);
+  assert.equal(nodes(tree).filter(node=>node.props?.className?.includes('workspace-button--primary')).length,1);
+  const previous=nodes(tree).find(node=>node.props?.['aria-label']==='이전 단계 보기');
+  const next=nodes(tree).find(node=>node.props?.['aria-label']==='다음 단계 보기');
+  for(const button of [previous,next,nodes(tree).find(node=>node.props?.['aria-haspopup']==='dialog'),nodes(tree).find(node=>node.props?.['aria-expanded']===false)])assert.match(button.props.className,/workspace-button--quiet/);
+  previous.props.onClick();next.props.onClick();assert.deepEqual(h.calls,[['step',2],['step',4]],'quiet arrows still navigate internal steps');
+ }finally{h.close();}
+ const full=mount({label:'확인',step:3},{activeStep:3,viewMode:'full'});try{const tree=full.render();assert.match(text(tree),/3\/6/);assert.doesNotMatch(text(tree),/세부 작업/);assert.doesNotMatch(nodes(tree).find(node=>node.props?.['aria-label']==='이전 단계 보기').props.className,/workspace-button--quiet/);}finally{full.close();}
 });

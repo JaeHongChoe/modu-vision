@@ -12,9 +12,11 @@ export function LearningJourneyPanel() {
   const oneclick = useOneclickTaskProgressStore();
   const assistant = useAssistantTaskStore();
   const projectReady = useProjectStore(s => Boolean(s.projectDir && s.project && !s.isProjectBusy));
-  const hasData = useDatasetStore(s => s.hasSelectedFolder && !s.isLoading && !s.importError);
+  const hasData = useDatasetStore(s => s.hasSelectedFolder && s.sourceImages > 0 && !s.isLoading && !s.importError);
   const selected = selectLearningTask(oneclick, assistant);
   const progress = selected?.state.task ? learningTaskProgress(selected.state.task, selected.state.error) : null;
+  // Empty stages already explain their one next action. Reserve this strip for prepared data or real work.
+  if (!progress && (!projectReady || !hasData)) return null;
   return <>
     <section aria-label="처음 만드는 AI 진행" className="shrink-0 border-b border-[var(--workspace-border)] bg-[var(--workspace-inset)] px-4 py-2 text-sm text-[var(--workspace-text)]">
       <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
@@ -29,7 +31,6 @@ export function LearningJourneyPanel() {
         </button>
       </div>
       {progress && <p className="mt-1 text-xs text-[var(--workspace-muted)]">{progress.detail}</p>}
-      {!progress && (!projectReady || !hasData) && <p className="mt-1 text-xs text-[var(--workspace-muted)]">{!projectReady ? '먼저 프로젝트를 만들거나 열어 주세요.' : '먼저 사용할 사진을 가져와 주세요.'}</p>}
     </section>
     {open && <AutoProgressDialog onClose={() => setOpen(false)}/>}
   </>;

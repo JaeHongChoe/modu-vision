@@ -3,6 +3,7 @@ import {expect,test} from './fixtures/test';
 // Isolated project/fixture images only. These tests navigate and create a project; they never start model or GPT work.
 test('novice entry creates an explicit purpose and keeps all four goals reachable',async({page,request,renderer,evidence})=>{
   page.setDefaultTimeout(20_000);
+  const projectName='첫 학습을 위한 세라믹 표면 검사 프로젝트 · Novice precise shapes';
   expect((await request.post(`${renderer.origin}/api/project/create`,{data:{name:'Novice starting workspace',task:'classification'}})).ok()).toBe(true);
   await page.goto(renderer.url);
   await expect(page.getByRole('button',{name:'Novice starting workspace'}).first()).toBeVisible();
@@ -21,7 +22,7 @@ test('novice entry creates an explicit purpose and keeps all four goals reachabl
   await welcome.getByRole('button',{name:'내 사진으로 만들기',exact:true}).click();
   const project=page.getByRole('dialog',{name:'프로젝트 관리'});
   await expect(project.getByText('어떤 결과가 필요한가요?',{exact:true})).toBeVisible();
-  await project.getByLabel(/프로젝트 이름/).fill('Novice precise shapes');
+  await project.getByLabel(/프로젝트 이름/).fill(projectName);
   const create=project.getByRole('button',{name:'프로젝트 만들기',exact:true});
   await expect(create).toBeDisabled();
   await project.getByRole('radio',{name:'아직 모르겠어요'}).check();
@@ -29,12 +30,41 @@ test('novice entry creates an explicit purpose and keeps all four goals reachabl
   await expect(project.getByText(/사진 전체에 이름 하나를 붙이려면/)).toBeVisible();
   await project.getByRole('radio',{name:/정확한 모양 표시하기/}).check();
   await expect(create).toBeEnabled();
+  await expect(create).toBeInViewport({ratio:1});
   await evidence.screenshot(page,'novice-purpose');
+  await page.setViewportSize({width:1100,height:780});
+  await expect(create).toBeInViewport({ratio:1});
+  await expect(project.getByLabel(/설명 선택/)).not.toBeVisible();
+  await evidence.screenshot(page,'novice-purpose-compact');
+  const chosenPurpose=project.getByRole('radio',{name:/정확한 모양 표시하기/});
+  await chosenPurpose.focus();
+  await page.keyboard.press('ArrowLeft');
+  await expect(project.getByRole('radio',{name:/위치와 개수 찾기/})).toBeChecked();
+  await page.keyboard.press('ArrowRight');
+  await expect(chosenPurpose).toBeChecked();
+  await expect(chosenPurpose).toBeFocused();
+  const optional=project.locator('summary').filter({hasText:'설명·저장 위치'});
+  await optional.focus();
+  await page.keyboard.press('Enter');
+  await project.getByLabel(/설명 선택/).fill('Synthetic UI verification; no manufacturing images.');
+  await optional.focus();
+  await page.keyboard.press('Enter');
+  await expect(project.getByLabel(/설명 선택/)).not.toBeVisible();
+  await page.route('**/api/project/create',route=>route.fulfill({status:503,contentType:'application/json',body:JSON.stringify({detail:'프로젝트 저장 연결을 확인해 주세요.'})}),{times:1});
+  await create.click();
+  await expect(project.getByRole('alert')).toContainText('프로젝트 저장 연결을 확인해 주세요.');
+  await expect(project.getByRole('alert')).toBeInViewport({ratio:1});
+  await expect(project.getByLabel(/프로젝트 이름/)).toHaveValue(projectName);
+  await expect(chosenPurpose).toBeChecked();
+  const unchanged=await (await request.get(`${renderer.origin}/api/project/current`)).json();
+  expect(unchanged.project?.name??unchanged.name).toBe('Novice starting workspace');
+  await evidence.screenshot(page,'novice-purpose-retry');
   await create.click();
   await expect(project).not.toBeVisible();
   const current=await (await request.get(`${renderer.origin}/api/project/current`)).json();
   expect(current.project?.task??current.task).toBe('segmentation');
-  await expect(page.getByRole('button',{name:'Novice precise shapes'}).first()).toBeVisible();
+  await expect(page.getByRole('button',{name:projectName}).first()).toBeVisible();
+  await page.setViewportSize({width:1440,height:900});
   for(const goal of ['사진 준비','AI에게 가르치기','처음 보는 사진으로 확인','검사에 사용']) {
     await page.getByRole('button',{name:goal,exact:true}).click();
     await expect(page.getByRole('button',{name:goal,exact:true})).toHaveAttribute('aria-current','true');
@@ -42,6 +72,7 @@ test('novice entry creates an explicit purpose and keeps all four goals reachabl
   await page.getByRole('button',{name:'AI에게 가르치기',exact:true}).click();
   await page.getByRole('button',{name:/모델 학습/,exact:false}).first().click();
   await expect(page.getByRole('heading',{name:'AI에게 가르칠 준비'})).toBeVisible();
+  await expect(page.getByRole('region',{name:'처음 만드는 AI 진행'})).toHaveCount(0);
   await expect(page.getByRole('button',{name:'사진 준비 열기',exact:true})).toBeVisible();
   await expect(page.getByText('사진·모델·실행 준비 자세히',{exact:true})).toBeVisible();
   const transforms=page.locator('details').filter({has:page.locator('summary').filter({hasText:'사진 변환 설정 (선택)'})}).first();
