@@ -151,12 +151,18 @@ async function chooseImage(page: Page, fileName: string) {
 }
 
 async function dragNode(page: Page, node: ReturnType<typeof flowNodes>, dx: number, dy: number, blocked=false) {
-  const box = await node.boundingBox();
+  // The properties panel can clip later nodes at the default readable zoom.
+  // Use the public viewport control before starting a real pointer drag.
+  await page.getByRole('button', { name: '플로우 전체 맞춤', exact: true }).click();
+  const box = await node.getByRole('heading').boundingBox();
   if (!box) throw new Error('node is not visible');
+  const start = { x: box.x + box.width / 2, y: box.y + box.height / 2 };
+  expect(await node.evaluate((element, point) => element.contains(document.elementFromPoint(point.x, point.y)), start),
+    'the drag starts on this node, not a clipping properties panel').toBe(true);
   const before = await node.evaluate(element => (element as HTMLElement).style.left);
-  await page.mouse.move(box.x + box.width / 2, box.y + 12);
+  await page.mouse.move(start.x, start.y);
   await page.mouse.down();
-  for (let step = 1; step <= 6; step++) await page.mouse.move(box.x + box.width / 2 + dx * step / 6, box.y + 12 + dy * step / 6);
+  for (let step = 1; step <= 6; step++) await page.mouse.move(start.x + dx * step / 6, start.y + dy * step / 6);
   await page.mouse.up();
   const position=()=>node.evaluate(element => (element as HTMLElement).style.left);
   if(blocked)await expect.poll(position).toBe(before);
@@ -575,7 +581,7 @@ test('a refused model family change keeps the active family and says why', async
   await expect(family('classification')).toHaveAttribute('aria-pressed', 'true');
   await family('segmentation').click();
   await page.getByRole('dialog', { name: '검사 작업 변경 영향' }).getByRole('button', { name: '영향 확인 후 변경', exact: true }).click();
-  await expect(page.getByRole('alert').filter({ hasText: '모델 종류 변경 후 확인이 필요합니다: Another job is running (S0-05 fixture)' })).toBeVisible();
+  await expect(page.locator('#workflow-training').getByRole('alert').filter({ hasText: '모델 종류 변경 후 확인이 필요합니다: Another job is running (S0-05 fixture)' })).toBeVisible();
   await expect(family('classification')).toHaveAttribute('aria-pressed', 'true');
   await expect(family('segmentation')).toHaveAttribute('aria-pressed', 'false');
   const current = await (await page.request.get(`${renderer.origin}/api/project/current`)).json() as Json;

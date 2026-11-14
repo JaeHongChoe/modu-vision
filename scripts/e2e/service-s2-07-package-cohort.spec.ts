@@ -44,6 +44,8 @@ test('package comparison choices survive reload, retain changed images and requi
   await page.goto(renderer.url);
   const open = async (navigate = true) => {
     if (navigate) await page.getByRole('button', { name: /06.*추론/ }).click();
+    const disclosure = page.locator('details').filter({ has: page.locator(':scope > summary', { hasText: '검사 흐름 패키지·모델 운영' }) });
+    if (!(await disclosure.evaluate(element => (element as HTMLDetailsElement).open))) await disclosure.locator(':scope > summary').click();
     const panel = page.getByRole('region', { name: '전체 검사 플로우 패키지' });
     await expect(panel).toBeVisible();
     await panel.getByLabel('고정 이미지 여러 장', { exact: true }).check();
@@ -51,6 +53,7 @@ test('package comparison choices survive reload, retain changed images and requi
     return panel;
   };
   await page.getByRole('button', { name: /06.*추론/ }).click();
+  await page.locator('summary').filter({ hasText: '검사 흐름 패키지·모델 운영' }).click();
   const waiting = page.getByRole('region', { name: '전체 검사 플로우 패키지' });
   try {
     await expect(waiting.getByLabel('고정 이미지 여러 장', { exact: true })).toBeEnabled();

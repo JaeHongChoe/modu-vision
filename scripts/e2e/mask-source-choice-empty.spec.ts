@@ -50,7 +50,7 @@ const UI_SOURCE={
   "scripts/e2e/fixtures/desktop-host-shim.ts": "4f598862ec0e08189628c72bbb552f72bf8fd73f5a9a05b8da1d3ddf516dcfa6",
   "scripts/e2e/fixtures/harness.cjs": "6fe3bb6411a28bc83c6da36ba0b2480b12de6b86fd08daa61d8d0e76d7dac950",
   "scripts/e2e/fixtures/test.ts": "7a7effa184e71c02414773308e0ea88e16cf83dfbd72d77d47046f2cfc1b8d09",
-  "scripts/e2e/qa/appFlow.ts": "4eed3e5dad1d9d65a6b19fc9bb51a1f9b0e23911a39e7f255220bec0ce37fea2",
+  "scripts/e2e/qa/appFlow.ts": "055a46afadb1a24a12343f554b2a87c44a3bb7c019e21742ccc2bbe41e2c218a",
   "src/renderer/services/hostAdapter.ts": "36f1bd262335e7bd3b3c7a510345fc78e64d3a07c22af66408f8075c512f2f1b"
 } as const;
 const POINTERS=['/records/117/actions/3/scenarios/empty'] as const;

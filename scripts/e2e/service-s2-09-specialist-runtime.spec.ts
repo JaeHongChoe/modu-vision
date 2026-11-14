@@ -67,7 +67,8 @@ test('real owned CPU rotation training reaches its runtime limit from the app wi
  await page.goto(renderer.url);
  // Wait for the actual owned project and source before the single stage navigation.
  await expect(page.getByTitle('프로젝트 관리',{exact:true})).toContainText('Actual specialist runtime');
- await expect(page.getByRole('button',{name:'데이터셋 폴더 열기',exact:true})).toBeEnabled();
+ await expect(page.locator('#workflow-data')).toHaveAccessibleName('폴더 경로로 가져오기');
+ await expect(page.locator('#workflow-data')).toBeEnabled();
  await page.getByRole('navigation',{name:'Workflow Stages'}).getByRole('button').nth(2).click();await page.getByRole('region',{name:'모델 학습 허브'}).getByRole('button',{name:/^정방향 보정/}).click();
  await page.getByLabel('Epoch',{exact:true}).fill('500');await page.getByLabel('배치 크기',{exact:true}).fill('1');await page.getByLabel('모델 입력 크기',{exact:true}).fill('128');await page.getByLabel(/CNN 채널 폭/).selectOption('32');
  await page.locator('summary',{hasText:'학습 시간 제한'}).click();await page.getByLabel('학습 시간 제한 (분)',{exact:true}).fill('0.02');

@@ -347,7 +347,7 @@ async function exercise(page: Page, w: Workspace, e: Evidence, api: Api, sourceE
 
     await choice.selectOption(created[1].id); await assertVersion(created[1]); await unchanged(storedPhase);
     await stages.getByRole('button').nth(0).click(); await expect(panel).toHaveCount(0);
-    await expect(page.getByTitle(source, {exact: true})).toBeVisible();
+    await expect(page.locator('#workflow-data').locator('..').getByTitle(source, {exact: true})).toBeVisible();
     await page.getByRole('button', {name: '파생 편집 · 검수한 학습 데이터 버전', exact: true}).click();
     const adoptions = page.getByRole('region', {name: '파생 편집 데이터 버전', exact: true});
     await expect(adoptions).toContainText('검수한 파생 학습 버전이 없습니다.');
