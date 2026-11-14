@@ -50,3 +50,9 @@
 - 현재 화면의 미저장 상태와 마운트된 화면 전용 동작은 기존 앱 실행기의 범위입니다. 새 CLI만으로 모든 GUI가 독립적인 headless 기능이 됐다고 주장하지 않습니다.
 - 실제 GPT 요청·이미지 외부 전송·새 로그인/키체인 접근·GPU/모델·서비스 등록·운영 배포·앱/웹 교체는 실행하지 않았습니다. 사람의 정답 확정·품질 수락과 현장 검증도 별도입니다.
 - 원격 PR fast/security/full 결과는 해당 PR에서 확인합니다. 위 로컬 검사 기록은 exact-head 전체 회귀 성공이나 main 병합 증거가 아닙니다.
+
+## 원격 CI 보존 회귀 정정
+
+최초 head `a5835e12`의 fast `43575149239`는 기존 full CI 명령 중간에 새 테스트를 삽입해 CI 순서·digest 보존 검사 2개가 실패했습니다. 제품 기능 성공으로 덮지 않습니다. `.github/workflows/ci.yml`을 main08066611과 byte-for-byte 동일하게 복원하고 신규 CLI 검사는 별도 `ci-studio-cli.yml`에서 모든 PR/main push에 전체 실행하도록 분리했습니다. 기존 full 선택·해시 단언·related selection·보호 조건은 변경하지 않았습니다.
+
+수정 전 기존 2개와 새 workflow 검사 4개의 실패를 재현했고, 수정 후 source CI 계약 **50/50**, 전체 CLI·catalog·격리 연동·새 workflow **61/61**을 확인했습니다. 기존 실행은 종료된 뒤 새 head를 게시했으며 취소·rerun·full dispatch는 하지 않았습니다. 새 원격 CI의 결과는 별도입니다.
