@@ -110,6 +110,7 @@ ChatGPT 연결에는 **텍스트·구조화된 앱 상태와 사용자가 첨부
 
 - 폴더·지원 LabelMe 형상 가져오기, 데이터셋 분할과 버전·원본 출처 관리
 - BBox, 회전 BBox, polygon, brush·eraser와 자동 선택 도구
+- [다각형 점 편집](docs/labeling-precision.md): 변에 점 추가·선택 점 삭제·방향키 이동과 실행 취소
 - 확대·이동·화면 맞춤과 픽셀 확인, 선택 형상 이동, 실행 취소·다시 실행
 - 원본을 유지하는 파생 이미지 편집과 라벨 세트 관리
 - 프로젝트별 라벨 기준서, 담당 배정·우선순위, 편집 잠금, 1인·2인 검수와 의견 조정
@@ -336,3 +337,5 @@ macOS 기본 빌더 설정은 `mac.identity: "-"`이며 실제 산출물의 서�
 버그 제보와 변경 제안은 [Issues](https://github.com/JaeHongChoe/modu-vision/issues), 코드 기여는 [기여 안내](CONTRIBUTING.md)를 이용하세요. 보안 문제 제보 방법은 [SECURITY.md](SECURITY.md)에 있습니다.
 
 프로젝트 코드는 [MIT License](LICENSE)를 따릅니다. 외부 라이브러리와 모델 가중치에는 각각의 조건이 적용됩니다. 특히 DINOv3·YOLO 등 사전학습 모델과 파생 모델의 이용·재배포 조건은 [모델 라이선스 표](docs/model-license-matrix.md)와 [외부 구성 요소 고지](THIRD_PARTY_NOTICES.md)를 확인하세요.
+
+다각형 편집에 사용한 Label Studio 유래 코드에는 [Apache-2.0 라이선스](third_party/label-studio/LICENSE)와 [NOTICE](third_party/label-studio/NOTICE)가 적용됩니다. 고정 출처·변경 범위는 [provenance](third_party/label-studio/provenance.json)에 기록하며, 라이선스와 고지를 앱·웹 renderer에도 함께 배포합니다.

@@ -731,6 +731,7 @@ export const useAnnotationStore = create<AnnotationState>((set, get) => ({
             color: a.color,
             rotated_bbox: a.rotated_bbox,
             direction_deg: a.direction_deg,
+            text: a.text,
             mask_rle: a.mask_rle,
             // An adopted draft keeps where it came from; without it the adoption could not be taken back later.
             ...(a.origin ? { origin: a.origin } : {}),

@@ -130,3 +130,14 @@ Stage3 TrainingInputPreparation reuses workspace section/buttons, native numeric
 FirstRunStudio delegates create/recent navigation through App's workspaceRequest to the existing ProjectWorkspaceDialog. Closing the guide does not implicitly start a job. First-trial completion is not human truth acceptance or field deployment. See docs/novice-first.md for user instructions and docs/superpowers/specs/2026-11-14-novice-first-design.md for scope.
 
 Simple creation keeps optional form fields mounted under a native disclosure and shows preparation for the selected purpose only. A failed operation reveals the existing alert without changing focus, inputs, active project or retry semantics. Only an explicit retry submits again. The simple header separates project utilities and goal navigation; narrow widths may wrap. The footer's quiet controls use the canonical `workspace-button--quiet` recipe and the existing readiness owner. Idle learning setup requires a positive original-image count; current task progress is never hidden merely because that count becomes zero.
+## Polygon point editing
+
+The existing annotation store, save API and team/review contracts remain the
+authority. Point selection is ephemeral and bound to the current project,
+labelset, image, annotation, tool and geometry. First-selection drag must not
+move the canvas when point controls become visible. During an external viewport reflow, drag deltas remain bound to the initial client position and scale. Preserve both geometry
+aliases and bounding box together; do not change metadata on geometry edits.
+Keep at least three points, offer undo, and explain refused edits in the row's
+live status. Point controls provide keyboard alternatives and do not forward
+unselected-point Delete/Backspace to whole-shape deletion. Typed text and modal
+dialogs own their keys. See `docs/labeling-precision.md` for actions.

@@ -1,0 +1,12 @@
+{
+  "base": "080666112135e5fdb4bf69cf291c97dd809a2f38",
+  "current_source_changes": {
+    "src/renderer/components/labeling/LabelingCanvas.tsx": {
+      "before": "e31025324124157daa7410c4ce2ffa0e550580453fb7443d4ab6355a2fc08a76",
+      "after": "3a78d9aa7bdb41c3bc35aff4748ef9ea5153309fbe496f3a3871e7d439ea2677"
+    }
+  },
+  "historical_records_unchanged": true,
+  "new_historical_acceptance_credit": 0,
+  "scope": "current source declarations only; new focused/browser evidence is separate"
+}

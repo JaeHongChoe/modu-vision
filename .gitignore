@@ -57,5 +57,5 @@ Thumbs.db
 # Dependency directory may be a local worktree symlink.
 /node_modules
 
-# Local implementation/review receipts
+# Local implementation ledgers and owned QA artifacts are not product source.
 /.superpowers/sdd/

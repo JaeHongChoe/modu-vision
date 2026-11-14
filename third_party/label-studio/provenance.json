@@ -1,0 +1,31 @@
+{
+  "repository": "https://github.com/HumanSignal/label-studio",
+  "commit": "8831d8b9eb507ebb3ce29ab0021e494bc1893a16",
+  "license": "Apache-2.0",
+  "files": [
+    {
+      "upstream_path": "web/libs/editor/src/regions/PolygonRegion.jsx",
+      "local_path": "third_party/label-studio/upstream/PolygonRegion.jsx",
+      "sha256": "1143355cc984aa7f53aef60768487367d563dccde4175714e46d28dcf0a1e97b",
+      "url": "https://github.com/HumanSignal/label-studio/blob/8831d8b9eb507ebb3ce29ab0021e494bc1893a16/web/libs/editor/src/regions/PolygonRegion.jsx"
+    },
+    {
+      "upstream_path": "web/libs/editor/LICENSE",
+      "local_path": "third_party/label-studio/LICENSE",
+      "sha256": "a521e1bc8db64bb04100212882b4867034a5abc3a12587b44a777494978a7d2e",
+      "url": "https://github.com/HumanSignal/label-studio/blob/8831d8b9eb507ebb3ce29ab0021e494bc1893a16/web/libs/editor/LICENSE"
+    },
+    {
+      "upstream_path": "NOTICE",
+      "local_path": "third_party/label-studio/NOTICE",
+      "sha256": "c2878293b2b07a7d4513e6938fd73b0fbe2bb5f441b0dcb4f200f2e8cf87fcf7",
+      "url": "https://github.com/HumanSignal/label-studio/blob/8831d8b9eb507ebb3ce29ab0021e494bc1893a16/NOTICE"
+    }
+  ],
+  "extracted_function_sha256": "cd0f2a8d30d944df9221a5083657e2c731371f6eb7b49b2ee4a57c06dd6a3f27",
+  "arithmetic_body_sha256": "4d9d50eb2d7f9eee7f9cdf85acade709d57c6391f632869dc1f9b3952b80b3de",
+  "typed_module": "src/renderer/vendor/label-studio/getAnchorPoint.ts",
+  "typed_module_sha256": "3b5b337905cccd89f20b2408f4816669fc5bf0ad575ae21307c56826ab648a29",
+  "modification_date": "2026-11-14",
+  "modifications": "Extracted getAnchorPoint; added provenance header, ESM export and TypeScript parameter/return type annotations. Arithmetic body unchanged. Segment clamp and zero-length guard are separate local code in polygonEditing.ts."
+}

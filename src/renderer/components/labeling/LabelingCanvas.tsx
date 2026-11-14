@@ -15,6 +15,10 @@ import { brushEditTarget } from './foundationRequest';
 import { resolveApiUrl,redactLocalAssetTicket } from '../../services/api';
 import { resolveLabelingShortcut } from './labelingShortcuts';
 import { refitAfterResize } from './labelingLayout';
+import { PolygonVertexControls } from './PolygonVertexControls';
+import { MaskLayerControls } from './MaskLayerControls';
+import { deletePolygonVertex, findClosestPolygonEdge, insertPolygonVertex, movePolygonVertex,
+  type PolygonEditResult } from './polygonEditing';
 import {
   calcRotatedCorners,
   calculateFitToScreen,
@@ -35,6 +39,19 @@ import {
   sanitizeBBox,
   viewportToImage,
 } from '../../utils/coordinateMath';
+
+// Read live owners at dispatch as well as render: a retained pointer/key callback
+// must not reinterpret an old point index in another image or labelset.
+function polygonPointScope(): string {
+  const state = useAnnotationStore.getState();
+  const project = useProjectStore.getState();
+  return JSON.stringify([project.backendPort, project.projectDir, project.project?.id,
+    project.project?.active_labelset_id, state.loadedAnnotationContext,
+    state.currentImage?.file_path, state.metadata?.image_uuid,
+    state.selectedAnnotationId, state.activeTool]);
+}
+
+type PointSelection = {scope: string; index: number; geometry: Array<[number, number]>};
 
 export const LabelingCanvas: React.FC = () => {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -74,6 +91,10 @@ export const LabelingCanvas: React.FC = () => {
     redo,
     setActiveTool,
     triggerAutoSelect,
+    annotationLoadStatus,
+    isSaving,
+    metadata,
+    loadedAnnotationContext,
   } = useAnnotationStore();
   const { backendPort, projectDir, project, isProjectBusy } = useProjectStore();
   useEffect(()=>{useFoundationPromptStore.getState().bind(currentImage?.file_path||'');},[currentImage?.file_path]);
@@ -82,6 +103,73 @@ export const LabelingCanvas: React.FC = () => {
   const [isSpacePressed, setIsSpacePressed] = useState(false);
   const [cursorPos, setCursorPos] = useState<Point | null>(null);
   const [imgDimensions, setImgDimensions] = useState<{ width: number; height: number }>({ width: 512, height: 512 });
+  const pointSelectionRef = useRef<PointSelection | null>(null);
+  const vertexDragFrameRef = useRef<{client: Point; vertex: Point; scale: number; scope: string; pointerId?: number} | null>(null);
+  const [pointSelection, setPointSelection] = useState<PointSelection | null>(null);
+  const [pointMessage, setPointMessage] = useState<string | null>(null);
+  // Selecting an unselected outline may create a controls row. Wait until its
+  // first drag ends so the image viewport never shifts under that pointer.
+  const [deferPointControls, setDeferPointControls] = useState(false);
+  const clearPointSelection = useCallback(() => {
+    pointSelectionRef.current = null;
+    vertexDragFrameRef.current = null;
+    setPointSelection(null);
+    setPointMessage(null);
+  }, []);
+  const getPointSelection = useCallback(() => {
+    const selection = pointSelectionRef.current;
+    const state = useAnnotationStore.getState();
+    const annotation = state.annotations.find(item => item.id === state.selectedAnnotationId);
+    const points = annotation?.polygon || annotation?.points;
+    return selection && selection.scope === polygonPointScope() && annotation?.type === 'polygon'
+      && points === selection.geometry && selection.index >= 0 && selection.index < points.length ? selection : null;
+  }, []);
+  const selectPoint = useCallback((index: number | null) => {
+    if (index === null) { clearPointSelection(); return; }
+    const state = useAnnotationStore.getState();
+    const annotation = state.annotations.find(item => item.id === state.selectedAnnotationId);
+    const geometry = annotation?.polygon || annotation?.points;
+    if (state.activeTool !== 'select' || annotation?.type !== 'polygon' || !geometry
+      || !Number.isInteger(index) || index < 0 || index >= geometry.length) return;
+    const selection = {scope: polygonPointScope(), index, geometry};
+    pointSelectionRef.current = selection;
+    setPointSelection(selection);
+    setPointMessage(null);
+  }, [clearPointSelection]);
+  const pointMutationReady = useCallback(() => {
+    const state = useAnnotationStore.getState();
+    return !!state.currentImage && state.activeTool === 'select' && state.annotationLoadStatus === 'ready'
+      && !state.isSaving && !useProjectStore.getState().isProjectBusy;
+  }, []);
+  const applyPointEdit = useCallback((result: PolygonEditResult, expectedScope: string) => {
+    if (!pointMutationReady() || expectedScope !== polygonPointScope()) return;
+    if ('error' in result) {
+      const messages = {minimum_points: '다각형은 최소 3점을 유지해야 합니다.', duplicate_point: '기존 점과 겹칩니다. 변의 다른 위치를 선택하세요.',
+        invalid_polygon: '이 위치에서는 다각형을 유지할 수 없습니다. 다른 위치를 선택하세요.', invalid_vertex: '점을 다시 선택해 주세요.'};
+      setPointMessage(messages[result.error]);
+      return;
+    }
+    const state = useAnnotationStore.getState();
+    if (!state.selectedAnnotationId) return;
+    state.updateAnnotation(state.selectedAnnotationId, result.updates);
+    selectPoint(result.vertexIndex);
+  }, [pointMutationReady, selectPoint]);
+  const removeSelectedPoint = useCallback(() => {
+    const selection = getPointSelection();
+    if (!selection || !pointMutationReady()) return;
+    const state = useAnnotationStore.getState();
+    const annotation = state.annotations.find(item => item.id === state.selectedAnnotationId);
+    if (annotation) applyPointEdit(deletePolygonVertex(annotation, selection.index), selection.scope);
+  }, [getPointSelection, pointMutationReady, applyPointEdit]);
+  useEffect(() => {
+    if (pointSelectionRef.current && !getPointSelection()) clearPointSelection();
+  }, [annotations, currentImage?.file_path, metadata?.image_uuid, loadedAnnotationContext,
+    selectedAnnotationId, activeTool, projectDir, project?.id, project?.active_labelset_id,
+    backendPort, getPointSelection, clearPointSelection]);
+  useEffect(() => { setDeferPointControls(false); }, [currentImage?.file_path, metadata?.image_uuid,
+    projectDir, project?.id, project?.active_labelset_id, loadedAnnotationContext, activeTool, backendPort]);
+  const selectedPointIndex = pointSelection && getPointSelection() ? pointSelection.index : null;
+  const renderedPointScope = polygonPointScope();
 
   // Ref to track latest image dimensions for synchronous event access
   const imgDimensionsRef = useRef<{ width: number; height: number }>({ width: 512, height: 512 });
@@ -376,14 +464,15 @@ export const LabelingCanvas: React.FC = () => {
 
         // Render vertices if selected
         if (isSelected) {
-          polyPts.forEach(([px, py]) => {
+          polyPts.forEach(([px, py], pointIndex) => {
             const vp = imageToViewport({ x: px, y: py }, viewTransform);
             ctx.beginPath();
-            ctx.arc(vp.x, vp.y, 4, 0, Math.PI * 2);
-            ctx.fillStyle = '#ffffff';
+            const pointIsSelected = pointIndex === selectedPointIndex;
+            ctx.arc(vp.x, vp.y, pointIsSelected ? 6 : 4, 0, Math.PI * 2);
+            ctx.fillStyle = pointIsSelected ? color : '#ffffff';
             ctx.fill();
-            ctx.strokeStyle = color;
-            ctx.lineWidth = 1.5;
+            ctx.strokeStyle = pointIsSelected ? '#ffffff' : color;
+            ctx.lineWidth = pointIsSelected ? 2.5 : 1.5;
             ctx.stroke();
           });
         }
@@ -493,6 +582,7 @@ export const LabelingCanvas: React.FC = () => {
     viewTransform,
     foundationPrompt.points,
     foundationPrompt.boxes,
+    selectedPointIndex,
   ]);
 
   const redrawAllLayers = useCallback(() => {
@@ -812,8 +902,10 @@ export const LabelingCanvas: React.FC = () => {
             setViewTransform(calculateFitToScreen(rect.width, rect.height, width, height));
           }
         } else if (shortcut.kind === 'undo') {
+          clearPointSelection();
           undo();
         } else {
+          clearPointSelection();
           redo();
         }
         return;
@@ -847,6 +939,18 @@ export const LabelingCanvas: React.FC = () => {
 
         const imgW = imgDimensionsRef.current.width;
         const imgH = imgDimensionsRef.current.height;
+
+        const point = getPointSelection();
+        if (pointSelectionRef.current && !point) { clearPointSelection(); return; }
+        if (point && targetAnn.type === 'polygon') {
+          if (!pointMutationReady()) return;
+          const position = point.geometry[point.index];
+          const clamped = clampPointToImage({x: position[0] + dx, y: position[1] + dy}, imgW, imgH);
+          if (clamped.x !== position[0] || clamped.y !== position[1]) {
+            applyPointEdit(movePolygonVertex(targetAnn, point.index, clamped), point.scope);
+          }
+          return;
+        }
 
         // Invalidate active drag snapshots to prevent mouse drag conflicts
         activeBBoxSnapshotRef.current = null;
@@ -910,6 +1014,7 @@ export const LabelingCanvas: React.FC = () => {
 
       // Escape: Cancel current drafting / deselect
       if (e.key === 'Escape') {
+        clearPointSelection();
         polygonPointsRef.current = [];
         setPolygonDraft([]);
         bboxDraftRef.current = null;
@@ -919,7 +1024,13 @@ export const LabelingCanvas: React.FC = () => {
       }
       // Delete / Backspace: Remove selected annotation
       else if (e.key === 'Delete' || e.key === 'Backspace') {
-        deleteSelected();
+        if (pointSelectionRef.current) {
+          e.preventDefault();
+          if (getPointSelection()) removeSelectedPoint();
+          else clearPointSelection();
+        } else if (!target?.closest('[data-polygon-point-controls]') && useAnnotationStore.getState().annotationLoadStatus === 'ready') {
+          deleteSelected();
+        }
       }
       // Enter: Complete polygon drafting
       else if (e.key === 'Enter') {
@@ -941,7 +1052,8 @@ export const LabelingCanvas: React.FC = () => {
       window.removeEventListener('keydown', handleKeyDown);
       window.removeEventListener('keyup', handleKeyUp);
     };
-  }, [deleteSelected, undo, redo, setActiveTool, setViewTransform, setSelectedAnnotationId, finishPolygon]);
+  }, [deleteSelected, undo, redo, setActiveTool, setViewTransform, setSelectedAnnotationId, finishPolygon,
+    clearPointSelection, getPointSelection, pointMutationReady, applyPointEdit, removeSelectedPoint]);
 
   // -------------------------------------------------------------
   // Brush Painting to Offscreen Canvas
@@ -977,9 +1089,19 @@ export const LabelingCanvas: React.FC = () => {
   // Pointer Events: Down, Move, Up
   // -------------------------------------------------------------
   const handlePointerDown = (e: React.PointerEvent<HTMLCanvasElement>) => {
+    if (renderedPointScope !== polygonPointScope()) return;
     const rect = e.currentTarget.getBoundingClientRect();
     const vpPt = clientToViewport(e.clientX, e.clientY, rect);
     const imgPt = viewportToImage(vpPt, viewTransform);
+    const beginVertexDrag = (points: Array<[number, number]>, index: number) => {
+      vertexDragFrameRef.current = {client: {x: e.clientX, y: e.clientY},
+        vertex: {x: points[index][0], y: points[index][1]}, scale: viewTransform.scale,
+        scope: polygonPointScope(), pointerId: e.pointerId};
+      // Other owned status rows can appear while an edit becomes dirty. Keep
+      // receiving this gesture and derive its delta from the original client
+      // frame instead of reinterpreting it through a moving viewport.
+      if (Number.isInteger(e.pointerId)) e.currentTarget.setPointerCapture?.(e.pointerId);
+    };
 
     dragStartViewRef.current = vpPt;
     dragStartImgRef.current = imgPt;
@@ -991,6 +1113,21 @@ export const LabelingCanvas: React.FC = () => {
     }
 
     if (e.button !== 0) return;
+
+    if (activeTool === 'select' && e.shiftKey && selectedAnnotationId) {
+      if (!pointMutationReady()) return;
+      const annotation = useAnnotationStore.getState().annotations.find(item => item.id === selectedAnnotationId);
+      const points = annotation?.polygon || annotation?.points;
+      if (annotation?.type === 'polygon' && points && viewTransform.scale > 0) {
+        const edge = findClosestPolygonEdge(points, imgPt, 8 / viewTransform.scale);
+        if (edge) {
+          e.preventDefault();
+          dragModeRef.current = null;
+          applyPointEdit(insertPolygonVertex(annotation, edge.edgeIndex, edge.point), polygonPointScope());
+          return;
+        }
+      }
+    }
 
     // 1. Tool: Select / Move
     if (activeTool === 'select') {
@@ -1028,11 +1165,14 @@ export const LabelingCanvas: React.FC = () => {
             const pts = polyCoords.map(([x, y]) => ({ x, y }));
             const hitV = hitTestPolygonVertex(vpPt, pts, viewTransform, 8);
             if (hitV !== null) {
+              selectPoint(hitV);
+              beginVertexDrag(polyCoords, hitV);
               dragModeRef.current = 'move_vertex';
               activeVertexIndexRef.current = hitV;
               return;
             }
             if (pointInPolygon(imgPt, pts)) {
+              clearPointSelection();
               dragModeRef.current = 'move_polygon';
               dragStartImgRef.current = imgPt;
               return;
@@ -1088,12 +1228,17 @@ export const LabelingCanvas: React.FC = () => {
             const pts = polyCoords.map(([x, y]) => ({ x, y }));
             const hitV = hitTestPolygonVertex(vpPt, pts, viewTransform, 8);
             if (hitV !== null) {
+              if (!annotations.some(item => item.id === selectedAnnotationId && item.type === 'polygon')) setDeferPointControls(true);
               setSelectedAnnotationId(ann.id || null);
+              selectPoint(hitV);
+              beginVertexDrag(polyCoords, hitV);
               dragModeRef.current = 'move_vertex';
               activeVertexIndexRef.current = hitV;
               return;
             }
             if (pointInPolygon(imgPt, pts)) {
+              if (!annotations.some(item => item.id === selectedAnnotationId && item.type === 'polygon')) setDeferPointControls(true);
+              clearPointSelection();
               setSelectedAnnotationId(ann.id || null);
               dragModeRef.current = 'move_polygon';
               dragStartImgRef.current = imgPt;
@@ -1105,6 +1250,7 @@ export const LabelingCanvas: React.FC = () => {
 
       // Clicked on empty canvas: deselect
       setSelectedAnnotationId(null);
+      clearPointSelection();
     }
 
     // 2. Tool: BBox & Rotated BBox Draw
@@ -1229,23 +1375,15 @@ export const LabelingCanvas: React.FC = () => {
 
     // 3.6 Move Polygon Vertex Drag
     if (mode === 'move_vertex' && activeVertexIndexRef.current !== null && selectedAnnotationId) {
-      const ann = annotations.find((a) => a.id === selectedAnnotationId);
-      const polyCoords = ann?.polygon || ann?.points;
-      if (polyCoords) {
-        const clamped = clampPointToImage(imgPt, imgDimensions.width, imgDimensions.height);
-        const updatedPts: [number, number][] = polyCoords.map(([px, py], idx) => {
-          if (idx === activeVertexIndexRef.current) {
-            return [clamped.x, clamped.y];
-          }
-          return [px, py];
-        });
-        const xs = updatedPts.map((p) => p[0]);
-        const ys = updatedPts.map((p) => p[1]);
-        updateAnnotation(selectedAnnotationId, {
-          polygon: updatedPts,
-          points: updatedPts,
-          bbox: [Math.min(...xs), Math.min(...ys), Math.max(...xs), Math.max(...ys)],
-        });
+      const selection = getPointSelection();
+      const frame = vertexDragFrameRef.current;
+      const ann = useAnnotationStore.getState().annotations.find((a) => a.id === selectedAnnotationId);
+      if (ann && selection && frame && frame.scope === selection.scope && pointMutationReady()) {
+        const position = {x: frame.vertex.x + (e.clientX - frame.client.x) / frame.scale,
+          y: frame.vertex.y + (e.clientY - frame.client.y) / frame.scale};
+        const clamped = clampPointToImage(position, imgDimensions.width, imgDimensions.height);
+        const current = selection.geometry[selection.index];
+        if (clamped.x !== current[0] || clamped.y !== current[1]) applyPointEdit(movePolygonVertex(ann, selection.index, clamped), selection.scope);
         return;
       }
     }
@@ -1322,6 +1460,12 @@ export const LabelingCanvas: React.FC = () => {
   };
 
   const handlePointerUp = () => {
+    setDeferPointControls(false);
+    const frame = vertexDragFrameRef.current;
+    if (frame?.pointerId !== undefined && canvasVectorRef.current?.hasPointerCapture?.(frame.pointerId)) {
+      canvasVectorRef.current.releasePointerCapture(frame.pointerId);
+    }
+    vertexDragFrameRef.current = null;
     const mode = dragModeRef.current;
     if (mode === 'brush' && offscreenBrushCanvasRef.current) {
       commitBrushMask(offscreenBrushCanvasRef.current.toDataURL('image/png'));
@@ -1369,6 +1513,11 @@ export const LabelingCanvas: React.FC = () => {
   };
 
   const handlePointerLeave = () => {
+    const frame = vertexDragFrameRef.current;
+    if (frame?.pointerId !== undefined && canvasVectorRef.current?.hasPointerCapture?.(frame.pointerId)) {
+      setCursorPos(null);
+      return;
+    }
     handlePointerUp();
     if (rafMoveRef.current !== null) {
       cancelAnimationFrame(rafMoveRef.current);
@@ -1443,10 +1592,29 @@ export const LabelingCanvas: React.FC = () => {
   }
 
   return (
+    <div className="w-full h-full min-h-0 flex flex-col">
+      {!deferPointControls && activeTool === 'select' && selectedAnn?.type === 'polygon' && (selectedAnn.polygon || selectedAnn.points) && (
+        <PolygonVertexControls count={(selectedAnn.polygon || selectedAnn.points)!.length}
+          selectedIndex={selectedPointIndex} disabled={annotationLoadStatus !== 'ready' || !!isSaving || !!isProjectBusy}
+          message={pointMessage}
+          onSelect={index => { if (renderedPointScope === polygonPointScope()) selectPoint(index); }}
+          onDelete={() => { if (renderedPointScope === polygonPointScope()) removeSelectedPoint(); }}
+          onInsert={() => {
+            if (renderedPointScope !== polygonPointScope()) return;
+            const selection = getPointSelection();
+            if (!selection || !pointMutationReady()) return;
+            const state = useAnnotationStore.getState();
+            const annotation = state.annotations.find(item => item.id === state.selectedAnnotationId);
+            if (!annotation) return;
+            const a = selection.geometry[selection.index];
+            const b = selection.geometry[(selection.index + 1) % selection.geometry.length];
+            applyPointEdit(insertPolygonVertex(annotation, selection.index, {x: (a[0] + b[0]) / 2, y: (a[1] + b[1]) / 2}), selection.scope);
+          }} />
+      )}
     <div
       ref={containerRef}
       data-canvas-container="true"
-      className="relative w-full h-full bg-[#0B0E14] overflow-hidden select-none touch-none"
+      className="relative w-full flex-1 min-h-0 bg-[#0B0E14] overflow-hidden select-none touch-none"
       style={{ cursor: dynamicCursor }}
     >
       {/* Layer 1: Base Raster */}
@@ -1464,6 +1632,8 @@ export const LabelingCanvas: React.FC = () => {
         onPointerUp={handlePointerUp}
         onPointerLeave={handlePointerLeave}
       />
+
+      <MaskLayerControls />
 
       {/* Precision Instrument Coordinate HUD */}
       <div
@@ -1508,6 +1678,7 @@ export const LabelingCanvas: React.FC = () => {
           <span className="text-[#3B82F6] text-[10px] ml-1">(실제 크기 미보정)</span>
         </div>
       </div>
+    </div>
     </div>
   );
 };
