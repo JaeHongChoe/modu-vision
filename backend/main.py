@@ -55,6 +55,8 @@ def _compat_httpx_init(self, *args, app=None, **kwargs):
     return _orig_httpx_init(self, *args, **kwargs)
 httpx.Client.__init__ = _compat_httpx_init
 
+from backend.api.routes_automation import router as automation_router
+from backend.automation.catalog import is_catalog_metadata
 from backend.api.routes_annotation import router as annotation_router
 from backend.api.routes_compute import router as compute_router
 from backend.api.routes_dataset import router as dataset_router
@@ -140,7 +142,7 @@ class ProjectContextMiddleware:
 
     async def __call__(self, scope, receive, send):
         path = scope.get('path', '')
-        if scope['type'] not in {'http', 'websocket'} or is_task_preparation(path, scope.get('method')) or path == '/health' or path.startswith('/api/accounts/') or (path.startswith('/api/local-host/') and getattr(self.project_app.state,'local_host',None) is not None) or scope.get('method') == 'OPTIONS':
+        if scope['type'] not in {'http', 'websocket'} or is_task_preparation(path, scope.get('method')) or is_catalog_metadata(path, scope.get('method')) or path == '/health' or path.startswith('/api/accounts/') or (path.startswith('/api/local-host/') and getattr(self.project_app.state,'local_host',None) is not None) or scope.get('method') == 'OPTIONS':
             return await self.app(scope, receive, send)
         scope.setdefault('app', self.project_app)
         state = scope.setdefault('state', {})
@@ -351,7 +353,7 @@ class ProjectStorageScopeMiddleware:
 
     @observe_storage_scope
     async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
-        if scope["type"] != "http" or is_task_preparation(scope.get('path',''), scope.get('method')) or scope.get('path','').startswith('/api/accounts/') or (scope.get('path','').startswith('/api/local-host/') and getattr(self.project_app.state,'local_host',None) is not None) or scope.get("path") in {
+        if scope["type"] != "http" or is_task_preparation(scope.get('path',''), scope.get('method')) or is_catalog_metadata(scope.get('path',''), scope.get('method')) or scope.get('path','').startswith('/api/accounts/') or (scope.get('path','').startswith('/api/local-host/') and getattr(self.project_app.state,'local_host',None) is not None) or scope.get("path") in {
             "/health", "/api/project/create", "/api/project/open",
             "/api/project/compatibility/preview", "/api/project/compatibility/apply",
             "/api/project/compatibility/recover", "/api/project/compatibility/global-preview",
@@ -745,6 +747,7 @@ def _admitted_create_app(project_dir: Optional[str] = None, shared_auth_dir: Opt
     app.include_router(export_router)
     app.include_router(report_router)
     app.include_router(telemetry_router)
+    app.include_router(automation_router)
 
     app.add_middleware(OwnedWorkAdmissionMiddleware, admission=app.state.owned_work_admission)
     from backend.engine.original_current_project_request import bind_current_project_request

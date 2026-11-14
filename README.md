@@ -158,7 +158,9 @@ GAN은 생성 데이터를 검토해 학습에 채택하는 용도이며, 검사
 - macOS LaunchAgent, Linux systemd user, Windows 로그온 작업을 통한 사용자 시작 등록
 - 별도의 Windows SCM 서비스 사전 검사·등록 파일 준비·등록 경로. 관리자 권한과 서비스 계정 등 대상 환경의 사전 조건 필요
 
-통합 방법은 [검사 서비스·SDK 안내](docs/api-integration.md)와 [학습 CLI·REST 안내](docs/training-engine-cli-rest.md)를 참고하세요.
+공통 CLI는 `npm run --silent cli -- --help`로 시작합니다. 실행 중인 서버에서 프로젝트·데이터·라벨·학습·평가·검사·운영 기능의 명령과 schema를 읽고 같은 API를 호출합니다. 내장 GPT도 필요한 명령을 찾아 관측하고, 지원되는 실행은 기존 작업 계획에 연결합니다.
+
+통합 방법은 [공통 CLI·GPT 기능 탐색](docs/studio-cli.md), [검사 서비스·SDK 안내](docs/api-integration.md), [학습 CLI·REST 안내](docs/training-engine-cli-rest.md)를 참고하세요.
 
 ## 개발 환경 설치
 
@@ -320,6 +322,7 @@ macOS 기본 빌더 설정은 `mac.identity: "-"`이며 실제 산출물의 서�
 | [코드 읽기·리팩토링 검토](docs/CODE_GUIDE.md) | 핵심 진입점, 상태 구분과 구조 개선 우선순위 |
 | [검사 서비스·SDK](docs/api-integration.md) | 전체 플로우 패키지, Python·CLI·REST·C++·C# 연동 |
 | [학습 CLI·REST](docs/training-engine-cli-rest.md) | 외부 프로그램에서 학습 엔진 사용 |
+| [공통 CLI·GPT 기능 탐색](docs/studio-cli.md) | 실제 기능 목록·schema, 인증된 실행, 파일 전송·진단과 GPT 권한 구분 |
 | [배포 지원 표](docs/release-platform-matrix.md) | 네이티브 빌드, 서명, 설치와 복구 조건 |
 | [모델 라이선스 표](docs/model-license-matrix.md) | 사전학습·파생 모델과 가중치 배포 조건 |
 | [작업 계획](docs/service-upgrade-program.json) · [검증 근거](docs/service-upgrade-evidence.json) | 기능별 범위와 확인 상태 |

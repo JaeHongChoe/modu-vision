@@ -4,6 +4,8 @@ The engine runs without selecting or changing the desktop project. Each explicit
 
 ## CLI
 
+앱의 프로젝트·라벨·평가·흐름·검사·운영 API를 함께 다루려면 [공통 CLI](studio-cli.md)를 사용합니다. 아래 명령은 독립적인 폴더/JSON 학습 엔진용으로 유지됩니다.
+
 Run from the checkout (or with the installed backend on `PYTHONPATH`):
 
 ```bash

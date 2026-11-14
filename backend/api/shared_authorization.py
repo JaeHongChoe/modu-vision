@@ -11,6 +11,7 @@ from starlette.datastructures import Headers
 from starlette.responses import JSONResponse
 from fastapi import HTTPException
 from backend.engine.assistant_tasks import is_task_preparation
+from backend.automation.catalog import is_catalog_metadata
 from backend.engine.original_shared_current_project import observe_shared_authorization
 from backend.engine.original_shared_auth_denial import original_shared_denial_authentication
 
@@ -98,7 +99,7 @@ class SharedAuthorizationMiddleware:
             try:assets.bind_download(scope,account,token,asset_context)
             except HTTPException as exc:return await reject(exc.status_code,exc.detail)
             return await self.app(scope,receive,send)
-        if is_task_preparation(path, method) or path.startswith('/api/accounts/') or (path.startswith('/api/local-host/') and getattr(self.project_app.state,'local_host',None) is not None):
+        if is_task_preparation(path, method) or is_catalog_metadata(path, method) or path.startswith('/api/accounts/') or (path.startswith('/api/local-host/') and getattr(self.project_app.state,'local_host',None) is not None):
             return await self.app(scope,receive,send)
         try:
             from backend.contracts.context import declared_context

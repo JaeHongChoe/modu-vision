@@ -56,3 +56,6 @@ Thumbs.db
 
 # Dependency directory may be a local worktree symlink.
 /node_modules
+
+# Local implementation/review receipts
+/.superpowers/sdd/

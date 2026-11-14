@@ -7,7 +7,8 @@ function fixture(){
  const compute={isLoaded:true,isLoading:false,loadError:null,selectedProfileId:null,transportRevision:0,profiles:[{id:'server'}]};
  const annotation={currentImage:{file_path:'/source/a.png'},images:[]};
  const evaluation={jobId:'job1',isLoading:false,confidenceThreshold:.5,metrics:{evaluated_split:'val',selection_overlap:true},testPredictions:[{ground_truth:'OK',defect_score:.2},{ground_truth:'NG',defect_score:.4}],overkillAnalysis:null,executionEvidence:{job_id:'job1',task:'classification',evaluated_at:'2026-10-24'}};
- const calls=[],cache=new Map(),writes=new Map();let epoch=1,opened=true,sourceCurrent=true,listRelease;
+ const calls=[],cache=new Map(),writes=new Map(),listeners=[];let epoch=1,opened=true,sourceCurrent=true,listRelease,commandReply;
+ data.sourceAuthority='source';data.lastImportedKey=data.datasetKey;
  const writeResult=(name,value)=>writes.has(name)?writes.get(name).promise:Promise.resolve(value);
  data.applySplit=async(...args)=>{calls.push(['split-write',...args]);await writeResult('split');};
  training.startTraining=async(...args)=>{calls.push(['training-write',...args]);await writeResult('training');};
@@ -15,16 +16,16 @@ function fixture(){
  const drafts=[{id:'high',image_path:'/source/high.png',status:'pending',created_at:'2026-01-01',candidates:[{confidence:.9}]},{id:'low',image_path:'/source/low.png',status:'pending',created_at:'2026-01-02',candidates:[{confidence:.3}]},{id:'empty',image_path:'/source/empty.png',status:'pending',created_at:'2026-01-01',candidates:[]},{id:'closed',image_path:'/source/c.png',status:'accepted',created_at:'2026-01-01',candidates:[{confidence:.1}]}];
  const ready={ready:true,model:'dinov3_vits16',runtime:{available:true,device:'cpu'},dependencies:{missing:[]},weights:{state:'file_available',filename:'/weights/model.safetensors',sha256:'ab'.repeat(32),content_verified:false},input:{split_counts:{train:6,val:2,test:2}},next_actions:[],execution_verified:false};
  project.setStep=async step=>{calls.push(['step',step]);};project.openImageForLabeling=async(id,file)=>{calls.push(['image',id,file]);if(opened)annotation.currentImage={file_path:file};return opened;};
- const store=state=>({getState:()=>state});const draftStore={requestOpen:(...args)=>calls.push(['requestOpen',...args])};
- const request=async(url,options)=>{calls.push(['request',url,options]);if(url==='/api/models/capabilities')return{families:[{task:'classification',default_architecture:'dinov3_vits16'}]};if(url.startsWith('/api/training-workspace/readiness'))return ready;throw Error('Unexpected backend request '+url);};
- const mocks={'../stores/assistContext':{currentAssistContext:()=>null},'../stores/useProjectStore':{useProjectStore:store(project)},'../stores/useDatasetStore':{useDatasetStore:store(data)},'../stores/useTrainingStore':{useTrainingStore:store(training)},'../stores/useAnnotationStore':{useAnnotationStore:store(annotation)},'../stores/useComputeStore':{useComputeStore:store(compute)},'../stores/useDraftReviewStore':{useDraftReviewStore:store(draftStore),draftReviewScope:s=>JSON.stringify([s.projectDir,s.project.active_labelset_id])},
+ const store=state=>({getState:()=>state,subscribe:listener=>{listeners.push(listener);return()=>{};}});const draftStore={requestOpen:(...args)=>calls.push(['requestOpen',...args])};
+ const request=async(url,options)=>{calls.push(['request',url,options]);if(commandReply)return commandReply(url,options);if(url==='/api/models/capabilities')return{families:[{task:'classification',default_architecture:'dinov3_vits16'}]};if(url.startsWith('/api/training-workspace/readiness'))return ready;throw Error('Unexpected backend request '+url);};
+ const mocks={'../stores/assistContext':{currentAssistContext:()=>null},'../stores/useProjectStore':{useProjectStore:store(project)},'../stores/useDatasetStore':{useDatasetStore:store(data),readDatasetAuthority:()=> 'source'},'../stores/useTrainingStore':{useTrainingStore:store(training)},'../stores/useAnnotationStore':{useAnnotationStore:store(annotation)},'../stores/useComputeStore':{useComputeStore:store(compute)},'../stores/useDraftReviewStore':{useDraftReviewStore:store(draftStore),draftReviewScope:s=>JSON.stringify([s.projectDir,s.project.active_labelset_id])},
  '../stores/useEvaluationStore':{useEvaluationStore:store(evaluation),currentEvaluationGuidanceSource:()=>sourceCurrent?{source:{folderPath:'/source',task:'classification'},jobId:'job1'}:null,computeSampleVerdict:(p,t)=>p.ground_truth==='NG'?(p.defect_score>=t?'CORRECT_NG':'ESCAPE'):(p.defect_score>=t?'OVERKILL':'CORRECT_OK'),isNormalLabel:l=>l==='OK',isDefectLabel:l=>l==='NG'},'../stores/workflowEvidence':{bumpWorkflowEvidence(){calls.push(['bump-evidence']);}},'../components/wizard/workflowReadiness':{focusWorkflowTarget:id=>calls.push(['focus',id])},'./datasetWorkflow':{workflowError:e=>String(e)},'../../services/datasetWorkflow':{workflowError:e=>String(e)},
- './api':{request,getApiPersistenceIdentity:()=> 'local',getProjectContextGeneration:()=>epoch,getProjectContext:()=>null,api:{dataset:{setImageClass:async body=>{calls.push(['class-write',body]);return writeResult('class',{class:body.class_name,class_source:'override',metadata:{},changed:true});}},labelSuggestions:{list:async()=>listRelease?new Promise(resolve=>{listRelease=resolve;}):{suggestions:drafts}}}}};
+ './api':{request,getApiDiagnosticScope:()=>String(epoch),getApiPersistenceIdentity:()=> 'local',getProjectContextGeneration:()=>epoch,getProjectContext:()=>({project_id:'p'}),api:{dataset:{setImageClass:async body=>{calls.push(['class-write',body]);return writeResult('class',{class:body.class_name,class_source:'override',metadata:{},changed:true});}},labelSuggestions:{list:async()=>listRelease?new Promise(resolve=>{listRelease=resolve;}):{suggestions:drafts}}}}};
  function load(file){if(cache.has(file))return cache.get(file).exports;const m=new Module(file,module);m.filename=file;m.paths=Module._nodeModulePaths(path.dirname(file));cache.set(file,m);const original=m.require.bind(m);m.require=name=>Object.hasOwn(mocks,name)?mocks[name]:name.startsWith('.')?load(path.resolve(path.dirname(file),name)+'.ts'):original(name);m._compile(ts.transpileModule(fs.readFileSync(file,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText,file);return m.exports;}
  const observed={observed_at:'now',errors:[{source:'training',message:'controlled failure'}]};
  mocks['./assistantDiagnosticsRuntime']={appDiagnosticSummary:()=>observed,readAppDiagnostics:async section=>({...observed,section})};
  const loaded=load(path.join(__dirname,'assistantRuntime.ts')),runtime=loaded.runtimeToolDeps;
- return{runtime,context:loaded.assistantContext,project,data,training,compute,evaluation,annotation,calls,ready,epoch:()=>epoch++,blockOpen:()=>{opened=false;},staleEvaluation:()=>{sourceCurrent=false;},holdList:()=>{listRelease=true;},releaseList:()=>listRelease({suggestions:drafts}),holdWrite:name=>{let release;const promise=new Promise(resolve=>{release=resolve;});writes.set(name,{promise,release});},releaseWrite:(name,value)=>writes.get(name).release(value)};
+ return{runtime,emit:()=>listeners.forEach(listener=>listener()),commandReply:handler=>{commandReply=handler;},context:loaded.assistantContext,project,data,training,compute,evaluation,annotation,calls,ready,epoch:()=>epoch++,blockOpen:()=>{opened=false;},staleEvaluation:()=>{sourceCurrent=false;},holdList:()=>{listRelease=true;},releaseList:()=>listRelease({suggestions:drafts}),holdWrite:name=>{let release;const promise=new Promise(resolve=>{release=resolve;});writes.set(name,{promise,release});},releaseWrite:(name,value)=>writes.get(name).release(value)};
 }
 test('question context and diagnostic tools use the current observation adapter without application writes',async()=>{
  const f=fixture(),value=f.context({status:'waiting_human',revision:9});
@@ -83,4 +84,25 @@ test('a mutation may consume its own settings or update metadata while preservin
  const applying=klass.runtime.setImageClass({path:'/source/a.png',name:'a.png'},'NG',classCheck);
  full=false;klass.releaseWrite('class',{class:'NG',metadata:{revision:2},changed:true});
  assert.equal((await applying).changed,true);assert.ok(klass.calls.some(row=>row[0]==='apply-class'));
+});
+
+const commandOperation={id:'GET /health',method:'GET',path:'/health',group:'system',summary:'Health',transport:'http',effect:'read',assistant:{mode:'read'},input:{parameters:[]},responses:{}};
+const commandCatalog={schema:'StudioOperations/v1',operations:[commandOperation],groups:[],total:1,next_offset:null,server_version:'1',components:{schemas:{}}};
+test('runtime wires lazy command discovery into existing authenticated GET transport before project selection',async()=>{
+ const f=fixture();f.commandReply(()=>commandCatalog);f.project.project=null;
+ assert.equal(typeof f.runtime.commands?.list,'function');assert.deepEqual(f.calls,[]);
+ const result=await f.runtime.commands.list({});assert.equal(result.operations[0].id,'GET /health');assert.ok(f.calls[0][1].startsWith('/api/automation/catalog?'));assert.deepEqual(f.calls[0][2],{method:'GET'});
+ await assert.rejects(f.runtime.commands.read({operation:'GET /health'}),error=>error.code==='context_changed');assert.equal(f.calls.length,1);
+});
+test('runtime command observations require confirmed source and catch store and transport A-B-A transitions',async()=>{
+ for(const target of ['source','source_authority','transport','context']){
+  const f=fixture();assert.ok(f.runtime.commands);f.commandReply(url=>{if(url.startsWith('/api/automation/'))return commandCatalog;
+   if(target==='context'){f.epoch();f.epoch();}
+   else if(target==='source_authority'){f.data.sourceAuthority='old';f.emit();f.data.sourceAuthority='source';f.emit();}
+   else if(target==='transport'){f.compute.transportRevision++;f.emit();f.compute.transportRevision++;f.emit();}
+   else {f.data.folderPath='/other';f.emit();f.data.folderPath='/source';f.emit();}
+   return{status:'stale-private-result'};
+  });await assert.rejects(f.runtime.commands.read({operation:'GET /health'}),error=>error.code==='context_changed');assert.equal(f.calls.length,2);
+ }
+ const f=fixture();f.data.sourceAuthority='old';f.commandReply(()=>commandCatalog);await assert.rejects(f.runtime.commands.read({operation:'GET /health'}),error=>error.code==='context_changed');assert.deepEqual(f.calls,[]);
 });
