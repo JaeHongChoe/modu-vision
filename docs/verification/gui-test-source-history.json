@@ -649,8 +649,8 @@
       "test": "scripts/e2e/classification-folder-chooser-error.spec.ts::classification folder chooser failure preserves owning source counts and bytes through ordinary reload",
       "recorded_test_source_sha256": "bf86d92b59c85b9c416121844d9d9eaacb629fc8858e2d8f261f545555886c7f",
       "retained_spec_commit": "6b14126fed9b3e0151d10d25e8dbce52606f8025",
-      "current_test_source_sha256": "7890a3ce0cf0fd93293f3d461f645277b734193e38f42a2176e566666dc831b2",
-      "reason": "Refreshed on the beginner-UX branch: the spec now reads the Korean control names and footer wording of the simple view; the retained commit still holds the exact bytes the receipt executed, and no new GUI execution is claimed. Readiness panel states defect-named train files; gallery specs read the thumbnail path attribute"
+      "current_test_source_sha256": "9843e2234d8b0406f395fac617b765c508ca924cf492cf952313cc375fa59ddd",
+      "reason": "Refreshed on the beginner-UX branch: the spec now reads the Korean control names and footer wording of the simple view; the retained commit still holds the exact bytes the receipt executed, and no new GUI execution is claimed. Readiness panel states defect-named train files; gallery specs read the thumbnail path attribute; 2026-11-15: scope the current chooser alert to its owning gallery because the next-action panel also displays the error; original receipt/test bytes/source/acceptance unchanged."
     },
     {
       "receipt": "2026-10-18-classification-browser-chooser-error-original-gui.json",
@@ -659,8 +659,8 @@
       "test": "scripts/e2e/classification-folder-chooser-error-scoped-media.spec.ts::classification folder chooser failure preserves owning source counts and bytes through ordinary reload",
       "recorded_test_source_sha256": "309be6bcf2edfd1a3ae5336e60ba58ddf40b835c94f0e1d172970a023d8db0df",
       "retained_spec_commit": "6b14126fed9b3e0151d10d25e8dbce52606f8025",
-      "current_test_source_sha256": "4faf2876d20aa673d95e26064861f3b51f930cf31e1e05625085c327863a5072",
-      "reason": "Refreshed on the beginner-UX branch: the spec now reads the Korean control names and footer wording of the simple view; the retained commit still holds the exact bytes the receipt executed, and no new GUI execution is claimed"
+      "current_test_source_sha256": "e0e61a1fc49608a7dad5759003bfb8cbb6e2f2d2e3e046313bd2364b6f263fce",
+      "reason": "Refreshed on the beginner-UX branch: the spec now reads the Korean control names and footer wording of the simple view; the retained commit still holds the exact bytes the receipt executed, and no new GUI execution is claimed; 2026-11-15: scope the current chooser alert to its owning gallery because the next-action panel also displays the error; original receipt/test bytes/source/acceptance unchanged."
     },
     {
       "receipt": "2026-10-17-classification-import-cancel-current-browser.json",

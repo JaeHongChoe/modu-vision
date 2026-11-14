@@ -77,7 +77,7 @@ test('visible dataset errors reach the common summary and clear after retry, nav
   };
   const assertVisibleError = async (message: string) => {
     // The assertion starts with the primary panel's displayed alert, before opening the common list.
-    const banner = page.getByRole('alert').filter({hasText: message});
+    const banner = page.locator('[data-dataset-gallery]').getByRole('alert').filter({hasText: message});
     await banner.scrollIntoViewIfNeeded();
     await expect(banner).toBeVisible();
     await expect(banner).toHaveText(message);
