@@ -479,6 +479,10 @@ def worker_evaluate(spec, checkpoint, metadata, data, descriptor, run_dir, cance
             raise ValueError('Common anomaly evidence output or ancestor is linked')
         evidence_root.mkdir(parents=True, exist_ok=False)
         result=evaluator(checkpoint,metadata,data,device,cancel=cancel,evidence_output_dir=evidence_root)
+    elif spec['task'] == 'detection':
+        from backend.engine.detection.metrics import DETECTION_AP_LEGACY
+        result=evaluator(checkpoint,metadata,data,device,cancel=cancel,
+            metric_contract=spec.get('detection_metric_contract',DETECTION_AP_LEGACY))
     else:
         result=evaluator(checkpoint,metadata,data,device,cancel=cancel)
     _,final_identity=target_identity(spec)
@@ -617,7 +621,10 @@ def validate_result(result,spec,cohort,artifacts):
             evidence=row.get('object_evidence')
             if not isinstance(evidence,dict) or not isinstance(evidence.get('truth'),list): raise ValueError('Common detection region truth missing')
             observed_truth=evidence['truth'];expected_truth=truth['objects']
-            if len(observed_truth)!=len(expected_truth) or any(a.get('label')!=b['label'] or not np.allclose(a.get('box',[]),b['box'],rtol=0,atol=1e-5) for a,b in zip(observed_truth,expected_truth)):
+            from backend.engine.detection.metrics import DETECTION_AP_V2
+            canonical_v2 = spec.get('detection_metric_contract') == DETECTION_AP_V2
+            tolerance = 0 if canonical_v2 else 1e-5
+            if len(observed_truth)!=len(expected_truth) or any(a.get('label')!=b['label'] or not np.allclose(a.get('box',[]),b['box'],rtol=0,atol=tolerance) for a,b in zip(observed_truth,expected_truth)):
                 raise ValueError('Common detection truth boxes changed')
             from backend.engine.evaluation_evidence import match_objects
             rebuilt=match_objects(evidence.get('predicted',[]),expected_truth,iou_threshold=evidence.get('iou_threshold',.5),confidence_threshold=evidence.get('confidence_threshold',.5))
@@ -682,7 +689,13 @@ def validate_result(result,spec,cohort,artifacts):
         keys=('miou','mdice','pixel_accuracy','foreground_iou','per_class_iou','per_class_dice')
     elif spec['task']=='detection':
         from backend.engine.detection import evaluate_detections_map
-        calculated=evaluate_detections_map(detection_predictions,detection_truth,num_classes=len(classes),class_names=dict(enumerate(classes)))
+        from backend.engine.detection.metrics import bound_detection_ap_contract,DETECTION_AP_V2
+        contract=bound_detection_ap_contract(spec,metrics)
+        calculated=evaluate_detections_map(detection_predictions,detection_truth,num_classes=len(classes),class_names=dict(enumerate(classes)),metric_contract=contract)
+        if contract==DETECTION_AP_V2 and (metrics.get('detection_ap_available')!=calculated['available']
+                or metrics.get('detection_ap_unavailable_reason')!=calculated['unavailable_reason']
+                or metrics.get('detection_ap_excluded_classes')!=calculated['excluded_classes']):
+            raise ValueError('Detection AP availability differs from bound truth')
         keys=('mAP_50','mAP_50_95','class_ap50')
     else:
         from backend.engine.anomaly import compute_anomaly_metrics
@@ -744,6 +757,9 @@ def execute_common(context,cohort,device,*,force_recompute=False):
         spec.update(model_score_spec=checkpoint_score_spec(context.output_dir/'best_model.pt'),
                     model_map_semantics=metadata.get('map_semantics','patch_score' if metadata.get('detector_type')=='dino_synthetic' else 'pixel_score'),
                     model_anomaly_mode=metadata.get('anomaly_mode','classification'))
+    if context.task=='detection':
+        from backend.engine.detection.metrics import DETECTION_AP_V2
+        spec['detection_metric_contract']=DETECTION_AP_V2
     spec['evaluation_binding_sha256']=digest(spec)
     outputs=run_remote_operation_artifacts(context,'evaluate',{k:v for k,v in spec.items() if k not in ('protocol_version','operation','job_id','task','input_manifest_sha256')},
           transport=transport,force_new=force_recompute,input_files={'inputs/cohort.tar.gz':cohort['archive']})

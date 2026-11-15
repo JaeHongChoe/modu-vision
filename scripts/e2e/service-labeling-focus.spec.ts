@@ -94,7 +94,9 @@ test('focus editing gives the labeling canvas the window height, refits the imag
   // A label load error is shown in focus editing too.
   await page.route('**/api/annotations/**', route => route.request().method() === 'GET' ? route.fulfill({ status: 500, body: '{"detail":"probe"}' }) : route.continue());
   await page.getByLabel('Next image or page').click();
-  await expect(page.getByRole('alert').filter({ hasText: '기존 라벨 조회 실패' })).toBeVisible();
+  const labelLoadError = page.getByRole('main').getByRole('alert').filter({ hasText: '기존 라벨 조회 실패' });
+  await expect(labelLoadError).toBeVisible();
+  await expect(labelLoadError).toContainText('저장을 막았습니다.');
   await page.unroute('**/api/annotations/**');
 
   await page.reload();

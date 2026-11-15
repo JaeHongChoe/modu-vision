@@ -1,3 +1,4 @@
+import {openWorkspaceSettings} from './fixtures/workspaceSettings';
 import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
@@ -12,7 +13,7 @@ const digest=(file:string)=>crypto.createHash('sha256').update(fs.readFileSync(f
 
 async function exercise(page:Page,workspace:Workspace,evidence:Evidence,api:Api,download:Download,url?:string,nativeDownloadCount?:()=>Promise<number>){
  if(url)await page.goto(url);else await page.reload();
- const enter=async()=>{await page.getByRole('button',{name:'패키지·장치·진단',exact:true}).click();};
+ const enter=async()=>{await openWorkspaceSettings(page); await page.getByRole('button',{name:'패키지·장치·진단',exact:true}).click();};
  const close=async()=>{await page.getByRole('button',{name:'패키지·장치·설치·진단 닫기',exact:true}).click();};
  await api('/api/project/create',{name:'Diagnostic download controls',task:'classification'});const project=await api('/api/project/current');
  const fixture=JSON.parse(execFileSync(harness.resolvePython(),[path.join(harness.REPO_ROOT,'scripts/e2e/fixtures/support_bundle_error.py'),workspace.root,JSON.stringify(project)],{encoding:'utf8',timeout:15_000}));

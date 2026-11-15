@@ -1,0 +1,52 @@
+name: Embedded OSS CPU checks
+
+# Additive coverage: the original full regression and CLI lanes are preserved.
+"on":
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: embedded-oss-${{ github.workflow }}-${{ github.ref }}
+  queue: max
+  cancel-in-progress: false
+
+jobs:
+  embedded:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    env:
+      OMP_NUM_THREADS: '2'
+      MKL_NUM_THREADS: '2'
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: '24'
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: '3.13'
+      - name: Install locked CPU environment
+        run: >-
+          python -m pip install --require-hashes --only-binary=:all:
+          -r build/ci/requirements-ubuntu-py313-cpu.lock
+      - name: Saved evidence, adaptive sampler, metric, trace, and packaging
+        run: >-
+          python -m pytest -q
+          backend/tests/test_embedded_label_quality.py
+          backend/tests/test_label_quality_immutable_basis.py
+          backend/tests/test_embedded_search_strategy.py
+          backend/tests/test_detection_ap_contract.py
+          backend/tests/test_detection_geometry_contract.py
+          backend/tests/test_local_trace.py
+          backend/tests/test_embedded_oss_packaging.py
+          backend/tests/test_remote_detection_validation.py
+          backend/tests/test_remote_detection_contract.py
+          backend/tests/test_automation_catalog.py
+          backend/tests/test_binary_export_resources.py

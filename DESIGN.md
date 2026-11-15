@@ -46,14 +46,23 @@ components:
 
 # Vision AI Studio Design System
 
+### Polygon precision controls
+
+`LabelingCanvas` owns point selection and the point-control row;
+`PolygonVertexControls` reuses workspace record/button tokens and Korean labels.
+The row is separate from the image viewport, and first-selection drag defers
+its appearance until pointer release. `MaskLayerControls` belongs to the image
+viewport so it cannot cover the point controls. Compact native icon buttons
+have accessible names, titles and keyboard activation. No new palette or font
+is introduced; a selected point inverts the existing outline/fill and grows.
+
 ## Overview
 
 This as-built context combines the existing assistant task slice with the shared
 workspace and project-readiness context. It introduces no rebrand, runtime token,
 permission policy, or whole-product acceptance claim. The application name is
 **Vision AI Studio**; repository documentation also uses **Modu Vision**. The
-six-step navigation remains the studio's operational signature: data preparation,
-labeling, training, evaluation, inspection-flow construction and inspection.
+six internal stages remain the studio's operational model. Simple view groups them into four user goals: prepare photos, teach the AI, check unseen photos, and use for inspection; full view retains all six stage controls.
 
 ### Creative North Star
 
@@ -325,3 +334,44 @@ The scoped automatic mode replaces routine plan/review checkpoints for ready dat
 Stage3 adds TrainingInputPreparation as the first training section; the existing six-stage navigation and Stage5 inspection/decision role remain. It uses workspace surfaces/buttons and native bounded number/select fields, with a real source-bound before/after preview. No new palette or UI library is introduced.
 
 The assistant adds local single-image attachment/paste/current-image selection, thumbnail/removal, external recipient disclosure and supported-model reasoning effort. The sidebar remains nonmodal, keyboard reachable and 13px minimum. Native effort dropdown geometry is intentionally platform-owned, like existing account/model controls. No unsupported model or API provider is silently selected.
+
+## 2026-11-14 embedded engines
+
+Embedded engines use existing workspace sections, native selectors, status regions and saved review queues. Label-quality ranking is advisory: correctly predicted low-margin samples remain visible, changed historical basis has a written warning, and stale fresh-queue creation is refused. No generated score adopts or edits truth.
+
+Detection AP details disclose the saved calculation version and supported bbox scope. No-ground-truth AP is unavailable, rather than zero or perfect. Keep these technical details within the established evaluation-grain disclosure in simple view.
+
+Flow nodes retain native control behavior. Focused-node arrow movement uses the existing layout/history store, repeated keydowns form one undo group, and search navigation transfers actual focus to the node. Focus reveal scrolls only the canvas and never steals focus after a later Tab. Escape cancels a pending connection without consuming text-field editing keys. These operations preserve node IDs and semantic graph identity.
+
+## 2026-11-14 novice first journey
+
+Simple view uses a four-goal rail with reachable internal substeps; full view preserves the six-stage rail. Project creation uses native radio choices expressed as desired image results, with no implicit simple-mode choice. Existing create/save/identity guards own the actual transition. The first-run guide offers three explicit routes rather than requiring an eight-step reading task first.
+
+LearningJourneyPanel is a compact read-only projection of existing oneclick/assistant controller records. It adds no scheduler, provider call or percentage estimate. Status and action labels separate navigation, execution, paused work, missing inputs, uncertain outcomes and field quality. Existing workspace tokens, button recipes, Korean typography and native disclosure controls remain canonical. Training diagnostics stay reachable through collapsed details and error recovery opens the control that can resolve that error. No palette or font change.
+
+The simple header gives project/utilities one row and the four goals their own rail, with quiet internal substeps. Short windows may wrap rather than overlap status and controls. The footer names the current internal task instead of showing a conflicting six-step fraction; a neutral status line and quiet secondary controls leave the recommended navigation action visually primary. `workspace-button--quiet` shares the base button's focus and disabled behavior in both themes.
+
+Simple project creation uses two columns of native radio choices at desktop widths, then one selected preparation note. Description/storage and the current project path are native closed disclosures; entered values remain mounted. The create action fits the verified 1100×780 and 1440×900 views. After a failed operation, reveal the alert with a small scroll margin without taking keyboard focus or discarding inputs. Without a current task, an empty original-image source shows stage guidance alone; a real task stays visible even when its data is temporarily unavailable.
+
+### Multi-model pilot guidance
+
+The selected model's result, data prerequisite and execution conditions remain
+visible above optional technical details. All model families remain reachable.
+Use existing workspace record tokens; uncertainty and missing dependencies use
+plain text with the existing warning tone. Do not present catalog support as
+field quality approval. Rich terminology help opens by an explicit help button,
+uses the existing steel popup surface and keeps keyboard focus recoverable.
+
+
+## 2026-11-14 — selected novice workspace (round 2, option 3)
+
+The user selected `docs/verification/assets/novice-workspace/selected-design.png`. This supersedes the earlier dense stage bands in the default simple view. It is an application workspace, not a landing page: photos and the active work surface occupy the larger left region; one next-action panel occupies the right.
+
+- Warm paper `#F7F8F3`, white surfaces, forest `#245B43` actions, dark ink `#22392E`; no new gradients or decorative illustrations. Dark mode retains the same hierarchy with green-neutral tokens. Existing explicit theme preferences are preserved.
+- Pretendard Variable remains the bundled Korean/Latin typeface. Stage titles use 26px desktop / 22px compact, body 14px, supporting text 13px. Technical identifiers remain selectable.
+- Four goals: 사진 준비 → AI 만들기 → 결과 확인 → 검사 사용. The six underlying steps and guarded navigation remain authoritative. Full view exposes the six-step rail.
+- One persistent next-action panel replaces the footer and duplicated journey banner. It describes the required input, offers a truthful navigation action, details, optional automatic progress, and assistant access. It does not start a model just because its button is pressed.
+- Image gallery uses original aspect ratios, plain captions, selected state and a shared filter toolbar. Data management, specialist setup, comparisons and exports use named disclosures. Current errors, run/stop and connection recovery remain visible.
+- Layout responds to the available content container, including the width reserved for the assistant drawer. Under 960px available width the next panel becomes a bounded lower area. Canvas and workspace retain independent scroll areas.
+
+This is source/UI validation. Installed app builds, running user web servers and model-performance acceptance are separate release work.

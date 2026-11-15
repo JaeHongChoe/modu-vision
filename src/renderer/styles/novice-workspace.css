@@ -1,0 +1,102 @@
+/* Selected novice workspace: warm paper, forest accent, one task and one next action.
+   Scope layout to this shell; dialogs, canvas pixels and existing state remain independent. */
+.modu-studio { container: modu-shell / inline-size; background: var(--workspace-bg); color: var(--workspace-text); }
+.modu-studio--assistant-open { padding-right: 26rem; }
+/* Header dialogs use the shared workspace overlay scale; a header stacking context
+   would trap their z-90 overlays below labeling's z-68/z-75 toolbars. */
+.modu-header { flex: none; border-bottom: 1px solid var(--workspace-border); background: var(--workspace-bg); }
+.modu-studio .modu-header [data-wizard-header-row="project"] { min-height: 66px; padding-block: 12px; background: var(--workspace-bg); border: 0; }
+.modu-wordmark { flex-shrink: 0; margin-right: 1.25rem; font-size: 1.3rem; font-weight: 750; letter-spacing: -.045em; color: var(--workspace-accent); }
+.modu-header [data-wizard-header-row="journey"] { padding: 8px 28px 12px; background: var(--workspace-bg) !important; border: 0; }
+.modu-goal-rail { gap: 10px; }
+.modu-goal-rail > button { gap: 10px; min-height: 40px; padding: 8px 16px; border: 0; border-radius: 6px; background: transparent; color: var(--workspace-muted); }
+.modu-goal-rail > button[aria-current] { font-weight: 650; background: var(--workspace-inset) !important; }
+.modu-goal-rail > button > span:first-child { display: grid; place-items: center; width: 22px; height: 22px; font-family: inherit; font-size: .75rem; border: 1px solid var(--workspace-border); border-radius: 50%; }
+.modu-goal-rail > button[aria-current] > span:first-child { background: var(--workspace-accent); color: var(--workspace-bg); border-color: var(--workspace-accent); }
+.modu-header [data-workspace-substeps] { font-size: .8125rem; }
+.modu-header [data-workspace-substeps] > span { display: none; }
+.modu-workspace-body { display: grid; grid-template-columns: minmax(0,1fr) minmax(300px, 29%); flex: 1; min-height: 0; overflow: hidden; }
+.modu-workspace-body--operator { grid-template-columns: minmax(0,1fr); }
+.modu-stage-content { background: var(--workspace-bg); }
+.modu-stage-content > * { min-width: 0; }
+.modu-stage-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 18px; flex-shrink: 0; padding: 22px 28px 14px; color: var(--workspace-text); background: var(--workspace-bg); }
+.modu-stage-header :is(h1,h2) { font-size: 1.65rem; font-weight: 650; line-height: 1.3; letter-spacing: -.035em; }
+.modu-stage-header:has(> h1) { display: block; }
+.modu-stage-header p { margin-top: 7px; max-width: 48rem; color: var(--workspace-muted); font-size: .875rem; line-height: 1.65; text-wrap: pretty; }
+.modu-stage-header__tools { display: flex; flex-wrap: wrap; justify-content: flex-end; flex-shrink: 0; gap: 4px; }
+.modu-stage-header__tools .workspace-button { font-size: .8125rem; padding: 5px 8px; }
+.modu-stage-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; padding: 12px 24px; border-bottom: 1px solid var(--workspace-border); }
+.modu-stage-summary { padding: 12px 24px; color: var(--workspace-muted); font-size: .875rem; line-height: 1.65; }
+.modu-stage-disclosure { border-block: 1px solid var(--workspace-border); background: var(--workspace-bg); }
+.modu-stage-disclosure > summary { cursor: pointer; padding: 12px 20px; color: var(--workspace-muted); font-size: .875rem; }
+.modu-stage-disclosure[open] > summary { color: var(--workspace-text); }
+.modu-next-panel { min-width: 0; overflow: auto; overscroll-behavior: contain; padding: 34px 32px; border-left: 1px solid var(--workspace-border); background: var(--workspace-bg); color: var(--workspace-text); font-size: 1rem; line-height: 1.65; }
+.modu-next-panel__context { margin-bottom: 32px; color: var(--workspace-muted); font-size: .75rem; }
+.modu-next-panel__step { display: flex; align-items: center; gap: 4px; margin-top: 7px; }
+.modu-next-panel__step strong { flex: 1; font-size: .875rem; font-weight: 550; color: var(--workspace-text); }
+.modu-next-panel__step .workspace-button { padding: 4px; min-height: 28px; }
+.modu-eyebrow { color: var(--workspace-accent); font-size: .75rem; font-weight: 650; letter-spacing: .02em; }
+.modu-next-panel h2 { margin-top: 12px; font-size: 1.5rem; font-weight: 650; line-height: 1.45; letter-spacing: -.025em; text-wrap: pretty; }
+.modu-next-panel__description { margin-top: 14px; color: var(--workspace-muted); overflow-wrap: anywhere; }
+.modu-next-panel__status { margin-top: 18px; color: var(--workspace-muted); font-size: .75rem; }
+.modu-next-panel__status[data-state="ready"] { color: var(--workspace-success); }
+.modu-next-panel__status[data-state="blocked"] { color: var(--workspace-warning); }
+.modu-next-panel__progress { margin-top: 4px; color: var(--workspace-muted); font-size: .8125rem; overflow-wrap: anywhere; }
+.modu-next-panel__primary { width: 100%; min-height: 44px; margin-top: 22px; justify-content: space-between; text-align: left; }
+.modu-next-panel__detail-toggle { margin-top: 8px; font-size: .8125rem; }
+.modu-next-panel__error { color: var(--workspace-danger); margin-block: 12px; overflow-wrap: anywhere; }
+.modu-next-panel__details { margin-top: 12px; padding: 14px 0; border-block: 1px solid var(--workspace-border); overflow-wrap: anywhere; }
+.modu-next-panel__details h3 { margin-top: 10px; font-weight: 600; }
+.modu-next-panel__details ul { list-style: disc; padding-left: 18px; margin: 6px 0 14px; }
+.modu-next-panel__details p { color: var(--workspace-muted); margin-bottom: 12px; }
+.modu-next-panel__secondary { margin-top: 14px; }
+.modu-next-panel__secondary > button { justify-content: flex-start; padding-left: 0; font-size: .8125rem; }
+.modu-next-panel__secondary > p { color: var(--workspace-accent); font-size: .8125rem; }
+.modu-next-panel__assistant { margin-top: 40px; padding-top: 22px; border-top: 1px solid var(--workspace-border); }
+.modu-next-panel__assistant h3 { display: flex; align-items: center; gap: 8px; font-weight: 600; }
+.modu-next-panel__assistant p { margin: 10px 0; color: var(--workspace-muted); font-size: .8125rem; }
+.modu-next-panel__assistant button { padding-left: 0; color: var(--workspace-accent); }
+@media (min-width: 1600px) { .modu-workspace-body { grid-template-columns: minmax(0,1fr) minmax(332px, 29%); } .modu-workspace-body--operator { grid-template-columns: minmax(0,1fr); } .modu-next-panel { padding: 32px; } }
+@media (max-width: 1199px) {
+  .modu-workspace-body { grid-template-columns: minmax(0,1fr) 252px; }
+  .modu-workspace-body--operator { grid-template-columns: minmax(0,1fr); }
+  .modu-next-panel { padding: 20px 16px; }
+  .modu-stage-header { padding: 20px; }
+  .modu-stage-header :is(h1,h2) { font-size: 1.4rem; }
+  .modu-wordmark { margin-right: .25rem; }
+  .modu-goal-rail > button { padding-inline: 10px; }
+}
+@container modu-shell (max-width: 959px) {
+  .modu-workspace-body { display: flex; flex-direction: column; }
+  .modu-stage-content { flex: 1; }
+  .modu-next-panel { flex: none; max-height: 30vh; padding: 12px 18px; border-left: 0; border-top: 1px solid var(--workspace-border); display: grid; grid-template-columns: minmax(0,1fr) minmax(180px, .65fr); gap: 6px 18px; align-items: start; }
+  .modu-next-panel__context { margin: 0; grid-column: 1 / -1; }
+  .modu-next-panel__context > span { display: none; }
+  .modu-next-panel__step { margin: 0; }
+  .modu-next-panel__step strong { flex: none; }
+  .modu-next-panel__action h2 { font-size: 1rem; margin-top: 2px; }
+  .modu-next-panel__description { margin-top: 4px; }
+  .modu-next-panel__status { margin-top: 4px; }
+  .modu-next-panel__primary { margin: 0; }
+  .modu-next-panel__assistant { margin-top: 8px; padding-top: 12px; }
+  .modu-next-panel__details, .modu-next-panel__error { grid-column: 1 / -1; }
+}
+@media (max-width: 959px) { .modu-studio--assistant-open { padding-right: 0; } }
+@media (max-width: 600px) {
+  .modu-header [data-wizard-header-row="journey"] { padding-inline: 12px; }
+  .modu-goal-rail { gap: 2px; }
+  .modu-goal-rail > button { font-size: .8125rem; gap: 6px; padding-inline: 6px; }
+  .modu-stage-header { padding: 16px; gap: 8px; }
+  .modu-stage-header__tools span { display: none; }
+  .modu-next-panel { grid-template-columns: minmax(0,1fr); }
+}
+
+/* Legacy studios keep their color utilities, but primary controls share the selected action color. */
+.modu-studio .modu-stage-content button:is([class~="bg-blue-600"],[class~="bg-blue-500"],[class~="bg-cyan-600"],[class~="bg-emerald-600"]) { background-color: #245b43; border-color: #245b43; color: #fff; }
+.modu-studio .modu-stage-content button:is([class~="bg-blue-600"],[class~="bg-blue-500"],[class~="bg-cyan-600"],[class~="bg-emerald-600"]):hover:not(:disabled) { background-color: #194831; }
+.modu-studio .modu-goal-rail > button:not([aria-current]) { background: transparent; }
+
+.modu-studio [data-dataset-gallery] > .overflow-y-auto:last-child { padding-top: 16px; }
+.modu-studio [data-dataset-gallery] button[class~="bg-[#3B82F6]"] { background-color: #245b43; color: white; }
+
+.modu-studio [data-dataset-gallery] button[class~="bg-[#2563EB]"] { background-color: #245b43; border-color: #245b43; color: white; }

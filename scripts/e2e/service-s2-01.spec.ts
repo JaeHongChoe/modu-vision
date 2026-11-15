@@ -1,3 +1,4 @@
+import {openWorkspaceSettings} from './fixtures/workspaceSettings';
 import { writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { expect, test } from './fixtures/test';
@@ -16,6 +17,7 @@ test('S2-01: a first start guides the order and builds the example end to end on
 
   const guide = page.getByRole('dialog', { name: '처음 시작하기' });
   await expect(guide).toBeVisible({ timeout: 60_000 });
+  await guide.locator('summary').filter({ hasText: '처음 프로젝트를 만드는 순서 자세히 보기' }).click();
   const order = guide.locator('ol').first();
   // The first-project path a beginner acts in (product direction 5.1 #2), the same order the example walks.
   const items = await order.getByRole('listitem').allInnerTexts();
@@ -24,7 +26,7 @@ test('S2-01: a first start guides the order and builds the example end to end on
   await evidence.screenshot(page, 's201-01-guide');
 
   const started = Date.now();
-  await guide.getByRole('button', { name: '예제 프로젝트 만들기' }).click();
+  await guide.getByRole('button', { name: '예제로 해보기', exact: true }).click();
   const progress = guide.getByRole('list', { name: '예제 진행' });
   await expect(progress).toBeVisible();
   const ready = guide.getByRole('status').filter({ hasText: /^예제 검사 12장/ });
@@ -93,9 +95,9 @@ test('S2-01: a first start guides the order and builds the example end to end on
   await page.reload();
   await expect(page.getByRole('navigation', { name: '프로젝트 작업 공간' })).toBeVisible();
   await expect(guide).toHaveCount(0);
-  await page.getByRole('button', { name: '처음 시작 안내' }).click();
+  await openWorkspaceSettings(page); await page.getByRole('button',{name:'처음 시작 안내' }).click();
   await expect(guide.getByRole('list', { name: '만들어 둔 예제 프로젝트' })).toContainText('예제 · 표면 긁힘 분류');
-  await expect(guide.getByRole('button', { name: '예제 프로젝트 새로 만들기' })).toBeVisible();
+  await expect(guide.getByRole('button', { name: '예제로 해보기', exact: true })).toBeVisible();
   await evidence.screenshot(page, 's201-04-guide-reopened');
   evidence.note('scope', { actual_backend: true, fixture_responses: [], training: 'resnet18 without pretrained weights, 20 epochs, CPU', network: 'the page reaches only the local renderer and backend (fixture); pretrained weights are off' });
 });

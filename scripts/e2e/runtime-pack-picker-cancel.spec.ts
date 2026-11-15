@@ -1,3 +1,4 @@
+import {openWorkspaceSettings} from './fixtures/workspaceSettings';
 import fs from 'node:fs';
 import path from 'node:path';
 import {createHash} from 'node:crypto';
@@ -76,7 +77,7 @@ async function exercise(page: Page, w: Workspace, e: Evidence, api: Api, produce
     const inventory = path.join(inputs, 'inventory.json'); fs.writeFileSync(inventory, JSON.stringify({fixture: 'picker-input-preservation-only'}));
     if (url) await page.goto(url); else await page.reload();
     await expect(page.getByTitle('프로젝트 관리', {exact: true})).toContainText(project.name);
-    await page.getByRole('button', {name: '패키지·장치·진단', exact: true}).click();
+    await openWorkspaceSettings(page); await page.getByRole('button',{name:'패키지·장치·진단', exact: true}).click();
     await page.getByRole('navigation', {name: '배포 운영 화면'}).getByRole('button', {name: '설치·진단', exact: true}).click();
     const panel = page.getByRole('group', {name: '선택형 런타임 팩', exact: true});
     await expect(panel).toContainText('이 프로젝트에 보관한 런타임 팩이 없습니다.');

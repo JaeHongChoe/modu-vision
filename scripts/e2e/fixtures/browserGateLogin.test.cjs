@@ -5,13 +5,15 @@ const path = require('node:path');
 const Module = require('node:module');
 const ts = require('typescript');
 
-function load(expect) {
-  const file = path.join(__dirname, 'browserGateLogin.ts');
+function load(expect, file = path.join(__dirname, 'browserGateLogin.ts')) {
   const mod = new Module(file, module);
   mod.filename = file;
   mod.paths = Module._nodeModulePaths(__dirname);
   const original = mod.require.bind(mod);
-  mod.require = name => name === './test' ? {expect} : original(name);
+  // Load the real TypeScript menu helper without changing Node's global resolver.
+  mod.require = name => name === './test' ? {expect}
+    : name === './workspaceSettings' ? load(expect, path.join(__dirname, 'workspaceSettings.ts'))
+    : original(name);
   mod._compile(ts.transpileModule(fs.readFileSync(file, 'utf8'), {
     fileName: file,
     compilerOptions: {module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022},

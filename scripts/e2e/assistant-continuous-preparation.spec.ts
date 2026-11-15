@@ -39,7 +39,7 @@ test('a direct work request saves previewed preparation and executes one durable
   }};
   if(!window.api)throw Error('Controlled desktop shim unavailable');Object.assign(window.api,{assistant:bridge});
  });
- await page.getByRole('button',{name:'왜 그런가요?',exact:true}).click();await page.getByRole('button',{name:'도우미에게 묻기',exact:true}).click();
+ await page.getByRole('button',{name:'도우미 열기',exact:true}).click();
  const assistant=page.getByRole('complementary',{name:'도우미',exact:true}),card=assistant.getByRole('region',{name:'도우미 작업',exact:true});
  await expect(card).toHaveAttribute('aria-busy','false');await assistant.getByRole('textbox',{name:'도우미에게 묻기',exact:true}).fill('이 자료 전처리를 저장하고 학습 준비해줘');await assistant.getByRole('button',{name:'보내기',exact:true}).click();
  await expect.poll(async()=>{const tasks=(await api('/api/assistant-tasks')).tasks;return tasks.find((task:{goal:string})=>task.goal==='합성 자료의 고정 입력과 학습 설정 준비')?.status;},{timeout:30_000}).toBe('completed');
@@ -73,7 +73,7 @@ test('selected image is normalized locally and keeps its reasoning choice throug
   }};
   if(!window.api)throw Error('Controlled desktop shim unavailable');Object.assign(window.api,{assistant:bridge});
  });
- await page.getByRole('button',{name:'왜 그런가요?',exact:true}).click();await page.getByRole('button',{name:'도우미에게 묻기',exact:true}).click();const assistant=page.getByRole('complementary',{name:'도우미',exact:true});
+ await page.getByRole('button',{name:'도우미 열기',exact:true}).click();const assistant=page.getByRole('complementary',{name:'도우미',exact:true});
  await assistant.locator('summary').filter({hasText:/^ChatGPT 연결$/}).click();
  await expect(assistant.getByLabel('추론 강도',{exact:true})).toBeEnabled();await assistant.getByLabel('추론 강도',{exact:true}).selectOption('high');
  const selected=path.join(workspace.root,'selected-image.png');fs.writeFileSync(selected,png(64,3,(x,y)=>[x,y,120]));

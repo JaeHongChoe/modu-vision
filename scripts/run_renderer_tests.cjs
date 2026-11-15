@@ -16,7 +16,7 @@ const files = [...discover(path.join(root, 'src', 'renderer')), ...discover(path
 if (!files.length) throw new Error('No renderer regression files discovered');
 if (process.argv.includes('--list')) console.log(JSON.stringify(files, null, 2));
 else {
-  const result = spawnSync(process.execPath, ['--test', '--test-concurrency=4', ...files], {
+  const result = spawnSync(process.execPath, ['--require', path.join(root, 'scripts', 'test_ts_dependencies.cjs'), '--test', '--test-concurrency=4', ...files], {
     cwd: root, stdio: 'inherit', shell: false,
   });
   if (result.error) throw result.error;

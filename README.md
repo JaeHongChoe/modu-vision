@@ -25,6 +25,14 @@
 
 현재 **0.1.0 개발 버전**입니다. 기능 구현과 자동 검사, 대상 OS의 설치·서명, 실제 장비·모델 품질의 확인 범위는 [배포 지원 표](docs/release-platform-matrix.md)와 [검증 근거](docs/service-upgrade-evidence.json)에서 구분합니다.
 
+## 초보자용 다중 모델 파일럿 후보
+
+사진에서 **얻고 싶은 결과**로 시작하고, 선택한 모델에 필요한 자료와 실행 위치를 먼저 확인합니다. 분류·영역 분할·객체 검출·이상 탐지부터 OCR·회전 보정 등 **10개 모델 계열**을 유지합니다. 자세한 설정은 펼쳐 보고, 용어 설명은 키보드로도 열고 닫을 수 있습니다.
+
+![선택한 모델의 결과·필요한 자료·실행 위치를 먼저 안내하는 간단히 보기](docs/verification/assets/multimodel-pilot/model-guidance.png)
+
+위 화면은 격리된 검증 프로젝트입니다. [모델별 조건과 검증 범위](docs/pilot-model-matrix.md), [사용자 파일럿 절차](docs/pilot-playbook.md), [이번 변경의 검사 결과와 남은 배포 조건](docs/verification/2026-11-14-multimodel-pilot.md)을 함께 제공합니다. **모든 모델의 현장 성능이나 설치본 배포를 승인한 상태는 아닙니다.**
+
 ## 빠른 시작
 
 | 사용 방식 | 시작 방법 | 준비할 것 |
@@ -37,7 +45,7 @@
 
 설치 파일을 전달받았다면 일반 사용자는 아래의 개발 환경 설치를 먼저 할 필요가 없습니다. macOS arm64는 앱/DMG·ZIP, Windows x64는 NSIS, Linux x64는 AppImage·deb 빌드 경로가 있습니다. **빌드 경로와 실제 설치·서명·복구 확인은 구분**하며, 대상 환경의 조건은 [배포 지원 표](docs/release-platform-matrix.md)를 따릅니다. 설치본을 직접 만들려면 [데스크톱 패키징](#데스크톱-패키징)을 보세요.
 
-앱을 연 뒤 **프로젝트 만들기·열기 → 데이터 준비**부터 시작합니다. 원본을 가져오고 클래스를 확인한 뒤 6단계를 따라 진행하세요.
+앱을 연 뒤 **처음 시작 안내**에서 **예제로 해보기**, **내 사진으로 만들기**, **만들어 둔 작업 이어가기**를 고릅니다. 내 사진으로 시작할 때는 기술 이름 대신 사진에서 얻고 싶은 결과를 선택하세요. [처음 만드는 AI 안내](docs/novice-first.md)에 따라 사진 준비부터 첫 시험 검사까지 진행할 수 있습니다.
 
 ### 브라우저로 시작
 
@@ -53,7 +61,7 @@ npm run web
 
 ## 작업 흐름
 
-Studio의 실제 화면 이름을 기준으로 한 **6단계**입니다.
+**간단히 보기**는 **사진 준비 → AI에게 가르치기 → 처음 보는 사진으로 확인 → 검사에 사용**의 네 가지 목표로 안내합니다. 각 목표 아래에서 필요한 세부 작업을 열 수 있습니다. **모두 보기**와 기존 자동 실행기는 아래 **6단계**를 유지합니다.
 
 | 단계 | 화면 | 여기서 하는 일 |
 | --- | --- | --- |
@@ -104,10 +112,13 @@ ChatGPT 연결에는 **텍스트·구조화된 앱 상태와 사용자가 첨부
 
 ## 주요 기능
 
+필요한 오픈소스 계산을 별도 서비스 없이 내부 엔진으로 사용하는 변경도 개발 중입니다. 저장된 분류 평가의 라벨 재확인 순위, Optuna 후보 탐색, 버전이 기록되는 검출 AP, 검사 흐름 키보드 조작, 로컬 호출 진단을 기존 UI·CLI·도우미에 연결합니다. [내재화 적용 범위와 사용법](docs/embedded-oss.md)을 참고하세요. 현재 설치 앱에 반영됐다는 뜻은 아닙니다.
+
 ### 데이터와 라벨링
 
 - 폴더·지원 LabelMe 형상 가져오기, 데이터셋 분할과 버전·원본 출처 관리
 - BBox, 회전 BBox, polygon, brush·eraser와 자동 선택 도구
+- [다각형 점 편집](docs/labeling-precision.md): 변에 점 추가·선택 점 삭제·방향키 이동과 실행 취소
 - 확대·이동·화면 맞춤과 픽셀 확인, 선택 형상 이동, 실행 취소·다시 실행
 - 원본을 유지하는 파생 이미지 편집과 라벨 세트 관리
 - 프로젝트별 라벨 기준서, 담당 배정·우선순위, 편집 잠금, 1인·2인 검수와 의견 조정
@@ -158,7 +169,9 @@ GAN은 생성 데이터를 검토해 학습에 채택하는 용도이며, 검사
 - macOS LaunchAgent, Linux systemd user, Windows 로그온 작업을 통한 사용자 시작 등록
 - 별도의 Windows SCM 서비스 사전 검사·등록 파일 준비·등록 경로. 관리자 권한과 서비스 계정 등 대상 환경의 사전 조건 필요
 
-통합 방법은 [검사 서비스·SDK 안내](docs/api-integration.md)와 [학습 CLI·REST 안내](docs/training-engine-cli-rest.md)를 참고하세요.
+공통 CLI는 `npm run --silent cli -- --help`로 시작합니다. 실행 중인 서버에서 프로젝트·데이터·라벨·학습·평가·검사·운영 기능의 명령과 schema를 읽고 같은 API를 호출합니다. 내장 GPT도 필요한 명령을 찾아 관측하고, 지원되는 실행은 기존 작업 계획에 연결합니다.
+
+통합 방법은 [공통 CLI·GPT 기능 탐색](docs/studio-cli.md), [검사 서비스·SDK 안내](docs/api-integration.md), [학습 CLI·REST 안내](docs/training-engine-cli-rest.md)를 참고하세요.
 
 ## 개발 환경 설치
 
@@ -320,6 +333,8 @@ macOS 기본 빌더 설정은 `mac.identity: "-"`이며 실제 산출물의 서�
 | [코드 읽기·리팩토링 검토](docs/CODE_GUIDE.md) | 핵심 진입점, 상태 구분과 구조 개선 우선순위 |
 | [검사 서비스·SDK](docs/api-integration.md) | 전체 플로우 패키지, Python·CLI·REST·C++·C# 연동 |
 | [학습 CLI·REST](docs/training-engine-cli-rest.md) | 외부 프로그램에서 학습 엔진 사용 |
+| [공통 CLI·GPT 기능 탐색](docs/studio-cli.md) | 실제 기능 목록·schema, 인증된 실행, 파일 전송·진단과 GPT 권한 구분 |
+| [내장 오픈소스 엔진](docs/embedded-oss.md) | 라벨 재확인, 적응형 탐색, 검출 AP 계산 기준, 키보드 편집과 로컬 진단 |
 | [배포 지원 표](docs/release-platform-matrix.md) | 네이티브 빌드, 서명, 설치와 복구 조건 |
 | [모델 라이선스 표](docs/model-license-matrix.md) | 사전학습·파생 모델과 가중치 배포 조건 |
 | [작업 계획](docs/service-upgrade-program.json) · [검증 근거](docs/service-upgrade-evidence.json) | 기능별 범위와 확인 상태 |
@@ -330,3 +345,5 @@ macOS 기본 빌더 설정은 `mac.identity: "-"`이며 실제 산출물의 서�
 버그 제보와 변경 제안은 [Issues](https://github.com/JaeHongChoe/modu-vision/issues), 코드 기여는 [기여 안내](CONTRIBUTING.md)를 이용하세요. 보안 문제 제보 방법은 [SECURITY.md](SECURITY.md)에 있습니다.
 
 프로젝트 코드는 [MIT License](LICENSE)를 따릅니다. 외부 라이브러리와 모델 가중치에는 각각의 조건이 적용됩니다. 특히 DINOv3·YOLO 등 사전학습 모델과 파생 모델의 이용·재배포 조건은 [모델 라이선스 표](docs/model-license-matrix.md)와 [외부 구성 요소 고지](THIRD_PARTY_NOTICES.md)를 확인하세요.
+
+다각형 편집에 사용한 Label Studio 유래 코드에는 [Apache-2.0 라이선스](third_party/label-studio/LICENSE)와 [NOTICE](third_party/label-studio/NOTICE)가 적용됩니다. 고정 출처·변경 범위는 [provenance](third_party/label-studio/provenance.json)에 기록하며, 라이선스와 고지를 앱·웹 renderer에도 함께 배포합니다.

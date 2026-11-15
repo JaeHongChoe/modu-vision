@@ -2,6 +2,7 @@ import type { Route } from '@playwright/test';
 import { expect, test } from './fixtures/test';
 import { installDesktopHostShim } from './fixtures/desktop-host-shim';
 import { confirmFlowSave } from './fixtures/flowChange';
+import { openWorkspaceSettings } from './fixtures/workspaceSettings';
 
 // Display-only transport regression on the actual renderer and owned backend. A single preflight reply is held;
 // no model was trained or verified and the synthetic "ready" reply is not deployment-readiness evidence.
@@ -51,7 +52,7 @@ for(const switchKind of ['edge','selected'] as const)test(`a late preflight repl
   await requestStarted;
   expect(captured.target).toEqual({ kind: 'this_computer', device: 'cpu' });
   if(switchKind==='edge'){await panel.getByLabel('점검 대상').selectOption({label:'Edge · Windows x64 · CPU'});await expect(panel.getByLabel('점검 대상').locator('option:checked')).toHaveText('Edge · Windows x64 · CPU');}
-  else {await page.getByRole('combobox').filter({has:page.locator('option[value="held-preflight-profile"]')}).first().selectOption('held-preflight-profile');await expect(panel.getByLabel('점검 대상')).toHaveValue('selected-cpu');}
+  else {await openWorkspaceSettings(page);await page.getByRole('combobox').filter({has:page.locator('option[value="held-preflight-profile"]')}).first().selectOption('held-preflight-profile');await expect(panel.getByLabel('점검 대상')).toHaveValue('selected-cpu');}
   const response = page.waitForResponse(reply => reply.url().endsWith('/api/export/flow/preflight') && reply.request().method() === 'POST');
   release();
   await (await response).finished();

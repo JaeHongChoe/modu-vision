@@ -1,3 +1,4 @@
+import {openWorkspaceSettings} from './fixtures/workspaceSettings';
 import fs from 'node:fs';import path from 'node:path';import crypto from 'node:crypto';
 import {execFileSync} from 'node:child_process';import type {Page} from '@playwright/test';
 import {test,expect,type Workspace,type Evidence} from './fixtures/test';
@@ -12,7 +13,7 @@ async function exercise(page:Page,workspace:Workspace,evidence:Evidence,api:Api,
  const fixture=JSON.parse(execFileSync(harness.resolvePython(),[path.join(harness.REPO_ROOT,'scripts/e2e/fixtures/runtime_pack_control.py'),projectDir],{encoding:'utf8',timeout:30_000}));
  const originalHashes=Object.fromEntries(fixture.files.map((r:any)=>[path.join(fixture.source_dir,r.path),sha(path.join(fixture.source_dir,r.path))]));
  const before=await api('/api/product-delivery/installation');
- const open=async()=>{if(url)await page.goto(url);else await page.reload();await expect(page.getByTitle('프로젝트 관리',{exact:true})).toContainText('Owned runtime pack');await page.getByRole('button',{name:'패키지·장치·진단',exact:true}).click();await page.getByRole('navigation',{name:'배포 운영 화면'}).getByRole('button',{name:'설치·진단',exact:true}).click();const panel=page.getByRole('group',{name:'선택형 런타임 팩',exact:true});await expect(panel).toContainText('실행 백엔드');await panel.scrollIntoViewIfNeeded();return panel;};
+ const open=async()=>{if(url)await page.goto(url);else await page.reload();await expect(page.getByTitle('프로젝트 관리',{exact:true})).toContainText('Owned runtime pack');await openWorkspaceSettings(page); await page.getByRole('button',{name:'패키지·장치·진단',exact:true}).click();await page.getByRole('navigation',{name:'배포 운영 화면'}).getByRole('button',{name:'설치·진단',exact:true}).click();const panel=page.getByRole('group',{name:'선택형 런타임 팩',exact:true});await expect(panel).toContainText('실행 백엔드');await panel.scrollIntoViewIfNeeded();return panel;};
  let panel=await open();await expect(panel).toContainText('이 프로젝트에 보관한 런타임 팩이 없습니다.');
  const button=()=>panel.getByRole('button',{name:'팩 검증·보관',exact:true});await expect(button()).toBeDisabled();
  await panel.getByLabel('런타임 팩 payload 폴더',{exact:true}).fill(fixture.source_dir);await panel.getByLabel('런타임 팩 inventory 경로',{exact:true}).fill(fixture.inventory_path);await panel.getByLabel('런타임 팩 검토 SHA-256',{exact:true}).fill('0'.repeat(64));

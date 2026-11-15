@@ -1,3 +1,4 @@
+import {openWorkspaceSettings} from './fixtures/workspaceSettings';
 import fs from 'node:fs';
 import path from 'node:path';
 import { expect, test } from './fixtures/test';
@@ -73,7 +74,7 @@ for (const viewport of [{ width: 1366, height: 768 }, { width: 1920, height: 108
     await page.mouse.click(3, 3);
     await expect(dialog).not.toBeVisible();
     await expect(opener).toBeFocused();
-    await page.getByRole('button', { name: '데이터·판정 이력', exact: true }).click();
+    await openWorkspaceSettings(page); await page.getByRole('button',{name:'데이터·판정 이력', exact: true }).click();
     const parent = page.getByRole('dialog', { name: '데이터·모델·판정 이력', exact: true });
     const nestedOpener = parent.getByRole('button', { name: '데이터·모델 변경 영향 확인', exact: true });
     await nestedOpener.click();

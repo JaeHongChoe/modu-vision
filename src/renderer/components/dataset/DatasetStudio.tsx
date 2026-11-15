@@ -34,7 +34,6 @@ import {WorkflowImpactPanel} from '../common/WorkflowImpactPanel';
 import {useDeliveryScope} from '../runtime/useDeliveryScope';
 import {DataReadinessPanel} from './DataReadinessPanel';
 import {DatasetStatisticsPanel} from './DatasetStatisticsPanel';
-import { OperatorGuidanceBanner } from '../common/OperatorGuidanceBanner';
 import { SimpleViewFold } from '../common/SimpleViewFold';
 import { BrowserFolderPathInput } from './BrowserFolderPathInput';
 import { ImportTaskSwitch } from './ImportTaskSwitch';
@@ -66,6 +65,8 @@ export const DatasetStudio: React.FC = () => {
   const { task, language, projectDir, openImageForLabeling, project, isProjectBusy } = useProjectStore();
   const full = useProjectStore(state => state.viewMode) === 'full';
   const simpleView = useProjectStore(state => state.viewMode) === 'simple';
+  const [pathImportOpen, setPathImportOpen] = useState(false);
+  const browserWithoutPicker = host.kind() === 'browser' && host.can?.('pickPaths') === false;
   const sessionChanging = useProjectStore(state => state.sharedSessionChanging);
   // The focus view folds the full-width panels above the toolbar (DATASET_HELPER_PANELS) so the sidebar and the gallery
   // keep the window's height; the choice is remembered. Off in both views until pressed (the simple view keeps 데이터 현황
@@ -167,7 +168,7 @@ export const DatasetStudio: React.FC = () => {
     : (language === 'ko' ? '데이터 정보를 확인할 수 없습니다. 오류를 확인한 뒤 다시 불러오세요.' : 'Dataset information is unavailable. Review the error and reload.');
 
   // Thumbnail Grid Density (S: compact 96px, M: default 144px, L: detailed 200px)
-  const [density, setDensity] = useState<'S' | 'M' | 'L'>('M');
+  const [density, setDensity] = useState<'S' | 'M' | 'L'>('L');
   const [splitOpen, setSplitOpen] = useState(false);
   const [openingImageId, setOpeningImageId] = useState<string | null>(null);
   const [showVersions, setShowVersions] = useState(false);
@@ -287,6 +288,7 @@ export const DatasetStudio: React.FC = () => {
     project?.id, project?.project_dir, project?.source_dataset_dir, project?.task, projectDir, ensureImported]);
 
   const handleSelectFolder = async () => {
+    if (browserWithoutPicker) { setPathImportOpen(true); return; }
     const selection = ++folderSelection.current;
     const started = useProjectStore.getState();
     const projectId = started.project?.id;
@@ -306,7 +308,7 @@ export const DatasetStudio: React.FC = () => {
       folder = await host.selectFolder({ purpose: 'dataset-source', title: 'Select Industrial Dataset' });
     } catch (error) {
       // Preserve the host refusal reason and the typed/upload fallback.
-      if (isCurrent()) setImageOpenError(hostErrorMessage(error, '폴더 선택 창을 열 수 없습니다.'));
+      if (isCurrent()) { setImageOpenError(hostErrorMessage(error, '폴더 선택 창을 열 수 없습니다.')); setPathImportOpen(true); }
       return;
     }
     if (folder && isCurrent()) {
@@ -415,35 +417,29 @@ export const DatasetStudio: React.FC = () => {
   const splitInfo = metadataReady ? splitStatus({ mode: calibrator.mode, splitState, locked: splitUnavailableForTask })
     : { label: isLoading ? '확인 중' : '확인 필요', description: metadataNotice, foldable: false, tone: 'neutral' };
   const splitFolded = simpleView && splitInfo.foldable && !splitOpen;
-  const checklist = metadataReady ? (importChecks({ task, totalImages: totalImages || 0, classes: classes || {}, split: split || { train: 0, val: 0, test: 0 },
+  const checklist = metadataReady ? (importChecks({ task, sourceImages, totalImages: totalImages || 0, classes: classes || {}, split: split || { train: 0, val: 0, test: 0 },
     splitState: splitState ?? null, classSplitCounts: classSplitCounts ?? null, corrupted: corruptedImages?.length ?? 0,
     excludedUndecodable: excludedUndecodable ?? null, labelsMissing: Boolean(labelsMissing), expectedLayout: expectedLayout || '',
     splitLocked: splitUnavailableForTask }) as ReturnType<typeof importChecks> | null) ?? [] : [];
+  const priorityCheck = checklist.find(check => check.level === 'block') || checklist.find(check => check.level === 'warn') || checklist[0];
+  const checklistSummary = priorityCheck?.action === 'label' ? (language === 'ko' ? '학습에 필요한 라벨을 준비하세요.' : 'Prepare the labels required for training.')
+    : priorityCheck?.text.match(/^.*?[.!?](?:\s|$)/)?.[0]?.trim() || priorityCheck?.text;
   const shownCounts = calibrator.counts;
   const shownRatios = calibrator.ratios;
 
   const gridClassByDensity = {
     S: 'grid grid-cols-[repeat(auto-fill,minmax(96px,1fr))] gap-2',
-    M: 'grid grid-cols-[repeat(auto-fill,minmax(144px,1fr))] gap-3',
-    L: 'grid grid-cols-[repeat(auto-fill,minmax(200px,1fr))] gap-4',
+    M: 'grid grid-cols-[repeat(auto-fill,minmax(168px,1fr))] gap-4',
+    L: 'grid grid-cols-[repeat(auto-fill,minmax(min(100%,240px),1fr))] gap-6',
   }[density];
 
   return (
-    <div className="flex-1 flex flex-col h-full bg-[#0B0E14] text-slate-100 overflow-hidden">
-      <OperatorGuidanceBanner step={1} />{host.localBrowser?.()&&<p className="mt-2 text-xs text-slate-400">선택한 반입 자료는 프로젝트 작업 폴더에 검증·복사합니다. 원본은 그대로 보관합니다.</p>}
-      {/* The focus view folds these three panels (DATASET_HELPER_PANELS, in this order). The step title above, the
-          alert and session rows and the toolbar below never fold. */}
-      {!focus && <>
-      <SimpleViewFold label="데이터 관리 도구" hint="이미지 검토·그룹 분할·라벨 교환, 현장 캡처, 파생 편집, 변경 영향 확인">
-        <DatasetWorkflowPanel />
-        <CaptureIntakePanel sourceDatasetPath={folderPath} contextKey={sourceContextKey} onUseSource={source=>importFolder(source,task,false)}/>
-        <DerivedDatasetPanel sourceDatasetPath={folderPath} contextKey={sourceContextKey} onUseSource={source=>importFolder(source,task,false)}/>
-        <WorkflowImpactPanel />
-        {!full && <DataReadinessPanel />}
-      </SimpleViewFold>
-      <DatasetStatisticsPanel />
-      {full && <DataReadinessPanel />}
-      </>}
+    <div className="flex-1 flex flex-col min-h-0 h-full bg-[#0B0E14] text-slate-100 overflow-hidden">
+      <header className="modu-stage-header">
+        <h1>{language === 'ko' ? '사진 준비' : 'Prepare photos'}</h1>
+        <p>{language === 'ko' ? `${sourceImages}장의 사진을 불러왔어요. 사진의 표시와 출처를 확인하세요.` : `${sourceImages} photos imported. Review their labels and source.`}</p>
+      </header>
+      {host.localBrowser?.()&&<p className="mt-2 text-xs text-slate-400">선택한 반입 자료는 프로젝트 작업 폴더에 검증·복사합니다. 원본은 그대로 보관합니다.</p>}
       {sourceSaveError && (
         <div role="alert" className="border-b border-amber-700 bg-amber-950/40 px-4 py-2 text-xs text-amber-200">
           {sourceSaveError}
@@ -454,11 +450,15 @@ export const DatasetStudio: React.FC = () => {
           {SESSION_CHANGING_NOTICE}
         </div>
       )}
+      {simpleView && isLoading && (
+        <div role="status" className="border-b border-sky-800/50 bg-sky-950/20 px-4 py-2 text-xs text-sky-200">
+          {metadataNotice}
+        </div>
+      )}
       {/* Top Action Toolbar (Dark Steel Panel #131822) */}
-      <div className="p-3 bg-[#131822] border-b border-[#2B3547] flex items-center justify-between gap-3">
-        {/* 모두 보기 at 1024px: the left group is wider than the window, so it scrolls sideways and the right group (집중 보기,
-            the split counts) stays on screen. Only there: the simple view's 더 보기 menu below would be clipped by it. */}
-        <div className={`flex items-center space-x-3${full ? ' min-w-0 overflow-x-auto whitespace-nowrap' : ''}`}>
+      <div className="modu-stage-toolbar p-3 bg-[#131822] border-b border-[#2B3547] flex flex-wrap items-center justify-between gap-3">
+        {/* Wrap tools so the mounted path picker and secondary menus are not clipped by a scroll container. */}
+        <div className="flex min-w-0 flex-wrap items-center gap-3">
           <button
             id="workflow-data"
             onClick={handleSelectFolder}
@@ -466,9 +466,15 @@ export const DatasetStudio: React.FC = () => {
             className="flex items-center space-x-2 px-3 py-1.5 bg-blue-600 hover:bg-blue-500 rounded-[4px] text-xs font-semibold text-white border border-blue-400 transition-tactile cursor-pointer"
           >
             <FolderOpen className="w-4 h-4" />
-            <span className="whitespace-nowrap">{language === 'ko' ? '데이터셋 폴더 열기' : 'Open Dataset Folder'}</span>
+            <span className="whitespace-nowrap">{browserWithoutPicker ? (language === 'ko' ? '폴더 경로로 가져오기' : 'Import folder path') : (language === 'ko' ? '데이터셋 폴더 열기' : 'Open Dataset Folder')}</span>
           </button>
-          <BrowserFolderPathInput disabled={isLoading} onImport={folder => importFolder(folder, task, undefined, false).catch(() => {})} />
+          <details hidden={host.kind() !== 'browser'} data-dataset-path className="modu-stage-disclosure relative" open={pathImportOpen}
+            onToggle={event => setPathImportOpen(event.currentTarget.open)}>
+            <summary>{language === 'ko' ? '폴더 경로로 가져오기' : 'Import by folder path'}</summary>
+            <div className="absolute left-0 top-full z-30 max-w-[85vw] rounded border border-slate-600 bg-[#131822] p-3 shadow-lg">
+              <BrowserFolderPathInput disabled={isLoading} onImport={folder => importFolder(folder, task, undefined, false).catch(() => {})} />
+            </div>
+          </details>
 
           {full ? <>
           <button
@@ -550,7 +556,7 @@ export const DatasetStudio: React.FC = () => {
             simple view). One group on this row that never wraps or shrinks: a new row would take its height from the body.
             The fold/narrow hints start at width 0 and take only the row's leftover room (full text in the title, and the
             switch turns amber), so on a short row the left group's buttons keep their room. */}
-        <div className="flex shrink-0 grow items-center justify-end gap-2">
+        <div className={`${simpleView ? 'hidden' : 'flex'} shrink-0 grow items-center justify-end gap-2`}>
           {focus && <span title={foldStatus} className="w-0 min-w-0 max-w-sm grow truncate text-right text-[11px] text-slate-400"><span className="xl:hidden">{FOLD_STATUS_SHORT}</span><span className="hidden xl:inline">{foldStatus}</span></span>}
           {narrowNotice && <span id={NARROW_NOTICE_ID} role="status" title={narrowNotice} className="w-0 min-w-0 max-w-xs grow truncate text-right text-[11px] text-amber-200"><span className="xl:hidden">{NARROW_BODY_NOTICE_SHORT}</span><span className="hidden xl:inline">{narrowNotice}</span></span>}
           <button type="button" aria-pressed={focus} onClick={toggleFocus} title={focus ? '위쪽 패널을 다시 보입니다' : '위쪽 패널을 접어 목록과 갤러리를 키웁니다'}
@@ -578,28 +584,24 @@ export const DatasetStudio: React.FC = () => {
         </div>
       </div>
 
-      {/* Main Studio Body: Left Sidebar (Stats, Split Calibrator & Distribution) + Right (Gallery) */}
-      <div ref={bodyRef} className="flex-1 flex overflow-hidden" data-dataset-work-area>
-        {/* Left Stats, Split Calibrator & Class Distribution Panel. A fixed width that never shrinks: `w-84` is not on
-            this Tailwind 3 scale, so the sidebar took its longest unwrapped line (a checklist warning is ~2000px) and
-            left the gallery zero pixels wide, off screen, with only the first cards inside its lazy-read margin. */}
-        <aside data-surface="page" className="w-[21rem] shrink-0 bg-[#131822] border-r border-[#2B3547] p-3 flex flex-col space-y-3 overflow-y-auto">
-          {/* Before-training checks from the import result: what will block training or step 4, and what is weak. */}
-          {hasSelectedFolder && checklist.length > 0 && (
-            <section aria-label="학습 전 점검" className="rounded-[4px] border border-[#2B3547] bg-[#1A212E] p-2.5 text-xs">
-              <h3 className="mb-1.5 font-semibold text-slate-100">학습 전 점검</h3>
-              <ul className="space-y-1">
-                {checklist.map(check => (
-                  <li key={check.id} data-check={check.id} data-level={check.level}
-                    className={check.level === 'block' ? 'text-rose-200' : check.level === 'warn' ? 'text-amber-200' : 'text-emerald-200'}>
-                    <span aria-hidden="true">{check.level === 'block' ? '✕ ' : check.level === 'warn' ? '! ' : '✓ '}</span>{check.text}
-                  </li>
-                ))}
-              </ul>
-            </section>
-          )}
-          {hasSelectedFolder && <FieldReadinessPanel />}
-          {hasSelectedFolder && <SpecialistFamilyNote step={1} />}
+      {/* Gallery workspace with secondary management tools. */}
+      <div ref={bodyRef} className="flex-1 flex flex-col min-h-0 overflow-hidden" data-dataset-work-area>
+        <details className="modu-stage-disclosure shrink-0 overflow-y-auto max-h-[45%]" data-dataset-management open={full}>
+          <summary style={{ paddingBlock: 7 }}>{language === 'ko' ? '분할·클래스·데이터 관리 도구' : 'Split, classes and data tools'}</summary>
+        <aside data-surface="page" className="p-3 flex flex-col space-y-3">
+      {/* Keep management mounted in its disclosure; the full view retains its focus preference. */}
+      {(!focus || simpleView) && <>
+      <SimpleViewFold label="데이터 관리 도구" hint="이미지 검토·그룹 분할·라벨 교환, 현장 캡처, 파생 편집, 변경 영향 확인">
+        <DatasetWorkflowPanel />
+        <CaptureIntakePanel sourceDatasetPath={folderPath} contextKey={sourceContextKey} onUseSource={source=>importFolder(source,task,false)}/>
+        <DerivedDatasetPanel sourceDatasetPath={folderPath} contextKey={sourceContextKey} onUseSource={source=>importFolder(source,task,false)}/>
+        <WorkflowImpactPanel />
+        {!full && <DataReadinessPanel />}
+      </SimpleViewFold>
+      <DatasetStatisticsPanel />
+      {full && <DataReadinessPanel />}
+      </>}
+
           {/* Summary KPI Readout Tiles */}
           <div className="grid grid-cols-2 gap-2 text-xs">
             <div className="p-2.5 bg-[#1A212E] rounded-[4px] border border-[#2B3547]">
@@ -643,72 +645,6 @@ export const DatasetStudio: React.FC = () => {
             </div>
             </>}
           </div>
-
-          {metadataReady && split.train + split.val + split.test === 0 && totalImages > 0 && (
-            <div className="text-[11px] text-amber-300">
-              {language === 'ko' ? '분할을 아직 적용하지 않았습니다. 아래 비율은 적용 전 예상치입니다.' : 'Split not applied yet. Ratios below are estimates.'}
-            </div>
-          )}
-
-          {/* Corrupted Images Alert if any */}
-          {metadataReady && unlabeledImages > 0 && (
-            <div className="p-2.5 bg-amber-950/30 border border-amber-500/40 rounded text-xs text-amber-200">
-              원본 {sourceImages}장 중 주석 없는 {unlabeledImages}장은 갤러리에서만 보이며 학습 분할에서 제외됩니다.
-            </div>
-          )}
-          {metadataReady && task === 'segmentation' && !splitUnavailableForTask && classes.defect_mask && !classes.OK && !classes.good && (
-            <div className="p-2.5 bg-amber-950/30 border border-amber-500/40 rounded text-xs text-amber-200">
-              결함 주석만 확인되었습니다. 정상(OK) 이미지가 없으면 과검률과 양산 판정 품질을 검증할 수 없습니다.
-            </div>
-          )}
-          {!isLoading && !isProjectBusy && !sessionChanging && validation && (
-            <div role="status" className={validation.tone === 'ok'
-              ? 'p-2.5 bg-emerald-950/30 border border-emerald-500/40 rounded text-xs text-emerald-200'
-              : 'p-2.5 bg-amber-950/30 border border-amber-500/40 rounded text-xs text-amber-200'}>
-              {validation.text}
-            </div>
-          )}
-          {metadataReady && corruptedImages.length > 0 && (
-            <div className="p-2.5 bg-[#EF4444]/10 border border-[#EF4444]/40 rounded-[4px] text-xs text-red-200">
-              <div className="flex items-center space-x-1.5 font-semibold text-[#EF4444] mb-1">
-                <AlertTriangle className="w-4 h-4" />
-                <span>
-                  {language === 'ko'
-                    ? `손상된 이미지 ${corruptedImages.length}건 감지`
-                    : `${corruptedImages.length} Corrupted Images`}
-                </span>
-              </div>
-              <p className="text-[11px] text-red-300">
-                {language !== 'ko' ? (excludedUndecodable?.recorded ? 'Unreadable images were left out of training and splits; the files are unchanged.' : 'Unreadable images found; reopen the project and import again to leave them out.')
-                  : excludedUndecodable?.recorded
-                    ? `읽을 수 없는 이미지 ${excludedUndecodable.excluded.length}장을 학습·분할에서 뺐습니다 (원본 파일은 그대로): ${excludedUndecodable.excluded.slice(0, 5).join(', ')}${excludedUndecodable.excluded.length > 5 ? ' …' : ''}`
-                    : '읽을 수 없는 이미지가 있습니다. 프로젝트를 열고 다시 불러오면 학습에서 자동으로 빠집니다.'}
-              </p>
-            </div>
-          )}
-
-          {/* Class Imbalance Warning if > 20:1 */}
-          {metadataReady && isImbalanced && (
-            <div className="p-2.5 bg-[#F59E0B]/10 border border-[#F59E0B]/40 rounded-[4px] text-xs text-amber-200">
-              <div className="flex items-center justify-between mb-1">
-                <div className="flex items-center space-x-1.5 font-semibold text-[#F59E0B]">
-                  <AlertTriangle className="w-4 h-4" />
-                  <span>
-                    {language === 'ko' ? '극심한 클래스 불균형 (ERR_003)' : 'Class Imbalance Warning'}
-                  </span>
-                </div>
-              </div>
-              <p className="text-[11px] text-amber-300">
-                {language === 'ko'
-                  ? (usesClassWeights
-                    ? '다수 클래스와 소수 클래스 비율이 20:1을 초과합니다. 분류 학습에는 클래스별 이미지 수에 따른 가중치가 적용됩니다. 적은 클래스의 이미지를 더 모으고 클래스별 평가 결과를 확인하세요.'
-                    : '다수 클래스와 소수 클래스 비율이 20:1을 초과합니다. 적은 클래스의 이미지와 라벨을 확인하고 클래스별 평가 결과를 검토하세요.')
-                  : (usesClassWeights
-                    ? 'Class ratio exceeds 20:1. Classification training uses weights from class image counts. Collect more minority-class images and review per-class evaluation results.'
-                    : 'Class ratio exceeds 20:1. Review minority-class images, labels and per-class evaluation results.')}
-              </p>
-            </div>
-          )}
 
           {/* Precision 3-Way Split Calibrator */}
           <div className="p-3 bg-[#1A212E] rounded-[4px] border border-[#2B3547] flex flex-col space-y-2.5">
@@ -838,11 +774,6 @@ export const DatasetStudio: React.FC = () => {
             </button>
             {metadataReady && splitUnavailableForTask && totalImages > 0 && (
               <p className="text-[11px] text-amber-300">{splitUnavailableHint}</p>
-            )}
-            {splitError && (
-              <div role="alert" className="text-[11px] text-red-200 bg-red-950/40 border border-red-700/60 rounded px-2 py-1.5">
-                {splitError}
-              </div>
             )}
             </div>
           </div>
@@ -990,10 +921,104 @@ export const DatasetStudio: React.FC = () => {
               )}
             </div>
           </div>
+          {hasSelectedFolder && <FieldReadinessPanel />}
+          {hasSelectedFolder && <SpecialistFamilyNote step={1} />}
         </aside>
+        </details>
 
         {/* Right Gallery Container */}
-        <main className="flex-1 flex flex-col bg-[#0B0E14] overflow-hidden">
+        <main data-dataset-gallery className="flex-1 min-h-0 min-w-0 flex flex-col bg-[#0B0E14] overflow-hidden">
+          <div className="modu-stage-summary shrink-0 max-h-[28%] overflow-y-auto">
+          {isSplitting && <p role="status" className="text-sm text-sky-200">{language === 'ko' ? '사진 분할을 저장하고 있습니다…' : 'Saving the photo split…'}</p>}
+          {/* Before-training checks from the import result: what will block training or step 4, and what is weak. */}
+          {hasSelectedFolder && checklist.length > 0 && (
+            <section aria-label="학습 전 점검" className="flex flex-wrap items-baseline gap-x-3 text-xs">
+              {simpleView && <p data-dataset-check-summary className="mb-1 text-amber-200">
+                {checklistSummary}
+                {' · '}{language === 'ko' ? `점검 ${checklist.length}개` : `${checklist.length} checks`}
+              </p>}
+              <details data-dataset-checklist open={full}>
+                <summary className="cursor-pointer text-slate-300">{language === 'ko' ? '학습 전 점검 자세히 보기' : 'Review all preparation checks'}</summary>
+              <ul className="space-y-1">
+                {checklist.map(check => (
+                  <li key={check.id} data-check={check.id} data-level={check.level}
+                    className={check.level === 'block' ? 'text-rose-200' : check.level === 'warn' ? 'text-amber-200' : 'text-emerald-200'}>
+                    <span aria-hidden="true">{check.level === 'block' ? '✕ ' : check.level === 'warn' ? '! ' : '✓ '}</span>{check.text}
+                  </li>
+                ))}
+              </ul>
+              </details>
+            </section>
+          )}
+
+          {metadataReady && split.train + split.val + split.test === 0 && totalImages > 0 && (
+            <div className="text-[11px] text-amber-300">
+              {language === 'ko' ? '분할을 아직 적용하지 않았습니다. 아래 비율은 적용 전 예상치입니다.' : 'Split not applied yet. Ratios below are estimates.'}
+            </div>
+          )}
+
+          {/* Corrupted Images Alert if any */}
+          {metadataReady && unlabeledImages > 0 && (
+            <div className="p-2.5 bg-amber-950/30 border border-amber-500/40 rounded text-xs text-amber-200">
+              원본 {sourceImages}장 중 주석 없는 {unlabeledImages}장은 갤러리에서만 보이며 학습 분할에서 제외됩니다.
+            </div>
+          )}
+          {metadataReady && task === 'segmentation' && !splitUnavailableForTask && classes.defect_mask && !classes.OK && !classes.good && (
+            <div className="p-2.5 bg-amber-950/30 border border-amber-500/40 rounded text-xs text-amber-200">
+              결함 주석만 확인되었습니다. 정상(OK) 이미지가 없으면 과검률과 양산 판정 품질을 검증할 수 없습니다.
+            </div>
+          )}
+          {!isLoading && !isProjectBusy && !sessionChanging && validation && (
+            <div role="status" className={validation.tone === 'ok'
+              ? 'p-2.5 bg-emerald-950/30 border border-emerald-500/40 rounded text-xs text-emerald-200'
+              : 'p-2.5 bg-amber-950/30 border border-amber-500/40 rounded text-xs text-amber-200'}>
+              {validation.text}
+            </div>
+          )}
+          {metadataReady && corruptedImages.length > 0 && (
+            <div className="p-2.5 bg-[#EF4444]/10 border border-[#EF4444]/40 rounded-[4px] text-xs text-red-200">
+              <div className="flex items-center space-x-1.5 font-semibold text-[#EF4444] mb-1">
+                <AlertTriangle className="w-4 h-4" />
+                <span>
+                  {language === 'ko'
+                    ? `손상된 이미지 ${corruptedImages.length}건 감지`
+                    : `${corruptedImages.length} Corrupted Images`}
+                </span>
+              </div>
+              <p className="text-[11px] text-red-300">
+                {language !== 'ko' ? (excludedUndecodable?.recorded ? 'Unreadable images were left out of training and splits; the files are unchanged.' : 'Unreadable images found; reopen the project and import again to leave them out.')
+                  : excludedUndecodable?.recorded
+                    ? `읽을 수 없는 이미지 ${excludedUndecodable.excluded.length}장을 학습·분할에서 뺐습니다 (원본 파일은 그대로): ${excludedUndecodable.excluded.slice(0, 5).join(', ')}${excludedUndecodable.excluded.length > 5 ? ' …' : ''}`
+                    : '읽을 수 없는 이미지가 있습니다. 프로젝트를 열고 다시 불러오면 학습에서 자동으로 빠집니다.'}
+              </p>
+            </div>
+          )}
+
+          {/* Class Imbalance Warning if > 20:1 */}
+          {metadataReady && isImbalanced && (
+            <div className="p-2.5 bg-[#F59E0B]/10 border border-[#F59E0B]/40 rounded-[4px] text-xs text-amber-200">
+              <div className="flex items-center justify-between mb-1">
+                <div className="flex items-center space-x-1.5 font-semibold text-[#F59E0B]">
+                  <AlertTriangle className="w-4 h-4" />
+                  <span>
+                    {language === 'ko' ? '극심한 클래스 불균형 (ERR_003)' : 'Class Imbalance Warning'}
+                  </span>
+                </div>
+              </div>
+              <p className="text-[11px] text-amber-300">
+                {language === 'ko'
+                  ? (usesClassWeights
+                    ? '다수 클래스와 소수 클래스 비율이 20:1을 초과합니다. 분류 학습에는 클래스별 이미지 수에 따른 가중치가 적용됩니다. 적은 클래스의 이미지를 더 모으고 클래스별 평가 결과를 확인하세요.'
+                    : '다수 클래스와 소수 클래스 비율이 20:1을 초과합니다. 적은 클래스의 이미지와 라벨을 확인하고 클래스별 평가 결과를 검토하세요.')
+                  : (usesClassWeights
+                    ? 'Class ratio exceeds 20:1. Classification training uses weights from class image counts. Collect more minority-class images and review per-class evaluation results.'
+                    : 'Class ratio exceeds 20:1. Review minority-class images, labels and per-class evaluation results.')}
+              </p>
+            </div>
+          )}
+
+{splitError && <div role="alert" className="text-xs text-red-200">{splitError}</div>}
+          </div>
           {importError && (
             <div role="alert" className="m-4 mb-0 p-3 bg-red-950/30 border border-red-500/40 rounded text-xs text-red-200">
               <div className="font-semibold mb-1">{language === 'ko' ? '데이터셋을 불러오지 못했습니다' : 'Could not import dataset'}</div>
@@ -1016,7 +1041,7 @@ export const DatasetStudio: React.FC = () => {
                 shopFloorTip="실제 검사 이미지 폴더를 선택하거나 기능 확인용 합성 데이터를 생성할 수 있습니다."
                 actions={[
                   {
-                    label: '검사 이미지 폴더 선택',
+                    label: browserWithoutPicker ? '폴더 경로 입력 열기' : '검사 이미지 폴더 선택',
                     icon: FolderOpen,
                     variant: 'primary',
                     loadingText: '폴더 선택 중...',
@@ -1040,8 +1065,11 @@ export const DatasetStudio: React.FC = () => {
               />
             </div>
           )}
+          <p className="sr-only" title={folderPath}>
+            {language === 'ko' ? `원본 ${sourceImages}장 · 학습 가능 ${totalImages}장 · 클래스 ${classEntries.length}개` : `${sourceImages} source photos · ${totalImages} trainable · ${classEntries.length} classes`}
+          </p>
           {/* Gallery Filter & Grid Density Toolbar */}
-          <div className="px-4 py-2 bg-[#131822] border-b border-[#2B3547] flex flex-wrap items-center justify-between gap-3 text-xs">
+          <div className="modu-stage-toolbar px-4 py-2 bg-[#131822] border-b border-[#2B3547] flex flex-wrap items-center justify-between gap-3 text-xs">
             <div className="flex flex-wrap items-center gap-1.5">
               {[
                 { id: 'all', labelKo: `전체 (${sourceImages})`, labelEn: `All (${sourceImages})` },
@@ -1096,6 +1124,12 @@ export const DatasetStudio: React.FC = () => {
               )}
             </div>
 
+            <div className="flex flex-wrap items-center gap-3" aria-label={language === 'ko' ? '클래스 필터' : 'Class filter'}>
+              {classEntries.map(([name, count]) => <button key={name} type="button" aria-pressed={activeClassFilter === name}
+                onClick={() => setClassFilter(activeClassFilter === name ? null : name)} className="text-sm text-slate-300 hover:text-slate-100">
+                {name} {count}
+              </button>)}
+            </div>
             {/* Density Toggle + Sensor Scale + Pagination */}
             <div className="flex items-center space-x-4 text-slate-400">
               {/* Defect Physical Scale Indicator (μm unit) */}
@@ -1185,9 +1219,9 @@ export const DatasetStudio: React.FC = () => {
                       onClick={() => void handleOpenImage(img.image_id, img.file_path)}
                       disabled={openingImageId !== null}
                       aria-label={language === 'ko' ? `${img.file_name} 라벨링에서 열기` : `Open ${img.file_name} in Labeling Studio`}
-                      className="group bg-[#1A212E] rounded-[4px] border border-[#2B3547] hover:border-[#3B82F6] hover:bg-[#222B3D] overflow-hidden transition-tactile flex flex-col cursor-pointer select-none text-left disabled:opacity-60 disabled:cursor-wait"
+                      className="group rounded-[4px] border border-transparent hover:border-[#3B82F6] overflow-hidden transition-tactile flex flex-col cursor-pointer select-none text-left disabled:opacity-60 disabled:cursor-wait"
                     >
-                      <div className="relative aspect-square bg-[#0B0E14] overflow-hidden flex items-center justify-center border-b border-[#2B3547]">
+                      <div className="relative w-full bg-[#0B0E14] overflow-hidden flex items-center justify-center" style={{ aspectRatio: w > 0 && h > 0 ? `${w} / ${h}` : '4 / 3' }}>
                         <ScopedDatasetThumbnail
                           path={img.thumbnail_url}
                           authority={sourceAuthority!}
@@ -1197,10 +1231,10 @@ export const DatasetStudio: React.FC = () => {
                           onLoad={(e) =>
                             handleImageLoad(img.file_path, e.currentTarget.naturalWidth, e.currentTarget.naturalHeight)
                           }
-                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-100"
+                          className="w-full h-full object-contain"
                         />
                         {/* Split Badge */}
-                        <span
+                        {full && <span
                           className={`absolute top-1 left-1 text-[8px] font-mono font-bold px-1 py-0.5 rounded-[2px] uppercase tracking-wider ${
                             img.split === 'train'
                               ? 'bg-[#3B82F6] text-white'
@@ -1212,9 +1246,9 @@ export const DatasetStudio: React.FC = () => {
                           }`}
                         >
                           {language === 'ko' ? (SPLIT_BADGE_KO[img.split] ?? img.split) : img.split}
-                        </span>
+                        </span>}
                         {/* Resolution Hover Overlay / Badge */}
-                        <span className="absolute bottom-1 right-1 font-mono tabular-nums text-[9px] bg-[#0B0E14]/90 text-slate-200 px-1 py-0.5 rounded-[2px] border border-[#2B3547] opacity-80 group-hover:opacity-100 transition-opacity">
+                        <span className={`${simpleView ? 'hidden' : ''} absolute bottom-1 right-1 font-mono tabular-nums text-[9px] bg-[#0B0E14]/90 text-slate-200 px-1 py-0.5 rounded-[2px] border border-[#2B3547] opacity-80 group-hover:opacity-100 transition-opacity`}>
                           {resBadge}
                         </span>
                         {/* Detailed L Mode Hover HUD */}
@@ -1225,8 +1259,8 @@ export const DatasetStudio: React.FC = () => {
                           </div>
                         )}
                       </div>
-                      <div className="p-1.5 bg-[#131822] flex flex-col justify-between flex-1">
-                        <span className="text-[11px] font-mono text-slate-300 truncate block" title={img.file_name}>
+                      <div className="py-2 flex items-center justify-between gap-2 w-full">
+                        <span className="text-sm text-slate-300 truncate block" title={img.file_name}>
                           {img.file_name}
                         </span>
                         {img.label && (
@@ -1239,8 +1273,8 @@ export const DatasetStudio: React.FC = () => {
                             <span
                               className={`text-[10px] font-semibold px-1 py-0.2 rounded-[2px] truncate ${
                                 isNormal
-                                  ? 'bg-emerald-950/80 text-emerald-400 border border-emerald-800/50'
-                                  : 'bg-rose-950/80 text-rose-400 border border-rose-800/50'
+                                  ? 'text-emerald-400'
+                                  : 'text-rose-400'
                               }`}
                             >
                               {img.label}

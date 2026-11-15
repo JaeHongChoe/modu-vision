@@ -1,3 +1,4 @@
+import {openWorkspaceSettings} from './fixtures/workspaceSettings';
 import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
@@ -85,14 +86,15 @@ async function exercise(page:Page,workspace:Workspace,evidence:Evidence,api:Api,
   await expect(undo()).toBeDisabled();await expect(redo()).toBeEnabled();
  };
  phase='same_context_history';await deleteUndo();
- const taskButton=page.getByRole('button',{name:'작업 센터',exact:true});
+ const taskButton=page.getByRole('button',{name:'작업 센터 · 진행 중인 작업',exact:true});
+ await openWorkspaceSettings(page);
  const taskResponse=page.waitForResponse(response=>new URL(response.url()).pathname==='/api/training-workspace/tasks'&&response.request().method()==='GET');
  await taskButton.click();const taskWire=await taskResponse;expect(taskWire.ok()).toBe(true);const taskSnapshot=await taskWire.json();
  expect(taskSnapshot).toMatchObject({source_dataset_path:workspace.dataset,labelset_id:A.project.active_labelset_id||'default',tasks:[]});
  const taskDialog=page.getByRole('dialog',{name:'작업 센터',exact:true});
  await expect(taskDialog.getByLabel('저장 작업 다시 열기',{exact:true}).locator('option')).toHaveCount(1);
  await expect(taskDialog.getByText('작업 센터 · 현재 프로젝트 0개',{exact:true})).toBeVisible();
- await taskDialog.getByRole('button',{name:'작업 센터 닫기',exact:true}).click();await expect(taskButton).toBeFocused();
+ await taskDialog.getByRole('button',{name:'작업 센터 닫기',exact:true}).click();await expect(page.locator('summary').filter({hasText:'설정·도구'})).toBeFocused();
  await expect(redo()).toBeEnabled();await page.keyboard.press('Control+Shift+z');
  await expect(page.locator('[data-flow-node-id="roi-A"]')).toHaveCount(0);await expect(page.locator('path[data-flow-edge]')).toHaveCount(1);
  await page.keyboard.press('Control+z');await matches(A.record);await readback('empty_task_center_preserves_original_redo');expect(writes).toEqual([]);

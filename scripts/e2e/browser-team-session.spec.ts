@@ -1,3 +1,4 @@
+import {openWorkspaceSettings} from './fixtures/workspaceSettings';
 import path from 'node:path';
 import fs from 'node:fs';
 import crypto from 'node:crypto';
@@ -57,7 +58,7 @@ test('browser HTTPS cookie login opens authorized flow and role revocation refus
     const storage=await page.evaluate(()=>JSON.stringify({local:{...localStorage},session:{...sessionStorage}}));
     for(const secret of [password,administrator.token,server.backend.token])expect(storage).not.toContain(secret);
     expect(storage).not.toMatch(/\"(?:token|csrf_token|password)\"\s*:/);
-    await page.getByRole('button',{name:'서버 관리',exact:true}).click();
+    await openWorkspaceSettings(page); await page.getByRole('button',{name:'서버 관리',exact:true}).click();
     await page.getByLabel('공동 작업 서버 연결 해제', {exact:true}).click();
     await expectBrowserLoginGate(page,server.origin);
     await expect(page.getByLabel('공유 계정 이름', {exact: true})).toBeVisible();

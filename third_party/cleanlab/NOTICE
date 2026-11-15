@@ -1,0 +1,4 @@
+Selected normalized-margin algorithm from cleanlab 2.9.0.
+Upstream project: cleanlab (Cleanlab Inc.). Licensed under Apache License 2.0.
+Upstream wheel contains no separate NOTICE file.
+Modified for Modu Vision: NumPy-only selected-function port, no package-level imports; strict saved-evidence validation and immutable advisory review workflow live outside the port. This is not the complete cleanlab product.

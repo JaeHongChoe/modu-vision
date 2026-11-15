@@ -1,0 +1,38 @@
+{
+  "schema_version": 1,
+  "scope": "real_source_cli_cpu_rotation_synthetic_smoke",
+  "returncode": 0,
+  "requested_epochs": 20,
+  "completed_epochs": 20,
+  "gpu_used": false,
+  "downloaded_weights": false,
+  "public_distribution_approved": false,
+  "model_quality_approved": false,
+  "terminal_run_sha256": "7960d76f205ebdbde9ce0ac571dcf34a570c173ae40602eed3a1fdf36c5e958f",
+  "terminal_run_status": "completed",
+  "trial_id": "60583496ec504b83ad41fd40c6903d4e",
+  "result": {
+    "cpu_demo": "completed",
+    "prepared_id": "288887e1683247c7b076f1819688debf",
+    "run_id": "d5be2f08a3f04aa781ea3535c7a42438",
+    "evaluated_split": "test",
+    "test_images": 16,
+    "angular_mae_deg": 1.8511409759521484,
+    "within_10_deg": 1.0,
+    "checkpoint_sha256": "7808a5a671b9a458045dd2130db90d0713ae9c4ad3ed78c5509871f8da8b4374",
+    "delivered_files": [
+      "artifacts.json",
+      "configuration.json",
+      "evaluation.json",
+      "model.pt",
+      "model_meta.json"
+    ]
+  },
+  "original_receipt_sha256": "f4708de56cbe28c5582e44ca255f9696daccd232c1d9a09d77dc6b916a9c371f",
+  "limitations": [
+    "Synthetic source-CLI CPU rotation only; not the frozen package.",
+    "No customer or human usability acceptance; no qualification of other model families.",
+    "Heldout test16, train120, val16; all152 synthetic images; no downloaded weights or GPU."
+  ],
+  "source_stage": "1999401b plus candidate changes; annotation alias fix was applied after this model execution, unrelated model code unchanged."
+}

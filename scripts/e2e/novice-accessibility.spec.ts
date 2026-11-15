@@ -1,0 +1,83 @@
+import {openWorkspaceSettings} from './fixtures/workspaceSettings';
+import AxeBuilder from '@axe-core/playwright';
+import type {Page} from '@playwright/test';
+import {expect,test} from './fixtures/test';
+
+async function scan(page:Page,selector:string) {
+  return new AxeBuilder({page}).include(selector).withTags(['wcag2a','wcag2aa','wcag21aa']).analyze();
+}
+
+test('terminology help is keyboard accessible, stays in the viewport and returns focus',async({page,request,renderer,evidence})=>{
+  page.setDefaultTimeout(20_000);
+  expect((await request.post(`${renderer.origin}/api/project/create`,{data:{name:'Terminology keyboard QA',task:'classification'}})).ok()).toBe(true);
+  await page.goto(renderer.url);
+  await expect(page.getByRole('button',{name:'Terminology keyboard QA'}).first()).toBeVisible();
+  await page.getByRole('button',{name:'03 모델 학습',exact:false}).first().click();
+  const help=page.getByRole('button',{name:/^용어 설명:.*학습률/}).first();
+  await expect(help).toBeVisible();
+  await help.focus();
+  await page.keyboard.press('Enter');
+  const popup=page.getByRole('dialog',{name:/학습률.*용어 설명/});
+  await expect(popup).toBeVisible();
+  await expect(popup.getByRole('button',{name:'용어 설명 닫기',exact:true})).toBeFocused();
+  const result=await scan(page,'[data-jargon-popover]');
+  evidence.note('terminologyAxe',result);
+  expect(result.violations).toEqual([]);
+  await evidence.screenshot(page,'terminology-keyboard');
+  await page.keyboard.press('Escape');
+  await expect(popup).not.toBeVisible();
+  await expect(help).toBeFocused();
+  await page.keyboard.press('Space');
+  await expect(popup).toBeVisible();
+  await popup.getByRole('button',{name:'용어 설명 닫기',exact:true}).click();
+  await expect(help).toBeFocused();
+  await page.setViewportSize({width:1100,height:780});
+  await help.click();
+  await expect(popup).toBeInViewport({ratio:1});
+  await page.keyboard.press('Escape');
+  await openWorkspaceSettings(page); await page.getByRole('button',{name:'어두운 화면',exact:true}).click();
+  await help.focus();
+  await page.keyboard.press('Enter');
+  await expect(popup).toBeInViewport({ratio:1});
+  const darkResult=await scan(page,'[data-jargon-popover]');
+  evidence.note('terminologyCompactDarkAxe',darkResult);
+  expect(darkResult.violations).toEqual([]);
+  await evidence.screenshot(page,'terminology-compact-dark');
+  await page.keyboard.press('Escape');
+  await expect(help).toBeFocused();
+  const presets=page.getByRole('button',{name:/빠른 시험 학습/});
+  await expect(presets).toBeEnabled();
+  evidence.note('scope','Owned renderer/backend, keyboard help only. No training, GPT or real-user acceptance. Axe scope is the terminology popup, not a whole-product accessibility certification.');
+});
+
+test('novice entry and explicit purpose form have named controls and readable contrast',async({page,request,renderer,evidence})=>{
+  page.setDefaultTimeout(20_000);
+  expect((await request.post(`${renderer.origin}/api/project/create`,{data:{name:'Accessible novice QA',task:'classification'}})).ok()).toBe(true);
+  await page.goto(renderer.url);
+  await expect(page.getByRole('button',{name:'Accessible novice QA'}).first()).toBeVisible();
+  await page.getByRole('button',{name:'간단히 보기',exact:true}).click();
+  await openWorkspaceSettings(page); await page.getByRole('button',{name:'처음 시작 안내',exact:true}).click();
+  const welcome=page.getByRole('dialog',{name:'처음 시작하기'});
+  await expect(welcome).toBeVisible();
+  await expect.poll(()=>page.evaluate(()=>document.getAnimations().filter(a=>a instanceof CSSTransition&&a.playState==='running').length)).toBe(0);
+  const entryResult=await scan(page,'[role="dialog"]');
+  evidence.note('entryAxe',entryResult);
+  expect(entryResult.violations).toEqual([]);
+  await welcome.getByRole('button',{name:'내 사진으로 만들기',exact:true}).click();
+  const project=page.getByRole('dialog',{name:'프로젝트 관리'});
+  await project.getByLabel(/프로젝트 이름/).fill('접근성 확인용 검사');
+  await project.getByRole('radio',{name:/정확한 모양 표시하기/}).check();
+  const purposeResult=await scan(page,'[role="dialog"]');
+  evidence.note('purposeAxe',purposeResult);
+  expect(purposeResult.violations).toEqual([]);
+  await evidence.screenshot(page,'pilot-purpose-accessible');
+  await page.keyboard.press('Escape');
+  await page.getByRole('button',{name:'AI 만들기',exact:true}).click();
+  await page.getByRole('button',{name:/모델 학습/}).first().click();
+  await expect(page.getByLabel('선택 모델 안내')).toContainText('필요한 자료');
+  const catalogResult=await scan(page,'[aria-label="모델 학습 허브"]');
+  evidence.note('catalogAxe',catalogResult);
+  expect(catalogResult.violations).toEqual([]);
+  await evidence.screenshot(page,'pilot-model-guidance');
+  evidence.note('scope','Owned browser/backend; named controls and automated WCAG A/AA checks only for the welcome, purpose dialog and model catalog. Human usability and model execution are not measured.');
+});

@@ -139,3 +139,13 @@ test('basic-flow preview callback is inert while loading or busy', () => {
     basic.props.onClick(); assert.equal(count,0);
   }
 });
+
+test('the model and rules get the working width while save and review remain compact and visible',()=>{
+  const tree=render();
+  const list=nodes(tree).find(n=>n.type==='ol');
+  assert.match(list.props.className,/sm:grid-cols-6/);
+  assert.match(stages(tree)[0].props.className,/sm:col-span-3/);
+  assert.match(stages(tree)[1].props.className,/sm:col-span-3/);
+  for(const stage of stages(tree).slice(2)) assert.match(stage.props.className,/sm:col-span-2/);
+  assert.ok(nodes(tree).some(n=>n.type==='header'&&n.props.className==='modu-stage-header'));
+});

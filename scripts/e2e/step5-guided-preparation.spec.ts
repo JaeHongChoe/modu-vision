@@ -70,7 +70,7 @@ test('guided Step 5 preserves advanced edits and makes evaluation prerequisites 
   await expect(page.getByTitle('프로젝트 관리',{exact:true})).toContainText(project.name);
   // The shared fixture starts full view. Use the real product toggle to select the beginner surface.
   await page.getByRole('button',{name:'간단히 보기',exact:true}).click();
-  await page.getByRole('navigation',{name:'Workflow Stages'}).getByRole('button').nth(4).click();
+  await page.getByRole('navigation',{name:'Workflow Stages'}).getByRole('button',{name:'검사 사용',exact:true}).click();
   const prepare=page.getByRole('region',{name:'검사 준비',exact:true});
   await expect(prepare).toBeVisible();await expect(prepare).toHaveAttribute('aria-busy','false');
   await expect(prepare.getByRole('heading',{name:'검사 준비',exact:true})).toBeVisible();
@@ -215,7 +215,7 @@ test('all-unknown saved evaluation keeps truth review required and enhancement m
   });
   await page.goto(renderer.url);await expect(page.getByTitle('프로젝트 관리',{exact:true})).toContainText(project.name);
   await page.getByRole('button',{name:'간단히 보기',exact:true}).click();
-  await page.getByRole('navigation',{name:'Workflow Stages'}).getByRole('button').nth(4).click();
+  await page.getByRole('navigation',{name:'Workflow Stages'}).getByRole('button',{name:'검사 사용',exact:true}).click();
   const prepare=page.getByRole('region',{name:'검사 준비',exact:true});
   await expect(prepare).toHaveAttribute('aria-busy','false');
   await expect(prepare.getByText('영상 개선 보조 모델',{exact:true})).toBeVisible();

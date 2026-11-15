@@ -13,7 +13,7 @@ const graphSha=(graph:any)=>sha(JSON.stringify(stable(graph)));
 
 async function enterLegacyEditor(page:Page,project:{name:string;task:string}){
  await expect(page.getByTitle('프로젝트 관리',{exact:true})).toHaveText(project.name);
- const task=page.getByRole('combobox',{name:'검사 작업 종류',exact:true});
+ const task=page.getByLabel('검사 작업 종류',{exact:true});
  await expect(task).toHaveValue(project.task);
  await expect(task).toBeEnabled();
  const stage=page.getByRole('navigation',{name:'Workflow Stages'}).getByRole('button').nth(4);

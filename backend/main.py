@@ -55,6 +55,8 @@ def _compat_httpx_init(self, *args, app=None, **kwargs):
     return _orig_httpx_init(self, *args, **kwargs)
 httpx.Client.__init__ = _compat_httpx_init
 
+from backend.api.routes_automation import router as automation_router
+from backend.automation.catalog import is_catalog_metadata
 from backend.api.routes_annotation import router as annotation_router
 from backend.api.routes_compute import router as compute_router
 from backend.api.routes_dataset import router as dataset_router
@@ -106,6 +108,7 @@ from backend.api.routes_mask_exchange import router as mask_exchange_router
 from backend.api.routes_class_rename import router as class_rename_router
 from backend.api.routes_artifacts import router as artifacts_router
 from backend.api.routes_dicom import router as dicom_router
+from backend.api.routes_local_trace import router as local_trace_router
 from backend.api.routes_report import router as report_router
 from backend.api.routes_training import router as training_router, training_job_manager
 from backend.api.websocket_telemetry import broadcaster, router as telemetry_router
@@ -140,7 +143,7 @@ class ProjectContextMiddleware:
 
     async def __call__(self, scope, receive, send):
         path = scope.get('path', '')
-        if scope['type'] not in {'http', 'websocket'} or is_task_preparation(path, scope.get('method')) or path == '/health' or path.startswith('/api/accounts/') or (path.startswith('/api/local-host/') and getattr(self.project_app.state,'local_host',None) is not None) or scope.get('method') == 'OPTIONS':
+        if scope['type'] not in {'http', 'websocket'} or is_task_preparation(path, scope.get('method')) or is_catalog_metadata(path, scope.get('method')) or path == '/health' or path.startswith('/api/accounts/') or (path.startswith('/api/local-host/') and getattr(self.project_app.state,'local_host',None) is not None) or scope.get('method') == 'OPTIONS':
             return await self.app(scope, receive, send)
         scope.setdefault('app', self.project_app)
         state = scope.setdefault('state', {})
@@ -179,9 +182,16 @@ class ProjectContextMiddleware:
         # as `via: assistant` beside the person's own actor (attribution only, the role check above is unchanged).
         from backend.engine import assistant_run
         run_token = assistant_run.bind(assistant_run.run_id_from_headers(Headers(scope=scope)))
+        from backend.engine.local_trace import begin_request_trace
+        trace_observation = begin_request_trace(scope)
+        trace_status = None
+        trace_failed = False
+        trace_cancelled = False
         held_start = None
         selected_body = bytearray()
         async def emit_start(message):
+            nonlocal trace_status
+            trace_status = message.get('status')
             context = state.get('project_context')
             if context:
                 import json
@@ -213,7 +223,13 @@ class ProjectContextMiddleware:
             await send(message)
         try:
             await self.app(scope, receive, contextual_send)
+        except BaseException as cause:
+            trace_failed = True
+            trace_cancelled = isinstance(cause, asyncio.CancelledError)
+            raise
         finally:
+            if trace_observation is not None:
+                trace_observation.end('cancelled' if trace_cancelled else 'error' if trace_failed or trace_status is None or trace_status >= 400 else 'ok', trace_status)
             assistant_run.reset(run_token)
             current_project_context.reset(token)
 
@@ -351,7 +367,7 @@ class ProjectStorageScopeMiddleware:
 
     @observe_storage_scope
     async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
-        if scope["type"] != "http" or is_task_preparation(scope.get('path',''), scope.get('method')) or scope.get('path','').startswith('/api/accounts/') or (scope.get('path','').startswith('/api/local-host/') and getattr(self.project_app.state,'local_host',None) is not None) or scope.get("path") in {
+        if scope["type"] != "http" or is_task_preparation(scope.get('path',''), scope.get('method')) or is_catalog_metadata(scope.get('path',''), scope.get('method')) or scope.get('path','').startswith('/api/accounts/') or (scope.get('path','').startswith('/api/local-host/') and getattr(self.project_app.state,'local_host',None) is not None) or scope.get("path") in {
             "/health", "/api/project/create", "/api/project/open",
             "/api/project/compatibility/preview", "/api/project/compatibility/apply",
             "/api/project/compatibility/recover", "/api/project/compatibility/global-preview",
@@ -570,7 +586,7 @@ def _admitted_create_app(project_dir: Optional[str] = None, shared_auth_dir: Opt
         "allow_origins": ["http://127.0.0.1:5173", "http://localhost:5173", "null"],
         "allow_credentials": False,
         "allow_methods": ["*"],
-        "allow_headers": ["Content-Type", "X-Vision-Token", "Authorization", "X-Vision-Project", "X-Vision-Context"],
+        "allow_headers": ["Content-Type", "X-Vision-Token", "Authorization", "X-Vision-Project", "X-Vision-Context", "traceparent", "X-Vision-Trace-Scope"],
         "expose_headers": ["X-Vision-Context"],
     }
     configured_origins = os.environ.get("MODU_BROWSER_ORIGINS", "")
@@ -744,7 +760,9 @@ def _admitted_create_app(project_dir: Optional[str] = None, shared_auth_dir: Opt
     app.include_router(inspections_router)
     app.include_router(export_router)
     app.include_router(report_router)
+    app.include_router(local_trace_router)
     app.include_router(telemetry_router)
+    app.include_router(automation_router)
 
     app.add_middleware(OwnedWorkAdmissionMiddleware, admission=app.state.owned_work_admission)
     from backend.engine.original_current_project_request import bind_current_project_request

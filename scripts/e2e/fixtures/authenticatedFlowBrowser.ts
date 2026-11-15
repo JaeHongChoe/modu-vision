@@ -87,7 +87,7 @@ export async function authenticatedFlowBrowser(inputs:Inputs,
       // No saved-source restore runs on an ambient cookie before the normal gate login.
       const datasetReady=async()=>{
         await expect(page.getByRole('button',{name:/ 라벨링에서 열기$/}).first()).toBeVisible({timeout:10_000});
-        await expect(page.getByRole('button',{name:'데이터셋 폴더 열기',exact:true})).toBeEnabled({timeout:10_000});
+        await expect(page.getByRole('button',{name:'폴더 경로로 가져오기',exact:true})).toBeEnabled({timeout:10_000});
       };
       await page.getByLabel('공유 계정 이름',{exact:true}).fill(username);
       await page.getByLabel('공유 계정 비밀번호',{exact:true}).fill(password);

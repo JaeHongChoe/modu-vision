@@ -1,3 +1,5 @@
 # Evidence receipts are hashed as exact bytes. Do not rewrite their line endings
 # during checkout on Windows or any other platform.
 docs/verification/receipts/*.json -text
+# Vendored license text keeps the original CRLF bytes inside the aggregate.
+public/third-party/radix-popover/LICENSES.txt -text whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol

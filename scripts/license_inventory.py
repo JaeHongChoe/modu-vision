@@ -33,7 +33,7 @@ PYTHON_OPTIONAL = {'dicom': 'backend/requirements-dicom.txt', 'openvino': 'backe
 REMOTE_WORKER_LOCK = 'build/remote/requirements-models.lock'
 REMOTE_WORKER_DOCKERFILE = 'build/remote/Dockerfile'
 CACHED_WEIGHTS = 'build/remote/cache_weights.py'
-DISTRIBUTED_THIRD_PARTY = ('npm_runtime', 'npm_bundled_build_output', 'electron_runtime', 'python_runtime')
+DISTRIBUTED_THIRD_PARTY = ('npm_runtime', 'npm_bundled_build_output', 'electron_runtime', 'python_runtime', 'vendored_source')
 # npm packages whose own code is emitted into the renderer bundle by the build.
 BUNDLED_BUILD_OUTPUT = {'tailwindcss': 'base styles in the built CSS', 'vite': 'module preload helper in the built JS'}
 
@@ -634,13 +634,29 @@ CONDITIONS = [
 ]
 
 
+def _vendored_components(root: Path) -> list[dict]:
+    """Selected source is distributed even though no full wheel is installed."""
+    source = root / 'backend/vendor/cleanlab/__init__.py'
+    if not source.exists(): return []
+    folder = root / 'third_party/cleanlab'
+    provenance = json.loads((folder / 'provenance.json').read_text(encoding='utf-8'))
+    texts = {name: _sha256(folder / name) for name in ('LICENSE', 'NOTICE', 'provenance.json')}
+    if not all(texts.values()): raise ValueError('Vendored cleanlab license/provenance is missing')
+    return [{'category': 'vendored_source', 'name': 'cleanlab-normalized-margin',
+             'version': provenance['version'], 'license': provenance['license'],
+             'source': provenance['source_url'], 'distribution': 'source_and_installer',
+             'notices_required': True, 'bundled': True, 'status': license_status(provenance['license']),
+             'source_sha256': _sha256(source), 'license_files': texts,
+             'scope': 'Selected modified NumPy-only normalized-margin algorithm; not the full cleanlab product'}]
+
+
 def build_inventory(root: Path = ROOT, *, frozen_build: Path | None = None, pyz_toc: Path | None = None) -> dict:
     root = Path(root).resolve()
     notes: list[str] = []
     python_components, python_notes, unsatisfied = _python_components(root)
     notes.extend(python_notes)
     components = (_first_party_components(root, notes) + _npm_components(root) + python_components
-                  + _remote_worker_components(root) + _weight_components(root))
+                  + _remote_worker_components(root) + _weight_components(root) + _vendored_components(root))
     frozen_receipt = {'scanned': False, 'reason': 'pass --frozen-build to inventory a built backend'}
     if frozen_build:
         frozen, frozen_receipt = scan_frozen_build(Path(frozen_build), pyz_toc)
@@ -690,6 +706,9 @@ def check_notices(receipt: dict, text: str, root: Path = ROOT) -> list[str]:
         if item['category'] in ('npm_runtime', 'npm_bundled_build_output', 'electron_runtime') and item['notices_required']:
             if f'| {item["name"]} | {item["version"]} |' not in text:
                 missing.append(f'{item["category"]}:{item["name"]}')
+        if item['category'] == 'vendored_source' and item['notices_required']:
+            if f'| {item["name"]} | {item["version"]} |' not in text:
+                missing.append(f'vendored_source:{item["name"]}')
     for line in _requirement_lines(root / PYTHON_RUNTIME):
         name = _canonical(re.match(r'^[A-Za-z0-9][A-Za-z0-9._-]*', line).group(0))
         if f'| {name} |' not in text:
@@ -725,6 +744,10 @@ def render_notices(receipt: dict) -> str:
         '| Pretendard Std (variable woff2, Latin only; kept, no longer declared) | 1.3.9 | SIL Open Font License 1.1 (`public/fonts/PRETENDARD-LICENSE.txt`) | resolved | https://github.com/orioncactus/pretendard/releases/tag/v1.3.9 |', '',
         '## Electron runtime', '', *_table(by('electron_runtime')), '',
         '## Renderer runtime (npm)', '', *_table(by('npm_runtime')), '',
+        '## Selected embedded source', '', *_table(by('vendored_source')), '',
+        'The selected cleanlab algorithm is modified and attributed in `third_party/cleanlab/NOTICE`; '
+        'its original Apache-2.0 license and source hashes ship with source, web and frozen backend resources. '
+        'The complete cleanlab package is not bundled.', '',
         '## Build tools whose code is emitted into the renderer bundle', '', *_table(by('npm_bundled_build_output')), '',
         f'## Python backend runtime (inventory interpreter: Python {environment["python"]} on {environment["platform"]})', '',
         f'Python dependencies are not locked. This interpreter {satisfied} `requirements.txt`; the list below is the '

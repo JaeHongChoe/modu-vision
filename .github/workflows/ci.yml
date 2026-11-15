@@ -121,6 +121,7 @@ jobs:
           backend/tests/test_required_flow_current_source_cohort.py
           backend/tests/test_split_seed_order.py
           backend/tests/test_annotation_save_source_spelling.py
+          backend/tests/test_annotation_load_source_spelling.py
           backend/tests/test_annotation_recovery.py
           backend/tests/test_service_release_eligibility.py
           backend/tests/test_fleet_emergency_rollback.py

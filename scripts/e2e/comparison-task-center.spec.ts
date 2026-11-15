@@ -168,7 +168,7 @@ async function exercise(page: Page, workspace: Workspace, evidence: Evidence, ap
   const queue=await api('/api/data-workbench/review-queues',{comparison_id:secondJob.report_id,threshold:.5,margin:.05});
   expect(queue.items.length).toBeGreaterThan(0);
   await page.getByRole('navigation',{name:'Workflow Stages'}).getByRole('button').nth(1).click();
-  await page.locator('summary').filter({hasText:'저장 검토 큐 · 오류·불일치·임계값 우선'}).click();
+  await page.locator('summary').filter({hasText:'저장 검토 큐 · 오류·불일치·라벨 재확인'}).click();
   const reviewQueue=page.getByRole('region',{name:'저장된 검토 큐'});
   await reviewQueue.getByLabel('저장 검토 큐 선택').selectOption(queue.id);await reviewQueue.getByRole('button',{name:'현재 항목 열기',exact:true}).click();
   await expect(reviewQueue.getByRole('button',{name:'검토 완료 · 다음',exact:true})).toBeEnabled();

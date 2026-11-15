@@ -8,7 +8,7 @@ async function project(request:import('@playwright/test').APIRequestContext,orig
  const created=await request.post(`${origin}/api/project/create`,{data:{name:'S110 workspace',task:'classification'}});expect(created.ok()).toBe(true);
 }
 
-test('a plain browser explains that it cannot open a folder dialog, and paths are typed in',async({page,request,renderer,evidence})=>{
+test('a plain browser offers a typed folder path and explains native picker limits',async({page,request,renderer,evidence})=>{
  await project(request,renderer.origin);
  await page.goto(renderer.url);
  await expect(page.getByRole('navigation',{name:'프로젝트 작업 공간'})).toBeVisible();
@@ -17,9 +17,15 @@ test('a plain browser explains that it cannot open a folder dialog, and paths ar
  // was raised in (a scope change hides it). Click once this project is the current one: a CI run clicked while
  // /api/project/current was still answering, and the notice raised in the empty scope was hidden when the project arrived.
  await expect(page.getByRole('button',{name:'S110 workspace'}).first()).toBeVisible();
- // the dataset step's folder button answers instead of doing nothing
- await page.getByRole('button',{name:'데이터셋 폴더 열기'}).click();
- await expect(page.getByRole('alert').filter({hasText:'브라우저에서는 폴더·파일 선택 창을 열 수 없습니다'})).toBeVisible();
+ // The public folder action explains the browser limitation and opens a server-readable path form.
+ const importPath=page.getByRole('main').locator('#workflow-data');
+ await expect(importPath).toHaveAccessibleName('폴더 경로로 가져오기');await importPath.click();
+ const pathInput=page.getByRole('main').getByRole('textbox',{name:'이미지 폴더 경로',exact:true});
+ await expect(pathInput).toBeVisible();
+ const pathForm=pathInput.locator('xpath=ancestor::form');
+ await expect(pathForm).toContainText('브라우저에서는 폴더 선택 창을 열 수 없습니다.');
+ await expect(pathForm).toContainText('백엔드가 읽을 수 있는 폴더 경로');
+ await expect(pathForm.getByRole('button',{name:'경로로 불러오기',exact:true})).toBeDisabled();
  await page.getByRole('button',{name:'S110 workspace'}).first().click();
  const dialog=page.getByRole('dialog',{name:'프로젝트 관리'});await expect(dialog).toBeVisible();
  await dialog.getByRole('button',{name:'새 프로젝트'}).click();

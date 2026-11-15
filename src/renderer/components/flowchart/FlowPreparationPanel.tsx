@@ -39,9 +39,9 @@ export function FlowPreparationPanel(props:FlowPreparationPanelProps) {
   ];
   return <section aria-label="검사 준비" tabIndex={-1} aria-busy={locked}
     className="min-w-0 shrink-0 space-y-4 p-4 text-sm text-[var(--workspace-text)]">
-    <div className="flex min-w-0 flex-wrap items-start justify-between gap-3">
+    <header className="modu-stage-header">
       <div className="min-w-0 space-y-1">
-        <h2 className="text-base font-semibold">{editing?'검사 준비':area==='evaluate'?'시험 이미지로 검사 확인':area==='test'?'선택 이미지 시험':'실행 전 확인'}</h2>
+        <h2>{editing?'검사 준비':area==='evaluate'?'시험 이미지로 검사 확인':area==='test'?'선택 이미지 시험':'실행 전 확인'}</h2>
         <p className="text-[var(--workspace-muted)]">4단계에서 확인한 모델에 판정 기준을 더해 실제 검사 순서를 준비합니다.</p>
       </div>
       <div className="flex flex-wrap gap-2">
@@ -50,12 +50,12 @@ export function FlowPreparationPanel(props:FlowPreparationPanelProps) {
         <button type="button" className="workspace-button" disabled={locked}
           onClick={guarded(props.onAdvanced)}>고급 편집</button>
       </div>
-    </div>
+    </header>
 
-    <ol aria-label="검사 준비 순서" className={editing?'grid min-w-0 grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-5':'flex min-w-0 flex-wrap gap-2'}>
+    <ol aria-label="검사 준비 순서" className={editing?'grid min-w-0 grid-cols-1 gap-3 sm:grid-cols-6':'flex min-w-0 flex-wrap gap-2'}>
       {stages.map((stage,index)=><li key={stage.id} data-preparation-stage={stage.id}
         aria-current={index===current?'step':undefined}
-        className={editing?'workspace-record space-y-2':'min-w-0 rounded border border-[var(--workspace-border)] px-3 py-2'}
+        className={editing?`workspace-record space-y-2 ${index<2?'sm:col-span-3':'sm:col-span-2'}`:'min-w-0 rounded border border-[var(--workspace-border)] px-3 py-2'}
         style={index===current?{borderColor:'var(--workspace-accent)'}:undefined}>
         <p className="font-semibold">{index+1}. {stage.title}</p>
         <p className="text-[13px] text-[var(--workspace-muted)]">{stage.status}</p>
@@ -83,13 +83,10 @@ export function FlowPreparationPanel(props:FlowPreparationPanelProps) {
           <button type="button" className="workspace-button" disabled={locked}
             onClick={guarded(props.onAdvanced)}>판정 기준 수정</button>
         </>}
-        {editing&&stage.id==='save'&&<p className="text-[13px] text-[var(--workspace-muted)]">현재 모델과 판정 기준을 함께 저장합니다. 변경 후에는 다시 저장하세요.</p>}
         {editing&&stage.id==='evaluate'&&<>
-          <p className="text-[13px] text-[var(--workspace-muted)]">저장한 검사 흐름 전체를 시험 이미지로 확인합니다.</p>
           {exactSaved&&<button type="button" className="workspace-button" disabled={locked}
             onClick={guarded(props.onEvaluate)}>평가 화면 열기</button>}
         </>}
-        {editing&&stage.id==='inspect'&&<p className="text-[13px] text-[var(--workspace-muted)]">6단계에서 검사 이미지와 실행 준비 상태를 확인합니다.</p>}
       </li>)}
     </ol>
 

@@ -1,3 +1,4 @@
+import {openWorkspaceSettings} from './fixtures/workspaceSettings';
 import path from 'node:path';
 import {createServer} from 'node:http';
 import {execFileSync} from 'node:child_process';
@@ -16,7 +17,7 @@ async function exercise(page:Page,workspace:Workspace,evidence:Evidence,api:Api,
  await new Promise<void>(done=>receiver.listen(0,'127.0.0.1',done));const port=(receiver.address() as AddressInfo).port;
  try{
   await api('/api/project/open',{project_dir:fixture.project.project_dir});if(url)await page.goto(url);else await page.reload();
-  await page.getByRole('button',{name:'패키지·장치·진단',exact:true}).click();
+  await openWorkspaceSettings(page); await page.getByRole('button',{name:'패키지·장치·진단',exact:true}).click();
   let panel=page.getByRole('region',{name:'검사 서비스 배포'});
   await panel.getByText('PLC·MES 연결 설정과 로컬 시험',{exact:true}).click();
   await panel.getByText('고급 JSON · 필드/판정/ACK 매핑',{exact:true}).click();
@@ -25,7 +26,7 @@ async function exercise(page:Page,workspace:Workspace,evidence:Evidence,api:Api,
   await panel.getByLabel('PLC 16-bit payload byte order',{exact:true}).selectOption('little');
   await panel.getByRole('button',{name:'설정 검증·저장',exact:true}).click();await expect(panel).toContainText('설정 저장됨');
   const saved=await api('/api/runtime-services');expect(saved.adapter_config.modbus.byte_order).toBe('little');expect(saved.adapter_config.modbus.trigger_image_path).toBe(mapping.modbus.trigger_image_path);
-  await page.reload();await page.getByRole('button',{name:'패키지·장치·진단',exact:true}).click();panel=page.getByRole('region',{name:'검사 서비스 배포'});
+  await page.reload();await openWorkspaceSettings(page); await page.getByRole('button',{name:'패키지·장치·진단',exact:true}).click();panel=page.getByRole('region',{name:'검사 서비스 배포'});
   await panel.getByText('PLC·MES 연결 설정과 로컬 시험',{exact:true}).click();
   await expect(panel.getByLabel('PLC 16-bit payload byte order',{exact:true})).toHaveValue('little');
   await expect(panel.getByLabel('트리거 이미지 (프로젝트 원본)',{exact:true})).toHaveValue(mapping.modbus.trigger_image_path);
@@ -53,7 +54,7 @@ async function exercise(page:Page,workspace:Workspace,evidence:Evidence,api:Api,
   accepted=true;await card.getByRole('button',{name:'ACK 전송 재시도',exact:true}).click();await expect.poll(async()=>(await job())?.state,{timeout:30_000}).toBe('completed');const completed=await job();
   expect(completed.model_verdict).toBe('OK');expect(completed.verdict).toBe('OK');expect(received).toHaveLength(2);expect(received[1]).toEqual(received[0]);
   await expect(operator).toContainText('completed',{timeout:20_000});await evidence.screenshot(page,`${native?'native':'browser'}-acknowledged-mes-retry`);
-  await page.reload();await page.getByRole('button',{name:'패키지·장치·진단',exact:true}).click();panel=page.getByRole('region',{name:'검사 서비스 배포'});await panel.getByText('PLC·MES 연결 설정과 로컬 시험',{exact:true}).click();
+  await page.reload();await openWorkspaceSettings(page); await page.getByRole('button',{name:'패키지·장치·진단',exact:true}).click();panel=page.getByRole('region',{name:'검사 서비스 배포'});await panel.getByText('PLC·MES 연결 설정과 로컬 시험',{exact:true}).click();
   await expect(panel.getByLabel('MES HTTP 주소',{exact:true})).toHaveValue(mes.mes.url);
   const reopened=await api('/api/runtime-services');expect(reopened.adapter_config.mes.field_mapping).toEqual(mes.mes.field_mapping);expect(reopened.adapter_config.mes.ack_job_field).toBe('receipt.job');
   await panel.getByRole('button',{name:'서비스 중지',exact:true}).click();await expect(panel).toContainText('현재 응답: stopped');

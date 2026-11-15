@@ -1,3 +1,4 @@
+import {openWorkspaceSettings} from './fixtures/workspaceSettings';
 import fs from 'node:fs';
 import path from 'node:path';
 import {createHash} from 'node:crypto';
@@ -29,7 +30,7 @@ test('native actual converted flow review, library reopen and managed IR executi
  evidence.note('synthetic_original_flow',fixture);
  await api('/api/project/open',{project_dir:fixture.project.project_dir});
  try{
-  await page.reload();await page.getByRole('button',{name:'패키지·장치·진단',exact:true}).click();
+  await page.reload();await openWorkspaceSettings(page); await page.getByRole('button',{name:'패키지·장치·진단',exact:true}).click();
   const library=page.getByRole('region',{name:'저장된 검사 패키지 보관함'});
   await library.getByRole('article').filter({hasText:'original_cpu_control'}).getByRole('button',{name:'최적화로 이동',exact:true}).click();
   const optimization=page.getByRole('region',{name:'Runtime 최적화와 양자화'});
@@ -65,7 +66,7 @@ test('native actual converted flow review, library reopen and managed IR executi
   const saved=(await api('/api/product-delivery/packages')).packages.find((row:any)=>row.name.startsWith('approved_runtime_'));
   expect(saved.scope_matches&&saved.approval_present&&saved.integrity==='verified').toBe(true);
   const approvedFiles=hashes(saved.package_path);
-  await page.reload();await page.getByRole('button',{name:'패키지·장치·진단',exact:true}).click();
+  await page.reload();await openWorkspaceSettings(page); await page.getByRole('button',{name:'패키지·장치·진단',exact:true}).click();
   const reopened=page.getByRole('region',{name:'저장된 검사 패키지 보관함'});
   await expect(reopened.getByRole('group',{name:'변환 후 전체 흐름 검토'}).getByText('저장된 변환 후 검토가 현재 근거와 일치합니다.')).toBeVisible({timeout:40_000});
   await evidence.screenshot(page,'native-converted-review-library-reopened');

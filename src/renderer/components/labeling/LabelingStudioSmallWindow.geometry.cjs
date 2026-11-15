@@ -19,7 +19,31 @@ const noop = () => {};
 const store = state => Object.assign(select => select ? select(state) : state, {getState: () => state});
 const categories = [{id: 0, name: 'OK', color: '#10b981'}, {id: 1, name: 'Scratch', color: '#ef4444'}, {id: 2, name: 'Dent', color: '#eab308'}];
 
-function markup(focus = false, {reviewOpen = false, draftWide = false} = {}) {
+// Follow the renderer's real local import graph, in source order. Unsupported/escaping imports must fail instead
+// of silently dropping the stylesheet that gives the application its layout.
+function applicationCss(file, ancestors = []) {
+  const resolved = fs.realpathSync(file);
+  assert.ok(resolved.startsWith(fs.realpathSync(renderer) + path.sep) && path.extname(resolved) === '.css', `renderer CSS only: ${file}`);
+  assert.ok(!ancestors.includes(resolved), `cyclic CSS import: ${file}`);
+  const sheet = postcss.parse(fs.readFileSync(resolved, 'utf8'), {from: resolved});
+  sheet.walkAtRules('import', rule => {
+    const local = /^(['"])(\.[^'"]+\.css)\1$/.exec(rule.params);
+    assert.ok(local && rule.parent === sheet, `unsupported CSS import: ${rule.params}`);
+    rule.replaceWith(applicationCss(path.resolve(path.dirname(resolved), local[2]), [...ancestors, resolved]).nodes);
+  });
+  return sheet;
+}
+
+const popoverFile = path.join(__dirname, 'popoverRoom.ts');
+const popoverModule = new Module(popoverFile, module);
+popoverModule.filename = popoverFile;
+popoverModule.paths = Module._nodeModulePaths(path.dirname(popoverFile));
+popoverModule._compile(ts.transpileModule(fs.readFileSync(popoverFile, 'utf8'), {compilerOptions: {
+  module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022,
+}}).outputText, popoverFile);
+const {horizontalPopoverBounds} = popoverModule.exports;
+
+function markup(focus = false, {reviewOpen = false, draftWide = false, draftBounds} = {}) {
   const image = {file_path: '/dataset/ok/large.png', file_name: 'large.png', image_id: 'large', label: 'OK', folder_label: 'OK', width: 4096, height: 2732};
   const project = {activeStep: 2, task: 'classification', language: 'ko', viewMode: 'full', theme: 'dark', projectName: 'Small window labeling',
     projectDir: '/project', project: {id: 'p1', project_dir: '/project', task: 'classification', source_dataset_dir: '/dataset', active_labelset_id: 'default'},
@@ -48,6 +72,7 @@ function markup(focus = false, {reviewOpen = false, draftWide = false} = {}) {
     'TeamDataPanel', 'ImageReviewPanel', 'ClassificationClassPicker', 'CategorySelector', 'DraftReviewQueue', 'ModelAssistPanel',
     'ImageFilmstrip', 'DerivedImagePanel', 'SavedReviewQueuePanel', 'WorkflowImpactPanel', 'AsyncAction',
     'labelingLayout', 'convertedAnnotation', 'coordinateMath', 'draftReview', 'popoverRoom', 'imageReadCustody',
+    'beginnerJourney', 'jargonDictionary', 'jargonEnglish',
     // A state hook the panels render through (ModelAssistPanel's error line); an empty stub returned undefined there.
     'useScopedError']);
   const empty = new Proxy({}, {get: (_, name) => name === '__esModule' ? true : noop});
@@ -62,7 +87,7 @@ function markup(focus = false, {reviewOpen = false, draftWide = false} = {}) {
       const name = path.basename(ref);
       if (stateModules[name]) return stateModules[name];
       if (name === 'useWorkflowReadiness') return {useWorkflowReadiness: () => ({readiness: {status: 'blocked', stage: 2,
-        missingInputs: ['라벨을 확인하세요'], completedInputs: [], nextAction: {label: '직접 라벨 달기'}}, refresh: noop})};
+        missingInputs: ['라벨을 확인하세요'], completedInputs: [], nextAction: {label: '직접 라벨 달기', step: 2, target: 'image-class-picker'}}, refresh: noop})};
       if (name === 'workflowReadiness') return {progressLine: () => ''};
       if (name === 'assistContext') return {assistPanelErrors: () => [], reportPanelError: noop};
       if (name === 'stepProgress') return {completedSteps: () => [1], mergeStepProgress: () => [1]};
@@ -72,8 +97,11 @@ function markup(focus = false, {reviewOpen = false, draftWide = false} = {}) {
         subscribeProjectContext: noop, resolveApiUrl: () => 'data:,', getProjectContext: noop};
       if (name === 'teamDataWorkflow') return {teamDataScope: () => 'scope', imageLeaseToken: () => null};
       // SSR has no effects/DOM measurement; this is the room measured below the entry row in the short window.
-      // The real hook's clipping/resize calculation is independently covered by popoverRoom.test.cjs.
-      if (name === 'popoverRoom') return {usePopoverRoom: () => 260, usePopoverHorizontalBounds: () => draftWide ? {left: -330, width: 1000} : undefined};
+      // Horizontal placement uses the real math and the rendered row/ancestor measurements supplied on the second
+      // render. SSR still does not run the hook's layout effect/resize tracking (covered by popoverRoom.test.cjs).
+      if (name === 'popoverRoom') return {usePopoverRoom: () => 260,
+        usePopoverHorizontalBounds: (open, _rowRef, preferredWidth) => open && draftBounds
+          ? horizontalPopoverBounds(draftBounds.row, draftBounds.clips, draftBounds.viewportWidth, preferredWidth) : undefined};
       if (name === 'dataWorkbench') return {dataWorkbenchScope: () => 'scope', dataWorkbenchPersistenceScope: () => 'scope'};
       if (name === 'LabelingCanvas') return {LabelingCanvas: () => React.createElement('div', {'data-canvas-container': true, className: 'w-full h-full'})};
       if (name === 'AnnotationList') return {AnnotationList: () => React.createElement('aside', {className: 'w-80 h-full shrink-0'})};
@@ -125,18 +153,15 @@ test('full view at 1024×768 reserves a practical canvas and keeps save, classes
   const wideHtml = markup(false, {draftWide: true});
   const config = require(path.join(root, 'tailwind.config.js'));
   const css = await postcss([tailwind({...config, content: [{raw: html + focusedHtml + reviewHtml + wideHtml, extension: 'html'}]})])
-    .process(fs.readFileSync(path.join(renderer, 'index.css'), 'utf8'), {from: path.join(renderer, 'index.css')});
-  // The imports hold the shared component styles (workspace buttons and launcher rows).
-  const imports = ['styles/design-tokens.css', 'styles/theme-light.css'].filter(file => fs.existsSync(path.join(renderer, file)))
-    .map(file => fs.readFileSync(path.join(renderer, file), 'utf8')).join('\n');
+    .process(applicationCss(path.join(renderer, 'index.css')), {from: path.join(renderer, 'index.css')});
   const browser = await chromium.launch({headless: true});
   try {
     const page = await browser.newPage();
     await page.setViewportSize({width: 1024, height: 768});
-    const styles = css.css.replace(/^@import[^;]+;/gm, '').replace(/url\(['"]?(\/fonts\/[^)'" ]+)['"]?\)/g, (_, name) =>
+    const styles = css.css.replace(/url\(['"]?(\/fonts\/[^)'" ]+)['"]?\)/g, (_, name) =>
       `url(data:font/woff2;base64,${fs.readFileSync(path.join(root, 'public', name)).toString('base64')})`);
     const show = async contents => {
-      await page.setContent(`<html lang="ko" data-view="full"><head><style>${imports}\n${styles}</style></head><body>${contents}</body></html>`);
+      await page.setContent(`<html lang="ko" data-view="full"><head><style>${styles}</style></head><body>${contents}</body></html>`);
       await page.evaluate(() => document.fonts.ready);
     };
     // Crossing the 1920/2400 px breakpoints changes the root font size, and controls with transition-all (the class
@@ -153,6 +178,8 @@ test('full view at 1024×768 reserves a practical canvas and keeps save, classes
       assert.ok(settled, `resize transitions to ${viewport.width}×${viewport.height} end within 2 s`);
     };
     await show(html);
+    assert.equal(await page.getByRole('complementary', {name: '다음 할 일', exact: true}).count(), 1, 'the real next-action panel participates in layout');
+    assert.equal(await page.getByRole('button', {name: '권장 행동: 사진 종류 선택 열기', exact: true}).count(), 1, 'the actual action label is rendered');
     const metrics = await page.evaluate(() => ({canvas: document.querySelector('[data-canvas-container]').getBoundingClientRect().height,
       header: document.querySelector('header').getBoundingClientRect().height, toolbar: document.querySelector('[data-testid="annotation-save-button"]').parentElement.parentElement.getBoundingClientRect().height}));
     const desktops = [];
@@ -198,6 +225,16 @@ test('full view at 1024×768 reserves a practical canvas and keeps save, classes
     const main = await page.locator('main').boundingBox();
     assert.ok(review.y + review.height <= main.y + main.height, `the image-review popover stays within its clipping workspace: ${JSON.stringify(review)}`);
     await show(wideHtml);
+    const draftBounds = await page.getByRole('button', {name: '초안 검토 패널', exact: true}).evaluate(button => {
+      const row = button.parentElement;
+      const bounds = node => { const {left, right} = node.getBoundingClientRect(); return {left, right}; };
+      const clips = [];
+      for (let node = row.parentElement; node; node = node.parentElement) {
+        if (getComputedStyle(node).overflowX !== 'visible') clips.push(bounds(node));
+      }
+      return {row: bounds(row), clips, viewportWidth: window.innerWidth};
+    });
+    await show(markup(false, {draftWide: true, draftBounds}));
     const wide = await page.getByRole('complementary', {name: '초안 검토', exact: true}).boundingBox();
     assert.ok(wide.x >= main.x && wide.x + wide.width <= main.x + main.width,
       `the wide draft panel uses its measured horizontal bounds: ${JSON.stringify(wide)}`);

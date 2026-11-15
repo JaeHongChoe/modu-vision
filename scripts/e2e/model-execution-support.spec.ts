@@ -1,4 +1,5 @@
 import type {Page} from '@playwright/test';
+import {openWorkspaceSettings} from './fixtures/workspaceSettings';
 import {test,expect,type Workspace,type Evidence} from './fixtures/test';
 type Api=(route:string,body?:unknown)=>Promise<any>;
 const stageNames:Record<string,string>={evaluate:'평가',predict:'단일 예측',benchmark:'모델 forward 계측',generate:'생성'};
@@ -12,7 +13,7 @@ async function exercise(page:Page,workspace:Workspace,evidence:Evidence,api:Api,
   // The catalogue case starts only after the ordinary project/source hydration.
   // A focused stage button alone does not establish that this initial adoption finished.
   await expect(page.getByTitle('프로젝트 관리',{exact:true})).toContainText('Execution support catalog control');
-  await expect(page.getByRole('button',{name:'데이터셋 폴더 열기',exact:true})).toBeEnabled();
+  await expect(page.locator('#workflow-data')).toBeEnabled();
   await page.getByRole('navigation',{name:'Workflow Stages'}).getByRole('button').nth(2).click();
   const hub=page.getByRole('region',{name:'모델 학습 허브'});
   let projectTask='classification';
@@ -29,7 +30,12 @@ async function exercise(page:Page,workspace:Workspace,evidence:Evidence,api:Api,
     const details=hub.locator('details').first();if(!await details.evaluate(el=>(el as HTMLDetailsElement).open))await details.locator('summary').click();
     const support=hub.getByLabel(family.label+' 실행 위치 지원');await expect(support).toBeVisible();
     for(const stage of family.execution.native_recipe_stages)await expect(support).toContainText(stageNames[stage]);
-    await expect(support).toContainText('상단 Compute에서 실행 위치 선택');
+    // Execution target moved into the real Settings & tools menu in both views.
+    await openWorkspaceSettings(page);
+    const runOn=page.getByRole('combobox',{name:'실행 위치',exact:true});
+    await expect(runOn).toBeVisible();await expect(runOn).toBeEnabled();
+    await expect(runOn.locator('option[value=""]')).toHaveText('이 컴퓨터');
+    await page.locator('summary').filter({hasText:/^설정·도구$/}).click();
     if(family.task==='defect_gan'){
       expect(family.execution.predict).toBe(false);expect(family.execution.flow).toBe(false);expect(family.execution.generate).toBe(true);
       await expect(support).toContainText('검사 플로우 모델로 사용할 수 없습니다.');await expect(support).not.toContainText('단일 예측');

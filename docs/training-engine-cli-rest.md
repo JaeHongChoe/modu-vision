@@ -4,6 +4,8 @@ The engine runs without selecting or changing the desktop project. Each explicit
 
 ## CLI
 
+앱의 프로젝트·라벨·평가·흐름·검사·운영 API를 함께 다루려면 [공통 CLI](studio-cli.md)를 사용합니다. 아래 명령은 독립적인 폴더/JSON 학습 엔진용으로 유지됩니다.
+
 Run from the checkout (or with the installed backend on `PYTHONPATH`):
 
 ```bash
@@ -20,6 +22,8 @@ python -m backend.training_cli train --config-path /data/model-output/artifacts/
 `train --background` launches an independent local process and returns its run ID/PID. `cancel --output ... --run-id ...` writes a durable cooperative cancellation request. `status` survives CLI/backend reopening; a dead owner becomes `interrupted`. Signals to foreground training request cancellation. Training progress is JSONL on stdout; background progress is saved under `runs/<run_id>/progress.jsonl`. Errors return a nonzero exit code. `--help` describes every command and option.
 
 Genuine DINOv3 and YOLO defaults are preserved. For an offline run, pass `pretrained_checkpoint` and its `pretrained_sha256` in `--config-json`. Missing/incompatible weights fail; the engine does not substitute random weights. CPU, MPS and CUDA selections are explicit and unavailable devices fail. Search exposes only controls applied by the selected family. `capabilities` lists each metric/direction, configuration field and search dimension.
+
+Adaptive candidate selection is embedded in the existing coordinator. `--search-strategy auto` (default) uses Optuna TPE for search budgets of at least eight trials; `deterministic` retains the original enumeration and `adaptive` requests TPE explicitly. Quick and fast-retrain modes stay deterministic. `--seed` pins proposal identity. The REST training requests expose the same `search_strategy` and `seed` fields. Candidate/epoch/time limits, existing cancellation and durable result validation still apply. Sampler version/domain/proposal receipts are stored; recipe replay starts a new study, not an exact optimizer continuation. See [embedded engines](embedded-oss.md).
 
 ## External labels
 

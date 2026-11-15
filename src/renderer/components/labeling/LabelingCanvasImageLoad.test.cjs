@@ -13,7 +13,17 @@ function load(file, mocks = {}) {
   m.filename = file;
   m.paths = Module._nodeModulePaths(path.dirname(file));
   const original = m.require.bind(m);
-  m.require = name => Object.hasOwn(mocks, name) ? mocks[name] : original(name);
+  m.require = name => {
+    if (Object.hasOwn(mocks, name)) return mocks[name];
+    // Follow the real component's new typed local helpers with the same
+    // controlled platform interfaces; do not replace their behavior with stubs.
+    if (name.startsWith('.')) {
+      const base = path.resolve(path.dirname(file), name);
+      const typed = [base + '.ts', base + '.tsx'].find(candidate => fs.existsSync(candidate));
+      if (typed) return load(typed, mocks);
+    }
+    return original(name);
+  };
   m._compile(ts.transpileModule(fs.readFileSync(file, 'utf8'), {
     compilerOptions: {module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, jsx: ts.JsxEmit.ReactJSX},
   }).outputText, file);

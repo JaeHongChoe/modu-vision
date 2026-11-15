@@ -68,8 +68,7 @@ test('a declined assistant split never writes; a confirmed split saves and logs 
     if(!window.api)throw new Error('Desktop host shim did not initialize');
     Object.assign(window.api,{assistant:bridge});Object.assign(window,{__confirmedSplit:{sent,armed,ended}});
   });
-  await page.getByRole('button',{name:'왜 그런가요?',exact:true}).click();
-  await page.getByRole('button',{name:'도우미에게 묻기',exact:true}).click();
+  await page.getByRole('button',{name:'도우미 열기',exact:true}).click();
   const assistant=page.getByRole('complementary',{name:'도우미',exact:true});
   const ask=async(text:string)=>{
     await assistant.getByRole('textbox',{name:'도우미에게 묻기',exact:true}).fill(text);

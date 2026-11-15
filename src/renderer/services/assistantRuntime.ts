@@ -1,9 +1,10 @@
+import {setLocalTraceScopeSource} from './localTrace';
 /** The assistant's tools wired to the app's real stores and services. Every write goes through the same store action or
  * service call the screen uses (and so the same backend role checks); the context is the footer's published picture
  * reduced by assistantContext.ts. */
 import { currentAssistContext } from '../stores/assistContext';
 import { useProjectStore } from '../stores/useProjectStore';
-import { useDatasetStore } from '../stores/useDatasetStore';
+import { readDatasetAuthority, useDatasetStore } from '../stores/useDatasetStore';
 import { useTrainingStore } from '../stores/useTrainingStore';
 import { useAnnotationStore } from '../stores/useAnnotationStore';
 import { useComputeStore } from '../stores/useComputeStore';
@@ -11,8 +12,9 @@ import { computeSampleVerdict, currentEvaluationGuidanceSource, isDefectLabel, i
 import { draftReviewScope, useDraftReviewStore } from '../stores/useDraftReviewStore';
 import { bumpWorkflowEvidence } from '../stores/workflowEvidence';
 import { focusWorkflowTarget, type WorkflowStep } from '../components/wizard/workflowReadiness';
-import { api, getApiPersistenceIdentity, getProjectContextGeneration, getProjectContext, request, type LabelSuggestion } from './api';
+import { api, getApiDiagnosticScope, getApiPersistenceIdentity, getProjectContextGeneration, getProjectContext, request, type LabelSuggestion } from './api';
 import { fileName, minimalAssistContext, withAssistantObservations, type AssistantFacts } from './assistantContext';
+import {createAssistantCommandCatalog} from './assistantCommandCatalog';
 import {appDiagnosticSummary,readAppDiagnostics} from './assistantDiagnosticsRuntime';
 import { createAssistantTools, requireToolCurrent, ToolRefusal, type DraftQueueOrder, type ImageChoice, type ToolCurrent, type ToolDeps, type AssistantTaskToolDeps } from './assistantTools';
 import { orderDrafts, topConfidence } from '../components/labeling/draftReview';
@@ -81,7 +83,40 @@ async function pendingRows(order: DraftQueueOrder, isCurrent?: ToolCurrent) {
   return {check, drafts: orderDrafts(listed.suggestions.filter(row => row.candidates.length > 0), order)};
 }
 
+// A source can change A→B→A without ending at different field values. Subscribe once, lazily,
+// and retain a monotonic revision locally; neither this revision nor transport identity leaves the app.
+let commandRevision = 0, commandWatching = false;
+function commandIdentity(): string {
+  const project = useProjectStore.getState(), data = useDatasetStore.getState();
+  return JSON.stringify([currentRuntimeScope(), project.project?.project_dir, data.sourceAuthority, data.lastImportedKey, data.sourceSaveError]);
+}
+function commandScope(): string {
+  if (!commandWatching) {
+    commandWatching = true;
+    let previous = commandIdentity();
+    const observe = () => {const next = commandIdentity();if (next !== previous) {commandRevision++;previous = next;}};
+    useProjectStore.subscribe(observe);useDatasetStore.subscribe(observe);useComputeStore.subscribe(observe);
+  }
+  return JSON.stringify([commandRevision, commandIdentity(),
+    getApiDiagnosticScope(), getProjectContextGeneration(), getApiPersistenceIdentity(), getProjectContext()]);
+}
+const runtimeCommands = createAssistantCommandCatalog({
+  request: (path, options) => request(path, options),
+  scope: commandScope,
+  canObserve: () => {
+    const project = useProjectStore.getState(), data = useDatasetStore.getState(), context = getProjectContext();
+    return Boolean(project.project && project.projectDir && project.project.project_dir === project.projectDir
+      && project.project.task === project.task && !project.isProjectBusy && context && context.project_id === project.project.id
+      && data.hasSelectedFolder && !data.isLoading && !data.isSplitting && !data.importError && !data.sourceSaveError
+      && project.project.source_dataset_dir === data.folderPath && data.datasetKey === `${data.folderPath}\0${project.task}`
+      && data.lastImportedKey === data.datasetKey && data.sourceAuthority === readDatasetAuthority());
+  },
+});
+
+setLocalTraceScopeSource(commandScope);
+
 export const runtimeToolDeps: ToolDeps = {
+  commands: runtimeCommands,
   diagnostics:readAppDiagnostics,
   snapshot: currentAssistContext,
   facts: assistantFacts,

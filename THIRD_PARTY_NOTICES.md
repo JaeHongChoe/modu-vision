@@ -19,43 +19,93 @@ This file lists third-party components that the desktop application distributes 
 
 | Component | Version | License | Status | Source |
 | --- | --- | --- | --- | --- |
-| electron | 44.5.1 | MIT (npm package); the Electron binary bundles Chromium, Node.js and FFmpeg under their own licenses | needs_review | https://registry.npmjs.org/electron/-/electron-44.5.1.tgz |
+| electron | 44.11.3 | MIT (npm package); the Electron binary bundles Chromium, Node.js and FFmpeg under their own licenses | needs_review | https://registry.npmjs.org/electron/-/electron-44.11.3.tgz |
 
 ## Renderer runtime (npm)
 
 | Component | Version | License | Status | Source |
 | --- | --- | --- | --- | --- |
+| @floating-ui/core | 1.8.0 | MIT | resolved | https://registry.npmjs.org/@floating-ui/core/-/core-1.8.0.tgz |
+| @floating-ui/dom | 1.8.0 | MIT | resolved | https://registry.npmjs.org/@floating-ui/dom/-/dom-1.8.0.tgz |
+| @floating-ui/react-dom | 2.1.9 | MIT | resolved | https://registry.npmjs.org/@floating-ui/react-dom/-/react-dom-2.1.9.tgz |
+| @floating-ui/utils | 0.2.12 | MIT | resolved | https://registry.npmjs.org/@floating-ui/utils/-/utils-0.2.12.tgz |
+| @opentelemetry/api | 1.9.0 | Apache-2.0 | resolved | https://registry.npmjs.org/@opentelemetry/api/-/api-1.9.0.tgz |
+| @opentelemetry/core | 2.12.0 | Apache-2.0 | resolved | https://registry.npmjs.org/@opentelemetry/core/-/core-2.12.0.tgz |
+| @opentelemetry/resources | 2.12.0 | Apache-2.0 | resolved | https://registry.npmjs.org/@opentelemetry/resources/-/resources-2.12.0.tgz |
+| @opentelemetry/sdk-trace | 2.12.0 | Apache-2.0 | resolved | https://registry.npmjs.org/@opentelemetry/sdk-trace/-/sdk-trace-2.12.0.tgz |
+| @opentelemetry/semantic-conventions | 1.45.0 | Apache-2.0 | resolved | https://registry.npmjs.org/@opentelemetry/semantic-conventions/-/semantic-conventions-1.45.0.tgz |
+| @radix-ui/primitive | 1.2.0 | MIT | resolved | https://registry.npmjs.org/@radix-ui/primitive/-/primitive-1.2.0.tgz |
+| @radix-ui/react-arrow | 1.1.17 | MIT | resolved | https://registry.npmjs.org/@radix-ui/react-arrow/-/react-arrow-1.1.17.tgz |
+| @radix-ui/react-compose-refs | 1.1.5 | MIT | resolved | https://registry.npmjs.org/@radix-ui/react-compose-refs/-/react-compose-refs-1.1.5.tgz |
+| @radix-ui/react-context | 1.3.0 | MIT | resolved | https://registry.npmjs.org/@radix-ui/react-context/-/react-context-1.3.0.tgz |
+| @radix-ui/react-dismissable-layer | 1.2.1 | MIT | resolved | https://registry.npmjs.org/@radix-ui/react-dismissable-layer/-/react-dismissable-layer-1.2.1.tgz |
+| @radix-ui/react-focus-guards | 1.2.0 | MIT | resolved | https://registry.npmjs.org/@radix-ui/react-focus-guards/-/react-focus-guards-1.2.0.tgz |
+| @radix-ui/react-focus-scope | 1.3.1 | MIT | resolved | https://registry.npmjs.org/@radix-ui/react-focus-scope/-/react-focus-scope-1.3.1.tgz |
+| @radix-ui/react-id | 1.1.4 | MIT | resolved | https://registry.npmjs.org/@radix-ui/react-id/-/react-id-1.1.4.tgz |
+| @radix-ui/react-popover | 1.3.1 | MIT | resolved | https://registry.npmjs.org/@radix-ui/react-popover/-/react-popover-1.3.1.tgz |
+| @radix-ui/react-popper | 1.4.0 | MIT | resolved | https://registry.npmjs.org/@radix-ui/react-popper/-/react-popper-1.4.0.tgz |
+| @radix-ui/react-portal | 1.2.0 | MIT | resolved | https://registry.npmjs.org/@radix-ui/react-portal/-/react-portal-1.2.0.tgz |
+| @radix-ui/react-presence | 1.1.11 | MIT | resolved | https://registry.npmjs.org/@radix-ui/react-presence/-/react-presence-1.1.11.tgz |
+| @radix-ui/react-primitive | 2.2.0 | MIT | resolved | https://registry.npmjs.org/@radix-ui/react-primitive/-/react-primitive-2.2.0.tgz |
+| @radix-ui/react-slot | 1.5.0 | MIT | resolved | https://registry.npmjs.org/@radix-ui/react-slot/-/react-slot-1.5.0.tgz |
+| @radix-ui/react-use-callback-ref | 1.1.5 | MIT | resolved | https://registry.npmjs.org/@radix-ui/react-use-callback-ref/-/react-use-callback-ref-1.1.5.tgz |
+| @radix-ui/react-use-controllable-state | 1.3.0 | MIT | resolved | https://registry.npmjs.org/@radix-ui/react-use-controllable-state/-/react-use-controllable-state-1.3.0.tgz |
+| @radix-ui/react-use-effect-event | 0.0.5 | MIT | resolved | https://registry.npmjs.org/@radix-ui/react-use-effect-event/-/react-use-effect-event-0.0.5.tgz |
+| @radix-ui/react-use-layout-effect | 1.1.4 | MIT | resolved | https://registry.npmjs.org/@radix-ui/react-use-layout-effect/-/react-use-layout-effect-1.1.4.tgz |
+| @radix-ui/react-use-rect | 1.1.4 | MIT | resolved | https://registry.npmjs.org/@radix-ui/react-use-rect/-/react-use-rect-1.1.4.tgz |
+| @radix-ui/react-use-size | 1.1.5 | MIT | resolved | https://registry.npmjs.org/@radix-ui/react-use-size/-/react-use-size-1.1.5.tgz |
+| @radix-ui/rect | 1.1.3 | MIT | resolved | https://registry.npmjs.org/@radix-ui/rect/-/rect-1.1.3.tgz |
+| aria-hidden | 1.2.6 | MIT | resolved | https://registry.npmjs.org/aria-hidden/-/aria-hidden-1.2.6.tgz |
+| detect-node-es | 1.1.0 | MIT | resolved | https://registry.npmjs.org/detect-node-es/-/detect-node-es-1.1.0.tgz |
+| get-nonce | 1.0.1 | MIT | resolved | https://registry.npmjs.org/get-nonce/-/get-nonce-1.0.1.tgz |
 | js-tokens | 4.0.0 | MIT | resolved | https://registry.npmjs.org/js-tokens/-/js-tokens-4.0.0.tgz |
 | loose-envify | 1.4.0 | MIT | resolved | https://registry.npmjs.org/loose-envify/-/loose-envify-1.4.0.tgz |
 | lucide-react | 1.47.0 | ISC | resolved | https://registry.npmjs.org/lucide-react/-/lucide-react-1.47.0.tgz |
 | react | 18.3.1 | MIT | resolved | https://registry.npmjs.org/react/-/react-18.3.1.tgz |
 | react-dom | 18.3.1 | MIT | resolved | https://registry.npmjs.org/react-dom/-/react-dom-18.3.1.tgz |
+| react-remove-scroll | 2.7.2 | MIT | resolved | https://registry.npmjs.org/react-remove-scroll/-/react-remove-scroll-2.7.2.tgz |
+| react-remove-scroll-bar | 2.3.8 | MIT | resolved | https://registry.npmjs.org/react-remove-scroll-bar/-/react-remove-scroll-bar-2.3.8.tgz |
+| react-style-singleton | 2.2.3 | MIT | resolved | https://registry.npmjs.org/react-style-singleton/-/react-style-singleton-2.2.3.tgz |
 | scheduler | 0.23.2 | MIT | resolved | https://registry.npmjs.org/scheduler/-/scheduler-0.23.2.tgz |
+| tslib | 2.8.1 | 0BSD | resolved | https://registry.npmjs.org/tslib/-/tslib-2.8.1.tgz |
+| use-callback-ref | 1.3.3 | MIT | resolved | https://registry.npmjs.org/use-callback-ref/-/use-callback-ref-1.3.3.tgz |
+| use-sidecar | 1.1.3 | MIT | resolved | https://registry.npmjs.org/use-sidecar/-/use-sidecar-1.1.3.tgz |
 | zustand | 5.0.15 | MIT | resolved | https://registry.npmjs.org/zustand/-/zustand-5.0.15.tgz |
+
+## Selected embedded source
+
+| Component | Version | License | Status | Source |
+| --- | --- | --- | --- | --- |
+| cleanlab-normalized-margin | 2.9.0 | Apache-2.0 | resolved | https://github.com/cleanlab/cleanlab/blob/v2.9.0/cleanlab/rank.py |
+
+The selected cleanlab algorithm is modified and attributed in `third_party/cleanlab/NOTICE`; its original Apache-2.0 license and source hashes ship with source, web and frozen backend resources. The complete cleanlab package is not bundled.
 
 ## Build tools whose code is emitted into the renderer bundle
 
 | Component | Version | License | Status | Source |
 | --- | --- | --- | --- | --- |
 | tailwindcss | 3.4.19 | MIT | resolved | https://registry.npmjs.org/tailwindcss/-/tailwindcss-3.4.19.tgz |
-| vite | 6.4.3 | MIT | resolved | https://registry.npmjs.org/vite/-/vite-6.4.3.tgz |
+| vite | 6.4.6 | MIT | resolved | https://registry.npmjs.org/vite/-/vite-6.4.6.tgz |
 
 ## Python backend runtime (inventory interpreter: Python 3.13.5 on darwin)
 
-Python dependencies are not locked. This interpreter does NOT satisfy `requirements.txt`; the list below is the declared dependency closure in that interpreter and must be regenerated from the locked release build environment for each target platform. A built backend can contain more packages and native libraries; `--frozen-build` lists its package metadata and native libraries, and `--pyz-toc` the pure-Python modules bundled inside the executable.
+Python dependencies are not locked. This interpreter satisfies `requirements.txt`; the list below is the declared dependency closure in that interpreter and must be regenerated from the locked release build environment for each target platform. A built backend can contain more packages and native libraries; `--frozen-build` lists its package metadata and native libraries, and `--pyz-toc` the pure-Python modules bundled inside the executable.
 
 | Component | Version | License | Status | Source |
 | --- | --- | --- | --- | --- |
-| annotated-types | 0.6.0 | MIT License | resolved | https://pypi.org/project/annotated-types/ |
-| anyio | 4.7.0 | MIT AND MIT License | resolved | https://github.com/agronholm/anyio |
+| alembic | 1.20.1 | MIT | resolved | https://alembic.sqlalchemy.org |
+| annotated-doc | 0.0.6 | MIT | resolved | https://github.com/fastapi/annotated-doc |
+| annotated-types | 0.8.0 | MIT | resolved | https://github.com/annotated-types/annotated-types |
+| anyio | 4.16.0 | MIT | resolved | https://github.com/agronholm/anyio |
 | certifi | 2025.8.3 | MPL-2.0 AND Mozilla Public License 2.0 (MPL 2.0) | needs_review | https://github.com/certifi/python-certifi |
 | cffi | 1.17.1 | MIT AND MIT License | resolved | https://github.com/python-cffi/cffi |
 | charset-normalizer | 3.3.2 | MIT AND MIT License | resolved | https://github.com/Ousret/charset_normalizer |
 | click | 8.1.8 | BSD License | resolved | https://github.com/pallets/click/ |
+| colorlog | 6.12.0 | MIT License | resolved | https://github.com/borntyping/python-colorlog |
 | contourpy | 1.3.1 | BSD License | resolved | https://github.com/contourpy/contourpy |
 | cryptography | 44.0.1 | Apache-2.0 OR BSD-3-Clause AND Apache Software License AND BSD License | resolved | https://github.com/pyca/cryptography |
 | cycler | 0.11.0 | BSD AND BSD License | resolved | https://github.com/matplotlib/cycler |
-| fastapi | 0.108.0 | MIT | resolved | https://github.com/tiangolo/fastapi |
+| fastapi | 0.142.2 | MIT | resolved | https://github.com/fastapi/fastapi |
 | filelock | 3.17.0 | Unlicense | resolved | https://github.com/tox-dev/py-filelock |
 | flatbuffers | 25.9.23 | Apache 2.0 AND Apache Software License | resolved | https://github.com/google/flatbuffers |
 | fonttools | 4.55.3 | MIT AND MIT License | resolved | http://github.com/fonttools/fonttools |
@@ -65,12 +115,13 @@ Python dependencies are not locked. This interpreter does NOT satisfy `requireme
 | httpcore | 1.0.9 | BSD-3-Clause | resolved | https://www.encode.io/httpcore/ |
 | httptools | None | UNKNOWN | not_installed_in_inventory_environment |  |
 | httpx | 0.28.1 | BSD-3-Clause | resolved | https://github.com/encode/httpx |
-| huggingface-hub | 1.1.4 | Apache AND Apache Software License | resolved | https://github.com/huggingface/huggingface_hub |
-| idna | 3.7 | BSD License | resolved | https://github.com/kjd/idna |
+| huggingface-hub | 0.36.2 | Apache AND Apache Software License | resolved | https://github.com/huggingface/huggingface_hub |
+| idna | 3.20 | BSD-3-Clause | resolved | https://github.com/kjd/idna |
 | jinja2 | 3.1.6 | BSD License | resolved | https://github.com/pallets/jinja/ |
 | joblib | 1.4.2 | BSD 3-Clause AND BSD License | resolved | https://joblib.readthedocs.io |
 | kiwisolver | 1.4.8 | BSD License | resolved | https://github.com/nucleic/kiwi |
-| markupsafe | 3.0.2 | BSD License | resolved | https://github.com/pallets/markupsafe/ |
+| mako | 1.4.3 | MIT | resolved | https://www.makotemplates.org/ |
+| markupsafe | 3.0.4 | BSD-3-Clause | resolved | https://github.com/pallets/markupsafe/ |
 | matplotlib | 3.10.0 | Python Software Foundation License | resolved | https://matplotlib.org |
 | mpmath | 1.3.0 | BSD AND BSD License | resolved | https://github.com/fredrik-johansson/mpmath |
 | networkx | 3.4.2 | BSD License | resolved | https://networkx.org/ |
@@ -78,38 +129,41 @@ Python dependencies are not locked. This interpreter does NOT satisfy `requireme
 | onnxruntime | 1.26.0 | MIT License | resolved | https://onnxruntime.ai |
 | opencv-python | 4.12.0.88 | Apache 2.0 AND Apache Software License | resolved | https://github.com/opencv/opencv-python |
 | opencv-python-headless | 4.12.0.88 | Apache 2.0 AND Apache Software License | resolved | https://github.com/opencv/opencv-python |
-| packaging | 24.2 | Apache Software License AND BSD License | resolved | https://github.com/pypa/packaging |
+| opentelemetry-api | 1.45.2 | Apache-2.0 | resolved | https://github.com/open-telemetry/opentelemetry-python/tree/main/opentelemetry-api |
+| opentelemetry-sdk | 1.45.2 | Apache-2.0 | resolved | https://github.com/open-telemetry/opentelemetry-python/tree/main/opentelemetry-sdk |
+| opentelemetry-semantic-conventions | 0.66b2 | Apache-2.0 | resolved | https://github.com/open-telemetry/opentelemetry-python/tree/main/opentelemetry-semantic-conventions |
+| optuna | 5.0.0 | MIT License | resolved | https://optuna.org/ |
+| packaging | 26.3 | Apache-2.0 OR BSD-2-Clause | resolved | https://github.com/pypa/packaging |
 | pi-heif | 1.4.0 | BSD-3-Clause AND GNU Lesser General Public License v3 (LGPLv3) | needs_review | https://github.com/bigcat88/pillow_heif |
 | pillow | 12.3.0 | MIT-CMU | resolved | https://python-pillow.github.io |
 | polars | 1.40.1 | MIT License | resolved | https://www.pola.rs/ |
 | polars-runtime-32 | 1.40.1 | MIT AND MIT License | resolved | https://www.pola.rs/ |
 | protobuf | 5.29.3 | 3-Clause BSD License | resolved | https://developers.google.com/protocol-buffers/ |
-| psutil | 5.9.0 | BSD AND BSD License | resolved | https://github.com/giampaolo/psutil |
+| psutil | 7.2.2 | BSD-3-Clause | resolved | https://github.com/giampaolo/psutil |
 | pycparser | 2.21 | BSD AND BSD License | resolved | https://github.com/eliben/pycparser |
-| pydantic | 2.10.3 | MIT | resolved | https://github.com/pydantic/pydantic |
+| pydantic | 2.10.3 | MIT AND MIT License | resolved | https://github.com/pydantic/pydantic |
 | pydantic-core | 2.27.1 | MIT AND MIT License | resolved | https://github.com/pydantic/pydantic-core |
 | pyparsing | 3.2.0 | MIT License | resolved | https://github.com/pyparsing/pyparsing/ |
 | python-dateutil | 2.9.0.post0 | Dual License AND Apache Software License AND BSD License | needs_review | https://github.com/dateutil/dateutil |
 | python-dotenv | 1.1.0 | BSD-3-Clause AND BSD License | resolved | https://github.com/theskumar/python-dotenv |
 | python-multipart | 0.0.20 | Apache-2.0 | resolved | https://github.com/Kludex/python-multipart |
-| pyyaml | 6.0.2 | MIT AND MIT License | resolved | https://github.com/yaml/pyyaml |
+| pyyaml | 6.0.3 | MIT AND MIT License | resolved | https://github.com/yaml/pyyaml |
 | requests | 2.32.3 | Apache-2.0 AND Apache Software License | resolved | https://github.com/psf/requests |
 | safetensors | 0.7.0 | Apache Software License | resolved | https://github.com/huggingface/safetensors |
 | scikit-learn | 1.6.1 | BSD License | resolved | https://scikit-learn.org |
 | scipy | 1.18.0 | BSD License | resolved | https://scipy.org/ |
-| setuptools | 72.1.0 | MIT License | resolved | https://github.com/pypa/setuptools |
-| shellingham | 1.5.0 | ISC License AND ISC License (ISCL) | resolved | https://github.com/sarugaku/shellingham |
+| setuptools | 84.2.1 | MIT | resolved | https://github.com/pypa/setuptools |
 | six | 1.17.0 | MIT AND MIT License | resolved | https://github.com/benjaminp/six |
-| sniffio | 1.3.0 | MIT OR Apache-2.0 AND Apache Software License AND MIT License | resolved | https://github.com/python-trio/sniffio |
-| starlette | 0.32.0.post1 | BSD-3-Clause | resolved | https://github.com/encode/starlette |
+| sqlalchemy | 2.1.8 | MIT | resolved | https://www.sqlalchemy.org |
+| starlette | 1.7.0 | BSD-3-Clause | resolved | https://github.com/Kludex/starlette |
 | sympy | 1.13.3 | BSD AND BSD License | resolved | https://github.com/sympy/sympy |
 | threadpoolctl | 3.5.0 | BSD-3-Clause AND BSD License | resolved | https://github.com/joblib/threadpoolctl |
 | timm | 1.0.24 | Apache-2.0 AND Apache Software License | resolved | https://github.com/huggingface/pytorch-image-models |
 | torch | 2.9.1 | BSD-3-Clause | resolved | https://pytorch.org |
 | torchvision | 0.24.1 | BSD | resolved | https://github.com/pytorch/vision |
-| tqdm | 4.67.1 | MPL-2.0 AND MIT AND MIT License AND Mozilla Public License 2.0 (MPL 2.0) | needs_review | https://tqdm.github.io |
-| typer-slim | 0.20.0 | MIT License | resolved | https://github.com/fastapi/typer |
-| typing-extensions | 4.12.2 | Python Software Foundation License | resolved | https://github.com/python/typing_extensions |
+| tqdm | 4.70.1 | MPL-2.0 AND MIT | needs_review | https://tqdm.github.io |
+| typing-extensions | 4.16.0 | PSF-2.0 | resolved | https://github.com/python/typing_extensions |
+| typing-inspection | 0.4.5 | MIT | resolved | https://github.com/pydantic/typing-inspection |
 | ultralytics | 8.4.41 | AGPL-3.0 AND GNU Affero General Public License v3 or later (AGPLv3+) | needs_decision | https://ultralytics.com |
 | ultralytics-thop | 2.0.19 | AGPL-3.0 AND GNU Affero General Public License v3 or later (AGPLv3+) | needs_decision | https://ultralytics.com |
 | urllib3 | 2.3.0 | MIT License | resolved | https://pypi.org/project/urllib3/ |
@@ -137,5 +191,4 @@ Python dependencies are not locked. This interpreter does NOT satisfy `requireme
 - `python_runtime:watchfiles`: not_installed_in_inventory_environment
 - `python_environment:unlocked`: needs_review
 - `license_texts:packaging`: needs_review
-- `python_environment:requirements_not_satisfied`: needs_review
 - `frozen_backend:inventory_required`: needs_review

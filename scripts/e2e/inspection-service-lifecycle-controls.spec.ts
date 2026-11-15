@@ -1,3 +1,4 @@
+import {openWorkspaceSettings} from './fixtures/workspaceSettings';
 import fs from 'node:fs';
 import path from 'node:path';
 import {createHash} from 'node:crypto';
@@ -27,7 +28,7 @@ async function projectViaUi(page:Page,projectDir:string){
  await expect(dialog).toHaveCount(0);
 }
 async function delivery(page:Page){
- await page.getByRole('button',{name:'패키지·장치·진단',exact:true}).click();
+ await openWorkspaceSettings(page); await page.getByRole('button',{name:'패키지·장치·진단',exact:true}).click();
  const panel=page.getByRole('region',{name:'검사 서비스 배포',exact:true});
  await expect(panel).toBeVisible();return panel;
 }
@@ -148,7 +149,7 @@ async function exercise(page:Page,workspace:Workspace,evidence:Evidence,api:Api,
   await expect(panel.getByRole('button',{name:'승인 패키지 적용',exact:true})).toBeDisabled();
   const beforeHandoff=mutations.length;
   await panel.getByRole('button',{name:'승인·패키지 확인 (6단계)',exact:true}).click();
-  await expect(page.getByRole('heading',{name:'검사 결과 및 플로우 배포',exact:true})).toBeVisible();
+  await expect(page.getByRole('heading',{name:'검사 사용',exact:true,level:2})).toBeVisible();
   expect(mutations.length).toBe(beforeHandoff);expect(identity(fixture.project.project_dir)).toEqual(restarted.owned);
   await evidence.screenshot(page,`${native?'native':'browser'}-explicit-package-stage-handoff`);
 

@@ -109,7 +109,7 @@ async function exercise(page: Page, w: Workspace, e: Evidence, api: Api, sourceE
     await stages.getByRole('button').nth(1).click();
     const focus = page.getByRole('button', {name: '집중 편집', exact: true});
     if (await focus.getAttribute('aria-pressed') === 'true') await focus.click();
-    const summary = page.locator('summary').filter({hasText: '저장 검토 큐 · 오류·불일치·임계값 우선'});
+    const summary = page.locator('summary').filter({hasText: '저장 검토 큐 · 오류·불일치·라벨 재확인'});
     if (await summary.locator('..').getAttribute('open') === null) await summary.click();
     await expect(panel).toContainText('검토 진행 0 / 3'); await expect(open).toBeEnabled();
     await expect(queueChoice).toHaveValue(queue.id);
@@ -320,7 +320,7 @@ async function queueSavedInputsProjectHandoff(page:Page,w:Workspace,e:Evidence,o
   const deadline=performance.now()+10_000,remaining=()=>Math.max(1,Math.floor(deadline-performance.now()));
   await queueInputHandoff.handoffWithin(page.getByRole('navigation',{name:'Workflow Stages'}).getByRole('button').nth(1).click(),deadline,'ordinary labeling entry');
   const focus=page.getByRole('button',{name:'집중 편집',exact:true});if(await focus.getAttribute('aria-pressed')==='true')await queueInputHandoff.handoffWithin(focus.click(),deadline,'ordinary focus exit');
-  const summary=page.getByText('저장 검토 큐 · 오류·불일치·임계값 우선',{exact:true});if(await summary.locator('..').getAttribute('open')===null)await queueInputHandoff.handoffWithin(summary.click(),deadline,'ordinary queue details');
+  const summary=page.getByText('저장 검토 큐 · 오류·불일치·라벨 재확인',{exact:true});if(await summary.locator('..').getAttribute('open')===null)await queueInputHandoff.handoffWithin(summary.click(),deadline,'ordinary queue details');
   await queueInputHandoff.handoffWithin(expect(panel()).toBeVisible({timeout:remaining()}),deadline,'queue panel visible');
   await queueInputHandoff.handoffWithin(expect(choice()).toHaveValue(expectedId,{timeout:remaining()}),deadline,'own remembered queue');
   for(const originRow of [scope.selectedOrigin,scope.defaultOrigin])await queueInputHandoff.handoffWithin(expect(panel().getByLabel('검토 큐 원본 평가',{exact:true}).locator('option[value="'+originRow.record.evaluation_id+'"]')).toHaveCount(1,{timeout:remaining()}),deadline,'own evaluation option');

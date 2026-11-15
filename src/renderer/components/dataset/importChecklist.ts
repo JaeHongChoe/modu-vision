@@ -8,6 +8,8 @@ export interface ImportCheck { id: string; level: ImportCheckLevel; text: string
 export interface ImportCheckInput {
   task: string;
   totalImages: number;
+  /** Original photos include images not yet annotated; totalImages remains the trainable labeled count. */
+  sourceImages?: number;
   classes: Record<string, number>;
   split: { train: number; val: number; test: number };
   splitState: 'saved' | 'source_folders' | 'automatic' | 'stale' | null;
@@ -83,7 +85,8 @@ export function roleTestCounts(classSplitCounts: Record<string, { test: number }
 
 export function importChecks(input: ImportCheckInput): ImportCheck[] {
   const checks: ImportCheck[] = [];
-  if (input.totalImages <= 0) {
+  const sourceImages = input.sourceImages ?? input.totalImages;
+  if (sourceImages <= 0 && input.totalImages <= 0) {
     checks.push({ id: 'no_images', level: 'block', action: 'reimport',
       text: `가져온 이미지가 없습니다.${input.expectedLayout ? ` 이렇게 준비하세요: ${input.expectedLayout}` : ''}` });
     return checks;
@@ -97,10 +100,16 @@ export function importChecks(input: ImportCheckInput): ImportCheck[] {
     checks.push({ id: 'undecodable', level: 'block', action: 'reimport',
       text: `읽을 수 없는 이미지가 ${input.corrupted}장 있습니다. 프로젝트를 열고 다시 불러오면 학습에서 자동으로 빠집니다.` });
   }
-  if (input.labelsMissing) {
+  const annotation = input.task === 'detection' ? '객체를 둘러싼 박스와 클래스를'
+    : input.task === 'rotated_detection' ? '회전 박스 또는 다각형과 클래스를'
+    : input.task === 'segmentation' ? '픽셀 마스크 또는 다각형과 클래스를' : '모델에 필요한 정답을';
+  const needsLabels = input.labelsMissing || (input.totalImages <= 0 && ['detection', 'segmentation', 'rotated_detection'].includes(input.task));
+  if (needsLabels) {
     checks.push({ id: 'labels_missing', level: 'block', action: 'label',
-      text: `라벨이 아직 없습니다. 2단계에서 영역을 그리거나, 이렇게 준비해 다시 불러오세요: ${input.expectedLayout}` });
+      text: `원본 ${sourceImages.toLocaleString('ko-KR')}장 · 학습에 쓸 라벨 이미지 ${input.totalImages.toLocaleString('ko-KR')}장입니다. 2단계에서 ${annotation} 준비하세요.${input.expectedLayout ? ` 외부 라벨 형식: ${input.expectedLayout}` : ''}` });
   }
+  // With no labeled images a split cannot recover training data; annotate first.
+  if (needsLabels && input.totalImages <= 0) return checks;
   const present = Object.entries(input.classes).filter(([, count]) => count > 0);
   const gaps = classGaps(input.classes, input.classSplitCounts, input.split);
   if (input.task === 'classification') {

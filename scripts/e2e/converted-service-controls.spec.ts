@@ -1,3 +1,4 @@
+import {openWorkspaceSettings} from './fixtures/workspaceSettings';
 import fs from 'node:fs';
 import path from 'node:path';
 import {createHash} from 'node:crypto';
@@ -24,7 +25,7 @@ async function openProject(page:Page,projectDir:string){
  await dialog.getByRole('button',{name:'프로젝트 열기',exact:true}).click();expect((await reply).status()).toBe(200);await expect(dialog).toHaveCount(0);
 }
 async function delivery(page:Page){
- await page.getByRole('button',{name:'패키지·장치·진단',exact:true}).click();
+ await openWorkspaceSettings(page); await page.getByRole('button',{name:'패키지·장치·진단',exact:true}).click();
  const panel=page.getByRole('region',{name:'검사 서비스 배포',exact:true});await expect(panel).toBeVisible();return panel;
 }
 async function closeDelivery(page:Page){
@@ -51,7 +52,7 @@ test('native reviewed OpenVINO CPU service preserves exact epoch through empty i
  const observe=(r:Request)=>{const pathname=new URL(r.url()).pathname;if(r.method()!=='GET'&&pathname.startsWith('/api/runtime-services'))mutations.push({method:r.method(),pathname});};
  page.on('request',observe);
  try{
-  await page.reload();await page.getByRole('button',{name:'패키지·장치·진단',exact:true}).click();
+  await page.reload();await openWorkspaceSettings(page); await page.getByRole('button',{name:'패키지·장치·진단',exact:true}).click();
   const library=page.getByRole('region',{name:'저장된 검사 패키지 보관함'});
   await library.getByRole('article').filter({hasText:'original_cpu_control'}).getByRole('button',{name:'최적화로 이동',exact:true}).click();
   const optimization=page.getByRole('region',{name:'Runtime 최적화와 양자화'}),cohort=optimization.getByRole('group',{name:'변환 오차 검증 · test / val'});

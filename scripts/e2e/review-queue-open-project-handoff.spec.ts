@@ -76,7 +76,7 @@ async function exercise(page:Page,w:Workspace,e:Evidence,native:boolean,origin:s
  const enter=async(scope:Scope)=>{const deadline=performance.now()+10_000;
   await handoffWithin(page.getByRole('navigation',{name:'Workflow Stages'}).getByRole('button').nth(1).click(),deadline,'labeling entry');
   const focus=page.getByRole('button',{name:'집중 편집',exact:true});if(await focus.getAttribute('aria-pressed')==='true')await handoffWithin(focus.click(),deadline,'ordinary focus exit');
-  const summary=page.getByText('저장 검토 큐 · 오류·불일치·임계값 우선',{exact:true});if(await summary.locator('..').getAttribute('open')===null)await handoffWithin(summary.click(),deadline,'queue details open');
+  const summary=page.getByText('저장 검토 큐 · 오류·불일치·라벨 재확인',{exact:true});if(await summary.locator('..').getAttribute('open')===null)await handoffWithin(summary.click(),deadline,'queue details open');
   await handoffWithin(expect(panel()).toBeVisible({timeout:Math.max(1,Math.floor(deadline-performance.now()))}),deadline,'own queue panel');
   await handoffWithin(expect(choice().locator('option[value="'+scope.chosen.id+'"]')).toHaveCount(1,{timeout:Math.max(1,Math.floor(deadline-performance.now()))}),deadline,'chosen option');
   return panel();};
@@ -192,7 +192,7 @@ async function exerciseQueueAdvanceHandoff(page:Page,w:Workspace,e:Evidence,orig
  const enter=async(scope:Scope)=>{const deadline=performance.now()+10_000;
   await handoffWithin(page.getByRole('navigation',{name:'Workflow Stages'}).getByRole('button').nth(1).click(),deadline,'labeling entry');
   const focus=page.getByRole('button',{name:'집중 편집',exact:true});if(await handoffWithin(focus.getAttribute('aria-pressed'),deadline,'ordinary focus state')==='true')await handoffWithin(focus.click(),deadline,'ordinary focus exit');
-  const summary=page.getByText('저장 검토 큐 · 오류·불일치·임계값 우선',{exact:true});if(await handoffWithin(summary.locator('..').getAttribute('open'),deadline,'queue details state')===null)await handoffWithin(summary.click(),deadline,'queue details open');
+  const summary=page.getByText('저장 검토 큐 · 오류·불일치·라벨 재확인',{exact:true});if(await handoffWithin(summary.locator('..').getAttribute('open'),deadline,'queue details state')===null)await handoffWithin(summary.click(),deadline,'queue details open');
   await handoffWithin(expect(panel()).toBeVisible({timeout:Math.max(1,Math.floor(deadline-performance.now()))}),deadline,'owning queue panel');
   await handoffWithin(expect(choice().locator('option[value="'+scope.chosen.id+'"]')).toHaveCount(1,{timeout:Math.max(1,Math.floor(deadline-performance.now()))}),deadline,'owning queue option');
  };

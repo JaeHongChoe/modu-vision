@@ -69,7 +69,7 @@ test('explicit diagnostics question receives scoped errors and GET-only task fee
     await browserLoginWithin(()=>expect(page.getByRole('main',{name:'브라우저 계정 로그인',exact:true})).toHaveCount(0),browserLoginDeadline);
     await expect(page.getByTitle('프로젝트 관리',{exact:true})).toContainText(project.name);
     await expect(page.getByRole('button',{name:'전체 (20)',exact:true})).toBeVisible();
-    const openAssistant=async()=>{await page.getByRole('button',{name:'왜 그런가요?',exact:true}).click();await page.getByRole('button',{name:'도우미에게 묻기',exact:true}).click();return page.getByRole('complementary',{name:'도우미',exact:true});};
+    const openAssistant=async()=>{await page.getByRole('button',{name:'도우미 열기',exact:true}).click();return page.getByRole('complementary',{name:'도우미',exact:true});};
     let assistant=await openAssistant();
     await assistant.getByRole('checkbox',{name:'약관과 전송·보관 안내를 읽고 동의합니다.',exact:true}).check();
     await assistant.getByRole('button',{name:'Continue with ChatGPT',exact:true}).click();
@@ -96,9 +96,9 @@ test('explicit diagnostics question receives scoped errors and GET-only task fee
     });
     const split=page.getByRole('button',{name:'이 비율로 나누기',exact:true});await expect(split).toBeEnabled();
     const conflict=page.waitForResponse(response=>new URL(response.url()).pathname==='/api/dataset/split'&&response.status()===409);
-    await split.click();await conflict;await expect(page.getByText(/진단용 분할 충돌/)).toBeVisible();
+    await split.click();await conflict;await expect(page.locator('[data-dataset-gallery]').getByRole('alert').filter({hasText:/진단용 분할 충돌/})).toBeVisible();
     await expect(split).toBeEnabled();const empty=page.waitForResponse(response=>new URL(response.url()).pathname==='/api/dataset/split'&&response.status()===200);
-    await split.click();await empty;await expect(page.getByText(/Unexpected end of JSON input/)).toBeVisible();
+    await split.click();await empty;await expect(page.locator('[data-dataset-gallery]').getByRole('alert').filter({hasText:/Unexpected end of JSON input/})).toBeVisible();
     expect(fault).toBe(2);expect(sha(fs.readFileSync(sourceSplitPath))).toBe(initialSplitHash);
     expect(ledger().filter(row=>row.route==='/v1/responses')).toHaveLength(2);
     assistant=await openAssistant();const beforeReadCount=taskReads.length,beforeJobs=jobsReads.length;

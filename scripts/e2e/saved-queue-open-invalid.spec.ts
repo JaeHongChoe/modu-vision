@@ -109,7 +109,7 @@ test('saved queue open refuses an actual invalid owned evaluation record without
  try{
   const startupDeadline=performance.now()+10_000;await handoffWithin(page.goto(renderer.url),startupDeadline,'original document mount');await handoffWithin(expect(page.getByTitle('프로젝트 관리',{exact:true})).toContainText(project.name),startupDeadline,'own project title');
   await page.getByRole('navigation',{name:'Workflow Stages'}).getByRole('button').nth(1).click();const focus=page.getByRole('button',{name:'집중 편집',exact:true});if(await focus.getAttribute('aria-pressed')==='true')await focus.click();
-  const summary=page.getByText('저장 검토 큐 · 오류·불일치·임계값 우선',{exact:true});if(await summary.locator('..').getAttribute('open')===null)await summary.click();
+  const summary=page.getByText('저장 검토 큐 · 오류·불일치·라벨 재확인',{exact:true});if(await summary.locator('..').getAttribute('open')===null)await summary.click();
   await expect(panel).toBeVisible();await expect(choice).toHaveValue(queue.id);await expect(open).toBeEnabled();await expect(panel).toContainText('검토 진행 0 / 3');
   // Real selection before custody creates the owning remembered key; this is setup only.
   await choice.selectOption('');await choice.selectOption(queue.id);await expect(open).toBeEnabled();await settle();

@@ -1,6 +1,6 @@
 'use strict';
-// Bootstrap checks for the end-to-end harness. They use only Node built-ins and
-// a fake backend so they run before Playwright, browsers or Python exist.
+// Bootstrap checks use Node built-ins and a fake backend. The configuration
+// probe loads installed Playwright, but no browser, Electron or Python is started.
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const crypto = require('node:crypto');
@@ -13,6 +13,29 @@ const { spawn, execFileSync } = require('node:child_process');
 const harness = require('../e2e/fixtures/harness.cjs');
 
 const REPO_ROOT = path.resolve(__dirname, '..', '..');
+
+test('default temporary run paths reach native ownership checks without linked ancestors', t => {
+  const root = fs.realpathSync(scratch('native-root'));
+  const temporary = path.join(root, 'temporary'), alias = path.join(root, 'temporary-alias');
+  fs.mkdirSync(temporary);
+  try { fs.symlinkSync(temporary, alias, process.platform === 'win32' ? 'junction' : 'dir'); }
+  catch (error) {
+    if (['EPERM', 'EACCES'].includes(error.code)) { t.skip('Directory links are unavailable'); return; }
+    throw error;
+  }
+  const env = { ...process.env, TMPDIR: alias, TMP: alias, TEMP: alias };
+  for (const key of Object.keys(env)) if (key.startsWith('MV_E2E_')) delete env[key];
+  const configUrl = require('node:url').pathToFileURL(path.join(REPO_ROOT, 'playwright.config.ts')).href;
+  const script = `process.argv.push('--list'); const {default: config} = await import(${JSON.stringify(configUrl)}); process.stdout.write(JSON.stringify({outputDir: config.outputDir}));`;
+  const configured = JSON.parse(execFileSync(process.execPath, ['--input-type=module', '-e', script], { cwd: REPO_ROOT, env, encoding: 'utf8' }));
+  const workspace = harness.createWorkspace(path.join(path.dirname(configured.outputDir), 'ws', 'owned-case'));
+  for (let ancestor = workspace.userData; ; ancestor = path.dirname(ancestor)) {
+    assert.equal(fs.lstatSync(ancestor).isSymbolicLink(), false, `Native launch cannot follow the ancestor ${ancestor}`);
+    if (path.dirname(ancestor) === ancestor) break;
+  }
+  assert.equal(fs.realpathSync(workspace.root), workspace.root);
+  assert.equal(fs.realpathSync(alias), temporary, 'The OS temporary alias keeps its original identity');
+});
 
 test('browser and Electron template stores remain owned even without changing the native home', () => {
   const workspace = { root: '/owned-fixture', home: '/owned-fixture/home', userData: '/owned-fixture/userData', projects: '/owned-fixture/projects' };

@@ -21,7 +21,7 @@ async function prepare(page:Page,renderer:RendererServer,workspace:Workspace){
 test('invalid runtime budget blocks the real core start action without submitting a job',async({page,renderer,workspace,evidence})=>{
  await prepare(page,renderer,workspace);let submissions=0;page.on('request',request=>{if(new URL(request.url()).pathname==='/api/training/start'&&request.method()==='POST')submissions++;});
  const minutes=page.getByLabel('학습 시간 제한 (분)',{exact:true});await expect(minutes).toBeVisible({timeout:2000});await minutes.fill('-1');
- await expect(page.getByRole('alert').filter({hasText:'시간 제한'})).toBeVisible();await expect(page.getByRole('button',{name:'선택 설정으로 학습 시작',exact:true})).toBeDisabled();expect(submissions).toBe(0);
+ await expect(page.getByLabel('학습 실행 예산과 대기열 설정',{exact:true}).getByRole('alert').filter({hasText:'시간 제한'})).toBeVisible();await expect(page.getByRole('button',{name:'선택 설정으로 학습 시작',exact:true})).toBeDisabled();expect(submissions).toBe(0);
  await minutes.fill('1.5');await page.getByLabel('장치가 사용 중이면 대기열에 넣기',{exact:true}).uncheck();await page.getByLabel('학습 대기열 우선순위',{exact:true}).fill('-10');
  await expect(page.getByRole('button',{name:'선택 설정으로 학습 시작',exact:true})).toBeEnabled();expect(submissions).toBe(0);
  await evidence.screenshot(page,'s209-budget-ready');evidence.note('scheduling_validation',{actual_renderer:true,actual_backend:true,submissions,training:false});

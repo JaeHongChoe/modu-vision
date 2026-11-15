@@ -1,3 +1,4 @@
+import {openWorkspaceSettings} from './fixtures/workspaceSettings';
 import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
@@ -20,7 +21,7 @@ for(const mode of ['matching','failed read and missing comparison'] as const)tes
  await page.route('**/api/model-deployments/specialized-approve',r=>{submits.push(r.request().postDataJSON());return r.fulfill({json:{revision:{revision_id:'transport-fixture-only'}}});});
  page.on('request',r=>{if(r.method()==='POST'&&['/api/training/start','/api/ocr/train','/api/compute/jobs'].includes(new URL(r.url()).pathname))training.push(r.url());});
  await page.goto(renderer.url);await expect(page.getByTitle('프로젝트 관리',{exact:true})).toContainText(`S209 incumbent ${mode}`);
- await page.getByRole('button',{name:'패키지·장치·진단',exact:true}).click();const dialog=page.getByRole('dialog',{name:'패키지·장치·설치·진단',exact:true});
+ await openWorkspaceSettings(page); await page.getByRole('button',{name:'패키지·장치·진단',exact:true}).click();const dialog=page.getByRole('dialog',{name:'패키지·장치·설치·진단',exact:true});
  await dialog.getByText('OCR · 회전 검출 · 이미지 개선 승인',{exact:true}).click();
  const candidate=dialog.getByRole('combobox',{name:'특수 모델 평가 승인',exact:true});const incumbent=dialog.getByLabel('특수 모델 기준 평가',{exact:true});
  const approve=dialog.getByRole('button',{name:'품질 기준 검증 후 승인',exact:true});const refresh=dialog.getByRole('button',{name:'특수 모델 평가 기록 새로 고침',exact:true});

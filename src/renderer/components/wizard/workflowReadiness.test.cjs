@@ -462,7 +462,8 @@ test('the footer line keeps step 2 wording, a shape from another step prints not
  const footer=fs.readFileSync(path.join(__dirname,'WizardFooter.tsx'),'utf8');
  assert.match(footer,/progressLine\(readiness\.stage,readiness\.progress,ko\)/);
  assert.ok(!footer.includes('progress.confirmed'),'the footer no longer formats step 2 by itself');
- assert.match(footer,/title=\{blocker\?`\$\{blocker\} → \$\{readiness\.nextAction\.label\}\$\{progress\}`/,'the status title carries the full line for the truncated span');
+ assert.match(footer,/title=\{`\$\{actionLabel\}\$\{progress\}`/,'the status title carries the full progress line');
+ assert.match(footer,/modu-next-panel__description/,'blocking reason has a wrapping description, rather than a truncated footer');
 });
 
 test('the production hook feeds the training clock, the evaluation counts and the shown inspection into the number line',async()=>{
@@ -674,8 +675,10 @@ test('every footer target is an element id or a named opener in the renderer',()
   assert.ok(literal||flowArea,`${target} has an element`);
  }
  assert.doesNotMatch(readiness,/textContent\?\.trim\(\)===label|\[title="프로젝트 관리"\]/,'no lookup by interface text');
- assert.match(fs.readFileSync(path.join(root,'components','wizard','WizardHeader.tsx'),'utf8'),/<button type="button" id="workflow-project" aria-haspopup="dialog" aria-expanded=\{showProjectPanel\} data-workflow-open-on-focus onClick=\{\(\) => setShowProjectPanel\(true\)\}/);
- assert.match(fs.readFileSync(path.join(root,'components','onboarding','FirstRunStudio.tsx'),'utf8'),/onClick=\{\(\) => \{ onClose\(\); focusWorkflowTarget\('workflow-project'\); \}\}>프로젝트 관리 열기<\/button>/);
+ assert.match(fs.readFileSync(path.join(root,'components','wizard','WizardHeader.tsx'),'utf8'),/<button type="button" id="workflow-project" aria-haspopup="dialog" aria-expanded=\{showProjectPanel\} data-workflow-open-on-focus onClick=\{openProjectPanel\}/);
+ const guide=fs.readFileSync(path.join(root,'components','onboarding','FirstRunStudio.tsx'),'utf8');
+ assert.match(guide,/onClick=\{\(\) => openWorkspace\('create'\)\}/,'first-run new-project entry opens its explicit workspace destination');
+ assert.match(guide,/focusWorkflowTarget\('workflow-project'\)/,'the embedded guide keeps its project-opener fallback');
 });
 
 test('the jump presses a closed dialog opener and leaves it the focus; other openers and targets are focused',()=>{

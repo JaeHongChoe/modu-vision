@@ -1,12 +1,12 @@
 :root {
-  --workspace-bg: #101722;
-  --workspace-surface: #182332;
-  --workspace-inset: #0d141e;
-  --workspace-border: #405166;
-  --workspace-text: #edf2f8;
-  --workspace-muted: #afbdce;
-  --workspace-accent: #9cddff;
-  --workspace-focus: #7dd3fc;
+  --workspace-bg: #151d1b;
+  --workspace-surface: #1d2925;
+  --workspace-inset: #101815;
+  --workspace-border: #40534a;
+  --workspace-text: #edf2ed;
+  --workspace-muted: #adbdb3;
+  --workspace-accent: #9ed5b5;
+  --workspace-focus: #9ed5b5;
   --workspace-success: #9ce5bc;
   --workspace-warning: #ffd28a;
   --workspace-danger: #ffb5bd;
@@ -33,13 +33,15 @@
 .workspace-section__header { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: var(--workspace-space-3); margin-bottom: var(--workspace-space-4); }
 .workspace-section h3 { font-size: 1rem; font-weight: 650; }
 .workspace-description { color: var(--workspace-muted); margin-top: var(--workspace-space-1); overflow-wrap: anywhere; }
-.workspace-button { display: inline-flex; align-items: center; justify-content: center; gap: var(--workspace-space-2); min-height: 2.25rem; padding: .5rem .8rem; color: var(--workspace-text); background: #223247; border: 1px solid #58718d; border-radius: .4rem; font-size: var(--workspace-font-body); font-weight: 550; white-space: normal; }
+.workspace-button { display: inline-flex; align-items: center; justify-content: center; gap: var(--workspace-space-2); min-height: 2.25rem; padding: .5rem .8rem; color: var(--workspace-text); background: #263c31; border: 1px solid #546e60; border-radius: .4rem; font-size: var(--workspace-font-body); font-weight: 550; white-space: normal; }
 /* Whole-pixel vertical padding: with a 20px text line the button is 38px, so rows built from it (the footer) keep
    whole-pixel heights and scroll areas do not start or end at a fraction of a pixel. */
-.workspace-button:hover:not(:disabled) { background: #2d445d; }
+.workspace-button:hover:not(:disabled) { background: #334e40; }
 .workspace-button:disabled { opacity: .55; cursor: not-allowed; }
-.workspace-button--primary { color: #e8f7ff; background: #0f4c6b; border-color: #38a3d1; font-weight: 650; }
-.workspace-button--primary:hover:not(:disabled) { background: #156288; }
+.workspace-button--primary { color: #f5fbf6; background: #275a42; border-color: #679d7e; font-weight: 650; }
+.workspace-button--primary:hover:not(:disabled) { background: #306c4f; }
+.workspace-button--quiet { color: var(--workspace-muted); background: transparent; border-color: transparent; }
+.workspace-button--quiet:hover:not(:disabled) { color: var(--workspace-text); background: var(--workspace-surface); border-color: var(--workspace-border); }
 .workspace-button:focus-visible, .workspace-field :is(input, select, textarea):focus-visible, .workspace-section summary:focus-visible { outline: 2px solid var(--workspace-focus); outline-offset: 3px; }
 .workspace-badge { display: inline-flex; align-items: center; gap: .4rem; padding: .2rem .6rem; border: 1px solid currentColor; border-radius: 999px; color: var(--workspace-muted); font-size: var(--workspace-font-small); font-weight: 550; }
 .workspace-badge[data-tone="success"] { color: var(--workspace-success); background: #153528; }

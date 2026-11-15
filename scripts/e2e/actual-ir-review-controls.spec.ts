@@ -1,3 +1,4 @@
+import {openWorkspaceSettings} from './fixtures/workspaceSettings';
 import fs from 'node:fs';
 import path from 'node:path';
 import {createHash} from 'node:crypto';
@@ -65,7 +66,7 @@ test('native actual IR candidate review and library controls preserve exact orig
   const precision = () => optimization().getByRole('group', {name: '정밀도·Runtime 별도 승인', exact: true});
   const approve = () => precision().getByRole('button', {name: '검토 후 새 승인 패키지 생성', exact: true});
   const openDelivery = async () => {
-    await page.getByRole('button', {name: '패키지·장치·진단', exact: true}).click();
+    await openWorkspaceSettings(page); await page.getByRole('button',{name:'패키지·장치·진단', exact: true}).click();
     await expect(library()).toBeVisible();
   };
   const closeDelivery = async () => {

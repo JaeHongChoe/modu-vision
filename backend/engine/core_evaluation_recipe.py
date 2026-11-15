@@ -83,6 +83,9 @@ def evaluation_spec(info,checkpoint,device,expected_uuid=None):
     if meta['task']=='anomaly':
         from backend.engine.score_contract import checkpoint_score_spec
         spec.update(model_score_spec=checkpoint_score_spec(checkpoint),model_map_semantics=meta.get('map_semantics','patch_score' if meta.get('detector_type')=='dino_synthetic' else 'pixel_score'),model_anomaly_mode=meta.get('anomaly_mode','classification'))
+    if meta['task']=='detection':
+        from backend.engine.detection.metrics import DETECTION_AP_V2
+        spec['detection_metric_contract']=DETECTION_AP_V2
     spec['evaluation_binding_sha256']=digest(spec)
     return spec
 

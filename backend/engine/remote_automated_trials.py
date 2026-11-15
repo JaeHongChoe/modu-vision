@@ -1,7 +1,6 @@
 """AutoDL child dispatch through the configured SSH job lifecycle."""
 from __future__ import annotations
 
-import itertools
 import json
 from pathlib import Path
 import time
@@ -11,7 +10,7 @@ class RemoteTrialUncertain(RuntimeError):
     """An owned detached trial needs reconciliation; its reservation stays held."""
 
 
-def validate_remote_search(profile, task, preset, device, base, search_space, budget, *, warm_start=False):
+def validate_remote_search(profile, task, preset, device, base, search_space, budget, *, warm_start=False, mode="search"):
     if device not in ('cpu', 'cuda', 'cuda:0'):
         raise ValueError('Remote AutoDL device must be CPU or CUDA; MPS belongs to a local Mac')
     if profile.distributed_processes > 1:
@@ -20,8 +19,12 @@ def validate_remote_search(profile, task, preset, device, base, search_space, bu
         raise ValueError('Remote exact resume needs a verified training-state transfer; local checkpoint paths are unsupported')
     if (base.get('recipe') or {}).get('adapter') == 'ultralytics_yolo_obb':
         raise ValueError('Remote YOLO OBB requires verified transfer of the local recipe model file')
-    from backend.engine.automated_trials import _space
-    candidates = list(itertools.islice(_space(task, search_space, base, 'search'), budget.get('max_trials', 4)))
+    from backend.engine.automated_trials import validated_domain
+    domain = validated_domain(task, search_space, base, mode)
+    # Every categorical alternative is checked even when beyond the first budgeted
+    # diagonal: adaptive asks can choose any alternative. No Cartesian expansion.
+    representative = {key: values[0] for key, values in domain.items()}
+    candidates = [{**base, **representative, key: value} for key, values in domain.items() for value in values]
     from backend.engine.automated_trials import validate_trial_controls
     for candidate in candidates:validate_trial_controls(task,preset,candidate)
     from backend.remote.ssh_transport import SSHTransport, require_training_runtime
@@ -51,7 +54,7 @@ def run_remote_candidate(context, *, profile, search_id, source_dataset_path, tr
             'family_dataset_path': str(context.dataset_path), 'measured_candidate': True,
             'parent_search_id': search_id, 'trial_id': context.output_dir.name,
             'automated_training': {'search_id': search_id, 'trial_id': context.output_dir.name,
-                                   'configuration_parent': configuration_parent},
+                                   'configuration_parent': configuration_parent,'search_sampling':context.search_sampling},
             'max_runtime_s': remaining_seconds, **(owner or {})}
     native_family = context.task in {'rotation', 'ocr', 'rotated_detection', 'enhancement', 'defect_gan'}
     remote_id = 'job_' + context.output_dir.name if native_family else context.output_dir.name

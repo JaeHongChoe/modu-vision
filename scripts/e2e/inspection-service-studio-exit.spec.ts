@@ -1,3 +1,4 @@
+import {openWorkspaceSettings} from './fixtures/workspaceSettings';
 import fs from 'node:fs';
 import path from 'node:path';
 import {createHash} from 'node:crypto';
@@ -41,7 +42,7 @@ test('native Studio exit preserves one owned CPU inspection and durable duplicat
  try{
   await api('/api/project/open',{project_dir:fixture.project.project_dir});await page.reload();
   await expect(page.getByTitle('프로젝트 관리',{exact:true})).toContainText(fixture.project.name);
-  await page.getByRole('button',{name:'패키지·장치·진단',exact:true}).click();
+  await openWorkspaceSettings(page); await page.getByRole('button',{name:'패키지·장치·진단',exact:true}).click();
   const panel=page.getByRole('region',{name:'검사 서비스 배포',exact:true});
   await expect(panel).toContainText('현재 응답: stopped');expect(identity(fixture.project.project_dir)).toBeNull();
   const started=page.waitForResponse(r=>new URL(r.url()).pathname==='/api/runtime-services/start'&&r.request().method()==='POST');

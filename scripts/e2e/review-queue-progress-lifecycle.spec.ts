@@ -159,7 +159,7 @@ async function exercise(page: Page, w: Workspace, e: Evidence, api: Api, sourceE
     await stages.getByRole('button').nth(1).click();
     const focus = page.getByRole('button', {name: '집중 편집', exact: true});
     if (await focus.getAttribute('aria-pressed') === 'true') await focus.click();
-    const summary = page.locator('summary').filter({hasText: '저장 검토 큐 · 오류·불일치·임계값 우선'});
+    const summary = page.locator('summary').filter({hasText: '저장 검토 큐 · 오류·불일치·라벨 재확인'});
     if (await summary.locator('..').getAttribute('open') === null) await summary.click(); await expect(panel).toBeVisible();
   };
   const reloadPanel = async () => {

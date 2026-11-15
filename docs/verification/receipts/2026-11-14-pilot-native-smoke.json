@@ -1,0 +1,48 @@
+{
+  "schema_version": 1,
+  "scope": "owned_source_electron_start_close_smoke_not_frozen_distribution",
+  "run_id": "2026-11-14T12-57-08-320Z-16633",
+  "host_node": "v26.4.0",
+  "playwright": "1.63.0",
+  "runtime": {
+    "electron": "44.11.3",
+    "node": "24.22.2",
+    "chrome": "152.0.7977.169"
+  },
+  "results": [
+    {
+      "test": "fixtures/harness-smoke.spec.ts › electron starts its own backend in an isolated profile",
+      "result": "pass",
+      "versions": {
+        "node": "v26.4.0",
+        "playwright": "1.63.0",
+        "electron": "44.11.3",
+        "python": "Python 3.13.5"
+      },
+      "backend_healthy": true,
+      "electron_stopped": true,
+      "backend_ports_closed": true,
+      "leftover_pids": []
+    },
+    {
+      "test": "fixtures/native-window-health.spec.ts › closed owned native window refuses backend status immediately",
+      "result": "pass",
+      "versions": {
+        "node": "v26.4.0",
+        "playwright": "1.63.0",
+        "electron": "44.11.3",
+        "python": "Python 3.13.5"
+      },
+      "backend_healthy": true,
+      "electron_stopped": true,
+      "backend_ports_closed": true,
+      "leftover_pids": []
+    }
+  ],
+  "original_receipt_sha256": "a9f7ea27b252d61f421c4435a6dc59309f505d568303bb7fe0f0f71a2f6eb531",
+  "limits": [
+    "Owned source backend, fresh private profile, no actual account or external request.",
+    "No frozen bundle, installed app, target OS signing or customer-quality approval.",
+    "Initial alias-root launch failure and stale URL fixture assertion preserved separately."
+  ]
+}

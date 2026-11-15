@@ -31,3 +31,8 @@ test('a safe historical paused plan in A does not block a new current project B 
  const f=fixture();Object.assign(f.saved,{status:'paused',current_step_id:null,steps:[{...f.saved.steps[0],status:'pending',attempt_id:null,receipt:null}]});f.c.state.task=structuredClone(f.saved);f.setRuntime('B');
  await f.api.startOneclickTask(()=>{});assert.deepEqual(f.calls,['create','authorize','dispatch']);assert.equal(f.c.state.task.binding,JSON.stringify(['B',JSON.stringify(['oneclick','w','a','local'])]));
 });
+test('oneclick progress publishes the controller record and removes foreign context without dispatch',async()=>{
+ const f=fixture();Object.assign(f.saved,{status:'paused',current_step_id:null,steps:[{...f.saved.steps[0],status:'pending',attempt_id:null,receipt:null}]});
+ await f.c.restore();const view=f.api.useOneclickTaskProgressStore.getState();assert.equal(view.task.id,f.saved.id);assert.equal(view.contextMatches,true);assert.deepEqual(f.calls,[]);
+ f.setRuntime('B');f.c.refreshContext();assert.equal(f.api.useOneclickTaskProgressStore.getState().contextMatches,false);assert.deepEqual(f.calls,[]);
+});

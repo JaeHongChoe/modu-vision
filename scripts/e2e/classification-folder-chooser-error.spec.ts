@@ -138,7 +138,7 @@ async function exercise( {page, request, renderer, workspace: w, evidence: e}: F
       if (gate.calls !== 1 || typeof gate.reject !== 'function' || gate.rejected) throw Error('Owned chooser is not pending');
       gate.rejected = true; gate.reject(Error((window as any).__ownedClassificationChooserErrorMessage)); gate.reject = null;
     }), deadline, 'reject the exact original pending chooser');
-    const alert = page.getByRole('alert').filter({hasText: CHOOSER_ERROR});
+    const alert = page.locator('[data-dataset-gallery]').getByRole('alert').filter({hasText: CHOOSER_ERROR});
     await handoffWithin(expect(alert).toHaveText(CHOOSER_ERROR, {timeout: remaining(deadline)}), deadline, 'owning handler caught the chooser failure and rendered its message');
     acknowledgement = await handoffWithin(page.evaluate(() => {const gate = (window as any).__ownedClassificationChooserError; return {calls: gate.calls, options: gate.options, rejected: gate.rejected, reject_cleared: gate.reject === null};}), deadline, 'chooser failure acknowledgement');
     expect(acknowledgement).toEqual({calls: 1, options: {title: 'Select Industrial Dataset'}, rejected: true, reject_cleared: true});
