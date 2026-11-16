@@ -39,4 +39,4 @@ TypeScript 시그니처로 연결했습니다. 선분 끝점과 길이 0 처리�
 - 저작권 고지: [NOTICE](../third_party/label-studio/NOTICE)
 - 앱·웹 빌드에 함께 실리는 고지: [public 배포본](../public/third-party/label-studio/SOURCE.md)
 
-이 브랜치의 기능·합성 자료 검증과 현장 라벨 정확도·설치본 수락은 별도입니다.
+현재 소스의 기능·합성 자료 검증과 현장 라벨 정확도·설치본 수락은 별도입니다.

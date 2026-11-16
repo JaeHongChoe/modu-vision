@@ -182,7 +182,7 @@ test('fixed test-cohort result keeps its matrix visible and disables unsupported
  const buttons=view.nodes.filter(n=>n.type==='button'&&['HTML 리포트 내보내기','JSON','평가 임계값 적용','검증 임계값 적용'].includes(view.text(n)));
  assert.equal(buttons.length,4);assert(buttons.every(n=>n.props.disabled));
  assert(view.nodes.some(n=>n.type==='td'&&n.props.onClick),'fixed result matrix is still inspectable');
- assert.match(buttons.find(n=>view.text(n)==='JSON').props.title,/코호트/);
+ assert.match(buttons.find(n=>view.text(n)==='JSON').props.title,/선택한 시험 이미지 묶음.*아직 지원되지 않습니다/);
 });
 
 
@@ -356,7 +356,7 @@ test('replacement evaluation read revokes old heatmap pixels and ownership immed
 // must change the actual rendered controls; no source-string assertions.
 for (const row of [
   {name:'pending results',state:{isLoading:true},reason:/불러오는 중|확인 중/,english:/loading|pending/i},
-  {name:'fixed common cohort',state:{executionEvidence:{common_cohort:{dataset_version_id:'v1'}}},reason:/코호트.*지원/,english:/cohort.*support/i},
+  {name:'fixed common cohort',state:{executionEvidence:{common_cohort:{dataset_version_id:'v1'}}},reason:/선택한 시험 이미지 묶음.*보정을 지원하지 않습니다/,english:/cohort.*support/i},
   {name:'heldout anomaly test',state:{metrics:{anomaly_mode:'classification',evaluated_split:'test'}},reason:/시험.*고정.*임계값/,english:/test.*fixed.*threshold/i},
   {name:'distance scores',state:{metrics:{score_spec:{domain:'distance'}}},reason:/거리.*저장.*임계값/,english:/distance.*saved.*threshold/i},
   {name:'missing model',state:{jobId:null},reason:/평가.*모델/,english:/evaluated model/i},

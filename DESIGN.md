@@ -461,3 +461,28 @@ conflict, duplicate, active-training, context-generation and unmount fences stay
 in force. Saved rules remain bound across training, evaluation, inspection and
 export. The native fields and disclosures use workspace tokens and the existing
 monospace code face without a new editor package or palette.
+
+### Task-centered labeling, results and inspection (2026-11-16)
+
+Keep the selected warm/forest workspace and existing four-goal navigation. Simple
+labeling shows tools relevant to the selected task and always keeps the active
+tool visible, including a tool inherited from full view or selected by a shortcut.
+Other region tools use a native disclosure; folding it never changes the tool,
+geometry, class or save state. Photo classification truth belongs to the existing
+class picker. Zero optional regions must not be described as missing photo truth.
+
+Evaluation uses readable task/model and image-set labels while exact select
+values remain unchanged. Current-preview error counts are native buttons into
+the existing preview filters. The saved-threshold review action stays separate.
+Simple view puts photos before advanced statistics and exact technical evidence;
+live progress, cancellation uncertainty, errors and recovery remain visible.
+
+Saved-flow cards lead with the flow name and connected model count. A selected
+inspection record explicitly describes its execution-time snapshot rather than
+the next run's current selection. Native evidence disclosures retain full run,
+flow, version, graph and checkpoint identities. Simple view starts them closed;
+full view respects the existing technical-detail preference. Missing historical
+evidence remains visible and is never filled from the current model.
+
+These are independent implementations of public workflow patterns; vendor
+branding, proprietary platform code and new external services are not introduced.

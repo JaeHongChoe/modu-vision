@@ -122,3 +122,22 @@ test('the selected failed image shares its visible error and retires it on label
     assert.deepEqual(f.context.assistPanelErrors(), []);
   } finally { f.close(); }
 });
+
+test('the mounted inspector passes only the selected historical run into its evidence and retires it on source change', async t => {
+  environment(t);
+  const run = {run_id: 'history-run', task: 'detection', source_folder: '/source', canonical_source_folder: '/source',
+    pipeline_id: 'historical-flow', pipeline_name: 'Historical saved flow', saved_version_id: 'historical-version',
+    pipeline_hash: 'a'.repeat(64), model_sha256: {'historical-model': 'b'.repeat(64)},
+    scope: 'test', created_at: '2026-11-16T00:00:00Z', status: 'completed', counts: {NG: 0, REVIEW: 0}, total: 0, rows: []};
+  const f = fixture({historyRun: run});
+  try {
+    await f.settle();
+    const card = nodes(f.tree()).find(node => node.type?.name === 'InspectionRunIdentityCard');
+    assert.ok(card, 'the selected record has its own identity presentation');
+    assert.equal(card.props.report, run);
+    f.mode('pending'); f.dataset.folderPath = '/other'; f.dataset.datasetKey = '/other\0detection';
+    f.project.project.source_dataset_dir = '/other'; f.invalidate(); f.render();
+    await f.settle();
+    assert.ok(!nodes(f.tree()).some(node => node.type?.name === 'InspectionRunIdentityCard'));
+  } finally { f.close(); }
+});

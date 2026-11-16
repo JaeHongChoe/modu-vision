@@ -48,6 +48,7 @@ import { scoreUnitLabel } from '../../utils/plainLabels';
 import { SpecialistFamilyNote } from '../common/SpecialistFamilyNote';
 import {useScopedError} from '../common/useScopedError';
 import {registerPanelError} from '../../stores/assistContext';
+import { focusWorkflowTarget } from '../wizard/workflowReadiness';
 
 const comparisonTasks = new Set<string>([
   'classification', 'detection', 'segmentation', 'anomaly', 'patch_classification',
@@ -60,6 +61,49 @@ const METRIC_NAMES_KO: Record<string, string> = {
   macro_f1: 'F1 (평균)', best_metric: '학습 중 최적 지표', image_auroc: '이미지 AUROC', pixel_auroc: '픽셀 AUROC', map: 'mAP', map50: 'mAP@0.5', map_50: 'mAP@0.5', map50_95: 'mAP@0.5:0.95', map_50_95: 'mAP@0.5:0.95',
   iou: 'IoU', miou: '평균 IoU', mean_iou: '평균 IoU', dice: 'Dice', mdice: '평균 Dice', mean_dice: '평균 Dice', escape_rate: '미검률', overkill_rate: '과검률', review_rate: '확인 필요 비율',
 };
+
+const EVALUATION_TASK_LABELS: Record<string, [string, string]> = {
+  classification: ['사진 분류', 'Image classification'], detection: ['객체 검출', 'Object detection'],
+  segmentation: ['영역 분할', 'Segmentation'], anomaly: ['이상 탐지', 'Anomaly detection'],
+  patch_classification: ['부분 사진 분류', 'Patch classification'], ocr: ['글자 읽기', 'Text recognition'],
+  rotated_detection: ['회전 객체 검출', 'Rotated detection'], enhancement: ['화질 개선', 'Image enhancement'],
+  rotation: ['방향 보정', 'Orientation correction'],
+};
+
+/** Display metadata only: the option value and every execution owner retain the original job ID. */
+export function evaluationModelOptionLabel(model: Pick<ModelComparisonModel, 'task' | 'preset' | 'created_at'>, index: number, language: 'ko' | 'en') {
+  const ko = language === 'ko';
+  const taskName = EVALUATION_TASK_LABELS[model.task]?.[ko ? 0 : 1] || (ko ? '작업 종류 기록 없음' : 'Task not recorded');
+  const preset = model.preset === 'fast' ? (ko ? '빠른 학습' : 'Fast training')
+    : model.preset === 'precision' ? (ko ? '정밀 학습' : 'Precision training')
+    : model.preset ? (ko ? '다른 학습 방식' : 'Other training style')
+    : ko ? '학습 방식 기록 없음' : 'Training style not recorded';
+  const date = model.created_at ? new Date(model.created_at) : null;
+  const completed = date && Number.isFinite(date.getTime())
+    ? new Intl.DateTimeFormat(ko ? 'ko-KR' : 'en-GB', {year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hour12:false}).format(date)
+    : ko ? '날짜 기록 없음' : 'Date not recorded';
+  return `${ko ? '모델' : 'Model'} ${index + 1} · ${taskName} · ${preset} · ${completed}`;
+}
+
+export function evaluationDatasetOptionLabel(version: Pick<DatasetVersionSummary, 'name' | 'image_count' | 'status'>, index: number, language: 'ko' | 'en') {
+  const ko = language === 'ko';
+  const statuses: Record<string, string> = ko
+    ? {verified:'확인됨',not_checked:'확인 전',changed:'변경됨',corrupt:'손상 확인 필요'}
+    : {verified:'Verified',not_checked:'Not checked',changed:'Changed',corrupt:'Needs integrity check'};
+  const count = Number.isFinite(version.image_count) && version.image_count >= 0
+    ? `${version.image_count}${ko ? '장' : ' images'}` : ko ? '장수 기록 없음' : 'Image count not recorded';
+  return `${ko ? '자료' : 'Data'} ${index + 1} · ${version.name.trim() || (ko ? '이름 없는 이미지 묶음' : 'Unnamed image set')} · ${count} · ${statuses[version.status] || (ko ? '상태 확인 필요' : 'Check status')}`;
+}
+
+export function remoteEvaluationStateLabel(state: string, language: 'ko' | 'en') {
+  const labels: Record<string, [string, string]> = {
+    queued:['대기 중','Queued'],pending:['대기 중','Pending'],starting:['시작 중','Starting'],running:['실행 중','Running'],
+    completed:['실행 완료','Completed'],succeeded:['실행 완료','Succeeded'],failed:['실패','Failed'],error:['오류','Error'],
+    cancel_requested:['취소 요청됨','Cancellation requested'],cancelling:['취소 처리 중','Cancelling'],
+    cancelled:['취소됨','Cancelled'],canceled:['취소됨','Cancelled'],unknown:['상태 확인 필요','Check status'],
+  };
+  return labels[state]?.[language === 'ko' ? 0 : 1] || (language === 'ko' ? '상태 확인 필요' : 'Check status');
+}
 
 export const SampleVerdictBadge: React.FC<{ verdict: SampleVerdict; compact?: boolean }> = ({
   verdict,
@@ -339,7 +383,7 @@ export const EvaluationStudio: React.FC = () => {
   const calibrationUnavailableReason = isLoading
     ? (language === 'ko' ? '평가 결과를 불러오는 중입니다. 완료 후 계산 가능 여부를 확인하세요.' : 'Evaluation results are loading. Check calibration availability when loading completes.')
     : executionEvidence?.common_cohort
-    ? (language === 'ko' ? '선택 코호트 평가는 임계값 보정을 지원하지 않습니다.' : 'Selected cohort evaluation does not support threshold calibration.')
+    ? (language === 'ko' ? '선택한 시험 이미지 묶음의 평가는 임계값 보정을 지원하지 않습니다.' : 'Selected cohort evaluation does not support threshold calibration.')
     : heldoutAnomalyTest
     ? (language === 'ko' ? '이상 탐지 시험 데이터는 고정된 임계값의 평가에만 사용합니다. 이 결과로 저장된 보정값을 바꾸지 않습니다.' : 'Anomaly test data evaluates a fixed threshold. These results do not replace the saved calibration.')
     : metrics.score_spec?.domain === 'distance'
@@ -367,7 +411,7 @@ export const EvaluationStudio: React.FC = () => {
   const hasObservedMisses = Boolean(!isLoading && jobId && sampleCounts.escape > 0);
   const hasReportableResult = Boolean(jobId && Object.keys(metrics).length > 0 && testPredictions.length > 0);
   const reportAvailabilityHint = executionEvidence?.common_cohort
-    ? '선택 코호트 보고서 내보내기는 아직 지원되지 않습니다.'
+    ? '선택한 시험 이미지 묶음의 보고서 내보내기는 아직 지원되지 않습니다.'
     : !jobId
     ? (language === 'ko' ? '평가가 완료된 모델이 있어야 리포트를 내보낼 수 있습니다.' : 'Load an evaluated model before exporting a report.')
     : !hasReportableResult
@@ -520,34 +564,60 @@ export const EvaluationStudio: React.FC = () => {
       <header className="modu-stage-header"><h1>{language === 'ko' ? '결과 확인' : 'Review results'}</h1><p>{language === 'ko' ? '시험 사진에서 놓친 불량과 잘못 잡은 정상을 확인하세요.' : 'Review missed defects and false alarms on your test images.'}</p></header>
 
       <div aria-label="평가 대상과 실행" className="modu-stage-toolbar shrink-0 flex flex-wrap items-center gap-3 text-sm">
-        <label>평가 모델<select aria-label="평가 모델" value={requestedCohortJob || ''} onChange={event=>{modelSelectionRevision.current++;invalidateForDataChange(true);setCohortModel(event.target.value);}} className="ml-2 rounded bg-slate-800 p-1"><option value="">완료 모델 선택</option>{cohortModels.map(model=><option key={model.job_id} value={model.job_id}>{model.task} · {model.job_id}</option>)}</select></label>
-        <label>시험 이미지 묶음<select aria-label="평가 데이터 버전" value={cohortVersion} onChange={event=>{invalidateForDataChange(true);setCohortVersion(event.target.value);}} className="ml-2 rounded bg-slate-800 p-1"><option value="">저장한 데이터 버전 선택</option>{cohortVersions.map(version=><option key={version.id} value={version.id}>{version.name} · {version.image_count}장 · {version.status}</option>)}</select></label>
+        <label className="min-w-0 flex-[1_1_18rem]">평가 모델<select aria-label="평가 모델" value={requestedCohortJob || ''} onChange={event=>{modelSelectionRevision.current++;invalidateForDataChange(true);setCohortModel(event.target.value);}} className="mt-1 block w-full max-w-full rounded bg-slate-800 p-1"><option value="">완료 모델 선택</option>{cohortModels.map((model,index)=><option key={model.job_id} value={model.job_id}>{evaluationModelOptionLabel(model,index,language)}</option>)}</select></label>
+        <label className="min-w-0 flex-[1_1_16rem]">시험 이미지 묶음<select aria-label="평가 데이터 버전" value={cohortVersion} onChange={event=>{invalidateForDataChange(true);setCohortVersion(event.target.value);}} className="mt-1 block w-full max-w-full rounded bg-slate-800 p-1"><option value="">저장한 데이터 버전 선택</option>{cohortVersions.map((version,index)=><option key={version.id} value={version.id}>{evaluationDatasetOptionLabel(version,index,language)}</option>)}</select></label>
         <span>실행 위치: {selectedProfileId ? profiles.find(profile=>profile.id===selectedProfileId)?.name || selectedProfileId : '이 컴퓨터'}</span>
         <label>장치<select aria-label="평가 장치" value={evaluationDevice} onChange={event=>{invalidateForDataChange(true);setEvaluationDevice(event.target.value);}} className="ml-2 rounded bg-slate-800 p-1"><option value="cpu">CPU</option><option value="cuda:0">{selectedProfileId?'CUDA · 선택 서버 GPU '+(profiles.find(profile=>profile.id===selectedProfileId)?.gpu_selector || '0'):'CUDA · 이 컴퓨터 GPU 0'}</option>{!selectedProfileId&&<option value="mps">Metal MPS · 이 컴퓨터</option>}</select></label>
-        <button aria-label="선택 코호트 평가" disabled={isLoading || !requestedCohortJob || !cohortVersion || !sourceFolder || !useComputeStore.getState().isLoaded} onClick={runSelectedCohort} className="rounded border border-blue-500 p-1">선택 코호트 평가</button>
-        {remoteOperation && <span>작업 {remoteOperation.op_id} · {remoteOperation.state} · 취소요청 {remoteOperation.cancel_requested_at ? '기록됨' : '없음'} · ACK {remoteOperation.cancel_acknowledged_at ? '확인' : '미확인'} · worker 종료 {remoteOperation.worker_exit_confirmed ? '확인' : '미확인'}</span>}
+        <button type="button" aria-label="선택한 시험 이미지 평가" disabled={isLoading || !requestedCohortJob || !cohortVersion || !sourceFolder || !useComputeStore.getState().isLoaded} onClick={runSelectedCohort} className="workspace-button workspace-button--primary">선택한 시험 이미지 평가</button>
+        {remoteOperation && <span role="status" aria-label="원격 평가 상태">원격 평가 {remoteEvaluationStateLabel(remoteOperation.state,language)} · 취소요청 {remoteOperation.cancel_requested_at ? '기록됨' : '없음'} · ACK {remoteOperation.cancel_acknowledged_at ? '확인' : '미확인'} · worker 종료 {remoteOperation.worker_exit_confirmed ? '확인' : '미확인'}</span>}
         {remoteOperation && <button aria-label="원격 평가 취소" onClick={()=>void cancelSelectedCohort()} disabled={Boolean(remoteOperation.cancel_requested_at)} className="rounded border border-amber-500 p-1">취소 요청</button>}
-        {executionEvidence?.common_cohort && <span>실제 코호트 {executionEvidence.common_cohort.dataset_version_id} · {executionEvidence.common_cohort.cohort_sha256} · 추가 분석·보정·보고서 미지원 · 실제 대상 {executionEvidence.execution_target==='local'?'이 컴퓨터':executionEvidence.compute_profile_name || executionEvidence.compute_profile_id} · {executionEvidence.resolved_device || executionEvidence.device}</span>}
-        {executionEvidence?.execution && <span aria-label="평가 실행 기록">실행 기록 {executionEvidence.execution.receipt_id} · SHA {executionEvidence.execution.evidence_sha256}</span>}
+        {executionEvidence?.common_cohort && <p role="note" className="basis-full">저장한 시험 이미지 묶음으로 평가했습니다 · 추가 분석·보정·보고서 미지원 · 실제 대상 {executionEvidence.execution_target==='local'?'이 컴퓨터':executionEvidence.compute_profile_name || executionEvidence.compute_profile_id} · {executionEvidence.resolved_device || executionEvidence.device}</p>}
         {(cohortError || remoteOperationError) && <span role="alert" className="text-red-300">{cohortError || remoteOperationError}</span>}
+        <details aria-label="평가 기술 근거" className="modu-stage-disclosure basis-full min-w-0" open={!simpleView}>
+          <summary className="cursor-pointer p-2.5 text-xs font-semibold">평가 기술 근거 · 모델과 자료 버전</summary>
+          <div className="space-y-1 break-all p-2.5 pt-0 text-xs text-slate-400">
+            <p>선택 모델 ID: {requestedCohortJob || '선택 안 함'} · 현재 결과 모델 ID: {jobId || '기록 없음'}</p>
+            <p>선택 모델 학습 방식 코드: {cohortModels.find(model=>model.job_id===requestedCohortJob)?.preset || '기록 없음'}</p>
+            <p>선택 자료 버전 ID: {cohortVersion || '선택 안 함'}</p>
+            {remoteOperation && <p>원격 작업 ID: {remoteOperation.op_id} · 상태 코드: {remoteOperation.state}</p>}
+            {executionEvidence?.common_cohort && <p>실제 시험 이미지 묶음 ID: {executionEvidence.common_cohort.dataset_version_id} · SHA {executionEvidence.common_cohort.cohort_sha256}</p>}
+            {executionEvidence?.execution && <p aria-label="평가 실행 기록">실행 기록 {executionEvidence.execution.receipt_id} · SHA {executionEvidence.execution.evidence_sha256}</p>}
+          </div>
+        </details>
       </div>
+      {testPredictions.length > 0 && <p role="note" aria-label="평가 결과 기준" className="px-6 pt-3 text-xs text-slate-400">
+        현재 미리보기 기준 {confidenceThreshold.toFixed(2)} · 저장된 평가 기준 {typeof persistedThreshold === 'number' ? persistedThreshold.toFixed(2) : '기록 없음'}.
+        {' '}요약과 일반 이미지 필터는 미리보기 기준이며 저장값을 바꾸지 않습니다.
+        {savedReview && ' 저장된 미검 목록을 보고 있습니다. 요약의 오류 카드를 누르면 미리보기로 돌아갑니다.'}
+      </p>}
       {testPredictions.length > 0 && (() => {
         // Open with the answer in either viewing mode: how many test images the model got right and what it missed.
         const right = sampleCounts.normal + sampleCounts.defect;
-        const card = (label: string, value: string, note: string, tone: string) => (
-          <div className={`rounded-lg border px-4 py-3 ${tone}`}>
+        const card = (label: string, value: string, note: string, tone: string, filter?: 'escape' | 'overkill') => {
+          const content = <>
             <p className="text-xs text-slate-300">{label}</p>
             <p className="mt-1 text-2xl font-bold leading-8 text-slate-50">{value}</p>
             <p className="mt-0.5 text-xs text-slate-400">{note}</p>
-          </div>
-        );
+          </>;
+          return filter ? <button type="button" aria-label={filter === 'escape' ? '미리보기 미검 이미지 보기' : '미리보기 과검 이미지 보기'} aria-controls="evaluation-image-list"
+            aria-pressed={sampleFilter === filter || sampleFilter === (filter === 'escape' ? 'fn_escape' : 'fp_overkill')}
+            disabled={isLoading} onClick={() => {
+              const expected = scope, generation = getProjectContextGeneration(), selectionRevision = modelSelectionRevision.current;
+              clearCellSelection();setSampleFilter(filter);
+              focusWorkflowTarget('evaluation-photo-review', () => scopeRef.current === expected
+                && getProjectContextGeneration() === generation && modelSelectionRevision.current === selectionRevision);
+            }}
+            className={`min-h-24 cursor-pointer rounded-lg border px-4 py-3 text-left hover:brightness-110 active:brightness-95 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cyan-400 disabled:cursor-not-allowed disabled:opacity-50 ${tone}`}>{content}</button>
+            : <div className={`rounded-lg border px-4 py-3 ${tone}`}>{content}</div>;
+        };
         return (
           <section aria-label="평가 결과 한눈에 보기" className="grid shrink-0 grid-cols-2 gap-3 border-b border-[#2B3547] bg-[#0E1520] px-6 py-4 lg:grid-cols-4">
             {/* The first card's colour follows the result like the cards beside it: missed defects rose, false alarms amber. */}
             {card('맞힌 이미지', `${right} / ${sampleCounts.all}장`, accuracyNote(right, sampleCounts.all), sampleCounts.escape ? 'border-rose-700/70 bg-rose-950/30' : sampleCounts.overkill ? 'border-amber-700/70 bg-amber-950/30' : right ? 'border-emerald-700/60 bg-emerald-950/20' : 'border-[#2B3547] bg-[#131822]')}
-            {card('놓친 불량 (미검)', `${sampleCounts.escape}장`, sampleCounts.escape ? '아래 목록의 미검 탭에서 이미지를 확인하세요' : '놓친 불량이 없습니다', sampleCounts.escape ? 'border-rose-700/70 bg-rose-950/30' : 'border-emerald-700/60 bg-emerald-950/20')}
-            {card('잘못 잡은 정상 (과검)', `${sampleCounts.overkill}장`, sampleCounts.overkill ? '과검 탭에서 이미지를 확인하세요' : '정상을 불량으로 잡은 이미지가 없습니다', sampleCounts.overkill ? 'border-amber-700/70 bg-amber-950/30' : 'border-emerald-700/60 bg-emerald-950/20')}
-            {card('판정 기준 점수', confidenceThreshold.toFixed(2), '오른쪽 위 기준값에서 바꿀 수 있습니다', 'border-[#2B3547] bg-[#131822]')}
+            {card('놓친 불량 (미검)', `${sampleCounts.escape}장`, '눌러서 미리보기 미검 이미지 보기', sampleCounts.escape ? 'border-rose-700/70 bg-rose-950/30' : sampleCounts.review ? 'border-[#2B3547] bg-[#131822]' : 'border-emerald-700/60 bg-emerald-950/20', 'escape')}
+            {card('잘못 잡은 정상 (과검)', `${sampleCounts.overkill}장`, '눌러서 미리보기 과검 이미지 보기', sampleCounts.overkill ? 'border-amber-700/70 bg-amber-950/30' : sampleCounts.review ? 'border-[#2B3547] bg-[#131822]' : 'border-emerald-700/60 bg-emerald-950/20', 'overkill')}
+            {card('미리보기 기준 점수', confidenceThreshold.toFixed(2), '저장된 판정 기준과 별도로 표시합니다', 'border-[#2B3547] bg-[#131822]')}
+            <p role="note" className="col-span-2 text-xs text-slate-400 lg:col-span-4">이미지 단위 판정 · 확인 필요 {sampleCounts.review}장. 검출 객체·분할 픽셀 지표와 구분합니다.</p>
           </section>
         );
       })()}
@@ -608,6 +678,10 @@ export const EvaluationStudio: React.FC = () => {
           {reportError || errorMessage}
         </div>
       )}
+      {(isCalibrating || calibrationMessage) && <div role="status" aria-live="polite" aria-label="판정 기준 처리 상태" className="mx-6 mt-3 rounded border border-[#2B3547] bg-[#0B0E14] p-2 text-xs text-[#38BDF8]">
+        {isCalibrating && <p>{language === 'ko' ? '판정 기준 처리 중…' : 'Processing evaluation threshold…'}</p>}
+        {calibrationMessage && <p>{calibrationMessage}</p>}
+      </div>}
 
       {/* In-Page Guardrail if no evaluation results */}
       {!isLoading && !jobId && testPredictions.length === 0 && (
@@ -639,10 +713,18 @@ export const EvaluationStudio: React.FC = () => {
         </div>
       )}
 
-      {/* Main Studio View: Left Matrix/Tradeoff + Right Drawer & Dual Viewport */}
-      <div className="flex-1 min-h-[36rem] flex flex-col xl:flex-row overflow-visible xl:overflow-hidden">
+      <div className="space-y-2 px-4 py-3">
+        <FieldReadinessPanel />
+        <SpecialistFamilyNote step={4} />
+      </div>
+
+      {/* In the simple view, images use the full row and advanced tools stay mounted below them. */}
+      <div className={simpleView ? 'flex-1 min-h-[36rem] flex flex-col overflow-visible' : 'flex-1 min-h-[36rem] flex flex-col xl:flex-row overflow-visible xl:overflow-hidden'}>
         {/* Left Side: Metrics & Clickable Confusion Matrix */}
-        <div className="order-2 xl:order-1 w-full xl:w-[320px] xl:shrink-0 bg-[#131822] border-r border-[#2B3547] p-4 flex flex-col space-y-4 overflow-y-auto">
+        <details aria-label="평가 고급 통계와 도구" open={!simpleView}
+          className={simpleView ? 'modu-stage-disclosure order-2 w-full shrink-0 border-t border-[#2B3547] bg-[#131822]' : 'order-2 xl:order-1 w-full xl:w-[320px] xl:shrink-0 bg-[#131822] border-r border-[#2B3547] overflow-y-auto'}>
+          <summary className="cursor-pointer p-4 text-sm font-semibold text-slate-200">고급 통계 · 모델 비교 · 평가 이력</summary>
+          <div className="flex flex-col space-y-4 p-4 pt-0">
           {/* The simple view keeps the comparison behind one line; the current model's own results stay in sight. */}
           <details className="modu-stage-disclosure" open={!simpleView}>
             <summary className="cursor-pointer p-2.5 font-semibold text-white">현행 모델 · 후보 모델 비교</summary>
@@ -668,8 +750,6 @@ export const EvaluationStudio: React.FC = () => {
             </div>
           </details>
 
-          <FieldReadinessPanel />
-          <SpecialistFamilyNote step={4} />
           {/* Approval, the inspection service, history and error analysis are a reviewer's tools: the simple view moves them
               to one closed line at the bottom of this column so the results come first. */}
 
@@ -740,11 +820,6 @@ export const EvaluationStudio: React.FC = () => {
             )}
             {smallTestWarning(sampleCounts.all) && (
               <p role="note" className="rounded-[3px] border border-amber-700/60 bg-amber-950/20 p-2 text-[11px] text-amber-100">{smallTestWarning(sampleCounts.all)}</p>
-            )}
-            {calibrationMessage && (
-              <div className="p-2 bg-[#0B0E14] border border-[#2B3547] rounded-[3px] text-[11px] text-[#38BDF8] font-mono">
-                {calibrationMessage}
-              </div>
             )}
             {/* Where the threshold applies: export uses it at once; a flow node uses it only after "이 값 쓰기" in step 5. */}
             <p className="text-[11px] text-slate-400">
@@ -1081,13 +1156,14 @@ export const EvaluationStudio: React.FC = () => {
               <EvaluationEvidencePanel samples={testPredictions} onSelect={path=>{const sample=testPredictions.find(item=>item.file_path===path);if(sample)void selectPrediction(sample);}}/>
             </div>
           </details>
-        </div>
+          </div>
+        </details>
 
         {/* Center/Right Side: Filtered Sample Drawer & Dual Viewport */}
-        <div className="order-1 xl:order-2 flex-1 min-w-0 min-h-[32rem] flex overflow-hidden">
+        <div className={`${simpleView ? 'order-1' : 'order-1 xl:order-2'} flex-1 min-w-0 min-h-[32rem] flex overflow-hidden`}>
           {/* Sample Thumbnails Drawer */}
-          <div className="w-44 2xl:w-60 shrink-0 bg-[#131822] border-r border-[#2B3547] p-3 flex flex-col overflow-y-auto space-y-2">
-            <div className="text-xs font-semibold text-slate-400 px-1 mb-1 flex items-center justify-between">
+          <div className={`${simpleView ? 'w-56 2xl:w-64' : 'w-44 2xl:w-60'} shrink-0 bg-[#131822] border-r border-[#2B3547] p-3 flex flex-col overflow-y-auto space-y-2`}>
+            <div id="evaluation-photo-review" tabIndex={-1} className="text-xs font-semibold text-slate-400 px-1 mb-1 flex items-center justify-between">
               <span>
                 {language === 'ko'
                   ? `평가 이미지 목록 (${filteredPredictions.length})`
@@ -1135,7 +1211,7 @@ export const EvaluationStudio: React.FC = () => {
                   aria-selected={sampleFilter === 'all'}
                   tabIndex={sampleFilter === 'all' ? 0 : -1}
                   onClick={() => setSampleFilter('all')}
-                  className={`py-1 px-1 rounded-[3px] transition-all cursor-pointer text-center truncate font-mono text-[10px] ${
+                  className={`py-1 px-1 rounded-[3px] transition-all cursor-pointer text-center whitespace-normal break-words font-mono text-[10px] ${
                     sampleFilter === 'all'
                       ? 'bg-[#1A212E] text-slate-100 font-bold border border-[#38BDF8]'
                       : 'text-slate-400 hover:text-slate-200'
@@ -1150,7 +1226,7 @@ export const EvaluationStudio: React.FC = () => {
                   aria-selected={sampleFilter === 'escape' || sampleFilter === 'fn_escape'}
                   tabIndex={sampleFilter === 'escape' || sampleFilter === 'fn_escape' ? 0 : -1}
                   onClick={() => setSampleFilter('escape')}
-                  className={`py-1 px-1 rounded-[3px] transition-all cursor-pointer text-center truncate font-mono text-[10px] flex items-center justify-center space-x-1 ${
+                  className={`py-1 px-1 rounded-[3px] transition-all cursor-pointer text-center whitespace-normal break-words font-mono text-[10px] flex items-center justify-center space-x-1 ${
                     sampleFilter === 'escape' || sampleFilter === 'fn_escape'
                       ? 'bg-[#450A0A] text-[#FCA5A5] font-bold border border-[#EF4444]'
                       : sampleCounts.escape > 0
@@ -1168,7 +1244,7 @@ export const EvaluationStudio: React.FC = () => {
                   aria-selected={sampleFilter === 'overkill' || sampleFilter === 'fp_overkill'}
                   tabIndex={sampleFilter === 'overkill' || sampleFilter === 'fp_overkill' ? 0 : -1}
                   onClick={() => setSampleFilter('overkill')}
-                  className={`py-1 px-1 rounded-[3px] transition-all cursor-pointer text-center truncate font-mono text-[10px] flex items-center justify-center space-x-1 ${
+                  className={`py-1 px-1 rounded-[3px] transition-all cursor-pointer text-center whitespace-normal break-words font-mono text-[10px] flex items-center justify-center space-x-1 ${
                     sampleFilter === 'overkill' || sampleFilter === 'fp_overkill'
                       ? 'bg-[#451A03] text-[#FCD34D] font-bold border border-[#F59E0B]'
                       : sampleCounts.overkill > 0
@@ -1188,7 +1264,7 @@ export const EvaluationStudio: React.FC = () => {
                   aria-selected={sampleFilter === 'defect' || sampleFilter === 'tp_defect'}
                   tabIndex={sampleFilter === 'defect' || sampleFilter === 'tp_defect' ? 0 : -1}
                   onClick={() => setSampleFilter('defect')}
-                  className={`py-1 px-1 rounded-[3px] transition-all cursor-pointer text-center truncate font-mono text-[10px] flex items-center justify-center space-x-1 ${
+                  className={`py-1 px-1 rounded-[3px] transition-all cursor-pointer text-center whitespace-normal break-words font-mono text-[10px] flex items-center justify-center space-x-1 ${
                     sampleFilter === 'defect' || sampleFilter === 'tp_defect'
                       ? 'bg-[#083344] text-[#67E8F9] font-bold border border-[#06B6D4]'
                       : 'text-slate-400 hover:text-slate-200'
@@ -1204,7 +1280,7 @@ export const EvaluationStudio: React.FC = () => {
                   aria-selected={sampleFilter === 'normal' || sampleFilter === 'tn_normal'}
                   tabIndex={sampleFilter === 'normal' || sampleFilter === 'tn_normal' ? 0 : -1}
                   onClick={() => setSampleFilter('normal')}
-                  className={`py-1 px-1 rounded-[3px] transition-all cursor-pointer text-center truncate font-mono text-[10px] flex items-center justify-center space-x-1 ${
+                  className={`py-1 px-1 rounded-[3px] transition-all cursor-pointer text-center whitespace-normal break-words font-mono text-[10px] flex items-center justify-center space-x-1 ${
                     sampleFilter === 'normal' || sampleFilter === 'tn_normal'
                       ? 'bg-[#064E3B] text-[#6EE7B7] font-bold border border-[#10B981]'
                       : 'text-slate-400 hover:text-slate-200'
