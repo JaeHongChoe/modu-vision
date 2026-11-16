@@ -13,6 +13,8 @@ node scripts/geti-platform.cjs check --json
 
 Geti UI는 React 19.1.1·Node >=24.2.0·npm >=11.14.0, backend는 Python >=3.14,<3.15를 선언한다. 기존 모두비전 React 18/Python 3.13 환경을 덮어쓰지 않는다. 공식 설치 대상과 현재 Mac ARM 가능성 검증은 구분한다. `application`의 현재 task는 classification·detection·instance segmentation이며 기존 모두비전 10모델군 전체의 대체를 뜻하지 않는다.
 
-초기 단계에서는 설치 앱·8443 웹·사용자 데이터·GPU·계정 설정을 바꾸지 않는다. 전체 runtime의 데이터→라벨→학습→평가→내보내기 시험, 모두비전 인증/프로젝트 연결, 기존 기능과 한국어 UI 통합, 실제 패키징은 별도 완료 단계다. [설계](../../docs/superpowers/specs/2026-11-16-full-training-platform-design.md)와 [실행 계획](../../docs/superpowers/plans/2026-11-16-full-training-platform.md)을 따른다.
+통합 브랜치에는 기존 계정·프로젝트 권한을 사용하는 `/api/platform/geti`와 한국어 학습 작업대가 있다. 부모 backend가 프로젝트별 비공개 Geti 자식을 소유하고, 데이터·전처리 복사본과 모델 변형을 고정해 연결한다. 기존 모델군은 원래 학습 경로를 유지한다. 실제 사용 순서는 [학습 작업대 안내](../../docs/geti-platform.md), 단계별 근거와 배포 경계는 [검증 기록](../../docs/verification/2026-11-16-full-training-platform.md)을 확인한다.
+
+`scripts/build_geti_runtime.py`는 이미 설치·검증한 별도 Python3.14 CPU 환경과 고정 source로부터 `dist-geti/runtime.json`을 만든다. 이 과정에서 패키지를 설치하거나 모델을 자동 다운로드하지 않는다. 앱 패키지는 전체 파일 inventory를 확인해 이 runtime을 포함하고, 개발 웹은 같은 descriptor를 읽는다. descriptor·inventory·source·entrypoint 검증을 통과하기 전에는 자식을 실행하지 않는다. 개발 환경이 있다는 사실과 설치 앱·8443 반영 완료는 구분한다.
 
 의존성·모델은 core license와 별도로 확인한다. 특히 upstream CPU extra는 optional Ultralytics를 포함하므로 무조건 설치하지 않는다. [고지](UPSTREAM-NOTICES.md)를 확인한다.

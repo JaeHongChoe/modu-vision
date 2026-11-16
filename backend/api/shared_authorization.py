@@ -136,6 +136,8 @@ class SharedAuthorizationMiddleware:
             labeling=path.startswith(('/api/annotations/','/api/label-candidates/','/api/label-suggestions/','/api/dataset/metadata/','/api/dataset/formats/','/api/data-workbench/'))
             training=path.startswith(('/api/training/','/api/engine/','/api/automated-training/','/api/patch-classification/','/api/rotation/','/api/ocr/','/api/rotated-detection/','/api/enhancement/','/api/defect-gan/','/api/evaluation/','/api/training-workspace/'))
             training=training or path.startswith('/api/model-execution/')
+            platform_adopt=path == '/api/platform/geti/adopt-labels'
+            training=training or (path.startswith('/api/platform/geti/') and not platform_adopt)
             parts=path.strip('/').split('/')
             precision_review=len(parts)==6 and parts[:4]==['api','export','flow','optimization-jobs'] and parts[5]=='approve'
             flow=not precision_review and path.startswith(('/api/flowchart/','/api/inspections/','/api/export/','/api/geometry/','/api/flow-workspace/'))
@@ -146,6 +148,7 @@ class SharedAuthorizationMiddleware:
             import_accept=path.startswith('/api/dataset/imports/') and path.endswith('/accept')
             labeling=labeling or (path=='/api/dataset/imports' or path.startswith('/api/dataset/imports/')) and not import_accept
             review=review or import_accept
+            review=review or platform_adopt
             compute_jobs=path.startswith('/api/compute/jobs')
             delivery_allowed=False
             team_allowed=False

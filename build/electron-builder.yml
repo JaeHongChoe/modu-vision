@@ -69,6 +69,11 @@ asarUnpack:
 # macOS Configuration (arm64)
 # -----------------------------------------------------------------------------
 mac:
+  extraResources:
+    - from: "dist-geti"
+      to: "geti-platform"
+      filter:
+        - "**/*"
   appId: com.visionaistudio.app
   category: public.app-category.developer-tools
   target:
@@ -92,6 +97,7 @@ mac:
   # backend-release.json at launch, and re-signing would change it. PyInstaller has already ad-hoc signed these files.
   signIgnore:
     - /Contents/Resources/backend_bin/
+    - /Contents/Resources/geti-platform/
   entitlements: build/entitlements.mac.plist
   entitlementsInherit: build/entitlements.mac.plist
   darkModeSupport: true

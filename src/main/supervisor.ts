@@ -301,6 +301,9 @@ export class BackendSupervisor extends EventEmitter {
         PYTHONPATH: appRoot,
         VISION_AI_STUDIO_API_TOKEN: apiToken,
         VISION_AI_APP_VERSION: getElectronApp()?.getVersion() || '',
+        ...(getElectronApp()?.isPackaged ? {
+          MODU_GETI_RUNTIME_DESCRIPTOR: path.join(process.resourcesPath, 'geti-platform', 'runtime.json'),
+        } : {}),
         ...(userDataDir ? { VISION_AI_STUDIO_USER_DATA_DIR: userDataDir } : {}),
       };
       if(owned)env=owned.backendEnvironment(env);

@@ -75,6 +75,7 @@ from backend.api.routes_flow_workspace import router as flow_workspace_router
 from backend.api.routes_flow_evaluation import router as flow_evaluation_router
 from backend.api.routes_image_truth import router as image_truth_router
 from backend.api.routes_training_workspace import router as training_workspace_router
+from backend.api.routes_platform_geti import router as geti_platform_router
 from backend.api.routes_product_delivery import router as product_delivery_router
 from backend.api.routes_flowchart import router as flowchart_router
 from backend.api.routes_inspections import router as inspections_router
@@ -490,6 +491,14 @@ async def _admitted_lifespan(app: FastAPI):
         if execution_stop is not None:execution_stop.set()
         if execution_thread is not None:execution_thread.join(timeout=1)
         logger.info("Initiating Vision AI Studio backend shutdown...")
+        # The optional platform is a child of this backend, never a separate
+        # user daemon. Its private instances and watchdog pipes end here.
+        platform_runtime = getattr(app.state, 'geti_runtime', None)
+        if platform_runtime is not None:
+            try:
+                await asyncio.to_thread(platform_runtime.shutdown)
+            except Exception:
+                logger.exception('Platform child cleanup failed; continuing original backend cleanup')
         try:
             # Detach owned jobs for reattachment; do not terminate training.
             training_job_manager.detach_all_for_shutdown()
@@ -562,6 +571,12 @@ def _admitted_create_app(project_dir: Optional[str] = None, shared_auth_dir: Opt
     app.state.project_dir = p_dir
     app.state.context_registry = ContextRegistry(p_dir)
     app.state.assistant_tasks = TaskLedger(p_dir / '.assistant-tasks')
+    from backend.platforms.geti.bindings import PlatformStore
+    from backend.platforms.geti.runtime import GetiRuntimeManager
+    app.state.geti_store = PlatformStore(p_dir / '.geti-platform' / 'ledger')
+    app.state.geti_runtime = GetiRuntimeManager(p_dir / '.geti-platform' / 'instances')
+    from backend.platforms.geti.activity import PlatformActivity
+    app.state.geti_activity = PlatformActivity(app.state.geti_runtime, app.state.geti_store)
 
     # The Electron supervisor provides a fresh capability for each daemon process.
     # Standalone invocations generate one too, so a missing environment variable
@@ -755,6 +770,7 @@ def _admitted_create_app(project_dir: Optional[str] = None, shared_auth_dir: Opt
     app.include_router(flow_evaluation_router)
     app.include_router(image_truth_router)
     app.include_router(training_workspace_router)
+    app.include_router(geti_platform_router)
     app.include_router(product_delivery_router)
     app.include_router(flowchart_router)
     app.include_router(inspections_router)

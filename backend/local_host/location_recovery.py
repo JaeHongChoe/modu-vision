@@ -330,6 +330,9 @@ class LocationRecovery:
         # complete namespace receipt. Never cancel them to obtain quiescence.
         if ledger().active() or training_job_manager.is_training:
             raise refusal('location_recovery_busy','진행 중인 작업이 끝난 뒤 폴더를 다시 확인하세요.')
+        platform = getattr(self.app.state, 'geti_runtime', None)
+        if platform is not None and platform.active_work(row['path']):
+            raise refusal('location_recovery_busy','학습 작업대의 실행과 작업자 종료를 확인한 뒤 폴더를 다시 연결하세요.')
         import importlib
         groups = (
             ('backend.api.routes_label_suggestions','_BATCH_LOCK',('_LIVE_BATCHES',)),

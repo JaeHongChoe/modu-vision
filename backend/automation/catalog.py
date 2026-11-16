@@ -23,6 +23,7 @@ SAFE_OBSERVATIONS = frozenset((
     'GET /api/training/queue',
     'GET /api/training/jobs',
     'GET /api/training-workspace/tasks',
+    'GET /api/platform/geti/status',
     'GET /api/provenance/impact',
     'GET /api/models/capabilities',
     'GET /api/label-suggestions/stats',

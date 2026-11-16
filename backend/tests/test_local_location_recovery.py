@@ -12,6 +12,25 @@ ORIGIN = 'https://localhost:8443'
 BASE = '/api/local-host/projects/location-recovery'
 
 
+def test_platform_done_artifact_without_worker_exit_blocks_location_recovery(tmp_path, monkeypatch):
+    f=fixture(tmp_path,monkeypatch); before=stored(f)
+    candidate=choose(f)
+    visited=[]
+    def active_work(project_root):
+        visited.append(project_root)
+        return [{'status':'done','worker_exited':False}]
+    f.app.state.geti_runtime=SimpleNamespace(active_work=active_work)
+    result=f.client.post(BASE+'/confirm',json={'candidate_id':candidate})
+    assert result.status_code==409,result.text
+    assert result.json()['detail']['code']=='location_recovery_busy'
+    assert visited==[f.row['path']]
+    assert stored(f)==before
+    assert f.app.state.accounts.authenticate(f.session['token'])['id']==f.owner['id']
+    f.app.state.geti_runtime.active_work=lambda root: []
+    completed=f.client.post(BASE+'/confirm',json={'candidate_id':choose(f)})
+    assert completed.status_code==200,completed.text
+
+
 class Native:
     ready = {'platform': 'darwin'}
     closed = False

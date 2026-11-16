@@ -81,7 +81,12 @@ def _model_references(pipeline: FlowchartPipeline) -> Dict[str, str]:
         task = flow_model_task(node)
         if task is None: continue
         job_id = node.data.model_job_id
-        if (not job_id or not valid_flow_job(job_id, task)
+        from backend.platforms.geti.inspection import is_platform_reference,parse_reference
+        platform=is_platform_reference(job_id)
+        if platform:
+            try: parse_reference(job_id)
+            except ValueError as exc: raise HTTPException(409,'Malformed platform inspection model reference') from exc
+        if (not job_id or not (platform or valid_flow_job(job_id, task))
                 or task not in FLOW_TASKS
                 or (job_id in references and references[job_id] != task)):
             raise HTTPException(status_code=409, detail="저장된 검사 플로우에 연결된 모델 정보가 올바르지 않습니다.")
@@ -183,6 +188,12 @@ def _verified_run_provenance(payload: "CreateRun", project: Dict[str, Any], requ
     model_paths: Dict[str, str] = {}
     for job_id, task in _model_references(pipeline).items():
         try:
+            from backend.platforms.geti.inspection import is_platform_reference,resolve_reference
+            if is_platform_reference(job_id):
+                bound=resolve_reference(request,project,str(source),job_id,task,export=True)
+                model_sha256[job_id]=bound['artifact']['export_sha256']
+                model_paths[job_id]=str(bound['artifact_path'].resolve())
+                continue
             retained = _retained_inspection_checkpoint(project, job_id, task, str(source), pipeline, request)
             if retained is not None:
                 checkpoint = retained
@@ -545,6 +556,14 @@ def _verified_execution_context(run: sqlite3.Row, project: Dict[str, Any], reque
             if not isinstance(recorded, str) or not isinstance(model_hashes[job_id], str):
                 raise ValueError("Stored checkpoint identity is invalid.")
             checkpoint = Path(recorded)
+            from backend.platforms.geti.inspection import is_platform_reference,resolve_reference
+            if is_platform_reference(job_id):
+                bound=resolve_reference(request,project,str(source),job_id,task,export=True)
+                if (checkpoint!=bound['artifact_path'].resolve() or checkpoint.is_symlink()
+                        or not checkpoint.is_file() or _sha256(checkpoint)!=model_hashes[job_id]):
+                    raise ValueError('Platform model export differs from recorded inspection artifact')
+                checkpoints[(job_id,task)]=checkpoint
+                continue
             retained = _retained_inspection_checkpoint(project, job_id, task, str(source), pipeline, request)
             local_job = Path(project["models_dir"]).resolve() / job_id
             if (checkpoint.name != "best_model.pt" or checkpoint.is_symlink() or not checkpoint.is_file()
