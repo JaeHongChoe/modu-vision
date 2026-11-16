@@ -39,6 +39,12 @@ def copy_tree(source, target):
         shutil.copytree(source, target, dirs_exist_ok=True, symlinks=True)
 
 
+def copy_overlay(source, target):
+    """Local interpreter caches/descriptors are not reviewed runtime assets."""
+    shutil.copytree(source, target, symlinks=True,
+                    ignore=shutil.ignore_patterns('__pycache__', '*.pyc', '*.pyo', 'installed-runtime.json'))
+
+
 def build(args):
     source = args.source.resolve(strict=True)
     base = args.python_root.resolve(strict=True)
@@ -96,7 +102,7 @@ def build(args):
         else:
             shutil.copy2(source / name, target)
     overlay = ROOT / 'platforms/geti/runtime'
-    copy_tree(overlay, output / 'overlay')
+    copy_overlay(overlay, output / 'overlay')
     (output / 'weights/classification').mkdir(parents=True)
     if args.weight:
         shutil.copy2(args.weight, output / 'weights/classification' / WEIGHT)

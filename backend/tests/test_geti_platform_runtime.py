@@ -235,3 +235,83 @@ def test_explicit_recovery_only_stops_recorded_owned_generation(tmp_path):
         for process in (owned, foreign):
             if process.poll() is None: process.kill()
             process.wait(timeout=5)
+
+
+def test_real_child_never_changes_existing_bytecode_or_creates_overlay_source_cache(tmp_path, monkeypatch):
+    """Reproduce signed-resource drift without training or modifying pinned source."""
+    import hashlib
+    import json
+    import os
+    import subprocess
+    python = os.environ.get('MODU_GETI_QA_PYTHON')
+    if not python: pytest.skip('explicit isolated Python 3.14 QA environment required')
+    from backend.platforms.geti.runtime import GetiRuntimeManager
+    overlay = tmp_path / 'overlay'
+    source = tmp_path / 'source-fixture'
+    overlay.mkdir(); source.mkdir()
+    helper = overlay / 'overlay_helper.py'
+    helper.write_text('VALUE = 17\n')
+    (source / 'source_helper.py').write_text('VALUE = 23\n')
+    subprocess.run([python,'-B','-c','import py_compile,sys;py_compile.compile(sys.argv[1],doraise=True)',str(helper)],check=True)
+    before_stat = helper.stat()
+    # Relocated packaged sources can have a new mtime while retaining exact bytes.
+    os.utime(helper,(before_stat.st_atime,before_stat.st_mtime+5))
+    entry = overlay / 'probe.py'
+    entry.write_text('''import json,os,sys,threading
+from http.server import BaseHTTPRequestHandler,HTTPServer
+sys.path.insert(0,SOURCE_FIXTURE)
+import overlay_helper,source_helper
+class Handler(BaseHTTPRequestHandler):
+ def do_GET(self):
+  self.send_response(200);self.send_header('Content-Type','application/json');self.end_headers()
+  self.wfile.write(json.dumps({'status':'ok','bytecode_disabled':sys.dont_write_bytecode,'inherited_policy':os.environ.get('PYTHONDONTWRITEBYTECODE')}).encode())
+ def log_message(self,*args):pass
+server=HTTPServer(('127.0.0.1',int(os.environ['PORT'])),Handler)
+threading.Thread(target=lambda:(sys.stdin.buffer.read(1),server.shutdown()),daemon=True).start()
+server.serve_forever();server.server_close()
+'''.replace('SOURCE_FIXTURE',repr(str(source))))
+    def snapshot():
+        return {path.relative_to(tmp_path).as_posix():hashlib.sha256(path.read_bytes()).hexdigest()
+                for folder in (overlay,source) for path in folder.rglob('*') if path.is_file()}
+    before = snapshot()
+    monkeypatch.setenv('MODU_GETI_ENTRYPOINT',str(entry))
+    monkeypatch.delenv('MODU_GETI_RUNTIME_DESCRIPTOR',raising=False)
+    manager = GetiRuntimeManager(tmp_path/'instances',python=Path(python))
+    try:
+        for _ in range(2):
+            client = manager.client('owned-cache-check')
+            health = client.request('GET','/health')
+            assert snapshot() == before, 'child mutated inventoried bytecode or created new resource cache files'
+            assert health['bytecode_disabled'] is True and health['inherited_policy']=='1'
+            manager.stop('owned-cache-check')
+    finally: manager.shutdown()
+
+
+def test_isolated_version_probe_cannot_write_site_pth_bytecode(tmp_path, monkeypatch):
+    """-I ignores inherited env policy, so even the startup probe needs -B."""
+    import hashlib
+    import os
+    import subprocess
+    python = os.environ.get('MODU_GETI_QA_PYTHON')
+    if not python: pytest.skip('explicit isolated Python 3.14 QA environment required')
+    from backend.platforms.geti.runtime import GetiRuntimeManager
+    prefix = tmp_path/'probe-python'
+    subprocess.run([python,'-B','-m','venv','--without-pip',str(prefix)],check=True)
+    executable = prefix/'bin/python3.14'
+    site = prefix/'lib/python3.14/site-packages'
+    helper = site/'owned_probe_helper.py'
+    helper.write_text('VALUE = 17\n')
+    subprocess.run([str(executable),'-B','-c','import py_compile,sys;py_compile.compile(sys.argv[1],doraise=True)',str(helper)],check=True)
+    (site/'owned_probe.pth').write_text('import owned_probe_helper\n')
+    stat = helper.stat();os.utime(helper,(stat.st_atime,stat.st_mtime+5))
+    def snapshot():
+        return {p.relative_to(site).as_posix():hashlib.sha256(p.read_bytes()).hexdigest() for p in site.rglob('*') if p.is_file()}
+    before = snapshot()
+    entry = tmp_path/'probe.py';entry.write_text('# This status-only test never starts the child.\n')
+    monkeypatch.setenv('MODU_GETI_ENTRYPOINT',str(entry))
+    monkeypatch.setenv('PYTHONDONTWRITEBYTECODE','1')
+    monkeypatch.delenv('MODU_GETI_RUNTIME_DESCRIPTOR',raising=False)
+    manager = GetiRuntimeManager(tmp_path/'instances',python=executable)
+    assert manager.status('owned-status-only')['state']=='stopped'
+    assert snapshot()==before, 'isolated version probe mutated packaged site .pth bytecode before child startup'
+    assert not (tmp_path/'instances/owned-status-only').exists()

@@ -71,7 +71,7 @@ class GetiRuntimeManager:
             self.weights_root = Path(installation['weights_root'])
         if not self.python or not self.python.is_file():
             raise RuntimeError('Geti Python 3.14 runtime is not installed. 플랫폼 실행 환경을 설치하세요.')
-        result = subprocess.run([str(self.python), '-I', '-c', 'import sys; print("%d.%d" % sys.version_info[:2])'], capture_output=True, text=True, timeout=15)
+        result = subprocess.run([str(self.python), '-I', '-B', '-c', 'import sys; print("%d.%d" % sys.version_info[:2])'], capture_output=True, text=True, timeout=15)
         if result.returncode or result.stdout.strip() != '3.14':
             raise RuntimeError('Geti requires a separate Python 3.14 runtime.')
         if not (self.source_root / 'application/backend/app/main.py').is_file() or not (self.source_root / 'library/src/getitune').is_dir():
@@ -162,6 +162,7 @@ class GetiRuntimeManager:
                         'LOG_DIR': str(instance / 'logs'), 'HOST': '127.0.0.1', 'PORT': str(port), 'GPU_SLOTS': '1',
                         'MODU_GETI_SECRET': secret, 'MODU_GETI_SOURCE_ROOT': str(self.source_root),
                         'MODU_GETI_PARENT_PIPE': '1', 'MODU_GETI_INSTANCE_GENERATION': secrets.token_hex(16),
+                        'PYTHONDONTWRITEBYTECODE': '1',
                         'PYTHONPATH': str(self.entrypoint.parent) + os.pathsep + str(self.source_root / 'library/src'),
                         'HF_HUB_DISABLE_TELEMETRY': '1', 'HF_HUB_OFFLINE': '1', 'HF_DATASETS_OFFLINE': '1',
                         'DO_NOT_TRACK': '1', 'OTEL_SDK_DISABLED': 'true', 'WANDB_MODE': 'disabled',
@@ -174,7 +175,7 @@ class GetiRuntimeManager:
                     if original_library: env[library_var] = original_library
             log = (instance / 'runtime.log').open('ab')
             try:
-                process = subprocess.Popen([str(self.python), str(self.entrypoint)], cwd=self.source_root / 'application/backend', env=env,
+                process = subprocess.Popen([str(self.python), '-B', str(self.entrypoint)], cwd=self.source_root / 'application/backend', env=env,
                                            stdin=subprocess.PIPE, stdout=log, stderr=subprocess.STDOUT,
                                            pass_fds=(lockfile.fileno(),) if os.name != 'nt' else (),
                                            start_new_session=os.name != 'nt', creationflags=subprocess.CREATE_NEW_PROCESS_GROUP if os.name == 'nt' else 0)
