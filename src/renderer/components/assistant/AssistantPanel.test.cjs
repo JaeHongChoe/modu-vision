@@ -11,7 +11,7 @@ const text=tree=>!tree?'':typeof tree==='string'||typeof tree==='number'?String(
 
 function render(state,ui={}){
  const slots=ui.slots||(ui.slots=[]);let cursor=0;
- const react={createElement:(type,props,...children)=>({type,props:{...props,children}}),useState:initial=>{const i=cursor++;if(!(i in slots))slots[i]=ui.draft!==undefined&&initial===''?ui.draft:typeof initial==='function'?initial():initial;return[slots[i],value=>{slots[i]=typeof value==='function'?value(slots[i]):value;ui.sets?.push(slots[i]);}];},useRef:()=>({current:ui.focus?{focus:ui.focus}:null}),useEffect:()=>{}};
+ const react={createElement:(type,props,...children)=>({type,props:{...props,children}}),useState:initial=>{const i=cursor++;if(!(i in slots))slots[i]=ui.draft!==undefined&&initial===''?ui.draft:typeof initial==='function'?initial():initial;return[slots[i],value=>{slots[i]=typeof value==='function'?value(slots[i]):value;ui.sets?.push(slots[i]);}];},useRef:()=>({current:ui.focus?{focus:ui.focus}:null}),useEffect:fn=>{ui.effects?.push(fn);}};
  const store=Object.assign(selector=>selector(state),{getState:()=>state});
  const taskState=ui.taskState||{};
  Object.assign(taskState,{task:null,busy:Boolean(ui.taskBusy),planningNew:false,history:[],readPending:false,contextMatches:true,loading:false,error:null,...taskState});
@@ -51,6 +51,23 @@ test('the public panel only offers ChatGPT and never sends through a saved API p
 });
 
 const connectedConfig=()=>({active:'chatgpt',providers:[{provider:'chatgpt',baseUrl:'https://chatgpt.com',model:'chosen',hasKey:false,ready:true,label:'ChatGPT',supportsImages:false}],chatgpt:{accounts:[{recordId:'a',model:'chosen',signedIn:true,planUsageEnabled:true}],active:'a'}});
+test('a scoped preprocessing draft is inserted once, preserves typed text, and never sends automatically',()=>{
+ for(const prior of ['', '먼저 적은 질문']){
+  const effects=[],calls=[],ui={draft:prior,effects,focus:()=>calls.push('focus')};
+  const request={id:1,text:'FFT 코드 전처리 요청',binding:'current'};
+  const state={...base,config:connectedConfig(),composerRequest:request,ask:()=>calls.push('send'),takeComposerDraft:given=>{
+   if(state.composerRequest!==given)return null;state.composerRequest=null;return given.text;
+  }};
+  render(state,ui);for(const run of effects)run();for(const run of effects)run();
+  const expected=prior?`${prior}\n\nFFT 코드 전처리 요청`:'FFT 코드 전처리 요청';
+  assert.equal(ui.slots[0],expected);assert.deepEqual(calls,['focus']);
+ }
+});
+test('a retired preprocessing request leaves the current composer unchanged',()=>{
+ const effects=[],ui={draft:'새 프로젝트 질문',effects};
+ render({...base,composerRequest:{id:1},takeComposerDraft:()=>null},ui);
+ for(const run of effects)run();assert.equal(ui.slots[0],'새 프로젝트 질문');
+});
 const pendingWrite=()=>({call:{id:'c',name:'save_split',arguments:{}},runId:'run_x',preview:{title:'분할 저장',lines:['학습 70%'],undo:'다시 나누기'}});
 
 test('real task card prepares a new request before resetting conversation and preserves the typed draft',async()=>{

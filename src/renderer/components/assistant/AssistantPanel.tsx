@@ -32,6 +32,7 @@ export const AssistantPanel: React.FC = () => {
   const configReadStatus = useAssistantStore(state => state.configReadStatus);
   const configError = useAssistantStore(state => state.configError);
   const pendingWrite = useAssistantStore(state => state.pending);
+  const composerRequest = useAssistantStore(state => state.composerRequest);
   const taskStatus=useAssistantTaskStore(state=>state.task?.status);
   const taskBusy=useAssistantTaskStore(state=>state.busy);
   const planningNew=useAssistantTaskStore(state=>state.planningNew);
@@ -47,6 +48,14 @@ export const AssistantPanel: React.FC = () => {
   useEffect(()=>{attachmentGeneration.current++;setAttachment(null);setAttachmentError(null);setReadingImage(false);},[isOpen,currentAttachmentBinding]);
   const list = useRef<HTMLOListElement>(null);
   const composer = useRef<HTMLTextAreaElement>(null);
+  useEffect(()=>{
+    if(!isOpen||!composerRequest)return;
+    const text=useAssistantStore.getState().takeComposerDraft(composerRequest);
+    if(!text)return;
+    // Keep the person's unsent text; opening a contextual request never sends it.
+    setDraft(current=>current?`${current}\n\n${text}`:text);
+    composer.current?.focus();
+  },[isOpen,composerRequest]);
   useEffect(() => { list.current?.lastElementChild?.scrollIntoView({ block: 'nearest' }); }, [items.length, pendingWrite]);
   if (!isOpen) return null;
 

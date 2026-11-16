@@ -19,6 +19,7 @@ const object = (properties: Schema = {}, required: string[] = []): Schema => ({t
 const job = string(256);
 const percent = {type: 'number', minimum: 0, maximum: 100};
 const recipeSchema:Schema=object({version:{type:'integer',minimum:1,maximum:1},operations:{type:'array',maxItems:16,items:{oneOf:[
+  object({op:enumeration(['code']),language:enumeration(['modu-numeric-v1']),code:string(8192)},['op','language','code']),
   object({op:enumeration(['crop']),roi:{type:'array',minItems:4,maxItems:4,items:{type:'number',minimum:0,maximum:1}}},['op','roi']),
   object({op:enumeration(['rotate90']),turns:{type:'integer',minimum:1,maximum:3}},['op','turns']),
   object({op:enumeration(['brightness','contrast']),factor:{type:'number',minimum:.25,maximum:4}},['op','factor']),
@@ -32,7 +33,7 @@ export const ACTION_CATALOG: readonly TaskActionDefinition[] = [
     inputSchema:object({train_percent:percent,val_percent:percent,test_percent:percent}, ['train_percent','val_percent','test_percent'])},
   {id:'configure_training', title:'학습 설정', description:'승인한 학습 품질·장치·배치 크기를 화면에 입력합니다.', changesBinding:true,
     inputSchema:{...object({preset:enumeration(['fast','precision']),device:enumeration(['auto','cpu','mps','cuda']),batch_size:{type:'integer',minimum:1,maximum:128}}), minProperties:1}},
-  {id:'configure_input_recipe',title:'학습 입력 규칙 저장',description:'분류·영역 분할의 고정 ROI·회전·밝기·대비·크기 규칙을 현재 로컬 이미지로 미리 확인하고 다음 학습에 저장합니다.',changesBinding:true,
+  {id:'configure_input_recipe',title:'학습 입력 규칙 저장',description:'분류·영역 분할의 고정 ROI·회전·밝기·대비·크기 또는 제한된 modu-numeric-v1 코드 규칙을 실제 이미지로 미리 확인하고 다음 학습에 저장합니다. 코드 작성 전 read_input_preparation_contract로 함수·FFT 예제·제한을 읽으세요. 임의 Python/import/시스템 실행은 지원하지 않습니다.',changesBinding:true,
     inputSchema:object({input_recipe:recipeSchema},['input_recipe'])},
   {id:'generate_label_drafts', title:'라벨 초안 만들기', description:'모델 또는 문구로 초안을 준비합니다. 채택과 정답 확정은 직접 합니다.', changesBinding:false,
     inputSchema:object({mode:enumeration(['trained','phrase']),job_id:job,threshold:{type:'number',minimum:0,maximum:1},prompt:string(2000)})},

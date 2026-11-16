@@ -425,3 +425,39 @@ cannot qualify an unexecuted full recipe. The last prefix is full-equivalent.
 Existing warm/forest tokens and Korean typography remain; no vendor branding,
 platform source or external runtime dependency is introduced into the product.
 See `docs/verification/2026-11-16-rea-supervisely.md` for the actual tool scope.
+
+### 2026-11-16 numeric preprocessing code
+
+The input editor adds an ordered code block alongside the existing fixed
+transforms. Its language is `modu-numeric-v1`, a bounded numeric expression DSL,
+not a Python or JavaScript execution environment. The canonical backend parses
+and interprets the allowed AST; the renderer never evaluates code. Input and
+output retain the same RGB shape, and segmentation truth is not changed by the
+code block. Existing classification/segmentation support limits remain.
+
+People can insert an FFT starting example, restore the identity expression, or
+describe the desired change in Korean. Code stays mounted inside a native closed
+disclosure, with a native labelled editor, UTF-8 byte/line counts, and concise
+syntax help from the assistant's shared numeric contract. The limit is 8,192
+UTF-8 bytes and 32 physical lines. The FFT example is a starting frequency only;
+noise removal and defect preservation require actual image comparison and are
+not claimed as validated performance.
+
+The assistant button passes the typed request, complete current draft recipe,
+selected operation index and public DSL contract into the existing scoped
+composer handoff. Other blocks and their order must be preserved. An over-limit
+20,000-character request or rejected handoff reports failure without discarding
+the editor or claiming success. Live project/source/task/labelset and accepted
+dataset authority/key are checked again at activation. It opens the assistant and
+does not send, attach an image, execute code, save a recipe or start training.
+The existing send/connection controls own submission. Draft text survives normal
+block navigation; a scope change retires the previous code/request context.
+
+Code edits change the complete recipe key and invalidate earlier preview/save
+qualification. Local format/size checks precede the canonical backend check.
+Only a successful current full-recipe preview can qualify a nonempty recipe for
+saving; an earlier prefix cannot qualify later code. The existing source/hash,
+conflict, duplicate, active-training, context-generation and unmount fences stay
+in force. Saved rules remain bound across training, evaluation, inspection and
+export. The native fields and disclosures use workspace tokens and the existing
+monospace code face without a new editor package or palette.

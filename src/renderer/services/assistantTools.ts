@@ -14,6 +14,7 @@
 import type {AssistantCommandCatalog} from './assistantCommandCatalog';
 import type { AssistSnapshot } from '../stores/assistContext';
 import type { AssistantToolSpec } from '../../types/electron';
+import {inputPreparationContract} from './assistantInputPreparation';
 import {ACTION_CATALOG,validateTaskPlan} from './assistantTasks/catalog';
 import { STEP_NAMES, fileName, minimalAssistContext, reducePaths, type AssistantFacts } from './assistantContext';
 
@@ -110,6 +111,8 @@ function draftModelChoice(models: DraftModel[], requested: unknown): DraftModel 
 export function createAssistantTools(deps: ToolDeps): AssistantToolRegistry {
   const facts = () => deps.facts();
   const definitions: ToolDefinition[] = [
+    {name:'read_input_preparation_contract',tier:'read',description:'학습 전처리 코드의 제한된 modu-numeric-v1 문법·수치 함수·FFT 예제·입출력·저장 절차를 읽습니다. 코드를 실행하거나 이미지·경로를 전송하지 않습니다. 예제의 노이즈 제거 성능은 검증되지 않았습니다.',parameters:NO_ARGS,
+      run:async args=>{if(Object.keys(args).length)throw new ToolRefusal('invalid_arguments','이 읽기 도구에는 인자를 넣지 마세요.');return ok(inputPreparationContract(facts().task),'제한된 입력 코드 계약과 미검증 FFT 예제를 읽었습니다.');}},
     ...(deps.commands ? ([
       {name: 'list_app_commands', tier: 'read', description: '설치된 HTTP/CLI 기능을 그룹별로 찾습니다. GPT 실행 권한과 CLI 기능 범위는 다릅니다. next_offset으로 다음 페이지를 읽고 상세 스키마는 describe_app_command로 확인하세요.',
         parameters: {type: 'object', properties: {group: {type: 'string', maxLength: 80}, offset: {type: 'integer', minimum: 0, maximum: 1000000}, limit: {type: 'integer', minimum: 1, maximum: 40}}, additionalProperties: false},

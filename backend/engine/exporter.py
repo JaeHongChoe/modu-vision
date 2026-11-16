@@ -874,6 +874,15 @@ if __name__ == "__main__":
     return template.replace("__CLASS_SEMANTICS_RUNTIME__\n", runtime_source())
 
 
+def _write_input_preparation_runtime(pkg_dir, recipe):
+    """Copy the same versioned implementation used during train/evaluation."""
+    for name in ('input_preparation', 'numeric_preparation'):
+        if name == 'numeric_preparation' and not any(row['op'] == 'code' for row in recipe['operations']):
+            continue
+        (Path(pkg_dir) / (name + '.py')).write_text(
+            Path(__file__).with_name(name + '.py').read_text(encoding='utf-8'), encoding='utf-8')
+
+
 def export_runtime_package(
     job_id: Optional[str] = None,
     export_format: str = "onnx",
@@ -1058,7 +1067,7 @@ def export_runtime_package(
     }
     config_data.update(bind_recipe(input_recipe, task))
     if input_recipe:
-        (pkg_dir / "input_preparation.py").write_text(Path(__file__).with_name("input_preparation.py").read_text(encoding="utf-8"), encoding="utf-8")
+        _write_input_preparation_runtime(pkg_dir, input_recipe)
     if calibration_applied:
         config_data["threshold_calibration"] = threshold_decision["threshold_calibration"]
     for key in ("backbone", "model_name", "architecture", "encoder_architecture", "encoder_frozen",

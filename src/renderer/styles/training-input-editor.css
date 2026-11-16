@@ -45,10 +45,44 @@
   text-align: center;
 }
 .training-input-editor__preview-note { grid-column: 1 / -1; margin: 0; }
+.training-input-editor__code { display: grid; gap: var(--workspace-space-3); width: 100%; min-width: 0; }
+.training-input-editor__code-tools { display: flex; flex-wrap: wrap; gap: var(--workspace-space-2); }
+.training-input-editor__code-disclosure { min-width: 0; }
+.training-input-editor__code-disclosure > summary,
+.training-input-editor__code-disclosure details > summary { padding-block: var(--workspace-space-2); cursor: pointer; }
+.training-input-editor__code-disclosure summary:focus-visible { outline: 2px solid var(--workspace-focus); outline-offset: 2px; }
+.training-input-editor__code-disclosure .workspace-field { margin-block: var(--workspace-space-2); }
+.training-input-editor__code textarea,
+.training-input-editor__code-assistant textarea {
+  width: 100%;
+  min-width: 0;
+  padding: var(--workspace-space-3);
+  resize: none;
+  border: 1px solid var(--workspace-border);
+  border-radius: var(--workspace-radius);
+  background: var(--workspace-inset);
+  color: var(--workspace-text);
+  line-height: 1.6;
+}
+.training-input-editor__code textarea { min-height: 13rem; font-size: var(--workspace-font-small); }
+.training-input-editor__code textarea:focus-visible,
+.training-input-editor__code-assistant textarea:focus-visible { outline: 2px solid var(--workspace-focus); outline-offset: 2px; }
+.training-input-editor__code-assistant { display: grid; justify-items: start; gap: var(--workspace-space-3); padding-block: var(--workspace-space-4); border-top: 1px solid var(--workspace-border); }
+.training-input-editor__code-assistant .workspace-field { width: 100%; min-width: 0; }
 @container training-input (min-width: 42rem) {
   .training-input-editor__workspace { grid-template-columns: minmax(13rem, .85fr) minmax(0, 1.4fr); column-gap: 1.25rem; }
   .training-input-editor__pipeline { grid-column: 1 / -1; }
   .training-input-editor__settings { grid-column: 1; grid-row: 2; }
   .training-input-editor__preview-controls { grid-column: 1; grid-row: 3; }
   .training-input-editor__comparison { grid-column: 2; grid-row: 2 / span 2; }
+  /* Only the selected, visible code editor gets the full writing width. Retained
+     open disclosures in hidden operation settings must not change this layout. */
+  .training-input-editor__workspace:has(.training-input-editor__settings li:not([hidden]) .training-input-editor__code-disclosure[open]) .training-input-editor__settings {
+    grid-column: 1 / -1;
+    grid-row: 2;
+  }
+  .training-input-editor__workspace:has(.training-input-editor__settings li:not([hidden]) .training-input-editor__code-disclosure[open]) .training-input-editor__comparison {
+    grid-column: 2;
+    grid-row: 3;
+  }
 }

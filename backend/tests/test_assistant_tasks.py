@@ -878,3 +878,14 @@ def test_uncertain_step_keeps_its_real_error_after_pause_and_clears_only_on_veri
     task = event(client, task, 'resume', confirmed=True)
     task = event(client, task, 'reconcile_step', step_id=sid, attempt_id='owned-step', receipt={'step': 1, 'not_started': False})
     assert task['status'] == 'completed' and task['steps'][0]['error'] is None
+
+
+def test_input_recipe_plan_accepts_only_canonical_numeric_code(tmp_path):
+    _, client = desktop(tmp_path)
+    row = {'op': 'code', 'language': 'modu-numeric-v1', 'code': 'result = image'}
+    recipe = {'version': 1, 'operations': [row]}
+    value = plan(steps=[{'action': 'configure_input_recipe', 'args': {'input_recipe': recipe}, 'label': '입력 코드'}])
+    assert create(client, value)['steps'][0]['args']['input_recipe'] == recipe
+    for code in ('import os\nresult = image', 'result = open("file")', 'result = image.__class__', 'x' * 8193, 'result = image\n#' + '한' * 3000, '\n'.join(['result = image'] * 33)):
+        row['code'] = code
+        assert client.post('/api/assistant-tasks', json=value).status_code == 422

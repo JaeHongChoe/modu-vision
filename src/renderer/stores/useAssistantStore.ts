@@ -26,10 +26,15 @@ import {assistantTaskTools,configureTaskConnection,notifyTaskConnectionChange,us
 
 export interface AssistantChatItem { id: number; kind: 'person' | 'assistant' | 'tool' | 'notice' | 'error'; text: string; detail?: string; ok?: boolean; code?: AssistantError['code'] }
 export interface AssistantImageOffer { grantId: string; message: string; providerLabel: string; question: string; binding: string; imageIdentity: string }
+export interface AssistantComposerRequest { id:number; text:string; binding:string }
 
 interface AssistantState {
   isOpen: boolean;
   open: () => void;
+  /** Prepare text locally; a separate explicit Send is always required. */
+  openWithDraft: (text:string) => boolean;
+  composerRequest: AssistantComposerRequest | null;
+  takeComposerDraft: (request:AssistantComposerRequest) => string | null;
   close: () => void;
   toggle: () => void;
   config: AssistantConfigState | null;
@@ -93,6 +98,8 @@ let configRequest = 0;
 let invalidationDeferred = false;
 let imageRevision = 0;
 let writeRevision = 0;
+let composerSequence = 0;
+const composerBinding=():string=>JSON.stringify([assistantProjectScope(),useDatasetStore.getState().sourceAuthority,useDatasetStore.getState().datasetKey]);
 const readImageBinding = ():string => JSON.stringify([imageRevision, assistantImageBinding(assistantScope(useAssistantStore.getState().config))]);
 const readWriteBinding = ():string => JSON.stringify([writeRevision, assistantWriteBinding(assistantScope(useAssistantStore.getState().config))]);
 const CONFIG_WAIT_MS = 15_000;
@@ -218,7 +225,19 @@ export const useAssistantStore = create<AssistantState>((set, get) => {
   return {
     isOpen: false,
     open: () => { set({ isOpen: true }); if (!get().config || get().configReadStatus === 'unverified') void get().loadConfig({ explicit: true }); },
-    close: () => { retireConfigWait(); set({ isOpen: false }); },
+    composerRequest: null,
+    openWithDraft: text => {
+      if(!text.trim()||text.length>20_000)return false;
+      set({composerRequest:{id:++composerSequence,text:text.trim(),binding:composerBinding()}});
+      get().open();
+      return true;
+    },
+    takeComposerDraft: request => {
+      if(get().composerRequest!==request)return null;
+      set({composerRequest:null});
+      return request.binding===composerBinding()?request.text:null;
+    },
+    close: () => { retireConfigWait(); set({ isOpen: false,composerRequest:null }); },
     toggle: () => (get().isOpen ? get().close() : get().open()),
     config: null,
     configError: null,
@@ -371,6 +390,7 @@ configureTaskConnection(()=>{
 let observedScope = assistantScope(useAssistantStore.getState().config);
 let observedImage = assistantImageBinding(observedScope);
 let observedWrite = assistantWriteBinding(observedScope);
+let observedComposerBinding = composerBinding();
 function invalidateAssistant(): void {
   taskExecutionAbort?.abort();
   // An executing confirmed write records and shows its outcome first; the reset follows when it returns.
@@ -382,6 +402,11 @@ function invalidateAssistant(): void {
   useAssistantStore.setState({ pending: null, busy: false, writing: false, imageOffer: null, items: [], runs: null, runsError: null });
 }
 function observeAuthority(): void {
+  const nextComposerBinding=composerBinding();
+  if(nextComposerBinding!==observedComposerBinding){
+    observedComposerBinding=nextComposerBinding;
+    if(useAssistantStore.getState().composerRequest)useAssistantStore.setState({composerRequest:null});
+  }
   const next = assistantScope(useAssistantStore.getState().config);
   const image = assistantImageBinding(next), write = assistantWriteBinding(next);
   if (image !== observedImage) { observedImage = image; imageRevision++; imageOfferVersion++; useAssistantStore.setState({attachmentRevision:imageRevision}); }

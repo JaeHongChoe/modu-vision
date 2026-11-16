@@ -212,3 +212,19 @@ test('the draft model and threshold shown in the preview are the ones executed, 
  await assert.rejects(tools.execute('generate_label_drafts',{threshold:0.42},{confirmed:true,runId:RUN}),error=>error.code==='preview_required');
  assert.deepEqual(calls,[],'no other model is picked');
 });
+
+test('input preparation help is read only and gives the actual bounded DSL and unvalidated FFT template',async()=>{
+ const {deps,calls}=fakeDeps();const tools=createAssistantTools(deps);assert.equal(tools.tier('read_input_preparation_contract'),'read');
+ const answer=await tools.runAutomatic('read_input_preparation_contract',{});const contract=JSON.parse(answer.content);
+ assert.equal(contract.language,'modu-numeric-v1');assert.equal(contract.input.name,'image');assert.equal(contract.output.name,'result');assert.deepEqual(contract.input.range,[0,255]);assert.equal(contract.limits.code_utf8_bytes,8192);assert.equal(contract.limits.input_pixels,1048576);assert.equal(contract.limits.fft_calls,4);assert.equal(contract.limits.ast_nodes,256);assert.equal(contract.limits.ast_depth,24);assert.equal(contract.limits.variables,16);assert.equal(contract.limits.array_elements,64*1024*1024);assert.equal(contract.limits.result_bytes,512*1024*1024);assert.equal(contract.limits.work_bytes,256*1024*1024);assert.equal(contract.limits.cooperative_elapsed_seconds,5);assert.equal(contract.hard_os_deadline,false);assert.match(contract.execution_order,/before.*final model resize/);assert.match(contract.signatures.ifft2,/unshifted/);assert.match(contract.signatures.fftshift,/unshifted/);
+ assert.match(contract.fft_example.code,/fftshift\(fft2\(image\)\)/);assert.match(contract.fft_example.code,/result = real/);assert.equal(contract.fft_example.code.split('\n').length,3);assert.ok(!contract.fft_example.code.includes('\\n'));assert.equal(contract.fft_example.quality_verified,false);assert.equal(contract.action,'configure_input_recipe');assert.equal(contract.supported_for_current_task,true);assert.deepEqual(calls,[]);
+ assert.ok(!JSON.stringify(contract).includes('/data/'));const originalFacts=deps.facts;deps.facts=()=>({...originalFacts(),task:'detection'});assert.equal(JSON.parse((await tools.runAutomatic('read_input_preparation_contract',{})).content).supported_for_current_task,false);await assert.rejects(tools.runAutomatic('read_input_preparation_contract',{code:'result = image'}),/인자/);
+});
+
+test('the documented FFT program enters the existing immutable input recipe plan without direct execution',async()=>{
+ const proposed=[];const {deps,calls}=fakeDeps({tasks:{isExecuting:()=>false,features:()=>({}),screen:()=>({}),status:()=>({}),propose:async plan=>{proposed.push(plan);return{status:'draft'};}}});
+ const tools=createAssistantTools(deps),contract=JSON.parse((await tools.runAutomatic('read_input_preparation_contract',{})).content);
+ const recipe={version:1,operations:[{op:'code',language:contract.language,code:contract.fft_example.code}]};
+ await tools.runAutomatic('propose_task',{goal:'주기적 패턴 노이즈 입력 변환',steps:[{action:'configure_input_recipe',args:{input_recipe:recipe},label:'제한된 FFT 코드 미리보기와 저장'}]});
+ assert.equal(proposed.length,1);assert.equal(proposed[0].steps[0].action,'configure_input_recipe');assert.deepEqual(proposed[0].steps[0].args.input_recipe,recipe);assert.deepEqual(calls,[]);
+});

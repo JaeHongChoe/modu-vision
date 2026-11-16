@@ -20,6 +20,34 @@ function harness(){
  return {store,project,annotation,compute,dataset,training,proposed,taskPort:()=>taskPort,taskConnection:()=>taskConnection(),sent,cancelled,executed,logged,tools,config,bridge,reads:()=>imageReads,setRead:fn=>delayedRead=fn,setIntent:fn=>delayedIntent=fn,changeAuthority:()=>{generation++;contextListeners.forEach(fn=>fn());}};
 }
 const deferred=()=>{let resolve;return {promise:new Promise(r=>resolve=r),resolve:v=>resolve(v)};};
+test('a prepared composer request opens locally and is consumed once without sending or reading pixels',async()=>{
+ const h=harness();await h.store.getState().loadConfig();
+ h.store.getState().openWithDraft('FFT로 반복 노이즈를 줄이는 코드 전처리를 작성해줘');
+ const request=h.store.getState().composerRequest;
+ assert.equal(h.store.getState().isOpen,true);assert.ok(request);
+ assert.equal(h.store.getState().takeComposerDraft(request),'FFT로 반복 노이즈를 줄이는 코드 전처리를 작성해줘');
+ assert.equal(h.store.getState().takeComposerDraft(request),null);
+ assert.equal(h.sent.length,0);assert.equal(h.reads(),0);assert.deepEqual(h.executed,[]);
+});
+test('composer requests cannot cross source changes, project ABA, or replace a newer request',async()=>{
+ for(const kind of ['source','source-aba','project','newer']){
+  const h=harness();await h.store.getState().loadConfig();h.store.getState().openWithDraft('원래 전처리 요청');
+  const old=h.store.getState().composerRequest;
+  if(kind==='source')h.dataset.setState({sourceAuthority:'replacement'});
+  if(kind==='source-aba'){const original=h.dataset.getState().sourceAuthority;h.dataset.setState({sourceAuthority:'replacement'});h.dataset.setState({sourceAuthority:original});}
+  if(kind==='project')h.changeAuthority();
+  if(kind==='newer')h.store.getState().openWithDraft('새 요청');
+  assert.equal(h.store.getState().takeComposerDraft(old),null);
+  if(kind==='newer')assert.equal(h.store.getState().takeComposerDraft(h.store.getState().composerRequest),'새 요청');
+  assert.equal(h.sent.length,0);
+ }
+});
+test('an oversized composer request is refused without claiming handoff or replacing an existing request',async()=>{
+ const h=harness();await h.store.getState().loadConfig();assert.equal(h.store.getState().openWithDraft('작은 요청'),true);
+ const original=h.store.getState().composerRequest;
+ assert.equal(h.store.getState().openWithDraft('x'.repeat(20_001)),false);
+ assert.equal(h.store.getState().composerRequest,original);assert.equal(h.sent.length,0);
+});
 test('the next explicit question receives cached task feedback without a separate provider send',async()=>{
  const h=harness();await h.store.getState().loadConfig();assert.equal(h.sent.length,0);
  await h.store.getState().ask('현재 작업의 오류를 확인해줘');

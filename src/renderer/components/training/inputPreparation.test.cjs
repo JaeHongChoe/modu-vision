@@ -2,6 +2,9 @@ const test=require('node:test'),assert=require('node:assert/strict'),fs=require(
 const m=new Module('inputPreparation.ts',module);
 m._compile(ts.transpileModule(fs.readFileSync(path.join(__dirname,'inputPreparation.ts'),'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText,'inputPreparation.ts');
 const {inputPreparationScope,validateInputRecipe,moveInputOperation}=m.exports;
+const contractFilename=path.join(__dirname,'../../services/assistantInputPreparation.ts');
+const contractModule=new Module(contractFilename,module);
+contractModule._compile(ts.transpileModule(fs.readFileSync(contractFilename,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText,contractFilename);
 test('scoped recipe keys change with project, labelset, source and task',()=>{
  const source={apiIdentity:'/api',projectId:'p',labelsetId:'a',source:'/images',task:'classification'};
  for(const key of Object.keys(source))assert.notEqual(inputPreparationScope(source),inputPreparationScope({...source,[key]:'other'}));
@@ -16,25 +19,47 @@ test('chosen operation order is preserved and edits move only the chosen operati
  assert.throws(()=>validateInputRecipe({version:1,operations:[{op:'normalize'}]},'classification'));
 });
 
+test('bounded numeric code is a versioned recipe operation and retains its exact source',()=>{
+ const row={op:'code',language:'modu-numeric-v1',code:'result = image\n'};
+ assert.deepEqual(validateInputRecipe({version:1,operations:[row]},'classification'),{version:1,operations:[row]});
+ assert.deepEqual(validateInputRecipe({version:1,operations:[row]},'segmentation').operations,[row]);
+ assert.throws(()=>validateInputRecipe({version:1,operations:[row]},'detection'),/분류.*분할/);
+ for(const invalid of [{...row,language:'python'},{...row,code:''},{...row,code:' \n\t'},{...row,code:null}]) {
+  assert.throws(()=>validateInputRecipe({version:1,operations:[invalid]},'classification'));
+ }
+});
+
+test('code resource limits count UTF8 bytes and physical lines without counting a final newline twice',()=>{
+ const code=value=>({version:1,operations:[{op:'code',language:'modu-numeric-v1',code:value}]});
+ assert.doesNotThrow(()=>validateInputRecipe(code('x'.repeat(8192)),'classification'));
+ assert.throws(()=>validateInputRecipe(code('x'.repeat(8193)),'classification'),/8192|8 ?KiB/);
+ assert.throws(()=>validateInputRecipe(code('한'.repeat(2800)),'classification'),/8192|8 ?KiB/);
+ assert.doesNotThrow(()=>validateInputRecipe(code('result = image\r\n'.repeat(32)),'classification'));
+ assert.throws(()=>validateInputRecipe(code('result = image\n'.repeat(33)),'classification'),/32/);
+});
+
 function loadComponent(mocks){
  const filename=path.join(__dirname,'TrainingInputPreparation.tsx'),component=new Module(filename,module);component.filename=filename;component.paths=Module._nodeModulePaths(__dirname);const base=component.require.bind(component);
- component.require=key=>key in mocks?mocks[key]:key==='./inputPreparation'?m.exports:base(key);
+ component.require=key=>key in mocks?mocks[key]:key==='./inputPreparation'?m.exports:key==='../../services/assistantInputPreparation'?contractModule.exports:base(key);
  component._compile(ts.transpileModule(fs.readFileSync(filename,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022,jsx:ts.JsxEmit.ReactJSX}}).outputText,filename);return component.exports;
 }
 function nodes(tree){if(Array.isArray(tree))return tree.flatMap(nodes);if(!tree||typeof tree!=='object')return[];return[tree,...Object.values(tree.props||{}).flatMap(value=>Array.isArray(value)?value.flatMap(nodes):nodes(value))];}
 function words(value){return Array.isArray(value)?value.map(words).join(''):value&&typeof value==='object'?words(value.props?.children):String(value??'');}
 function fixture(initial={}){
- let cursor=0,identity=initial.identity||'/api',generation=1,dirty=false;const effects=[],slots=[],requests=[],saved=[],writes=[];
+ let cursor=0,identity=initial.identity||'/api',generation=1,dirty=false;const effects=[],slots=[],requests=[],saved=[],writes=[],assistantDrafts=[];
  const props={task:'classification',imageSize:32,disabled:false};
  const project={id:'p',active_labelset_id:'a',source_dataset_dir:'/source'};
+ const liveProject={project,task:'classification'};
  const store={inputRecipe:initial.recipe||null,inputRecipeScope:initial.scope||null,inputRecipeSha256:initial.hash||null,setInputRecipe:(scope,recipe,hash)=>{saved.push([scope,recipe,hash]);Object.assign(store,{inputRecipeScope:scope,inputRecipe:recipe,inputRecipeSha256:hash});dirty=true;}};
  const useTrainingStore=()=>store;useTrainingStore.getState=()=>store;
  const dataset={images:initial.images||[{file_path:'/source/a.png',file_name:'a.png'}],sourceAuthority:'authority-a',datasetKey:'/source\0classification'};
+ const useProjectStore=fn=>fn(liveProject);useProjectStore.getState=()=>liveProject;
+ const useDatasetStore=()=>dataset;useDatasetStore.getState=()=>dataset;
  const api={getApiPersistenceIdentity:()=>identity,getProjectContextGeneration:()=>generation,request:async(url,options)=>{requests.push({url,body:JSON.parse(options.body)});return{input_recipe_sha256:'abc123',source_size:[64,32],prepared_size:[32,32],original_image:'data:before',prepared_image:'data:after',original_target:null,prepared_target:null};}};
  const react={useEffect:(fn,deps)=>{const i=cursor++,old=slots[i];if(!old||deps.some((value,j)=>!Object.is(value,old.deps[j]))){const slot={deps,cleanup:old?.cleanup};slots[i]=slot;effects.push(()=>{slot.cleanup?.();slot.cleanup=fn();});}},useRef:initial=>{const i=cursor++;return slots[i]??(slots[i]={current:initial});},useState:initial=>{const i=cursor++;if(!(i in slots))slots[i]=typeof initial==='function'?initial():initial;return[slots[i],next=>{const value=typeof next==='function'?next(slots[i]):next;if(!Object.is(value,slots[i]))dirty=true;slots[i]=value;}];}};
- const view=loadComponent({'react':react,'react/jsx-runtime':{jsx:(type,props)=>({type,props}),jsxs:(type,props)=>({type,props})},'lucide-react':{},'../../services/api':api,'../../stores/useProjectStore':{useProjectStore:fn=>fn({project})},'../../stores/useDatasetStore':{useDatasetStore:()=>dataset},'../../stores/useTrainingStore':{useTrainingStore},'./ProgramWorkbenchControls':{programButton:'button'}});
+ const view=loadComponent({'react':react,'react/jsx-runtime':{jsx:(type,props)=>({type,props}),jsxs:(type,props)=>({type,props})},'lucide-react':{},'../../services/api':api,'../../stores/useProjectStore':{useProjectStore},'../../stores/useDatasetStore':{useDatasetStore},'../../stores/useTrainingStore':{useTrainingStore},'../../stores/useAssistantStore':{useAssistantStore:{getState:()=>({openWithDraft:prompt=>{if(initial.rejectAssistant)return false;assistantDrafts.push(prompt);return true;}})}},'./ProgramWorkbenchControls':{programButton:'button'}});
  const storage={getItem:key=>key.startsWith(`modu.input-preparation.v1:${initial.identity||'/api'}:`)&&initial.history?JSON.stringify(initial.history):null,setItem:(...args)=>writes.push(args)};
- return{render(task=props.task){props.task=task;const previous=Object.getOwnPropertyDescriptor(global,'localStorage');Object.defineProperty(global,'localStorage',{value:storage,configurable:true,writable:true});try{let tree;for(let i=0;i<12;i++){dirty=false;cursor=0;tree=view.TrainingInputPreparation(props);effects.splice(0).forEach(fn=>fn());if(!dirty)return tree;}throw Error('component effects did not settle');}finally{if(previous)Object.defineProperty(global,'localStorage',previous);else delete global.localStorage;}},api,requests,saved,writes,project,store,dataset,props,setIdentity:value=>{identity=value;},setGeneration:value=>{generation=value;},unmount:()=>{for(const slot of slots)slot?.cleanup?.();},runEffects:()=>effects.splice(0).forEach(fn=>fn()),storage};
+ return{render(task=props.task){props.task=task;liveProject.task=task;const previous=Object.getOwnPropertyDescriptor(global,'localStorage');Object.defineProperty(global,'localStorage',{value:storage,configurable:true,writable:true});try{let tree;for(let i=0;i<12;i++){dirty=false;cursor=0;tree=view.TrainingInputPreparation(props);effects.splice(0).forEach(fn=>fn());if(!dirty)return tree;}throw Error('component effects did not settle');}finally{if(previous)Object.defineProperty(global,'localStorage',previous);else delete global.localStorage;}},api,requests,saved,writes,assistantDrafts,project,liveProject,store,dataset,props,setIdentity:value=>{identity=value;},setGeneration:value=>{generation=value;},unmount:()=>{for(const slot of slots)slot?.cleanup?.();},runEffects:()=>effects.splice(0).forEach(fn=>fn()),storage};
 }
 
 const tick=()=>new Promise(resolve=>setImmediate(resolve));
@@ -277,4 +302,111 @@ test('segmentation prefix previews show original and transformed mask overlays w
  assert.deepEqual(nodes(tree).filter(node=>node.type==='img').map(node=>({src:node.props.src,alt:node.props.alt})),[{src:'data:original-mask-overlay',alt:'원본 이미지와 정답 영역'},{src:'data:cropped-mask-overlay',alt:'준비한 입력 이미지와 정답 영역'}]);
  assert.ok(nodes(tree).filter(node=>node.type==='figcaption').every(node=>words(node).includes('청록: 정답 영역')));
  assert.equal(button(tree,'규칙 저장').props.disabled,true);assert.equal(f.saved.length,0);assert.equal(f.writes.length,0);
+});
+
+test('code blocks offer an editable FFT starter without running, saving or losing the code on block navigation',()=>{
+ const f=fixture();let tree=f.render();button(tree,'+ 코드 블록').props.onClick();tree=f.render();
+ const editor=()=>nodes(tree).find(node=>node.type==='textarea'&&node.props['aria-label']==='1번 전처리 코드');
+ assert.equal(editor().props.value,'result = image');
+ const disclosure=nodes(tree).find(node=>node.type==='details'&&words(node).includes('코드 보기·직접 수정'));
+ assert.ok(disclosure);assert.ok(!disclosure.props.open,'code details start folded');
+ button(tree,'FFT 예시 넣기').props.onClick();tree=f.render();
+ assert.equal(editor().props.value,'spectrum = fftshift(fft2(image))\nmask = notch_mask(image, fx=.125, fy=0, radius=.02)\nresult = real(ifft2(ifftshift(spectrum * mask)))');
+ editor().props.onChange({currentTarget:{value:'result = clip(image * 1.1, 0, 255)'}});tree=f.render();
+ button(tree,'+ 밝기').props.onClick();tree=f.render();nodes(tree).find(node=>node.props?.['data-input-operation']===0).props.onClick();tree=f.render();
+ assert.equal(editor().props.value,'result = clip(image * 1.1, 0, 255)');
+ button(tree,'기본 코드로 되돌리기').props.onClick();tree=f.render();assert.equal(editor().props.value,'result = image');
+ assert.equal(f.requests.length,0);assert.equal(f.saved.length,0);assert.equal(f.writes.length,0);
+});
+
+test('code input-size recovery is visible before opening the editor and names the preceding resize or ROI block',()=>{
+ const f=scopedFixture({version:1,operations:[{op:'code',language:'modu-numeric-v1',code:'result = image'}]});
+ const tree=f.render();const hint=nodes(tree).find(node=>node.type==='p'&&words(node).includes('1,048,576'));
+ assert.ok(hint,'the actual code input pixel cap is shown');
+ assert.match(words(hint),/코드 앞.*크기 조절.*ROI/);
+ assert.ok(!nodes(tree).filter(node=>node.type==='details').some(node=>nodes(node).includes(hint)),'recovery does not require opening code details');
+});
+
+test('a changed code source invalidates full-preview qualification and retires its older save callback',async()=>{
+ const f=fixture();await withStorage(f,async()=>{
+  let tree=f.render();button(tree,'+ 코드 블록').props.onClick();tree=f.render();
+  button(tree,'실제 입력 미리보기').props.onClick();await tick();tree=f.render();
+  assert.deepEqual(f.requests[0].body.input_recipe,{version:1,operations:[{op:'code',language:'modu-numeric-v1',code:'result = image'}]});
+  const oldSave=button(tree,'규칙 저장');assert.equal(oldSave.props.disabled,false);
+  nodes(tree).find(node=>node.type==='textarea'&&node.props['aria-label']==='1번 전처리 코드').props.onChange({currentTarget:{value:'result = image * .9'}});tree=f.render();
+  assert.equal(button(tree,'규칙 저장').props.disabled,true);oldSave.props.onClick();assert.equal(f.saved.length,0);assert.equal(f.writes.length,0);
+  button(tree,'실제 입력 미리보기').props.onClick();await tick();tree=f.render();button(tree,'규칙 저장').props.onClick();
+  assert.equal(f.saved.length,1);assert.equal(f.saved[0][1].operations[0].code,'result = image * .9');assert.equal(f.saved[0][2],'abc123');
+ });
+});
+
+test('the assistant receives a current text draft with the user request and DSL contract, never a preview or image attachment',()=>{
+ const f=fixture();let tree=f.render();button(tree,'+ 코드 블록').props.onClick();tree=f.render();
+ const request=nodes(tree).find(node=>node.type==='textarea'&&node.props['aria-label']==='도우미에게 요청할 내용');assert.ok(request);
+ request.props.onChange({currentTarget:{value:'세로 줄무늬를 줄이고 작은 흠집을 남겨줘'}});tree=f.render();
+ const handoff=button(tree,'도우미에게 요청').props.onClick;handoff();
+ assert.equal(f.assistantDrafts.length,1);const prompt=f.assistantDrafts[0];
+ for(const part of ['세로 줄무늬를 줄이고 작은 흠집을 남겨줘','modu-numeric-v1','result = image','fft2','notch_mask','8192','32'])assert.ok(prompt.includes(part),part);
+ assert.ok(!prompt.includes('/source/a.png'));assert.ok(!prompt.includes('data:'));
+ assert.equal(f.requests.length,0);assert.equal(f.saved.length,0);assert.equal(f.writes.length,0);
+ f.project.id='another';f.render();handoff();assert.equal(f.assistantDrafts.length,1,'a retired editor cannot hand over its former code');
+});
+
+test('code validation and backend failures preserve the draft and cannot qualify a save',async()=>{
+ const f=fixture();let tree=f.render();button(tree,'+ 코드 블록').props.onClick();tree=f.render();
+ const editor=()=>nodes(tree).find(node=>node.type==='textarea'&&node.props['aria-label']==='1번 전처리 코드');
+ editor().props.onChange({currentTarget:{value:'  '}});tree=f.render();button(tree,'실제 입력 미리보기').props.onClick();await tick();tree=f.render();
+ assert.equal(f.requests.length,0);assert.equal(button(tree,'규칙 저장').props.disabled,true);
+ editor().props.onChange({currentTarget:{value:'result = unsupported(image)'}});tree=f.render();
+ f.api.request=async()=>{throw Error('Line 1: unsupported function');};
+ button(tree,'실제 입력 미리보기').props.onClick();await tick();tree=f.render();
+ assert.equal(editor().props.value,'result = unsupported(image)');assert.ok(nodes(tree).some(node=>node.props?.role==='alert'&&words(node).includes('Line 1: unsupported function')));
+ assert.equal(button(tree,'규칙 저장').props.disabled,true);assert.equal(f.saved.length,0);assert.equal(f.writes.length,0);
+});
+
+function prepareCodeRequest(f){
+ let tree=f.render();nodes(tree).find(node=>node.type==='textarea'&&node.props['aria-label']==='도우미에게 요청할 내용').props.onChange({currentTarget:{value:'줄무늬만 줄이고 흠집은 남겨줘'}});
+ tree=f.render();return button(tree,'도우미에게 요청').props.onClick;
+}
+const identityCode={op:'code',language:'modu-numeric-v1',code:'result = image'};
+test('assistant handoff includes the entire unsaved recipe and selected index so other blocks cannot be silently replaced',()=>{
+ const f=scopedFixture({version:1,operations:[{op:'crop',roi:[0,0,.5,1]},{op:'brightness',factor:1.3},identityCode]});
+ let tree=f.render();nodes(tree).find(node=>node.props?.['data-input-operation']===2).props.onClick();tree=f.render();
+ nodes(tree).find(node=>node.type==='textarea'&&node.props['aria-label']==='3번 전처리 코드').props.onChange({currentTarget:{value:'result = image * .9'}});f.render();
+ prepareCodeRequest(f)();assert.equal(f.assistantDrafts.length,1);
+ const prompt=f.assistantDrafts[0],json=prompt.match(/```json\n([\s\S]*?)\n```/);assert.ok(json,'complete editable recipe is explicit structured context');
+ assert.deepEqual(JSON.parse(json[1]),{version:1,operations:[{op:'crop',roi:[0,0,.5,1]},{op:'brightness',factor:1.3},{...identityCode,code:'result = image * .9'}]});
+ assert.match(prompt,/selected_operation_index: 2/);assert.match(prompt,/다른 블록.*순서.*보존/);
+ assert.equal(f.saved.length,0);assert.equal(f.writes.length,0);
+});
+
+for(const [name,change] of [
+ ['dataset authority',f=>{f.dataset.sourceAuthority='authority-b';}],
+ ['dataset key',f=>{f.dataset.datasetKey='/other\0classification';}],
+ ['project',f=>{f.project.id='other';}],
+ ['source',f=>{f.project.source_dataset_dir='/other';}],
+ ['labelset',f=>{f.project.active_labelset_id='b';}],
+ ['task',f=>{f.liveProject.task='segmentation';}],
+ ['training',f=>{f.store.isTraining=true;}],
+ ['recovery',f=>{f.store.isRecoveringTraining=true;}],
+ ['generation',f=>{f.setGeneration(2);}],
+ ['API identity',f=>{f.setIdentity('/other-api');}],
+ ['unmount',f=>f.unmount()],
+])test(`a code handoff checks live ${name} before a rerender`,()=>{
+ const f=scopedFixture({version:1,operations:[identityCode]}),handoff=prepareCodeRequest(f);
+ change(f);handoff();assert.equal(f.assistantDrafts.length,0);assert.equal(f.requests.length,0);assert.equal(f.saved.length,0);
+});
+
+test('oversize multi-code drafts report failure without a success notice or draft loss',()=>{
+ const longCode={...identityCode,code:'result = image #'+ 'x'.repeat(7000)};
+ const f=scopedFixture({version:1,operations:[longCode,longCode,longCode,longCode]});prepareCodeRequest(f)();let tree=f.render();
+ assert.equal(f.assistantDrafts.length,0);assert.ok(nodes(tree).some(node=>node.props?.role==='alert'&&/20,000|20000/.test(words(node))));
+ assert.equal(nodes(tree).filter(node=>node.type==='textarea'&&/번 전처리 코드/.test(node.props['aria-label']||'')).length,4);
+ assert.deepEqual(nodes(tree).filter(node=>node.type==='textarea'&&/번 전처리 코드/.test(node.props['aria-label']||'')).map(node=>node.props.value),[longCode.code,longCode.code,longCode.code,longCode.code]);
+ assert.ok(!nodes(tree).some(node=>node.props?.role==='status'&&words(node).includes('작성칸에 넣었습니다')));
+});
+test('a rejected composer handoff reports failure and never claims the request was prepared',()=>{
+ const refused=fixture({rejectAssistant:true});let tree=refused.render();button(tree,'+ 코드 블록').props.onClick();prepareCodeRequest(refused)();tree=refused.render();
+ assert.ok(nodes(tree).some(node=>node.props?.role==='alert'&&words(node).includes('도우미')));
+ assert.ok(!nodes(tree).some(node=>node.props?.role==='status'&&words(node).includes('작성칸에 넣었습니다')));
 });

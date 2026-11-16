@@ -2,11 +2,17 @@ export type FixedInputOperation =
   | {op:'crop';roi:[number,number,number,number]}
   | {op:'rotate90';turns:number}
   | {op:'brightness'|'contrast';factor:number}
-  | {op:'resize';width:number;height:number};
+  | {op:'resize';width:number;height:number}
+  | {op:'code';language:'modu-numeric-v1';code:string};
 export type FixedInputRecipe = {version:1;operations:FixedInputOperation[]};
 export type InputRecipeScope = {apiIdentity:string;projectId:string;labelsetId:string;source:string;task:string};
 export const inputPreparationScope=(scope:InputRecipeScope)=>JSON.stringify([scope.apiIdentity,scope.projectId,scope.labelsetId,scope.source,scope.task]);
 export const supportsInputPreparation=(task:string)=>task==='classification'||task==='segmentation';
+export function inputCodeSize(code:string):{bytes:number;lines:number}{
+  const rows=code.split(/\r\n|[\n\r\v\f\u001c-\u001e\u0085\u2028\u2029]/);
+  if(rows.at(-1)==='')rows.pop();
+  return {bytes:new TextEncoder().encode(code).length,lines:rows.length};
+}
 export function validateInputRecipe(value:FixedInputRecipe,task:string):FixedInputRecipe {
   if(value.version!==1||!Array.isArray(value.operations)||value.operations.length>16)throw new Error('규칙 버전과 연산 수를 확인하세요. 최대 16개까지 사용할 수 있습니다.');
   if(value.operations.length&&!supportsInputPreparation(task))throw new Error('고정 입력 규칙은 현재 분류·영역 분할에서 지원합니다. 다른 모델군은 기존 입력을 사용하세요.');
@@ -19,6 +25,10 @@ export function validateInputRecipe(value:FixedInputRecipe,task:string):FixedInp
       if([row.width,row.height].some(n=>!Number.isInteger(n)||n<16||n>4096))throw new Error('입력 크기는 16~4096 정수로 지정하세요.');
     }else if(row.op==='brightness'||row.op==='contrast'){
       if(!Number.isFinite(row.factor)||row.factor<.25||row.factor>4)throw new Error('밝기·대비 배율은 0.25~4 사이로 지정하세요.');
+    }else if(row.op==='code'){
+      if(row.language!=='modu-numeric-v1'||typeof row.code!=='string'||!row.code.trim())throw new Error('modu-numeric-v1 형식의 전처리 코드를 입력하세요.');
+      const size=inputCodeSize(row.code);
+      if(size.bytes>8192||size.lines>32)throw new Error('전처리 코드는 UTF-8 기준 8192바이트·32줄 이내로 입력하세요.');
     }else throw new Error('지원하지 않는 고정 입력 연산입니다.');
   }
   return {version:1,operations:value.operations.map(row=>({...row,...(row.op==='crop'?{roi:[...row.roi] as [number,number,number,number]}:{})}))};

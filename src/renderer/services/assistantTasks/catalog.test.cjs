@@ -57,3 +57,10 @@ test('plan bounds refuse empty, oversized and non-JSON structures', () => {
 });
 
 test('label quality action accepts only saved evaluation identity and bounded top count',()=>{assert.deepEqual(catalog.validateTaskAction('analyze_label_quality',{evaluation_id:'evaluation_'+'a'.repeat(32),top_n:7}),{evaluation_id:'evaluation_'+'a'.repeat(32),top_n:7});for(const args of [{evaluation_id:'/source/image.png'},{evaluation_id:'evaluation_'+'a'.repeat(32),top_n:101},{evaluation_id:'evaluation_'+'a'.repeat(32),approve:true}])assert.throws(()=>catalog.validateTaskAction('analyze_label_quality',args));});
+
+test('the existing input recipe action describes and preserves bounded numeric code without a new action',()=>{
+ const row={op:'code',language:'modu-numeric-v1',code:'result = image'};const args={input_recipe:{version:1,operations:[row]}};
+ assert.deepEqual(catalog.validateTaskAction('configure_input_recipe',args),args);
+ const definition=catalog.taskActionCatalog().find(row=>row.id==='configure_input_recipe');assert.match(JSON.stringify(definition.inputSchema),/modu-numeric-v1/);assert.match(definition.description,/read_input_preparation_contract/);
+ for(const change of [{language:'python'},{code:''},{code:'x'.repeat(8193)},{code:'result = image',path:'/private'}])assert.throws(()=>catalog.validateTaskAction('configure_input_recipe',{input_recipe:{version:1,operations:[{...row,...change}]}}));
+});

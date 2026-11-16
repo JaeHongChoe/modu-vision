@@ -168,3 +168,20 @@ test('approved explicit model args override the upstream baton while source and 
 });
 
 test('label quality task saves an advisory analysis and ranked queue without human wait or truth changes',async()=>{const f=fixture();f.project.task=f.project.project.task='classification';f.data.datasetKey=f.data.lastImportedKey='/source\0classification';const evaluation_id='evaluation_'+'a'.repeat(32),analysis={id:'labelquality_'+'b'.repeat(32),analysis_sha256:'c'.repeat(64),evaluation_id,advisory_only:true,group_independence:'unverified',basis_changed:false,items:[]},queue={id:'review_'+'d'.repeat(32),mode:'label_quality',origin:{analysis_id:analysis.id},items:[],cursor:0};const requests=[];f.api.request=async(url,init)=>{requests.push([url,init?.method||'GET']);if(url==='/api/data-workbench/label-quality-analyses')return analysis;if(url.includes('/label-quality-analyses/'))return analysis;return queue;};const result=await f.runtime.executeTaskAction(f.step('analyze_label_quality',{evaluation_id,top_n:7}),f.control);assert.equal(result.kind,'completed');assert.equal(result.receipt.analysis_id,analysis.id);assert.equal(result.receipt.review_queue_id,queue.id);assert.equal(result.receipt.advisory_only,true);assert.equal(requests.length,4);assert.equal(f.calls.filter(c=>c[0]==='draft'||c[0]==='task-ui').length,0);});
+
+test('numeric code uses the existing source-proven preview and scoped recipe save without claiming quality approval',async()=>{
+ const f=fixture();f.project.task=f.project.project.task='classification';f.data.datasetKey=f.data.lastImportedKey='/source\0classification';f.annotation.currentImage={file_path:'/source/a'};
+ const recipe={version:1,operations:[{op:'code',language:'modu-numeric-v1',code:'result = image'}]};const saved=[];f.training.setInputRecipe=(...args)=>saved.push(args);
+ f.api.request=async(url,options)=>{f.calls.push(['code-preview',url,JSON.parse(options.body)]);return{input_recipe:recipe,input_recipe_sha256:'a'.repeat(64),source_sha256:'b'.repeat(64),prepared_size:[256,256]};};
+ const result=await f.runtime.executeTaskAction(f.step('configure_input_recipe',{input_recipe:recipe}),f.control);
+ assert.equal(result.kind,'completed');assert.deepEqual(saved[0][1],recipe);assert.equal(f.calls.find(row=>row[0]==='code-preview')[1],'/api/training/input-preparation/preview');assert.equal(result.receipt.previewed,true);assert.equal(result.receipt.quality_approved,undefined);assert.ok(!f.calls.some(row=>row[0]==='task-ui'));
+});
+
+test('a code preview cannot save after actor/source changes or without matching recipe proof',async()=>{
+ for(const mode of ['actor','source','hash','recipe','error']){
+  const f=fixture();f.project.task=f.project.project.task='classification';f.data.datasetKey=f.data.lastImportedKey='/source\0classification';f.annotation.currentImage={file_path:'/source/a'};
+  const recipe={version:1,operations:[{op:'code',language:'modu-numeric-v1',code:'result = image'}]};const saved=[];f.training.setInputRecipe=(...args)=>saved.push(args);
+  f.api.request=async()=>{if(mode==='actor')f.setActor('other');if(mode==='source')f.data.folderPath='/other';if(mode==='error')throw Error('Numeric result must be finite');return{input_recipe:mode==='recipe'?{version:1,operations:[]}:recipe,input_recipe_sha256:mode==='hash'?undefined:'a'.repeat(64),source_sha256:'b'.repeat(64),prepared_size:[256,256]};};
+  const result=await f.runtime.executeTaskAction(f.step('configure_input_recipe',{input_recipe:recipe}),f.control);assert.notEqual(result.kind,'completed',mode);assert.deepEqual(saved,[],mode);
+ }
+});
