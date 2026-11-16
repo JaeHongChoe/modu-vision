@@ -1,3 +1,4 @@
+import {selectTrainingFamily,openTrainingCoreSettings} from './fixtures/modelRecipe';
 import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
@@ -21,10 +22,11 @@ for(const family of ['core','ocr'] as const)test(`${family} parent selection dis
  page.on('request',r=>{if(r.method()==='POST'&&['/api/training/start','/api/ocr/train','/api/compute/jobs'].includes(new URL(r.url()).pathname))submits.push(r.url());});
  await page.goto(renderer.url);await expect(page.getByTitle('프로젝트 관리',{exact:true})).toContainText(`S209 parent summary ${family}`);
  await page.getByRole('navigation',{name:'Workflow Stages'}).getByRole('button').nth(2).click();
- if(family==='ocr')await page.getByRole('region',{name:'모델 학습 허브'}).getByRole('button',{name:/^문자 인식/}).click();
+ if(family==='ocr')await selectTrainingFamily(page,'ocr');else await openTrainingCoreSettings(page);
  const select=page.getByRole('combobox',{name:family==='core'?'재학습 시작 모델':'ocr 재학습 시작 모델',exact:true});
  const option=select.locator('option[value="job_summary_parent"]');await expect(option).toContainText('검증 손실=0.2500',{timeout:10_000});await expect(option).toContainText('모델 기록 2026-09-30 00:00 UTC');await expect(option).toContainText('완료일 미확인');
  await expect(select.locator('option[value="job_legacy_parent"]')).toContainText('학습 지표 미확인');await expect(select).toBeEnabled();await select.selectOption(complete.job_id);await expect(select).toHaveValue(complete.job_id);
- await expect(page.getByText('지표는 저장된 학습 기록입니다.',{exact:false})).toBeVisible();expect(submits).toEqual([]);expect(hashes()).toEqual(before);
+ const parentSettings=select.locator('..').locator('..');
+ await expect(parentSettings.getByText('지표는 저장된 학습 기록입니다.',{exact:false})).toBeVisible();expect(submits).toEqual([]);expect(hashes()).toEqual(before);
  await select.scrollIntoViewIfNeeded();await evidence.screenshot(page,`s209-parent-summary-${family}`);evidence.note('scope',{actual_renderer:true,actual_backend:true,parent_api:'controlled',compatibility_qualification:'separate backend suites',training:false,server:false,submits,selected_parent:complete.job_id,source_images:Object.entries(before).map(([path,sha256])=>({path,sha256,bytes:fs.statSync(path).size})),source_unchanged:true});
 });

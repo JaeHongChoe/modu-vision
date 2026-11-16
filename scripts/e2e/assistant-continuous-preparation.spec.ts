@@ -47,7 +47,11 @@ test('a direct work request saves previewed preparation and executes one durable
  expect(task.authorization.source).toBe('user_request');expect(task.approval).toBeNull();expect(task.steps.map((step:{status:string})=>step.status)).toEqual(['completed','completed','completed','completed']);
  expect(task.steps[0].receipt.input_recipe_sha256).toMatch(/^[a-f0-9]{64}$/);expect(task.steps[0].receipt.preview_source_sha256).toMatch(/^[a-f0-9]{64}$/);expect(task.steps[0].receipt.previewed).toBe(true);
  await expect(card.getByRole('button',{name:'계획 확인하고 실행',exact:true})).toHaveCount(0);expect(splitWrites).toHaveLength(1);
- await assistant.getByRole('button',{name:'닫기',exact:true}).click();await expect(page.getByRole('heading',{name:'학습 흐름 준비',exact:true})).toBeVisible();
+ await assistant.getByRole('button',{name:'닫기',exact:true}).click();
+ await page.getByRole('tab',{name:/사진 전처리/}).click();
+ const inputPanel=page.getByRole('tabpanel',{name:/사진 전처리/});
+ await expect(inputPanel).toBeVisible();await expect(inputPanel.getByRole('heading',{name:'사진 전처리',level:3,exact:true})).toBeVisible();
+ await expect(inputPanel.getByRole('region',{name:'학습 흐름 준비',exact:true})).toBeVisible();
  await expect(page.getByLabel('1번 밝기 배율',{exact:true})).toHaveValue('1.2');
  await evidence.screenshot(page,'continuous-preparation-saved-without-review');
  for(const {file,hash}of originals)expect(crypto.createHash('sha256').update(fs.readFileSync(file)).digest('hex')).toBe(hash);

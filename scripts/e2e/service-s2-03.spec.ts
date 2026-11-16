@@ -1,3 +1,4 @@
+import {openTrainingModelBlock,selectTrainingFamily,trainingFamilyOption} from './fixtures/modelRecipe';
 import {openWorkspaceSettings} from './fixtures/workspaceSettings';
 import { expect, test } from './fixtures/test';
 
@@ -84,6 +85,7 @@ test('blocked training and deployment expose a visible recovery destination',asy
   expect((await request.post(`${renderer.origin}/api/project/create`,{data:{name:'S203 recovery fixture',task:'classification'}})).ok()).toBe(true);
   await page.goto(renderer.url);await expect(page.getByTitle('프로젝트 관리', { exact: true }), 'the backend current project opens on load').toContainText('S203 recovery fixture');
   await page.getByRole('navigation',{name:'Workflow Stages'}).getByRole('button').nth(2).click();
+  await openTrainingModelBlock(page);
   const train=page.getByRole('button',{name:'선택 설정으로 학습 시작',exact:true});
   await expect(train).toBeDisabled();
   await expect(page.getByLabel('학습 시작 준비도')).toContainText('학습 시작 보류');
@@ -106,15 +108,16 @@ test('model family choice uses the same cancellable task impact preview',async({
   await page.route('**/api/models/capabilities',route=>route.fulfill({json:{families:['classification','segmentation'].map(task=>({task,label:task==='classification'?'S203 분류':'S203 분할',model:'fixture catalog',architectures:['fixture'],devices:['cpu'],default_architecture:'fixture',prerequisite:'fixture',remote_training:false,continuation:'none',stages:[],missing_dependencies:[]}))}}));
   await page.goto(renderer.url);await expect(page.getByTitle('프로젝트 관리', { exact: true }), 'the backend current project opens on load').toContainText('S203 family fixture');
   await page.getByRole('navigation',{name:'Workflow Stages'}).getByRole('button').nth(2).click();
-  const family=page.getByRole('button',{name:'S203 분할 fixture catalog',exact:true});
-  const current=page.getByRole('button',{name:'S203 분류 fixture catalog',exact:true});
-  await family.click();const dialog=page.getByRole('dialog',{name:'검사 작업 변경 영향'});
-  await expect(dialog).toBeVisible();await expect(current).toHaveAttribute('aria-pressed','true');
+  const family=trainingFamilyOption(page,'segmentation');
+  const current=trainingFamilyOption(page,'classification');
+  await selectTrainingFamily(page,'segmentation');const dialog=page.getByRole('dialog',{name:'검사 작업 변경 영향'});
+  await expect(family).toHaveAccessibleName(/S203 분할/);await expect(current).toHaveAccessibleName(/S203 분류/);
+  await expect(dialog).toBeVisible();await expect(current).toBeChecked();
   await evidence.screenshot(page,'s203-family-preview');
-  await dialog.getByRole('button',{name:'취소',exact:true}).click();await expect(current).toHaveAttribute('aria-pressed','true');
+  await dialog.getByRole('button',{name:'취소',exact:true}).click();await expect(current).toBeChecked();
   await page.route('**/api/project/update',route=>route.fulfill({status:409,json:{detail:'S203 family change refused'}}));
-  await family.click();await dialog.getByRole('button',{name:'영향 확인 후 변경',exact:true}).click();
-  await expect(dialog).not.toBeVisible();await expect(current).toHaveAttribute('aria-pressed','true');
+  await selectTrainingFamily(page,'segmentation');await dialog.getByRole('button',{name:'영향 확인 후 변경',exact:true}).click();
+  await expect(dialog).not.toBeVisible();await expect(current).toBeChecked();
   await expect(page.getByLabel('검사 작업 종류',{exact:true})).toHaveValue('classification');
   await expect(page.getByText(/모델 종류 변경 후 확인이 필요합니다:.*S203 family change refused/)).toBeVisible();
 });

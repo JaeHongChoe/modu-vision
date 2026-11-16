@@ -1,3 +1,4 @@
+import {selectTrainingFamily,trainingFamilyOption} from './fixtures/modelRecipe';
 import fs from 'node:fs';
 import path from 'node:path';
 import {createHash} from 'node:crypto';
@@ -106,7 +107,7 @@ async function exercise(page: Page, w: Workspace, e: Evidence, api: OwnedApi,
   const ownerError = ocr.locator(':scope > div > p[role="alert"]');
   const enter = async () => {
     await stages.getByRole('button', {name: /^03.*오토딥러닝/}).click();
-    await page.getByRole('region', {name: '모델 학습 허브'}).getByRole('button', {name: /^문자 인식/}).click();
+    await selectTrainingFamily(page,'ocr');await expect(trainingFamilyOption(page,'ocr')).toBeChecked();
     await expect(ocr).toBeVisible();
     await expect(images.locator('option')).toHaveCount(files.length + 1);
     await expect(images).toBeEnabled();

@@ -54,7 +54,7 @@ export interface ToolDeps {
   snapshot(): AssistSnapshot | null;
   facts(): AssistantFacts;
   setStep(step: number): Promise<void>;
-  focusTarget(target?: string): void;
+  focusTarget(target?: string, isCurrent?: ToolCurrent): void;
   setTrainRatio(ratio: number): void;
   splitSupport(): { supported: boolean | null; reason: string | null };
   applySplit(train: number, val: number, test: number, isCurrent?: ToolCurrent): Promise<{ ok: boolean; error?: string | null }>;
@@ -109,6 +109,9 @@ function draftModelChoice(models: DraftModel[], requested: unknown): DraftModel 
 }
 
 export function createAssistantTools(deps: ToolDeps): AssistantToolRegistry {
+  const focusTarget = (target: string | undefined, current?: ToolCurrent) => {
+    if (current) deps.focusTarget(target, current); else deps.focusTarget(target);
+  };
   const facts = () => deps.facts();
   const definitions: ToolDefinition[] = [
     {name:'read_input_preparation_contract',tier:'read',description:'학습 전처리 코드의 제한된 modu-numeric-v1 문법·수치 함수·FFT 예제·입출력·저장 절차를 읽습니다. 코드를 실행하거나 이미지·경로를 전송하지 않습니다. 예제의 노이즈 제거 성능은 검증되지 않았습니다.',parameters:NO_ARGS,
@@ -215,7 +218,7 @@ export function createAssistantTools(deps: ToolDeps): AssistantToolRegistry {
       run: async (args, current) => {
         const step = integer(args, 'step', 1, 6);
         const target = typeof args.target === 'string' && /^[a-z][a-z0-9-]{1,63}$/.test(args.target) ? args.target : undefined;
-        requireToolCurrent(current);await deps.setStep(step);requireToolCurrent(current);deps.focusTarget(target);
+        requireToolCurrent(current);await deps.setStep(step);requireToolCurrent(current);focusTarget(target, current);
         return ok(`${step}단계(${STEP_NAMES[step]}) 화면을 열었습니다. 다음 버튼은 사람이 직접 누릅니다.`, `${step}단계 화면을 열었습니다.`);
       } },
     { name: 'open_next_action', tier: 'navigate', parameters: NO_ARGS,
@@ -223,7 +226,7 @@ export function createAssistantTools(deps: ToolDeps): AssistantToolRegistry {
       run: async (_args, current) => {
         const next = deps.snapshot()?.nextAction;
         if (!next) throw new ToolRefusal('no_next_action', '지금 다음 행동을 읽지 못했습니다. read_status로 상태를 먼저 확인하세요.');
-        requireToolCurrent(current);await deps.setStep(next.step);requireToolCurrent(current);deps.focusTarget(next.target);
+        requireToolCurrent(current);await deps.setStep(next.step);requireToolCurrent(current);focusTarget(next.target, current);
         return ok(`"${next.label}" 위치(${next.step}단계)를 열었습니다. 사람이 직접 누릅니다.`, `"${next.label}" 위치를 열었습니다.`);
       } },
     { name: 'prefill_split', tier: 'navigate',
@@ -231,7 +234,7 @@ export function createAssistantTools(deps: ToolDeps): AssistantToolRegistry {
       parameters: { type: 'object', properties: { train_percent: { type: 'integer', minimum: 10, maximum: 95 } }, required: ['train_percent'], additionalProperties: false },
       run: async (args, current) => {
         const train = integer(args, 'train_percent', 10, 95);
-        requireToolCurrent(current);deps.setTrainRatio(train / 100);await deps.setStep(1);requireToolCurrent(current);deps.focusTarget('workflow-data');
+        requireToolCurrent(current);deps.setTrainRatio(train / 100);await deps.setStep(1);requireToolCurrent(current);focusTarget('workflow-data', current);
         return ok(`학습 비율 ${train}%를 채웠습니다. 1단계 분할 막대를 확인한 뒤 사람이 '분할 저장'을 누릅니다.`, `학습 비율 ${train}%를 채웠습니다(저장 안 함).`);
       } },
     { name: 'prefill_training', tier: 'navigate',
@@ -244,8 +247,9 @@ export function createAssistantTools(deps: ToolDeps): AssistantToolRegistry {
         if (deps.training().isTraining) throw new ToolRefusal('already_training', '학습 중에는 다음 학습 설정을 바꾸지 않습니다. 작업이 끝난 뒤 다시 요청하세요.');
         const settings: TrainingSettings = {...(args.preset !== undefined ? {preset: args.preset as TrainingSettings['preset']} : {}),
           ...(args.device !== undefined ? {device: args.device as TrainingSettings['device']} : {}), ...(args.batch_size !== undefined ? {batch_size: integer(args, 'batch_size', 1, 128)} : {})};
-        requireToolCurrent(current);const configured = await deps.prefillTraining(settings, current);
-        requireToolCurrent(current);await deps.setStep(3);requireToolCurrent(current);deps.focusTarget('workflow-training');
+        requireToolCurrent(current);await deps.setStep(3);requireToolCurrent(current);
+        const configured = await deps.prefillTraining(settings, current);
+        requireToolCurrent(current);focusTarget('training-next-settings', current);
         return ok({settings: configured, training_started: false, weights_downloaded: false, next: 'read_training_preparation'}, '학습 설정만 채웠습니다. 준비 근거를 확인한 뒤 사람이 학습을 시작하세요.');
       } },
     { name: 'open_pending_draft', tier: 'navigate',

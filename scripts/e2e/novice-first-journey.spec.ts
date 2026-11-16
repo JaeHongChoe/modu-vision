@@ -70,12 +70,14 @@ test('novice entry creates an explicit purpose and keeps all four goals reachabl
   }
   await page.getByRole('button',{name:'AI 만들기',exact:true}).click();
   await page.getByRole('button',{name:/모델 학습/,exact:false}).first().click();
-  await expect(page.getByRole('heading',{name:'AI에게 가르칠 준비'})).toBeVisible();
+  await expect(page.getByRole('heading',{name:'AI 만들기',exact:true})).toBeVisible();
+  const preparation=page.getByRole('tablist',{name:'학습 데이터 준비 단계',exact:true});
+  await expect(preparation.getByRole('tab')).toHaveCount(5);
+  await expect(preparation.getByRole('tab',{name:/^사진 준비/})).toHaveAttribute('aria-selected','true');
+  await expect(preparation.getByRole('tab',{name:/^사진 준비/})).toContainText('확인 필요');
   await expect(page.getByRole('region',{name:'처음 만드는 AI 진행'})).toHaveCount(0);
   await expect(page.getByRole('button',{name:'사진 준비 열기',exact:true})).toBeVisible();
-  await expect(page.getByText('사진·모델·실행 준비 자세히',{exact:true})).toBeVisible();
-  const transforms=page.locator('details').filter({has:page.locator('summary').filter({hasText:'사진 변환 설정 (선택)'})}).first();
-  await expect(transforms).not.toHaveAttribute('open','');
+  await expect(preparation.getByRole('tab',{name:/^사진 전처리/})).toContainText('선택 사항');
   await expect(page.getByRole('button',{name:'+ 고정 ROI',exact:true})).not.toBeVisible();
   await evidence.screenshot(page,'novice-training-empty');
   await page.setViewportSize({width:1100,height:780});
@@ -87,7 +89,9 @@ test('novice entry creates an explicit purpose and keeps all four goals reachabl
   await expect.poll(()=>page.evaluate(()=>document.getAnimations().filter(animation=>animation instanceof CSSTransition&&animation.playState==='running').length)).toBe(0);
   await evidence.screenshot(page,'novice-training-dark');
   await page.getByRole('button',{name:'모두 보기',exact:true}).click();
+  await preparation.getByRole('tab',{name:/^사진 전처리/}).click();
   await expect(page.getByRole('button',{name:'+ 고정 ROI',exact:true})).toBeVisible();
+  await expect(page.getByRole('button',{name:'+ 고정 ROI',exact:true})).toBeDisabled();
   await expect(page.getByRole('button',{name:/검사 흐름 만들기/}).first()).toBeVisible();
   evidence.note('scope','Real renderer and backend in isolated workspace. Purpose mapping and navigation only; no model/GPT execution or field quality acceptance.');
 });

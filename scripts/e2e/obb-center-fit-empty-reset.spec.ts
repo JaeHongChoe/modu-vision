@@ -1,3 +1,4 @@
+import {selectTrainingFamily,trainingFamilyOption} from './fixtures/modelRecipe';
 import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
@@ -102,7 +103,7 @@ test('center fitting empty and redraw discard only the unsent proposal and reope
       if (reload) await within(page.reload(), deadline, 'actual browser reload'); else await within(page.goto(renderer.url), deadline, 'original browser entry');
       await within(expect(page.getByTitle('프로젝트 관리', {exact: true})).toContainText(project.name, {timeout: remaining(deadline)}), deadline, 'own current project');
       await within(page.getByRole('navigation', {name: 'Workflow Stages'}).getByRole('button').nth(2).click({timeout: remaining(deadline)}), deadline, 'ordinary training stage');
-      await within(page.getByRole('region', {name: '모델 학습 허브'}).getByRole('button', {name: /^회전 객체 검출/}).click({timeout: remaining(deadline)}), deadline, 'ordinary rotated workbench');
+      await within(selectTrainingFamily(page,'rotated_detection',{deadline}).then(()=>expect(trainingFamilyOption(page,'rotated_detection')).toBeChecked({timeout:remaining(deadline)})), deadline, 'ordinary rotated workbench');
       expect(await body(await within(capture.reply, deadline, 'original saved manifest GET'), deadline, label, capture.original())).toEqual(saved);
       await within(expect(panel().getByRole('combobox', {name: '프로젝트에 저장된 회전 박스 정답', exact: true})).toHaveValue(saved.dataset_path, {timeout: remaining(deadline)}), deadline, 'own saved manifest selection');
       await within(expect(fitting().getByRole('combobox', {name: '이미지', exact: true}).locator('option')).toHaveCount(4, {timeout: remaining(deadline)}), deadline, 'three original image options');
@@ -252,7 +253,7 @@ test('center fitting source-change error retires the unsent proposal and recover
       if (reload) await within(page.reload(), deadline, 'actual browser reload'); else await within(page.goto(renderer.url), deadline, 'original browser entry');
       await within(expect(page.getByTitle('프로젝트 관리', {exact: true})).toContainText(project.name, {timeout: remaining(deadline)}), deadline, 'own current project');
       await within(page.getByRole('navigation', {name: 'Workflow Stages'}).getByRole('button').nth(2).click({timeout: remaining(deadline)}), deadline, 'ordinary training stage');
-      await within(page.getByRole('region', {name: '모델 학습 허브'}).getByRole('button', {name: /^회전 객체 검출/}).click({timeout: remaining(deadline)}), deadline, 'ordinary rotated workbench');
+      await within(selectTrainingFamily(page,'rotated_detection',{deadline}).then(()=>expect(trainingFamilyOption(page,'rotated_detection')).toBeChecked({timeout:remaining(deadline)})), deadline, 'ordinary rotated workbench');
       expect(await body(await within(capture.reply, deadline, 'original saved manifest GET'), deadline, label, capture.original())).toEqual(saved);
       await within(expect(panel().getByRole('combobox', {name: '프로젝트에 저장된 회전 박스 정답', exact: true})).toHaveValue(saved.dataset_path, {timeout: remaining(deadline)}), deadline, 'own saved manifest selection');
       await within(expect(fitting().getByRole('combobox', {name: '이미지', exact: true}).locator('option')).toHaveCount(4, {timeout: remaining(deadline)}), deadline, 'three original image options');

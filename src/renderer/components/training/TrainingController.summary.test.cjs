@@ -40,6 +40,7 @@ function fixture({warmParentsFailure = null, resumeFailure = null, deferResume =
     const req = m.require.bind(m);
     m.require = name => {
       if (name === './trainingStartSummary' || name === './modelTrainingOptions' || name === './inputPreparation' || name === './trainingWorkflow') return load(name.slice(2) + '.ts', true);
+      if (name.endsWith('/workflowReadiness')) return load('../wizard/workflowReadiness.ts', true);
       if (name === 'react') return react;
       if (name === 'react/jsx-runtime') return {jsx: (type, props, key) => ({type, props, key}), jsxs: (type, props, key) => ({type, props, key}), Fragment: 'Fragment'};
       if (name.endsWith('/assistContext')) return load('../../stores/assistContext.ts', true);
@@ -80,7 +81,7 @@ function fixture({warmParentsFailure = null, resumeFailure = null, deferResume =
     preset: training.preset, nextDevice: training.nextDevice, nextBatchSize: training.nextBatchSize, selectedProfileId: compute.selectedProfileId,
     profile: compute.profiles.find(row => row.id === compute.selectedProfileId), transportRevision: compute.transportRevision,
     computeLoaded: compute.isLoaded, computeLoading: compute.isLoading, computeLoadError: compute.loadError });
-  return { project, data, training, compute, h, shared, scope, render, resumeReads, savedJob, storage, taskHandler: () => taskHandlers.get('train')?.handler,
+  return { focusTarget: load('../wizard/workflowReadiness.ts',true).focusWorkflowTarget, project, data, training, compute, h, shared, scope, render, resumeReads, savedJob, storage, taskHandler: () => taskHandlers.get('train')?.handler,
     async settle() { for (let i = 0; i < 8; i++) { render(); effects.splice(0).forEach(effect => effect()); await new Promise(setImmediate); } },
     change(label, value) { const field = nodes(tree).find(node => node.props?.['aria-label'] === label); assert.ok(field, label); field.props.onChange({ target: { value } }); },
     summary: () => h.currentTrainingSummary(scope()),
@@ -455,4 +456,23 @@ test('recovery reads live ownership before a React render and refuses changed so
   const f=fixture();await f.settle();f.change('수동 학습 횟수','0');await f.settle();const recover=f.preparation().onResolveBlocker;
   f.catalog().onSelect('ocr');f.render();mutate(f);recover();f.render();assert.equal(f.catalog().selectedFamily,'ocr','a stale callback cannot change parent selection before a render');assert.equal(f.workflow().revealRequest,undefined);f.unmount();
  }
+});
+
+
+test('the mounted controller routes explicit model and preprocessing targets through its current React owner',async()=>{
+ const previous=global.document;global.document={};
+ try{const f=fixture();await f.settle();f.catalog().onSelect('ocr');await f.settle();
+  f.focusTarget('training-next-settings',()=>true);f.render();assert.equal(f.catalog().selectedFamily,'detection');
+  assert.equal(f.workflow().revealRequest.blockId,'model');assert.equal(f.workflow().revealRequest.targetId,'training-next-settings');
+  f.focusTarget('training-input-preparation',()=>true);f.render();assert.equal(f.workflow().revealRequest.blockId,'preprocess');
+  assert.equal(f.workflow().revealRequest.isCurrent(),true);f.unmount();assert.equal(f.workflow().revealRequest.isCurrent(),false);
+ }finally{global.document=previous;}
+});
+
+test('the registered controller owner refuses live authority changes before a replacement render',async()=>{
+ const previous=global.document;global.document={};
+ try{for(const mutate of [f=>{f.project.task='classification';},f=>{f.project.project.active_labelset_id='new-labels';},f=>{f.data.folderPath='/next';},f=>{f.data.currentAuthority='new-actor';},f=>{f.compute.transportRevision++;}]){
+  const f=fixture();await f.settle();f.catalog().onSelect('ocr');await f.settle();mutate(f);
+  f.focusTarget('training-next-settings',()=>true);f.render();assert.equal(f.catalog().selectedFamily,'ocr');assert.equal(f.workflow().revealRequest,undefined);f.unmount();
+ }}finally{global.document=previous;}
 });

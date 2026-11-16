@@ -72,8 +72,9 @@ function mount(initialBlocks, scope = 'project-a', width = 1000) {
         Object.assign(element, { id: node.props?.id || '', tagName: String(node.type).toUpperCase(), parentElement: parent,
           hidden: !!node.props?.hidden, disabled: !!node.props?.disabled, children: [], clientWidth: width,
           getBoundingClientRect: () => ({ width }),
+          getAttribute: name => node.props?.[name] ?? null,
           hasAttribute: name => name === 'tabindex' && node.props?.tabIndex !== undefined,
-          focus: () => focus.push(node.props?.id), scrollIntoView: () => scroll.push(node.props?.id),
+          focus: () => { for(let owner=element;owner;owner=owner.parentElement)if(owner.hidden)return;focus.push(node.props?.id);if(global.document?.getElementById?.(element.id)===element)global.document.activeElement=element; }, scrollIntoView: () => scroll.push(node.props?.id),
           contains(other) { for (let p = other; p; p = p.parentElement) if (p === this) return true; return false; },
           querySelectorAll(selector) { const all = []; const walk = value => { for (const child of value.children) { all.push(child); walk(child); } }; walk(this); return all.filter(child => selector === '[id]' ? child.id : child.tagName === 'DETAILS'); },
           querySelector() { const all = []; const walk = value => { for (const child of value.children) { all.push(child); walk(child); } }; walk(this); return all.find(child => !child.disabled && ['BUTTON', 'INPUT', 'SELECT', 'TEXTAREA', 'A'].includes(child.tagName)) || null; },
@@ -290,4 +291,73 @@ test('a pending recovery cannot steal focus after navigation, a scope change or 
   assert.deepEqual(filtered.focus, [], 'parent filtering a stale request to null cannot make it fresh on return');
   assert.equal(filtered.selected().props.id, filtered.tabs()[0].props.id);
   const gone = make(); gone.change({ revealRequest: request }); gone.unmount(); gone.frames(); assert.deepEqual(gone.focus, []);
+});
+
+function loadFocusRouter() {
+  const file=path.resolve(__dirname,'../wizard/workflowReadiness.ts'),m=new Module(file,module);
+  m._compile(ts.transpileModule(fs.readFileSync(file,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText,file);
+  return m.exports;
+}
+
+test('an explicit workflow target reveals its real hidden React panel before focus', () => {
+  const x=mount([block('photos'),block('model','pending',{type:'details',props:{id:'advanced',children:{type:'input',props:{id:'training-next-settings'}}}})]);
+  const router=loadFocusRouter(),frames=[];const previous={document:global.document,requestAnimationFrame:global.requestAnimationFrame,HTMLElement:global.HTMLElement};
+  let current=true;const doc={getElementById:id=>x.element(id),querySelector:()=>null,activeElement:null};
+  const target=x.element('training-next-settings'),focus=target.focus;
+  target.focus=()=>{let p=target;while(p){if(p.hidden)return;p=p.parentElement;}doc.activeElement=target;focus();};
+  global.document=doc;global.HTMLElement=class {};global.requestAnimationFrame=fn=>frames.push(fn);
+  const dispose=router.registerWorkflowTargetOwner?.({handles:id=>id==='training-next-settings',isCurrent:()=>current,
+    reveal:(targetId,isCurrent)=>x.change({revealRequest:{scope:'project-a',blockId:'model',targetId,sequence:1,isCurrent}})});
+  try{
+    router.focusWorkflowTarget('training-next-settings',()=>current);
+    frames.splice(0).forEach(fn=>fn());
+    assert.equal(x.panels()[1].props.hidden,false,'the owning tab must be selected, not a focus attempt on hidden DOM');
+    x.frames();assert.equal(x.selected().props['aria-selected'],true);assert.equal(x.element('advanced').open,true);
+    assert.equal(doc.activeElement,target);assert.equal(x.focus.at(-1),'training-next-settings');
+  }finally{dispose?.();x.unmount();Object.assign(global,previous);}
+});
+
+test('live authority is checked before reveal and again before the committed focus',()=>{
+  let current=false;
+  const x=mount([block('photos'),block('model','pending',{type:'input',props:{id:'training-next-settings'}})]);
+  x.change({revealRequest:{scope:'project-a',blockId:'model',targetId:'training-next-settings',sequence:1,isCurrent:()=>current}});
+  x.frames();assert.equal(x.panels()[1].props.hidden,true);assert.deepEqual(x.focus,[]);
+  current=true;x.change({revealRequest:{scope:'project-a',blockId:'model',targetId:'training-next-settings',sequence:2,isCurrent:()=>current}});
+  current=false;x.frames();assert.deepEqual(x.focus,[],'actor/source can change before React commits a replacement scope');
+});
+
+test('owner replacement, same-object ABA and disposal retire pending visual requests',()=>{
+ const router=loadFocusRouter(),previous=global.document;global.document={};
+ let pending;const owner={handles:()=>true,isCurrent:()=>true,reveal:(_id,current)=>{pending=current;}};
+ try{
+  let dispose=router.registerWorkflowTargetOwner(owner);router.focusWorkflowTarget('training-next-settings',()=>true);assert.equal(pending(),true);
+  const other=router.registerWorkflowTargetOwner({...owner});assert.equal(pending(),false);
+  dispose();assert.equal(pending(),false,'an old cleanup cannot unregister a newer owner');
+  const aba=router.registerWorkflowTargetOwner(owner);assert.equal(pending(),false,'same object and scope do not revive an old registration');
+  router.focusWorkflowTarget('training-next-settings',()=>true);assert.equal(pending(),true);aba();assert.equal(pending(),false);other();
+ }finally{global.document=previous;}
+});
+
+test('a scoped request waiting for mount cannot transfer after its caller or first owner changes',()=>{
+ const router=loadFocusRouter(),frames=[],previous={document:global.document,requestAnimationFrame:global.requestAnimationFrame};
+ global.document={getElementById:()=>null,querySelector:()=>null};global.requestAnimationFrame=fn=>frames.push(fn);
+ let current=true,reveals=0;const owner={handles:()=>true,isCurrent:()=>true,reveal:()=>reveals++};
+ try{
+  router.focusWorkflowTarget('training-next-settings',()=>current);current=false;
+  const dispose=router.registerWorkflowTargetOwner(owner);frames.splice(0).forEach(fn=>fn());assert.equal(reveals,0);dispose();
+  current=true;router.focusWorkflowTarget('training-next-settings',()=>current);
+  const first=router.registerWorkflowTargetOwner(owner);first();const second=router.registerWorkflowTargetOwner(owner);
+  frames.splice(0).forEach(fn=>fn());assert.equal(reveals,0);second();
+ }finally{Object.assign(global,previous);}
+});
+
+test('an old cleanup cannot clear a newer same-object owner registration',()=>{
+ const router=loadFocusRouter(),previous={document:global.document,requestAnimationFrame:global.requestAnimationFrame};
+ global.document={getElementById:()=>null,querySelector:()=>null};global.requestAnimationFrame=()=>{};
+ let reveals=0;const owner={handles:()=>true,isCurrent:()=>true,reveal:()=>reveals++};
+ try{
+  const old=router.registerWorkflowTargetOwner(owner);const middle=router.registerWorkflowTargetOwner({...owner});
+  const latest=router.registerWorkflowTargetOwner(owner);old();router.focusWorkflowTarget('training-next-settings',()=>true);
+  assert.equal(reveals,1,'old A cleanup must not unregister new A after A→B→A');latest();middle();
+ }finally{Object.assign(global,previous);}
 });

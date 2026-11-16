@@ -1,3 +1,4 @@
+import {selectTrainingFamily,trainingFamilyOption} from './fixtures/modelRecipe';
 import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
@@ -16,7 +17,7 @@ async function exercise(page:Page,workspace:Workspace,evidence:Evidence,api:Owne
  const project=await api('/api/project/create',{name:'Human truth and fitting fixture',task:'classification'});
  await api('/api/project/update',{source_dataset_dir:source},'PUT');await api('/api/dataset/import',{folder_path:source,task:'classification'});
  const trainingPosts:string[]=[];page.on('request',request=>{if(request.method()==='POST'&&/\/(train|jobs)$/.test(new URL(request.url()).pathname))trainingPosts.push(request.url());});
- const open=async(card:string)=>{if(url)await page.goto(url);else await page.reload();await expect(page.getByTitle('프로젝트 관리',{exact:true})).toContainText('Human truth and fitting fixture');await page.getByRole('navigation',{name:'Workflow Stages'}).getByRole('button').nth(2).click();await page.getByRole('region',{name:'모델 학습 허브'}).getByRole('button',{name:new RegExp(`^${card}`)}).click();};
+ const open=async(card:'문자 인식'|'회전 객체 검출')=>{if(url)await page.goto(url);else await page.reload();await expect(page.getByTitle('프로젝트 관리',{exact:true})).toContainText('Human truth and fitting fixture');await page.getByRole('navigation',{name:'Workflow Stages'}).getByRole('button').nth(2).click();const family=card==='문자 인식'?'ocr':'rotated_detection';await selectTrainingFamily(page,family);await expect(trainingFamilyOption(page,family)).toBeChecked();};
  await open('문자 인식');
  const ocr=page.locator('details').filter({has:page.locator('summary').filter({hasText:'문자 인식 모델 실험'})}).first();
  const expectedOCR=files.map((file,i)=>({image:relative[i],text:truth,split:['train','train','val','test'][i]}));
@@ -96,7 +97,7 @@ async function splitControlExercise(page:Page,workspace:Workspace,evidence:Evide
   const created=await api('/api/project/create',{name:'Hash-bound split controls '+tag,task:'classification'});await api('/api/project/update',{source_dataset_dir:source},'PUT');await api('/api/dataset/import',{folder_path:source,task:'classification'});const project=await api('/api/project/current');expect(project.id).toBe(created.id);expect(project.source_dataset_dir).toBe(source);expect(path.dirname(project.project_dir)).toBe(native?path.join(workspace.userData,'projects'):workspace.projects);return {tag,source,sourceHashes,rows,project};
  };
  const A=await make('A');if(url)await page.goto(url);else await page.reload();
- const openOCR=async(name:string)=>{await expect(page.getByTitle('프로젝트 관리',{exact:true})).toContainText(name);await page.getByRole('navigation',{name:'Workflow Stages'}).getByRole('button').nth(2).click();await page.getByRole('region',{name:'모델 학습 허브'}).getByRole('button',{name:/^문자 인식/}).click();};
+ const openOCR=async(name:string)=>{await expect(page.getByTitle('프로젝트 관리',{exact:true})).toContainText(name);await page.getByRole('navigation',{name:'Workflow Stages'}).getByRole('button').nth(2).click();await selectTrainingFamily(page,'ocr');await expect(trainingFamilyOption(page,'ocr')).toBeChecked();};
  await openOCR(A.project.name);const ocr=page.locator('details').filter({has:page.locator('summary').filter({hasText:'문자 인식 모델 실험'})}).first();
  const expand=async()=>{const details=ocr.locator('details').filter({has:page.locator('summary').filter({hasText:'정답 표·가져오기 상세 설정'})});if(await details.getAttribute('open')===null)await details.locator('summary').click();};
  await expand();const table=ocr.getByRole('textbox',{name:/^정답 표 · 한 줄에/}),save=ocr.getByRole('button',{name:'정답과 이미지 해시 저장',exact:true});const expectedTSV=A.rows.map(row=>`${row.image}\t${row.text}\t${row.split}`).join('\n');await table.fill(expectedTSV);

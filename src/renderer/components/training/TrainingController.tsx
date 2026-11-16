@@ -44,10 +44,11 @@ import { AutoDLWorkbench } from './AutoDLWorkbench';
 import type { ModelFamily } from '../../services/modelTrainingProgram';
 import type { VisionTask } from '../../types';
 import {TaskChangeImpactDialog,taskPreviewScope} from '../wizard/TaskChangeImpactDialog';
+import {registerWorkflowTargetOwner} from '../wizard/workflowReadiness';
 import {TrainingPreparationPanel} from './TrainingPreparationPanel';
 import {TrainingInputPreparation} from './TrainingInputPreparation';
 import {inputPreparationScope,supportsInputPreparation} from './inputPreparation';
-import {TrainingDataWorkflow,type TrainingDataBlock} from './TrainingDataWorkflow';
+import {TrainingDataWorkflow,type TrainingDataBlock,type TrainingDataRevealRequest} from './TrainingDataWorkflow';
 import {TrainingDataSplitBlock} from './TrainingDataSplitBlock';
 import {familyPreparation} from './trainingWorkflow';
 import {useTaskHandoff} from './useTaskHandoff';
@@ -177,8 +178,23 @@ export const TrainingController: React.FC = () => {
   const sourceReady = Boolean(projectDir && folderPath && project?.source_dataset_dir===folderPath && datasetKey === `${folderPath}\0${task}`);
   const currentAuthority = readDatasetAuthority();
   const errorScope = JSON.stringify([taskPreviewScope(), modelResetScope, datasetKey, transportRevision, currentAuthority]);
-  const [settingsReveal, setSettingsReveal] = useState<{scope:string;blockId:string;targetId:string;sequence:number}>();
+  const [settingsReveal, setSettingsReveal] = useState<TrainingDataRevealRequest>();
   const revealSequence = useRef(0);
+  const isCurrentTrainingView = () => {
+    const liveProject=useProjectStore.getState(),liveData=useDatasetStore.getState(),liveCompute=useComputeStore.getState();
+    const liveModelScope=JSON.stringify([liveProject.task,liveProject.projectDir,liveProject.project?.id,liveProject.project?.active_labelset_id,liveData.folderPath]);
+    return JSON.stringify([taskPreviewScope(),liveModelScope,liveData.datasetKey,liveCompute.transportRevision,readDatasetAuthority()])===errorScope;
+  };
+  useEffect(() => registerWorkflowTargetOwner({
+    handles: target => ['training-model-settings','training-compute-settings','training-scheduling-settings','training-next-settings','training-input-preparation'].includes(target),
+    isCurrent: isCurrentTrainingView,
+    reveal: (targetId, isCurrent) => {
+      if(!isCurrent() || !isCurrentTrainingView())return;
+      setSelectedFamily(task);
+      setSettingsReveal({scope:errorScope,blockId:targetId==='training-input-preparation'?'preprocess':'model',targetId,sequence:++revealSequence.current,isCurrent});
+    },
+  }), [errorScope]);
+
   const [actionError, setActionError] = useScopedError(errorScope);
   const [resumeError, setResumeError] = useScopedError(errorScope);
   const [warmParentsError, setWarmParentsError] = useScopedError(errorScope);
@@ -427,7 +443,7 @@ export const TrainingController: React.FC = () => {
 
         </div>
   );
-  const inputPreparation=<><div hidden={selectedFamily!==task}><TrainingInputPreparation task={task} imageSize={(modelOptions.image_size as number|number[]|undefined) ?? (preset==='precision'?512:256)} disabled={isTraining||isRecoveringTraining||isProjectBusy||isLoading||isSplitting||Boolean(resumeState)||!sourceReady||selectedFamily!==task} /></div>{selectedFamily!==task&&<p className="text-sm text-[var(--workspace-muted)]">선택한 전문 모델은 아래 전용 작업대에서 입력을 준비합니다. 현재 프로젝트의 전처리 편집은 보관됩니다.</p>}</>;
+  const inputPreparation=<><div id="training-input-preparation" tabIndex={-1} hidden={selectedFamily!==task}><TrainingInputPreparation task={task} imageSize={(modelOptions.image_size as number|number[]|undefined) ?? (preset==='precision'?512:256)} disabled={isTraining||isRecoveringTraining||isProjectBusy||isLoading||isSplitting||Boolean(resumeState)||!sourceReady||selectedFamily!==task} /></div>{selectedFamily!==task&&<p className="text-sm text-[var(--workspace-muted)]">선택한 전문 모델은 아래 전용 작업대에서 입력을 준비합니다. 현재 프로젝트의 전처리 편집은 보관됩니다.</p>}</>;
   const modelCatalog=<ModelFamilyCatalog key="model-catalog" selectedFamily={selectedFamily} onSelect={chooseFamily} disabled={isLoading||isSplitting||isProjectBusy||isTraining||isRecoveringTraining} />;
   const preparationPanel=selectedFamily===task&&<TrainingPreparationPanel key="core-preparation" inputBlocker={startBlocker?{message:startBlocker,step:startRecoveryStep,actionLabel:startRecoveryLabel}:null} onResolveBlocker={resolveStartBlocker} family={selectedFamily} model={syntheticAnomaly ? syntheticOptions.anomaly_backbone : selectedBackbone} preset={preset} checkpoint={pretrainedCheckpoint} onCheckpointChange={setPretrainedCheckpoint} device={nextDevice==='mps'||nextDevice==='cuda'||nextDevice==='cpu' ? nextDevice : 'auto'} config={modelOptions} warmStartJobId={warmParentId||undefined} trained={Boolean(completedJobId)} />;
   const inputReady=sourceReady&&sourceAuthority===currentAuthority&&project?.task===task&&!importError&&!isLoading&&!isProjectBusy;
@@ -508,7 +524,7 @@ export const TrainingController: React.FC = () => {
           {warmParentId && <p className="mt-2 text-cyan-200">학습 뒤 4단계에서 이전 모델과 같은 test 이미지로 비교하고 승인 기준을 확인하세요. 승인 전에는 활성 모델을 바꾸지 않습니다.</p>}
         </div>}
 
-        <details className="rounded border border-slate-600 bg-[#111C2A] p-3 text-sm text-slate-200"><summary className="cursor-pointer">다음 학습 배치·로컬 장치 설정</summary><div className="mt-3 grid gap-3 sm:grid-cols-2"><label>배치 크기<input aria-label="다음 학습 배치 크기" type="number" min={1} max={128} disabled={isTraining} value={nextBatchSize ?? trainingPresetBatchSize(preset)} onChange={event=>setNextSettings({batchSize:Number(event.target.value)})} className="mt-1 w-full rounded border border-slate-600 bg-[#0B1520] p-2" /></label><label>로컬 장치<select aria-label="다음 학습 로컬 장치" disabled={isTraining} value={nextDevice || 'auto'} onChange={event=>setNextSettings({device:event.target.value})} className="mt-1 w-full rounded border border-slate-600 bg-[#0B1520] p-2"><option value="auto">자동 감지</option><option value="cpu">CPU</option><option value="mps">Apple Metal / MPS</option><option value="cuda">CUDA</option></select></label></div><p className="mt-2 text-slate-400">새 학습에 적용됩니다. 서버를 선택하면 서버 설정의 실행 장치를 사용합니다.</p></details>
+        <details id="training-next-settings" tabIndex={-1} className="rounded border border-slate-600 bg-[#111C2A] p-3 text-sm text-slate-200"><summary className="cursor-pointer">다음 학습 배치·로컬 장치 설정</summary><div className="mt-3 grid gap-3 sm:grid-cols-2"><label>배치 크기<input aria-label="다음 학습 배치 크기" type="number" min={1} max={128} disabled={isTraining} value={nextBatchSize ?? trainingPresetBatchSize(preset)} onChange={event=>setNextSettings({batchSize:Number(event.target.value)})} className="mt-1 w-full rounded border border-slate-600 bg-[#0B1520] p-2" /></label><label>로컬 장치<select aria-label="다음 학습 로컬 장치" disabled={isTraining} value={nextDevice || 'auto'} onChange={event=>setNextSettings({device:event.target.value})} className="mt-1 w-full rounded border border-slate-600 bg-[#0B1520] p-2"><option value="auto">자동 감지</option><option value="cpu">CPU</option><option value="mps">Apple Metal / MPS</option><option value="cuda">CUDA</option></select></label></div><p className="mt-2 text-slate-400">새 학습에 적용됩니다. 서버를 선택하면 서버 설정의 실행 장치를 사용합니다.</p></details>
         <div id="training-scheduling-settings" tabIndex={-1} aria-label="학습 실행 예산과 대기열 설정"><TrainingSchedulingSettings value={scheduling} onChange={setScheduling} remote={!!selectedProfileId} disabled={isTraining || isRecoveringTraining} error={schedulingError} /></div>
           </div>
         </details>
@@ -545,7 +561,7 @@ export const TrainingController: React.FC = () => {
       {startWarning&&<div className="workspace-record m-3 text-xs" role="note" aria-label="학습 전 확인"><p className="text-amber-200">{startWarning}</p><button className="workspace-button mt-2" onClick={()=>void setStep(1)}>분할 확인 (1단계)</button></div>}
       <header className="modu-stage-header"><h1>{language === 'ko' ? 'AI 만들기' : 'Build your AI'}</h1><p>{language === 'ko' ? '사진과 정답을 준비하고, 필요한 전처리를 연결한 뒤 학습하세요.' : 'Prepare your photos and labels, connect preprocessing, then train.'}</p></header>
       <div className="max-w-7xl w-full mx-auto space-y-5 p-6">
-        <TrainingDataWorkflow scope={errorScope} blocks={dataBlocks} revealRequest={settingsReveal?.scope===errorScope?settingsReveal:undefined}/>
+        <TrainingDataWorkflow isScopeCurrent={isCurrentTrainingView} scope={errorScope} blocks={dataBlocks} revealRequest={settingsReveal?.scope===errorScope?settingsReveal:undefined}/>
         {remediationNotice&&<p role="status" className="rounded border border-cyan-800 bg-cyan-950/30 p-3 text-sm text-cyan-100">{remediationNotice}</p>}
           {jobId && (
             <section aria-label="현재 작업 위치와 복구" className="modu-stage-summary p-3 text-sm">

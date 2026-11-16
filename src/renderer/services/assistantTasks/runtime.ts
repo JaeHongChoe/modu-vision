@@ -106,6 +106,13 @@ async function navigate(step: WorkflowStep, control: Control) {
   await new Promise<void>(resolve => setTimeout(resolve, 0));
   requireActive(control);
 }
+function focusTaskTarget(target: string, control: Control) {
+  // Configuration writes intentionally replace their binding. Bind this visual
+  // request to the accepted post-write generation, never grant another action.
+  const binding=taskRuntimeBinding(),generation=taskRuntimeGeneration();
+  focusWorkflowTarget(target, () => authorityCurrent(control) && !control.isPaused()
+    && taskRuntimeBinding()===binding && taskRuntimeGeneration()===generation);
+}
 function localScopeReceipt() {
   const state = useProjectStore.getState(), data = useDatasetStore.getState();
   return {project_id: state.project?.id, registration_id: state.project?.registration_id ?? null,
@@ -184,7 +191,7 @@ export async function executeTaskAction(step: TaskStep, control: Control): Promi
     const args = validateTaskAction(step.action, step.args); requireActive(control);
     if (step.action === 'open_step') {
       await navigate(args.step as WorkflowStep, control);
-      if (args.target) focusWorkflowTarget(String(args.target));
+      if (args.target) focusTaskTarget(String(args.target), control);
       return completed({step: args.step, target: args.target ?? null});
     }
     if (step.action === 'create_project') {
@@ -222,6 +229,7 @@ export async function executeTaskAction(step: TaskStep, control: Control): Promi
     }
     const check = fence(control);
     if (step.action === 'configure_training') {
+      await navigate(3, control); check();
       const training = useTrainingStore.getState(), compute = useComputeStore.getState();
       if (training.isTraining) return human('학습 중에는 설정을 바꾸지 않습니다. 3단계에서 현재 작업을 확인하세요.');
       if (compute.selectedProfileId && args.device !== undefined) return human('선택 서버는 등록된 장치를 사용합니다. 로컬 장치를 바꾸려면 3단계에서 실행 위치를 직접 선택하세요.');
@@ -229,6 +237,7 @@ export async function executeTaskAction(step: TaskStep, control: Control): Promi
       if (args.preset) training.setPreset(args.preset as 'fast' | 'precision');
       training.setNextSettings({...(args.device ? {device: String(args.device)} : {}), ...(args.batch_size !== undefined ? {batchSize: Number(args.batch_size)} : {})});
       const after = useTrainingStore.getState();
+      focusTaskTarget('training-next-settings', control);
       return {...completed({settings: {preset: after.preset, device: after.nextDevice || 'auto', batch_size: after.nextBatchSize,
         compute_profile_id: compute.selectedProfileId ?? null}}), bindingAfter: taskRuntimeBinding()};
     }
@@ -270,6 +279,7 @@ export async function executeTaskAction(step: TaskStep, control: Control): Promi
         localStorage.setItem(key,JSON.stringify([...history.slice(-19),{recipe,sha256:preview.input_recipe_sha256??null,saved_at:new Date().toISOString()}]));
       }
       useTrainingStore.getState().setInputRecipe(scope,clearing?null:recipe,preview.input_recipe_sha256??null);
+      focusTaskTarget('training-input-preparation', control);
       return{...completed({...localScopeReceipt(),input_recipe_sha256:preview.input_recipe_sha256??null,preview_source_sha256:preview.source_sha256,input_recipe:recipe,input_recipe_cleared:clearing,previewed:true}),bindingAfter:taskRuntimeBinding()};
     }
     if (step.action === 'generate_label_drafts') {dispatched = true; return await draftAction(args, control);}

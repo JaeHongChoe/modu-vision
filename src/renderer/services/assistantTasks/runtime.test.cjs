@@ -8,7 +8,7 @@ function fixture() {
   const flow = {baseVersionId:'v1',pipelineDirty:false,pipelineIsDraft:false,pipeline:{id:'flow1',nodes:[],edges:[]},error:null};
   const annotation = {isDirty:false,categories:[{id:1,name:'NG'}]};
   let context = {workspace_id:'ws',project_id:'p',actor_id:'actor',mode:'local'}, epoch = 1, transport = 'local', chosen='/picked';
-  const calls=[], cache=new Map(), holds=new Map(), subscriptions=new Map();
+  const focusGuards=[],calls=[], cache=new Map(), holds=new Map(), subscriptions=new Map();
   function emit(state){for(const fn of subscriptions.get(state)||[])fn(state);}
   const wait = name => holds.get(name)?.promise || Promise.resolve();
   const control = {isCurrent:()=>true,isPaused:()=>false};
@@ -28,12 +28,12 @@ function fixture() {
     '../../stores/useProjectStore':{useProjectStore:store(project)},'../../stores/useDatasetStore':{useDatasetStore:store(data),readDatasetAuthority:()=>JSON.stringify([epoch,transport,context])},'../../stores/useTrainingStore':{useTrainingStore:store(training)},'../../stores/useEvaluationStore':{useEvaluationStore:store(evaluation),currentEvaluationGuidanceSource:()=>({source:{folderPath:data.folderPath,task:project.task},jobId:evaluation.jobId})},'../../stores/useComputeStore':{useComputeStore:store(compute)},'../../stores/useAnnotationStore':{useAnnotationStore:store(annotation)},'../../stores/useFlowchartStore':{useFlowchartStore:store(flow)},'../../stores/useInspectionRunStore':{useInspectionRunStore:store({isRunning:false})},
     '../../stores/assistContext':{currentAssistContext:()=>({scope:'private-scope',stage:project.activeStep,status:'ready',blocker:'/source/private.png',nextAction:{label:'다음',step:2},errors:[],progress:null})},'../../stores/workflowEvidence':{bumpWorkflowEvidence:()=>calls.push(['refresh'])},
     '../../stores/autoRunChannel':{taskAutoRunSettings:()=>uiResult.receipt?.settings||null,requestAutoRun:async kind=>{calls.push(['auto',kind]);return null;},requestTaskAutoRun:async(kind,c)=>{calls.push(['task-ui',kind]);await wait('ui');if(c.isCurrent()===false)return{error:'stale'};if(kind==='train'){training.jobId=uiResult.receipt?.job_id;training.status='running';training.isTraining=true;}return uiResult;},announceFlowSaved:()=>calls.push(['announce'])},
-    '../../components/wizard/workflowReadiness':{focusWorkflowTarget:target=>calls.push(['focus',target])},'../api':{api,request:(...args)=>api.request(...args),getProjectContext:()=>context,getProjectContextGeneration:()=>epoch,getApiPersistenceIdentity:()=>transport},'../hostAdapter':{host:{selectFolder:async options=>{calls.push(['choose',options]);await wait('choose');return chosen;}}},'../flowEvaluation':{flowEvaluation},'../foundationLabelingApi':{foundationLabelingApi:foundation},
+    '../../components/wizard/workflowReadiness':{focusWorkflowTarget:(target,current)=>{calls.push(['focus',target]);focusGuards.push(current);}},'../api':{api,request:(...args)=>api.request(...args),getProjectContext:()=>context,getProjectContextGeneration:()=>epoch,getApiPersistenceIdentity:()=>transport},'../hostAdapter':{host:{selectFolder:async options=>{calls.push(['choose',options]);await wait('choose');return chosen;}}},'../flowEvaluation':{flowEvaluation},'../foundationLabelingApi':{foundationLabelingApi:foundation},
   };
   function load(file){if(cache.has(file))return cache.get(file).exports;const m=new Module(file,module);m.filename=file;m.paths=Module._nodeModulePaths(path.dirname(file));cache.set(file,m);const original=m.require.bind(m);m.require=name=>Object.hasOwn(mocks,name)?mocks[name]:name.startsWith('.')?load(path.resolve(path.dirname(file),name)+'.ts'):original(name);m._compile(ts.transpileModule(fs.readFileSync(file,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText,file);return m.exports;}
   const runtime=load(path.join(__dirname,'runtime.ts'));
   const step=(action,args={},receipt=null)=>({id:'step',action,args,label:'작업',status:'running',attempt_id:'attempt',receipt,error:null});
-  return{runtime,step,control,calls,project,data,training,evaluation,compute,flow,annotation,api,foundation,flowEvaluation,setUi:r=>{uiResult=r;},epoch:()=>epoch++,setActor:a=>{context={...context,actor_id:a};},setTransport:t=>{transport=t;},hold:name=>{let release;holds.set(name,{promise:new Promise(r=>{release=r;}),release:()=>release()});},release:name=>holds.get(name).release(),cancelChooser:()=>{chosen=null;}};
+  return{runtime,step,control,calls,focusGuards,project,data,training,evaluation,compute,flow,annotation,api,foundation,flowEvaluation,setUi:r=>{uiResult=r;},epoch:()=>epoch++,setActor:a=>{context={...context,actor_id:a};},setTransport:t=>{transport=t;},hold:name=>{let release;holds.set(name,{promise:new Promise(r=>{release=r;}),release:()=>release()});},release:name=>holds.get(name).release(),cancelChooser:()=>{chosen=null;}};
 }
 test('training reconciliation preserves the observed failure and next action without starting a job',async()=>{
  const f=fixture();f.api.training.getStatus=async job=>({job_id:job,status:'failed',task:'detection',dataset_path:'/source',error:{code:'out_of_memory',message:'CUDA out of memory at /private/model.bin'},observation:{cause:'worker exited',next_action:'reduce batch size'},wait_reason:'device budget'});
@@ -183,5 +183,34 @@ test('a code preview cannot save after actor/source changes or without matching 
   const recipe={version:1,operations:[{op:'code',language:'modu-numeric-v1',code:'result = image'}]};const saved=[];f.training.setInputRecipe=(...args)=>saved.push(args);
   f.api.request=async()=>{if(mode==='actor')f.setActor('other');if(mode==='source')f.data.folderPath='/other';if(mode==='error')throw Error('Numeric result must be finite');return{input_recipe:mode==='recipe'?{version:1,operations:[]}:recipe,input_recipe_sha256:mode==='hash'?undefined:'a'.repeat(64),source_sha256:'b'.repeat(64),prepared_size:[256,256]};};
   const result=await f.runtime.executeTaskAction(f.step('configure_input_recipe',{input_recipe:recipe}),f.control);assert.notEqual(result.kind,'completed',mode);assert.deepEqual(saved,[],mode);
+ }
+});
+
+test('configure training refuses cancelled navigation before changing any settings',async()=>{
+ const f=fixture();f.project.setStep=async()=>{};f.project.activeStep=1;
+ const before={preset:f.training.preset,device:f.training.nextDevice,batch:f.training.nextBatchSize};
+ const result=await f.runtime.executeTaskAction(f.step('configure_training',{preset:'precision',device:'mps',batch_size:4}),f.control);
+ assert.notEqual(result.kind,'completed');
+ assert.deepEqual({preset:f.training.preset,device:f.training.nextDevice,batch:f.training.nextBatchSize},before);
+ assert.ok(!f.calls.some(row=>row[0]==='focus'));
+});
+
+
+test('configured settings reveal uses accepted post-write authority without another action',async()=>{
+ const f=fixture();const result=await f.runtime.executeTaskAction(f.step('configure_training',{preset:'precision',device:'cpu',batch_size:4}),f.control);
+ assert.equal(result.kind,'completed');assert.deepEqual(result.receipt.settings,{preset:'precision',device:'cpu',batch_size:4,compute_profile_id:null});
+ assert.deepEqual(f.calls.filter(r=>r[0]==='focus'),[['focus','training-next-settings']]);assert.equal(f.focusGuards[0](),true);
+ assert.ok(!f.calls.some(r=>['task-ui','split','import'].includes(r[0])));
+ f.epoch();assert.equal(f.focusGuards[0](),false,'project epoch retirement also rejects ABA');
+});
+
+test('saved input recipes reveal their editor but retire focus on actor, transport or source changes',async()=>{
+ for(const mutate of [f=>f.setActor('other'),f=>f.setTransport('other'),f=>{f.data.folderPath='/next';},f=>{f.project.project.active_labelset_id='next';}]){
+  const f=fixture();f.project.task=f.project.project.task='classification';f.data.datasetKey=f.data.lastImportedKey='/source\0classification';f.annotation.currentImage={file_path:'/source/a'};
+  const recipe={version:1,operations:[{op:'brightness',factor:1.2}]};f.training.setInputRecipe=()=>{};
+  f.api.request=async()=>({input_recipe:recipe,input_recipe_sha256:'a'.repeat(64),source_sha256:'b'.repeat(64),prepared_size:[256,256]});
+  const result=await f.runtime.executeTaskAction(f.step('configure_input_recipe',{input_recipe:recipe}),f.control);
+  assert.equal(result.kind,'completed');assert.deepEqual(f.calls.filter(r=>r[0]==='focus'),[['focus','training-input-preparation']]);
+  assert.equal(f.focusGuards[0](),true);mutate(f);assert.equal(f.focusGuards[0](),false);
  }
 });

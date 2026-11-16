@@ -227,7 +227,9 @@ test('task plan approval persists real actions; pause, human resume and reload r
     await page.setViewportSize({width: 1440, height: 900});
     const trainingScreen = page.locator('#workflow-training');
     await expect(trainingScreen).toBeVisible();
-    await trainingScreen.getByText('다음 학습 배치·로컬 장치 설정', {exact: true}).click();
+    await expect(trainingScreen.getByRole('tab',{name:/모델과 학습/})).toHaveAttribute('aria-selected','true');
+    await expect(trainingScreen.locator('#training-next-settings')).toBeVisible();
+    await expect(trainingScreen.locator('#training-next-settings')).toBeFocused();
     await expect(trainingScreen.getByLabel('다음 학습 배치 크기', {exact: true})).toHaveValue('8');
     await expect(trainingScreen.getByLabel('다음 학습 로컬 장치', {exact: true})).toHaveValue('cpu');
     expect(splitWrites).toHaveLength(1);

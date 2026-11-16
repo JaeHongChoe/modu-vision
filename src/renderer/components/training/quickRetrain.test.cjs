@@ -33,6 +33,7 @@ test('the parent picked by the quick retrain survives its own epoch change and g
  const parentReads=[],starts=[];
  const parents=[{job_id:'job_old',created_at:'2026-10-20T00:00:00Z'},{job_id:'job_new',created_at:'2026-10-22T00:00:00Z'}];
  const {TrainingController}=compile('TrainingController.tsx',{react,'lucide-react':new Proxy({},{get:(_,key)=>String(key)}),
+  '../wizard/workflowReadiness':compile('../wizard/workflowReadiness.ts',{}),
   './parentCandidate':{parentCandidateLabel:parent=>parent.job_id,parentCandidateNotice:''},
   './modelTrainingOptions':compile('modelTrainingOptions.ts',{}),
   './inputPreparation':compile('inputPreparation.ts',{}),

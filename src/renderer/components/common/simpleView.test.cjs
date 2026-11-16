@@ -65,7 +65,7 @@ test('training location and current status remain reachable and comparison stays
  const training=read('src/renderer/components/training/TrainingController.tsx');
  assert.match(training,/<details className="modu-stage-disclosure" open=\{full\}/);
  assert.match(training, /id="training-current-status"/);
- assert.match(training, /<TrainingDataWorkflow scope=\{errorScope\} blocks=\{dataBlocks\} revealRequest=\{settingsReveal\?\.scope===errorScope\?settingsReveal:undefined\}/);
+ assert.match(training, /<TrainingDataWorkflow isScopeCurrent=\{isCurrentTrainingView\} scope=\{errorScope\} blocks=\{dataBlocks\} revealRequest=\{settingsReveal\?\.scope===errorScope\?settingsReveal:undefined\}/);
  const workflow=read('src/renderer/components/training/TrainingDataWorkflow.tsx');
  assert.match(workflow,/panel\.querySelectorAll<HTMLElement>\('\[id\]'\)/,'settings lookup belongs to the requested panel');
  assert.match(workflow,/liveScope\.current !== reveal\.scope \|\| navigation\.current !== reveal\.navigation/,'retired scope or intervening navigation cannot move focus');

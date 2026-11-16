@@ -144,7 +144,7 @@ test('preparation reads backend evidence while training settings only prefill ex
  const checked=JSON.parse((await tools.runAutomatic('read_training_preparation',{})).content);
  assert.equal(checked.ready,false);assert.equal(checked.weights.state,'missing');assert.deepEqual(calls,[]);
  const prepared=await tools.runAutomatic('prefill_training',{preset:'precision',device:'cpu',batch_size:8});
- assert.equal(prepared.ok,true);assert.deepEqual(calls,[['prefillTraining',{preset:'precision',device:'cpu',batch_size:8}],['setStep',3],['focusTarget','workflow-training']]);
+ assert.equal(prepared.ok,true);assert.deepEqual(calls,[['setStep',3],['prefillTraining',{preset:'precision',device:'cpu',batch_size:8}],['focusTarget','training-next-settings']]);
  assert.match(prepared.summary,/설정/);assert.ok(!calls.some(row=>row[0]==='startTraining'));
  for(const args of [{preset:'turbo'},{device:'cuda:7'},{batch_size:0},{batch_size:129},{batch_size:1.5},{}])
   await assert.rejects(tools.runAutomatic('prefill_training',args),error=>error.code==='invalid_arguments');
@@ -227,4 +227,11 @@ test('the documented FFT program enters the existing immutable input recipe plan
  const recipe={version:1,operations:[{op:'code',language:contract.language,code:contract.fft_example.code}]};
  await tools.runAutomatic('propose_task',{goal:'주기적 패턴 노이즈 입력 변환',steps:[{action:'configure_input_recipe',args:{input_recipe:recipe},label:'제한된 FFT 코드 미리보기와 저장'}]});
  assert.equal(proposed.length,1);assert.equal(proposed[0].steps[0].action,'configure_input_recipe');assert.deepEqual(proposed[0].steps[0].args.input_recipe,recipe);assert.deepEqual(calls,[]);
+});
+
+test('a cancelled training-screen navigation cannot prefill settings or report success',async()=>{
+ const {deps,calls}=fakeDeps({setStep:async()=>{throw Error('save refused navigation');},prefillTraining:async()=>{calls.push(['unexpected-prefill']);}});
+ const tools=createAssistantTools(deps);
+ await assert.rejects(tools.runAutomatic('prefill_training',{preset:'fast',device:'cpu'}),/save refused navigation/);
+ assert.ok(!calls.some(row=>row[0]==='unexpected-prefill'));
 });

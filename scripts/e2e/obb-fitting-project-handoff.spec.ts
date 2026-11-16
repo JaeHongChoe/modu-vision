@@ -1,3 +1,4 @@
+import {selectTrainingFamily,trainingFamilyOption} from './fixtures/modelRecipe';
 import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
@@ -117,7 +118,7 @@ test(variant.mode + ' fitting proposal stays scoped through ordinary A B A proje
     const deadline=performance.now()+10_000;
     await within(expect(page.getByTitle('프로젝트 관리',{exact:true})).toContainText(scope.project.name,{timeout:remaining(deadline)}),deadline,'own visible project');
     await within(page.getByRole('navigation',{name:'Workflow Stages'}).getByRole('button').nth(2).click({timeout:remaining(deadline)}),deadline,'ordinary training stage');
-    await within(page.getByRole('region',{name:'모델 학습 허브'}).getByRole('button',{name:/^회전 객체 검출/}).click({timeout:remaining(deadline)}),deadline,'ordinary rotated workbench');
+    await within(selectTrainingFamily(page,'rotated_detection',{deadline}).then(()=>expect(trainingFamilyOption(page,'rotated_detection')).toBeChecked({timeout:remaining(deadline)})),deadline,'ordinary rotated workbench');
     // Let the original automatic owner manifest finish rendering before the
     // explicit read capture, so a second request cannot be mistaken for it.
     await within(expect(table()).toHaveValue(scope.table,{timeout:remaining(deadline)}),deadline,'automatic saved truth hydrated');

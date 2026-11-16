@@ -1,3 +1,4 @@
+import {selectTrainingFamily,trainingFamilyOption} from './fixtures/modelRecipe';
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { crc32, deflateSync } from 'node:zlib';
@@ -186,8 +187,8 @@ test('S0-08: a model trained on the actual backend carries its calibrated thresh
   await page.getByRole('button', { name: /03.*오토딥러닝/ }).click();
   const capabilities = await (await page.request.get(`${renderer.origin}/api/models/capabilities`)).json() as { families: Array<{ task: string; label: string }> };
   const segmentation = capabilities.families.find(family => family.task === 'segmentation')!.label;
-  const hub = page.getByRole('region', { name: '모델 학습 허브' });
-  await hub.getByRole('button', { name: new RegExp(`^${segmentation}`) }).click();
+  await selectTrainingFamily(page,'segmentation');
+  await expect(trainingFamilyOption(page,'segmentation')).toHaveAccessibleName(new RegExp(segmentation));
   const dialog = page.getByRole('dialog', { name: '검사 작업 변경 영향' });
   await expect(dialog.getByRole('alert')).toHaveText('저장하지 않은 라벨·플로우가 있습니다. 먼저 저장하거나 변경을 취소하세요.');
   await expect(dialog.getByRole('button', { name: '영향 확인 후 변경', exact: true })).toBeDisabled();

@@ -8,7 +8,7 @@ export type TrainingDataBlock = {
   content: ReactNode;
 };
 
-export type TrainingDataRevealRequest = { scope: string; blockId: string; targetId: string; sequence: number };
+export type TrainingDataRevealRequest = { scope: string; blockId: string; targetId: string; sequence: number; isCurrent?: () => boolean };
 
 const statusLabels: Record<TrainingDataBlock['status'], string> = {
   ready: '입력 준비됨',
@@ -20,8 +20,8 @@ const statusLabels: Record<TrainingDataBlock['status'], string> = {
 };
 
 /** Navigation only. Each block's existing owner supplies its readiness and actions. */
-export function TrainingDataWorkflow({ scope, blocks, revealRequest }: {
-  scope: string; blocks: TrainingDataBlock[]; revealRequest?: TrainingDataRevealRequest | null;
+export function TrainingDataWorkflow({ scope, blocks, revealRequest, isScopeCurrent }: {
+  scope: string; blocks: TrainingDataBlock[]; revealRequest?: TrainingDataRevealRequest | null; isScopeCurrent?: () => boolean;
 }) {
   const instanceId = useId();
   const firstId = (blocks.find(block => block.status === 'attention' || block.status === 'error')
@@ -38,6 +38,8 @@ export function TrainingDataWorkflow({ scope, blocks, revealRequest }: {
   const handledRequest = useRef<string | null>(null);
   const liveScope = useRef(scope);
   liveScope.current = scope;
+  const liveScopeCurrent = useRef(isScopeCurrent);
+  liveScopeCurrent.current = isScopeCurrent;
 
   useEffect(() => {
     const root = rootRef.current;
@@ -71,17 +73,18 @@ export function TrainingDataWorkflow({ scope, blocks, revealRequest }: {
     const key = JSON.stringify([requestedScope, requestedBlock, requestedTarget, requestedSequence]);
     if (handledRequest.current === key) return;
     handledRequest.current = key;
-    if (requestedScope !== scope) return;
+    if (requestedScope !== scope || revealRequest?.isCurrent?.() === false || liveScopeCurrent.current?.() === false) return;
     const panel = panelRefs.current.get(requestedBlock);
     if (!panel || !Array.from(panel.querySelectorAll<HTMLElement>('[id]')).some(element => element.id === requestedTarget)) return;
     setSelection({ scope, id: requestedBlock });
-    setReveal({ scope, blockId: requestedBlock, targetId: requestedTarget, sequence: requestedSequence, navigation: navigation.current });
+    setReveal({ scope, blockId: requestedBlock, targetId: requestedTarget, sequence: requestedSequence, isCurrent: revealRequest?.isCurrent, navigation: navigation.current });
   }, [scope, requestedScope, requestedBlock, requestedTarget, requestedSequence]);
 
   useEffect(() => {
     if (!reveal || reveal.scope !== scope || reveal.blockId !== selectedId) return;
     const frame = requestAnimationFrame(() => {
-      if (liveScope.current !== reveal.scope || navigation.current !== reveal.navigation) return;
+      if (liveScope.current !== reveal.scope || navigation.current !== reveal.navigation
+          || reveal.isCurrent?.() === false || liveScopeCurrent.current?.() === false) return;
       const panel = panelRefs.current.get(reveal.blockId);
       if (!panel || panel.hidden) return;
       const target = Array.from(panel.querySelectorAll<HTMLElement>('[id]')).find(element => element.id === reveal.targetId);
