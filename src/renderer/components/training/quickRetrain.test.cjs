@@ -33,9 +33,11 @@ test('the parent picked by the quick retrain survives its own epoch change and g
  const parentReads=[],starts=[];
  const parents=[{job_id:'job_old',created_at:'2026-10-20T00:00:00Z'},{job_id:'job_new',created_at:'2026-10-22T00:00:00Z'}];
  const {TrainingController}=compile('TrainingController.tsx',{react,'lucide-react':new Proxy({},{get:(_,key)=>String(key)}),
+  '../wizard/workflowReadiness':compile('../wizard/workflowReadiness.ts',{}),
   './parentCandidate':{parentCandidateLabel:parent=>parent.job_id,parentCandidateNotice:''},
   './modelTrainingOptions':compile('modelTrainingOptions.ts',{}),
   './inputPreparation':compile('inputPreparation.ts',{}),
+  './trainingWorkflow':compile('trainingWorkflow.ts',{}),
   './TrainingInputPreparation':{TrainingInputPreparation:'TrainingInputPreparation'},
   './trainingStartSummary':compile('trainingStartSummary.ts',{'./modelTrainingOptions':compile('modelTrainingOptions.ts',{})}),
   '../../stores/assistContext':compile('../../stores/assistContext.ts',{}),
@@ -53,8 +55,8 @@ test('the parent picked by the quick retrain survives its own epoch change and g
   './useSelectedCoreJob':{useSelectedCoreJob:()=>({job:null,error:null})},
   '../dataset/importChecklist':{classGaps:()=>({thin:[]}),classStartBlocker:()=>null,SPLIT_MISSES_LABELS_TEXT:'',splitMissesLabels:()=>false},
   '../wizard/TaskChangeImpactDialog':{TaskChangeImpactDialog:'TaskChangeImpactDialog',taskPreviewScope:()=>''}});
- const nodes=node=>!node||typeof node!=='object'?[]:Array.isArray(node)?node.flatMap(nodes):[node,...nodes(node.props?.children)];
- const text=node=>node==null||typeof node==='boolean'?'':typeof node==='string'||typeof node==='number'?String(node):Array.isArray(node)?node.map(text).join(''):text(node.props?.children);
+ const nodes=node=>!node||typeof node!=='object'?[]:Array.isArray(node)?node.flatMap(nodes):[node,...nodes(node.props?.children),...nodes(node.props?.blocks?.map(block=>block.content))];
+ const text=node=>node==null||typeof node==='boolean'?'':typeof node==='string'||typeof node==='number'?String(node):Array.isArray(node)?node.map(text).join(''):text(node.props?.children)+text(node.props?.blocks?.map(block=>block.content));
  const settle=async()=>{let tree;for(let cycle=0;cycle<12;cycle++){cursor=0;tree=TrainingController();effects.splice(0).forEach(fn=>fn());await new Promise(resolve=>setImmediate(resolve));}return tree;};
  const parentSelect=tree=>nodes(tree).find(node=>node.props?.['aria-label']==='재학습 시작 모델');
  let tree=await settle();

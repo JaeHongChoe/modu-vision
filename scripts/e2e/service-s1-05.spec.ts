@@ -1,3 +1,4 @@
+import {openTrainingModelBlock} from './fixtures/modelRecipe';
 import type { Page } from '@playwright/test';
 import { expect, test } from './fixtures/test';
 import { installDesktopHostShim } from './fixtures/desktop-host-shim';
@@ -18,6 +19,7 @@ test('S1-05: a CPU preflight from the model hub moves the classification stages 
   await page.goto(renderer.url);
   expect((await imported).status()).toBe(200);
   await page.getByRole('button', { name: /03.*오토딥러닝/ }).click();
+  await openTrainingModelBlock(page);
   const hub = page.getByRole('region', { name: '모델 학습 허브' });
   await hub.getByText('선택 모델의 데이터·장치·학습 구조').click();
   const support = hub.getByRole('region', { name: '이 컴퓨터 지원 상태' });
@@ -48,6 +50,7 @@ test('S1-05: a CPU preflight from the model hub moves the classification stages 
   // The record outlives a reload; nothing in the browser holds it.
   await page.reload();
   await page.getByRole('button', { name: /03.*오토딥러닝/ }).click();
+  await openTrainingModelBlock(page);
   await hub.getByText('선택 모델의 데이터·장치·학습 구조').click();
   await expect(cell(page, 'CPU', '학습')).toHaveText('검증됨');
   evidence.note('scope', { actual_backend: true, fixture_responses: [], preflight: 'tiny synthetic classification on the CPU', model_quality: 'not assessed' });

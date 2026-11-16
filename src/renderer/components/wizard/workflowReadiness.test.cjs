@@ -683,7 +683,7 @@ test('every footer target is an element id or a named opener in the renderer',()
 
 test('the jump presses a closed dialog opener and leaves it the focus; other openers and targets are focused',()=>{
  const source=fs.readFileSync(path.join(__dirname,'workflowReadiness.ts'),'utf8');
- const start=source.indexOf('export function focusWorkflowTarget'),end=source.indexOf('\n}\n',start)+3;
+ const focusStart=source.indexOf('export function focusWorkflowTarget'),start=source.indexOf('export type WorkflowTargetOwner'),end=source.indexOf('\n}\n',focusStart)+3;
  const helpers=source.slice(source.indexOf('function openFoldsAround'),source.indexOf('\n}\n',source.indexOf('function openFoldsAround'))+3);
  const js=ts.transpileModule(helpers+source.slice(start,end),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText;
  const make=(id,attrs={})=>{const el={id,attrs:{...attrs},clicks:0,focused:false,scrolled:false,parentElement:null,closest:()=>null,

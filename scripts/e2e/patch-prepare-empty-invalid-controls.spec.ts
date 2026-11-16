@@ -1,3 +1,4 @@
+import {selectTrainingFamily,trainingFamilyOption} from './fixtures/modelRecipe';
 import fs from 'node:fs';
 import path from 'node:path';
 import {createHash} from 'node:crypto';
@@ -98,7 +99,7 @@ async function exercise(mode: 'empty' | 'invalid', {page, request, renderer, wor
   const enterPatch = async (deadline: number) => {
     const opts = () => ({timeout: remaining(deadline)});
     await handoffWithin(page.getByRole('navigation', {name: 'Workflow Stages'}).getByRole('button').nth(2).click(), deadline, 'ordinary model stage');
-    await handoffWithin(page.getByRole('region', {name: '모델 학습 허브'}).getByRole('button', {name: /^패치 분류/}).click(), deadline, 'ordinary patch tab');
+    await handoffWithin(selectTrainingFamily(page,'patch_classification',{deadline}).then(()=>expect(trainingFamilyOption(page,'patch_classification')).toBeChecked({timeout:remaining(deadline)})), deadline, 'ordinary patch tab');
     await handoffWithin(expect(page.getByRole('heading', {name: '고해상도 패치 분류', exact: true})).toBeVisible(opts()), deadline, 'actual patch workbench');
     const prepared = page.getByRole('combobox', {name: '프로젝트에 저장된 패치 정답', exact: true});
     await handoffWithin(expect(prepared.locator('option')).toHaveCount(1, opts()), deadline, 'no prepared dataset option');

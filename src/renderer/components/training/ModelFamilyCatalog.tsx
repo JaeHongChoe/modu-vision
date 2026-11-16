@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 import { Boxes } from 'lucide-react';
 import { request } from '../../services/api';
 import type { ModelFamily } from '../../services/modelTrainingProgram';
@@ -28,17 +28,27 @@ function SelectedFamilySummary({family, simple}: {family: Family; simple: boolea
   </div>;
 }
 
-/** The cards. The simple view shows the project's own kind of training first and folds the other kinds away. */
-function FamilyCards({families, selectedFamily, onSelect, disabled}: {families: Family[]; selectedFamily?: ModelFamily; onSelect: (family: ModelFamily) => void; disabled: boolean}) {
-  const full = useProjectStore(state => state.viewMode) === 'full';
-  const card = (family: Family) => <button type="button" key={family.task} disabled={disabled} onClick={() => onSelect(family.task)} aria-pressed={selectedFamily === family.task}
-      className={`rounded-lg border p-3 text-left transition-colors disabled:cursor-wait disabled:opacity-50 ${selectedFamily === family.task ? 'border-cyan-500 bg-cyan-950/40' : 'border-[#314155] bg-[#0D1622] hover:border-slate-500'}`}>
-      <span className="block font-semibold text-white">{family.label}</span><span className="mt-1 block text-[11px] text-slate-400">{family.model}</span>
-    </button>;
-  if (full || !selectedFamily) return <div className="mt-4 grid gap-2 sm:grid-cols-2 xl:grid-cols-5">{families.map(card)}</div>;
-  return <details className="modu-stage-disclosure mt-3"><summary>모델 종류 선택 · 10종</summary>
-    <div className="mt-3 grid gap-2 sm:grid-cols-2 xl:grid-cols-3">{families.map(card)}</div>
-  </details>;
+function FamilyCards({families, selectedFamily, onSelect, disabled, name, simple}: {
+  families: Family[]; selectedFamily?: ModelFamily; onSelect: (family: ModelFamily) => void;
+  disabled: boolean; name: string; simple: boolean;
+}) {
+  return <fieldset className="training-family-catalog__choices">
+    <legend className="sr-only">검사 목적에 맞는 모델 종류 선택</legend>
+    {families.map(family => <label key={family.task} className="training-family-catalog__choice"
+      data-selected={selectedFamily === family.task} data-disabled={disabled}>
+      <input type="radio" name={name} value={family.task} checked={selectedFamily === family.task} disabled={disabled}
+        onChange={event => { if (!disabled && event.currentTarget.checked) onSelect(family.task); }} />
+      <span className="training-family-catalog__choice-content">
+        <span className="training-family-catalog__choice-heading"><strong>{family.label}</strong>
+          {selectedFamily === family.task && <span className="training-family-catalog__selected">선택됨</span>}</span>
+        <span className="training-family-catalog__purpose">결과: {resultNames[family.task]}</span>
+        <span className="training-family-catalog__prerequisite">필요한 자료: {simple ? family.prerequisite.replaceAll('train/val/test', '학습·검증·시험 사진') : family.prerequisite}</span>
+        <span className="training-family-catalog__architecture">{family.model}</span>
+        {!!family.missing_dependencies.length && <span className="training-family-catalog__warning">추가 설치 필요: {family.missing_dependencies.join(', ')}</span>}
+        {family.execution?.generation_only && <span className="training-family-catalog__warning">생성 후보 검토용 · 검사 플로우 모델로 사용할 수 없습니다.</span>}
+      </span>
+    </label>)}
+  </fieldset>;
 }
 
 export function ModelFamilyCatalog({selectedFamily, onSelect, disabled=false}: {selectedFamily?: ModelFamily; onSelect?: (family: ModelFamily) => void; disabled?: boolean}) {
@@ -47,7 +57,13 @@ export function ModelFamilyCatalog({selectedFamily, onSelect, disabled=false}: {
   const simpleView = useProjectStore(state => state.viewMode) === 'simple';
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
+  const [query, setQuery] = useState('');
+  const searchRef = useRef<HTMLInputElement>(null);
+  const radioName = useId();
   const selected = families.find(family => family.task === selectedFamily);
+  const terms = query.trim().toLocaleLowerCase('ko-KR');
+  const filtered = families.filter(family => [family.label, family.model, family.prerequisite, resultNames[family.task], ...family.architectures]
+    .join(' ').toLocaleLowerCase('ko-KR').includes(terms));
   useEffect(() => {
     let current = true;
     request<{families: Family[]}>('/api/models/capabilities').then(result => {
@@ -56,15 +72,28 @@ export function ModelFamilyCatalog({selectedFamily, onSelect, disabled=false}: {
       .finally(() => { if (current) setLoading(false); });
     return () => { current = false; };
   }, []);
-  return <section className="modu-stage-summary p-4 text-sm" aria-label="모델 학습 허브">
-    <h2 className="flex items-center gap-2 text-sm font-semibold"><Boxes className="h-4 w-4 text-cyan-300" />{simpleView ? '모델 종류' : '모델 학습 허브'}</h2>
-    {!simpleView && <p className="mt-2 text-slate-400">검사 목적에 맞는 모델을 선택하고 정답 준비부터 완료 후보의 평가·배포까지 진행하세요.</p>}
+  return <section className="training-family-catalog text-sm" aria-label="모델 학습 허브">
+    <h2 className="flex items-center gap-2 font-semibold"><Boxes className="h-4 w-4" />{simpleView ? '어떤 검사를 만들까요?' : '모델 학습 허브'}</h2>
+    <p className="training-family-catalog__intro">필요한 결과와 준비한 자료에 맞춰 모델 종류를 선택하세요. 선택만으로 학습을 시작하지 않습니다.</p>
     {loading ? <p role="status" className="mt-3">모델 종류를 확인 중입니다. 실행 지원은 아직 확인되지 않았습니다.</p>
       : error ? <p role="alert" className="mt-3 text-amber-300">모델 종류 확인 실패: {error}</p>
       : selected ? <SelectedFamilySummary family={selected} simple={simpleView} />
       : selectedFamily ? <p role="status" className="mt-3">선택 모델의 지원 정보를 확인할 수 없습니다.</p> : null}
-    {onSelect && <FamilyCards families={families} selectedFamily={selectedFamily} onSelect={onSelect} disabled={disabled || loading || !!error} />}
-    {disabled&&<p role="status" className="mt-2 text-cyan-200">프로젝트 데이터를 확인 중입니다. 완료 후 모델을 선택하세요.</p>}
+    {onSelect && !loading && !error && <details className="modu-stage-disclosure training-family-catalog__picker" open={!simpleView || !selected}>
+      <summary>{selected ? '모델 종류 바꾸기' : '모델 종류 선택'} · {families.length.toLocaleString('ko-KR')}종</summary>
+      <div className="training-family-catalog__picker-content">
+      <div className="training-family-catalog__search">
+        <label className="workspace-field">모델 찾기<input ref={searchRef} type="search" value={query}
+          placeholder="검사 목적, 필요한 자료, 모델 이름" onChange={event => setQuery(event.currentTarget.value)} /></label>
+        {query && <button type="button" className="workspace-button workspace-button--quiet" aria-label="모델 검색 지우기"
+          onClick={() => { setQuery(''); searchRef.current?.focus(); }}>검색 지우기</button>}
+      </div>
+      <p className="training-family-catalog__count" role="status">모델 종류 {filtered.length.toLocaleString('ko-KR')}개{terms ? ` · 전체 ${families.length.toLocaleString('ko-KR')}개` : ''}</p>
+      {filtered.length ? <FamilyCards families={filtered} selectedFamily={selectedFamily} onSelect={onSelect}
+        disabled={disabled} name={radioName} simple={simpleView} /> : <p className="workspace-record" role="status">검색에 맞는 모델이 없습니다. 다른 검사 목적이나 자료 이름으로 찾아보세요.</p>}
+      </div>
+    </details>}
+    {disabled&&<p role="status" className="mt-2">현재 작업을 확인 중이거나 진행 중입니다. 완료 후 모델을 선택하세요.</p>}
     <details className="mt-4"><summary className="cursor-pointer text-slate-300">{onSelect ? '선택 모델의 데이터·장치·학습 구조' : '모델 종류와 필요한 데이터'}</summary>
     <div className="mt-3">
       <p className="mb-3 text-slate-300">분류·패치·분할은 DINOv3, 객체 검출은 YOLO를 기본으로 사용합니다. DINOv3 인코더는 고정하고 검사 헤드를 현재 라벨로 학습합니다. YOLO는 선택한 학습 설정으로 학습합니다. 다중 GPU DDP는 모델을 각 GPU에 복제하고 데이터 배치를 나눕니다. 모델 분할·샤딩은 제공하지 않습니다.</p>

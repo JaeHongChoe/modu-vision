@@ -1,3 +1,4 @@
+import {selectTrainingFamily,trainingFamilyOption} from './fixtures/modelRecipe';
 import fs from 'node:fs';
 import path from 'node:path';
 import type {Page, Request} from '@playwright/test';
@@ -88,7 +89,7 @@ async function exercise(page: Page, workspace: Workspace, evidence: Evidence, or
   const enter = async (scope: Scope) => {
     await checkProject(scope);
     await page.getByRole('navigation', {name: 'Workflow Stages'}).getByRole('button', {name: /^03.*오토딥러닝/}).click();
-    await page.getByRole('region', {name: '모델 학습 허브'}).getByRole('button', {name: /^문자 인식/}).click();
+    await selectTrainingFamily(page,'ocr');await expect(trainingFamilyOption(page,'ocr')).toBeChecked();
     await expect(ocr).toBeVisible(); await expect(picker).toBeEnabled();
     await expect(picker.locator('option')).toHaveCount(5);
     expect((await picker.locator('option').evaluateAll(options => options.map(option => (option as HTMLOptionElement).value))).sort())

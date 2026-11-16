@@ -1,3 +1,4 @@
+import {openTrainingModelBlock,selectTrainingFamily,trainingFamilyOption} from './fixtures/modelRecipe';
 import { copyFileSync, mkdirSync } from 'node:fs';
 import { join } from 'node:path';
 import type { Page, Request, Route } from '@playwright/test';
@@ -576,14 +577,15 @@ test('a refused model family change keeps the active family and says why', async
     return json(route, { detail: 'Another job is running (S0-05 fixture)' }, 409);
   });
   await openStep(page, renderer.port, renderer.url, /03.*오토딥러닝/);
-  const hub = page.getByRole('region', { name: '모델 학습 허브' });
-  const family = (task: string) => hub.getByRole('button', { name: new RegExp(`^${label(task)}`) });
-  await expect(family('classification')).toHaveAttribute('aria-pressed', 'true');
-  await family('segmentation').click();
+  await openTrainingModelBlock(page);
+  const family = (task: string) => trainingFamilyOption(page,task);
+  await expect(family('classification')).toHaveAccessibleName(new RegExp(label('classification')));
+  await expect(family('classification')).toBeChecked();
+  await selectTrainingFamily(page,'segmentation');
   await page.getByRole('dialog', { name: '검사 작업 변경 영향' }).getByRole('button', { name: '영향 확인 후 변경', exact: true }).click();
   await expect(page.locator('#workflow-training').getByRole('alert').filter({ hasText: '모델 종류 변경 후 확인이 필요합니다: Another job is running (S0-05 fixture)' })).toBeVisible();
-  await expect(family('classification')).toHaveAttribute('aria-pressed', 'true');
-  await expect(family('segmentation')).toHaveAttribute('aria-pressed', 'false');
+  await expect(family('classification')).toBeChecked();
+  await expect(family('segmentation')).not.toBeChecked();
   const current = await (await page.request.get(`${renderer.origin}/api/project/current`)).json() as Json;
   expect(current.task, 'the project task is unchanged').toBe('classification');
   await evidence.screenshot(page, 'refused-family-change');

@@ -1,3 +1,4 @@
+import {openTrainingModelBlock,openTrainingCoreSettings} from './fixtures/modelRecipe';
 import fs from 'node:fs';import path from 'node:path';import crypto from 'node:crypto';import {execFileSync} from 'node:child_process';
 import type {Page} from '@playwright/test';
 import {test,expect,type Workspace,type Evidence} from './fixtures/test';
@@ -23,15 +24,18 @@ async function exercise(page:Page,workspace:Workspace,evidence:Evidence,api:Api,
   const status=center.getByRole('status').filter({hasText:'실행 주체 없음 · 재개 확인 필요'});await expect(status).toBeVisible();await expect(status).toContainText(/다시 (학습|실행)하세요/);
   await expect(status.getByRole('button',{name:'취소 요청',exact:true})).toHaveCount(0);await expect(status.getByRole('button',{name:/재연결/})).toHaveCount(0);
   await status.getByRole('button',{name:'학습 화면으로 이동',exact:true}).click();await expect(center).not.toBeVisible();
+  await openTrainingModelBlock(page);
+  if(['classification','segmentation','detection','anomaly'].includes(row.family))await openTrainingCoreSettings(page);
   if(row.family==='defect_gan')await page.locator('summary').filter({hasText:'결함 이미지 생성 실험'}).click();
   const preparation=page.getByRole('region',{name:'공통 모델 준비'});await expect(preparation).toBeVisible();
   await expect(preparation.getByRole('heading')).toContainText(labels[row.family]);const actualTitle=await preparation.getByRole('heading').textContent();
   await expect(preparation).toContainText('1. 프로젝트 이미지');await expect(preparation).toContainText('2. 정답·시험 분리');await expect(preparation).toContainText('3. 모델·실행 환경');
   await preparation.getByRole('button',{name:'로컬 준비 검사',exact:true}).click();await expect(preparation.getByRole('status')).toContainText('실제 학습·추론 실행과 모델 품질 승인은 아직 확인하지 않았습니다.',{timeout:15_000});
-  const summary=page.locator('summary').filter({hasText:/^학습 (실행 예산|시간 제한)/});await expect(summary).toHaveCount(1);if(!(await summary.locator('..').getAttribute('open')))await summary.click();
-  const minutes=page.getByLabel('학습 시간 제한 (분)',{exact:true});await minutes.fill('1.5');await expect(minutes).toHaveValue('1.5');
-  const priority=page.getByLabel('학습 대기열 우선순위',{exact:true});await priority.fill('3');await expect(priority).toHaveValue('3');
-  const queue=page.getByLabel('장치가 사용 중이면 대기열에 넣기',{exact:true});await queue.uncheck();await expect(queue).not.toBeChecked();
+  const settingsScope=preparation.locator('..');
+  const summary=settingsScope.locator('summary').filter({hasText:/^학습 (실행 예산|시간 제한)/});await expect(summary).toHaveCount(1);if(await summary.locator('..').getAttribute('open')===null)await summary.click();
+  const minutes=settingsScope.getByRole('spinbutton',{name:'학습 시간 제한 (분)',exact:true});await minutes.fill('1.5');await expect(minutes).toHaveValue('1.5');
+  const priority=settingsScope.getByRole('spinbutton',{name:'학습 대기열 우선순위',exact:true});await priority.fill('3');await expect(priority).toHaveValue('3');
+  const queue=settingsScope.getByRole('checkbox',{name:'장치가 사용 중이면 대기열에 넣기',exact:true});await queue.uncheck();await expect(queue).not.toBeChecked();
   const workbench=page.getByRole('status',{name:'학습 작업 상태',exact:true});await expect(workbench).toContainText('실행 주체 없음 · 재개 확인 필요');await expect(workbench).toContainText(/다시 (학습|실행)하세요/);
   await expect(workbench.getByRole('button',{name:'취소 요청',exact:true})).toHaveCount(0);
   await workbench.scrollIntoViewIfNeeded();await evidence.screenshot(page,`training-center-${row.family}`);

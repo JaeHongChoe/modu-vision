@@ -1,4 +1,5 @@
 import {openWorkspaceSettings} from './fixtures/workspaceSettings';
+import {openTrainingModelBlock} from './fixtures/modelRecipe';
 import AxeBuilder from '@axe-core/playwright';
 import type {Page} from '@playwright/test';
 import {expect,test} from './fixtures/test';
@@ -13,6 +14,7 @@ test('terminology help is keyboard accessible, stays in the viewport and returns
   await page.goto(renderer.url);
   await expect(page.getByRole('button',{name:'Terminology keyboard QA'}).first()).toBeVisible();
   await page.getByRole('button',{name:'03 모델 학습',exact:false}).first().click();
+  await openTrainingModelBlock(page);
   const help=page.getByRole('button',{name:/^용어 설명:.*학습률/}).first();
   await expect(help).toBeVisible();
   await help.focus();
@@ -74,7 +76,13 @@ test('novice entry and explicit purpose form have named controls and readable co
   await page.keyboard.press('Escape');
   await page.getByRole('button',{name:'AI 만들기',exact:true}).click();
   await page.getByRole('button',{name:/모델 학습/}).first().click();
+  await openTrainingModelBlock(page);
   await expect(page.getByLabel('선택 모델 안내')).toContainText('필요한 자료');
+  const catalog=page.getByRole('region',{name:'모델 학습 허브',exact:true});
+  const picker=catalog.locator('summary').filter({hasText:/^모델 종류 바꾸기/});
+  if(await picker.locator('..').getAttribute('open')===null)await picker.click();
+  await expect(catalog.getByRole('radio')).toHaveCount(10);
+  await expect(catalog.getByRole('searchbox',{name:'모델 찾기',exact:true})).toBeVisible();
   const catalogResult=await scan(page,'[aria-label="모델 학습 허브"]');
   evidence.note('catalogAxe',catalogResult);
   expect(catalogResult.violations).toEqual([]);

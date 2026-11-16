@@ -4,6 +4,7 @@ import crypto from 'node:crypto';
 import type {Page,Request} from '@playwright/test';
 import {test,expect,type Workspace,type Evidence} from './fixtures/test';
 import {installDesktopHostShim} from './fixtures/desktop-host-shim';
+import {openTrainingModelBlock} from './fixtures/modelRecipe';
 import {png} from './qa/appFlow';
 test.use({actionTimeout:10_000});
 type Reply={status:number;body:string;url?:string};
@@ -243,6 +244,7 @@ async function exercise(page:Page,workspace:Workspace,evidence:Evidence,api:Api,
 
  const handoff=await protect('before-handoff'),handoffWriteStart=writes.length;
  await page.getByRole('navigation',{name:'Workflow Stages'}).getByRole('button').nth(2).click();
+ await openTrainingModelBlock(page);
  const preparation=page.getByRole('region',{name:'공통 모델 준비'});await expect(preparation).toBeVisible();
  await expect(preparation).toContainText(name);await expect(preparation).toContainText('원본 1장');
  const atTraining=await unchanged(handoff);await preparation.getByRole('button',{name:'정답 검토',exact:true}).click();

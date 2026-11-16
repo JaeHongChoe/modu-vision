@@ -1,3 +1,4 @@
+import {openTrainingModelBlock,selectTrainingFamily,trainingFamilyOption} from './fixtures/modelRecipe';
 import type {Page} from '@playwright/test';
 import {openWorkspaceSettings} from './fixtures/workspaceSettings';
 import {test,expect,type Workspace,type Evidence} from './fixtures/test';
@@ -19,15 +20,17 @@ async function exercise(page:Page,workspace:Workspace,evidence:Evidence,api:Api,
   let projectTask='classification';
   for(const family of catalog.families){
     expect(family.execution).toEqual(matrix.families[family.task]);
-    await hub.getByRole('button',{name:new RegExp('^'+family.label)}).click();
+    await selectTrainingFamily(page,family.task);
     if(['classification','segmentation','detection','anomaly'].includes(family.task)&&family.task!==projectTask){
       const impact=page.getByRole('dialog',{name:'검사 작업 변경 영향'});
       await expect(impact).toBeVisible();
       await impact.getByRole('button',{name:'영향 확인 후 변경',exact:true}).click();
       await expect(impact).not.toBeVisible();projectTask=family.task;
+      await openTrainingModelBlock(page);
     }
-    await expect(hub.getByRole('button',{name:new RegExp('^'+family.label)})).toHaveAttribute('aria-pressed','true');
-    const details=hub.locator('details').first();if(!await details.evaluate(el=>(el as HTMLDetailsElement).open))await details.locator('summary').click();
+    await expect(trainingFamilyOption(page,family.task)).toBeChecked();
+    const supportSummary=hub.locator('summary').filter({hasText:/^선택 모델의 데이터·장치·학습 구조$/});
+    const details=supportSummary.locator('..');if(!await details.evaluate(el=>(el as HTMLDetailsElement).open))await supportSummary.click();
     const support=hub.getByLabel(family.label+' 실행 위치 지원');await expect(support).toBeVisible();
     for(const stage of family.execution.native_recipe_stages)await expect(support).toContainText(stageNames[stage]);
     // Execution target moved into the real Settings & tools menu in both views.

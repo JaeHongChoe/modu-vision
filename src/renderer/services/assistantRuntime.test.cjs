@@ -1,13 +1,13 @@
 // Production runtime, guidance and draft ordering; only backend I/O and app store boundaries are controlled.
 const test=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path'),Module=require('node:module'),ts=require('typescript');
 function fixture(){
- const project={projectDir:'/project',task:'classification',isProjectBusy:false,project:{id:'p',project_dir:'/project',task:'classification',source_dataset_dir:'/source',active_labelset_id:'default'}};
+ const project={activeStep:1,projectDir:'/project',task:'classification',isProjectBusy:false,project:{id:'p',project_dir:'/project',task:'classification',source_dataset_dir:'/source',active_labelset_id:'default'}};
  const data={hasSelectedFolder:true,totalImages:10,unlabeledImages:2,folderPath:'/source',datasetKey:'/source\0classification',isLoading:false,isSplitting:false,classes:{OK:6,NG:4},split:{train:6,val:2,test:2},splitState:'saved',images:[]};
  const training={preset:'fast',nextDevice:'cpu',nextBatchSize:8,isTraining:false,status:'idle',setPreset(p){this.preset=p;},setNextSettings(s){if(s.device)this.nextDevice=s.device;if(s.batchSize)this.nextBatchSize=s.batchSize;}};
  const compute={isLoaded:true,isLoading:false,loadError:null,selectedProfileId:null,transportRevision:0,profiles:[{id:'server'}]};
  const annotation={currentImage:{file_path:'/source/a.png'},images:[]};
  const evaluation={jobId:'job1',isLoading:false,confidenceThreshold:.5,metrics:{evaluated_split:'val',selection_overlap:true},testPredictions:[{ground_truth:'OK',defect_score:.2},{ground_truth:'NG',defect_score:.4}],overkillAnalysis:null,executionEvidence:{job_id:'job1',task:'classification',evaluated_at:'2026-10-24'}};
- const calls=[],cache=new Map(),writes=new Map(),listeners=[];let epoch=1,opened=true,sourceCurrent=true,listRelease,commandReply;
+ const focusChecks=[],calls=[],cache=new Map(),writes=new Map(),listeners=[];let epoch=1,opened=true,sourceCurrent=true,listRelease,commandReply;
  data.sourceAuthority='source';data.lastImportedKey=data.datasetKey;
  const writeResult=(name,value)=>writes.has(name)?writes.get(name).promise:Promise.resolve(value);
  data.applySplit=async(...args)=>{calls.push(['split-write',...args]);await writeResult('split');};
@@ -15,17 +15,17 @@ function fixture(){
  annotation.applyImageClass=(...args)=>calls.push(['apply-class',...args]);data.annotationsChanged=async()=>{calls.push(['refresh-annotations']);};
  const drafts=[{id:'high',image_path:'/source/high.png',status:'pending',created_at:'2026-01-01',candidates:[{confidence:.9}]},{id:'low',image_path:'/source/low.png',status:'pending',created_at:'2026-01-02',candidates:[{confidence:.3}]},{id:'empty',image_path:'/source/empty.png',status:'pending',created_at:'2026-01-01',candidates:[]},{id:'closed',image_path:'/source/c.png',status:'accepted',created_at:'2026-01-01',candidates:[{confidence:.1}]}];
  const ready={ready:true,model:'dinov3_vits16',runtime:{available:true,device:'cpu'},dependencies:{missing:[]},weights:{state:'file_available',filename:'/weights/model.safetensors',sha256:'ab'.repeat(32),content_verified:false},input:{split_counts:{train:6,val:2,test:2}},next_actions:[],execution_verified:false};
- project.setStep=async step=>{calls.push(['step',step]);};project.openImageForLabeling=async(id,file)=>{calls.push(['image',id,file]);if(opened)annotation.currentImage={file_path:file};return opened;};
+ project.setStep=async step=>{calls.push(['step',step]);project.activeStep=step;};project.openImageForLabeling=async(id,file)=>{calls.push(['image',id,file]);if(opened)annotation.currentImage={file_path:file};return opened;};
  const store=state=>({getState:()=>state,subscribe:listener=>{listeners.push(listener);return()=>{};}});const draftStore={requestOpen:(...args)=>calls.push(['requestOpen',...args])};
  const request=async(url,options)=>{calls.push(['request',url,options]);if(commandReply)return commandReply(url,options);if(url==='/api/models/capabilities')return{families:[{task:'classification',default_architecture:'dinov3_vits16'}]};if(url.startsWith('/api/training-workspace/readiness'))return ready;throw Error('Unexpected backend request '+url);};
  const mocks={'../stores/assistContext':{currentAssistContext:()=>null},'../stores/useProjectStore':{useProjectStore:store(project)},'../stores/useDatasetStore':{useDatasetStore:store(data),readDatasetAuthority:()=> 'source'},'../stores/useTrainingStore':{useTrainingStore:store(training)},'../stores/useAnnotationStore':{useAnnotationStore:store(annotation)},'../stores/useComputeStore':{useComputeStore:store(compute)},'../stores/useDraftReviewStore':{useDraftReviewStore:store(draftStore),draftReviewScope:s=>JSON.stringify([s.projectDir,s.project.active_labelset_id])},
- '../stores/useEvaluationStore':{useEvaluationStore:store(evaluation),currentEvaluationGuidanceSource:()=>sourceCurrent?{source:{folderPath:'/source',task:'classification'},jobId:'job1'}:null,computeSampleVerdict:(p,t)=>p.ground_truth==='NG'?(p.defect_score>=t?'CORRECT_NG':'ESCAPE'):(p.defect_score>=t?'OVERKILL':'CORRECT_OK'),isNormalLabel:l=>l==='OK',isDefectLabel:l=>l==='NG'},'../stores/workflowEvidence':{bumpWorkflowEvidence(){calls.push(['bump-evidence']);}},'../components/wizard/workflowReadiness':{focusWorkflowTarget:id=>calls.push(['focus',id])},'./datasetWorkflow':{workflowError:e=>String(e)},'../../services/datasetWorkflow':{workflowError:e=>String(e)},
+ '../stores/useEvaluationStore':{useEvaluationStore:store(evaluation),currentEvaluationGuidanceSource:()=>sourceCurrent?{source:{folderPath:'/source',task:'classification'},jobId:'job1'}:null,computeSampleVerdict:(p,t)=>p.ground_truth==='NG'?(p.defect_score>=t?'CORRECT_NG':'ESCAPE'):(p.defect_score>=t?'OVERKILL':'CORRECT_OK'),isNormalLabel:l=>l==='OK',isDefectLabel:l=>l==='NG'},'../stores/workflowEvidence':{bumpWorkflowEvidence(){calls.push(['bump-evidence']);}},'../components/wizard/workflowReadiness':{focusWorkflowTarget:(id,current)=>{calls.push(['focus',id]);focusChecks.push(current);}},'./datasetWorkflow':{workflowError:e=>String(e)},'../../services/datasetWorkflow':{workflowError:e=>String(e)},
  './api':{request,getApiDiagnosticScope:()=>String(epoch),getApiPersistenceIdentity:()=> 'local',getProjectContextGeneration:()=>epoch,getProjectContext:()=>({project_id:'p'}),api:{dataset:{setImageClass:async body=>{calls.push(['class-write',body]);return writeResult('class',{class:body.class_name,class_source:'override',metadata:{},changed:true});}},labelSuggestions:{list:async()=>listRelease?new Promise(resolve=>{listRelease=resolve;}):{suggestions:drafts}}}}};
  function load(file){if(cache.has(file))return cache.get(file).exports;const m=new Module(file,module);m.filename=file;m.paths=Module._nodeModulePaths(path.dirname(file));cache.set(file,m);const original=m.require.bind(m);m.require=name=>Object.hasOwn(mocks,name)?mocks[name]:name.startsWith('.')?load(path.resolve(path.dirname(file),name)+'.ts'):original(name);m._compile(ts.transpileModule(fs.readFileSync(file,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText,file);return m.exports;}
  const observed={observed_at:'now',errors:[{source:'training',message:'controlled failure'}]};
  mocks['./assistantDiagnosticsRuntime']={appDiagnosticSummary:()=>observed,readAppDiagnostics:async section=>({...observed,section})};
  const loaded=load(path.join(__dirname,'assistantRuntime.ts')),runtime=loaded.runtimeToolDeps;
- return{runtime,emit:()=>listeners.forEach(listener=>listener()),commandReply:handler=>{commandReply=handler;},context:loaded.assistantContext,project,data,training,compute,evaluation,annotation,calls,ready,epoch:()=>epoch++,blockOpen:()=>{opened=false;},staleEvaluation:()=>{sourceCurrent=false;},holdList:()=>{listRelease=true;},releaseList:()=>listRelease({suggestions:drafts}),holdWrite:name=>{let release;const promise=new Promise(resolve=>{release=resolve;});writes.set(name,{promise,release});},releaseWrite:(name,value)=>writes.get(name).release(value)};
+ return{runtime,focusChecks,emit:()=>listeners.forEach(listener=>listener()),commandReply:handler=>{commandReply=handler;},context:loaded.assistantContext,project,data,training,compute,evaluation,annotation,calls,ready,epoch:()=>epoch++,blockOpen:()=>{opened=false;},staleEvaluation:()=>{sourceCurrent=false;},holdList:()=>{listRelease=true;},releaseList:()=>listRelease({suggestions:drafts}),holdWrite:name=>{let release;const promise=new Promise(resolve=>{release=resolve;});writes.set(name,{promise,release});},releaseWrite:(name,value)=>writes.get(name).release(value)};
 }
 test('question context and diagnostic tools use the current observation adapter without application writes',async()=>{
  const f=fixture(),value=f.context({status:'waiting_human',revision:9});
@@ -105,4 +105,17 @@ test('runtime command observations require confirmed source and catch store and 
   });await assert.rejects(f.runtime.commands.read({operation:'GET /health'}),error=>error.code==='context_changed');assert.equal(f.calls.length,2);
  }
  const f=fixture();f.data.sourceAuthority='old';f.commandReply(()=>commandCatalog);await assert.rejects(f.runtime.commands.read({operation:'GET /health'}),error=>error.code==='context_changed');assert.deepEqual(f.calls,[]);
+});
+
+
+test('the actual navigation adapter refuses a dirty-guard cancelled stage and retains settings',async()=>{
+ const f=fixture();f.project.setStep=async()=>{};f.project.activeStep=1;
+ await assert.rejects(f.runtime.setStep(3),e=>e.code==='navigation_cancelled');
+ assert.equal(f.training.preset,'fast');assert.equal(f.training.nextBatchSize,8);assert.ok(!f.calls.some(r=>r[0]==='focus'));
+});
+
+test('the actual focus adapter retires queued work on live epoch and source changes',()=>{
+ const f=fixture();f.runtime.focusTarget('training-next-settings',()=>true);assert.equal(f.focusChecks[0](),true);
+ f.epoch();assert.equal(f.focusChecks[0](),false);
+ const second=fixture();second.runtime.focusTarget('training-next-settings',()=>true);second.data.folderPath='/next';assert.equal(second.focusChecks[0](),false);
 });

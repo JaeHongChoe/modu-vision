@@ -133,14 +133,14 @@ function ocrProjectSwitchHarness() {
     './modelTrainingOptions': {modelChoices: {classification: [{value: 'model'}]}, dinoSyntheticDefaults: {},
       manualTrainingRecipe: () => ({}), trainingModelOverrides: () => ({})},
     '../wizard/TaskChangeImpactDialog': {taskPreviewScope: () => 'scope'},
-    '../common/errorActions': {}, './trainingLog': {},
+    '../common/errorActions': load('../common/errorActions.ts'), './trainingLog': {},
     './TrainingSchedulingSettings': {defaultTrainingScheduling: {}, trainingSchedulingOptions: () => ({})},
     './useSelectedCoreJob': {useSelectedCoreJob: () => ({job:null,error:null})},
   };
   for (const name of ['../common/OperatorGuidanceBanner', '../common/GuardrailBanner', '../common/LedAnnunciator',
     './OscilloscopeLossCurve', './HardwareTelemetryPanel', './RecipePresetSelector', './RotatedDetectionPanel',
     './DefectGANWorkbench', './EnhancementWorkbench', './ModelFamilyCatalog', './DinoSyntheticOptions',
-    './PatchClassificationWorkbench', './RotationWorkbench', './AutoDLWorkbench', './TrainingPreparationPanel', './TrainingInputPreparation',
+    './PatchClassificationWorkbench', './RotationWorkbench', './AutoDLWorkbench', './TrainingPreparationPanel', './TrainingInputPreparation','./TrainingDataWorkflow','./TrainingDataSplitBlock',
     './JobProgressView', '../runtime/OperationsObservabilityPanel']) mocks[name] = {};
   const {WarmStartSelector} = load('WarmStartSelector.tsx', mocks);
   mocks['./WarmStartSelector'] = {WarmStartSelector};

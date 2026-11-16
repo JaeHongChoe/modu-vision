@@ -1,3 +1,4 @@
+import {selectTrainingFamily} from './fixtures/modelRecipe';
 import fs from 'node:fs';import path from 'node:path';import crypto from 'node:crypto';import {execFileSync} from 'node:child_process';
 import type {Page} from '@playwright/test';import {test,expect,type Workspace,type Evidence} from './fixtures/test';
 const harness=require('./fixtures/harness.cjs');
@@ -8,26 +9,28 @@ async function exercise(page:Page,workspace:Workspace,evidence:Evidence,api:Api,
  const project=await api('/api/project/create',{name:'Explicit model execution target',task:'classification'});await api('/api/project/update',{source_dataset_dir:fixture.source});
  if(url)await page.goto(url);else await page.reload();
  await expect(page.getByTitle('프로젝트 관리',{exact:true})).toContainText(project.name);
- const enter=async()=>{await page.getByRole('navigation',{name:'Workflow Stages'}).getByRole('button').nth(2).click();await page.getByRole('region',{name:'모델 학습 허브'}).getByRole('button',{name:/^정방향 보정/}).click();};await enter();
- await page.locator('summary').filter({hasText:'각도 정답 표·가져오기 상세'}).click();await page.getByLabel('각도 정답 표 · 상대 이미지 경로 ↹ 보정각 ↹ train/val/test').fill(fixture.rows.map((r:any)=>`${r.image}\t${r.correction_deg}\t${r.split}`).join('\n'));
- const preparation=page.waitForResponse(r=>new URL(r.url()).pathname==='/api/rotation/prepare'&&r.request().method()==='POST');await page.getByRole('button',{name:'원본과 보정각 준비',exact:true}).click();expect((await preparation).ok()).toBe(true);
- await page.getByLabel('Epoch',{exact:true}).fill('1');await page.getByLabel('모델 입력 크기',{exact:true}).fill('32');await page.getByLabel('학습 평가 장치',{exact:true}).first().selectOption('cpu');
- const training=page.waitForResponse(r=>new URL(r.url()).pathname==='/api/rotation/train'&&r.request().method()==='POST');await page.getByRole('button',{name:'정방향 모델 후보 학습',exact:true}).click();const accepted=await training;expect(accepted.ok(),await accepted.text()).toBe(true);const job=(await accepted.json()).job_id;
- await expect.poll(async()=>(await api(`/api/rotation/jobs/${job}`)).status,{timeout:60_000}).toBe('completed');await expect(page.getByLabel('완료 정방향 후보 모델')).toHaveValue(job);
- const image=path.join(fixture.source,'test_90_0.png');await page.getByLabel('프로젝트 이미지 선택',{exact:true}).selectOption(image);
- const localPrediction=page.waitForResponse(r=>new URL(r.url()).pathname==='/api/model-execution/recipes'&&r.request().method()==='POST');await page.getByRole('button',{name:'선택 이미지 정렬',exact:true}).click();const prediction=await localPrediction;expect(prediction.ok()).toBe(true);await expect(page.getByAltText('모델이 예측한 정방향 정렬 결과')).toBeVisible();
+ const enter=async()=>{await page.getByRole('navigation',{name:'Workflow Stages'}).getByRole('button').nth(2).click();await selectTrainingFamily(page,'rotation');};await enter();
+ const workbench=page.getByRole('heading',{name:'학습형 정방향 보정',exact:true}).locator('..');
+ await expect(workbench).toBeVisible();
+ await workbench.locator('summary').filter({hasText:'각도 정답 표·가져오기 상세'}).click();await workbench.getByLabel('각도 정답 표 · 상대 이미지 경로 ↹ 보정각 ↹ train/val/test').fill(fixture.rows.map((r:any)=>`${r.image}\t${r.correction_deg}\t${r.split}`).join('\n'));
+ const preparation=page.waitForResponse(r=>new URL(r.url()).pathname==='/api/rotation/prepare'&&r.request().method()==='POST');await workbench.getByRole('button',{name:'원본과 보정각 준비',exact:true}).click();expect((await preparation).ok()).toBe(true);
+ await workbench.getByLabel('Epoch',{exact:true}).fill('1');await workbench.getByLabel('모델 입력 크기',{exact:true}).fill('32');await workbench.getByRole('combobox',{name:'학습 평가 장치',exact:true}).selectOption('cpu');
+ const training=page.waitForResponse(r=>new URL(r.url()).pathname==='/api/rotation/train'&&r.request().method()==='POST');await workbench.getByRole('button',{name:'정방향 모델 후보 학습',exact:true}).click();const accepted=await training;expect(accepted.ok(),await accepted.text()).toBe(true);const job=(await accepted.json()).job_id;
+ await expect.poll(async()=>(await api(`/api/rotation/jobs/${job}`)).status,{timeout:60_000}).toBe('completed');await expect(workbench.getByLabel('완료 정방향 후보 모델')).toHaveValue(job);
+ const image=path.join(fixture.source,'test_90_0.png');await workbench.getByLabel('프로젝트 이미지 선택',{exact:true}).selectOption(image);
+ const localPrediction=page.waitForResponse(r=>new URL(r.url()).pathname==='/api/model-execution/recipes'&&r.request().method()==='POST');await workbench.getByRole('button',{name:'선택 이미지 정렬',exact:true}).click();const prediction=await localPrediction;expect(prediction.ok()).toBe(true);await expect(workbench.getByAltText('모델이 예측한 정방향 정렬 결과')).toBeVisible();
  // The actual GUI local action now writes its receipt automatically. The
  // untouched legacy alias provides pixel parity, not a second UI execution.
  const recipe=await prediction.json();expect(prediction.request().postDataJSON()).toMatchObject({execution_target:'local',device:'cpu',params:{job_id:job,image_path:image,include_aligned:true}});
- const history=page.getByRole('region',{name:'저장된 실행 위치 기록'});await expect(history).toContainText(recipe.execution.evidence_sha256);
+ const history=workbench.getByRole('region',{name:'저장된 실행 위치 기록'});await expect(history).toContainText(recipe.execution.evidence_sha256);
  const receipt=await api('/api/model-execution/recipes/'+recipe.execution.receipt_id);
  const legacy=await api('/api/rotation/predict',{job_id:job,image_path:image,include_aligned:true,device:'cpu'});expect(recipe.aligned_image_base64).toBe(legacy.aligned_image_base64);
  await evidence.screenshot(page,'automatic-local-cpu-receipt');
  const profile={id:'unreachable-owned-loopback',name:'Unavailable owned loopback',ssh_target:'127.0.0.1',ssh_port:1,remote_root:path.join(workspace.root,'unreachable-worker'),runtime_kind:'python',runtime_value:'python3'};await api('/api/compute/profiles',profile);
- await page.reload();await enter();await expect(history).toContainText(receipt.evidence_sha256);await page.getByLabel('모델 학습 실행 위치',{exact:true}).first().selectOption(profile.id);await expect(page.getByLabel('모델 학습 실행 위치',{exact:true}).first()).toHaveValue(profile.id);await expect(page.getByLabel('학습 평가 장치',{exact:true}).first()).toHaveValue('cpu');expect(await page.getByLabel('학습 평가 장치',{exact:true}).first().locator('option[value="mps"]').count()).toBe(0);
- await page.getByLabel('완료 정방향 후보 모델').selectOption(job);await page.getByLabel('프로젝트 이미지 선택',{exact:true}).selectOption(image);
+ await page.reload();await enter();await expect(history).toContainText(receipt.evidence_sha256);await workbench.getByRole('combobox',{name:'모델 학습 실행 위치',exact:true}).selectOption(profile.id);await expect(workbench.getByRole('combobox',{name:'모델 학습 실행 위치',exact:true})).toHaveValue(profile.id);await expect(workbench.getByRole('combobox',{name:'학습 평가 장치',exact:true})).toHaveValue('cpu');expect(await workbench.getByRole('combobox',{name:'학습 평가 장치',exact:true}).locator('option[value="mps"]').count()).toBe(0);
+ await workbench.getByLabel('완료 정방향 후보 모델').selectOption(job);await workbench.getByLabel('프로젝트 이미지 선택',{exact:true}).selectOption(image);
  const posts:string[]=[];const observe=(req:any)=>{if(req.method()==='POST')posts.push(new URL(req.url()).pathname);};page.on('request',observe);
- const failed=page.waitForResponse(r=>new URL(r.url()).pathname==='/api/model-execution/recipes'&&r.request().method()==='POST');await page.getByRole('button',{name:'선택 이미지 정렬',exact:true}).click();const wire=await failed;expect(wire.status()).toBe(503);expect(wire.request().postDataJSON()).toMatchObject({execution_target:'selected_compute',compute_profile_id:profile.id,device:'cpu',params:{job_id:job,image_path:image}});
+ const failed=page.waitForResponse(r=>new URL(r.url()).pathname==='/api/model-execution/recipes'&&r.request().method()==='POST');await workbench.getByRole('button',{name:'선택 이미지 정렬',exact:true}).click();const wire=await failed;expect(wire.status()).toBe(503);expect(wire.request().postDataJSON()).toMatchObject({execution_target:'selected_compute',compute_profile_id:profile.id,device:'cpu',params:{job_id:job,image_path:image}});
  await expect(page.getByRole('alert').last()).toBeVisible();page.off('request',observe);expect(posts).not.toContain('/api/rotation/predict');await evidence.screenshot(page,'selected-server-failure-no-local-fallback');
  const independent=JSON.parse(execFileSync(harness.resolvePython(),['-c',"import hashlib,json,sys;from pathlib import Path;p=Path(sys.argv[1]);v=json.loads(p.read_bytes());expected=v.pop('evidence_sha256');actual=hashlib.sha256(json.dumps(v,ensure_ascii=False,sort_keys=True,separators=(',',':'),allow_nan=False).encode()).hexdigest();print(json.dumps({'expected':expected,'actual':actual}))",path.join(project.reports_dir,'execution_recipes',receipt.receipt_id+'.json')],{encoding:'utf8'}));expect(independent.actual).toBe(receipt.evidence_sha256);expect(independent.expected).toBe(receipt.evidence_sha256);
  for(const row of fixture.rows)expect(crypto.createHash('sha256').update(fs.readFileSync(path.join(fixture.source,row.image))).digest('hex')).toBe(row.source_sha256);

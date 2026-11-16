@@ -1,3 +1,4 @@
+import {selectTrainingFamily,trainingFamilyOption} from './fixtures/modelRecipe';
 import fs from 'node:fs';
 import path from 'node:path';
 import {createHash} from 'node:crypto';
@@ -100,7 +101,7 @@ async function exercise(mode: 'reopen' | 'error', {page, request, renderer, work
   const enterPatch = async (deadline: number, selectedPath = '') => {
     const opts = () => ({timeout: remaining(deadline)});
     await handoffWithin(page.getByRole('navigation', {name: 'Workflow Stages'}).getByRole('button').nth(2).click(), deadline, 'ordinary model stage');
-    await handoffWithin(page.getByRole('region', {name: '모델 학습 허브'}).getByRole('button', {name: /^패치 분류/}).click(), deadline, 'ordinary patch tab');
+    await handoffWithin(selectTrainingFamily(page,'patch_classification',{deadline}).then(()=>expect(trainingFamilyOption(page,'patch_classification')).toBeChecked({timeout:remaining(deadline)})), deadline, 'ordinary patch tab');
     await handoffWithin(expect(page.getByRole('heading', {name: '고해상도 패치 분류', exact: true})).toBeVisible(opts()), deadline, 'actual patch workbench');
     await handoffWithin(expect(datasetSelector().locator('option')).toHaveCount(selectedPath ? 2 : 1, opts()), deadline, 'exact prepared option count');
     await handoffWithin(expect(datasetSelector()).toHaveValue(selectedPath, opts()), deadline, 'exact owning prepared selection');

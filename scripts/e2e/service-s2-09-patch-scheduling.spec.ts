@@ -1,3 +1,4 @@
+import {selectTrainingFamily} from './fixtures/modelRecipe';
 import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
@@ -30,9 +31,11 @@ for(const mode of ['local','remote','refused'] as const)test(`${mode} scheduling
  await page.route('**/api/compute/jobs/exec_patch_budget_controlled',route=>route.fulfill({json:{...job,job_id:'exec_patch_budget_controlled',model_id:job.job_id,compute_profile_id:'controlled-server'}}));
  await page.goto(renderer.url);await expect(page.getByTitle('프로젝트 관리',{exact:true})).toContainText(`S209 patch scheduling ${mode}`);
  await page.getByRole('navigation',{name:'Workflow Stages'}).getByRole('button').nth(2).click();
- await page.getByRole('region',{name:'모델 학습 허브'}).getByRole('button',{name:/^패치 분류/}).click();
- const settings=page.locator('summary',{hasText:'학습 실행 예산·대기열'});await expect(settings).toBeVisible({timeout:3000});await settings.click();
- const minutes=page.getByLabel('학습 시간 제한 (분)',{exact:true});const priority=page.getByLabel('학습 대기열 우선순위',{exact:true});const queue=page.getByLabel('장치가 사용 중이면 대기열에 넣기',{exact:true});const start=page.getByRole('button',{name:'패치 분류 후보 학습',exact:true});
+ await selectTrainingFamily(page,'patch_classification');
+ const workbench=page.getByRole('heading',{name:'고해상도 패치 분류',exact:true}).locator('..');
+ await expect(workbench).toBeVisible();
+ const settings=workbench.locator('summary',{hasText:'학습 실행 예산·대기열'});await expect(settings).toBeVisible({timeout:3000});await settings.click();
+ const minutes=workbench.getByRole('spinbutton',{name:'학습 시간 제한 (분)',exact:true});const priority=workbench.getByRole('spinbutton',{name:'학습 대기열 우선순위',exact:true});const queue=workbench.getByRole('checkbox',{name:'장치가 사용 중이면 대기열에 넣기',exact:true});const start=page.getByRole('button',{name:'패치 분류 후보 학습',exact:true});
  await minutes.fill('-1');await expect(start).toBeDisabled();await expect(page.getByRole('alert').filter({hasText:'시간 제한'})).toBeVisible();expect(submissions).toEqual([]);
  await minutes.fill('1.5');
  if(mode==='remote'){await expect(priority).toBeDisabled();await expect(priority).toHaveValue('0');await expect(queue).toBeDisabled();await expect(queue).toBeChecked();}

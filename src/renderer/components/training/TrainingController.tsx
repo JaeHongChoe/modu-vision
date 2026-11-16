@@ -44,9 +44,13 @@ import { AutoDLWorkbench } from './AutoDLWorkbench';
 import type { ModelFamily } from '../../services/modelTrainingProgram';
 import type { VisionTask } from '../../types';
 import {TaskChangeImpactDialog,taskPreviewScope} from '../wizard/TaskChangeImpactDialog';
+import {registerWorkflowTargetOwner} from '../wizard/workflowReadiness';
 import {TrainingPreparationPanel} from './TrainingPreparationPanel';
 import {TrainingInputPreparation} from './TrainingInputPreparation';
-import {inputPreparationScope} from './inputPreparation';
+import {inputPreparationScope,supportsInputPreparation} from './inputPreparation';
+import {TrainingDataWorkflow,type TrainingDataBlock,type TrainingDataRevealRequest} from './TrainingDataWorkflow';
+import {TrainingDataSplitBlock} from './TrainingDataSplitBlock';
+import {familyPreparation} from './trainingWorkflow';
 import {useTaskHandoff} from './useTaskHandoff';
 import {clearTaskHandoff} from './taskHandoff';
 import {trainingPresetBatchSize} from '../common/errorActions';
@@ -100,7 +104,7 @@ export const TrainingController: React.FC = () => {
   // sends). Epochs or image size never change which parents fit, and '빠른 이어 학습' sets the epochs together with the
   // parent it picked, which a re-read would clear.
   const parentQueryKey = JSON.stringify(['backbone', 'model_name', 'anomaly_method', 'anomaly_backbone', 'patch_size', 'stride'].map(name => modelOptions[name] ?? null));
-  const { folderPath, totalImages, split, isLoading, isSplitting, importError, splitError,
+  const { folderPath, totalImages, sourceImages, labelsMissing, split, isLoading, isSplitting, importError, splitError,
     splitSupported, splitUnavailableReason, datasetKey, sourceAuthority, splitState, classes: datasetClasses, classSplitCounts } = useDatasetStore();
   const modelResetScope = JSON.stringify([task, projectDir, project?.id, project?.active_labelset_id, folderPath]);
   // Classes with images: one class trains a model that can only answer that class (F-03), so the start waits.
@@ -174,6 +178,23 @@ export const TrainingController: React.FC = () => {
   const sourceReady = Boolean(projectDir && folderPath && project?.source_dataset_dir===folderPath && datasetKey === `${folderPath}\0${task}`);
   const currentAuthority = readDatasetAuthority();
   const errorScope = JSON.stringify([taskPreviewScope(), modelResetScope, datasetKey, transportRevision, currentAuthority]);
+  const [settingsReveal, setSettingsReveal] = useState<TrainingDataRevealRequest>();
+  const revealSequence = useRef(0);
+  const isCurrentTrainingView = () => {
+    const liveProject=useProjectStore.getState(),liveData=useDatasetStore.getState(),liveCompute=useComputeStore.getState();
+    const liveModelScope=JSON.stringify([liveProject.task,liveProject.projectDir,liveProject.project?.id,liveProject.project?.active_labelset_id,liveData.folderPath]);
+    return JSON.stringify([taskPreviewScope(),liveModelScope,liveData.datasetKey,liveCompute.transportRevision,readDatasetAuthority()])===errorScope;
+  };
+  useEffect(() => registerWorkflowTargetOwner({
+    handles: target => ['training-model-settings','training-compute-settings','training-scheduling-settings','training-next-settings','training-input-preparation'].includes(target),
+    isCurrent: isCurrentTrainingView,
+    reveal: (targetId, isCurrent) => {
+      if(!isCurrent() || !isCurrentTrainingView())return;
+      setSelectedFamily(task);
+      setSettingsReveal({scope:errorScope,blockId:targetId==='training-input-preparation'?'preprocess':'model',targetId,sequence:++revealSequence.current,isCurrent});
+    },
+  }), [errorScope]);
+
   const [actionError, setActionError] = useScopedError(errorScope);
   const [resumeError, setResumeError] = useScopedError(errorScope);
   const [warmParentsError, setWarmParentsError] = useScopedError(errorScope);
@@ -232,7 +253,8 @@ export const TrainingController: React.FC = () => {
   useEffect(()=>{if(handoff?.family)setSelectedFamily(handoff.family);},[handoff?.jobId,handoff?.selectionId]);
   const chooseFamily = (family: ModelFamily) => {
     const data = useDatasetStore.getState();
-    if (data.isLoading || data.isSplitting || useProjectStore.getState().isProjectBusy) return;
+    const running=useTrainingStore.getState();
+    if (data.isLoading || data.isSplitting || useProjectStore.getState().isProjectBusy || running.isTraining || running.isRecoveringTraining) return;
     if (['classification', 'segmentation', 'detection', 'anomaly'].includes(family) && family !== task) {
       setTaskProposal({task:family as VisionTask,scope:taskPreviewScope()});return;
     }
@@ -304,21 +326,24 @@ export const TrainingController: React.FC = () => {
   const startRecoveryStep:1|undefined=startNeedsData||splitMissesLabelled||splitState==='stale'||splitState==='automatic'?1:undefined;
   const startRecoveryLabel=isRecoveringTraining?'현재 학습 상태 보기':modelOptionsError?'모델 설정 확인':schedulingError?'시간·대기열 설정 확인':'학습 위치 확인';
   const resolveStartBlocker=()=>{
+    const liveProject=useProjectStore.getState(),liveData=useDatasetStore.getState(),liveCompute=useComputeStore.getState();
+    const liveModelScope=JSON.stringify([liveProject.task,liveProject.projectDir,liveProject.project?.id,liveProject.project?.active_labelset_id,liveData.folderPath]);
+    if(JSON.stringify([taskPreviewScope(),liveModelScope,liveData.datasetKey,liveCompute.transportRevision,readDatasetAuthority()])!==errorScope)return;
     if(startRecoveryStep){void setStep(startRecoveryStep);return;}
     const id=isRecoveringTraining?'training-current-status':modelOptionsError?'training-model-settings':schedulingError?'training-scheduling-settings':'training-compute-settings';
+    if(id!=='training-current-status'){
+      setSelectedFamily(task);
+      setSettingsReveal({scope:errorScope,blockId:'model',targetId:id,sequence:++revealSequence.current});
+      return;
+    }
     const target=document.getElementById(id);
     if(!target)return;
     // Open the existing controls without changing settings or running a probe/training operation.
     for(let parent:HTMLElement|null=target;parent;parent=parent.parentElement){
       if(parent.tagName==='DETAILS')(parent as HTMLDetailsElement).open=true;
     }
-    if(id==='training-scheduling-settings'){
-      const details=target.querySelector<HTMLDetailsElement>('details');
-      if(details)details.open=true;
-    }
     target.scrollIntoView({block:'nearest'});
-    const control=id==='training-compute-settings'?target.querySelector<HTMLButtonElement>('button:not(:disabled)'):null;
-    (control||target).focus();
+    target.focus();
   };
   const startWarning = !startBlocker && thinClasses.length ? `${thinClasses.join(', ')}: 검증 이미지가 없는 클래스는 학습 중 확인되지 않고, 시험 이미지가 없는 클래스는 4단계에서 잴 수 없습니다. 학습은 시작할 수 있습니다. 이 클래스까지 확인하려면 1단계에서 이미지를 늘리거나 검증·시험 비율이 큰 분할로 다시 나누세요.` : null;
   const requiresSourcePartitions = isSplitUnavailable(task, splitSupported);
@@ -418,14 +443,111 @@ export const TrainingController: React.FC = () => {
 
         </div>
   );
-  // Keep the same editor wrappers and sibling order in both viewing modes.
-  // Native details keeps the transform editor mounted while collapsed.
-  const inputPreparation=<details key="input-preparation" open={simpleView?undefined:true} className="modu-stage-disclosure">
-    <summary hidden={!simpleView} className="cursor-pointer px-3 py-2 text-sm text-slate-300">사진 변환 설정 (선택)</summary>
-    <TrainingInputPreparation task={task} imageSize={(modelOptions.image_size as number|number[]|undefined) ?? (preset==='precision'?512:256)} disabled={isTraining||Boolean(resumeState)} />
-  </details>;
-  const modelCatalog=<ModelFamilyCatalog key="model-catalog" selectedFamily={selectedFamily} onSelect={chooseFamily} disabled={isLoading||isSplitting||isProjectBusy} />;
+  const inputPreparation=<><div id="training-input-preparation" tabIndex={-1} hidden={selectedFamily!==task}><TrainingInputPreparation task={task} imageSize={(modelOptions.image_size as number|number[]|undefined) ?? (preset==='precision'?512:256)} disabled={isTraining||isRecoveringTraining||isProjectBusy||isLoading||isSplitting||Boolean(resumeState)||!sourceReady||selectedFamily!==task} /></div>{selectedFamily!==task&&<p className="text-sm text-[var(--workspace-muted)]">선택한 전문 모델은 아래 전용 작업대에서 입력을 준비합니다. 현재 프로젝트의 전처리 편집은 보관됩니다.</p>}</>;
+  const modelCatalog=<ModelFamilyCatalog key="model-catalog" selectedFamily={selectedFamily} onSelect={chooseFamily} disabled={isLoading||isSplitting||isProjectBusy||isTraining||isRecoveringTraining} />;
   const preparationPanel=selectedFamily===task&&<TrainingPreparationPanel key="core-preparation" inputBlocker={startBlocker?{message:startBlocker,step:startRecoveryStep,actionLabel:startRecoveryLabel}:null} onResolveBlocker={resolveStartBlocker} family={selectedFamily} model={syntheticAnomaly ? syntheticOptions.anomaly_backbone : selectedBackbone} preset={preset} checkpoint={pretrainedCheckpoint} onCheckpointChange={setPretrainedCheckpoint} device={nextDevice==='mps'||nextDevice==='cuda'||nextDevice==='cpu' ? nextDevice : 'auto'} config={modelOptions} warmStartJobId={warmParentId||undefined} trained={Boolean(completedJobId)} />;
+  const inputReady=sourceReady&&sourceAuthority===currentAuthority&&project?.task===task&&!importError&&!isLoading&&!isProjectBusy;
+  const currentSplit=inputReady&&selectedFamily===task&&(splitState==='saved'||splitState==='source_folders');
+  const recipeReady=fixedScope===activeInputScope&&fixedInput?.operations.length;
+  const hasCurrentRun=Boolean(jobId||isTraining||isRecoveringTraining||startError||jobStatusError||stopError||selectedSavedJob.job||selectedSavedJob.error);
+  const coreSettings=<div hidden={selectedFamily!==task} className="space-y-4">
+        {/* Only new-job settings fold away. Current operation and recovery remain visible. */}
+        <details className="modu-stage-disclosure" open={full}>
+          <summary>학습 위치 · {!isComputeLoaded ? '설정 확인 중' : selectedProfileId ? (selectedProfile?.name || `설정 없음: ${selectedProfileId}`) : '이 컴퓨터'}</summary>
+          <div className="p-3">{block}</div>
+        </details>
+        {/* Industrial Recipe Presets Section */}
+        <RecipePresetSelector
+          preset={preset}
+          setPreset={setPreset}
+          isTraining={isTraining}
+          language={language}
+        />
+        {/* The short loop after adopting drafts: a few epochs from the newest completed model instead of a fresh run.
+            Renderer-only — it fills the warm-start parent and the epoch count the start request already carries. */}
+        {warmParents.length > 0 && !resumeState && task !== 'anomaly' && !isTraining && (
+          <div className="flex flex-wrap items-center gap-2 rounded border border-[#2B3547] bg-[#111C2A] px-3 py-2 text-xs text-slate-200">
+            <button type="button" aria-label="빠른 이어 학습" onClick={() => { const parent = warmParents.find(p => p.job_id === completedJobId) ?? warmParents[warmParents.length - 1]; setWarmParentId(parent.job_id); setManualEpochs('5'); }}
+              className="workspace-button">빠른 이어 학습</button>
+            <span className="min-w-0 text-slate-400">직전 완료 모델에서 5회만 이어 학습합니다(초안을 채택한 뒤 모델을 빨리 맞출 때). 결과는 새 후보 모델로 저장됩니다.</span>
+            {warmParentId && manualEpochs === '5' && <span className="text-cyan-200">시작 모델 …{warmParentId.slice(-8)} · 학습 횟수 5 · 아래 '학습 시작'을 누르세요.</span>}
+            {/* The list holds only this label set's parents, plus ones whose receipt predates the label-set record. */}
+            {warmParentId && manualEpochs === '5' && warmParents.find(p => p.job_id === warmParentId)?.labelset_id == null && <span className="text-amber-300">라벨 세트 기록 없음(이전 버전에서 학습한 모델) · 지금 라벨 세트의 정답으로 학습한 모델인지 확인한 뒤 시작하세요.</span>}
+          </div>
+        )}
+
+        {/* The simple view keeps the model structure, resume, warm start and scheduling behind one line, so the start
+            button follows the recipe choice; 모두 보기 shows them as before. */}
+        <details className="modu-stage-disclosure" open={!simpleView}>
+          <summary>고급 학습 설정 <span>모델 구조 · 이어서 학습 · 이전 모델에서 재학습 · 배치와 장치 · 예약</span></summary>
+          <div className="space-y-5 p-3">
+        <div id="training-model-settings" tabIndex={-1} aria-label="모델 학습 설정" className="rounded border border-[#3B5269] bg-[#111C2A] p-3 text-xs text-slate-200">
+          <label className="font-semibold text-white">다음 학습 모델
+            <select aria-label="학습 모델 구조" value={selectedBackbone} disabled={isTraining||!!resumeState} onChange={event => { setTrainingBackbone(event.target.value); setWarmParentId(''); }}
+              className="mt-2 block w-full rounded border border-[#415970] bg-[#0B1520] px-2 py-2 font-normal">
+              {modelChoices[task].map(choice => <option key={choice.value} value={choice.value}>{choice.label}</option>)}
+            </select>
+          </label>
+          {selectedBackbone.startsWith('dinov3') && <><p className="mt-2 text-slate-300">DINOv3 사전학습 가중치에서 선택한 범위를 학습합니다. 사전학습 가중치가 없으면 준비 오류를 안내합니다.</p><label className="mt-2 block">DINO 학습 범위<select aria-label="DINO 학습 범위" value={trainMode} disabled={isTraining||!!resumeState} onChange={event=>setTrainMode(event.target.value as typeof trainMode)} className="mt-1 w-full rounded border border-slate-600 bg-[#0B1520] p-2"><option value="head_only">헤드만 · 기본</option><option value="partial">헤드와 마지막 인코더 블록</option><option value="full">전체 인코더와 헤드</option></select></label>{trainMode==='partial'&&<label className="mt-2 block">마지막 학습 블록 수<input aria-label="마지막 학습 블록 수" type="number" min={1} max={12} value={partialBlocks} disabled={isTraining||!!resumeState} onChange={event=>setPartialBlocks(Number(event.target.value))} className="mt-1 w-full rounded border border-slate-600 bg-[#0B1520] p-2" /></label>}</>}
+          {selectedBackbone.startsWith('dinov3')&&<p className="mt-2 text-slate-400">헤드만 학습하면 인코더 가중치를 고정합니다. 부분 학습은 마지막 블록과 최종 정규화 계층을, 전체 학습은 인코더 전체를 갱신합니다. 학습 범위가 넓을수록 gradient·optimizer 저장과 메모리 사용이 늘어납니다. 필요한 메모리는 입력 크기·배치·장치에 따라 달라집니다.</p>}
+          {task!=='anomaly'&&<div className="mt-3 grid gap-2 sm:grid-cols-2"><label>학습 횟수 (선택)<input aria-label="수동 학습 횟수" type="number" min={1} max={500} step={1} value={manualEpochs} disabled={isTraining||!!resumeState} onChange={event=>setManualEpochs(event.target.value)} placeholder="선택 프리셋 사용" className="mt-1 w-full rounded border border-slate-600 bg-[#0B1520] p-2" /></label><label>입력 크기 (선택)<input aria-label="수동 학습 입력 크기" type="number" min={64} max={1024} step={16} value={manualImageSize} disabled={isTraining||!!resumeState} onChange={event=>setManualImageSize(event.target.value)} placeholder="선택 프리셋 사용" className="mt-1 w-full rounded border border-slate-600 bg-[#0B1520] p-2" /></label><p className="sm:col-span-2 text-slate-400">비워두면 선택 프리셋을 사용합니다. 입력 크기는 16의 배수여야 합니다. 이어가기는 저장된 설정을 그대로 사용하며, 완료 모델의 초기 가중치 사용은 새 학습입니다.</p></div>}
+          {selectedBackbone.startsWith('yolo') && <p className="mt-2 text-slate-300">YOLO 사전학습 가중치에서 현재 객체 클래스로 학습합니다. 완료된 YOLO 후보는 ROI 검출 노드에 연결할 수 있습니다.</p>}
+          {task==='anomaly'&&<div className="mt-3"><label className="block text-sm text-slate-200">이상탐지 검사 목적<select aria-label="이상탐지 검사 목적" value={anomalyPurpose} disabled={isTraining} onChange={event=>setAnomalyPurpose(event.target.value as 'image'|'region')} className="mt-1 w-full rounded border border-slate-600 bg-[#0B1520] p-2"><option value="image">이미지 단위 정상·이상 판정</option><option value="region" disabled={syntheticAnomaly}>이상 위치·영역 검토</option></select></label><p className="mt-2 text-slate-300">{anomalyPurpose==='image'?'평가 프로필: 이미지 점수 AUROC·임계값·혼동행렬. 정상·결함 시험 이미지가 모두 필요합니다.':'평가 프로필: 정답 마스크 기반 영역 지표. 정상 학습 이미지와 독립 결함 시험 마스크를 준비하세요.'}{syntheticAnomaly&&' DINOv3 패치 점수 맵은 학습된 영역 마스크가 아니므로 이미지 검사만 지원합니다.'}</p><p className="mt-2 text-slate-300">학습과 겹치지 않는 검증 정상 이미지로 임계값을 고정합니다. 시험 데이터는 그 임계값의 평가에만 사용합니다. 소수 정상 이미지의 보정 결과만으로 현장 과검률을 보증하지 않습니다.</p></div>}
+          {statisticalRefit&&<label className="mt-3 block">이상탐지 입력 크기 (선택)<input aria-label="이상탐지 입력 크기" type="number" min={64} max={1024} step={16} value={manualImageSize} disabled={isTraining} onChange={event=>setManualImageSize(event.target.value)} placeholder="선택 프리셋 사용" className="mt-1 w-full rounded border border-slate-600 bg-[#0B1520] p-2" /></label>}
+          {syntheticAnomaly&&<label className="mt-3 block">합성 결함 학습 횟수 (선택)<input aria-label="합성 결함 학습 횟수" type="number" min={1} max={500} step={1} value={manualEpochs} disabled={isTraining} onChange={event=>setManualEpochs(event.target.value)} placeholder="선택 프리셋 사용" className="mt-1 w-full rounded border border-slate-600 bg-[#0B1520] p-2" /></label>}
+          {syntheticAnomaly && <DinoSyntheticOptions options={syntheticOptions} disabled={isTraining}
+            onChange={options => { setSyntheticOptions(options); setWarmParentId(''); }} />}
+          {modelOptionsError && <p role="alert" className="mt-2 text-amber-300">{modelOptionsError}</p>}
+          {(selectedBackbone.startsWith('dinov3') || selectedBackbone.startsWith('yolo') || task==='anomaly') && <details className="mt-3"><summary className="cursor-pointer text-slate-300">사전학습 파일 가져오기 · 상세 설정</summary><label className="mt-3 block text-slate-300">사전학습 가중치 파일 (선택)
+            <input aria-label="사전학습 가중치 파일" value={pretrainedCheckpoint} disabled={isTraining} onChange={event => setPretrainedCheckpoint(event.target.value)}
+              placeholder="기본 가중치를 사용하거나 로컬 파일의 절대 경로를 입력하세요"
+              className="mt-1 w-full rounded border border-[#415970] bg-[#0B1520] px-2 py-2" />
+          </label></details>}
+          {statisticalRefit && <p className="mt-2 text-slate-300">이상탐지는 정상 이미지로 특징 통계를 구성합니다. 부모 모델 사용 시 검증된 특징 추출기로 통계를 다시 구성합니다.</p>}
+        </div>
+
+        {task!=='anomaly'&&(!selectedProfileId||task==='classification')&&<div className="rounded border border-[#3B5269] bg-[#111C2A] p-3 text-xs text-slate-200"><label>중단된 학습 이어가기 · Epoch 경계<select aria-label="정확한 학습 이어가기" value={resumeState?.checkpoint_path||''} disabled={isTraining} onChange={event=>{const row=resumeStates.find(state=>state.checkpoint_path===event.target.value)||null;setResumeState(row);setWarmParentId('');if(row){setTrainingBackbone(String(row.recipe.model_name||row.recipe.backbone||selectedBackbone));setTrainMode((row.recipe.train_mode||'head_only') as typeof trainMode);setPartialBlocks(Number(row.recipe.partial_blocks)||2);}}} className="mt-1 w-full rounded border border-slate-600 bg-[#0B1520] p-2"><option value="">새 학습 또는 완료 모델의 초기 가중치 사용</option>{resumeStates.map(row=><option key={row.checkpoint_path} value={row.checkpoint_path}>Epoch {row.next_epoch}/{String(row.recipe.epochs)} 완료 · Step {row.global_step} · {row.device}</option>)}</select></label><p className="mt-2 text-slate-400">동일 데이터·구조·설정·장치에서 마지막으로 완료한 Epoch부터 optimizer·RNG·AMP·scheduler 상태를 복원합니다. 진행 중이던 Epoch는 다시 시작합니다. 분류 서버 학습은 원래 프로필과 종료가 확인된 worker의 검증된 상태를 전송합니다. 변환된 데이터 작업·MPS·DDP 이어가기는 지원하지 않습니다.</p>{resumeState&&<p className="mt-2 text-cyan-200">저장된 학습 설정 사용 · 전체 {String(resumeState.recipe.epochs)} Epoch · 마지막 완료 Step {resumeState.global_step}</p>}{resumeExcluded.length>0&&<details className="mt-2 text-slate-300"><summary>이어갈 수 없는 중단 작업 {resumeExcluded.length}개</summary><ul className="mt-1 list-disc pl-5">{resumeExcluded.map(row=><li key={row.job_id}>Epoch {row.next_epoch}/{row.epochs} 완료 · {row.device.toUpperCase()} · {row.reason}</li>)}</ul></details>}{resumeError&&<p role="alert" className="mt-2 text-amber-300">{resumeError}</p>}</div>}
+
+        {warmStartSupported && <div className="rounded border border-[#3B5269] bg-[#111C2A] p-3 text-xs text-slate-200">
+          <div className="font-semibold text-white">이전 모델에서 재학습</div>
+          <p className="mt-1 text-slate-400">{statisticalRefit ? '완료된 같은 출처의 특징 추출기를 검증하고, 현재 정상 데이터로 통계를 다시 구성합니다.' : syntheticAnomaly ? '같은 백본·원본 패치 크기·패치 간격·헤드 구조의 완료 모델 전체 가중치에서 다시 학습합니다.' : '완료된 같은 프로젝트·데이터 출처·구조의 체크포인트를 초기 가중치로 사용합니다.'} 새 결과는 후보 모델로 저장됩니다.</p>
+          <label className="mt-2 block text-slate-300">시작 모델
+              <select aria-label="재학습 시작 모델" value={warmParentId} onChange={(event) => setWarmParentId(event.target.value)}
+                disabled={!sourceReady || isTraining || !!modelOptionsError||!!resumeState} className="mt-1 w-full rounded border border-[#415970] bg-[#0B1520] px-2 py-2 text-white disabled:opacity-50">
+                <option value="">새 모델로 학습</option>
+                {warmParents.map((parent) => <option key={parent.job_id} value={parent.job_id}>{parentCandidateLabel(parent)}</option>)}
+              </select>
+              <p className="mt-1 text-xs text-slate-400">{parentCandidateNotice}</p>
+            </label>
+          {selectedProfileId && warmParentId && <p className="mt-2 text-slate-400">부모 체크포인트의 해시와 구조를 검증한 뒤 선택 서버에 전송합니다.</p>}
+          {warmParentsError && <p role="alert" className="mt-2 text-amber-300">재학습 모델 목록: {warmParentsError}</p>}
+          {warmParentId && <p className="mt-2 text-cyan-200">학습 뒤 4단계에서 이전 모델과 같은 test 이미지로 비교하고 승인 기준을 확인하세요. 승인 전에는 활성 모델을 바꾸지 않습니다.</p>}
+        </div>}
+
+        <details id="training-next-settings" tabIndex={-1} className="rounded border border-slate-600 bg-[#111C2A] p-3 text-sm text-slate-200"><summary className="cursor-pointer">다음 학습 배치·로컬 장치 설정</summary><div className="mt-3 grid gap-3 sm:grid-cols-2"><label>배치 크기<input aria-label="다음 학습 배치 크기" type="number" min={1} max={128} disabled={isTraining} value={nextBatchSize ?? trainingPresetBatchSize(preset)} onChange={event=>setNextSettings({batchSize:Number(event.target.value)})} className="mt-1 w-full rounded border border-slate-600 bg-[#0B1520] p-2" /></label><label>로컬 장치<select aria-label="다음 학습 로컬 장치" disabled={isTraining} value={nextDevice || 'auto'} onChange={event=>setNextSettings({device:event.target.value})} className="mt-1 w-full rounded border border-slate-600 bg-[#0B1520] p-2"><option value="auto">자동 감지</option><option value="cpu">CPU</option><option value="mps">Apple Metal / MPS</option><option value="cuda">CUDA</option></select></label></div><p className="mt-2 text-slate-400">새 학습에 적용됩니다. 서버를 선택하면 서버 설정의 실행 장치를 사용합니다.</p></details>
+        <div id="training-scheduling-settings" tabIndex={-1} aria-label="학습 실행 예산과 대기열 설정"><TrainingSchedulingSettings value={scheduling} onChange={setScheduling} remote={!!selectedProfileId} disabled={isTraining || isRecoveringTraining} error={schedulingError} /></div>
+          </div>
+        </details>
+        {!isTraining && (
+              <button
+                type="button"
+                onClick={handleStart}
+                disabled={!canStart} aria-describedby={startBlocker?"training-start-reason":undefined}
+                className="workspace-button workspace-button--primary disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                <Play className="w-3.5 h-3.5 fill-white" />
+                <span>{isRecoveringTraining ? '기존 학습 확인 중...' :
+                  language === 'ko' ? '선택 설정으로 학습 시작' : 'Start Auto Training'}</span>
+              </button>
+        )}
+  </div>;
+  const dataBlocks:TrainingDataBlock[]=[
+    {id:'photos',title:'사진 준비',status:inputReady?'ready':'attention',summary:inputReady?`${sourceImages??totalImages}장 연결됨`:'원본 사진을 연결하세요',content:<section className="workspace-section"><h2 className="font-semibold">어떤 사진으로 AI를 만들까요?</h2><p className="mt-2 text-sm text-[var(--workspace-muted)]">{inputReady?`현재 프로젝트에 연결된 원본 사진 ${sourceImages??totalImages}장을 사용합니다.`:'사진 준비에서 검사할 사진을 먼저 불러오세요. 이전 자료의 숫자는 사용하지 않습니다.'}</p>{importError&&<p role="alert" className="mt-3 text-sm text-[var(--workspace-danger)]">{importError}</p>}<button type="button" className="workspace-button mt-4" onClick={()=>void setStep(1)}>사진 준비 열기</button></section>},
+    {id:'labels',title:'정답 확인',status:inputReady&&totalImages>0&&!labelsMissing&&selectedFamily===task&&!(task==='classification'&&(populatedClasses<2||classBlocker))?'ready':'attention',summary:familyPreparation[selectedFamily].truth,content:<section className="workspace-section"><h2 className="font-semibold">AI가 배울 정답을 확인하세요</h2><p className="mt-2 text-sm text-[var(--workspace-muted)]">{familyPreparation[selectedFamily].truth}{selectedFamily!==task?' · 선택한 모델의 전용 작업대에서 준비 상태를 확인하세요.':labelsMissing?' · 아직 정답이 준비되지 않았습니다.':' · 저장한 정답만 학습에 사용합니다. 기계가 만든 초안은 채택 전까지 정답이 아닙니다.'}</p><button type="button" className="workspace-button mt-4" onClick={()=>void setStep(2)}>정답 붙이기 열기</button></section>},
+    {id:'split',title:'데이터 나누기',status:isSplitting?'working':splitError?'error':currentSplit&&split.train>0&&split.val>0?'ready':'attention',summary:currentSplit?`학습 ${split.train} · 검증 ${split.val} · 시험 ${split.test}`:'학습용과 시험용을 구분하세요',content:<><div hidden={selectedFamily!==task}><TrainingDataSplitBlock task={task} disabled={isTraining||isRecoveringTraining||Boolean(resumeState)||selectedFamily!==task}/></div>{selectedFamily!==task&&<p className="text-sm text-[var(--workspace-muted)]">선택한 전문 모델의 전용 작업대에서 정답과 분할을 준비하세요. 기본 프로젝트의 분할은 변경하지 않습니다.</p>}</>},
+    {id:'preprocess',title:'사진 전처리',status:'optional',summary:supportsInputPreparation(selectedFamily)?recipeReady?`저장한 변환 ${fixedInput!.operations.length}개`:'추가 변환 없이 사용': '이 모델은 기본 입력 사용',content:inputPreparation},
+    {id:'model',title:'모델과 학습',status:isTraining?'working':modelOptionsError?'error':'pending',summary:isTraining?(phaseLabels[currentPhase]||currentPhase):'목적에 맞는 모델 선택',content:<div className="space-y-4">{modelCatalog}{preparationPanel}{coreSettings}<p className="text-sm text-[var(--workspace-muted)]">{selectedFamily===task?'이 블록의 설정으로 학습합니다. 검사에 사용할 모델 연결과 판정 규칙은 학습 후 검사 사용에서 구성합니다.':'아래 전용 작업대에서 자료와 학습 설정을 이어서 준비하세요.'}</p></div>},
+  ];
   return (<>
     {taskProposal&&<TaskChangeImpactDialog nextTask={taskProposal.task} scope={taskProposal.scope} onClose={()=>setTaskProposal(null)} onResult={outcome=>{
       setTaskProposal(null);
@@ -435,20 +557,12 @@ export const TrainingController: React.FC = () => {
       if(!outcome.ok)setActionError(`모델 종류 변경 후 확인이 필요합니다: ${outcome.error}`);
     }}/>}
     <div id="workflow-training" tabIndex={-1} className="flex-1 flex flex-col min-h-0 overflow-y-auto select-none" style={{background: 'var(--workspace-bg)', color: 'var(--workspace-text)'}}>
-      {startBlocker&&(!simpleView||selectedFamily!==task)&&<div className="workspace-record m-3 text-xs" role="note" aria-label="학습 시작 준비도"><p id="training-start-reason">학습 시작 보류: {startBlocker}</p><button className="workspace-button mt-2" onClick={resolveStartBlocker}>{startRecoveryStep?'데이터·분할 확인 (1단계)':startRecoveryLabel}</button></div>}
+      {startBlocker&&<div className="workspace-record m-3 text-xs" role="note" aria-label="학습 시작 준비도"><p>학습 시작 보류: {startBlocker}</p><button className="workspace-button mt-2" onClick={resolveStartBlocker}>{startRecoveryStep?'데이터·분할 확인 (1단계)':startRecoveryLabel}</button></div>}
       {startWarning&&<div className="workspace-record m-3 text-xs" role="note" aria-label="학습 전 확인"><p className="text-amber-200">{startWarning}</p><button className="workspace-button mt-2" onClick={()=>void setStep(1)}>분할 확인 (1단계)</button></div>}
-      <header className="modu-stage-header"><h1>{language === 'ko' ? 'AI 만들기' : 'Build your AI'}</h1><p>{language === 'ko' ? '학습 목적과 준비 상태를 확인하고 선택한 설정으로 시작하세요.' : 'Check your purpose and input, then start with the selected recipe.'}</p></header>
+      <header className="modu-stage-header"><h1>{language === 'ko' ? 'AI 만들기' : 'Build your AI'}</h1><p>{language === 'ko' ? '사진과 정답을 준비하고, 필요한 전처리를 연결한 뒤 학습하세요.' : 'Prepare your photos and labels, connect preprocessing, then train.'}</p></header>
       <div className="max-w-7xl w-full mx-auto space-y-5 p-6">
-        {modelCatalog}
-        {preparationPanel}
-        {inputPreparation}
+        <TrainingDataWorkflow isScopeCurrent={isCurrentTrainingView} scope={errorScope} blocks={dataBlocks} revealRequest={settingsReveal?.scope===errorScope?settingsReveal:undefined}/>
         {remediationNotice&&<p role="status" className="rounded border border-cyan-800 bg-cyan-950/30 p-3 text-sm text-cyan-100">{remediationNotice}</p>}
-        {selectedFamily === task && <>
-        {/* Only new-job settings fold away. Current operation and recovery remain visible. */}
-        <details className="modu-stage-disclosure" open={full}>
-          <summary>학습 위치 · {!isComputeLoaded ? '설정 확인 중' : selectedProfileId ? (selectedProfile?.name || `설정 없음: ${selectedProfileId}`) : '이 컴퓨터'}</summary>
-          <div className="p-3">{block}</div>
-        </details>
           {jobId && (
             <section aria-label="현재 작업 위치와 복구" className="modu-stage-summary p-3 text-sm">
               <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
@@ -536,101 +650,11 @@ export const TrainingController: React.FC = () => {
           {actionError || startError || jobStatusError}
         </div>}
 
-        {/* Industrial Recipe Presets Section */}
-        <RecipePresetSelector
-          preset={preset}
-          setPreset={setPreset}
-          isTraining={isTraining}
-          language={language}
-        />
-        {/* The short loop after adopting drafts: a few epochs from the newest completed model instead of a fresh run.
-            Renderer-only — it fills the warm-start parent and the epoch count the start request already carries. */}
-        {warmParents.length > 0 && !resumeState && task !== 'anomaly' && !isTraining && (
-          <div className="flex flex-wrap items-center gap-2 rounded border border-[#2B3547] bg-[#111C2A] px-3 py-2 text-xs text-slate-200">
-            <button type="button" aria-label="빠른 이어 학습" onClick={() => { const parent = warmParents.find(p => p.job_id === completedJobId) ?? warmParents[warmParents.length - 1]; setWarmParentId(parent.job_id); setManualEpochs('5'); }}
-              className="workspace-button">빠른 이어 학습</button>
-            <span className="min-w-0 text-slate-400">직전 완료 모델에서 5회만 이어 학습합니다(초안을 채택한 뒤 모델을 빨리 맞출 때). 결과는 새 후보 모델로 저장됩니다.</span>
-            {warmParentId && manualEpochs === '5' && <span className="text-cyan-200">시작 모델 …{warmParentId.slice(-8)} · 학습 횟수 5 · 아래 '학습 시작'을 누르세요.</span>}
-            {/* The list holds only this label set's parents, plus ones whose receipt predates the label-set record. */}
-            {warmParentId && manualEpochs === '5' && warmParents.find(p => p.job_id === warmParentId)?.labelset_id == null && <span className="text-amber-300">라벨 세트 기록 없음(이전 버전에서 학습한 모델) · 지금 라벨 세트의 정답으로 학습한 모델인지 확인한 뒤 시작하세요.</span>}
-          </div>
-        )}
-
-        {/* The simple view keeps the model structure, resume, warm start and scheduling behind one line, so the start
-            button follows the recipe choice; 모두 보기 shows them as before. */}
-        <details className="modu-stage-disclosure" open={!simpleView}>
-          <summary>고급 학습 설정 <span>모델 구조 · 이어서 학습 · 이전 모델에서 재학습 · 배치와 장치 · 예약</span></summary>
-          <div className="space-y-5 p-3">
-        <div id="training-model-settings" tabIndex={-1} aria-label="모델 학습 설정" className="rounded border border-[#3B5269] bg-[#111C2A] p-3 text-xs text-slate-200">
-          <label className="font-semibold text-white">다음 학습 모델
-            <select aria-label="학습 모델 구조" value={selectedBackbone} disabled={isTraining||!!resumeState} onChange={event => { setTrainingBackbone(event.target.value); setWarmParentId(''); }}
-              className="mt-2 block w-full rounded border border-[#415970] bg-[#0B1520] px-2 py-2 font-normal">
-              {modelChoices[task].map(choice => <option key={choice.value} value={choice.value}>{choice.label}</option>)}
-            </select>
-          </label>
-          {selectedBackbone.startsWith('dinov3') && <><p className="mt-2 text-slate-300">DINOv3 사전학습 가중치에서 선택한 범위를 학습합니다. 사전학습 가중치가 없으면 준비 오류를 안내합니다.</p><label className="mt-2 block">DINO 학습 범위<select aria-label="DINO 학습 범위" value={trainMode} disabled={isTraining||!!resumeState} onChange={event=>setTrainMode(event.target.value as typeof trainMode)} className="mt-1 w-full rounded border border-slate-600 bg-[#0B1520] p-2"><option value="head_only">헤드만 · 기본</option><option value="partial">헤드와 마지막 인코더 블록</option><option value="full">전체 인코더와 헤드</option></select></label>{trainMode==='partial'&&<label className="mt-2 block">마지막 학습 블록 수<input aria-label="마지막 학습 블록 수" type="number" min={1} max={12} value={partialBlocks} disabled={isTraining||!!resumeState} onChange={event=>setPartialBlocks(Number(event.target.value))} className="mt-1 w-full rounded border border-slate-600 bg-[#0B1520] p-2" /></label>}</>}
-          {selectedBackbone.startsWith('dinov3')&&<p className="mt-2 text-slate-400">헤드만 학습하면 인코더 가중치를 고정합니다. 부분 학습은 마지막 블록과 최종 정규화 계층을, 전체 학습은 인코더 전체를 갱신합니다. 학습 범위가 넓을수록 gradient·optimizer 저장과 메모리 사용이 늘어납니다. 필요한 메모리는 입력 크기·배치·장치에 따라 달라집니다.</p>}
-          {task!=='anomaly'&&<div className="mt-3 grid gap-2 sm:grid-cols-2"><label>학습 횟수 (선택)<input aria-label="수동 학습 횟수" type="number" min={1} max={500} step={1} value={manualEpochs} disabled={isTraining||!!resumeState} onChange={event=>setManualEpochs(event.target.value)} placeholder="선택 프리셋 사용" className="mt-1 w-full rounded border border-slate-600 bg-[#0B1520] p-2" /></label><label>입력 크기 (선택)<input aria-label="수동 학습 입력 크기" type="number" min={64} max={1024} step={16} value={manualImageSize} disabled={isTraining||!!resumeState} onChange={event=>setManualImageSize(event.target.value)} placeholder="선택 프리셋 사용" className="mt-1 w-full rounded border border-slate-600 bg-[#0B1520] p-2" /></label><p className="sm:col-span-2 text-slate-400">비워두면 선택 프리셋을 사용합니다. 입력 크기는 16의 배수여야 합니다. 이어가기는 저장된 설정을 그대로 사용하며, 완료 모델의 초기 가중치 사용은 새 학습입니다.</p></div>}
-          {selectedBackbone.startsWith('yolo') && <p className="mt-2 text-slate-300">YOLO 사전학습 가중치에서 현재 객체 클래스로 학습합니다. 완료된 YOLO 후보는 ROI 검출 노드에 연결할 수 있습니다.</p>}
-          {task==='anomaly'&&<div className="mt-3"><label className="block text-sm text-slate-200">이상탐지 검사 목적<select aria-label="이상탐지 검사 목적" value={anomalyPurpose} disabled={isTraining} onChange={event=>setAnomalyPurpose(event.target.value as 'image'|'region')} className="mt-1 w-full rounded border border-slate-600 bg-[#0B1520] p-2"><option value="image">이미지 단위 정상·이상 판정</option><option value="region" disabled={syntheticAnomaly}>이상 위치·영역 검토</option></select></label><p className="mt-2 text-slate-300">{anomalyPurpose==='image'?'평가 프로필: 이미지 점수 AUROC·임계값·혼동행렬. 정상·결함 시험 이미지가 모두 필요합니다.':'평가 프로필: 정답 마스크 기반 영역 지표. 정상 학습 이미지와 독립 결함 시험 마스크를 준비하세요.'}{syntheticAnomaly&&' DINOv3 패치 점수 맵은 학습된 영역 마스크가 아니므로 이미지 검사만 지원합니다.'}</p><p className="mt-2 text-slate-300">학습과 겹치지 않는 검증 정상 이미지로 임계값을 고정합니다. 시험 데이터는 그 임계값의 평가에만 사용합니다. 소수 정상 이미지의 보정 결과만으로 현장 과검률을 보증하지 않습니다.</p></div>}
-          {statisticalRefit&&<label className="mt-3 block">이상탐지 입력 크기 (선택)<input aria-label="이상탐지 입력 크기" type="number" min={64} max={1024} step={16} value={manualImageSize} disabled={isTraining} onChange={event=>setManualImageSize(event.target.value)} placeholder="선택 프리셋 사용" className="mt-1 w-full rounded border border-slate-600 bg-[#0B1520] p-2" /></label>}
-          {syntheticAnomaly&&<label className="mt-3 block">합성 결함 학습 횟수 (선택)<input aria-label="합성 결함 학습 횟수" type="number" min={1} max={500} step={1} value={manualEpochs} disabled={isTraining} onChange={event=>setManualEpochs(event.target.value)} placeholder="선택 프리셋 사용" className="mt-1 w-full rounded border border-slate-600 bg-[#0B1520] p-2" /></label>}
-          {syntheticAnomaly && <DinoSyntheticOptions options={syntheticOptions} disabled={isTraining}
-            onChange={options => { setSyntheticOptions(options); setWarmParentId(''); }} />}
-          {modelOptionsError && <p role="alert" className="mt-2 text-amber-300">{modelOptionsError}</p>}
-          {(selectedBackbone.startsWith('dinov3') || selectedBackbone.startsWith('yolo') || task==='anomaly') && <details className="mt-3"><summary className="cursor-pointer text-slate-300">사전학습 파일 가져오기 · 상세 설정</summary><label className="mt-3 block text-slate-300">사전학습 가중치 파일 (선택)
-            <input aria-label="사전학습 가중치 파일" value={pretrainedCheckpoint} disabled={isTraining} onChange={event => setPretrainedCheckpoint(event.target.value)}
-              placeholder="기본 가중치를 사용하거나 로컬 파일의 절대 경로를 입력하세요"
-              className="mt-1 w-full rounded border border-[#415970] bg-[#0B1520] px-2 py-2" />
-          </label></details>}
-          {statisticalRefit && <p className="mt-2 text-slate-300">이상탐지는 정상 이미지로 특징 통계를 구성합니다. 부모 모델 사용 시 검증된 특징 추출기로 통계를 다시 구성합니다.</p>}
-        </div>
-
-        {task!=='anomaly'&&(!selectedProfileId||task==='classification')&&<div className="rounded border border-[#3B5269] bg-[#111C2A] p-3 text-xs text-slate-200"><label>중단된 학습 이어가기 · Epoch 경계<select aria-label="정확한 학습 이어가기" value={resumeState?.checkpoint_path||''} disabled={isTraining} onChange={event=>{const row=resumeStates.find(state=>state.checkpoint_path===event.target.value)||null;setResumeState(row);setWarmParentId('');if(row){setTrainingBackbone(String(row.recipe.model_name||row.recipe.backbone||selectedBackbone));setTrainMode((row.recipe.train_mode||'head_only') as typeof trainMode);setPartialBlocks(Number(row.recipe.partial_blocks)||2);}}} className="mt-1 w-full rounded border border-slate-600 bg-[#0B1520] p-2"><option value="">새 학습 또는 완료 모델의 초기 가중치 사용</option>{resumeStates.map(row=><option key={row.checkpoint_path} value={row.checkpoint_path}>Epoch {row.next_epoch}/{String(row.recipe.epochs)} 완료 · Step {row.global_step} · {row.device}</option>)}</select></label><p className="mt-2 text-slate-400">동일 데이터·구조·설정·장치에서 마지막으로 완료한 Epoch부터 optimizer·RNG·AMP·scheduler 상태를 복원합니다. 진행 중이던 Epoch는 다시 시작합니다. 분류 서버 학습은 원래 프로필과 종료가 확인된 worker의 검증된 상태를 전송합니다. 변환된 데이터 작업·MPS·DDP 이어가기는 지원하지 않습니다.</p>{resumeState&&<p className="mt-2 text-cyan-200">저장된 학습 설정 사용 · 전체 {String(resumeState.recipe.epochs)} Epoch · 마지막 완료 Step {resumeState.global_step}</p>}{resumeExcluded.length>0&&<details className="mt-2 text-slate-300"><summary>이어갈 수 없는 중단 작업 {resumeExcluded.length}개</summary><ul className="mt-1 list-disc pl-5">{resumeExcluded.map(row=><li key={row.job_id}>Epoch {row.next_epoch}/{row.epochs} 완료 · {row.device.toUpperCase()} · {row.reason}</li>)}</ul></details>}{resumeError&&<p role="alert" className="mt-2 text-amber-300">{resumeError}</p>}</div>}
-
-        {warmStartSupported && <div className="rounded border border-[#3B5269] bg-[#111C2A] p-3 text-xs text-slate-200">
-          <div className="font-semibold text-white">이전 모델에서 재학습</div>
-          <p className="mt-1 text-slate-400">{statisticalRefit ? '완료된 같은 출처의 특징 추출기를 검증하고, 현재 정상 데이터로 통계를 다시 구성합니다.' : syntheticAnomaly ? '같은 백본·원본 패치 크기·패치 간격·헤드 구조의 완료 모델 전체 가중치에서 다시 학습합니다.' : '완료된 같은 프로젝트·데이터 출처·구조의 체크포인트를 초기 가중치로 사용합니다.'} 새 결과는 후보 모델로 저장됩니다.</p>
-          <label className="mt-2 block text-slate-300">시작 모델
-              <select aria-label="재학습 시작 모델" value={warmParentId} onChange={(event) => setWarmParentId(event.target.value)}
-                disabled={!sourceReady || isTraining || !!modelOptionsError||!!resumeState} className="mt-1 w-full rounded border border-[#415970] bg-[#0B1520] px-2 py-2 text-white disabled:opacity-50">
-                <option value="">새 모델로 학습</option>
-                {warmParents.map((parent) => <option key={parent.job_id} value={parent.job_id}>{parentCandidateLabel(parent)}</option>)}
-              </select>
-              <p className="mt-1 text-xs text-slate-400">{parentCandidateNotice}</p>
-            </label>
-          {selectedProfileId && warmParentId && <p className="mt-2 text-slate-400">부모 체크포인트의 해시와 구조를 검증한 뒤 선택 서버에 전송합니다.</p>}
-          {warmParentsError && <p role="alert" className="mt-2 text-amber-300">재학습 모델 목록: {warmParentsError}</p>}
-          {warmParentId && <p className="mt-2 text-cyan-200">학습 뒤 4단계에서 이전 모델과 같은 test 이미지로 비교하고 승인 기준을 확인하세요. 승인 전에는 활성 모델을 바꾸지 않습니다.</p>}
-          {status === 'completed' && warmStartParentJobId && jobId && <button type="button" onClick={() => void setStep(4)}
-            className="mt-2 rounded border border-cyan-500/50 bg-cyan-700/20 px-3 py-2 font-semibold text-cyan-100 hover:bg-cyan-700/40">
-            4단계에서 {warmStartParentJobId} → {jobId} 비교
-          </button>}
-          {status === 'completed' && !warmStartParentJobId && jobId && <div role="status" className="mt-2 flex flex-wrap items-center gap-2 rounded border border-emerald-600/60 bg-emerald-950/30 px-3 py-2 text-sm text-emerald-100">
-            <span>학습이 끝났습니다. 시험 이미지로 결과를 확인하세요.</span>
-            <button type="button" onClick={() => void setStep(4)} className="workspace-button workspace-button--primary">결과 평가하기 (4단계)</button>
-          </div>}
-        </div>}
-
-        <details className="rounded border border-slate-600 bg-[#111C2A] p-3 text-sm text-slate-200"><summary className="cursor-pointer">다음 학습 배치·로컬 장치 설정</summary><div className="mt-3 grid gap-3 sm:grid-cols-2"><label>배치 크기<input aria-label="다음 학습 배치 크기" type="number" min={1} max={128} disabled={isTraining} value={nextBatchSize ?? trainingPresetBatchSize(preset)} onChange={event=>setNextSettings({batchSize:Number(event.target.value)})} className="mt-1 w-full rounded border border-slate-600 bg-[#0B1520] p-2" /></label><label>로컬 장치<select aria-label="다음 학습 로컬 장치" disabled={isTraining} value={nextDevice || 'auto'} onChange={event=>setNextSettings({device:event.target.value})} className="mt-1 w-full rounded border border-slate-600 bg-[#0B1520] p-2"><option value="auto">자동 감지</option><option value="cpu">CPU</option><option value="mps">Apple Metal / MPS</option><option value="cuda">CUDA</option></select></label></div><p className="mt-2 text-slate-400">새 학습에 적용됩니다. 서버를 선택하면 서버 설정의 실행 장치를 사용합니다.</p></details>
-        <div id="training-scheduling-settings" tabIndex={-1} aria-label="학습 실행 예산과 대기열 설정"><TrainingSchedulingSettings value={scheduling} onChange={setScheduling} remote={!!selectedProfileId} disabled={isTraining || isRecoveringTraining} error={schedulingError} /></div>
-          </div>
-        </details>
+        {hasCurrentRun&&<>
         {/* Dark Steel Execution Control Toolbar */}
         <div className="modu-stage-toolbar flex flex-wrap items-center justify-between gap-3">
           <div className="flex flex-wrap items-center gap-4">
-            {!isTraining ? (
-              <button
-                type="button"
-                onClick={handleStart}
-                disabled={!canStart} aria-describedby={startBlocker?"training-start-reason":undefined}
-                className="workspace-button workspace-button--primary disabled:opacity-40 disabled:cursor-not-allowed"
-              >
-                <Play className="w-3.5 h-3.5 fill-white" />
-                <span>{isRecoveringTraining ? '기존 학습 확인 중...' :
-                  language === 'ko' ? '선택 설정으로 학습 시작' : 'Start Auto Training'}</span>
-              </button>
-            ) : (
+            {isTraining && (
               <button
                 type="button"
                 onClick={handleAbort}
@@ -685,9 +709,8 @@ export const TrainingController: React.FC = () => {
           )}
         </div>
 
-        {/* The completion banner and the comparison button live in 이전 모델에서 재학습, which the simple view folds into
-            고급 학습 설정; repeat them under the status so a finished run always points to step 4. */}
-        {simpleView && status === 'completed' && jobId && (warmStartParentJobId
+        {/* Completion belongs to the current run, independent of the selected setup block. */}
+        {status === 'completed' && jobId && (warmStartParentJobId
           ? <button type="button" onClick={() => void setStep(4)} className="workspace-button workspace-button--primary self-start">4단계에서 이전 모델과 비교하기</button>
           : <div role="status" className="flex flex-wrap items-center gap-3 rounded border border-emerald-600/60 bg-emerald-950/30 px-4 py-3 text-sm text-emerald-100">
             <span>학습이 끝났습니다. 시험 이미지로 결과를 확인하세요.</span>
@@ -773,8 +796,8 @@ export const TrainingController: React.FC = () => {
             )}
           </div>}
         </div>
-        <AutoDLWorkbench task={task} anomalyPurpose={anomalyPurpose} />
         </>}
+        {selectedFamily === task && <AutoDLWorkbench task={task} anomalyPurpose={anomalyPurpose} />}
         {selectedFamily === 'patch_classification' && <PatchClassificationWorkbench />}
         {selectedFamily === 'rotation' && <RotationWorkbench />}
         {selectedFamily === 'ocr' && <OCRWorkbench key={JSON.stringify([projectDir, project?.source_dataset_dir ?? '', project?.active_labelset_id ?? 'default'])} />}

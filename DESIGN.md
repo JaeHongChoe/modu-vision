@@ -375,3 +375,89 @@ The user selected `docs/verification/assets/novice-workspace/selected-design.png
 - Layout responds to the available content container, including the width reserved for the assistant drawer. Under 960px available width the next panel becomes a bounded lower area. Canvas and workspace retain independent scroll areas.
 
 This is source/UI validation. Installed app builds, running user web servers and model-performance acceptance are separate release work.
+
+## 2026-11-16 — training data preparation blocks
+
+Training begins with a connected, five-block preparation rail: photos, saved
+truth, dataset split, input preprocessing, and model selection. This intentionally
+supersedes the November novice ordering that hid input preparation after model
+selection. Supervisely's public training wizard and Pipelines documentation are
+interaction references; no proprietary platform frontend, brand asset, or
+unlicensed application code is embedded.
+
+The selected block owns one visible settings panel. All panels stay mounted;
+changing blocks or simple/full presentation preserves unfinished editor input.
+A project/source/actor/transport scope change resets navigation and retires old
+feedback. Native buttons with tab roles support arrow keys, Home/End, written
+status and explicit previous/next navigation. The rail scrolls within its own
+width on compact screens; it does not make the whole document wider. Shared
+workspace semantic tokens, Pretendard and the warm/forest adapters remain
+canonical. The new stylesheet contains layout and token references only.
+
+`TrainingDataSplitBlock` delegates to the existing dataset store and backend. An
+existing saved or source-folder partition is read-only until the person chooses
+to change it. Navigation cannot apply a split, start a model, download weights,
+or adopt truth. The model block is labelled configuration review, not optional
+training or quality acceptance. Current job status, stop and recovery remain
+outside the preparation panels.
+
+Input transformations are real ordered recipe blocks with a single selected
+settings group and source-bound before/after preview. Existing preview-before-save,
+conflict, model-binding and original-preservation contracts remain in force.
+Classification and segmentation support the existing fixed transformations;
+other families visibly retain their task-specific input paths. This surface is
+not an arbitrary training DAG, nor a claim that unsupported transforms execute.
+
+### 2026-11-16 REA observation refinement
+
+The user requested a closer Supervisely interaction reference after actual REA
+observation. The preparation surface uses the observed persistent left step rail
+and a large single settings pane; compact containers switch to a horizontal
+rail with matching ARIA orientation and arrow keys. Native purpose choices use
+readable cards. The model step contains the next job's configuration and explicit
+start, while active status, stop, recovery and saved run evidence remain outside
+hidden panes. Scoped remediation reveals its owning pane before focusing a
+control; navigation never starts work.
+
+The preprocessing surface keeps its ordered transform controls beside a large
+before/after view. A selected-prefix response is shown as partial evidence and
+cannot qualify an unexecuted full recipe. The last prefix is full-equivalent.
+Existing warm/forest tokens and Korean typography remain; no vendor branding,
+platform source or external runtime dependency is introduced into the product.
+See `docs/verification/2026-11-16-rea-supervisely.md` for the actual tool scope.
+
+### 2026-11-16 numeric preprocessing code
+
+The input editor adds an ordered code block alongside the existing fixed
+transforms. Its language is `modu-numeric-v1`, a bounded numeric expression DSL,
+not a Python or JavaScript execution environment. The canonical backend parses
+and interprets the allowed AST; the renderer never evaluates code. Input and
+output retain the same RGB shape, and segmentation truth is not changed by the
+code block. Existing classification/segmentation support limits remain.
+
+People can insert an FFT starting example, restore the identity expression, or
+describe the desired change in Korean. Code stays mounted inside a native closed
+disclosure, with a native labelled editor, UTF-8 byte/line counts, and concise
+syntax help from the assistant's shared numeric contract. The limit is 8,192
+UTF-8 bytes and 32 physical lines. The FFT example is a starting frequency only;
+noise removal and defect preservation require actual image comparison and are
+not claimed as validated performance.
+
+The assistant button passes the typed request, complete current draft recipe,
+selected operation index and public DSL contract into the existing scoped
+composer handoff. Other blocks and their order must be preserved. An over-limit
+20,000-character request or rejected handoff reports failure without discarding
+the editor or claiming success. Live project/source/task/labelset and accepted
+dataset authority/key are checked again at activation. It opens the assistant and
+does not send, attach an image, execute code, save a recipe or start training.
+The existing send/connection controls own submission. Draft text survives normal
+block navigation; a scope change retires the previous code/request context.
+
+Code edits change the complete recipe key and invalidate earlier preview/save
+qualification. Local format/size checks precede the canonical backend check.
+Only a successful current full-recipe preview can qualify a nonempty recipe for
+saving; an earlier prefix cannot qualify later code. The existing source/hash,
+conflict, duplicate, active-training, context-generation and unmount fences stay
+in force. Saved rules remain bound across training, evaluation, inspection and
+export. The native fields and disclosures use workspace tokens and the existing
+monospace code face without a new editor package or palette.

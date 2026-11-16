@@ -34,7 +34,7 @@
     "src/renderer/components/inference/PackageLibraryPanel.tsx": "e6eaa53f27415cd1be5e10e5b620565762bd43bdd4f3265d4ea33d5fc000b3b8",
     "src/renderer/components/runtime/RuntimeServicePanel.tsx": "8e6f6defd490e4a055a09f143da98f3b2d1c8cd33c3e869ab08c49b8090d5144",
     "src/renderer/components/flowchart/FlowGraphNavigator.tsx": "7be4b6a2ae7f612b65c59bb2dd2188cab2c2403ee7f319525012697d02c8fe43",
-    "src/renderer/components/training/TrainingController.tsx": "6ca26cfb60ba361ff7d9672f97543fd52564c409c861c431a89f5b8c21e01186",
+    "src/renderer/components/training/TrainingController.tsx": "b552ff7fab8b6b6a2cf8c2c226c9d069e6b2bd41511ff05495aa258ad970599e",
     "src/renderer/components/wizard/WizardHeader.tsx": "89b909c2f81c0bcc7c9b37e8f3c1e34ef9585c3eee124d39e4709f59fe717b85",
     "src/renderer/components/training/PatchClassificationWorkbench.tsx": "1e1ffa525e9db32c058d89620a13cf219f9f5deed943466d8a20c71641aa4cc5",
     "src/renderer/components/training/PatchRecipePreview.tsx": "fb0b91b076e0512583cd955a9a2bc134275db03145961a488c89ce2e1c63f542",

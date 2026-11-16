@@ -20,6 +20,23 @@ READINESS_CI_CONTROLS = (
 )
 
 ANNOTATION_LOAD_CONTROL = 'backend/tests/test_annotation_load_source_spelling.py'
+PREPARATION_CONTROLS = ('backend/tests/test_input_preparation.py', 'backend/tests/test_numeric_preparation.py')
+
+
+def _preparation_predecessor_command(workflow):
+    """Check the exact additive preparation block before restoring old hash pins."""
+    steps = workflow['jobs']['source']['steps']
+    selected = [step for step in steps if step.get('name') == 'CPU contract and recovery regressions']
+    assert len(selected) == 1
+    cpu = selected[0]
+    assert set(cpu) == {'name', 'env', 'run'}, 'Preparation coverage cannot soften the CPU step'
+    assert cpu['run'].startswith('python -m pytest -q --junitxml="$MV_CI_RECORD_DIR/ci-pytest.xml" '), 'Preparation coverage cannot add test filtering'
+    block = ' '.join(PREPARATION_CONTROLS) + ' '
+    insertion = 'backend/tests/test_service_joint_augmentation.py ' + block + 'backend/tests/test_service_score_contract.py'
+    assert cpu['run'].count(insertion) == 1, 'Preparation coverage requires its exact ordered insertion'
+    for reference in PREPARATION_CONTROLS:
+        assert sum(step.get('run', '').split().count(reference) for step in steps) == 1
+    return cpu['run'].replace(block, '', 1)
 
 
 def _annotation_load_predecessor_command(workflow):
@@ -34,7 +51,7 @@ def _annotation_load_predecessor_command(workflow):
     assert cpu['run'].count(insertion) == 1, 'Annotation load coverage must retain its exact ordered insertion'
     assert sum(step.get('run', '').split().count(ANNOTATION_LOAD_CONTROL) for step in steps) == 1, \
         'Annotation load coverage must execute exactly once in full CI'
-    return cpu['run'].replace(ANNOTATION_LOAD_CONTROL + ' ', '', 1)
+    return _preparation_predecessor_command(workflow).replace(ANNOTATION_LOAD_CONTROL + ' ', '', 1)
 
 
 def ci_module():
@@ -290,7 +307,7 @@ def test_cpu_and_browser_ci_have_independent_original_bounds_and_complete_comman
         'backend/tests/test_labelset_blank_name_boundary.py',
         'backend/tests/test_runtime_spawn_diagnostic.py',
     )
-    # Only the separately checked read-alias selector is new. All historical
+    # Strip only the separately checked additive preparation/read-alias selectors. All historical
     # contiguous blocks, command bytes and hashes below keep their original pins.
     command = _annotation_load_predecessor_command(workflow)
     readiness_cli = 'python -m pytest -q --junitxml="$MV_CI_RECORD_DIR/ci-pytest.xml" '
@@ -583,6 +600,30 @@ def test_saved_brush_summary_regressions_run_in_full_cpu_and_changed_file_fast_s
     for reference in required:
         assert command.count(reference) == 1, f'Full CPU lane must run {reference} exactly once'
         assert reference in related.select_pytest([reference]), f'Changed regression must reach fast CI: {reference}'
+
+
+def test_numeric_preparation_controls_reach_full_and_fast_selection_once():
+    workflow = yaml.safe_load((ROOT / '.github/workflows/ci.yml').read_text())
+    _preparation_predecessor_command(workflow)
+    related = related_module()
+    for reference in PREPARATION_CONTROLS:
+        assert related.full_pytest_references().count(reference) == 1
+        assert related.select_pytest([reference]).count(reference) == 1
+    selected = related.select_pytest(['backend/engine/numeric_preparation.py'])
+    assert PREPARATION_CONTROLS[1] in selected
+
+
+@pytest.mark.parametrize('damage', ['missing', 'duplicate', 'moved', 'conditional', 'extra_filter'])
+def test_numeric_preparation_normalization_rejects_missing_or_weakened_coverage(damage):
+    workflow = yaml.safe_load((ROOT / '.github/workflows/ci.yml').read_text())
+    cpu = next(step for step in workflow['jobs']['source']['steps'] if step.get('name') == 'CPU contract and recovery regressions')
+    reference = PREPARATION_CONTROLS[1]
+    if damage == 'missing':cpu['run'] = cpu['run'].replace(reference + ' ', '', 1)
+    elif damage == 'duplicate':cpu['run'] += ' ' + reference
+    elif damage == 'moved':cpu['run'] = cpu['run'].replace(reference + ' ', '', 1) + ' ' + reference
+    elif damage == 'conditional':cpu['if'] = 'false'
+    else:cpu['run'] = cpu['run'].replace('pytest -q ', 'pytest -q -k numeric ', 1)
+    with pytest.raises(AssertionError):_preparation_predecessor_command(workflow)
 
 
 def test_annotation_load_addition_reaches_full_and_changed_file_fast_selection_once():

@@ -120,8 +120,16 @@ export const runtimeToolDeps: ToolDeps = {
   diagnostics:readAppDiagnostics,
   snapshot: currentAssistContext,
   facts: assistantFacts,
-  setStep: step => useProjectStore.getState().setStep(step as WorkflowStep),
-  focusTarget: target => focusWorkflowTarget(target),
+  setStep: async step => {
+    await useProjectStore.getState().setStep(step as WorkflowStep);
+    if(useProjectStore.getState().activeStep!==step)throw new ToolRefusal('navigation_cancelled','현재 편집을 저장한 뒤 작업 화면으로 이동하세요.');
+  },
+  focusTarget: (target, isCurrent) => {
+    const scope=currentRuntimeScope(),epoch=getProjectContextGeneration(),identity=getApiPersistenceIdentity(),authority=JSON.stringify(getProjectContext());
+    focusWorkflowTarget(target, () => (isCurrent?.afterMutation || isCurrent)?.() !== false
+      && currentRuntimeScope()===scope && getProjectContextGeneration()===epoch
+      && getApiPersistenceIdentity()===identity && JSON.stringify(getProjectContext())===authority);
+  },
   setTrainRatio: ratio => useDatasetStore.getState().prefillSplit(ratio),
   splitSupport: () => {
     const data = useDatasetStore.getState();

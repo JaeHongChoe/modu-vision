@@ -14,6 +14,14 @@ IMPLEMENTATION = 'modu-fixed-input-v1'
 SUPPORTED_TASKS = ('classification', 'segmentation')
 
 
+def _numeric_runtime():
+    if __package__:
+        from . import numeric_preparation
+    else:
+        import numeric_preparation
+    return numeric_preparation
+
+
 def canonical_recipe(value, task='classification'):
     if value is None:
         return None
@@ -45,6 +53,10 @@ def canonical_recipe(value, task='classification'):
             factor=row.get('factor')
             if set(row) != {'op','factor'} or type(factor) not in (int,float) or not math.isfinite(factor) or not .25<=factor<=4:
                 raise ValueError('Photometric factor must be finite from 0.25 to 4')
+        elif op == 'code':
+            if set(row) != {'op', 'language', 'code'} or row.get('language') != 'modu-numeric-v1':
+                raise ValueError('Code requires language modu-numeric-v1 and source text')
+            _numeric_runtime().validate_numeric_code(row.get('code'))
         else:
             raise ValueError(f'Unsupported input recipe operation: {op}')
         result.append({**row, **({"roi":list(row["roi"])} if op=="crop" else {})})
@@ -60,10 +72,13 @@ def bind_recipe(recipe, task):
     recipe=canonical_recipe(recipe,task)
     if not recipe or not recipe['operations']:
         return {}
-    return {'input_recipe':recipe,'input_recipe_sha256':recipe_sha256(recipe),
+    binding = {'input_recipe':recipe,'input_recipe_sha256':recipe_sha256(recipe),
             'input_preparation_contract':{'implementation':IMPLEMENTATION,'image_interpolation':'linear',
                 'mask_interpolation':'nearest','tensor_range':'0..1','normalization':'model_internal',
                 'rotation':'counterclockwise','excluded_pixels':'background'}}
+    if any(row['op'] == 'code' for row in recipe['operations']):
+        binding['input_preparation_contract']['numeric_runtime'] = _numeric_runtime().NUMERIC_RUNTIME_VERSION
+    return binding
 
 
 def saved_recipe(metadata, checkpoint=None, task='classification'):
@@ -120,6 +135,8 @@ def prepare_input(rgb, recipe, *, task='classification', target=None, image_size
         elif op=='contrast':
             # Fixed midpoint; no statistics fitted on val/test pixels.
             image=np.clip((image.astype(np.float32)-127.5)*row['factor']+127.5,0,255).round().astype(np.uint8)
+        elif op=='code':
+            image=_numeric_runtime().apply_numeric_code(image, row['code'])
         geometry['steps'].append(step)
     geometry['prepared_size']=[image.shape[1],image.shape[0]]
     return image,mask,geometry

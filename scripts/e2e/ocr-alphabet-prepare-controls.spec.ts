@@ -1,3 +1,4 @@
+import {selectTrainingFamily,trainingFamilyOption} from './fixtures/modelRecipe';
 import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
@@ -48,7 +49,7 @@ async function alphabetPrepareExercise(page:Page,workspace:Workspace,evidence:Ev
  };
  // Both fixtures exist before the renderer synchronizes to backend B; never click the disabled current project.
  const A=await make('A'),B=await make('B');if(url)await page.goto(url);else await page.reload();
- const openOCR=async(name:string)=>{await expect(page.getByTitle('프로젝트 관리',{exact:true})).toContainText(name);await page.getByRole('navigation',{name:'Workflow Stages'}).getByRole('button').nth(2).click();await page.getByRole('region',{name:'모델 학습 허브'}).getByRole('button',{name:/^문자 인식/}).click();};
+ const openOCR=async(name:string)=>{await expect(page.getByTitle('프로젝트 관리',{exact:true})).toContainText(name);await page.getByRole('navigation',{name:'Workflow Stages'}).getByRole('button').nth(2).click();await selectTrainingFamily(page,'ocr');await expect(trainingFamilyOption(page,'ocr')).toBeChecked();};
  // Finish the owning B picker GET before A/baseline; its backend metadata transaction is ordinary initialization.
  const BPickerDeadline=performance.now()+10_000,BPickerResponse=page.waitForResponse(reply=>{const target=new URL(reply.url());return reply.request().method()==='GET'&&target.origin===apiOrigin&&target.pathname==='/api/dataset/images'&&target.searchParams.get('folder_path')===B.source&&target.searchParams.get('task')==='classification'&&target.searchParams.get('limit')==='48'&&target.searchParams.get('offset')==='0';},{timeout:10_000});
  void BPickerResponse.catch(()=>{}); // Keep a later waiter refusal handled if the original UI action fails first.

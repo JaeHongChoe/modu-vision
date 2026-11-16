@@ -1,3 +1,4 @@
+import {selectTrainingFamily} from './fixtures/modelRecipe';
 import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -102,7 +103,7 @@ async function exercise(page:Page, workspace:Workspace, evidence:Evidence, api:A
   const restoredVersions = await api('/api/dataset/versions');expect(restoredVersions.versions.map((entry:any)=>entry.id)).toContain(version.id);
   await page.reload();await expect(page.getByTitle('프로젝트 관리',{exact:true})).toContainText(project.name);
   await page.getByRole('navigation',{name:'Workflow Stages'}).getByRole('button').nth(2).click();
-  await page.getByRole('region',{name:'모델 학습 허브'}).getByRole('button',{name:/^문자 인식/}).click();
+  await selectTrainingFamily(page,'ocr');
   await expect(page.getByRole('combobox',{name:'완료 후보 모델',exact:true})).toHaveValue(training.job_id);
   await expect(page.getByLabel('프로젝트에 저장된 문자 정답')).toHaveValue(restoredModel.metadata.dataset_path);
   await evidence.screenshot(page,'lifecycle-relocated-completed-candidate-reopened');

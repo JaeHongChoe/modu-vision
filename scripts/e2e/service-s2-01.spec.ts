@@ -1,3 +1,4 @@
+import {openTrainingCoreSettings} from './fixtures/modelRecipe';
 import {openWorkspaceSettings} from './fixtures/workspaceSettings';
 import { writeFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -88,7 +89,8 @@ test('S2-01: a first start guides the order and builds the example end to end on
 
   // The example's CPU job left the user's own device setting for later trainings as it was.
   await page.getByRole('button', { name: /03.*오토딥러닝/ }).click();
-  await page.getByText('다음 학습 배치·로컬 장치 설정').click();
+  await openTrainingCoreSettings(page);
+  await page.getByText('다음 학습 배치·로컬 장치 설정',{exact:true}).click();
   await expect(page.getByLabel('다음 학습 로컬 장치')).toHaveValue('auto');
 
   // After a reload the guide does not open by itself (the project has data); reopened, it offers the example to open.

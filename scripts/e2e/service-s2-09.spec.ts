@@ -1,3 +1,4 @@
+import {selectTrainingFamily,openTrainingModelBlock} from './fixtures/modelRecipe';
 import {openWorkspaceSettings} from './fixtures/workspaceSettings';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -39,6 +40,7 @@ test('a job left running by a restart reads as interrupted in the task center an
 
   await status.getByRole('button', { name: '학습 화면으로 이동' }).click();
   await expect(dialog).not.toBeVisible();
+  await openTrainingModelBlock(page);
   const view = page.getByRole('status', { name: '학습 작업 상태' });
   await expect(view).toContainText('실행 주체 없음 · 재개 확인 필요', { timeout: 15000 });
   await expect(view).toContainText('epoch 2/5');
@@ -69,7 +71,7 @@ test('a saved stop whose server observation is refused stays unconfirmed without
  await page.route('**/api/compute/jobs/exec-refused/reconnect',r=>{calls.push('reconnect');return r.fulfill({status:409,json:{detail:'The job manager could not reconnect this job'}});});
  await page.goto(renderer.url);await expect(page.getByTitle('프로젝트 관리',{exact:true})).toContainText('S209 refused observation');
  await page.getByRole('navigation',{name:'Workflow Stages'}).getByRole('button').nth(2).click();
- await page.getByRole('region',{name:'모델 학습 허브'}).getByRole('button',{name:/^이미지 개선/}).click();
+ await selectTrainingFamily(page,'enhancement');
  const view=page.getByRole('status',{name:'학습 작업 상태'});await expect(view).toContainText('연결 끊김 · 상태 미확인');
  await view.getByRole('button',{name:'취소 요청',exact:true}).click();
  await expect(page.getByRole('alert').filter({hasText:'cancel intent was saved'})).toBeVisible();
@@ -83,8 +85,8 @@ test('a saved stop whose server observation is refused stays unconfirmed without
  evidence.note('scope',{actual_renderer:true,actual_backend:true,server_job_api:'stubbed',server:false,training:false,calls,cancel_delivered:false,reservation_release_claimed:false});
 });
 for (const family of [
-  { button: '회전 객체 검출', list: '**/api/rotated-detection/jobs', row: (source: string) => ({ job_id: 'model-r', execution_job_id: 'exec-r', compute_profile_id: 'gpu-lab', status: 'disconnected', epochs_completed: 1, total_epochs: 4, result: null, error: null, training_provenance: { labelset_id: 'default' }, source_dataset_path: source, dataset_path: source }) },
-  { button: '이미지 개선', list: '**/api/enhancement/jobs', row: (source: string) => ({ job_id: 'model-r', execution_job_id: 'exec-r', compute_profile_id: 'gpu-lab', status: 'disconnected', epoch: 1, epochs: 4, error: null, training_provenance: { labelset_id: 'default' }, source_dataset_path: source, dataset_path: source }) },
+  { task: 'rotated_detection', button: '회전 객체 검출', list: '**/api/rotated-detection/jobs', row: (source: string) => ({ job_id: 'model-r', execution_job_id: 'exec-r', compute_profile_id: 'gpu-lab', status: 'disconnected', epochs_completed: 1, total_epochs: 4, result: null, error: null, training_provenance: { labelset_id: 'default' }, source_dataset_path: source, dataset_path: source }) },
+  { task: 'enhancement', button: '이미지 개선', list: '**/api/enhancement/jobs', row: (source: string) => ({ job_id: 'model-r', execution_job_id: 'exec-r', compute_profile_id: 'gpu-lab', status: 'disconnected', epoch: 1, epochs: 4, error: null, training_provenance: { labelset_id: 'default' }, source_dataset_path: source, dataset_path: source }) },
 ]) for (const order of ['reconnect first', 'cancel while disconnected'] as const) test(`${family.button}: a disconnected server job is reopened and, ${order}, handled through the server job API`, async ({ page, request, renderer, workspace, evidence }) => {
   expect((await request.post(`${renderer.origin}/api/project/create`, { data: { name: `S209 server job ${family.button} ${order}`, task: 'detection' } })).ok()).toBe(true);
   expect((await request.put(`${renderer.origin}/api/project/update`, { data: { source_dataset_dir: workspace.dataset } })).ok()).toBe(true);
@@ -101,7 +103,7 @@ for (const family of [
   await page.goto(renderer.url);
   await expect(page.getByTitle('프로젝트 관리', { exact: true })).toContainText(`S209 server job ${family.button} ${order}`);
   await page.getByRole('navigation', { name: 'Workflow Stages' }).getByRole('button').nth(2).click();
-  await page.getByRole('region', { name: '모델 학습 허브' }).getByRole('button', { name: new RegExp(`^${family.button}`) }).click();
+  await selectTrainingFamily(page,family.task);
   const view = page.getByRole('status', { name: '학습 작업 상태' });
   await expect(view, 'a job whose connection dropped is reopened').toContainText('연결 끊김 · 상태 미확인', { timeout: 15000 });
   await expect(view).toContainText('연결을 복구하면 같은 작업을 다시 관찰합니다');
@@ -143,7 +145,7 @@ for(const outcome of ['observed','refused'] as const)test(`local patch reconnect
  page.on('request',r=>{if(r.method()==='POST'&&['/api/training/start','/api/patch-classification/train','/api/compute/jobs'].includes(new URL(r.url()).pathname))submits.push(r.url());});
  await page.goto(renderer.url);await expect(page.getByTitle('프로젝트 관리',{exact:true})).toContainText(`S209 local patch ${outcome}`);
  await page.getByRole('navigation',{name:'Workflow Stages'}).getByRole('button').nth(2).click();
- await page.getByRole('region',{name:'모델 학습 허브'}).getByRole('button',{name:/^패치 분류/}).click();
+ await selectTrainingFamily(page,'patch_classification');
  const view=page.getByRole('status',{name:'학습 작업 상태'});await expect(view).toContainText('연결 끊김 · 상태 미확인');
  await expect(view).toContainText('이 컴퓨터');await expect(view.getByRole('button',{name:'같은 서버 작업 재연결',exact:true})).toHaveCount(0);
  await view.getByRole('button',{name:'같은 로컬 작업 재연결',exact:true}).click();

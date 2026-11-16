@@ -2,7 +2,16 @@ const assert = require('node:assert/strict'), fs = require('node:fs'), path = re
 const Module = require('node:module'), test = require('node:test'), ts = require('typescript');
 
 function fixture({warmParentsFailure = null, resumeFailure = null, deferResume = false} = {}) {
-  const slots = [], effects = [], cache = new Map(), resumeReads = [], taskHandlers = new Map(); let cursor = 0, tree;
+  const slots = [], effects = [], cache = new Map(), resumeReads = [], taskHandlers = new Map(), savedJob = {job:null,error:null}; let cursor = 0, tree;
+  const storageValues = new Map();
+  const storage = {
+    get length() { return storageValues.size; },
+    key(index) { return [...storageValues.keys()][index] ?? null; },
+    getItem(key) { return storageValues.get(String(key)) ?? null; },
+    setItem(key, value) { storageValues.set(String(key), String(value)); },
+    removeItem(key) { storageValues.delete(String(key)); },
+    clear() { storageValues.clear(); },
+  };
   const react = { createElement: (type, props, ...children) => ({ type, props: { ...props, children } }), Fragment: 'Fragment',
     useRef(initial) { const i = cursor++; return slots[i] ?? (slots[i] = { current: initial }); },
     useState(initial) { const i = cursor++; if (!(i in slots)) slots[i] = { value: typeof initial === 'function' ? initial() : initial };
@@ -30,7 +39,8 @@ function fixture({warmParentsFailure = null, resumeFailure = null, deferResume =
     const m = new Module(filename, module); m.filename = filename; m.paths = Module._nodeModulePaths(path.dirname(filename)); cache.set(filename, m);
     const req = m.require.bind(m);
     m.require = name => {
-      if (name === './trainingStartSummary' || name === './modelTrainingOptions' || name === './inputPreparation') return load(name.slice(2) + '.ts', true);
+      if (name === './trainingStartSummary' || name === './modelTrainingOptions' || name === './inputPreparation' || name === './trainingWorkflow') return load(name.slice(2) + '.ts', true);
+      if (name.endsWith('/workflowReadiness')) return load('../wizard/workflowReadiness.ts', true);
       if (name === 'react') return react;
       if (name === 'react/jsx-runtime') return {jsx: (type, props, key) => ({type, props, key}), jsxs: (type, props, key) => ({type, props, key}), Fragment: 'Fragment'};
       if (name.endsWith('/assistContext')) return load('../../stores/assistContext.ts', true);
@@ -38,38 +48,45 @@ function fixture({warmParentsFailure = null, resumeFailure = null, deferResume =
       if (real) return req(name);
       if (name === 'lucide-react') return new Proxy({}, { get: (_, key) => String(key) });
       if (name.endsWith('/useProjectStore')) return { useProjectStore: hook(project) };
-      if (name.endsWith('/useDatasetStore')) return { useDatasetStore: hook(data), readDatasetAuthority: () => 'authority' };
+      if (name.endsWith('/useDatasetStore')) return { useDatasetStore: hook(data), readDatasetAuthority: () => data.currentAuthority||'authority' };
       if (name.endsWith('/useTrainingStore')) return { useTrainingStore: hook(training) };
       if (name.endsWith('/useComputeStore')) return { useComputeStore: hook(compute) };
       if (name.endsWith('/services/api')) return { api: { training: { warmStartParents: async () => {if (warmParentsFailure) throw Error(warmParentsFailure); return { parents: [], total: 0 };} } }, request: async () => {if (deferResume) return new Promise((resolve, reject) => resumeReads.push({resolve, reject})); if (resumeFailure) throw Error(resumeFailure); return { states: [{checkpoint_path:'/resume/last.pt',device:'cuda',recipe:{backbone:'yolo26n',epochs:12},next_epoch:2,global_step:4}], excluded: [] };}, getApiPersistenceIdentity: () => compute.apiIdentity||'local' };
       if (name.endsWith('/autoRunChannel')) return { registerAutoRun: () => () => {}, registerTaskAutoRun: (kind, handler, settings) => {const record={handler,settings};taskHandlers.set(kind,record);return()=>{if(taskHandlers.get(kind)===record)taskHandlers.delete(kind);};} };
       if (name.endsWith('/datasetSplitCapability')) return { isSplitUnavailable: () => false };
       if (name.endsWith('/trainingComputeReadiness')) return load('../../utils/trainingComputeReadiness.ts', true);
+      if (name.endsWith('/taskHandoff')) return load('taskHandoff.ts', true);
       if (name === './useTaskHandoff') return { useTaskHandoff: () => null };
-      if (name === './useSelectedCoreJob') return { useSelectedCoreJob: () => ({ job: null, error: null }) };
+      if (name === './useSelectedCoreJob') return { useSelectedCoreJob: () => savedJob };
       if (name === './TrainingSchedulingSettings') return load('TrainingSchedulingSettings.tsx', true);
       if (name.endsWith('/errorActions')) return { trainingPresetBatchSize: () => 8 };
-      if (name === './trainingLog') return { trainingLogLines: () => [] };
+      if (name === './trainingLog') return { trainingLogLines: () => ['Current core log'] };
       if (name.endsWith('/TaskChangeImpactDialog')) return { taskPreviewScope: authority, TaskChangeImpactDialog: 'TaskChangeImpactDialog' };
       if (name.endsWith('/importChecklist')) return { classGaps: () => ({ thin: [] }), classStartBlocker: () => null, splitMissesLabels: () => false };
       return new Proxy({}, { get: (_, key) => String(key) });
     };
-    m._compile(ts.transpileModule(fs.readFileSync(filename, 'utf8'), { compilerOptions: {
+    const compiled = ts.transpileModule(fs.readFileSync(filename, 'utf8'), { compilerOptions: {
       module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, jsx: ts.JsxEmit.ReactJSX, esModuleInterop: true,
-    } }).outputText, filename);
+    } }).outputText;
+    // Browser storage belongs to this mounted fixture, independent of whether
+    // the host Node version exposes a native global localStorage implementation.
+    new Function('exports', 'require', 'module', '__filename', '__dirname', 'localStorage', compiled)
+      .call(m.exports, m.exports, m.require.bind(m), m, filename, path.dirname(filename), storage);
     return m.exports;
   }
   const h = load('trainingStartSummary.ts', true), shared = load('../../stores/assistContext.ts', true), { TrainingController } = load('TrainingController.tsx');
-  const nodes = value => Array.isArray(value) ? value.flatMap(nodes) : value && typeof value === 'object' ? [value, ...nodes(typeof value.type === 'function' ? value.type(value.props) : value.props?.children)] : [];
+  const nodes = value => Array.isArray(value) ? value.flatMap(nodes) : value && typeof value === 'object' ? [value, ...nodes(typeof value.type === 'function' ? value.type(value.props) : value.props?.children), ...nodes(value.props?.blocks?.map(block => block.content))] : [];
   function render() { cursor = 0; tree = TrainingController(); }
   const scope = () => h.trainingSummaryScope(authority(), { task: project.task, folderPath: data.folderPath, datasetKey: data.datasetKey,
     preset: training.preset, nextDevice: training.nextDevice, nextBatchSize: training.nextBatchSize, selectedProfileId: compute.selectedProfileId,
     profile: compute.profiles.find(row => row.id === compute.selectedProfileId), transportRevision: compute.transportRevision,
     computeLoaded: compute.isLoaded, computeLoading: compute.isLoading, computeLoadError: compute.loadError });
-  return { project, data, training, compute, h, shared, scope, render, resumeReads, taskHandler: () => taskHandlers.get('train')?.handler,
+  return { focusTarget: load('../wizard/workflowReadiness.ts',true).focusWorkflowTarget, project, data, training, compute, h, shared, scope, render, resumeReads, savedJob, storage, taskHandler: () => taskHandlers.get('train')?.handler,
     async settle() { for (let i = 0; i < 8; i++) { render(); effects.splice(0).forEach(effect => effect()); await new Promise(setImmediate); } },
     change(label, value) { const field = nodes(tree).find(node => node.props?.['aria-label'] === label); assert.ok(field, label); field.props.onChange({ target: { value } }); },
     summary: () => h.currentTrainingSummary(scope()),
+    catalog: () => nodes(tree).find(node => node.type === 'ModelFamilyCatalog')?.props,
+    workflow: () => nodes(tree).find(node => node.type === 'TrainingDataWorkflow')?.props,
     preparation: () => nodes(tree).find(node => node.type === 'TrainingPreparationPanel')?.props,
     dom() {
       const elements = []; let focused = null;
@@ -83,7 +100,7 @@ function fixture({warmParentsFailure = null, resumeFailure = null, deferResume =
             let owner = candidate.parentElement; while (owner && owner !== this) owner = owner.parentElement;
             return owner === this && (selector === 'details' ? candidate.tagName === 'DETAILS' : selector === 'button:not(:disabled)' ? candidate.tagName === 'BUTTON' && !candidate.props.disabled : false);
           }) || null;}};
-        elements.push(element); materialize(value.props.children, element);
+        elements.push(element); materialize(value.props.children, element); materialize(value.props.blocks?.map(block => ({type:'WorkflowBlock',props:{'data-workflow-block':block.id,children:block.content}})), element);
       }
       materialize(tree);
       return {getElementById: id => elements.find(element => element.props.id === id) || null, focused: () => focused, elements};
@@ -260,7 +277,7 @@ test('a saved next-training recipe never crosses API transports for an identical
 });
 
 
-test('preparation recovery opens the actual model, scheduling and compute controls and preserves the start guard', async () => {
+test('preparation recovery requests scoped model settings reveal while current status focuses outside the wizard and guards remain', async () => {
   const previousDocument = global.document;
   try {
     for (const [setup, expected] of [
@@ -274,10 +291,12 @@ test('preparation recovery opens the actual model, scheduling and compute contro
       const before = f.preparation(); assert.ok(before.inputBlocker); assert.equal(typeof before.onResolveBlocker, 'function');
       const dom = f.dom(); global.document = dom; before.onResolveBlocker();
       const target = dom.getElementById(expected); assert.ok(target, expected); assert.equal(probeCalls, 0, 'recovery opens the existing probe control without running it');
-      let parent = target.parentElement; while (parent) {if (parent.tagName === 'DETAILS') assert.equal(parent.open, true); parent = parent.parentElement;}
-      if (expected === 'training-scheduling-settings') assert.equal(target.querySelector('details').open, true);
-      if (expected === 'training-compute-settings') assert.equal(dom.focused(), target.querySelector('button:not(:disabled)'));
-      else assert.equal(dom.focused(), target);
+      if(expected==='training-current-status')assert.equal(dom.focused(),target);
+      else {
+        f.render();const request=f.workflow().revealRequest;
+        assert.deepEqual({scope:request?.scope,blockId:request?.blockId,targetId:request?.targetId},{scope:f.workflow().scope,blockId:'model',targetId:expected});
+        assert.equal(dom.focused(),null,'the shell owns focus after the hidden pane becomes visible');
+      }
       const button = dom.elements.find(element => element.tagName === 'BUTTON' && element.props['aria-describedby'] === 'training-start-reason');
       assert.equal(button?.props.disabled, true, 'navigation does not clear the actual blocking condition'); f.unmount();
     }
@@ -285,25 +304,18 @@ test('preparation recovery opens the actual model, scheduling and compute contro
 });
 
 
-test('training keeps purpose, preparation and mounted transforms in the same order across viewing modes', async () => {
-  const f = fixture(); await f.settle();
-  const simple = f.dom().elements;
-  const find = (rows, name) => rows.find(node => node.tagName === name.toUpperCase());
-  const preparation = find(simple, 'TrainingPreparationPanel'), catalog = find(simple, 'ModelFamilyCatalog'), input = find(simple, 'TrainingInputPreparation');
-  assert.ok(simple.indexOf(catalog) < simple.indexOf(preparation)); assert.ok(simple.indexOf(preparation) < simple.indexOf(input));
-  assert.equal(input.parentElement.tagName, 'DETAILS'); assert.equal(input.parentElement.open, false);
-  assert.equal(input.parentElement.props.children[0].props.children, '사진 변환 설정 (선택)');
-  assert.ok(input.parentElement.key, 'the editor disclosure has stable React identity when reordered');
-  assert.equal(input.props.disabled, false);
-  const identity = input.parentElement.key;
-  f.project.viewMode = 'full'; await f.settle();
-  const full = f.dom().elements, fullInput = find(full, 'TrainingInputPreparation');
-  assert.ok(full.indexOf(find(full, 'TrainingPreparationPanel')) < full.indexOf(fullInput));
-  assert.ok(full.indexOf(find(full, 'ModelFamilyCatalog')) < full.indexOf(find(full, 'TrainingPreparationPanel')));
-  assert.equal(fullInput.parentElement.tagName, 'DETAILS'); assert.equal(fullInput.parentElement.open, true);
-  assert.equal(fullInput.parentElement.key, identity, 'view changes move the existing editor instead of replacing its wrapper');
-  assert.equal(fullInput.parentElement.props.children[0].props.hidden, true, 'full view does not add a new disclosure heading');
-  f.training.isTraining = true; await f.settle(); assert.equal(find(f.dom().elements, 'TrainingInputPreparation').props.disabled, true); f.unmount();
+test('training shows preprocessing before model purpose in a stable workflow across viewing modes', async () => {
+  const f=fixture();await f.settle();
+  const simple=f.dom().elements,find=(rows,name)=>rows.find(node=>node.tagName===name.toUpperCase());
+  const input=find(simple,'TrainingInputPreparation'),catalog=find(simple,'ModelFamilyCatalog'),preparation=find(simple,'TrainingPreparationPanel');
+  assert.ok(simple.indexOf(input)<simple.indexOf(catalog),'preprocessing comes before choosing the model');
+  assert.ok(simple.indexOf(catalog)<simple.indexOf(preparation));
+  assert.equal(input.props.disabled,false);const scope=f.workflow().scope;
+  f.project.viewMode='full';await f.settle();
+  const full=f.dom().elements;
+  assert.ok(full.indexOf(find(full,'TrainingInputPreparation'))<full.indexOf(find(full,'ModelFamilyCatalog')));
+  assert.equal(f.workflow().scope,scope,'view changes retain the workflow selection and mounted editor');
+  f.unmount();
 });
 
 test('advanced model fields retain their selected values across mode changes while running stop stays outside disclosures', async () => {
@@ -351,4 +363,116 @@ test('closing training location cannot hide transfer state or disconnected recov
   const reconnect = nodes.find(node => node.tagName === 'BUTTON' && text(node.props.children).includes('연결 다시 확인'));
   assertVisible(reconnect); await reconnect.props.onClick(); assert.equal(reconnected, 1);
   f.unmount();
+});
+
+
+test('training starts with connected data preparation before model selection without starting work', async () => {
+  const f=fixture();await f.settle();
+  assert.ok(f.workflow(),'the preparation workflow is mounted');
+  assert.deepEqual(f.workflow().blocks.map(block=>block.id),['photos','labels','split','preprocess','model']);
+  assert.match(f.workflow().blocks.find(block=>block.id==='preprocess').summary,/기본 입력/,'detection does not claim unsupported transforms');
+  f.data.folderPath='/retired';await f.settle();
+  assert.equal(f.workflow().blocks[0].status,'attention','old-source counts cannot mark photos ready');
+  f.unmount();
+});
+
+
+test('running or recovering training keeps model selection locked even through a retained callback', async()=>{
+ for(const key of ['isTraining','isRecoveringTraining']){
+  const f=fixture();await f.settle();const choose=f.catalog().onSelect;
+  f.training[key]=true;await f.settle();assert.equal(f.catalog().disabled,true);
+  choose('ocr');await f.settle();assert.equal(f.catalog().selectedFamily,'detection');
+  f.unmount();
+ }
+});
+test('classification with only one populated class does not mark truth ready',async()=>{
+ const f=fixture();f.project.task='classification';f.project.project.task='classification';f.data.datasetKey='/images\0classification';f.data.classes={Only:10};
+ await f.settle();assert.equal(f.workflow().blocks.find(block=>block.id==='labels').status,'attention');f.unmount();
+});
+
+function blockOwner(element){for(let node=element?.parentElement;node;node=node.parentElement){if(node.props['data-workflow-block'])return node.props['data-workflow-block'];}return null;}
+test('the final model block contains next-run location, recipe, advanced controls and the single start button',async()=>{
+ const f=fixture();await f.settle();const elements=f.dom().elements;
+ for(const id of ['training-compute-settings','training-model-settings','training-scheduling-settings']){const target=elements.find(n=>n.props.id===id);assert.ok(target,id);assert.equal(blockOwner(target),'model',id+' belongs to the final setup pane');}
+ const preset=elements.find(n=>n.tagName==='RECIPEPRESETSELECTOR');assert.ok(preset);assert.equal(blockOwner(preset),'model');
+ const starts=elements.filter(n=>n.tagName==='BUTTON'&&n.props.onClick?.name==='handleStart');assert.equal(starts.length,1);assert.equal(blockOwner(starts[0]),'model');
+ f.change('학습 모델 구조','yolo26s');f.change('수동 학습 횟수','7');await f.settle();const startsCalled=[];f.training.startTraining=async(...args)=>startsCalled.push(args);await f.settle();await f.start();assert.equal(startsCalled.length,1);assert.equal(startsCalled[0][3].backbone,'yolo26s');assert.equal(startsCalled[0][3].epochs,7);f.unmount();
+});
+test('model catalog browsing does not change the wizard navigation scope',async()=>{
+ const f=fixture();await f.settle();const scope=f.workflow().scope;f.catalog().onSelect('ocr');await f.settle();assert.equal(f.workflow().scope,scope);assert.equal(f.catalog().selectedFamily,'ocr');f.unmount();
+});
+test('catalog changes clear only their fixture handoff and never share browser storage or replace the Node global',async()=>{
+ const globalStorage=Object.getOwnPropertyDescriptor(globalThis,'localStorage');
+ const first=fixture(),second=fixture();
+ assert.ok(first.storage&&second.storage,'each fixture supplies its own browser storage');
+ assert.notEqual(first.storage,second.storage);
+ const key='vision-task-handoff:["/project","p","/images","default","local","local"]';
+ first.storage.setItem(key,'first handoff');second.storage.setItem(key,'second handoff');
+ first.storage.setItem('unrelated','keep first');second.storage.setItem('unrelated','keep second');
+ await first.settle();await second.settle();first.catalog().onSelect('ocr');await first.settle();
+ assert.equal(first.storage.getItem(key),null,'the real controller clears its own scoped handoff');
+ assert.equal(second.storage.getItem(key),'second handoff','another mounted fixture keeps the same-scope record');
+ assert.equal(first.storage.getItem('unrelated'),'keep first');assert.equal(second.storage.getItem('unrelated'),'keep second');
+ second.catalog().onSelect('rotation');await second.settle();assert.equal(second.storage.getItem(key),null);
+ assert.deepEqual(Object.getOwnPropertyDescriptor(globalThis,'localStorage'),globalStorage,'no ambient Node storage is installed or replaced');
+ first.unmount();second.unmount();
+});
+test('core job status, failure, logs and saved history stay outside wizard panels when browsing another model',async()=>{
+ const f=fixture();await f.settle();f.training.jobId='finished-core';f.training.status='completed';f.training.startError='Current core failure';f.savedJob.job={job_id:'saved-core',status:'completed'};f.savedJob.error='Saved history read failure';await f.settle();f.catalog().onSelect('ocr');await f.settle();
+ const elements=f.dom().elements;const current=elements.find(n=>n.props.id==='training-current-status');assert.ok(current,'core status remains after specialty browsing');assert.equal(blockOwner(current),null);
+ const log=elements.find(n=>n.props['aria-label']==='학습 로그');assert.ok(log);assert.equal(blockOwner(log),null);
+ const saved=elements.find(n=>n.props['aria-label']==='선택한 저장 학습 작업');assert.ok(saved);assert.equal(blockOwner(saved),null);
+ assert.ok(f.alerts().some(value=>value.includes('Current core failure')));assert.ok(f.alerts().some(value=>value.includes('Saved history read failure')));f.unmount();
+});
+test('repeated settings remediation requests carry a fresh sequence and the current authority scope',async()=>{
+ const f=fixture();await f.settle();f.change('수동 학습 횟수','0');await f.settle();f.preparation().onResolveBlocker();f.render();const first=f.workflow().revealRequest;assert.ok(first);
+ f.preparation().onResolveBlocker();f.render();const second=f.workflow().revealRequest;assert.ok(second.sequence>first.sequence);assert.equal(second.targetId,'training-model-settings');
+ f.project.project.active_labelset_id='new';await f.settle();assert.notEqual(f.workflow().scope,first.scope,'a retired reveal cannot own the next labelset');f.unmount();
+});
+
+test('an idle workspace keeps empty runtime telemetry out of setup, while recovery still exposes current status',async()=>{
+ const f=fixture();await f.settle();assert.equal(f.dom().getElementById('training-current-status'),null);assert.equal(f.dom().elements.some(n=>n.tagName==='OSCILLOSCOPELOSSCURVE'),false);
+ f.training.isRecoveringTraining=true;await f.settle();assert.ok(f.dom().getElementById('training-current-status'));f.unmount();
+});
+
+test('settings remediation from a specialty catalog choice reveals the actual core settings without changing project task',async()=>{
+ const f=fixture();await f.settle();f.compute.selectedProfileId='gpu';f.compute.profiles=[{id:'gpu',name:'GPU 서버'}];await f.settle();f.catalog().onSelect('ocr');await f.settle();
+ const button=f.dom().elements.find(n=>n.tagName==='BUTTON'&&n.props.children==='학습 위치 확인');assert.ok(button);button.props.onClick();f.render();
+ assert.equal(f.catalog().selectedFamily,f.project.task);assert.equal(f.workflow().revealRequest.targetId,'training-compute-settings');assert.equal(f.project.task,'detection');f.unmount();
+});
+
+test('simple view keeps settings recovery outside a hidden model pane',async()=>{
+ const f=fixture();await f.settle();f.project.viewMode='simple';await f.settle();f.change('수동 학습 횟수','0');await f.settle();
+ const recovery=f.dom().elements.find(n=>n.tagName==='BUTTON'&&n.props.children==='모델 설정 확인');assert.ok(recovery,'global remediation remains reachable on another wizard block');assert.equal(blockOwner(recovery),null);f.unmount();
+});
+
+test('retired recovery callbacks cannot change the next project model selection',async()=>{
+ const f=fixture();await f.settle();f.change('수동 학습 횟수','0');await f.settle();const recover=f.preparation().onResolveBlocker;
+ f.project.task='classification';f.project.project={...f.project.project,id:'next',task:'classification'};f.data.datasetKey='/images\0classification';await f.settle();
+ assert.equal(f.catalog().selectedFamily,'classification');recover();f.render();assert.equal(f.catalog().selectedFamily,'classification');assert.equal(f.workflow().revealRequest,undefined);f.unmount();
+});
+test('recovery reads live ownership before a React render and refuses changed source, actor, API or transport',async()=>{
+ for(const mutate of [f=>{f.project.project.source_dataset_dir='/next';f.data.folderPath='/next';f.data.datasetKey='/next\0detection';},f=>{f.data.currentAuthority='new-actor';},f=>{f.compute.apiIdentity='new-api';f.data.currentAuthority='new-api-authority';},f=>{f.compute.transportRevision++;f.compute.selectedProfileId='next-profile';}]){
+  const f=fixture();await f.settle();f.change('수동 학습 횟수','0');await f.settle();const recover=f.preparation().onResolveBlocker;
+  f.catalog().onSelect('ocr');f.render();mutate(f);recover();f.render();assert.equal(f.catalog().selectedFamily,'ocr','a stale callback cannot change parent selection before a render');assert.equal(f.workflow().revealRequest,undefined);f.unmount();
+ }
+});
+
+
+test('the mounted controller routes explicit model and preprocessing targets through its current React owner',async()=>{
+ const previous=global.document;global.document={};
+ try{const f=fixture();await f.settle();f.catalog().onSelect('ocr');await f.settle();
+  f.focusTarget('training-next-settings',()=>true);f.render();assert.equal(f.catalog().selectedFamily,'detection');
+  assert.equal(f.workflow().revealRequest.blockId,'model');assert.equal(f.workflow().revealRequest.targetId,'training-next-settings');
+  f.focusTarget('training-input-preparation',()=>true);f.render();assert.equal(f.workflow().revealRequest.blockId,'preprocess');
+  assert.equal(f.workflow().revealRequest.isCurrent(),true);f.unmount();assert.equal(f.workflow().revealRequest.isCurrent(),false);
+ }finally{global.document=previous;}
+});
+
+test('the registered controller owner refuses live authority changes before a replacement render',async()=>{
+ const previous=global.document;global.document={};
+ try{for(const mutate of [f=>{f.project.task='classification';},f=>{f.project.project.active_labelset_id='new-labels';},f=>{f.data.folderPath='/next';},f=>{f.data.currentAuthority='new-actor';},f=>{f.compute.transportRevision++;}]){
+  const f=fixture();await f.settle();f.catalog().onSelect('ocr');await f.settle();mutate(f);
+  f.focusTarget('training-next-settings',()=>true);f.render();assert.equal(f.catalog().selectedFamily,'ocr');assert.equal(f.workflow().revealRequest,undefined);f.unmount();
+ }}finally{global.document=previous;}
 });
