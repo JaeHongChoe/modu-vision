@@ -18,6 +18,27 @@ test('safe observation uses the exact operation and returned method, path, trans
  const f=fixture(url=>url.startsWith('/api/automation/')?catalog([operation()]):{status:'ok',token:'secret',account:{name:'Ada'},path:'/private/account.json',address:'https://private.invalid',nested:{password:'hidden'}});
  const value=await f.adapter.read({operation:'GET /health'});assert.equal(f.calls.length,2);assert.equal(f.calls[1][0],'/health');assert.equal(f.calls[1][1].method,'GET');assert.match(f.calls[1][1].traceParent.traceparent,/^00-[a-f0-9]{32}-[a-f0-9]{16}-01$/);assert.equal(value.data.status,'ok');assert.equal(value.truncated,false);for(const secret of ['secret','Ada','/private','private.invalid','hidden'])assert.ok(!JSON.stringify(value).includes(secret),secret);
 });
+test('assistant observes the integrated learning platform without starting its runtime or exposing source paths',async()=>{
+ const id='GET /api/platform/geti/status';
+ const f=fixture(url=>url.startsWith('/api/automation/')?catalog([operation(id)]):{
+  available:true,runtime:{state:'stopped'},project:{name:'Private customer project',task:'classification',binding_state:'stale',binding_message:'현재 데이터를 다시 준비하세요.'},
+  dataset:{id:'transfer-1',recipe_sha256:'a'.repeat(64),counts:{training:16,validation:4,testing:4,total:24},source_mapping:[{relative_path:'Customer-X/LOT-2026/private-sample.png',source_path:'/private/customer/one.png'}],training_binding:{members:{'Customer-X/LOT-2026/private-sample.png':'secret'}}},
+  jobs:[{status:'completed',worker_exited:true}],models:[{variants:[{format:'OpenVINO'}]}],
+ });
+ const value=await f.adapter.read({operation:id});
+ assert.equal(f.calls.length,2);assert.equal(f.calls[1][0],'/api/platform/geti/status');
+ assert.equal(value.data.runtime.state,'stopped');assert.equal(value.data.jobs[0].status,'completed');
+ assert.equal(value.data.project.binding_state,'stale');assert.equal(value.data.project.binding_message,'현재 데이터를 다시 준비하세요.');
+ assert.equal(value.data.dataset.recipe_sha256,'[가림]');
+ assert.equal(value.data.dataset.counts.total,24);assert.equal(value.data.dataset.source_mapping,undefined);assert.equal(value.data.dataset.training_binding,undefined);
+ assert.ok(!JSON.stringify(value).includes('/private/customer'));assert.ok(!JSON.stringify(value).includes('Private customer'));
+ const {sanitizedMessages}=load(path.resolve(__dirname,'../../main/assistant/service.ts'));
+ const sent=sanitizedMessages([{role:'tool',toolCallId:'status',name:'read_app_command',content:JSON.stringify(value)}])[0].content;
+ for(const privateValue of ['Customer-X','LOT-2026','private-sample.png','secret'])assert.ok(!sent.includes(privateValue),privateValue);
+ for(const operation of ['POST /api/platform/geti/start','POST /api/platform/geti/train','POST /api/platform/geti/predict','GET /api/platform/geti/images']){
+  const denied=fixture();await assert.rejects(denied.adapter.read({operation}),error=>error.code==='operation_not_permitted');assert.equal(denied.calls.length,0);
+ }
+});
 test('computing GETs, account reads, arbitrary headers and lookalikes never dispatch an operation',async()=>{
  for(const operation of ['GET /api/evaluation/auto-threshold','GET /api/accounts/me','GET /health?probe=1','GET /health/','POST /health','GET https://private.invalid/health']){
   const f=fixture();await assert.rejects(f.adapter.read({operation}),error=>error.code==='operation_not_permitted');assert.equal(f.calls.length,0);

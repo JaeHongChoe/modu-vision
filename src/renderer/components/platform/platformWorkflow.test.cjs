@@ -72,11 +72,11 @@ test('cancel remains a request until worker exit is confirmed',async()=>{
 });
 test('prediction admits only exact frozen source images and never forwards a typed URL',async()=>{
   const model={id:'model-1',name:'표면 검사 AI',architecture:'efficientnet',task:'classification',variants:[{id:'v1',format:'openvino',precision:'fp32',weights_size:4,evaluations:[]}]};
-  const f=fixture(async path=>path.endsWith('/status')?status({models:[model]}):path.startsWith('/api/dataset/library/images')?{items:[{image_uuid:'known',relative_path:'test.png',sha256:'digest',file_path:'/source/test.png',file_name:'test.png',valid:true},{image_uuid:'foreign',relative_path:'other.png',sha256:'other',file_path:'https://external.invalid/x',file_name:'x',valid:true}],next_cursor:null}:{});
+  const f=fixture(async path=>path.endsWith('/status')?status({models:[model]}):path.startsWith('/api/platform/geti/images')?{items:[{image_uuid:'media-1',relative_path:'test.png',sha256:'digest',source_path:'/source/test.png',file_name:'test.png',transferred:true},{image_uuid:'foreign',relative_path:'other.png',sha256:'other',source_path:'https://external.invalid/x',file_name:'x',transferred:true}],pagination:{offset:0,limit:100,total:2}}:{});
   await f.controller.refresh();await f.controller.loadImages();
-  assert.deepEqual(f.controller.getSnapshot().images.map(row=>row.image_uuid),['known']);
+  assert.deepEqual(f.controller.getSnapshot().images.map(row=>row.image_uuid),['media-1']);
   f.controller.selectImage('foreign');await f.controller.predict();assert.equal(f.calls.filter(c=>c.path.endsWith('/predict')).length,0);
-  f.controller.selectImage('known');await f.controller.predict();
+  f.controller.selectImage('media-1');await f.controller.predict();
   const call=f.calls.find(c=>c.path.endsWith('/predict'));assert.equal(JSON.parse(call.body).image_path,'/source/test.png');
 });
 test('truth adoption needs deliberate review and frozen revision; permissions cannot be bypassed',async()=>{
@@ -125,7 +125,7 @@ test('prepare sends the scoped saved recipe and explicit retry reuses an unresol
 
 test('prediction-disabled model formats cannot be executed through direct handler calls',async()=>{
   const model={id:'model',name:'저장된 AI',architecture:'e',task:'classification',variants:[{id:'pt',format:'pytorch',precision:'fp32',weights_size:1,evaluations:[],prediction_supported:false}]};
-  const f=fixture(async path=>path.endsWith('/status')?status({models:[model]}):path.startsWith('/api/dataset/library/images')?{items:[{image_uuid:'known',relative_path:'test.png',sha256:'digest',file_path:'/source/test.png',valid:true}],next_cursor:null}:{});
+  const f=fixture(async path=>path.endsWith('/status')?status({models:[model]}):path.startsWith('/api/platform/geti/images')?{items:[{image_uuid:'media-1',relative_path:'test.png',sha256:'digest',source_path:'/source/test.png',transferred:true}],pagination:{offset:0,limit:100,total:1}}:{});
   await f.controller.refresh();await f.controller.loadImages();await f.controller.predict();assert.equal(f.calls.filter(c=>c.path.endsWith('/predict')).length,0);
 });
 
@@ -159,7 +159,7 @@ test('acknowledged unconfirmed submission clears only after the same operation h
 
 test('view-only members can read models but cannot submit a prediction',async()=>{
   const model={id:'model',name:'AI',architecture:'e',task:'classification',variants:[{id:'ov',format:'openvino',precision:'fp32',weights_size:1,evaluations:[]}]};
-  const f=fixture(async path=>path.endsWith('/status')?status({models:[model],permissions:{can_prepare:false,can_train:false,can_adopt:false}}):path.startsWith('/api/dataset/library/images')?{items:[{image_uuid:'known',relative_path:'test.png',sha256:'digest',file_path:'/source/test.png',valid:true}],next_cursor:null}:{});
+  const f=fixture(async path=>path.endsWith('/status')?status({models:[model],permissions:{can_prepare:false,can_train:false,can_adopt:false}}):path.startsWith('/api/platform/geti/images')?{items:[{image_uuid:'media-1',relative_path:'test.png',sha256:'digest',source_path:'/source/test.png',transferred:true}],pagination:{offset:0,limit:100,total:1}}:{});
   await f.controller.refresh();await f.controller.loadImages();await f.controller.predict();assert.equal(f.calls.filter(c=>c.path.endsWith('/predict')).length,0);
 });
 
@@ -203,16 +203,16 @@ test('actual structured architecture license displays a readable name rather tha
 });
 
 const storedModel = (id='model-A',variantId='variant-A') => ({id,name:id,architecture:'efficientnet',task:'classification',variants:[{id:variantId,format:'openvino',precision:'fp32',weights_size:4,evaluations:[]}]});
-const admittedImage = (digest='digest') => ({image_uuid:'known',relative_path:'test.png',sha256:digest,file_path:'/source/test.png',file_name:'test.png',valid:true});
+const admittedImage = (digest='digest') => ({image_uuid:'media-1',relative_path:'test.png',sha256:digest,source_path:'/source/test.png',file_name:'test.png',transferred:true});
 const otherReceipt = (overrides={}) => ({...receipt,id:'transfer-B',revision:'revision-B',dataset_version_id:'version-B',...overrides});
 
 test('a changed receipt retires checked review, image pagination and prediction before adoption can run',async()=>{
   let current=status({models:[storedModel()]});
-  const f=fixture(async path=>path.endsWith('/status')?current:path.startsWith('/api/dataset/library/images')?{items:[admittedImage()],next_cursor:'cursor-A'}:path.endsWith('/predict')?{model_id:'model-A',predictions:[{label:'A'}]}:{});
+  const f=fixture(async path=>path.endsWith('/status')?current:path.startsWith('/api/platform/geti/images')?{items:[admittedImage()],pagination:{offset:0,limit:100,total:200}}:path.endsWith('/predict')?{model_id:'model-A',predictions:[{label:'A'}]}:{});
   await f.controller.refresh();await f.controller.loadImages();await f.controller.predict();f.controller.reviewAdoption(true);
   assert.equal(f.controller.getSnapshot().adoptionReview,true);assert.ok(f.controller.getSnapshot().prediction);
   current=status({dataset:otherReceipt(),models:[storedModel('model-B','variant-B')]});await f.controller.refresh();
-  const state=f.controller.getSnapshot();assert.equal(state.adoptionReview,false);assert.equal(state.adopted,null);assert.deepEqual(state.images,[]);assert.equal(state.imageId,'');assert.equal(state.imagesLoaded,false);assert.equal(state.nextImageCursor,null);assert.equal(state.prediction,null);
+  const state=f.controller.getSnapshot();assert.equal(state.adoptionReview,false);assert.equal(state.adopted,null);assert.deepEqual(state.images,[]);assert.equal(state.imageId,'');assert.equal(state.imagesLoaded,false);assert.equal(state.nextImageOffset,null);assert.equal(state.prediction,null);
   assert.equal(state.modelId,'model-B');assert.equal(state.variantId,'variant-B');
   await f.controller.adoptLabels();assert.equal(f.calls.filter(call=>call.path.endsWith('/adopt-labels')).length,0,'review of A never authorizes adoption of B');
 });
@@ -229,9 +229,9 @@ test('same receipt id with a new revision retires adopted state and the unresolv
 });
 
 test('local prepare accepts the new receipt through the same transition and clears old model metadata',async()=>{
-  const f=fixture(async path=>path.endsWith('/status')?status({models:[storedModel()]}):path.endsWith('/prepare')?otherReceipt():path.startsWith('/api/dataset/library/images')?{items:[admittedImage()],next_cursor:'old-page'}:path.endsWith('/predict')?{predictions:[{label:'old'}]}:{});
+  const f=fixture(async path=>path.endsWith('/status')?status({models:[storedModel()]}):path.endsWith('/prepare')?otherReceipt():path.startsWith('/api/platform/geti/images')?{items:[admittedImage()],pagination:{offset:0,limit:100,total:200}}:path.endsWith('/predict')?{predictions:[{label:'old'}]}:{});
   await f.controller.refresh();await f.controller.loadImages();await f.controller.predict();f.controller.reviewAdoption(true);await f.controller.prepare();
-  const state=f.controller.getSnapshot();assert.equal(state.status.dataset.id,'transfer-B');assert.deepEqual(state.status.models,[]);assert.equal(state.modelId,'');assert.equal(state.variantId,'');assert.equal(state.adoptionReview,false);assert.deepEqual(state.images,[]);assert.equal(state.nextImageCursor,null);assert.equal(state.prediction,null);
+  const state=f.controller.getSnapshot();assert.equal(state.status.dataset.id,'transfer-B');assert.deepEqual(state.status.models,[]);assert.equal(state.modelId,'');assert.equal(state.variantId,'');assert.equal(state.adoptionReview,false);assert.deepEqual(state.images,[]);assert.equal(state.nextImageOffset,null);assert.equal(state.prediction,null);
 });
 
 for(const settles of ['resolve','reject'])test(`late receipt-A image ${settles} cannot change receipt B`,async()=>{
@@ -239,13 +239,13 @@ for(const settles of ['resolve','reject'])test(`late receipt-A image ${settles} 
   const f=fixture(async path=>path.endsWith('/status')?current:new Promise((resolve,reject)=>{resolveImages=resolve;rejectImages=reject;}));
   await f.controller.refresh();const pending=f.controller.loadImages();const request=f.calls.at(-1);
   current=status({dataset:otherReceipt()});await f.controller.refresh();assert.equal(request.signal.aborted,true);
-  if(settles==='resolve')resolveImages({items:[admittedImage()],next_cursor:'page-A'});else rejectImages(new Error('late A image error'));
-  await pending;const state=f.controller.getSnapshot();assert.deepEqual(state.images,[]);assert.equal(state.imagesLoaded,false);assert.equal(state.nextImageCursor,null);assert.equal(state.imageError,'');assert.equal(state.imageLoading,false);
+  if(settles==='resolve')resolveImages({items:[admittedImage()],pagination:{offset:0,limit:100,total:200}});else rejectImages(new Error('late A image error'));
+  await pending;const state=f.controller.getSnapshot();assert.deepEqual(state.images,[]);assert.equal(state.imagesLoaded,false);assert.equal(state.nextImageOffset,null);assert.equal(state.imageError,'');assert.equal(state.imageLoading,false);
 });
 
 test('a late prediction response cannot publish after its receipt was retired',async()=>{
   let resolvePrediction;
-  const f=fixture(async path=>path.endsWith('/status')?status({models:[storedModel()]}):path.startsWith('/api/dataset/library/images')?{items:[admittedImage()],next_cursor:null}:new Promise(resolve=>{resolvePrediction=resolve;}));
+  const f=fixture(async path=>path.endsWith('/status')?status({models:[storedModel()]}):path.startsWith('/api/platform/geti/images')?{items:[admittedImage()],pagination:{offset:0,limit:100,total:1}}:new Promise(resolve=>{resolvePrediction=resolve;}));
   await f.controller.refresh();await f.controller.loadImages();const pending=f.controller.predict();const request=f.calls.at(-1);
   // Exercise the central acceptance boundary while the inference request is in flight.
   f.controller.applyStatus(status({dataset:otherReceipt(),models:[storedModel('model-B','variant-B')]}));
@@ -263,7 +263,7 @@ test('a late adoption response cannot populate the next receipt with the previou
 
 test('refreshing a different model or variant clears the cached prediction while the receipt remains current',async()=>{
   let current=status({models:[storedModel()]});
-  const f=fixture(async path=>path.endsWith('/status')?current:path.startsWith('/api/dataset/library/images')?{items:[admittedImage()],next_cursor:null}:{predictions:[{label:'old'}]});
+  const f=fixture(async path=>path.endsWith('/status')?current:path.startsWith('/api/platform/geti/images')?{items:[admittedImage()],pagination:{offset:0,limit:100,total:1}}:{predictions:[{label:'old'}]});
   await f.controller.refresh();await f.controller.loadImages();await f.controller.predict();
   current=status({models:[storedModel('model-B','variant-B')]});await f.controller.refresh();assert.equal(f.controller.getSnapshot().prediction,null);assert.equal(f.controller.getSnapshot().modelId,'model-B');
   await f.controller.predict();assert.ok(f.controller.getSnapshot().prediction);
@@ -271,9 +271,9 @@ test('refreshing a different model or variant clears the cached prediction while
 });
 
 test('same immutable receipt and selection preserve a deliberate review and confirmed prediction on refresh',async()=>{
-  const f=fixture(async path=>path.endsWith('/status')?status({dataset:{...receipt},models:[storedModel()]}):path.startsWith('/api/dataset/library/images')?{items:[admittedImage()],next_cursor:'page-A'}:{predictions:[{label:'current'}]});
+  const f=fixture(async path=>path.endsWith('/status')?status({dataset:{...receipt},models:[storedModel()]}):path.startsWith('/api/platform/geti/images')?{items:[admittedImage()],pagination:{offset:0,limit:100,total:200}}:{predictions:[{label:'current'}]});
   await f.controller.refresh();await f.controller.loadImages();await f.controller.predict();f.controller.reviewAdoption(true);await f.controller.refresh();
-  const state=f.controller.getSnapshot();assert.equal(state.adoptionReview,true);assert.equal(state.images.length,1);assert.equal(state.nextImageCursor,'page-A');assert.ok(state.prediction);
+  const state=f.controller.getSnapshot();assert.equal(state.adoptionReview,true);assert.equal(state.images.length,1);assert.equal(state.nextImageOffset,100);assert.ok(state.prediction);
 });
 
 test('a stale parent binding explains recovery outside closed details',async()=>{
@@ -283,4 +283,59 @@ test('a stale parent binding explains recovery outside closed details',async()=>
   const tree=PlatformWorkspaceView({state:f.controller.getSnapshot(),controller:f.controller,hasSource:true,projectName:'검사',task:'classification'}), messages=[];
   function visit(node,ancestors=[]){if(!node||typeof node!=='object')return;if(node.props?.children===message)messages.push({node,ancestors});React.Children.forEach(node.props?.children,child=>visit(child,[...ancestors,node.type]));}visit(tree);
   assert.ok(messages.some(({node,ancestors})=>node.props.role==='status'&&!ancestors.includes('details')),'the current binding warning must stay visible without opening technical details');
+});
+
+test('model photos use admitted platform sources without an active Library revision',async()=>{
+  const frozen={image_uuid:'media-1',relative_path:'test.png',file_name:'test.png',source_path:'/source/test.png',sha256:'digest',transferred:true};
+  const fresh={image_uuid:'inspection',relative_path:'new.png',file_name:'new.png',source_path:'/source/new.png',sha256:'new-digest',transferred:false};
+  const f=fixture(async path=>{
+    if(path.endsWith('/status'))return status({models:[storedModel()]});
+    if(path.startsWith('/api/dataset/library/'))throw Object.assign(new Error('No validated dataset revision is active'),{status:409});
+    if(path.startsWith('/api/platform/geti/images'))return {items:[frozen,fresh,{...frozen,image_uuid:'wrong-identity'},{...frozen,image_uuid:'changed',sha256:'wrong'},{...fresh,image_uuid:'url',source_path:'https://foreign.invalid/private.png'},{...fresh,image_uuid:'foreign-root',source_path:'/other/new.png'}],pagination:{offset:0,limit:100,total:6}};
+    return {predictions:[{label:'blue'}]};
+  });
+  await f.controller.refresh();await f.controller.loadImages();
+  assert.deepEqual(f.controller.getSnapshot().images.map(row=>row.image_uuid),['media-1','inspection']);
+  assert.equal(f.controller.getSnapshot().imageError,'');
+  f.controller.selectImage('inspection');await f.controller.predict();
+  assert.equal(JSON.parse(f.calls.find(row=>row.path.endsWith('/predict')).body).image_path,'/source/new.png');
+  assert.equal(f.controller.getSnapshot().status.dataset.counts.total,8,'new inspection photos do not join the frozen training cohort');
+  const {PlatformWorkspaceView}=load('./PlatformWorkspaceView.tsx',{'../../services/getiPlatform':f.exports});
+  const html=renderToStaticMarkup(React.createElement(PlatformWorkspaceView,{state:f.controller.getSnapshot(),controller:f.controller,hasSource:true,projectName:'검사',task:'classification'}));
+  assert.match(html,/new\.png · 새 검사 사진/);assert.match(html,/test\.png · 시험 사진/);
+});
+
+test('admitted platform photo pagination appends by server offset and preserves selection',async()=>{
+  const image=(id,relative)=>({image_uuid:id,relative_path:relative,file_name:relative,source_path:'/source/'+relative,sha256:'new-'+id,transferred:false});
+  const f=fixture(async route=>{
+    if(route.endsWith('/status'))return status({models:[storedModel()]});
+    if(route.startsWith('/api/platform/geti/images'))return new URL(route,'https://fixture.test').searchParams.get('offset')==='2'
+      ? {items:[image('three','three.png')],pagination:{offset:2,limit:2,total:3}}
+      : {items:[image('one','one.png'),image('two','two.png')],pagination:{offset:0,limit:2,total:3}};
+    throw Error('Unexpected Library lookup');
+  });
+  await f.controller.refresh();await f.controller.loadImages();f.controller.selectImage('two');await f.controller.loadImages(true);
+  assert.deepEqual(f.controller.getSnapshot().images.map(row=>row.image_uuid),['one','two','three']);
+  assert.equal(f.controller.getSnapshot().imageId,'two');assert.equal(f.controller.getSnapshot().nextImageOffset,null);
+});
+
+test('a mismatched platform image page preserves the prior selection and requests a fresh list',async()=>{
+  const row={image_uuid:'media-1',relative_path:'test.png',file_name:'test.png',source_path:'/source/test.png',sha256:'digest',transferred:true};let pages=0;
+  const f=fixture(async route=>route.endsWith('/status')?status({models:[storedModel()]}):{items:[row],pagination:++pages===1?{offset:0,limit:2,total:3}:{offset:0,limit:0,total:3}});
+  await f.controller.refresh();await f.controller.loadImages();await f.controller.loadImages(true);
+  const state=f.controller.getSnapshot();assert.equal(state.imageId,'media-1');assert.equal(state.nextImageOffset,2);assert.equal(state.images.length,1);assert.match(state.imageError,/사진 목록.*다시/);
+  const {PlatformWorkspaceView}=load('./PlatformWorkspaceView.tsx',{'../../services/getiPlatform':f.exports});
+  const tree=PlatformWorkspaceView({state,controller:f.controller,hasSource:true,projectName:'검사',task:'classification'});let retry;
+  function visit(node){if(!node||typeof node!=='object')return;if(node.type==='button'&&node.props.children==='사진 목록 다시 확인')retry=node;React.Children.forEach(node.props?.children,visit);}visit(tree);
+  assert.ok(retry);retry.props.onClick();
+  assert.equal(new URL(f.calls.at(-1).path,'https://fixture.test').searchParams.get('offset'),'0','the visible retry restarts listing instead of repeating an invalid old offset');
+});
+
+test('a reconnected browser shows frozen model preprocessing separately from its empty next-training draft',async()=>{
+  const f=fixture(async()=>status({dataset:{...receipt,input_recipe:{version:1,operations:[{op:'resize',width:80,height:64}]}},models:[storedModel()]}));await f.controller.refresh();
+  const {PlatformWorkspaceView}=load('./PlatformWorkspaceView.tsx',{'../../services/getiPlatform':f.exports});
+  const html=renderToStaticMarkup(React.createElement(PlatformWorkspaceView,{state:f.controller.getSnapshot(),controller:f.controller,hasSource:true,projectName:'검사',task:'classification',preparationCount:0}));
+  assert.match(html,/고정된 학습·예측 규칙/);assert.match(html,/크기 맞추기 80 × 64/);
+  assert.match(html,/새 학습 기준에 사용할 편집 규칙/);assert.match(html,/현재 브라우저에 저장한 편집 규칙이 없습니다/);
+  assert.doesNotMatch(html,/저장한 고정 입력 전처리가 없습니다/);
 });

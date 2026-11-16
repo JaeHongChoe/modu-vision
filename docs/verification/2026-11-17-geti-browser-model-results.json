@@ -1,0 +1,191 @@
+{
+  "schema": 1,
+  "status": "passed",
+  "kind": "owned HTTPS browser trained-model acceptance",
+  "source_head": "bc9fc28e673b7253b2981f857d9238bf1f52f4fb",
+  "source_inputs_sha256": {
+    "src/renderer/services/getiPlatform.ts": "4d26eb9a9fff3f75ac715fa3516aa51e12033ed77051d78af4892d54e7311e2b",
+    "src/renderer/components/platform/PlatformWorkspaceView.tsx": "8f5fd730c75638dcf57885164eaf6c98d428b5582f5cae71d232aeafbf89b1b5",
+    "src/renderer/services/assistantCommandCatalog.ts": "90cbde0a13a7d2d38a4fe3eb1486405d177c32566eaa3cb703bf59dd50979157",
+    "backend/api/routes_platform_geti.py": "f7574a92142704c4e8f63d2182e682b39905b10cde6323102f72802d9c082e85"
+  },
+  "started_at": "2026-11-16T17:14:19.246Z",
+  "finished_at": "2026-11-16T17:15:01.402Z",
+  "reused_job_id": "gt_75c8693bac8ee94bb1eb5cc1fab278fc",
+  "expected_model_id": "9d0ab6d5-5f1b-4e24-8a7e-d2de4ede6a7a",
+  "descriptor_sha256": "c1573a40313869c4af2f91ccb27d48a34bdb47abad1e8f0c6eec2aff174a7192",
+  "original_image_count": 25,
+  "authentication": {
+    "actual_ui_login": true,
+    "actual_project_selection": true,
+    "secure_httponly_cookie": true,
+    "process_token_in_renderer": false
+  },
+  "assistant_catalog": {
+    "operation": "GET /api/platform/geti/status",
+    "effect": "read",
+    "mode": "read",
+    "gpt_calls": 0
+  },
+  "source_originals_unchanged": true,
+  "same_training_job": true,
+  "parent_port_closed": true,
+  "limits": {
+    "new_training": false,
+    "new_accounts": false,
+    "private_images": false,
+    "gpt": false,
+    "user_8443": false,
+    "installed_app": false
+  },
+  "preparation": {
+    "receipt_recipe_sha256": "87944c467bc879eee52d5a4638653531580bc37e1a1533c6120d04b338c75366",
+    "receipt_input_recipe": {
+      "operations": [
+        {
+          "height": 64,
+          "op": "resize",
+          "width": 80
+        }
+      ],
+      "version": 1
+    }
+  },
+  "image_picker": {
+    "path": "/api/platform/geti/images",
+    "status": 200,
+    "returned_images": 25,
+    "options": 25
+  },
+  "predictions": [
+    {
+      "format": "openvino",
+      "model_id": "9d0ab6d5-5f1b-4e24-8a7e-d2de4ede6a7a",
+      "variant_id": "90ce2e3a-be96-4b75-b9fa-ae00f9dc5961",
+      "recipe_sha256": "87944c467bc879eee52d5a4638653531580bc37e1a1533c6120d04b338c75366",
+      "image_sha256": "eed1edc798cbdde7ecb7221eee552370195b9feb9f328563f9a9e75183a0fa06",
+      "predictions": [
+        {
+          "label": "red",
+          "shape": {
+            "type": "full_image"
+          },
+          "confidence": 0.5681912302970886
+        }
+      ]
+    },
+    {
+      "format": "onnx",
+      "model_id": "9d0ab6d5-5f1b-4e24-8a7e-d2de4ede6a7a",
+      "variant_id": "cd2c1f0f-80c3-4a1b-ab5c-55c7ad27eae5",
+      "recipe_sha256": "87944c467bc879eee52d5a4638653531580bc37e1a1533c6120d04b338c75366",
+      "image_sha256": "828bb615fceee45a4f233db7e46e2e126dcb156c442294adeb225eda527b3390",
+      "predictions": [
+        {
+          "label": "red",
+          "shape": {
+            "type": "full_image"
+          },
+          "confidence": 0.5285828709602356
+        }
+      ]
+    }
+  ],
+  "exports": [
+    {
+      "format": "openvino",
+      "bytes": 7450825,
+      "sha256": "f700cba8bde82d43288ea420e7d00e889e2eb21f429508d1ceef3ba8f199e5db",
+      "members": [
+        {
+          "name": "model.xml",
+          "size": 350891
+        },
+        {
+          "name": "model.bin",
+          "size": 7978236
+        },
+        {
+          "name": "image.png",
+          "size": 963
+        },
+        {
+          "name": "demo.py",
+          "size": 641
+        },
+        {
+          "name": "demo_async.py",
+          "size": 874
+        },
+        {
+          "name": "utils.py",
+          "size": 2126
+        },
+        {
+          "name": "pyproject.toml",
+          "size": 362
+        },
+        {
+          "name": "LICENSE",
+          "size": 11357
+        },
+        {
+          "name": "README.md",
+          "size": 3132
+        }
+      ],
+      "unauthenticated_status": 401,
+      "authenticated_status": 200
+    },
+    {
+      "format": "onnx",
+      "bytes": 7481899,
+      "sha256": "e5654071e82336b2f82a996a6d38e9edb6a83d8f6d183e4fc081e8e214344ddc",
+      "members": [
+        {
+          "name": "model.onnx",
+          "size": 8949143
+        },
+        {
+          "name": "image.png",
+          "size": 963
+        },
+        {
+          "name": "demo.py",
+          "size": 641
+        },
+        {
+          "name": "demo_async.py",
+          "size": 874
+        },
+        {
+          "name": "utils.py",
+          "size": 2127
+        },
+        {
+          "name": "pyproject.toml",
+          "size": 362
+        },
+        {
+          "name": "LICENSE",
+          "size": 11357
+        },
+        {
+          "name": "README.md",
+          "size": 3126
+        }
+      ],
+      "unauthenticated_status": 401,
+      "authenticated_status": 200
+    }
+  ],
+  "source_changes_after_run": [
+    {
+      "path": "src/renderer/services/assistantCommandCatalog.ts",
+      "reason": "Provider-only compact status projection removes relative source folders; no change to model picker/prediction/export. Separate 19-test provider-roundtrip suite and independent review passed; no real GPT call."
+    }
+  ],
+  "source_receipt_sha256": "cc41df8e2bd23df39e838c8d3c4854fb98fdc440ca768896231dc0991e294611",
+  "installed_package_qualified": false,
+  "field_quality_qualified": false
+}

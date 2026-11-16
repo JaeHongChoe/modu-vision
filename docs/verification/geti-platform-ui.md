@@ -75,3 +75,28 @@ npx playwright test scripts/e2e/geti-platform.spec.ts --project=browser --projec
 ![합성 학습 복사본 준비와 한 주요 다음 행동](assets/geti-platform/prepared-light.png)
 
 ![720px 어두운 테마와 키보드 확인](assets/geti-platform/prepared-dark-720.png)
+
+## 저장된 모델 결과의 실제 HTTPS 브라우저 확인
+
+2026년 11월 17일에는 합성 프로젝트에서 이미 완료된 EfficientNet-B0 작업을 다시 열었다. 새 HTTPS origin에서 실제 계정 로그인과 프로젝트 선택을 거쳤으며, 저장된 모델의 `크기 맞추기 80 × 64` 규칙과 새 브라우저의 비어 있는 편집 규칙을 따로 표시하는지 확인했다. 실제 평가 DTO의 testing Accuracy `0.5`가 표시됐다. 이 합성 수치는 제품 품질 승인 결과가 아니다.
+
+Library revision을 새로 활성화하지 않고 프로젝트에서 허용한 사진 25장을 불러왔다. 고정 학습 기준 24장과 `새 검사 사진` 1장을 구분하며, 학습·검증·시험 수는 16/4/4로 유지했다. OpenVINO는 고정된 시험 사진을, ONNX는 새 검사 사진을 실제로 예측했다. 두 응답 모두 저장된 입력 규칙 SHA와 원본 사진 SHA가 일치했다.
+
+로그인한 브라우저에서 내려받은 ZIP은 OpenVINO `model.xml`·`model.bin`, ONNX `model.onnx`를 포함했다. 실제 파일 SHA-256은 각각 `f700cba8bde82d43288ea420e7d00e889e2eb21f429508d1ceef3ba8f199e5db`, `e5654071e82336b2f82a996a6d38e9edb6a83d8f6d183e4fc081e8e214344ddc`로 응답 헤더와 일치했으며, 로그인 없는 다운로드는 401로 거절됐다.
+
+최종 실행은 42.156초에 통과했다. 첫 상태 HTTP 응답은 6.714초였고, 기존 작업 ID·고정 데이터·원본 사진 25장의 해시를 보존했다. 추가 학습·데이터 준비·가중치 다운로드·라벨 채택·GPT 호출은 실행하지 않았다. 소유한 부모와 자식 프로세스 종료, 포트 닫힘, 외부 요청과 브라우저 오류가 없는 것도 확인했다. 이 결과는 소스 부모 서버와 실제 portable Geti 런타임을 연결한 브라우저 검증이며, 설치 제품의 모델 결과 검증으로 확대하지 않는다.
+
+실행 도구는 완료된 **소유 합성 QA 저장소**만 선택한다. 기존 receipt를 덮어쓰지 않고 실행별 TLS·로그·다운로드·스크린샷·receipt를 새 디렉터리에 저장한다.
+
+```sh
+node scripts/qa/geti_browser_model_results.cjs \
+  --root /absolute/path/to/completed-synthetic-integrated-qa \
+  --descriptor /absolute/path/to/geti/runtime.json \
+  --python /absolute/path/to/parent-python3.13
+```
+
+증거: `.superpowers/sdd/2026-11-16-full-training-platform/integrated-qa-20261117-v2/browser-results-2026-11-16T17-14-19-230Z/receipt.json`. 앞선 409 실패와 수정 전후 회귀 로그도 별도 실행 디렉터리에 보존했다. 최종 플랫폼 검사 36개와 도우미 기능 목록 검사 19개, 두 TypeScript 설정의 검사도 통과했다.
+
+![고정 입력 규칙과 저장된 평가·OpenVINO 예측을 함께 확인한 합성 화면](assets/geti-platform/trained-model-results.png)
+
+![학습 기준에 추가하지 않은 새 검사 사진의 실제 ONNX 예측](assets/geti-platform/trained-model-new-photo.png)

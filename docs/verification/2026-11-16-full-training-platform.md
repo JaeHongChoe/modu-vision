@@ -9,7 +9,10 @@
 - [연결 사이클 영수증](2026-11-17-geti-integrated-cycle.json): 기존 cookie 로그인·CSRF, 역할·타 프로젝트 거절, 24장 고정 분할16/4/4, 저장한 resize 규칙, 단 한 번의 CPU 1epoch 학습을 확인했다. 모델·데이터 revision과 세 형식의 평가·내보내기 SHA를 기록했다.
 - 같은 완료 모델의 OpenVINO·ONNX로 실제 예측했다. 새 검사 사진은 학습 구성원에 추가하지 않았고 원본 좌표로 결과를 반환했다. 기존 모델 목록→검증→흐름 저장→실행→저장 검사 실행까지 실제 Geti 추론으로 통과했다. 재시작과 같은 작업 ID 조회가 새 학습을 만들지 않았다.
 - [화면 검증](geti-platform-ui.md): 실제 브라우저·Electron 2경로에서 64장 복사·전처리 SHA·원본 보존·조회503 복구·프로젝트 전환 뒤 늦은 응답 거절·양 테마·720px·키보드·접근성을 확인했다. 화면 시험을 학습 버튼 이후 결과 UI·설치 앱·사용자8443 검증으로 확대하지 않는다.
-- 독립 검토에서 내보내기 동시 발행, 추론 중 권한 철회, 다른 준비본의 오인, 복사본 변경 후 라벨 검토 표시 재사용을 재현해 수정한다. 회귀 검사와 재검토 결과를 릴리스 기록에 남긴다.
+- [실제 HTTPS 결과 화면 영수증](2026-11-17-geti-browser-model-results.json): 같은 완료 모델을 재사용해 저장한 resize 80×64 표시, 고정 사진 24장과 새 검사 사진 1장의 선택, OpenVINO·ONNX 예측, 실제 ZIP 저장·내용·SHA와 비로그인 401을 확인했다. 새 학습 없이 기존 작업·고정 묶음·원본 25장을 보존했고 소유 프로세스와 포트가 종료됐다.
+- 실제 화면에서 Library revision 부재로 사진 선택이 409로 거절되고, 새 브라우저가 저장한 모델 전처리를 없다고 표시하는 문제를 재현해 수정했다. Library 보호를 낮추지 않고 별도 프로젝트 사진 조회를 연결했으며, 새 검사 사진을 학습에 넣지 않는다.
+- 독립 검토에서 내보내기 동시 발행, 추론 중 권한 철회, 다른 준비본의 오인, 복사본 변경 후 라벨 검토 표시 재사용을 수정했다. 마지막 결과 화면 검토의 상대 폴더명 도우미 노출과 잘못된 사진 페이지 재시도도 수정하고 재검토했다. 새 사진 조회 16개와 화면·도우미 55개 검사가 통과했다. 실제 GPT 질문은 실행하지 않았다.
+- [실제 macOS ARM 패키지 영수증](2026-11-17-geti-packaged-runtime.json): frozen parent `6f548b48…`와 패키지 내부 Python 3.14를 실제로 사용해 합성64장·38/12/14·밝기1.1 준비와 두 번의 실행을 확인했다. 프로젝트·전처리·복사본과 사진 ID/해시가 유지됐고, 정지 상태의 목록 조회는 child를 시작하지 않았다. 두 종료 후 전체 Geti 리소스 트리 변경 0, strict 서명 검증 성공과 소유 프로세스/포트 종료를 확인했다. 이 영수증은 분리된 사용자 자료를 쓴 패키지 시험이며 기존 사용자 설치본 교체와 구분한다.
 - macOS ARM CPU를 검증했다. Geti Windows 프로세스 트리 종료, 모든 모델 구조의 실제 학습, GPU·현장 정확도·실제 초보자 완주는 확인하지 않았다. Python 수준 egress 제한은 OS sandbox가 아니다. Geti 백그라운드를 기존 자동 관리 업데이트의 완전 종료 보증에 포함시키지 않았으며 보호를 낮추지 않았다.
 
 ## 소스와 경계
@@ -62,7 +65,7 @@
 
 ## 추가한 소스 CI
 
-[Geti platform source checks](../../.github/workflows/ci-geti-platform.yml)는 관련 source/gitlink/guard 변경의 PR과 main push에만 추가되는 M0 전용 workflow다. Ubuntu 24.04·Node 24에서 정확 submodule을 checkout하고 위 18개 fixture 시험과 전체 source 검사를 실행한다. npm/Python 설치·upstream script·학습은 실행하지 않으며, 기존 fast/full/gate·보호 조건을 변경하지 않는다. 현재 로컬 검사 결과와 앞으로 실행될 원격 workflow 결과는 구분한다. 이 workflow 성공은 실제 모델 학습·제품 통합의 성공이 아니다.
+[Geti platform source checks](../../.github/workflows/ci-geti-platform.yml)는 관련 source/gitlink/guard·패키지 inventory 변경의 PR과 main push에 추가된다. Ubuntu 24.04·Node 24에서 정확 submodule을 checkout하고 18개 소스 fixture, 4개 패키지 inventory 계약과 전체 source 검사를 실행한다. npm/Python 설치·upstream script·학습은 실행하지 않는다. 제품 gateway·권한·데이터·모델·작업·runtime의 11개 검사 파일은 기존 전체 CPU 회귀 목록에도 추가했으며, 빠른 검사의 관련 파일 선택에도 포함된다. 기존 검사와 fast/full/gate·보호 조건은 유지한다. 로컬 검사 결과와 실제 원격 workflow 결과를 구분하며, 이 소스 workflow만으로 모델 학습·제품 통합을 승인하지 않는다.
 
 ## 보존한 실패와 관측
 
@@ -73,9 +76,11 @@
 5. 최초 CRUD 시험의 두 종료와 실제 학습 시험의 재시작 직후 종료에서는 **Geti scheduler 자체가 InferenceWorker와 StreamLoader를 각각 10초 기다린 뒤 terminate**했다. 실제 학습을 수행한 첫 server의 worker는 이 강제 종료 없이 끝났다. harness가 신호를 강제 확대한 것은 아니지만, 전체 수명주기가 깨끗하다고 표현하지 않는다.
 6. 원본 `/api/jobs`는 현재 server session의 메모리 큐다. 재시작 뒤 작업 이력을 보존하는 플랫폼 ledger로 간주하면 안 된다. 모두비전의 기존 작업 영수증과 durable binding이 필요하다.
 
-## 다음 완료 조건
+## 릴리스 확인 조건
 
-남은 릴리스 단계는 검토 수정의 최종 재확인, 정확한 최종 head CI, 실제 OS 패키지·설치/기존 프로젝트 재접속과 매뉴얼 반영이다. 원본 플랫폼의 실행 성공과 개발용 Electron 화면만으로 설치 제품·전체 현장 수락을 선언하지 않는다.
+릴리스할 때는 정확한 최종 head CI와 위 OS 패키지 근거를 확인하고, 실제 설치·기존 프로젝트 재접속과 매뉴얼 반영을 별도 인계 기록에 남긴다. 원본 플랫폼의 실행 성공과 분리된 패키지 시험만으로 기존 사용자 자료의 교체·전체 현장 수락을 선언하지 않는다.
+
+첫 서명 패키지에서는 준비 후 재시작 시 Python 캐시가 앱 리소스를 바꿔 무결성 검사에 실패했다. 버전 확인과 실제 실행을 모두 `-B`로 고정하고 패키지의 개발 캐시를 제외했다. 실패한 패키지·해시 차이·서명 진단을 보존했으며, 최종 패키지의 첫 실행과 재실행 각각에서 전체 Geti 파일 트리와 서명을 다시 대조해 통과했다. Frozen diagnostics의 새 파일 최초 실행은 120초 제한으로 실패했고, 같은 바이트의 제한 내 진단과 acceptance-only 재검사가 통과했다. 최초 지연의 OS 검사 가설은 확인된 원인으로 쓰지 않는다.
 
 세부 설계는 [전체 플랫폼 설계](../superpowers/specs/2026-11-16-full-training-platform-design.md), 실행 순서는 [계획](../superpowers/plans/2026-11-16-full-training-platform.md)에 기록했다.
 

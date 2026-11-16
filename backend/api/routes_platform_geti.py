@@ -2,11 +2,14 @@
 from __future__ import annotations
 
 import hashlib
+import json
+import os
 from pathlib import Path
 import time
 from typing import Literal
 from urllib.parse import quote
-from fastapi import APIRouter, HTTPException, Request
+import uuid
+from fastapi import APIRouter, HTTPException, Query, Request
 from fastapi.responses import Response
 from pydantic import BaseModel, ConfigDict, Field
 from backend.platforms.geti.client import GetiError
@@ -105,6 +108,77 @@ def current_receipt(project, receipt):
     if not matches:
         return None, '현재 작업·원본 폴더·정답 묶음이 준비 당시와 달라졌습니다. 현재 데이터 버전을 다시 준비하세요. 이전 기록은 보존되어 있습니다.'
     return receipt, None
+
+
+def _image_source_root(project, receipt):
+    """Read the current identity without activating Library or migrating files."""
+    matched, message = current_receipt(project, receipt)
+    if not matched: raise HTTPException(409, message or '학습에 사용할 데이터 버전을 먼저 준비하세요.')
+    try:
+        root = Path(project['source_dataset_dir']).expanduser().resolve(strict=True)
+        project_root = Path(project['project_dir']).resolve(strict=True)
+        manifest = json.loads((project_root / 'project.json').read_text(encoding='utf-8'))
+        labelsets = json.loads((project_root / 'labelsets.json').read_text(encoding='utf-8'))
+        matches = (root.is_dir() and manifest['id'] == project['id'] and manifest['task'] == project['task']
+                   and Path(manifest['source_dataset_dir']).expanduser().resolve() == root
+                   and labelsets['active_id'] == project.get('active_labelset_id', 'default'))
+    except (OSError, ValueError, KeyError, TypeError):
+        matches = False
+    if not matches:
+        raise HTTPException(409, '현재 프로젝트 또는 원본 데이터 연결이 달라졌습니다. 프로젝트를 다시 열고 준비 상태를 확인하세요.')
+    return root
+
+
+def _source_image_sha256(path, root):
+    """Hash an admitted original and refuse a changed path or partial read."""
+    try:
+        resolved = path.resolve(strict=True)
+        if not resolved.is_relative_to(root): raise OSError('Image left admitted source')
+        before = resolved.stat()
+        digest = hashlib.sha256()
+        with resolved.open('rb') as handle:
+            opened = os.fstat(handle.fileno())
+            for block in iter(lambda: handle.read(1024 * 1024), b''): digest.update(block)
+            finished = os.fstat(handle.fileno())
+        after = path.stat()
+        identity = lambda stat: (stat.st_dev, stat.st_ino, stat.st_size, stat.st_mtime_ns, stat.st_ctime_ns)
+        if (identity(before) != identity(opened) or identity(opened) != identity(finished)
+                or identity(finished) != identity(after) or path.resolve(strict=True) != resolved):
+            raise OSError('Image changed during read')
+        return digest.hexdigest()
+    except OSError as exc:
+        raise HTTPException(409, '검사 사진을 읽는 동안 원본이 달라졌습니다. 사진 목록을 다시 확인하세요.') from exc
+
+
+@router.get('/images')
+def images(request: Request, offset: int = Query(default=0, ge=0), limit: int = Query(default=100, ge=1, le=200)):
+    project, context, key, permissions = authority(request)
+    _, store = services(request)
+    receipt = receipt_for(store, key)
+    root = _image_source_root(project, receipt)
+    from backend.engine.grouped_dataset_views import source_image_paths
+    try:
+        inventory = sorted((path.relative_to(root).as_posix(), path) for path in source_image_paths(root, project['task'])
+                           if path.resolve().is_relative_to(root))
+    except (OSError, ValueError) as exc:
+        raise HTTPException(409, '현재 원본 사진 목록을 읽을 수 없습니다. 원본 데이터 연결을 확인하세요.') from exc
+    frozen = {row['relative_path']: row for row in receipt.get('source_mapping', [])}
+    items = []
+    for relative, path in inventory[offset:offset + limit]:
+        digest = _source_image_sha256(path, root)
+        transferred = frozen.get(relative)
+        if transferred and digest != transferred.get('sha256'):
+            raise HTTPException(409, '준비한 데이터 버전의 원본 사진이 달라졌습니다. 현재 데이터를 다시 준비하세요.')
+        identifier = transferred.get('media_id') if transferred else str(uuid.uuid5(uuid.NAMESPACE_URL, key + ':' + relative + ':' + digest))
+        if not identifier: raise HTTPException(409, '준비한 데이터의 사진 식별자를 확인할 수 없습니다. 현재 데이터를 다시 준비하세요.')
+        items.append({'image_uuid': identifier, 'relative_path': relative, 'file_name': path.name,
+                      'source_path': str(path.resolve()), 'sha256': digest, 'transferred': bool(transferred)})
+    current_project, current_context, current_key, _ = authority(request)
+    latest = receipt_for(store, current_key)
+    if current_key != key or latest != receipt or _image_source_root(current_project, latest) != root:
+        raise HTTPException(409, '사진 목록을 읽는 동안 현재 프로젝트 또는 데이터 버전이 달라졌습니다. 다시 확인하세요.')
+    # These are explicitly admitted original paths, never private Geti storage.
+    return {'items': items, 'pagination': {'offset': offset, 'limit': limit, 'total': len(inventory)}}
 
 
 def _operation(store, key, actor, body, kind):

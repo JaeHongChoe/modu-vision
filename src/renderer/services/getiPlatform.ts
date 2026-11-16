@@ -1,4 +1,4 @@
-import {getApiDiagnosticScope, getProjectContext, request, type LibraryImage, type ProjectConfig, type ProjectContext} from './api';
+import {getApiDiagnosticScope, getProjectContext, request, type ProjectConfig, type ProjectContext} from './api';
 import type {FixedInputRecipe} from '../components/training/inputPreparation';
 
 export interface PlatformDatasetReceipt {
@@ -6,6 +6,7 @@ export interface PlatformDatasetReceipt {
   source_task?: string;
   dataset_version_id: string; manifest_sha256: string; dataset_fingerprint: string;
   labelset_id: string; split_sha256: string; recipe_sha256?: string; preparation_id?: string;
+  input_recipe?: FixedInputRecipe | null;
   counts: {training: number; validation: number; testing: number; total: number};
   source_mapping: Array<{relative_path: string; sha256: string; media_id: string; subset: string; label?: string}>;
   class_mapping: unknown; created_at: string;
@@ -55,6 +56,13 @@ export interface PlatformPrediction {
   predictions?: unknown[]; annotations?: unknown[]; result?: unknown;
   source_sha256?: string; recipe_sha256?: string;
 }
+export interface PlatformSourceImage {
+  image_uuid: string; relative_path: string; file_name: string; source_path: string;
+  sha256: string; transferred: boolean;
+}
+interface PlatformSourcePage {
+  items: PlatformSourceImage[]; pagination: {offset:number;limit:number;total:number};
+}
 export type PlatformActionKind = 'refresh' | 'import' | 'native' | 'start' | 'prepare' | 'weights' | 'train' | 'results';
 export interface PlatformNextAction {kind: PlatformActionKind; label: string; reason: string; disabled?: boolean}
 export function platformTrainingTask(status:PlatformStatus,targetTask?:string):string {
@@ -99,8 +107,8 @@ type Project = Pick<ProjectConfig, 'id' | 'name' | 'task' | 'source_dataset_dir'
 export interface PlatformWorkspaceState {
   status: PlatformStatus | null; loading: boolean; busy: string | null; error: string; notice: string;
   uncertain: boolean; architectureId: string; epochs: string; epochsError: string;
-  modelId: string; variantId: string; images: LibraryImage[]; imageId: string;
-  imageLoading: boolean; imageError: string; nextImageCursor: string | null; imagesLoaded: boolean;
+  modelId: string; variantId: string; images: PlatformSourceImage[]; imageId: string;
+  imageLoading: boolean; imageError: string; nextImageOffset: number | null; imagesLoaded: boolean;
   prediction: PlatformPrediction | null; adoptionReview: boolean;
   adopted: {dataset_version_id: string; labelset_id: string} | null; jobLimit: number;
   targetTask: string;
@@ -120,12 +128,20 @@ function refused(cause: unknown): boolean {
   return typeof code === 'number' && code >= 400 && code < 500;
 }
 const prefix = '/api/platform/geti';
+function withinSource(path:string, root:string):boolean {
+  const normal = (value:string) => value.replace(/\\/g,'/').replace(/\/+$/,'');
+  let candidate = normal(path), source = normal(root);
+  if (!candidate.startsWith('/') && !/^[A-Za-z]:\//.test(candidate)) return false;
+  if (candidate.split('/').some(part => part === '.' || part === '..')) return false;
+  if (/^[A-Za-z]:\//.test(source) || source.startsWith('//')) {candidate=candidate.toLowerCase();source=source.toLowerCase();}
+  return !!source && candidate.startsWith(source + '/');
+}
 
 /** An in-memory view of the server ledger. It never schedules or resumes a mutation on mount. */
 export class GetiPlatformController {
   private value: PlatformWorkspaceState = {status:null,loading:false,busy:null,error:'',notice:'',uncertain:false,
     architectureId:'',epochs:'5',epochsError:'',modelId:'',variantId:'',images:[],imageId:'',imageLoading:false,
-    imageError:'',nextImageCursor:null,imagesLoaded:false,prediction:null,adoptionReview:false,adopted:null,jobLimit:10,targetTask:''};
+    imageError:'',nextImageOffset:null,imagesLoaded:false,prediction:null,adoptionReview:false,adopted:null,jobLimit:10,targetTask:''};
   private listeners = new Set<() => void>();
   private abort = new AbortController();
   private receiptAbort = new AbortController();
@@ -175,7 +191,7 @@ export class GetiPlatformController {
       this.receiptAbort.abort();this.receiptAbort = new AbortController();this.retirePrediction();
       this.adoptionOperation = null;
       Object.assign(retired,{adoptionReview:false,adopted:null,images:[],imageId:'',imageLoading:false,
-        imageError:'',nextImageCursor:null,imagesLoaded:false,prediction:null,notice:''});
+        imageError:'',nextImageOffset:null,imagesLoaded:false,prediction:null,notice:''});
     }
     const targetTask = status.dataset?.source_task === 'segmentation' && status.dataset.task === 'instance_segmentation' ? status.dataset.task
       : changedReceipt && !status.dataset ? '' : this.value.targetTask;
@@ -334,17 +350,26 @@ export class GetiPlatformController {
     const sameRead = () => this.sameReceipt(epoch,identity) && generation === this.imageRead;
     this.update({imageLoading:true,imageError:''});
     try {
-      const query = new URLSearchParams({state:'valid',usage_state:'active',limit:'25'});
-      if (more && this.value.nextImageCursor) query.set('cursor',this.value.nextImageCursor);
-      const page = await this.call<{items: LibraryImage[];next_cursor: string | null}>(`/api/dataset/library/images?${query}`,'GET',undefined,false,this.receiptAbort.signal);
+      const offset = more ? this.value.nextImageOffset ?? 0 : 0;
+      const query = new URLSearchParams({offset:String(offset),limit:'100'});
+      const page = await this.call<PlatformSourcePage>(`${prefix}/images?${query}`,'GET',undefined,false,this.receiptAbort.signal);
       if (!sameRead()) return;
+      const pagination = page.pagination;
+      if (!Array.isArray(page.items) || !pagination || pagination.offset !== offset
+        || !Number.isSafeInteger(pagination.limit) || pagination.limit < 1 || pagination.limit > 100
+        || !Number.isSafeInteger(pagination.total) || pagination.total < offset + page.items.length || page.items.length > pagination.limit) {
+        throw new Error('사진 목록의 페이지 기준이 달라졌습니다. 사진 목록을 다시 확인하세요.');
+      }
       const allowed = new Map(receipt.source_mapping.map(row => [row.relative_path,row]));
-      const items = page.items.filter(row => row.valid && typeof row.file_path === 'string' && (row.file_path.startsWith('/') || /^[A-Za-z]:[\\/]/.test(row.file_path) || row.file_path.startsWith('\\\\'))
-        && allowed.get(row.relative_path)?.sha256 === row.sha256);
-      items.sort((a,b) => Number(allowed.get(b.relative_path)?.subset === 'testing') - Number(allowed.get(a.relative_path)?.subset === 'testing'));
+      const items = page.items.filter(row => typeof row.image_uuid === 'string' && !!row.image_uuid && typeof row.sha256 === 'string' && !!row.sha256
+        && typeof row.source_path === 'string' && withinSource(row.source_path,this.options.project.source_dataset_dir || '')
+        && (row.transferred === true ? allowed.get(row.relative_path)?.sha256 === row.sha256 && allowed.get(row.relative_path)?.media_id === row.image_uuid : row.transferred === false && !allowed.has(row.relative_path)));
+      items.sort((a,b) => Number(b.transferred && allowed.get(b.relative_path)?.subset === 'testing') - Number(a.transferred && allowed.get(a.relative_path)?.subset === 'testing'));
       const images = more ? [...this.value.images,...items.filter(row => !this.value.images.some(old => old.image_uuid === row.image_uuid))] : items;
+      const next = page.pagination.offset + page.pagination.limit;
+      const nextImageOffset = Number.isSafeInteger(next) && next > page.pagination.offset && next < page.pagination.total ? next : null;
       this.retirePrediction();
-      this.update({images,nextImageCursor:page.next_cursor,imagesLoaded:true,imageId:images.some(row => row.image_uuid === this.value.imageId) ? this.value.imageId : images[0]?.image_uuid ?? '',prediction:null});
+      this.update({images,nextImageOffset,imagesLoaded:true,imageId:images.some(row => row.image_uuid === this.value.imageId) ? this.value.imageId : images[0]?.image_uuid ?? '',prediction:null});
     } catch (cause) {if (sameRead()) this.update({imageError:errorText(cause)});}
     finally {if (sameRead()) this.update({imageLoading:false});}
   }
@@ -358,7 +383,7 @@ export class GetiPlatformController {
       && this.value.modelId === model.id && this.value.variantId === variantId && this.value.imageId === image.image_uuid;
     await this.mutate('predict', async () => {
       generation = ++this.predictionRead;
-      const prediction = await this.call<PlatformPrediction>(`${prefix}/predict`, 'POST', {model_id:model.id,variant_id:variantId,image_path:image.file_path},false,this.predictionAbort.signal);
+      const prediction = await this.call<PlatformPrediction>(`${prefix}/predict`, 'POST', {model_id:model.id,variant_id:variantId,image_path:image.source_path},false,this.predictionAbort.signal);
       if (samePrediction()) this.update({prediction,notice:'선택한 사진의 예측 응답을 받았습니다. 이 결과는 독립 시험 평가나 정답 채택이 아닙니다.'});
     },samePrediction);
   }

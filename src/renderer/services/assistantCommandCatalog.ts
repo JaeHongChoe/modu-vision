@@ -18,6 +18,7 @@ export interface CommandCatalogDeps {
 export const ASSISTANT_COMMAND_READ_ALLOWLIST = [
   'GET /health', 'GET /api/project/labelsets', 'GET /api/training/status',
   'GET /api/training/queue', 'GET /api/training/jobs', 'GET /api/training-workspace/tasks',
+  'GET /api/platform/geti/status',
   'GET /api/provenance/impact', 'GET /api/models/capabilities', 'GET /api/label-suggestions/stats',
 ] as const;
 const SAFE_READ = new Set<string>(ASSISTANT_COMMAND_READ_ALLOWLIST);
@@ -57,6 +58,26 @@ function safeValue(value: unknown, metadata: boolean, flags: {truncated: boolean
   return Object.fromEntries(entries.slice(0, 60).map(([key, item]) => [metadata && /^[A-Za-z_$][A-Za-z0-9_.$-]{0,239}$/.test(key) ? key : diagnosticText(key, 120) || '[가림]',
     (!metadata && PRIVATE_KEY.test(key)) || /^(authorization|cookie|secret|password|token|api_key|access_token|refresh_token)$/i.test(key) && !object(item)
       ? '[가림]' : safeValue(item, metadata, flags, depth + 1, budget)]));
+}
+/** The platform receipt is an application contract, not a provider payload.
+ * Exclude per-photo paths and bindings before the common diagnostic redactor. */
+function platformStatusObservation(value: unknown): unknown {
+  const row = object(value);if (!row) return value;
+  const pick = (value: unknown, keys: string[]) => {
+    const source = object(value);return source ? Object.fromEntries(keys.filter(key => key in source).map(key => [key, source[key]])) : null;
+  };
+  return {
+    available: row.available,
+    runtime: pick(row.runtime, ['state', 'message', 'degraded']),
+    project: pick(row.project, ['task', 'supported', 'linked', 'binding_state', 'binding_message']),
+    dataset: row.dataset ? {...pick(row.dataset, ['task', 'source_task', 'recipe_sha256']), counts: pick(object(row.dataset)?.counts, ['training', 'validation', 'testing', 'total'])} : null,
+    jobs: Array.isArray(row.jobs) ? row.jobs.map(job => pick(job, ['id', 'status', 'progress', 'message', 'error', 'model_id', 'architecture_id', 'created_at', 'finished_at', 'worker_exited'])) : null,
+    models: Array.isArray(row.models) ? row.models.map(model => {
+      const source = object(model);
+      return {...pick(model, ['id', 'architecture', 'task']), variants: Array.isArray(source?.variants) ? source.variants.map(variant => pick(variant, ['id', 'format', 'precision', 'weights_size', 'prediction_supported'])) : null};
+    }) : null,
+    native_tasks: row.native_tasks,
+  };
 }
 function catalogDocument(value: unknown): Record<string, unknown> {
   const row = object(value);
@@ -160,7 +181,8 @@ export function createAssistantCommandCatalog(deps: CommandCatalogDeps): Assista
         if (row.gpt_permission !== 'read') throw denied();
         // The path is chosen from this constant allowlist, never from the server descriptor or model arguments.
         const path = args.operation.slice(4), raw = await get(path, check, 'observation_unavailable', observation);
-        const result = bound({...envelope(flags), operation: args.operation, observed_at: new Date().toISOString(), data: safeValue(raw, false, flags)}, flags);
+        const data = args.operation === 'GET /api/platform/geti/status' ? platformStatusObservation(raw) : raw;
+        const result = bound({...envelope(flags), operation: args.operation, observed_at: new Date().toISOString(), data: safeValue(data, false, flags)}, flags);
         observation?.end('ok');return result;
       } catch (cause) {observation?.end('error');throw cause;}
     },

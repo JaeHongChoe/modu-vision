@@ -1,6 +1,6 @@
 name: Geti platform source checks
 
-# Additive M0 coverage only: no training, package installation or upstream code.
+# Additive source/inventory contracts: no training, package installation or upstream execution.
 "on":
   pull_request:
     paths:
@@ -8,6 +8,9 @@ name: Geti platform source checks
       - 'platforms/geti/**'
       - 'scripts/geti-platform.cjs'
       - 'scripts/tests/geti-platform.test.cjs'
+      - 'scripts/geti-package-runtime.cjs'
+      - 'scripts/tests/geti-package-runtime.test.cjs'
+      - 'scripts/build_geti_runtime.py'
       - '.github/workflows/ci-geti-platform.yml'
   push:
     branches: [main]
@@ -16,6 +19,9 @@ name: Geti platform source checks
       - 'platforms/geti/**'
       - 'scripts/geti-platform.cjs'
       - 'scripts/tests/geti-platform.test.cjs'
+      - 'scripts/geti-package-runtime.cjs'
+      - 'scripts/tests/geti-package-runtime.test.cjs'
+      - 'scripts/build_geti_runtime.py'
       - '.github/workflows/ci-geti-platform.yml'
 
 permissions:
@@ -40,5 +46,7 @@ jobs:
           node-version: '24'
       - name: Source guard contracts with owned Git fixtures
         run: node --test scripts/tests/geti-platform.test.cjs
+      - name: Packaged runtime inventory contracts
+        run: node --test scripts/tests/geti-package-runtime.test.cjs
       - name: Verify the complete pinned upstream source
         run: node scripts/geti-platform.cjs check --json
