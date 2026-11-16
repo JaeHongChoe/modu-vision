@@ -1,0 +1,74 @@
+{
+  "schema_version": 1,
+  "scope": "Source-only repair of real model-free fixed-ROI partial execution plus Korean user-facing refusals. Package/CI/delivery qualification is recorded separately.",
+  "before_head": "efd99d583da8a46df7b9c6f901efc9bfebd96857",
+  "original_full": {
+    "run_id": 43946303184,
+    "url": "https://github.com/JaeHongChoe/modu-vision/actions/runs/43946303184",
+    "conclusion": "failure",
+    "source": {
+      "job_id": 133598131006,
+      "passed": 6275,
+      "skipped": 21,
+      "failed": 2,
+      "log_sha256": "62df086da3433d14ce3bf5cc7ff00b004d4f6e3fb97d80692863accc8a259fe0",
+      "cause": "Four new literal HTTP refusals lacked Korean text; original Korean guard remains unchanged."
+    },
+    "browser": {
+      "job_id": 133598131728,
+      "passed": 373,
+      "skipped": 3,
+      "failed": 6,
+      "log_sha256": "ae91a48d6ff57900e0ee44f62a66672d6cbbd13a819a93bacd4a13785cbb2187",
+      "artifact_sha256": "e8404226f3f361a50f623512393467aba8378465187f925ace4ad633ef8d6eef",
+      "causes": [
+        "Four current routes source pins were stale before GUI exercise.",
+        "Actual comparison/debugger model-free partial execution hit an unbound is_platform_reference predicate."
+      ]
+    }
+  },
+  "causal_confirmation": {
+    "actual_ci_error": "cannot access free variable is_platform_reference where it is not associated with a value in enclosing scope",
+    "comparison_error_resource_sha256": "a1db1e0f35fe5edaf835a15cc4420f63f5a6735150026dc2da44c9f9339e5608",
+    "debugger_error_resource_sha256": "d6556d4225ed8c3bb143bd7d9a4f8a9cad768def0a2f7834509187d2a2f3bd61",
+    "real_asgi_red": "2 HTTP500 failures and 1 unchanged default-target refusal pass",
+    "real_asgi_green_initial": "36 passed across partial cancellation, comparison integrity, execution target and Geti native boundaries"
+  },
+  "changes": {
+    "routes_flowchart_sha256": "3b88469828aa258ac8af548c31bd4819c78fa2a9bf6a0a3e6f9c1c416cdd22a2",
+    "routes_inspections_sha256": "1d6cdcc48927078f26367cc6c67430e0fbc1d9bea503807cdb6cf38a297aa366",
+    "production": "Move the existing predicate/resolver import before the model-node loop; translate four refusal strings. No HTTP status, device, project, authorization, ownership, model verification or fallback changes.",
+    "regression": "Three genuine ASGI direct/prepared/default-target cases in the already CI-selected test_geti_platform_flow_boundary.py; real ROI work, downstream skip, REVIEW/notOK, prepared terminal result and zero active execution.",
+    "pins": "Four final route literals plus one previously masked single-quoted engine pin; TypeScript AST checks all 114 current source pins. Engine content remains unchanged.",
+    "history": "Only current SHA/reason fields in 8 existing declarations refreshed. All 229 rows, historical receipts, execution hashes, retained ancestor and other 221 declarations remain unchanged."
+  },
+  "final_local": {
+    "geti_cpu": {
+      "files": 12,
+      "passed": 115,
+      "skipped": 5,
+      "log_sha256": "3c48279e0c6ce2568c860d4ccfabc7d574f7e326f929f769bcfb8225be4c11ab"
+    },
+    "korean_and_boundary": {
+      "passed": 40,
+      "log_sha256": "c240dd0f74e17ea9cedd25a33d6393855d22bfa6229e2f1e037e02a60caf2397"
+    },
+    "actual_browser": {
+      "passed": 6,
+      "failed": 0,
+      "log_sha256": "b8cdfca4c5159659d57f461feac5f2741a237e1efb4d35b1001ac86b0d5cb2d0"
+    },
+    "evidence_gates": "Both existing service/action checks pass, zero errors; E2E typecheck and generated API type check pass.",
+    "history_damage_controls": "32 related provenance tests pass, including 10 damage controls; no checker changes.",
+    "independent_review": "clear"
+  },
+  "preserved_intermediate_failures": [
+    "First browser repair batch had 5 pass and 1 failure at a second previously masked engine source pin.",
+    "Relocating the ASGI test into the CI-selected file initially omitted its shared RUN constant; those test-only failures were preserved and corrected."
+  ],
+  "limits": [
+    "No new model training, provider call, real account operation or live app/web change in this repair.",
+    "Source tests are not acceptance of a newly frozen backend or app; previous8876/8b package is historical after these Python changes.",
+    "Previous failures and macOS managed-daemon qualification limits remain recorded."
+  ]
+}

@@ -79,7 +79,7 @@ const UI_SOURCE={
  "src/renderer/components/flowchart/flowchartGraph.ts": "2db91b8c7d514e39a1dfbb5edf60c52c82d69b3c51aadb47e17b9cfe9e640743",
  "src/renderer/components/flowchart/flowchartViewport.ts": "65564c68bb1242e5c78767cdbc1b77596815b14ef071d68bfb96b42799e5aac1",
  "src/renderer/components/common/ImagePickerModal.tsx": "169020303e9b7a1de70cc483d3a19a7881bbb84b22ed73e87053f06e9af7f72f",
- "backend/api/routes_flowchart.py": "8f8964c35542aade10baf627341ecf5190d75f62438ddfc52fdad52706cd952a",
+ "backend/api/routes_flowchart.py": "3b88469828aa258ac8af548c31bd4819c78fa2a9bf6a0a3e6f9c1c416cdd22a2",
  "src/renderer/components/flowchart/FlowNodeDebugger.tsx": "82b81c5ceb3556f4bdc14fd7a93edbe9657a528a1af140c5755aa9e6daa83a2f",
  "src/renderer/components/flowchart/flowWorkspace.ts": "17c39a0236efa5b444fcc99751bc8db95d613071c916ecf0e3ec44ebb49253e4",
  "scripts/e2e/fixtures/remaining-project-handoff.ts": "7a7c74a2f42a5d6ad991dadc97626c1f8330f962edaf73fd461d31f9c4764904",

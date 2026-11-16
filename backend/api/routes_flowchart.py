@@ -667,7 +667,7 @@ def verify_flowchart_models(request: FlowchartModelVerificationRequest, http_req
             except (ValueError,OSError) as exc: raise HTTPException(409,str(exc)) from exc
             verified.append(model.job_id)
             continue
-        if model.platform_model is not None: raise HTTPException(409,'Platform model requires its exact typed reference')
+        if model.platform_model is not None: raise HTTPException(409,'학습 작업대 모델은 저장된 모델 참조와 작업 유형이 일치해야 합니다. 모델을 다시 선택하세요.')
         if not valid_flow_job(model.job_id, model.task):
             raise HTTPException(status_code=409, detail=f"모델 작업 ID가 올바르지 않습니다: {model.job_id}")
         try:
@@ -1393,17 +1393,17 @@ def run_flowchart(req: FlowchartRunRequest, request: Request = None):
         model_contexts: Dict[str, Any] = {}
         local_model_jobs: set[str] = set()
         verified_checkpoints: Dict[tuple[str, str], Path] = {}
+        from backend.platforms.geti.inspection import is_platform_reference,resolve_reference
         for node in ordered_nodes:
             if flow_model_task(node) is None:
                 continue
             job_id = node.data.model_job_id
             if not job_id:
                 raise HTTPException(status_code=409, detail=f"{node.data.label} 노드에 모델이 연결되어 있지 않습니다. 학습을 끝낸 모델을 고르세요.")
-            from backend.platforms.geti.inspection import is_platform_reference,resolve_reference
             if is_platform_reference(job_id):
-                if project is None or request is None: raise HTTPException(409,'Platform model needs an active authorized project')
+                if project is None or request is None: raise HTTPException(409,'학습 작업대 모델을 실행하려면 사용할 권한이 있는 프로젝트를 먼저 여세요.')
                 if req.execution_target=='selected_compute' or req.device!='cpu':
-                    raise HTTPException(422,'Geti platform models currently execute on this owned CPU runtime')
+                    raise HTTPException(422,'학습 작업대 모델은 현재 이 컴퓨터의 CPU에서만 실행할 수 있습니다. 실행 위치를 이 컴퓨터로, 장치를 CPU로 선택하세요.')
                 try: resolve_reference(request,project,project.get('source_dataset_dir'),job_id,flow_model_task(node),export=True)
                 except (ValueError,OSError) as exc: raise HTTPException(409,str(exc)) from exc
                 local_model_jobs.add(job_id)

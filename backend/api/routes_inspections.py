@@ -85,7 +85,7 @@ def _model_references(pipeline: FlowchartPipeline) -> Dict[str, str]:
         platform=is_platform_reference(job_id)
         if platform:
             try: parse_reference(job_id)
-            except ValueError as exc: raise HTTPException(409,'Malformed platform inspection model reference') from exc
+            except ValueError as exc: raise HTTPException(409,'학습 작업대 모델 참조가 올바르지 않습니다. 저장된 모델을 다시 선택하세요.') from exc
         if (not job_id or not (platform or valid_flow_job(job_id, task))
                 or task not in FLOW_TASKS
                 or (job_id in references and references[job_id] != task)):

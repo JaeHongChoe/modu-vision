@@ -99,3 +99,54 @@ def test_unavailable_explicit_geti_adapter_never_falls_back_to_native(monkeypatc
     monkeypatch.setattr(engine,'_get_inspection_model',lambda **kwargs:pytest.fail('Unavailable Geti adapter reached native checkpoint loader'))
     with pytest.raises(ModuleNotFoundError,match='Owned Geti adapter unavailable'):
         engine._inspect_crops(pixels,[{'id':'full_image','bbox':[0,0,32,32]}],node)
+
+
+@pytest.mark.parametrize('target,prepared,expected_status', [
+    ('local', False, 200),
+    ('local', True, 200),
+    ('model_compute', False, 422),
+])
+def test_model_free_fixed_ROI_partial_preserves_execution_contract(
+        tmp_path, monkeypatch, target, prepared, expected_status):
+    """A debug scope with no model must reach real ROI work, not an unbound adapter predicate."""
+    import asyncio
+    import httpx
+    from backend.api import routes_flowchart as flows
+    from backend.tests.test_flowchart_partial_cancel import _stack, _prepare, _terminal, _unchanged, _no_native_claim, RUN
+    from backend.tests.test_original_owned_flow_lifetime import _login_current
+    app, _, observer, project, graph, body, roi, split, basis, audit = _stack(tmp_path, monkeypatch)
+    body = {**body, 'stop_node_id':roi}
+    if target == 'model_compute':
+        # Omission exercises the public request default; it must keep refusing
+        # partial execution without an explicitly selected execution location.
+        body.pop('execution_target')
+    model = next(node for node in graph.nodes if node.data.node_type == 'inspection')
+    assert model.data.model_job_id is None
+
+    async def sequence():
+        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url='http://owned.invalid') as client:
+            headers = await _login_current(client, app, project)
+            run_id = await _prepare(client, headers, body) if prepared else None
+            response = await client.post(RUN, headers=headers,
+                json={**body, **({'partial_run_id':run_id} if prepared else {})})
+            assert response.status_code == expected_status, response.text
+            if expected_status != 200:
+                return
+            result = response.json()
+            assert result['status'] == 'partial' and result['stop_node_id'] == roi
+            assert result['final_verdict'] == 'REVIEW' and result['is_ok'] is False
+            assert result['execution_target'] == 'local' and result['execution_device'] == 'cpu'
+            steps = {step['node_id']:step for step in result['execution_steps']}
+            assert steps[roi]['status'] == 'passed'
+            assert steps[roi]['artifacts'][0]['bbox'] == [0, 0, 32, 32]
+            assert steps[split]['skip_reason'] == 'outside_debug_scope'
+            assert steps[model.id]['skip_reason'] == 'outside_debug_scope'
+            if prepared:
+                assert result['partial_run_id'] == run_id
+                terminal = await _terminal(client, headers, run_id)
+                assert terminal['state'] == 'completed' and terminal['execution_finished'] is True
+
+    asyncio.run(sequence())
+    assert flows._CPU_ENGINE.execution_resources()['active_executions'] == 0
+    _unchanged(basis, audit)
+    _no_native_claim(observer)
