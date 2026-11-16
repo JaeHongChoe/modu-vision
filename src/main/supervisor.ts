@@ -294,6 +294,10 @@ export class BackendSupervisor extends EventEmitter {
       const appRoot = this.getAppRoot();
       const backendCwd = this.getBackendWorkingDirectory(appRoot);
       const userDataDir = getElectronApp()?.getPath('userData');
+      const resourcesRoot = process.resourcesPath;
+      const getiRuntimeDescriptor = getElectronApp()?.isPackaged
+        && typeof resourcesRoot === 'string' && resourcesRoot.length > 0 && path.isAbsolute(resourcesRoot)
+        ? path.join(resourcesRoot, 'geti-platform', 'runtime.json') : undefined;
       let env:NodeJS.ProcessEnv = {
         ...process.env,
         PYTHONUNBUFFERED: '1',
@@ -301,8 +305,8 @@ export class BackendSupervisor extends EventEmitter {
         PYTHONPATH: appRoot,
         VISION_AI_STUDIO_API_TOKEN: apiToken,
         VISION_AI_APP_VERSION: getElectronApp()?.getVersion() || '',
-        ...(getElectronApp()?.isPackaged ? {
-          MODU_GETI_RUNTIME_DESCRIPTOR: path.join(process.resourcesPath, 'geti-platform', 'runtime.json'),
+        ...(getiRuntimeDescriptor ? {
+          MODU_GETI_RUNTIME_DESCRIPTOR: getiRuntimeDescriptor,
         } : {}),
         ...(userDataDir ? { VISION_AI_STUDIO_USER_DATA_DIR: userDataDir } : {}),
       };
