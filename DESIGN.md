@@ -407,3 +407,21 @@ conflict, model-binding and original-preservation contracts remain in force.
 Classification and segmentation support the existing fixed transformations;
 other families visibly retain their task-specific input paths. This surface is
 not an arbitrary training DAG, nor a claim that unsupported transforms execute.
+
+### 2026-11-16 REA observation refinement
+
+The user requested a closer Supervisely interaction reference after actual REA
+observation. The preparation surface uses the observed persistent left step rail
+and a large single settings pane; compact containers switch to a horizontal
+rail with matching ARIA orientation and arrow keys. Native purpose choices use
+readable cards. The model step contains the next job's configuration and explicit
+start, while active status, stop, recovery and saved run evidence remain outside
+hidden panes. Scoped remediation reveals its owning pane before focusing a
+control; navigation never starts work.
+
+The preprocessing surface keeps its ordered transform controls beside a large
+before/after view. A selected-prefix response is shown as partial evidence and
+cannot qualify an unexecuted full recipe. The last prefix is full-equivalent.
+Existing warm/forest tokens and Korean typography remain; no vendor branding,
+platform source or external runtime dependency is introduced into the product.
+See `docs/verification/2026-11-16-rea-supervisely.md` for the actual tool scope.

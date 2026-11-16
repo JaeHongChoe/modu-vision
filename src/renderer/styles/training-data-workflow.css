@@ -1,5 +1,8 @@
 /* Preparation navigation inherits the workspace palette and its novice/light adapters. */
 .training-data-workflow {
+  display: grid;
+  grid-template-columns: 12.5rem minmax(0, 1fr);
+  gap: var(--workspace-space-6);
   min-width: 0;
   color: var(--workspace-text);
   font-size: var(--workspace-font-body);
@@ -8,65 +11,49 @@
 
 .training-data-workflow__rail {
   display: flex;
-  align-items: stretch;
-  gap: var(--workspace-space-6);
-  overflow-x: auto;
-  padding: var(--workspace-space-2) var(--workspace-space-1) var(--workspace-space-4);
-  scrollbar-gutter: stable;
+  flex-direction: column;
+  gap: var(--workspace-space-1);
+  min-width: 0;
+  padding: var(--workspace-space-2) var(--workspace-space-4) var(--workspace-space-2) 0;
+  border-right: 1px solid var(--workspace-border);
 }
 
-.training-data-workflow .training-data-workflow__tab {
+.training-data-workflow .training-data-workflow__rail .training-data-workflow__tab {
   position: relative;
   display: flex;
-  flex: 1 0 10.75rem;
-  flex-direction: column;
-  align-items: stretch;
+  flex: none;
+  align-items: flex-start;
   justify-content: flex-start;
-  gap: var(--workspace-space-2);
-  min-width: 10.75rem;
-  padding: var(--workspace-space-4);
+  gap: var(--workspace-space-3);
+  min-height: 4.5rem;
+  padding: var(--workspace-space-3) var(--workspace-space-2);
   text-align: left;
   color: var(--workspace-text);
-  background: var(--workspace-surface);
-  border: 1px solid var(--workspace-border);
+  background: transparent;
+  border: 1px solid transparent;
   border-radius: var(--workspace-radius);
   line-height: 1.55;
   white-space: normal;
 }
 
+.training-data-workflow__tab-copy { display: block; min-width: 0; }
 .training-data-workflow__tab:not(:last-child)::after {
-  content: '→';
+  content: '';
   position: absolute;
-  left: 100%;
-  top: 50%;
-  width: var(--workspace-space-6);
-  color: var(--workspace-muted);
-  text-align: center;
-  transform: translateY(-50%);
+  left: calc(var(--workspace-space-2) + .875rem);
+  top: calc(var(--workspace-space-3) + 1.75rem);
+  bottom: calc(-1 * var(--workspace-space-4));
+  border-left: 1px solid var(--workspace-border);
   pointer-events: none;
 }
 
-.training-data-workflow .training-data-workflow__tab:hover {
-  background: var(--workspace-inset);
-  border-color: var(--workspace-accent);
-}
-
-.training-data-workflow .training-data-workflow__tab:active {
-  background: var(--workspace-bg);
-}
-
+.training-data-workflow .training-data-workflow__tab:hover { background: var(--workspace-inset); }
+.training-data-workflow .training-data-workflow__tab:active { background: var(--workspace-bg); }
 .training-data-workflow .training-data-workflow__tab[aria-selected='true'] {
-  border-color: var(--workspace-accent);
+  border-color: var(--workspace-border);
   background: var(--workspace-inset);
-  box-shadow: inset 0 3px 0 var(--workspace-accent);
 }
-
-.training-data-workflow__tab-top {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--workspace-space-2);
-}
+.training-data-workflow__tab[aria-selected='true'] .training-data-workflow__title { color: var(--workspace-accent); }
 
 .training-data-workflow__number {
   display: grid;
@@ -75,7 +62,10 @@
   width: 1.75rem;
   height: 1.75rem;
   border: 1px solid var(--workspace-border);
-  border-radius: 50%;
+  position: relative;
+  z-index: 1;
+  border-radius: var(--workspace-radius);
+  background: var(--workspace-surface);
   font-size: var(--workspace-font-small);
   font-variant-numeric: tabular-nums;
   color: var(--workspace-muted);
@@ -110,16 +100,26 @@
   overflow-wrap: anywhere;
 }
 
+/* The compact rail keeps the complete readiness reason as its accessible description.
+   The selected stage presents the same reason visibly once. */
 .training-data-workflow__summary {
-  font-size: var(--workspace-font-small);
-  font-weight: 400;
-  color: var(--workspace-muted);
-  overflow-wrap: anywhere;
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
 }
 
 .training-data-workflow__panel {
   min-width: 0;
-  margin: var(--workspace-space-2) var(--workspace-space-1) 0;
+  display: flex;
+  flex-direction: column;
+  min-height: 27rem;
+  margin: 0;
   padding: var(--workspace-space-6);
   border: 1px solid var(--workspace-border);
   border-radius: var(--workspace-radius);
@@ -155,7 +155,7 @@
   overflow-wrap: anywhere;
 }
 
-.training-data-workflow__content { min-width: 0; }
+.training-data-workflow__content { min-width: 0; flex: 1; }
 
 .training-data-workflow [data-input-operation][aria-pressed='true'] {
   border-color: var(--workspace-accent);
@@ -173,14 +173,73 @@
   border-top: 1px solid var(--workspace-border);
 }
 
-@media (max-width: 640px) {
-  .training-data-workflow__panel { padding: var(--workspace-space-4); }
-  .training-data-workflow__panel-header { flex-wrap: wrap; }
+.training-data-workflow[data-compact='true'] { grid-template-columns: minmax(0, 1fr); gap: var(--workspace-space-4); }
+.training-data-workflow[data-compact='true'] .training-data-workflow__rail {
+  flex-direction: row;
+  align-items: stretch;
+  overflow-x: auto;
+  border-right: 0;
+  border-bottom: 1px solid var(--workspace-border);
+  padding: var(--workspace-space-1) 0 var(--workspace-space-3);
+  scrollbar-gutter: stable;
 }
+.training-data-workflow[data-compact='true'] .training-data-workflow__tab { flex: 1 0 9.25rem; }
+.training-data-workflow[data-compact='true'] .training-data-workflow__tab::after { display: none; }
+.training-data-workflow[data-compact='true'] .training-data-workflow__panel { padding: var(--workspace-space-4); min-height: 24rem; }
+.training-data-workflow[data-compact='true'] .training-data-workflow__panel-header { flex-wrap: wrap; }
+
+.training-family-catalog { min-width: 0; color: var(--workspace-text); }
+.training-family-catalog__intro { margin-top: var(--workspace-space-2); color: var(--workspace-muted); }
+.training-family-catalog__picker { margin-top: var(--workspace-space-4); }
+.training-family-catalog__picker-content { padding: var(--workspace-space-4); }
+.training-family-catalog__search {
+  display: flex;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  gap: var(--workspace-space-3);
+  margin-top: var(--workspace-space-6);
+}
+.training-family-catalog__search .workspace-field { flex: 1; min-width: min(100%, 14rem); }
+.training-family-catalog__count { margin: var(--workspace-space-3) 0; color: var(--workspace-muted); font-size: var(--workspace-font-small); }
+.training-family-catalog__choices {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 17rem), 1fr));
+  gap: var(--workspace-space-4);
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+.training-family-catalog__choice {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--workspace-space-3);
+  min-width: 0;
+  padding: var(--workspace-space-4);
+  border: 1px solid var(--workspace-border);
+  border-radius: var(--workspace-radius);
+  background: var(--workspace-surface);
+  cursor: pointer;
+}
+.training-family-catalog__choice:hover { background: var(--workspace-inset); border-color: var(--workspace-accent); }
+.training-family-catalog__choice:active { background: var(--workspace-bg); }
+.training-family-catalog__choice[data-selected='true'] { border-color: var(--workspace-accent); background: var(--workspace-inset); }
+.training-family-catalog__choice:focus-within { outline: 2px solid var(--workspace-focus); outline-offset: 3px; }
+.training-family-catalog__choice[data-disabled='true'] { cursor: not-allowed; opacity: .65; }
+.training-family-catalog__choice input[type='radio'] { flex: none; width: 1.125rem; height: 1.125rem; margin-top: .25rem; accent-color: var(--workspace-accent); cursor: inherit; }
+.training-family-catalog__choice-content { display: block; min-width: 0; overflow-wrap: anywhere; }
+.training-family-catalog__choice-heading { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: var(--workspace-space-2); }
+.training-family-catalog__choice-heading strong { font-size: 1rem; font-weight: 650; }
+.training-family-catalog__selected { color: var(--workspace-accent); font-size: var(--workspace-font-small); font-weight: 600; }
+.training-family-catalog__purpose { display: block; margin-top: var(--workspace-space-2); }
+.training-family-catalog__prerequisite { display: block; margin-top: var(--workspace-space-3); color: var(--workspace-muted); font-size: var(--workspace-font-small); }
+.training-family-catalog__architecture { display: block; margin-top: var(--workspace-space-2); color: var(--workspace-muted); font-size: var(--workspace-font-small); }
+.training-family-catalog__warning { display: block; margin-top: var(--workspace-space-2); color: var(--workspace-warning); font-size: var(--workspace-font-small); }
 
 @media (forced-colors: active) {
   .training-data-workflow .training-data-workflow__tab[aria-selected='true'] {
     outline: 2px solid Highlight;
     outline-offset: -3px;
   }
+  .training-family-catalog__choice[data-selected='true'] { outline: 2px solid Highlight; }
 }

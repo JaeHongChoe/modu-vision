@@ -14,8 +14,10 @@ let instance = 0;
 
 // Render the real component with the repository's lightweight hook harness.
 // A missing implementation renders nothing, so RED reports the absent UI contract.
-function mount(initialBlocks, scope = 'project-a') {
+function mount(initialBlocks, scope = 'project-a', width = 1000) {
   const slots = [], effects = [], focus = [], scroll = [];
+  const frames = new Map(), elements = new Map();
+  let frameId = 0, observer;
   let cursor = 0, effectCursor = 0, pending = [], dirty = false, tree;
   let props = { scope, blocks: initialBlocks };
   const prefix = `workflow-${++instance}`;
@@ -45,9 +47,15 @@ function mount(initialBlocks, scope = 'project-a') {
     const original = m.require.bind(m);
     m.require = name => name === 'react' ? { __esModule: true, default: react, ...react }
       : name.endsWith('.css') ? {} : original(name);
-    m._compile(ts.transpileModule(fs.readFileSync(file, 'utf8'), { compilerOptions: {
+    const compiled = ts.transpileModule(fs.readFileSync(file, 'utf8'), { compilerOptions: {
       module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, jsx: ts.JsxEmit.React, esModuleInterop: true,
-    } }).outputText, file);
+    } }).outputText;
+    new Function('require', 'module', 'exports', 'requestAnimationFrame', 'cancelAnimationFrame', 'ResizeObserver', compiled)(
+      m.require.bind(m), m, m.exports,
+      callback => { const id = ++frameId; frames.set(id, callback); return id; },
+      id => frames.delete(id),
+      class { constructor(callback) { observer = callback; } observe() { observer([{ contentRect: { width } }]); } disconnect() { observer = null; } },
+    );
     Workflow = m.exports.TrainingDataWorkflow;
   }
   function render() {
@@ -56,16 +64,36 @@ function mount(initialBlocks, scope = 'project-a') {
       if (++turns > 10) assert.fail('selection effects do not settle');
       cursor = 0; effectCursor = 0; pending = []; dirty = false;
       tree = Workflow(props);
-      for (const node of nodes(tree)) if (node.props?.role === 'tab' && typeof node.props.ref === 'function') {
-        node.props.ref({ focus: () => focus.push(node.props.id), scrollIntoView: () => scroll.push(node.props.id) });
+      function commit(node, parent = null) {
+        if (Array.isArray(node)) { node.forEach(child => commit(child, parent)); return; }
+        if (!node || typeof node !== 'object') return;
+        const key = node.props?.id || node;
+        const element = elements.get(key) || { open: false };
+        Object.assign(element, { id: node.props?.id || '', tagName: String(node.type).toUpperCase(), parentElement: parent,
+          hidden: !!node.props?.hidden, disabled: !!node.props?.disabled, children: [], clientWidth: width,
+          getBoundingClientRect: () => ({ width }),
+          hasAttribute: name => name === 'tabindex' && node.props?.tabIndex !== undefined,
+          focus: () => focus.push(node.props?.id), scrollIntoView: () => scroll.push(node.props?.id),
+          contains(other) { for (let p = other; p; p = p.parentElement) if (p === this) return true; return false; },
+          querySelectorAll(selector) { const all = []; const walk = value => { for (const child of value.children) { all.push(child); walk(child); } }; walk(this); return all.filter(child => selector === '[id]' ? child.id : child.tagName === 'DETAILS'); },
+          querySelector() { const all = []; const walk = value => { for (const child of value.children) { all.push(child); walk(child); } }; walk(this); return all.find(child => !child.disabled && ['BUTTON', 'INPUT', 'SELECT', 'TEXTAREA', 'A'].includes(child.tagName)) || null; },
+        });
+        elements.set(key, element); parent?.children.push(element);
+        if (typeof node.props?.ref === 'function') node.props.ref(element);
+        else if (node.props?.ref) node.props.ref.current = element;
+        commit(node.props?.children, element);
       }
+      commit(tree);
       for (const effect of pending) effect();
     } while (dirty);
     return tree;
   }
   render();
   return {
-    render, focus, scroll, tree: () => tree,
+    render, focus, scroll, tree: () => tree, element: id => elements.get(id),
+    frames() { const current = [...frames.values()]; frames.clear(); current.forEach(callback => callback()); },
+    resize(next) { width = next; observer?.([{ contentRect: { width } }]); render(); },
+    unmount() { for (const effect of effects) effect?.cleanup?.(); },
     tabs: () => nodes(tree).filter(node => node.props?.role === 'tab'),
     panels: () => nodes(tree).filter(node => node.props?.role === 'tabpanel'),
     selected() { return this.tabs().find(tab => tab.props['aria-selected']); },
@@ -92,7 +120,7 @@ test('initial selection opens the first attention/error block in displayed order
 test('all native tabs and panels expose one coherent named ARIA relationship', () => {
   const x = mount([block('source'), block('split', 'attention')]);
   const list = nodes(x.tree()).find(node => node.props?.role === 'tablist');
-  assert.ok(list?.props['aria-label']); assert.equal(list.props['aria-orientation'], 'horizontal');
+  assert.ok(list?.props['aria-label']); assert.equal(list.props['aria-orientation'], 'vertical');
   assert.equal(x.tabs().length, 2);
   x.tabs().forEach((tab, index) => {
     const panel = x.panels()[index];
@@ -123,7 +151,7 @@ test('changing blocks only hides panels and keeps each editor mounted with its s
 test('arrow keys wrap and Home/End select and focus their actual destination tab', () => {
   const x = mount([block('source'), block('labels'), block('split')]);
   assert.equal(x.tabs().length, 3);
-  for (const [from, key, to] of [[0, 'ArrowRight', 1], [1, 'End', 2], [2, 'ArrowRight', 0], [0, 'ArrowLeft', 2], [2, 'Home', 0]]) {
+  for (const [from, key, to] of [[0, 'ArrowDown', 1], [1, 'End', 2], [2, 'ArrowDown', 0], [0, 'ArrowUp', 2], [2, 'Home', 0]]) {
     assert.equal(x.key(from, key), true);
     assert.equal(x.selected().props.id, x.tabs()[to].props.id);
     assert.equal(x.focus.at(-1), x.tabs()[to].props.id);
@@ -203,4 +231,63 @@ test('an empty block list has an honest empty state and can receive blocks later
   assert.equal(x.tabs().length, 0); assert.equal(x.panels().length, 0);
   x.change({ blocks: [block('source', 'attention')] });
   assert.match(text(x.selected()), /source 설정/);
+});
+
+// A horizontal ARIA rail with vertical layout would make the announced keys wrong.
+test('the available container width switches rail orientation and its arrow keys together', () => {
+  const x = mount([block('source'), block('model')]);
+  assert.equal(x.key(0, 'ArrowDown'), true);
+  x.resize(600);
+  assert.equal(nodes(x.tree()).find(node => node.props?.role === 'tablist').props['aria-orientation'], 'horizontal');
+  assert.equal(x.key(1, 'ArrowRight'), true);
+  assert.equal(x.selected().props.id, x.tabs()[0].props.id);
+  assert.equal(x.key(0, 'ArrowDown'), false, 'horizontal rails leave page scrolling keys alone');
+  x.resize(1100);
+  assert.equal(nodes(x.tree()).find(node => node.props?.role === 'tablist').props['aria-orientation'], 'vertical');
+  assert.equal(x.key(0, 'ArrowRight'), false);
+});
+
+test('a current recovery request reveals only its owned settings and opens nested disclosures after commit', () => {
+  const details = { type: 'details', props: { id: 'settings-disclosure', children: {
+    type: 'div', props: { id: 'training-settings', tabIndex: -1, children: { type: 'details', props: { id: 'nested-disclosure' } } },
+  } } };
+  const x = mount([block('source'), block('model', 'pending', details)]);
+  x.change({ revealRequest: { scope: 'project-a', blockId: 'model', targetId: 'training-settings', sequence: 1 } });
+  assert.equal(x.panels()[1].props.hidden, false);
+  assert.deepEqual(x.focus, [], 'focus waits for the visible commit');
+  x.frames();
+  assert.equal(x.element('settings-disclosure').open, true);
+  assert.equal(x.element('nested-disclosure').open, true);
+  assert.equal(x.focus.at(-1), 'training-settings');
+  x.click(0); x.change({ revealRequest: { scope: 'project-a', blockId: 'model', targetId: 'training-settings', sequence: 2 } });
+  x.frames(); assert.equal(x.focus.at(-1), 'training-settings');
+});
+
+test('missing, foreign-panel and foreign-scope recovery targets cannot change selection or focus', () => {
+  const target = { type: 'input', props: { id: 'model-setting' } };
+  const x = mount([block('source'), block('model', 'pending', target)]);
+  for (const [scope, blockId, targetId] of [['project-a', 'model', 'missing'], ['project-a', 'source', 'model-setting'], ['project-b', 'model', 'model-setting']]) {
+    x.change({ revealRequest: { scope, blockId, targetId, sequence: 1 } }); x.frames();
+    assert.equal(x.selected().props.id, x.tabs()[0].props.id); assert.deepEqual(x.focus, []);
+  }
+});
+
+test('a pending recovery cannot steal focus after navigation, a scope change or unmount', () => {
+  const make = () => mount([block('source'), block('model', 'pending', { type: 'input', props: { id: 'model-setting' } })]);
+  const request = { scope: 'project-a', blockId: 'model', targetId: 'model-setting', sequence: 1 };
+  const nav = make(); nav.change({ revealRequest: request }); nav.click(0); nav.frames();
+  assert.equal(nav.selected().props.id, nav.tabs()[0].props.id); assert.deepEqual(nav.focus, []);
+  nav.change({ revealRequest: { ...request } }); nav.frames();
+  assert.equal(nav.selected().props.id, nav.tabs()[0].props.id, 'rerendering the same request cannot override navigation');
+  const scope = make(); scope.change({ revealRequest: request }); scope.change({ scope: 'project-b' }); scope.frames();
+  assert.deepEqual(scope.focus, []); assert.equal(scope.selected().props.id, scope.tabs()[0].props.id);
+  scope.change({ scope: 'project-a' }); scope.frames();
+  assert.deepEqual(scope.focus, [], 'returning to an earlier scope cannot revive its retired request');
+  assert.equal(scope.selected().props.id, scope.tabs()[0].props.id);
+  const filtered = make(); filtered.change({ revealRequest: request });
+  filtered.change({ scope: 'project-b', revealRequest: null });
+  filtered.change({ scope: 'project-a', revealRequest: request }); filtered.frames();
+  assert.deepEqual(filtered.focus, [], 'parent filtering a stale request to null cannot make it fresh on return');
+  assert.equal(filtered.selected().props.id, filtered.tabs()[0].props.id);
+  const gone = make(); gone.change({ revealRequest: request }); gone.unmount(); gone.frames(); assert.deepEqual(gone.focus, []);
 });

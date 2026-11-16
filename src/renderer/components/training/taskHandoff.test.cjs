@@ -133,7 +133,7 @@ function ocrProjectSwitchHarness() {
     './modelTrainingOptions': {modelChoices: {classification: [{value: 'model'}]}, dinoSyntheticDefaults: {},
       manualTrainingRecipe: () => ({}), trainingModelOverrides: () => ({})},
     '../wizard/TaskChangeImpactDialog': {taskPreviewScope: () => 'scope'},
-    '../common/errorActions': {}, './trainingLog': {},
+    '../common/errorActions': load('../common/errorActions.ts'), './trainingLog': {},
     './TrainingSchedulingSettings': {defaultTrainingScheduling: {}, trainingSchedulingOptions: () => ({})},
     './useSelectedCoreJob': {useSelectedCoreJob: () => ({job:null,error:null})},
   };

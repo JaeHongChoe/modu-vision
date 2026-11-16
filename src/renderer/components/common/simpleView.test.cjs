@@ -64,7 +64,14 @@ test('the data workspace centers the gallery with named management and quiet sou
 test('training location and current status remain reachable and comparison stays named with readable wide-screen text',()=>{
  const training=read('src/renderer/components/training/TrainingController.tsx');
  assert.match(training,/<details className="modu-stage-disclosure" open=\{full\}/);
- assert.match(training, /id="training-current-status"/);assert.match(training, /target\.querySelector<HTMLButtonElement>/);
+ assert.match(training, /id="training-current-status"/);
+ assert.match(training, /<TrainingDataWorkflow scope=\{errorScope\} blocks=\{dataBlocks\} revealRequest=\{settingsReveal\?\.scope===errorScope\?settingsReveal:undefined\}/);
+ const workflow=read('src/renderer/components/training/TrainingDataWorkflow.tsx');
+ assert.match(workflow,/panel\.querySelectorAll<HTMLElement>\('\[id\]'\)/,'settings lookup belongs to the requested panel');
+ assert.match(workflow,/liveScope\.current !== reveal\.scope \|\| navigation\.current !== reveal\.navigation/,'retired scope or intervening navigation cannot move focus');
+ assert.match(workflow,/if \(!panel \|\| panel\.hidden\) return;/,'the settings panel must be visible before focus');
+ assert.match(workflow,/target\.querySelector<HTMLElement>\('button:not\(\[disabled\]\)/);
+ assert.match(workflow,/focusTarget\?\.focus\(\{ preventScroll: true \}\)/);
  assert.match(training,/<summary>학습 위치/);assert.match(training,/id="training-compute-settings" tabIndex=\{-1\}/);
  const evaluation=read('src/renderer/components/evaluation/EvaluationStudio.tsx');assert.match(evaluation,/현행 모델 · 후보 모델 비교/);
  const css=read('src/renderer/index.css');
@@ -141,13 +148,14 @@ test('the simple view states the team review result in one sentence, never as a 
 
 test('step 3 in the simple view: one model heading, plain preset words, a finished run points to step 4',()=>{
  const catalog=read('src/renderer/components/training/ModelFamilyCatalog.tsx');
- assert.match(catalog,/\{simpleView \? '모델 종류' : '모델 학습 허브'\}/);assert.match(catalog,/aria-label="모델 학습 허브"/,'the region keeps its name');
+ assert.match(catalog,/\{simpleView \? '어떤 검사를 만들까요\?' : '모델 학습 허브'\}/);assert.match(catalog,/aria-label="모델 학습 허브"/,'the region keeps its name');
  // Preparation visibility and recovery are exercised by TrainingPreparationPanel.novice.test.cjs.
  const presets=read('src/renderer/components/training/RecipePresetSelector.tsx');
  assert.match(presets,/처음 학습할 때 고르세요/);assert.match(presets,/\{showMatrix && !simpleView && \(/);
  const training=read('src/renderer/components/training/TrainingController.tsx');
- const banner=training.indexOf("{simpleView && status === 'completed' && jobId && (warmStartParentJobId");
- assert.ok(banner>0&&banner<training.indexOf('{stopError && ('),'the finished-run banner sits under the status, outside 고급 학습 설정');
+ const banner=training.indexOf("{status === 'completed' && jobId && (warmStartParentJobId");
+ const runtime=training.indexOf('{hasCurrentRun&&<>');
+ assert.ok(runtime>training.indexOf('const dataBlocks:')&&banner>runtime&&banner<training.indexOf('{stopError && ('),'the finished-run banner sits under the current-run status, outside the model settings panel');
  assert.match(training,/plain=\{simpleView\}/);assert.match(training,/\{!simpleView && <OperationsObservabilityPanel/);
  assert.match(training,/'This computer' \? '이 컴퓨터'/);
  const progress=read('src/renderer/components/training/JobProgressView.tsx');

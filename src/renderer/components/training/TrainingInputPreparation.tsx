@@ -27,12 +27,20 @@ export function TrainingInputPreparation({task,imageSize=256,disabled=false}:{ta
   const firstAddButton=useRef<HTMLButtonElement|null>(null);
   useEffect(()=>{if(focusOperation.current){focusOperation.current=false;(operationButtons.current.get(selectedOperation)||firstAddButton.current)?.focus();}},[selectedOperation,operations]);
   const [imagePath,setImagePath]=useState('');const [preview,setPreview]=useState<{key:string;value:Preview}|null>(null);
+  const [previewMode,setPreviewMode]=useState<'all'|'block'>('all');
+  const [blockPreview,setBlockPreview]=useState<{key:string;through:number;value:Preview}|null>(null);
+  const previewSequence=useRef(0),previewPending=useRef(false),mounted=useRef(true),disabledRef=useRef(disabled);
+  disabledRef.current=disabled;
+  useEffect(()=>{mounted.current=true;return()=>{mounted.current=false;previewSequence.current++;};},[]);
   const [error,setError]=useState('');const [busy,setBusy]=useState(false);const [notice,setNotice]=useState('');
   const recipe:FixedInputRecipe={version:1,operations};
   const inputSize=Array.isArray(imageSize)?imageSize:[imageSize,imageSize];
   const currentKey=JSON.stringify([scope,identity,generation,dataset.sourceAuthority,dataset.datasetKey,imagePath,recipe,inputSize]);
   const active=useRef(currentKey);active.current=currentKey;
   const currentPreview=preview?.key===currentKey?preview.value:null;
+  const through=Math.min(selectedOperation+1,operations.length);
+  const currentBlockPreview=blockPreview?.key===currentKey&&blockPreview.through===through?blockPreview.value:null;
+  const visiblePreview=previewMode==='all'?currentPreview:currentBlockPreview||(through===operations.length?currentPreview:null);
   useEffect(()=>{
     const base=editorBase.current;
     if(base.scope!==scope){
@@ -42,7 +50,7 @@ export function TrainingInputPreparation({task,imageSize=256,disabled=false}:{ta
       if(restored&&inputRecipeScope!==scope)setInputRecipe(scope,restored,hash);
       setOperations(restored?.operations||[]);setConflict(false);
       setSelectedOperation(0);
-      setPreview(null);setError('');setNotice('');setBusy(false);setImagePath('');
+      setPreview(null);setBlockPreview(null);setPreviewMode('all');setError('');setNotice('');setBusy(false);setImagePath('');
     }else if(base.revision!==savedRevision){
       if(JSON.stringify(operations)!==JSON.stringify(base.operations)){
         setConflict(true);setPreview(null);setNotice('');
@@ -56,7 +64,7 @@ export function TrainingInputPreparation({task,imageSize=256,disabled=false}:{ta
     editorBase.current={scope,revision:savedRevision,operations:saved?.operations||[]};
     setOperations(saved?.operations||[]);setSelectedOperation(0);setConflict(false);setPreview(null);setError('');setNotice('');
   };
-  useEffect(()=>{setBusy(false);},[currentKey,savedRevision]);
+  useEffect(()=>{previewSequence.current++;previewPending.current=false;setBusy(false);},[currentKey,savedRevision]);
   useEffect(()=>{if(!imagePath&&dataset.images.length)setImagePath((dataset.images.find(image=>image.split==='train')||dataset.images[0]).file_path);},[dataset.images,imagePath]);
   const edit=(next:FixedInputOperation[])=>{setOperations(next);setNotice('');setError('');};
   const update=(index:number,row:FixedInputOperation)=>edit(operations.map((value,i)=>i===index?row:value));
@@ -65,15 +73,28 @@ export function TrainingInputPreparation({task,imageSize=256,disabled=false}:{ta
   const remove=(index:number)=>{focusOperation.current=true;setSelectedOperation(Math.max(0,Math.min(selectedOperation,operations.length-2)));edit(operations.filter((_,i)=>i!==index));};
   const inspect=async()=>{
     const key=currentKey;
-    try{if(getApiPersistenceIdentity()!==identity)throw new Error('연결 대상이 바뀌었습니다. 현재 입력 규칙을 다시 확인하세요.');validateInputRecipe(recipe,task);setBusy(true);setError('');
-      const value=await request<Preview>('/api/training/input-preparation/preview',{method:'POST',body:JSON.stringify({task,image_path:imagePath,input_recipe:recipe,image_size:inputSize})});
-      if(active.current===key&&getProjectContextGeneration()===generation&&getApiPersistenceIdentity()===identity)setPreview({key,value});
-    }catch(cause){if(active.current===key)setError(cause instanceof Error?cause.message:String(cause));}
-    finally{if(active.current===key)setBusy(false);}
+    const live=useTrainingStore.getState();
+    if(disabledRef.current||previewPending.current||live.isTraining||live.isRecoveringTraining||active.current!==key||getProjectContextGeneration()!==generation)return;
+    const sequence=++previewSequence.current;
+    const owns=()=>mounted.current&&active.current===key&&previewSequence.current===sequence&&getProjectContextGeneration()===generation&&getApiPersistenceIdentity()===identity;
+    const prefix=previewMode==='block'?through:operations.length;
+    const complete=prefix===operations.length;
+    previewPending.current=true;
+    try{
+      if(getApiPersistenceIdentity()!==identity)throw new Error('연결 대상이 바뀌었습니다. 현재 입력 규칙을 다시 확인하세요.');
+      validateInputRecipe(recipe,task);setBusy(true);setError('');
+      const value=await request<Preview>('/api/training/input-preparation/preview',{method:'POST',body:JSON.stringify({task,image_path:imagePath,input_recipe:{...recipe,operations:operations.slice(0,prefix)},image_size:inputSize})});
+      if(owns()){
+        if(complete)setPreview({key,value});
+        setBlockPreview({key,through:prefix,value});
+      }
+    }catch(cause){if(owns())setError(cause instanceof Error?cause.message:String(cause));}
+    finally{if(owns()){previewPending.current=false;setBusy(false);}}
   };
   const save=()=>{
     try{
       const live=useTrainingStore.getState();
+      if(!mounted.current||active.current!==currentKey||disabledRef.current||previewPending.current||live.isTraining||live.isRecoveringTraining||getProjectContextGeneration()!==generation)return;
       const liveRevision=recipeRevision(live.inputRecipeScope===scope?live.inputRecipe:null,live.inputRecipeScope===scope?live.inputRecipeSha256:null);
       if(getApiPersistenceIdentity()!==identity||editorBase.current.scope!==scope||editorBase.current.revision!==liveRevision||conflict)throw new Error('저장한 규칙이 바뀌었습니다. 저장한 규칙을 불러온 뒤 다시 편집하세요.');
       const value=validateInputRecipe(recipe,task);if(value.operations.length&&!currentPreview)throw new Error('변경한 규칙으로 실제 입력 미리보기를 확인한 뒤 저장하세요.');
@@ -85,19 +106,19 @@ export function TrainingInputPreparation({task,imageSize=256,disabled=false}:{ta
     }catch(cause){setError(cause instanceof Error?cause.message:String(cause));}
   };
   const changed=JSON.stringify(saved?.operations||[])!==JSON.stringify(operations);
-  return <section aria-label="학습 흐름 준비" className="workspace-section text-sm text-[var(--workspace-text)]">
-    <h2 className="flex items-center gap-2 font-semibold"><ImageIcon className="h-4 w-4 text-[var(--workspace-accent)]"/>사진 전처리</h2>
-    <p className="mt-2 text-[var(--workspace-muted)]">학습에 들어갈 사진을 준비하세요. 블록을 선택해 설정하고, 원본과 변환 결과를 비교한 뒤 저장합니다.</p>
-    <p className="mt-1 text-xs text-[var(--workspace-muted)]">원본은 보존합니다. 저장한 변환은 학습·검증·시험·검사에 동일하게 적용됩니다.</p>
+  return <section aria-label="학습 흐름 준비" className="training-input-editor text-sm text-[var(--workspace-text)]">
+    <h2 className="sr-only"><ImageIcon className="h-4 w-4 text-[var(--workspace-accent)]"/>사진 전처리</h2>
+    <p className="training-input-editor__intro text-[var(--workspace-muted)]">변환 블록을 선택해 설정하세요. 원본은 보존하고, 미리보기로 확인한 전체 규칙을 학습에 사용합니다.</p>
+
     {!supportsInputPreparation(task)?<p className="mt-3 text-[var(--workspace-warning)]" role="note">현재 고정 입력 규칙은 분류·영역 분할에서 지원합니다. 검출·OCR·방향·이상 탐지 등은 기존 입력을 사용합니다.</p>:<>
-      <fieldset disabled={disabled||busy} className="mt-3 space-y-3">
+      <fieldset disabled={disabled||busy} className="training-input-editor__workspace">
         <legend className="sr-only">학습 전 고정 입력 규칙</legend>
-        <div className="flex flex-wrap items-center gap-2" aria-label="전처리 블록 순서">
+        <div className="training-input-editor__pipeline flex flex-wrap items-center gap-2" aria-label="전처리 블록 순서">
           <span className="workspace-badge">원본 사진</span>
           {operations.map((row,index)=><span key={index} className="inline-flex items-center gap-2"><span aria-hidden="true">→</span><button type="button" className="workspace-button" data-input-operation={index} ref={button=>{if(button)operationButtons.current.set(index,button);else operationButtons.current.delete(index);}} aria-pressed={selectedOperation===index} onClick={()=>setSelectedOperation(index)}>{index+1}. {names[row.op]}</button></span>)}
           <span aria-hidden="true">→</span><span className="workspace-badge">모델 입력 {inputSize.join(' × ')}</span>
         </div>
-        <ol className="space-y-2">{operations.map((row,index)=><li key={index} data-operation-settings={index} hidden={selectedOperation!==index} className={selectedOperation===index?'workspace-record flex flex-wrap items-center gap-2':'hidden'}>
+        <div className="training-input-editor__settings"><h3 className="font-semibold mb-3">선택 블록 설정</h3><ol className="space-y-2">{operations.map((row,index)=><li key={index} data-operation-settings={index} hidden={selectedOperation!==index} className={selectedOperation===index?'workspace-record flex flex-wrap items-center gap-2':'hidden'}>
           <strong className="min-w-24">{index+1}. {names[row.op]}</strong>
           {row.op==='crop'&&row.roi.map((value,i)=><label key={i} className="workspace-field max-w-24">{['왼쪽','위','오른쪽','아래'][i]} <input aria-label={`${index+1}번 ROI ${['왼쪽','위','오른쪽','아래'][i]}`} type="number" min="0" max="1" step="0.05" className="tabular-nums" value={value} onChange={event=>{const roi=[...row.roi] as typeof row.roi;roi[i]=Number(event.target.value);update(index,{...row,roi});}}/></label>)}
           {row.op==='rotate90'&&<label className="workspace-field max-w-40">반시계 <select aria-label={`${index+1}번 회전 각도`} value={row.turns} className="tabular-nums" onChange={event=>update(index,{...row,turns:Number(event.target.value)})}><option value={1}>90°</option><option value={2}>180°</option><option value={3}>270°</option></select></label>}
@@ -109,11 +130,17 @@ export function TrainingInputPreparation({task,imageSize=256,disabled=false}:{ta
         </li>)}</ol>
         {!operations.length&&<p className="text-xs text-[var(--workspace-muted)]">추가 규칙 없음 · 기존 모델 입력 크기와 내부 정규화를 사용합니다.</p>}
         <div className="flex flex-wrap gap-2" aria-label="전처리 블록 추가">{([{op:'crop',roi:[0,0,1,1]},{op:'rotate90',turns:1},{op:'brightness',factor:1},{op:'contrast',factor:1},{op:'resize',width:256,height:256}] as FixedInputOperation[]).map(row=><button type="button" key={row.op} ref={row.op==='crop'?firstAddButton:undefined} disabled={operations.length>=16} className="workspace-button" onClick={()=>add(row)}>+ {names[row.op]}</button>)}</div>
+        </div>
+        <div className="training-input-editor__preview-controls">
         <label className="workspace-field max-w-xl">실제 미리보기 이미지 <select className="max-w-full" value={imagePath} onChange={event=>setImagePath(event.target.value)}>{!dataset.images.length&&<option value="">1단계에서 이미지를 불러오세요</option>}{dataset.images.map(image=><option key={image.file_path} value={image.file_path}>{image.file_name}{image.split?` · ${{train:'학습',val:'검증',test:'시험'}[image.split]||image.split}`:''}{image.label?` · ${image.label}`:''}</option>)}</select></label>
         {dataset.images.some(image=>image.file_path===imagePath&&(image.split==='val'||image.split==='test'))&&<p role="note" className="text-xs text-[var(--workspace-warning)]">검증·시험 사진입니다. 변환을 조정할 때는 학습 사진을 선택해 시험 결과의 독립성을 지키세요.</p>}
-        <div className="flex flex-wrap gap-2"><button type="button" disabled={!imagePath} className="workspace-button" onClick={()=>void inspect()}>{busy?'입력 확인 중…':'실제 입력 미리보기'}</button><button type="button" className="workspace-button workspace-button--primary" disabled={conflict||(operations.length>0&&!currentPreview)} onClick={save}>규칙 저장</button><button type="button" className="workspace-button" onClick={reloadSaved}>편집 취소</button></div>
+        {operations.length>0&&<label className="workspace-field">미리보기 범위<select aria-label="미리보기 범위" value={previewMode} onChange={event=>setPreviewMode(event.target.value==='block'?'block':'all')}><option value="all">전체 규칙 → 모델 입력</option><option value="block">{through}번 블록까지 → 모델 입력</option></select></label>}
+        <div className="flex flex-wrap gap-2"><button type="button" disabled={!imagePath} className="workspace-button" onClick={()=>void inspect()}>{busy?'입력 확인 중…':previewMode==='block'?'선택 블록 미리보기':'실제 입력 미리보기'}</button><button type="button" className="workspace-button workspace-button--primary" disabled={conflict||(operations.length>0&&!currentPreview)} onClick={save}>규칙 저장</button><button type="button" className="workspace-button" onClick={reloadSaved}>편집 취소</button></div>
+        </div>
+      {previewMode==='block'&&operations.length>0&&<p role="note" className="training-input-editor__preview-note text-xs text-[var(--workspace-muted)]">{through}번 블록까지 적용한 뒤 모델 입력 크기로 맞춘 결과입니다. {through<operations.length?'이후 블록은 포함하지 않습니다. 전체 규칙을 미리본 뒤 저장하세요.':'모든 블록을 포함하므로 이 결과로 전체 규칙을 저장할 수 있습니다.'}</p>}
+      {visiblePreview&&<div className="training-input-editor__comparison mt-3 grid gap-3 sm:grid-cols-2">{[['원본',visiblePreview.original_target||visiblePreview.original_image,visiblePreview.source_size],['준비한 입력',visiblePreview.prepared_target||visiblePreview.prepared_image,visiblePreview.prepared_size]].map(([label,url,size])=><figure key={String(label)} className="workspace-record"><figcaption className="mb-2 text-xs">{String(label)} · {(size as number[]).join(' × ')}{task==='segmentation'?' · 청록: 정답 영역':''}</figcaption><img className="w-full object-contain" src={String(url)} alt={`${label} ${task==='segmentation'?'이미지와 정답 영역':'학습 이미지'}`}/></figure>)}</div>}
+      {!visiblePreview&&<div className="training-input-editor__comparison training-input-editor__empty" role="status"><ImageIcon className="h-6 w-6" aria-hidden="true"/><p>원본과 변환 결과를 여기서 비교합니다.</p><p className="text-xs">미리볼 사진과 범위를 고른 뒤 미리보기를 실행하세요.</p></div>}
       </fieldset>
-      {currentPreview&&<div className="mt-3 grid gap-3 sm:grid-cols-2">{[['원본',currentPreview.original_target||currentPreview.original_image,currentPreview.source_size],['준비한 입력',currentPreview.prepared_target||currentPreview.prepared_image,currentPreview.prepared_size]].map(([label,url,size])=><figure key={String(label)} className="workspace-record"><figcaption className="mb-2 text-xs">{String(label)} · {(size as number[]).join(' × ')}{task==='segmentation'?' · 청록: 정답 영역':''}</figcaption><img className="h-48 w-full object-contain" src={String(url)} alt={`${label} ${task==='segmentation'?'이미지와 정답 영역':'학습 이미지'}`}/></figure>)}</div>}
       <p className="mt-3 text-xs text-[var(--workspace-muted)]">{changed?'저장하지 않은 변경이 있습니다. 다음 학습은 마지막 저장 규칙을 사용합니다.':saved?`저장한 규칙 ${inputRecipeSha256?.slice(0,12)||''} · 다음 학습에 적용`:'기존 입력 사용'} · 규칙을 바꾸면 새 학습·평가가 필요합니다. 기존 모델과 평가 기록은 보존됩니다.</p>
       <details className="mt-3 text-xs text-[var(--workspace-muted)]"><summary className="cursor-pointer">학습용 사진 늘리기와 검사 흐름은 어떻게 다른가요?</summary><p className="mt-2">선택한 모델이 제공하는 무작위 증강은 학습 사진에만 적용합니다. 검증·시험 사진은 늘리지 않습니다. 학습이 끝난 뒤 검사 사용에서 모델과 판정 규칙을 연결합니다.</p></details>
       {operations.some(row=>row.op==='crop')&&<p className="mt-1 text-xs text-[var(--workspace-muted)]">ROI 밖의 영역은 검사하지 않습니다. 분할 마스크는 원본 좌표로 되돌리고 제외 영역은 배경으로 둡니다.</p>}

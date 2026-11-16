@@ -1,7 +1,7 @@
 const test=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path'),Module=require('node:module'),ts=require('typescript'),React=require('react'),{renderToStaticMarkup}=require('react-dom/server');
-function render({families=[],error='',selectedFamily='ocr',disabled=false,loading=false,viewMode='simple'}={}){
+function render({families=[],error='',selectedFamily='ocr',disabled=false,loading=false,viewMode='simple',query=''}={}){
  const filename=path.join(__dirname,'ModelFamilyCatalog.tsx'),m=new Module(filename,module);m.filename=filename;m.paths=Module._nodeModulePaths(__dirname);
- let i=0;const states=[families,error,loading];m.require=id=>id==='react'?{...React,useState:()=>[states[i++],()=>{}],useEffect:()=>{}}:id==='../../services/api'?{request:()=>{throw Error('no requests during render')}}:id==='../../stores/useProjectStore'?{useProjectStore:select=>select({viewMode})}:id==='./WorkerSupportPanel'?{WorkerSupportPanel:()=>null}:require(id);
+ let i=0;const states=[families,error,loading,query];m.require=id=>id==='react'?{...React,useState:()=>[states[i++],()=>{}],useEffect:()=>{}}:id==='../../services/api'?{request:()=>{throw Error('no requests during render')}}:id==='../../stores/useProjectStore'?{useProjectStore:select=>select({viewMode})}:id==='./WorkerSupportPanel'?{WorkerSupportPanel:()=>null}:require(id);
  m._compile(ts.transpileModule(fs.readFileSync(filename,'utf8'),{compilerOptions:{jsx:ts.JsxEmit.ReactJSX,module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText,filename);
  return renderToStaticMarkup(React.createElement(m.exports.ModelFamilyCatalog,{selectedFamily,onSelect:()=>{throw Error('selection must be explicit')},disabled}));
 }
@@ -24,9 +24,52 @@ test('loading, failed capability load and absent selected family never imply rea
 
 test('all catalog choices remain selectable and busy selection stays disabled',()=>{
  const families=['classification','segmentation','detection','anomaly','patch_classification','ocr','rotated_detection','defect_gan','enhancement','rotation'].map(family);
- const html=render({families});assert.equal((html.match(/<button /g)||[]).length,10);
- assert.equal((render({families,disabled:true}).match(/<button [^>]*disabled/g)||[]).length,10);
+ const html=render({families});assert.equal((html.match(/type="radio"/g)||[]).length,10);
+ assert.equal((render({families,disabled:true}).match(/<input [^>]*disabled/g)||[]).length,10);
  const unknown=visible(render({families:[{...family('ocr'),devices:[],execution:undefined}],viewMode:'full'}));assert.match(unknown,/사용 가능한 장치 없음/);assert.match(unknown,/지원 정보 없음/);
+});
+
+test('a selected simple model keeps its support summary visible and offers all ten large choices in an explicit change disclosure',()=>{
+ const tasks=['classification','segmentation','detection','anomaly','patch_classification','ocr','rotated_detection','defect_gan','enhancement','rotation'];
+ const html=render({families:tasks.map(family),selectedFamily:'detection'});
+ assert.match(html,/<details[^>]*><summary>모델 종류 바꾸기 · 10종<\/summary>/);
+ assert.doesNotMatch(visible(html),/type="radio"/);
+ assert.match(visible(html),/객체 박스와 클래스/);assert.match(visible(html),/detection 정답 자료/);
+ assert.equal((html.match(/type="radio"/g)||[]).length,10);
+ assert.equal((html.match(/checked=""/g)||[]).length,1);
+ for(const task of tasks) assert.match(html,new RegExp(task+' 정답 자료'));
+ assert.match(html,/객체 박스와 클래스/);assert.match(html,/선택됨/);
+ assert.match(render({families:tasks.map(family),viewMode:'full'}),/<details[^>]*open=""[^>]*><summary>모델 종류 바꾸기/);
+ assert.match(render({families:tasks.map(family),selectedFamily:null}),/<details[^>]*open=""[^>]*><summary>모델 종류 선택/);
+});
+
+test('local catalog search filters by purpose and data, exposes no-results and can be cleared',()=>{
+ const families=['classification','detection','ocr'].map(family);
+ const filtered=render({families,query:'문자열'});
+ assert.equal((filtered.match(/type="radio"/g)||[]).length,1);assert.match(filtered,/ocr 모델/);
+ assert.match(filtered,/aria-label="모델 검색 지우기"/);
+ const noMatch=render({families,query:'없는 모델'});
+ assert.equal((noMatch.match(/type="radio"/g)||[]).length,0);assert.match(noMatch,/검색.*모델.*없/);
+ assert.equal((render({families,query:''}).match(/type="radio"/g)||[]).length,3);
+});
+
+test('search clearing restores choices and a disabled radio callback cannot dispatch selection',()=>{
+ const filename=path.join(__dirname,'ModelFamilyCatalog.tsx'),m=new Module(filename,module);m.filename=filename;m.paths=Module._nodeModulePaths(__dirname);
+ const states=[['classification','detection','ocr'].map(family),'',false,''];let cursor=0,controls=[],selections=[],focused=0,disabled=false;
+ const runtime=require('react/jsx-runtime');
+ m.require=id=>id==='react'?{...React,useState:initial=>{const index=cursor++;if(!(index in states))states[index]=initial;return[states[index],value=>{states[index]=value;}];},useEffect:()=>{},useRef:()=>({current:{focus:()=>focused++}})}
+  :id==='react/jsx-runtime'?Object.fromEntries(Object.entries(runtime).map(([key,value])=>[key,typeof value==='function'?(type,props,...args)=>{if(['input','button'].includes(type))controls.push({type,props});return value(type,props,...args);}:value]))
+  :id==='../../services/api'?{request:()=>{throw Error('no render request')}}:id==='../../stores/useProjectStore'?{useProjectStore:select=>select({viewMode:'simple'})}:id==='./WorkerSupportPanel'?{WorkerSupportPanel:()=>null}:require(id);
+ m._compile(ts.transpileModule(fs.readFileSync(filename,'utf8'),{compilerOptions:{jsx:ts.JsxEmit.ReactJSX,module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText,filename);
+ const run=()=>{cursor=0;controls=[];return renderToStaticMarkup(React.createElement(m.exports.ModelFamilyCatalog,{selectedFamily:'classification',onSelect:task=>selections.push(task),disabled}));};
+ run();const search=controls.find(control=>control.props.type==='search');assert.ok(search,'catalog has an owned search field');
+ search.props.onChange({currentTarget:{value:'문자열'}});run();assert.equal(controls.filter(control=>control.props.type==='radio').length,1);
+ controls.find(control=>control.props['aria-label']==='모델 검색 지우기').props.onClick();run();
+ assert.equal(controls.filter(control=>control.props.type==='radio').length,3);assert.equal(focused,1);
+ controls.find(control=>control.props.type==='radio'&&control.props.value==='detection').props.onChange({currentTarget:{checked:true}});
+ assert.deepEqual(selections,['detection']);
+ disabled=true;run();const blocked=controls.find(control=>control.props.type==='radio'&&control.props.value==='ocr');
+ assert.equal(blocked.props.disabled,true);blocked.props.onChange({currentTarget:{checked:true}});assert.deepEqual(selections,['detection']);
 });
 
 test('simple guidance translates split terms while technical stages and raw prerequisites stay in details',()=>{

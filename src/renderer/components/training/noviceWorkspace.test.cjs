@@ -9,7 +9,9 @@ test('training editors have one persistent render path across viewing modes', ()
     assert.equal(training.split(`id="${label}"`).length - 1, 1, label);
   }
   assert.match(training, /<details[^>]+className="modu-stage-disclosure"[^>]*open=\{!simpleView\}/);
-  assert.match(fs.readFileSync(path.join(__dirname, 'ModelFamilyCatalog.tsx'), 'utf8'), /모델 종류 선택 · 10종/);
+  const catalog = fs.readFileSync(path.join(__dirname, 'ModelFamilyCatalog.tsx'), 'utf8');
+  assert.match(catalog, /className="modu-stage-disclosure training-family-catalog__picker" open=\{!simpleView \|\| !selected\}/);
+  assert.match(catalog, /<summary>\{selected \? '모델 종류 바꾸기' : '모델 종류 선택'\} · \{families.length.toLocaleString\('ko-KR'\)\}종<\/summary>/);
 });
 test('evaluation keeps model, cohort, cancellation and errors in a single visible toolbar', () => {
   for (const label of ['평가 모델', '평가 데이터 버전', '원격 평가 취소']) {
