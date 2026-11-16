@@ -36,6 +36,7 @@ test('the parent picked by the quick retrain survives its own epoch change and g
   './parentCandidate':{parentCandidateLabel:parent=>parent.job_id,parentCandidateNotice:''},
   './modelTrainingOptions':compile('modelTrainingOptions.ts',{}),
   './inputPreparation':compile('inputPreparation.ts',{}),
+  './trainingWorkflow':compile('trainingWorkflow.ts',{}),
   './TrainingInputPreparation':{TrainingInputPreparation:'TrainingInputPreparation'},
   './trainingStartSummary':compile('trainingStartSummary.ts',{'./modelTrainingOptions':compile('modelTrainingOptions.ts',{})}),
   '../../stores/assistContext':compile('../../stores/assistContext.ts',{}),

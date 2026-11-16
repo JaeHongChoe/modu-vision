@@ -375,3 +375,35 @@ The user selected `docs/verification/assets/novice-workspace/selected-design.png
 - Layout responds to the available content container, including the width reserved for the assistant drawer. Under 960px available width the next panel becomes a bounded lower area. Canvas and workspace retain independent scroll areas.
 
 This is source/UI validation. Installed app builds, running user web servers and model-performance acceptance are separate release work.
+
+## 2026-11-16 — training data preparation blocks
+
+Training begins with a connected, five-block preparation rail: photos, saved
+truth, dataset split, input preprocessing, and model selection. This intentionally
+supersedes the November novice ordering that hid input preparation after model
+selection. Supervisely's public training wizard and Pipelines documentation are
+interaction references; no proprietary platform frontend, brand asset, or
+unlicensed application code is embedded.
+
+The selected block owns one visible settings panel. All panels stay mounted;
+changing blocks or simple/full presentation preserves unfinished editor input.
+A project/source/actor/transport scope change resets navigation and retires old
+feedback. Native buttons with tab roles support arrow keys, Home/End, written
+status and explicit previous/next navigation. The rail scrolls within its own
+width on compact screens; it does not make the whole document wider. Shared
+workspace semantic tokens, Pretendard and the warm/forest adapters remain
+canonical. The new stylesheet contains layout and token references only.
+
+`TrainingDataSplitBlock` delegates to the existing dataset store and backend. An
+existing saved or source-folder partition is read-only until the person chooses
+to change it. Navigation cannot apply a split, start a model, download weights,
+or adopt truth. The model block is labelled configuration review, not optional
+training or quality acceptance. Current job status, stop and recovery remain
+outside the preparation panels.
+
+Input transformations are real ordered recipe blocks with a single selected
+settings group and source-bound before/after preview. Existing preview-before-save,
+conflict, model-binding and original-preservation contracts remain in force.
+Classification and segmentation support the existing fixed transformations;
+other families visibly retain their task-specific input paths. This surface is
+not an arbitrary training DAG, nor a claim that unsupported transforms execute.

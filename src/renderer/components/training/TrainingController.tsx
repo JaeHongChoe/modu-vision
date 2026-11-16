@@ -46,7 +46,10 @@ import type { VisionTask } from '../../types';
 import {TaskChangeImpactDialog,taskPreviewScope} from '../wizard/TaskChangeImpactDialog';
 import {TrainingPreparationPanel} from './TrainingPreparationPanel';
 import {TrainingInputPreparation} from './TrainingInputPreparation';
-import {inputPreparationScope} from './inputPreparation';
+import {inputPreparationScope,supportsInputPreparation} from './inputPreparation';
+import {TrainingDataWorkflow,type TrainingDataBlock} from './TrainingDataWorkflow';
+import {TrainingDataSplitBlock} from './TrainingDataSplitBlock';
+import {familyPreparation} from './trainingWorkflow';
 import {useTaskHandoff} from './useTaskHandoff';
 import {clearTaskHandoff} from './taskHandoff';
 import {trainingPresetBatchSize} from '../common/errorActions';
@@ -100,7 +103,7 @@ export const TrainingController: React.FC = () => {
   // sends). Epochs or image size never change which parents fit, and '빠른 이어 학습' sets the epochs together with the
   // parent it picked, which a re-read would clear.
   const parentQueryKey = JSON.stringify(['backbone', 'model_name', 'anomaly_method', 'anomaly_backbone', 'patch_size', 'stride'].map(name => modelOptions[name] ?? null));
-  const { folderPath, totalImages, split, isLoading, isSplitting, importError, splitError,
+  const { folderPath, totalImages, sourceImages, labelsMissing, split, isLoading, isSplitting, importError, splitError,
     splitSupported, splitUnavailableReason, datasetKey, sourceAuthority, splitState, classes: datasetClasses, classSplitCounts } = useDatasetStore();
   const modelResetScope = JSON.stringify([task, projectDir, project?.id, project?.active_labelset_id, folderPath]);
   // Classes with images: one class trains a model that can only answer that class (F-03), so the start waits.
@@ -232,7 +235,8 @@ export const TrainingController: React.FC = () => {
   useEffect(()=>{if(handoff?.family)setSelectedFamily(handoff.family);},[handoff?.jobId,handoff?.selectionId]);
   const chooseFamily = (family: ModelFamily) => {
     const data = useDatasetStore.getState();
-    if (data.isLoading || data.isSplitting || useProjectStore.getState().isProjectBusy) return;
+    const running=useTrainingStore.getState();
+    if (data.isLoading || data.isSplitting || useProjectStore.getState().isProjectBusy || running.isTraining || running.isRecoveringTraining) return;
     if (['classification', 'segmentation', 'detection', 'anomaly'].includes(family) && family !== task) {
       setTaskProposal({task:family as VisionTask,scope:taskPreviewScope()});return;
     }
@@ -418,14 +422,19 @@ export const TrainingController: React.FC = () => {
 
         </div>
   );
-  // Keep the same editor wrappers and sibling order in both viewing modes.
-  // Native details keeps the transform editor mounted while collapsed.
-  const inputPreparation=<details key="input-preparation" open={simpleView?undefined:true} className="modu-stage-disclosure">
-    <summary hidden={!simpleView} className="cursor-pointer px-3 py-2 text-sm text-slate-300">사진 변환 설정 (선택)</summary>
-    <TrainingInputPreparation task={task} imageSize={(modelOptions.image_size as number|number[]|undefined) ?? (preset==='precision'?512:256)} disabled={isTraining||Boolean(resumeState)} />
-  </details>;
-  const modelCatalog=<ModelFamilyCatalog key="model-catalog" selectedFamily={selectedFamily} onSelect={chooseFamily} disabled={isLoading||isSplitting||isProjectBusy} />;
+  const inputPreparation=<><div hidden={selectedFamily!==task}><TrainingInputPreparation task={task} imageSize={(modelOptions.image_size as number|number[]|undefined) ?? (preset==='precision'?512:256)} disabled={isTraining||isRecoveringTraining||isProjectBusy||isLoading||isSplitting||Boolean(resumeState)||!sourceReady||selectedFamily!==task} /></div>{selectedFamily!==task&&<p className="text-sm text-[var(--workspace-muted)]">선택한 전문 모델은 아래 전용 작업대에서 입력을 준비합니다. 현재 프로젝트의 전처리 편집은 보관됩니다.</p>}</>;
+  const modelCatalog=<ModelFamilyCatalog key="model-catalog" selectedFamily={selectedFamily} onSelect={chooseFamily} disabled={isLoading||isSplitting||isProjectBusy||isTraining||isRecoveringTraining} />;
   const preparationPanel=selectedFamily===task&&<TrainingPreparationPanel key="core-preparation" inputBlocker={startBlocker?{message:startBlocker,step:startRecoveryStep,actionLabel:startRecoveryLabel}:null} onResolveBlocker={resolveStartBlocker} family={selectedFamily} model={syntheticAnomaly ? syntheticOptions.anomaly_backbone : selectedBackbone} preset={preset} checkpoint={pretrainedCheckpoint} onCheckpointChange={setPretrainedCheckpoint} device={nextDevice==='mps'||nextDevice==='cuda'||nextDevice==='cpu' ? nextDevice : 'auto'} config={modelOptions} warmStartJobId={warmParentId||undefined} trained={Boolean(completedJobId)} />;
+  const inputReady=sourceReady&&sourceAuthority===currentAuthority&&project?.task===task&&!importError&&!isLoading&&!isProjectBusy;
+  const currentSplit=inputReady&&selectedFamily===task&&(splitState==='saved'||splitState==='source_folders');
+  const recipeReady=fixedScope===activeInputScope&&fixedInput?.operations.length;
+  const dataBlocks:TrainingDataBlock[]=[
+    {id:'photos',title:'사진 준비',status:inputReady?'ready':'attention',summary:inputReady?`${sourceImages??totalImages}장 연결됨`:'원본 사진을 연결하세요',content:<section className="workspace-section"><h2 className="font-semibold">어떤 사진으로 AI를 만들까요?</h2><p className="mt-2 text-sm text-[var(--workspace-muted)]">{inputReady?`현재 프로젝트에 연결된 원본 사진 ${sourceImages??totalImages}장을 사용합니다.`:'사진 준비에서 검사할 사진을 먼저 불러오세요. 이전 자료의 숫자는 사용하지 않습니다.'}</p>{importError&&<p role="alert" className="mt-3 text-sm text-[var(--workspace-danger)]">{importError}</p>}<button type="button" className="workspace-button mt-4" onClick={()=>void setStep(1)}>사진 준비 열기</button></section>},
+    {id:'labels',title:'정답 확인',status:inputReady&&totalImages>0&&!labelsMissing&&selectedFamily===task&&!(task==='classification'&&(populatedClasses<2||classBlocker))?'ready':'attention',summary:familyPreparation[selectedFamily].truth,content:<section className="workspace-section"><h2 className="font-semibold">AI가 배울 정답을 확인하세요</h2><p className="mt-2 text-sm text-[var(--workspace-muted)]">{familyPreparation[selectedFamily].truth}{selectedFamily!==task?' · 선택한 모델의 전용 작업대에서 준비 상태를 확인하세요.':labelsMissing?' · 아직 정답이 준비되지 않았습니다.':' · 저장한 정답만 학습에 사용합니다. 기계가 만든 초안은 채택 전까지 정답이 아닙니다.'}</p><button type="button" className="workspace-button mt-4" onClick={()=>void setStep(2)}>정답 붙이기 열기</button></section>},
+    {id:'split',title:'데이터 나누기',status:isSplitting?'working':splitError?'error':currentSplit&&split.train>0&&split.val>0?'ready':'attention',summary:currentSplit?`학습 ${split.train} · 검증 ${split.val} · 시험 ${split.test}`:'학습용과 시험용을 구분하세요',content:<><div hidden={selectedFamily!==task}><TrainingDataSplitBlock task={task} disabled={isTraining||isRecoveringTraining||Boolean(resumeState)||selectedFamily!==task}/></div>{selectedFamily!==task&&<p className="text-sm text-[var(--workspace-muted)]">선택한 전문 모델의 전용 작업대에서 정답과 분할을 준비하세요. 기본 프로젝트의 분할은 변경하지 않습니다.</p>}</>},
+    {id:'preprocess',title:'사진 전처리',status:'optional',summary:supportsInputPreparation(selectedFamily)?recipeReady?`저장한 변환 ${fixedInput!.operations.length}개`:'추가 변환 없이 사용': '이 모델은 기본 입력 사용',content:inputPreparation},
+    {id:'model',title:'모델과 학습',status:isTraining?'working':modelOptionsError?'error':'pending',summary:isTraining?(phaseLabels[currentPhase]||currentPhase):'목적에 맞는 모델 선택',content:<div className="space-y-4">{modelCatalog}{preparationPanel}<p className="text-sm text-[var(--workspace-muted)]">{selectedFamily===task?'아래 학습 설정에서 시작합니다. 검사에 사용할 모델 연결과 판정 규칙은 학습 후 검사 사용에서 구성합니다.':'아래 전용 작업대에서 자료와 학습 설정을 이어서 준비하세요.'}</p></div>},
+  ];
   return (<>
     {taskProposal&&<TaskChangeImpactDialog nextTask={taskProposal.task} scope={taskProposal.scope} onClose={()=>setTaskProposal(null)} onResult={outcome=>{
       setTaskProposal(null);
@@ -437,11 +446,9 @@ export const TrainingController: React.FC = () => {
     <div id="workflow-training" tabIndex={-1} className="flex-1 flex flex-col min-h-0 overflow-y-auto select-none" style={{background: 'var(--workspace-bg)', color: 'var(--workspace-text)'}}>
       {startBlocker&&(!simpleView||selectedFamily!==task)&&<div className="workspace-record m-3 text-xs" role="note" aria-label="학습 시작 준비도"><p id="training-start-reason">학습 시작 보류: {startBlocker}</p><button className="workspace-button mt-2" onClick={resolveStartBlocker}>{startRecoveryStep?'데이터·분할 확인 (1단계)':startRecoveryLabel}</button></div>}
       {startWarning&&<div className="workspace-record m-3 text-xs" role="note" aria-label="학습 전 확인"><p className="text-amber-200">{startWarning}</p><button className="workspace-button mt-2" onClick={()=>void setStep(1)}>분할 확인 (1단계)</button></div>}
-      <header className="modu-stage-header"><h1>{language === 'ko' ? 'AI 만들기' : 'Build your AI'}</h1><p>{language === 'ko' ? '학습 목적과 준비 상태를 확인하고 선택한 설정으로 시작하세요.' : 'Check your purpose and input, then start with the selected recipe.'}</p></header>
+      <header className="modu-stage-header"><h1>{language === 'ko' ? 'AI 만들기' : 'Build your AI'}</h1><p>{language === 'ko' ? '사진과 정답을 준비하고, 필요한 전처리를 연결한 뒤 학습하세요.' : 'Prepare your photos and labels, connect preprocessing, then train.'}</p></header>
       <div className="max-w-7xl w-full mx-auto space-y-5 p-6">
-        {modelCatalog}
-        {preparationPanel}
-        {inputPreparation}
+        <TrainingDataWorkflow scope={JSON.stringify([errorScope,selectedFamily])} blocks={dataBlocks}/>
         {remediationNotice&&<p role="status" className="rounded border border-cyan-800 bg-cyan-950/30 p-3 text-sm text-cyan-100">{remediationNotice}</p>}
         {selectedFamily === task && <>
         {/* Only new-job settings fold away. Current operation and recovery remain visible. */}

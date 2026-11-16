@@ -24,7 +24,7 @@ html[data-theme="light"] .workspace-badge[data-tone="info"] { background: #E0F2F
 html[data-theme="light"] .workspace-field :is(input, select, textarea) { border-color: #93A395; }
 html[data-theme="light"] .flow-canvas-grid { --flow-grid-line: #E4E9DF; }
 html[data-theme="light"] .text-slate-400 { color: #475569; } /* 813 */
-html[data-theme="light"] .text-slate-300 { color: #334155; } /* 381 */
+html[data-theme="light"] .text-slate-300 { color: #334155; } /* 380 */
 html[data-theme="light"] .border-\[\#2B3547\] { border-color: #D9DED3; } /* 317 */
 html[data-theme="light"] .border-slate-600 { border-color: #D9DED3; } /* 303 */
 html[data-theme="light"] .text-slate-200 { color: #1E293B; } /* 230 */

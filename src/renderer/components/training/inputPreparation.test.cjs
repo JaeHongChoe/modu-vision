@@ -21,7 +21,7 @@ function loadComponent(mocks){
  component.require=key=>key in mocks?mocks[key]:key==='./inputPreparation'?m.exports:base(key);
  component._compile(ts.transpileModule(fs.readFileSync(filename,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022,jsx:ts.JsxEmit.ReactJSX}}).outputText,filename);return component.exports;
 }
-function nodes(tree){if(!tree||typeof tree!=='object')return[];return[tree,...Object.values(tree.props||{}).flatMap(value=>Array.isArray(value)?value.flatMap(nodes):nodes(value))];}
+function nodes(tree){if(Array.isArray(tree))return tree.flatMap(nodes);if(!tree||typeof tree!=='object')return[];return[tree,...Object.values(tree.props||{}).flatMap(value=>Array.isArray(value)?value.flatMap(nodes):nodes(value))];}
 function words(value){return Array.isArray(value)?value.map(words).join(''):value&&typeof value==='object'?words(value.props?.children):String(value??'');}
 function fixture(initial={}){
  let cursor=0,identity=initial.identity||'/api',dirty=false;const effects=[],slots=[],requests=[],saved=[],writes=[];
@@ -105,4 +105,20 @@ test('an external rule update retires an in-flight preview without leaving the e
  const f=scopedFixture(before);f.api.request=()=>new Promise(()=>{});let all=nodes(f.render());
  all.find(n=>n.type==='button'&&words(n.props.children)==='실제 입력 미리보기').props.onClick();all=nodes(f.render());assert.equal(all.find(n=>n.type==='fieldset').props.disabled,true);
  f.store.setInputRecipe(f.store.inputRecipeScope,after,'new-hash');all=nodes(f.render());assert.equal(all.find(n=>n.type==='fieldset').props.disabled,false);
+});
+
+test('preprocessing is a connected block editor with one settings group at a time and preserves drafts on navigation',()=>{
+ const f=scopedFixture({version:1,operations:[{op:'rotate90',turns:1},{op:'brightness',factor:1.3}]});
+ let all=nodes(f.render());
+ const blocks=all.filter(n=>n.type==='button'&&n.props['aria-pressed']!==undefined&&n.props['data-input-operation']!==undefined);
+ assert.equal(blocks.length,2,'each operation is a selectable block');
+ assert.equal(blocks[0].props['aria-pressed'],true);assert.equal(blocks[1].props['aria-pressed'],false);
+ blocks[1].props.onClick();all=nodes(f.render());
+ assert.equal(all.find(n=>n.props?.['data-operation-settings']===0).props.hidden,true);
+ assert.equal(all.find(n=>n.props?.['data-operation-settings']===1).props.hidden,false);
+ all.find(n=>n.type==='input'&&n.props['aria-label']==='2번 밝기 배율').props.onChange({target:{value:'1.7'}});
+ all=nodes(f.render());all.find(n=>n.type==='button'&&n.props['data-input-operation']===0).props.onClick();
+ all=nodes(f.render());all.find(n=>n.type==='button'&&n.props['data-input-operation']===1).props.onClick();
+ all=nodes(f.render());assert.equal(all.find(n=>n.type==='input'&&n.props['aria-label']==='2번 밝기 배율').props.value,1.7);
+ assert.equal(f.requests.length,0,'selecting blocks does not execute a preview or start a job');
 });

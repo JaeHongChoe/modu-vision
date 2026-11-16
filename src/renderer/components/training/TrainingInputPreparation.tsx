@@ -21,6 +21,11 @@ export function TrainingInputPreparation({task,imageSize=256,disabled=false}:{ta
   const editorBase=useRef<{scope:string|null;revision:string;operations:FixedInputOperation[]}>({scope:null,revision:savedRevision,operations:saved?.operations||[]});
   const [conflict,setConflict]=useState(false);
   const [operations,setOperations]=useState<FixedInputOperation[]>(saved?.operations||[]);
+  const [selectedOperation,setSelectedOperation]=useState(0);
+  const operationButtons=useRef(new Map<number,HTMLButtonElement>());
+  const focusOperation=useRef(false);
+  const firstAddButton=useRef<HTMLButtonElement|null>(null);
+  useEffect(()=>{if(focusOperation.current){focusOperation.current=false;(operationButtons.current.get(selectedOperation)||firstAddButton.current)?.focus();}},[selectedOperation,operations]);
   const [imagePath,setImagePath]=useState('');const [preview,setPreview]=useState<{key:string;value:Preview}|null>(null);
   const [error,setError]=useState('');const [busy,setBusy]=useState(false);const [notice,setNotice]=useState('');
   const recipe:FixedInputRecipe={version:1,operations};
@@ -36,24 +41,28 @@ export function TrainingInputPreparation({task,imageSize=256,disabled=false}:{ta
       editorBase.current={scope,revision:recipeRevision(restored,hash),operations:restored?.operations||[]};
       if(restored&&inputRecipeScope!==scope)setInputRecipe(scope,restored,hash);
       setOperations(restored?.operations||[]);setConflict(false);
+      setSelectedOperation(0);
       setPreview(null);setError('');setNotice('');setBusy(false);setImagePath('');
     }else if(base.revision!==savedRevision){
       if(JSON.stringify(operations)!==JSON.stringify(base.operations)){
         setConflict(true);setPreview(null);setNotice('');
       }else{
         editorBase.current={scope,revision:savedRevision,operations:saved?.operations||[]};
-        setOperations(saved?.operations||[]);setConflict(false);setPreview(null);setError('');setNotice('저장한 입력 규칙을 편집기에 반영했습니다.');
+        setOperations(saved?.operations||[]);setSelectedOperation(0);setConflict(false);setPreview(null);setError('');setNotice('저장한 입력 규칙을 편집기에 반영했습니다.');
       }
     }
   },[scope,savedRevision]); // scope includes API transport, source, task and labelset
   const reloadSaved=()=>{
     editorBase.current={scope,revision:savedRevision,operations:saved?.operations||[]};
-    setOperations(saved?.operations||[]);setConflict(false);setPreview(null);setError('');setNotice('');
+    setOperations(saved?.operations||[]);setSelectedOperation(0);setConflict(false);setPreview(null);setError('');setNotice('');
   };
   useEffect(()=>{setBusy(false);},[currentKey,savedRevision]);
-  useEffect(()=>{if(!imagePath&&dataset.images.length)setImagePath(dataset.images[0].file_path);},[dataset.images,imagePath]);
+  useEffect(()=>{if(!imagePath&&dataset.images.length)setImagePath((dataset.images.find(image=>image.split==='train')||dataset.images[0]).file_path);},[dataset.images,imagePath]);
   const edit=(next:FixedInputOperation[])=>{setOperations(next);setNotice('');setError('');};
   const update=(index:number,row:FixedInputOperation)=>edit(operations.map((value,i)=>i===index?row:value));
+  const add=(row:FixedInputOperation)=>{focusOperation.current=true;setSelectedOperation(operations.length);edit([...operations,row]);};
+  const move=(index:number,delta:number)=>{focusOperation.current=true;setSelectedOperation(index+delta);edit(moveInputOperation(operations,index,delta));};
+  const remove=(index:number)=>{focusOperation.current=true;setSelectedOperation(Math.max(0,Math.min(selectedOperation,operations.length-2)));edit(operations.filter((_,i)=>i!==index));};
   const inspect=async()=>{
     const key=currentKey;
     try{if(getApiPersistenceIdentity()!==identity)throw new Error('연결 대상이 바뀌었습니다. 현재 입력 규칙을 다시 확인하세요.');validateInputRecipe(recipe,task);setBusy(true);setError('');
@@ -77,29 +86,36 @@ export function TrainingInputPreparation({task,imageSize=256,disabled=false}:{ta
   };
   const changed=JSON.stringify(saved?.operations||[])!==JSON.stringify(operations);
   return <section aria-label="학습 흐름 준비" className="workspace-section text-sm text-[var(--workspace-text)]">
-    <h2 className="flex items-center gap-2 font-semibold"><ImageIcon className="h-4 w-4 text-[var(--workspace-accent)]"/>학습 흐름 준비</h2>
-    <p className="mt-2 text-[var(--workspace-muted)]">원본·분할 → 고정 입력 규칙 → 모델 입력 {inputSize.join(' × ')} → 학습 전용 무작위 증강 → 모델 학습</p>
-    <p className="mt-1 text-xs text-[var(--workspace-muted)]">저장한 모델은 같은 입력 규칙으로 평가·검사합니다. 5단계에서는 학습한 모델로 검사·판정 흐름을 완성합니다.</p>
+    <h2 className="flex items-center gap-2 font-semibold"><ImageIcon className="h-4 w-4 text-[var(--workspace-accent)]"/>사진 전처리</h2>
+    <p className="mt-2 text-[var(--workspace-muted)]">학습에 들어갈 사진을 준비하세요. 블록을 선택해 설정하고, 원본과 변환 결과를 비교한 뒤 저장합니다.</p>
+    <p className="mt-1 text-xs text-[var(--workspace-muted)]">원본은 보존합니다. 저장한 변환은 학습·검증·시험·검사에 동일하게 적용됩니다.</p>
     {!supportsInputPreparation(task)?<p className="mt-3 text-[var(--workspace-warning)]" role="note">현재 고정 입력 규칙은 분류·영역 분할에서 지원합니다. 검출·OCR·방향·이상 탐지 등은 기존 입력을 사용합니다.</p>:<>
       <fieldset disabled={disabled||busy} className="mt-3 space-y-3">
         <legend className="sr-only">학습 전 고정 입력 규칙</legend>
-        <ol className="space-y-2">{operations.map((row,index)=><li key={index} className="workspace-record flex flex-wrap items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2" aria-label="전처리 블록 순서">
+          <span className="workspace-badge">원본 사진</span>
+          {operations.map((row,index)=><span key={index} className="inline-flex items-center gap-2"><span aria-hidden="true">→</span><button type="button" className="workspace-button" data-input-operation={index} ref={button=>{if(button)operationButtons.current.set(index,button);else operationButtons.current.delete(index);}} aria-pressed={selectedOperation===index} onClick={()=>setSelectedOperation(index)}>{index+1}. {names[row.op]}</button></span>)}
+          <span aria-hidden="true">→</span><span className="workspace-badge">모델 입력 {inputSize.join(' × ')}</span>
+        </div>
+        <ol className="space-y-2">{operations.map((row,index)=><li key={index} data-operation-settings={index} hidden={selectedOperation!==index} className={selectedOperation===index?'workspace-record flex flex-wrap items-center gap-2':'hidden'}>
           <strong className="min-w-24">{index+1}. {names[row.op]}</strong>
           {row.op==='crop'&&row.roi.map((value,i)=><label key={i} className="workspace-field max-w-24">{['왼쪽','위','오른쪽','아래'][i]} <input aria-label={`${index+1}번 ROI ${['왼쪽','위','오른쪽','아래'][i]}`} type="number" min="0" max="1" step="0.05" className="tabular-nums" value={value} onChange={event=>{const roi=[...row.roi] as typeof row.roi;roi[i]=Number(event.target.value);update(index,{...row,roi});}}/></label>)}
           {row.op==='rotate90'&&<label className="workspace-field max-w-40">반시계 <select aria-label={`${index+1}번 회전 각도`} value={row.turns} className="tabular-nums" onChange={event=>update(index,{...row,turns:Number(event.target.value)})}><option value={1}>90°</option><option value={2}>180°</option><option value={3}>270°</option></select></label>}
           {(row.op==='brightness'||row.op==='contrast')&&<label className="workspace-field max-w-24">배율 <input aria-label={`${index+1}번 ${names[row.op]} 배율`} type="number" min="0.25" max="4" step="0.1" className="tabular-nums" value={row.factor} onChange={event=>update(index,{...row,factor:Number(event.target.value)})}/></label>}
           {row.op==='resize'&&(['width','height'] as const).map(key=><label key={key} className="workspace-field max-w-24">{key==='width'?'너비':'높이'} <input aria-label={`${index+1}번 ${key==='width'?'너비':'높이'}`} type="number" min="16" max="4096" step="16" className="tabular-nums" value={row[key]} onChange={event=>update(index,{...row,[key]:Number(event.target.value)})}/></label>)}
-          <button type="button" aria-label={`${index+1}번 규칙 위로`} disabled={index===0} className="workspace-button" onClick={()=>edit(moveInputOperation(operations,index,-1))}><ArrowUp className="h-3 w-3"/></button>
-          <button type="button" aria-label={`${index+1}번 규칙 아래로`} disabled={index===operations.length-1} className="workspace-button" onClick={()=>edit(moveInputOperation(operations,index,1))}><ArrowDown className="h-3 w-3"/></button>
-          <button type="button" aria-label={`${index+1}번 규칙 삭제`} className="workspace-button" onClick={()=>edit(operations.filter((_,i)=>i!==index))}><Trash2 className="h-3 w-3"/></button>
+          <button type="button" aria-label={`${index+1}번 규칙 위로`} disabled={index===0} className="workspace-button" onClick={()=>move(index,-1)}><ArrowUp className="h-3 w-3"/></button>
+          <button type="button" aria-label={`${index+1}번 규칙 아래로`} disabled={index===operations.length-1} className="workspace-button" onClick={()=>move(index,1)}><ArrowDown className="h-3 w-3"/></button>
+          <button type="button" aria-label={`${index+1}번 규칙 삭제`} className="workspace-button" onClick={()=>remove(index)}><Trash2 className="h-3 w-3"/></button>
         </li>)}</ol>
         {!operations.length&&<p className="text-xs text-[var(--workspace-muted)]">추가 규칙 없음 · 기존 모델 입력 크기와 내부 정규화를 사용합니다.</p>}
-        <div className="flex flex-wrap gap-2">{([{op:'crop',roi:[0,0,1,1]},{op:'rotate90',turns:1},{op:'brightness',factor:1},{op:'contrast',factor:1},{op:'resize',width:256,height:256}] as FixedInputOperation[]).map(row=><button type="button" key={row.op} disabled={operations.length>=16} className="workspace-button" onClick={()=>edit([...operations,row])}>+ {names[row.op]}</button>)}</div>
-        <label className="workspace-field max-w-xl">실제 미리보기 이미지 <select className="max-w-full" value={imagePath} onChange={event=>setImagePath(event.target.value)}>{!dataset.images.length&&<option value="">1단계에서 이미지를 불러오세요</option>}{dataset.images.map(image=><option key={image.file_path} value={image.file_path}>{image.file_name}{image.label?` · ${image.label}`:''}</option>)}</select></label>
+        <div className="flex flex-wrap gap-2" aria-label="전처리 블록 추가">{([{op:'crop',roi:[0,0,1,1]},{op:'rotate90',turns:1},{op:'brightness',factor:1},{op:'contrast',factor:1},{op:'resize',width:256,height:256}] as FixedInputOperation[]).map(row=><button type="button" key={row.op} ref={row.op==='crop'?firstAddButton:undefined} disabled={operations.length>=16} className="workspace-button" onClick={()=>add(row)}>+ {names[row.op]}</button>)}</div>
+        <label className="workspace-field max-w-xl">실제 미리보기 이미지 <select className="max-w-full" value={imagePath} onChange={event=>setImagePath(event.target.value)}>{!dataset.images.length&&<option value="">1단계에서 이미지를 불러오세요</option>}{dataset.images.map(image=><option key={image.file_path} value={image.file_path}>{image.file_name}{image.split?` · ${{train:'학습',val:'검증',test:'시험'}[image.split]||image.split}`:''}{image.label?` · ${image.label}`:''}</option>)}</select></label>
+        {dataset.images.some(image=>image.file_path===imagePath&&(image.split==='val'||image.split==='test'))&&<p role="note" className="text-xs text-[var(--workspace-warning)]">검증·시험 사진입니다. 변환을 조정할 때는 학습 사진을 선택해 시험 결과의 독립성을 지키세요.</p>}
         <div className="flex flex-wrap gap-2"><button type="button" disabled={!imagePath} className="workspace-button" onClick={()=>void inspect()}>{busy?'입력 확인 중…':'실제 입력 미리보기'}</button><button type="button" className="workspace-button workspace-button--primary" disabled={conflict||(operations.length>0&&!currentPreview)} onClick={save}>규칙 저장</button><button type="button" className="workspace-button" onClick={reloadSaved}>편집 취소</button></div>
       </fieldset>
       {currentPreview&&<div className="mt-3 grid gap-3 sm:grid-cols-2">{[['원본',currentPreview.original_target||currentPreview.original_image,currentPreview.source_size],['준비한 입력',currentPreview.prepared_target||currentPreview.prepared_image,currentPreview.prepared_size]].map(([label,url,size])=><figure key={String(label)} className="workspace-record"><figcaption className="mb-2 text-xs">{String(label)} · {(size as number[]).join(' × ')}{task==='segmentation'?' · 청록: 정답 영역':''}</figcaption><img className="h-48 w-full object-contain" src={String(url)} alt={`${label} ${task==='segmentation'?'이미지와 정답 영역':'학습 이미지'}`}/></figure>)}</div>}
       <p className="mt-3 text-xs text-[var(--workspace-muted)]">{changed?'저장하지 않은 변경이 있습니다. 다음 학습은 마지막 저장 규칙을 사용합니다.':saved?`저장한 규칙 ${inputRecipeSha256?.slice(0,12)||''} · 다음 학습에 적용`:'기존 입력 사용'} · 규칙을 바꾸면 새 학습·평가가 필요합니다. 기존 모델과 평가 기록은 보존됩니다.</p>
+      <details className="mt-3 text-xs text-[var(--workspace-muted)]"><summary className="cursor-pointer">학습용 사진 늘리기와 검사 흐름은 어떻게 다른가요?</summary><p className="mt-2">선택한 모델이 제공하는 무작위 증강은 학습 사진에만 적용합니다. 검증·시험 사진은 늘리지 않습니다. 학습이 끝난 뒤 검사 사용에서 모델과 판정 규칙을 연결합니다.</p></details>
       {operations.some(row=>row.op==='crop')&&<p className="mt-1 text-xs text-[var(--workspace-muted)]">ROI 밖의 영역은 검사하지 않습니다. 분할 마스크는 원본 좌표로 되돌리고 제외 영역은 배경으로 둡니다.</p>}
       {conflict&&<div role="alert" className="workspace-record mt-2 text-[var(--workspace-warning)]"><p>도우미 또는 다른 작업에서 저장한 규칙이 바뀌었습니다. 편집 내용은 보관했습니다. 저장한 규칙을 불러온 뒤 다시 편집하세요.</p><button type="button" className="workspace-button mt-2" onClick={reloadSaved}>저장한 규칙 불러오기</button></div>}
       {notice&&<p role="status" className="mt-2 text-[var(--workspace-accent)]">{notice}</p>}{error&&<p role="alert" className="mt-2 text-[var(--workspace-danger)]">{error}</p>}

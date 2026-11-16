@@ -140,7 +140,7 @@ function ocrProjectSwitchHarness() {
   for (const name of ['../common/OperatorGuidanceBanner', '../common/GuardrailBanner', '../common/LedAnnunciator',
     './OscilloscopeLossCurve', './HardwareTelemetryPanel', './RecipePresetSelector', './RotatedDetectionPanel',
     './DefectGANWorkbench', './EnhancementWorkbench', './ModelFamilyCatalog', './DinoSyntheticOptions',
-    './PatchClassificationWorkbench', './RotationWorkbench', './AutoDLWorkbench', './TrainingPreparationPanel', './TrainingInputPreparation',
+    './PatchClassificationWorkbench', './RotationWorkbench', './AutoDLWorkbench', './TrainingPreparationPanel', './TrainingInputPreparation','./TrainingDataWorkflow','./TrainingDataSplitBlock',
     './JobProgressView', '../runtime/OperationsObservabilityPanel']) mocks[name] = {};
   const {WarmStartSelector} = load('WarmStartSelector.tsx', mocks);
   mocks['./WarmStartSelector'] = {WarmStartSelector};

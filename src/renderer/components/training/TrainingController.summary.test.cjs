@@ -30,7 +30,7 @@ function fixture({warmParentsFailure = null, resumeFailure = null, deferResume =
     const m = new Module(filename, module); m.filename = filename; m.paths = Module._nodeModulePaths(path.dirname(filename)); cache.set(filename, m);
     const req = m.require.bind(m);
     m.require = name => {
-      if (name === './trainingStartSummary' || name === './modelTrainingOptions' || name === './inputPreparation') return load(name.slice(2) + '.ts', true);
+      if (name === './trainingStartSummary' || name === './modelTrainingOptions' || name === './inputPreparation' || name === './trainingWorkflow') return load(name.slice(2) + '.ts', true);
       if (name === 'react') return react;
       if (name === 'react/jsx-runtime') return {jsx: (type, props, key) => ({type, props, key}), jsxs: (type, props, key) => ({type, props, key}), Fragment: 'Fragment'};
       if (name.endsWith('/assistContext')) return load('../../stores/assistContext.ts', true);
@@ -60,7 +60,7 @@ function fixture({warmParentsFailure = null, resumeFailure = null, deferResume =
     return m.exports;
   }
   const h = load('trainingStartSummary.ts', true), shared = load('../../stores/assistContext.ts', true), { TrainingController } = load('TrainingController.tsx');
-  const nodes = value => Array.isArray(value) ? value.flatMap(nodes) : value && typeof value === 'object' ? [value, ...nodes(typeof value.type === 'function' ? value.type(value.props) : value.props?.children)] : [];
+  const nodes = value => Array.isArray(value) ? value.flatMap(nodes) : value && typeof value === 'object' ? [value, ...nodes(typeof value.type === 'function' ? value.type(value.props) : value.props?.children), ...nodes(value.props?.blocks?.map(block => block.content))] : [];
   function render() { cursor = 0; tree = TrainingController(); }
   const scope = () => h.trainingSummaryScope(authority(), { task: project.task, folderPath: data.folderPath, datasetKey: data.datasetKey,
     preset: training.preset, nextDevice: training.nextDevice, nextBatchSize: training.nextBatchSize, selectedProfileId: compute.selectedProfileId,
@@ -70,6 +70,8 @@ function fixture({warmParentsFailure = null, resumeFailure = null, deferResume =
     async settle() { for (let i = 0; i < 8; i++) { render(); effects.splice(0).forEach(effect => effect()); await new Promise(setImmediate); } },
     change(label, value) { const field = nodes(tree).find(node => node.props?.['aria-label'] === label); assert.ok(field, label); field.props.onChange({ target: { value } }); },
     summary: () => h.currentTrainingSummary(scope()),
+    catalog: () => nodes(tree).find(node => node.type === 'ModelFamilyCatalog')?.props,
+    workflow: () => nodes(tree).find(node => node.type === 'TrainingDataWorkflow')?.props,
     preparation: () => nodes(tree).find(node => node.type === 'TrainingPreparationPanel')?.props,
     dom() {
       const elements = []; let focused = null;
@@ -83,7 +85,7 @@ function fixture({warmParentsFailure = null, resumeFailure = null, deferResume =
             let owner = candidate.parentElement; while (owner && owner !== this) owner = owner.parentElement;
             return owner === this && (selector === 'details' ? candidate.tagName === 'DETAILS' : selector === 'button:not(:disabled)' ? candidate.tagName === 'BUTTON' && !candidate.props.disabled : false);
           }) || null;}};
-        elements.push(element); materialize(value.props.children, element);
+        elements.push(element); materialize(value.props.children, element); materialize(value.props.blocks?.map(block => block.content), element);
       }
       materialize(tree);
       return {getElementById: id => elements.find(element => element.props.id === id) || null, focused: () => focused, elements};
@@ -285,25 +287,18 @@ test('preparation recovery opens the actual model, scheduling and compute contro
 });
 
 
-test('training keeps purpose, preparation and mounted transforms in the same order across viewing modes', async () => {
-  const f = fixture(); await f.settle();
-  const simple = f.dom().elements;
-  const find = (rows, name) => rows.find(node => node.tagName === name.toUpperCase());
-  const preparation = find(simple, 'TrainingPreparationPanel'), catalog = find(simple, 'ModelFamilyCatalog'), input = find(simple, 'TrainingInputPreparation');
-  assert.ok(simple.indexOf(catalog) < simple.indexOf(preparation)); assert.ok(simple.indexOf(preparation) < simple.indexOf(input));
-  assert.equal(input.parentElement.tagName, 'DETAILS'); assert.equal(input.parentElement.open, false);
-  assert.equal(input.parentElement.props.children[0].props.children, '사진 변환 설정 (선택)');
-  assert.ok(input.parentElement.key, 'the editor disclosure has stable React identity when reordered');
-  assert.equal(input.props.disabled, false);
-  const identity = input.parentElement.key;
-  f.project.viewMode = 'full'; await f.settle();
-  const full = f.dom().elements, fullInput = find(full, 'TrainingInputPreparation');
-  assert.ok(full.indexOf(find(full, 'TrainingPreparationPanel')) < full.indexOf(fullInput));
-  assert.ok(full.indexOf(find(full, 'ModelFamilyCatalog')) < full.indexOf(find(full, 'TrainingPreparationPanel')));
-  assert.equal(fullInput.parentElement.tagName, 'DETAILS'); assert.equal(fullInput.parentElement.open, true);
-  assert.equal(fullInput.parentElement.key, identity, 'view changes move the existing editor instead of replacing its wrapper');
-  assert.equal(fullInput.parentElement.props.children[0].props.hidden, true, 'full view does not add a new disclosure heading');
-  f.training.isTraining = true; await f.settle(); assert.equal(find(f.dom().elements, 'TrainingInputPreparation').props.disabled, true); f.unmount();
+test('training shows preprocessing before model purpose in a stable workflow across viewing modes', async () => {
+  const f=fixture();await f.settle();
+  const simple=f.dom().elements,find=(rows,name)=>rows.find(node=>node.tagName===name.toUpperCase());
+  const input=find(simple,'TrainingInputPreparation'),catalog=find(simple,'ModelFamilyCatalog'),preparation=find(simple,'TrainingPreparationPanel');
+  assert.ok(simple.indexOf(input)<simple.indexOf(catalog),'preprocessing comes before choosing the model');
+  assert.ok(simple.indexOf(catalog)<simple.indexOf(preparation));
+  assert.equal(input.props.disabled,false);const scope=f.workflow().scope;
+  f.project.viewMode='full';await f.settle();
+  const full=f.dom().elements;
+  assert.ok(full.indexOf(find(full,'TrainingInputPreparation'))<full.indexOf(find(full,'ModelFamilyCatalog')));
+  assert.equal(f.workflow().scope,scope,'view changes retain the workflow selection and mounted editor');
+  f.unmount();
 });
 
 test('advanced model fields retain their selected values across mode changes while running stop stays outside disclosures', async () => {
@@ -351,4 +346,29 @@ test('closing training location cannot hide transfer state or disconnected recov
   const reconnect = nodes.find(node => node.tagName === 'BUTTON' && text(node.props.children).includes('연결 다시 확인'));
   assertVisible(reconnect); await reconnect.props.onClick(); assert.equal(reconnected, 1);
   f.unmount();
+});
+
+
+test('training starts with connected data preparation before model selection without starting work', async () => {
+  const f=fixture();await f.settle();
+  assert.ok(f.workflow(),'the preparation workflow is mounted');
+  assert.deepEqual(f.workflow().blocks.map(block=>block.id),['photos','labels','split','preprocess','model']);
+  assert.match(f.workflow().blocks.find(block=>block.id==='preprocess').summary,/기본 입력/,'detection does not claim unsupported transforms');
+  f.data.folderPath='/retired';await f.settle();
+  assert.equal(f.workflow().blocks[0].status,'attention','old-source counts cannot mark photos ready');
+  f.unmount();
+});
+
+
+test('running or recovering training keeps model selection locked even through a retained callback', async()=>{
+ for(const key of ['isTraining','isRecoveringTraining']){
+  const f=fixture();await f.settle();const choose=f.catalog().onSelect;
+  f.training[key]=true;await f.settle();assert.equal(f.catalog().disabled,true);
+  choose('ocr');await f.settle();assert.equal(f.catalog().selectedFamily,'detection');
+  f.unmount();
+ }
+});
+test('classification with only one populated class does not mark truth ready',async()=>{
+ const f=fixture();f.project.task='classification';f.project.project.task='classification';f.data.datasetKey='/images\0classification';f.data.classes={Only:10};
+ await f.settle();assert.equal(f.workflow().blocks.find(block=>block.id==='labels').status,'attention');f.unmount();
 });
