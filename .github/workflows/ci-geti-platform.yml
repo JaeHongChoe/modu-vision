@@ -1,0 +1,44 @@
+name: Geti platform source checks
+
+# Additive M0 coverage only: no training, package installation or upstream code.
+"on":
+  pull_request:
+    paths:
+      - '.gitmodules'
+      - 'platforms/geti/**'
+      - 'scripts/geti-platform.cjs'
+      - 'scripts/tests/geti-platform.test.cjs'
+      - '.github/workflows/ci-geti-platform.yml'
+  push:
+    branches: [main]
+    paths:
+      - '.gitmodules'
+      - 'platforms/geti/**'
+      - 'scripts/geti-platform.cjs'
+      - 'scripts/tests/geti-platform.test.cjs'
+      - '.github/workflows/ci-geti-platform.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: geti-platform-${{ github.workflow }}-${{ github.ref }}
+  queue: max
+  cancel-in-progress: false
+
+jobs:
+  source:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          submodules: true
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: '24'
+      - name: Source guard contracts with owned Git fixtures
+        run: node --test scripts/tests/geti-platform.test.cjs
+      - name: Verify the complete pinned upstream source
+        run: node scripts/geti-platform.cjs check --json

@@ -1,0 +1,53 @@
+{
+  "schemaVersion": 1,
+  "repository": "https://github.com/open-edge-platform/geti.git",
+  "tag": "app/v3.3.0",
+  "commit": "ddcf394d550bf1b84ca262888260043af361f5e7",
+  "tree": "0230bda3c9fce38e275a41403500dc8eec445616",
+  "sourcePath": "platforms/geti/upstream",
+  "applicationPath": "application",
+  "libraryPath": "library",
+  "license": {
+    "path": "LICENSE",
+    "spdx": "Apache-2.0",
+    "sha256": "db231b35ec46df91df83044d2a5c376757833423911459743353f54ddb783c2e"
+  },
+  "expectedFiles": {
+    "total": 2987,
+    "application/backend": 589,
+    "application/ui": 1239,
+    "library": 987
+  },
+  "requiredPaths": [
+    "LICENSE",
+    "THIRD-PARTY-NOTICES.md",
+    "application/backend/pyproject.toml",
+    "application/backend/app/main.py",
+    "application/ui/package.json",
+    "application/ui/src/router.tsx",
+    "library/pyproject.toml",
+    "library/src/getitune/engine/engine.py"
+  ],
+  "lifecycleOwners": {
+    "data": ["application/backend/app/api/routers/datasets.py", "application/backend/app/api/routers/dataset_revisions.py", "application/backend/app/api/routers/dataset_views.py"],
+    "annotation": ["application/ui/src/modules/annotator", "application/backend/app/api/routers/media.py"],
+    "training": ["application/backend/app/api/routers/jobs.py", "application/backend/app/api/routers/training_configurations.py", "library/src/getitune/engine"],
+    "evaluation": ["application/backend/app/services/evaluation", "application/backend/app/services/metrics_service.py"],
+    "models": ["application/backend/app/api/routers/models.py", "application/backend/app/services/model_service.py"],
+    "inference": ["application/backend/app/api/routers/pipelines.py", "application/backend/app/api/routers/sources.py", "application/backend/app/api/routers/sinks.py", "application/backend/app/services/inference"]
+  },
+  "toolchains": {
+    "backendPython": ">=3.14,<3.15",
+    "uiReact": "~19.1.1",
+    "uiNode": ">=v24.2.0",
+    "uiNpm": ">=11.14.0",
+    "currentModuPython": "3.13",
+    "currentModuReact": "18.3.1",
+    "separateEnvironmentRequired": true
+  },
+  "qualification": {
+    "runtimeVerified": false,
+    "productIntegrationVerified": false,
+    "scope": "Full upstream source identity only; isolated runtime feasibility and Modu integration are separate milestones"
+  }
+}

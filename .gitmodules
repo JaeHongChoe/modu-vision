@@ -1,0 +1,3 @@
+[submodule "geti"]
+	path = platforms/geti/upstream
+	url = https://github.com/open-edge-platform/geti.git
