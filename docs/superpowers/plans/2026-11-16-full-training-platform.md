@@ -58,9 +58,11 @@
 - [x] pin 불일치, dirty upstream, 빠진 application/library/license, manifest 누락을 거절하는 Node test를 작성하고 실패를 확인한다.
 - [x] 전체 source를 gitlink로 가져오고 lock/notice를 작성한다. 고정 source와 package metadata에서 toolchain 요구를 읽어 `verifyUpstream`을 구현한다. global 환경을 변경하지 않는다.
 - [x] `node --test scripts/tests/geti-platform.test.cjs`로 성공/거절 양쪽을 확인한다. `git diff --cached --submodule=short`로 정확 SHA와 전체 source 경계를 읽는다. 실제 source check는 2,987 tracked objects, backend589/UI1,239/library987을 확인했고 runtime/product integration은 false다.
-- [ ] README에 M0의 완료와 M1 이후 미완료를 구분하고 단독 source/contract commit을 만든다.
+- [x] README에 M0의 완료와 M1 이후 미완료를 구분하고 단독 source/contract commit을 만든다 (`0156a92c`).
 
 ### Task 2: 실제 macOS ARM CPU 전체 runtime 가능성 시험 (M1)
+
+원본의 독립 API 경로에서 합성24장·CPU1epoch·세 variant 평가/내보내기·실제 추론·재접속은 통과했다. [검증 기록](../../verification/2026-11-16-full-training-platform.md)을 따른다. 아래 제품용 launcher 계약·송신 관측·실제 사용자 화면·종료 경계까지 완료했다는 뜻은 아니므로 Task 2 전체를 완료로 표시하지 않는다.
 
 **Files:** `scripts/geti-platform.cjs`, 같은 test 파일, `scripts/e2e/geti-platform-lifecycle.spec.ts`, 검증 문서.
 

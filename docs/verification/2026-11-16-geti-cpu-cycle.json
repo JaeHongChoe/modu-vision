@@ -1,0 +1,451 @@
+{
+  "schema_version": 1,
+  "qualification": "isolated upstream synthetic CPU lifecycle feasibility only",
+  "product_integration_verified": false,
+  "field_quality_accepted": false,
+  "upstream_commit": "ddcf394d550bf1b84ca262888260043af361f5e7",
+  "modu_foundation_commit": "0156a92c7e84aa2d62516d1424ddfc2e532a297a",
+  "original_receipt_sha256": "c553b01ca3e2d4089545aa3b5ac97fa9d7b3e3b511be9a3ec9770ee8bdb39154",
+  "status": "PASS",
+  "http_requests": 169,
+  "passed_checks": 57,
+  "failed_checks": [],
+  "synthetic_samples": [
+    {
+      "media_id": "0a0a4c61-9ad3-42a9-ae23-5d92dd43f3b5",
+      "label": "OK",
+      "label_id": "843ac3aa-2cd7-4287-b874-aa712ef0a088",
+      "subset": "training",
+      "input_path": "synthetic-inputs/synthetic-01-OK-training.png",
+      "input_sha256": "353c705a573449860dd45619f798455f955fac7429ebe628f0b7edee68898afe"
+    },
+    {
+      "media_id": "def75be2-a7b8-4a84-8e34-e7dfdb120bb7",
+      "label": "NG",
+      "label_id": "b2463fbe-1944-404e-b22d-9bbc6eef9e5a",
+      "subset": "training",
+      "input_path": "synthetic-inputs/synthetic-02-NG-training.png",
+      "input_sha256": "85e172b358c6c594bfdfa5f515fb83570ef5c09ab0829cc0b5f5df41d915f138"
+    },
+    {
+      "media_id": "2724b461-0d47-400c-80b9-abc0832cdfc9",
+      "label": "OK",
+      "label_id": "843ac3aa-2cd7-4287-b874-aa712ef0a088",
+      "subset": "training",
+      "input_path": "synthetic-inputs/synthetic-03-OK-training.png",
+      "input_sha256": "bcd6cbaa3cc42e2fe5cf1553aef783ff0af086771ea7e5d8acd9bfdd65f8fb73"
+    },
+    {
+      "media_id": "882fbc81-ba41-4e7d-a332-5b27f5574bdf",
+      "label": "NG",
+      "label_id": "b2463fbe-1944-404e-b22d-9bbc6eef9e5a",
+      "subset": "training",
+      "input_path": "synthetic-inputs/synthetic-04-NG-training.png",
+      "input_sha256": "f8b7c6c9bde6a8c699f362571a478a4387b36f09abf2667f0faa9636e5448e4f"
+    },
+    {
+      "media_id": "79404c3d-788e-474d-8602-879075561a8d",
+      "label": "OK",
+      "label_id": "843ac3aa-2cd7-4287-b874-aa712ef0a088",
+      "subset": "training",
+      "input_path": "synthetic-inputs/synthetic-05-OK-training.png",
+      "input_sha256": "96703f32b825bc191c74f41545686d86067a6c50e779b3d4389bad63048a5d8a"
+    },
+    {
+      "media_id": "5bc2ea6b-4a28-439c-9db7-654ad5c34547",
+      "label": "NG",
+      "label_id": "b2463fbe-1944-404e-b22d-9bbc6eef9e5a",
+      "subset": "training",
+      "input_path": "synthetic-inputs/synthetic-06-NG-training.png",
+      "input_sha256": "44e6a7a829a1582b838be7be9f65156b67a163d0726c7e9161a628aad31ffc2b"
+    },
+    {
+      "media_id": "e1d1d55b-d2bf-4f42-bd41-700f27340311",
+      "label": "OK",
+      "label_id": "843ac3aa-2cd7-4287-b874-aa712ef0a088",
+      "subset": "training",
+      "input_path": "synthetic-inputs/synthetic-07-OK-training.png",
+      "input_sha256": "dcae9d434bd636926830446ab0f05d1bb595da45c302538ddf1dd3eea4cce97b"
+    },
+    {
+      "media_id": "56b3107e-6d87-4f20-ac87-33feafb53c21",
+      "label": "NG",
+      "label_id": "b2463fbe-1944-404e-b22d-9bbc6eef9e5a",
+      "subset": "training",
+      "input_path": "synthetic-inputs/synthetic-08-NG-training.png",
+      "input_sha256": "87ac529b80bde84646199c3dabb8cb57cfaa3253e913e198d242a2a172bda0e1"
+    },
+    {
+      "media_id": "5c869d25-15b8-4287-8bc5-b6219cb2f24b",
+      "label": "OK",
+      "label_id": "843ac3aa-2cd7-4287-b874-aa712ef0a088",
+      "subset": "training",
+      "input_path": "synthetic-inputs/synthetic-09-OK-training.png",
+      "input_sha256": "777ca657d964eb7d2783ecf1ea94c6fe90ddb621173662ac6bce7af6b933db68"
+    },
+    {
+      "media_id": "f714c2b9-4ea8-4e70-b4d4-ddbc1f8914e5",
+      "label": "NG",
+      "label_id": "b2463fbe-1944-404e-b22d-9bbc6eef9e5a",
+      "subset": "training",
+      "input_path": "synthetic-inputs/synthetic-10-NG-training.png",
+      "input_sha256": "0cc63df749fb2f9b802f4db110d4470fd399ddc427a677865f0048b26bc99471"
+    },
+    {
+      "media_id": "17fa9ab2-2560-48eb-9199-2ed55802d297",
+      "label": "OK",
+      "label_id": "843ac3aa-2cd7-4287-b874-aa712ef0a088",
+      "subset": "training",
+      "input_path": "synthetic-inputs/synthetic-11-OK-training.png",
+      "input_sha256": "6d5b0c9890693b6c36abc0625079a24237cca1c1f533d5534d6d83953977b344"
+    },
+    {
+      "media_id": "e63b7477-a822-4e7e-a94c-3440c45200f5",
+      "label": "NG",
+      "label_id": "b2463fbe-1944-404e-b22d-9bbc6eef9e5a",
+      "subset": "training",
+      "input_path": "synthetic-inputs/synthetic-12-NG-training.png",
+      "input_sha256": "36c74effcd91abcb18c1c67f1534a0b7492a3e3320da9f45167824bb079f6768"
+    },
+    {
+      "media_id": "36132201-07ad-4b8b-8743-6c3931b4c6a8",
+      "label": "OK",
+      "label_id": "843ac3aa-2cd7-4287-b874-aa712ef0a088",
+      "subset": "training",
+      "input_path": "synthetic-inputs/synthetic-13-OK-training.png",
+      "input_sha256": "8697956af872ee28b9795eb12735fd73630363708224a4bae7ee87ba4c74abe8"
+    },
+    {
+      "media_id": "3c7ee30d-43ed-43f8-a453-5f0750b113aa",
+      "label": "NG",
+      "label_id": "b2463fbe-1944-404e-b22d-9bbc6eef9e5a",
+      "subset": "training",
+      "input_path": "synthetic-inputs/synthetic-14-NG-training.png",
+      "input_sha256": "68dc9d6ae7c46cec47f0807047ad04624c4e612e3d573c8769ad0ba7f5787bdf"
+    },
+    {
+      "media_id": "1331c09e-6954-4664-8b18-8f7664e38357",
+      "label": "OK",
+      "label_id": "843ac3aa-2cd7-4287-b874-aa712ef0a088",
+      "subset": "training",
+      "input_path": "synthetic-inputs/synthetic-15-OK-training.png",
+      "input_sha256": "a372e12f8e3469cf03e97f702a5be2174de93c035127f561dc42310852d15acf"
+    },
+    {
+      "media_id": "4ef2a03c-86c7-498f-ace7-e2da2734827e",
+      "label": "NG",
+      "label_id": "b2463fbe-1944-404e-b22d-9bbc6eef9e5a",
+      "subset": "training",
+      "input_path": "synthetic-inputs/synthetic-16-NG-training.png",
+      "input_sha256": "383500656ceca98afb3688cb766d57ccf5a62abdc08b1eaf74cd3312658cf683"
+    },
+    {
+      "media_id": "02a2e412-535a-4ba9-b2a1-0816a48acd56",
+      "label": "OK",
+      "label_id": "843ac3aa-2cd7-4287-b874-aa712ef0a088",
+      "subset": "validation",
+      "input_path": "synthetic-inputs/synthetic-17-OK-validation.png",
+      "input_sha256": "a81445b1607bd7f77d89f5902eedc285d558689f387729c97cd5eb7d20630647"
+    },
+    {
+      "media_id": "bc34eb5a-8eab-443b-ad67-e329e4d17b3a",
+      "label": "NG",
+      "label_id": "b2463fbe-1944-404e-b22d-9bbc6eef9e5a",
+      "subset": "validation",
+      "input_path": "synthetic-inputs/synthetic-18-NG-validation.png",
+      "input_sha256": "7a95a7321cb0628ac7f992500417b2991a4db28ba294021583f45f2fb38ff203"
+    },
+    {
+      "media_id": "5d6c2217-43d1-4ed7-a396-9a968bbe6ddb",
+      "label": "OK",
+      "label_id": "843ac3aa-2cd7-4287-b874-aa712ef0a088",
+      "subset": "validation",
+      "input_path": "synthetic-inputs/synthetic-19-OK-validation.png",
+      "input_sha256": "0139762e2b95a00d125fdd4232fc297d9c958d6e2709222a15d9e703d3f349cc"
+    },
+    {
+      "media_id": "348ed917-e7dc-455e-a7ba-49ae44c9e000",
+      "label": "NG",
+      "label_id": "b2463fbe-1944-404e-b22d-9bbc6eef9e5a",
+      "subset": "validation",
+      "input_path": "synthetic-inputs/synthetic-20-NG-validation.png",
+      "input_sha256": "10f5d681f4c1cdb7299ee48d13e8954cb25ce26a78bb88118ad7cdc717fa06df"
+    },
+    {
+      "media_id": "0790913a-7bfe-4f4b-ae0c-9c45c923eb8d",
+      "label": "OK",
+      "label_id": "843ac3aa-2cd7-4287-b874-aa712ef0a088",
+      "subset": "testing",
+      "input_path": "synthetic-inputs/synthetic-21-OK-testing.png",
+      "input_sha256": "fbdfa08ee999dcd646c7a7ef3e371c00084a424a151084653f429a2ec2093130"
+    },
+    {
+      "media_id": "687c6dd9-c869-49a4-bbcf-02c42f548969",
+      "label": "NG",
+      "label_id": "b2463fbe-1944-404e-b22d-9bbc6eef9e5a",
+      "subset": "testing",
+      "input_path": "synthetic-inputs/synthetic-22-NG-testing.png",
+      "input_sha256": "55d03a0ee0c1837955b0ba851d719ec1a3603c082a75584d6efd87ace96b2d68"
+    },
+    {
+      "media_id": "7769f3fd-f2a1-4650-8c6f-8fe27bcf045b",
+      "label": "OK",
+      "label_id": "843ac3aa-2cd7-4287-b874-aa712ef0a088",
+      "subset": "testing",
+      "input_path": "synthetic-inputs/synthetic-23-OK-testing.png",
+      "input_sha256": "6e602d128bf8832211b12c9a30447652d408e5427d97f85ed122c212c92118c8"
+    },
+    {
+      "media_id": "9f814f08-f81b-483f-9930-16c98c0f40b1",
+      "label": "NG",
+      "label_id": "b2463fbe-1944-404e-b22d-9bbc6eef9e5a",
+      "subset": "testing",
+      "input_path": "synthetic-inputs/synthetic-24-NG-testing.png",
+      "input_sha256": "4d2d2752015adc78ef2e698a0d77ec462aee8f7813eb706697123f8fc9562d1b"
+    }
+  ],
+  "subset_counts": {
+    "training": 16,
+    "validation": 4,
+    "testing": 4
+  },
+  "configuration": {
+    "architecture": "image-classification-efficientnet-b0",
+    "device": "cpu",
+    "epochs": 1,
+    "batch_size": 2,
+    "num_workers": 0,
+    "input_size": 64,
+    "thread_environment": {
+      "OMP_NUM_THREADS": "2",
+      "MKL_NUM_THREADS": "2",
+      "OPENBLAS_NUM_THREADS": "2",
+      "VECLIB_MAXIMUM_THREADS": "2",
+      "NUMEXPR_NUM_THREADS": "2"
+    },
+    "overall_threadpool_limit_measured": false
+  },
+  "weight_provenance": {
+    "publisher": "osmr/imgclsmob",
+    "publisher_release": "v0.0.364",
+    "publisher_release_url": "https://github.com/osmr/imgclsmob/releases/tag/v0.0.364",
+    "publisher_license_url": "https://raw.githubusercontent.com/osmr/imgclsmob/v0.0.364/LICENSE",
+    "publisher_license": "MIT",
+    "publisher_license_sha256": "f3c0a6b9badbfa79bfeb135a373b869093d1b53df931aad4f946b436855ad3ab",
+    "weight_url": "https://github.com/osmr/imgclsmob/releases/download/v0.0.364/efficientnet_b0-0752-0e386130.pth.zip",
+    "expected_sha256": "79f2b405a15399a0772337bd7f58052cb88299a65ed838a43c1ea8d3e0253f70",
+    "pretraining_dataset": "ImageNet-1K per publisher release",
+    "commercial_release_clearance_claimed": false,
+    "download_attempted": true,
+    "download_content_length": "19824784",
+    "actual_sha256": "79f2b405a15399a0772337bd7f58052cb88299a65ed838a43c1ea8d3e0253f70",
+    "download_bytes": 19824784,
+    "download_completed_at": "2026-11-16T14:46:23.081114+00:00"
+  },
+  "single_submitted_job": {
+    "job_id": "429ec27c-eb9c-4c5b-a54e-87209694bd2d",
+    "job_type": "train",
+    "metadata": {
+      "project": {
+        "id": "89afed84-1a2a-440a-bcba-5395cd8ca439"
+      },
+      "model": {
+        "id": "04bce283-4e67-4f1e-88b1-18cfc8394e4b",
+        "name": "EfficientNet-B0 (04bce283)",
+        "architecture": "image-classification-efficientnet-b0",
+        "parent_revision_id": null,
+        "dataset_revision_id": null,
+        "dataset_view_id": null,
+        "dataset_view_name": null
+      },
+      "device": {
+        "type": "cpu",
+        "name": "CPU",
+        "memory": null,
+        "index": null
+      }
+    },
+    "status": "DONE",
+    "progress": 100.0,
+    "message": "Completed: Store Model Artifacts",
+    "error": null,
+    "started_at": "2026-11-16T14:47:09.647050Z",
+    "finished_at": "2026-11-16T14:50:01.967556Z"
+  },
+  "models": [
+    {
+      "id": "04bce283-4e67-4f1e-88b1-18cfc8394e4b",
+      "name": "EfficientNet-B0 (04bce283)",
+      "architecture": "image-classification-efficientnet-b0",
+      "parent_revision": null,
+      "training_info": {
+        "status": "successful",
+        "label_schema_revision": {
+          "labels": [
+            {
+              "name": "OK",
+              "id": "843ac3aa-2cd7-4287-b874-aa712ef0a088"
+            },
+            {
+              "name": "NG",
+              "id": "b2463fbe-1944-404e-b22d-9bbc6eef9e5a"
+            }
+          ]
+        },
+        "start_time": "2026-11-16T14:47:27.763752Z",
+        "end_time": "2026-11-16T14:50:01.945636Z",
+        "dataset_revision_id": "35dd0e81-78f7-427b-8da0-a4ed97d0377b",
+        "device": {
+          "type": "cpu",
+          "name": "CPU",
+          "memory": null,
+          "index": null
+        }
+      },
+      "variants": [
+        {
+          "id": "d753aa84-0c5d-4728-ad54-959bff42d771",
+          "format": "pytorch",
+          "precision": "fp32",
+          "weights_size": 32452355,
+          "evaluations": [
+            {
+              "dataset_revision_id": "35dd0e81-78f7-427b-8da0-a4ed97d0377b",
+              "subset": "testing",
+              "metrics": [
+                {
+                  "name": "Accuracy",
+                  "value": 0.5,
+                  "primary": true
+                }
+              ]
+            }
+          ],
+          "quantization_info": null,
+          "files_deleted": false,
+          "optimal_confidence_threshold": null
+        },
+        {
+          "id": "bd90da86-e82f-4b73-b29c-12838da84a49",
+          "format": "openvino",
+          "precision": "fp16",
+          "weights_size": 8328728,
+          "evaluations": [
+            {
+              "dataset_revision_id": "35dd0e81-78f7-427b-8da0-a4ed97d0377b",
+              "subset": "testing",
+              "metrics": [
+                {
+                  "name": "Accuracy",
+                  "value": 0.5,
+                  "primary": true
+                }
+              ]
+            }
+          ],
+          "quantization_info": null,
+          "files_deleted": false,
+          "optimal_confidence_threshold": null
+        },
+        {
+          "id": "7e42f025-57d7-4312-8fbb-69d3302df914",
+          "format": "onnx",
+          "precision": "fp16",
+          "weights_size": 9041852,
+          "evaluations": [
+            {
+              "dataset_revision_id": "35dd0e81-78f7-427b-8da0-a4ed97d0377b",
+              "subset": "testing",
+              "metrics": [
+                {
+                  "name": "Accuracy",
+                  "value": 0.5,
+                  "primary": true
+                }
+              ]
+            }
+          ],
+          "quantization_info": null,
+          "files_deleted": false,
+          "optimal_confidence_threshold": null
+        }
+      ],
+      "files_deleted": false,
+      "size": 49988949
+    }
+  ],
+  "artifacts": [
+    {
+      "path": "04bce283-4e67-4f1e-88b1-18cfc8394e4b/variants/7e42f025-57d7-4312-8fbb-69d3302df914/model.onnx",
+      "bytes": 9041852,
+      "sha256": "86b2a314c76e9c79c90514ba1050454944be73eff129840c3431c95cb1856237"
+    },
+    {
+      "path": "04bce283-4e67-4f1e-88b1-18cfc8394e4b/variants/bd90da86-e82f-4b73-b29c-12838da84a49/model.bin",
+      "bytes": 7978236,
+      "sha256": "9798780e3a443a4d90c22194e95ccaf9b2e44019b432c6d1f20e3ec929df8f88"
+    },
+    {
+      "path": "04bce283-4e67-4f1e-88b1-18cfc8394e4b/variants/bd90da86-e82f-4b73-b29c-12838da84a49/model.xml",
+      "bytes": 350492,
+      "sha256": "932f1ec2f9580573e2fb7d45bfbf0cfa54beca2b52b20dba353eea5e6a9a4815"
+    },
+    {
+      "path": "04bce283-4e67-4f1e-88b1-18cfc8394e4b/variants/d753aa84-0c5d-4728-ad54-959bff42d771/model.pt",
+      "bytes": 32452355,
+      "sha256": "13add4de3ceee9245eaf8e097d1dd3e21b8ae6243e06c80e60fb0f3ca0a655be"
+    }
+  ],
+  "actual_synthetic_prediction": {
+    "predictions": [
+      {
+        "media": {
+          "id": "9f814f08-f81b-483f-9930-16c98c0f40b1",
+          "frame_index": null
+        },
+        "prediction": [
+          {
+            "shape": {
+              "type": "full_image"
+            },
+            "labels": [
+              {
+                "id": "843ac3aa-2cd7-4287-b874-aa712ef0a088"
+              }
+            ],
+            "confidences": [
+              0.583737313747406
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "process_cleanup": [
+    {
+      "phase": "training",
+      "exit_code": 0,
+      "remaining_owned_children": [],
+      "port_closed": true
+    },
+    {
+      "phase": "training-restart",
+      "exit_code": 0,
+      "remaining_owned_children": [],
+      "port_closed": true
+    }
+  ],
+  "unverified": [
+    "Manufacturing field data, real-world performance, generalization and acceptance quality",
+    "Other model architectures or tasks, hyperparameter optimization and quantization",
+    "Browser/UI rendering and novice flow usability",
+    "Modu authentication, project authorization, original projects and migration",
+    "Modu model engines outside Geti's three task types",
+    "Packaged Mac/Windows applications, remote GPU execution and production deployment"
+  ],
+  "observations": [
+    "OpenCV/PyAV duplicate ObjC classes on macOS",
+    "Initial training server stopped workers gracefully; immediate post-restart shutdown required upstream internal worker terminate",
+    "Upstream job history is not durable after restart"
+  ]
+}

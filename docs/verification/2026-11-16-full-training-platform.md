@@ -2,7 +2,7 @@
 
 ## 현재 판정
 
-전체 공개 소스를 고정하고 원본 UI 빌드·타입 검사와 실제 격리 API 왕복을 확인한 **기반 도입 단계**다. 모두비전 제품에 통합되거나 설치본에 반영된 상태가 아니다. 실제 모델 학습·평가·내보내기와 기존 계정·프로젝트 연결은 아직 검증하지 않았다.
+전체 공개 소스를 고정하고 원본 UI 빌드·타입 검사, 실제 격리 API 왕복, 합성 자료의 CPU 학습·평가·내보내기·추론을 확인한 **기반 도입 단계**다. 모두비전 제품에 통합되거나 설치본에 반영된 상태가 아니다. 기존 계정·프로젝트 연결과 사용자 화면의 전주기 조작은 아직 검증하지 않았다.
 
 ## 소스와 경계
 
@@ -29,7 +29,28 @@
 | 재접속 | 같은 격리 data로 재시작 후 프로젝트·클래스 ID·사진·라벨·분할·설정과 사진/썸네일 해시 보존 |
 | 종료 | 두 server exit 0, 관측한 소유 child 모두 종료, 두 포트 닫힘. 아래 worker 강제 종료 관측과 구분 |
 
-`1 epoch`는 저장한 설정값이다. 학습을 실행하거나 1 epoch가 통과했다는 뜻이 아니다. 카메라, 모델 job 제출, 별도 backend pretrained weight 다운로드, GPT 호출, 사용자 이미지 전송을 시험하지 않았다. npm 의존 패키지에는 SAM decoder·ORT WASM 자산이 포함된다. 전체 의존성의 외부 송신 관측은 아직 수행하지 않았다.
+위 66회 API 시험의 `1 epoch`는 저장한 설정값이며 학습 실행 근거는 아니다. 실제 학습은 아래 독립 시험에서 확인했다. 카메라·GPT 호출·사용자 이미지 전송은 수행하지 않았다. npm 의존 패키지에는 SAM decoder·ORT WASM 자산이 포함된다. 전체 의존성의 외부 송신 관측은 아직 수행하지 않았다.
+
+## 실제 CPU 학습 사이클
+
+같은 원본 소스의 별도 QA 프로젝트에서 합성 24장(학습16·검증4·시험4, OK/NG 균형)을 사용했다. EfficientNet-B0을 CPU·batch2·worker0·64px·1 epoch로 **단 한 번** 제출했다. OMP/MKL/OpenBLAS/VECLIB/NUMEXPR thread 환경값은 2로 설정했으며, 전체 프로세스나 OpenVINO threadpool의 실제 상한을 측정한 것은 아니다. 공개 publisher의 MIT LICENSE와 weight 출처를 보존하고, 19,824,784바이트 weight를 명시적으로 한 번 받아 upstream SHA256 `79f2b405a15399a0772337bd7f58052cb88299a65ed838a43c1ea8d3e0253f70`을 대조한 뒤 소유 QA cache에서 읽었다. 플랫폼 core의 Apache-2.0과 pretrained publisher MIT를 구분한다.
+
+- job `429ec27c-eb9c-4c5b-a54e-87209694bd2d`: `DONE`, error 없음, `2026-11-16T14:50:01.967556Z` 완료.
+- 실제 학습 → PyTorch checkpoint → OpenVINO·ONNX export → 세 variant 각각 시험 subset 평가 → 모델 저장 완료.
+- 실제 OpenVINO CPU 예측 1회 성공. 재시작 후 모델·세 variant ID와 데이터 revision 보존.
+- **169회 HTTP·57개 확인 통과**, 산출물 83개의 파일 목록·SHA256 저장.
+- 학습 worker 종료를 서버 종료 전에 확인했다. 두 server exit0, 관측한 소유 child와 두 포트 모두 종료했다. 작업 재시도·중복 제출·취소는 없었다.
+
+| 실제 산출물 | 바이트 | SHA256 |
+| --- | ---: | --- |
+| PyTorch `model.pt` | 32,452,355 | `13add4de3ceee9245eaf8e097d1dd3e21b8ae6243e06c80e60fb0f3ca0a655be` |
+| ONNX `model.onnx` | 9,041,852 | `86b2a314c76e9c79c90514ba1050454944be73eff129840c3431c95cb1856237` |
+| OpenVINO `model.bin` | 7,978,236 | `9798780e3a443a4d90c22194e95ccaf9b2e44019b432c6d1f20e3ec929df8f88` |
+| OpenVINO `model.xml` | 350,492 | `932f1ec2f9580573e2fb7d45bfbf0cfa54beca2b52b20dba353eea5e6a9a4815` |
+
+모델 ID는 `04bce283-4e67-4f1e-88b1-18cfc8394e4b`, dataset revision은 `35dd0e81-78f7-427b-8da0-a4ed97d0377b`다. 이 합성 실행의 세 형식 시험 정확도는 모두 0.5다. **플랫폼 실행 가능성 시험이며 실제 검사 성능·제품 수락의 근거가 아니다.** 다른 모델군·양자화·MPS·영상·모든 OS를 확인한 것으로 확대하지 않는다.
+
+공개 가능한 합성 sample ID·split·원본 해시·실제 job/model/variant·산출물 해시·평가·미검증 범위는 [축약 실행 영수증](2026-11-16-geti-cpu-cycle.json)에 보존했다. 실제 모델 binary나 사용자 자료를 저장소에 올리지 않았다.
 
 ## 추가한 소스 CI
 
@@ -41,12 +62,12 @@
 2. 최초 UI 타입 검사는 fresh clone에 생성 spec/types가 없어 실패했다. 정확 backend spec/types 생성 뒤에는 상위 모두비전의 Electron 타입이 Playwright의 선택적 import를 통해 섞여 3개 진단이 남았다. 실제 외부 빌드 경계에서 같은 원본·의존성·생성 타입으로 검사하자 통과했다. 설치·패키징에서도 이 분리를 유지해야 한다.
 3. 최초 API harness는 잘못된 `/dataset` 요청의 404로 실패했다. 원본 계약인 `/dataset/items`로 harness를 고친 새 실행만 통과했다. 원래 실패 로그·DB·응답·합성 사진은 보존했다.
 4. macOS에서 PyAV와 OpenCV가 같은 ObjC class를 포함한다는 경고가 나왔다. 영상/카메라 경로와 패키지 호환성은 미검증이다.
-5. 두 종료 모두 **Geti scheduler 자체가 InferenceWorker와 StreamLoader를 각각 10초 기다린 뒤 terminate**했다. harness가 신호를 강제 확대한 것은 아니지만, 이를 모든 worker의 정상 완료나 깨끗한 종료라고 표현하지 않는다.
+5. 최초 CRUD 시험의 두 종료와 실제 학습 시험의 재시작 직후 종료에서는 **Geti scheduler 자체가 InferenceWorker와 StreamLoader를 각각 10초 기다린 뒤 terminate**했다. 실제 학습을 수행한 첫 server의 worker는 이 강제 종료 없이 끝났다. harness가 신호를 강제 확대한 것은 아니지만, 전체 수명주기가 깨끗하다고 표현하지 않는다.
 6. 원본 `/api/jobs`는 현재 server session의 메모리 큐다. 재시작 뒤 작업 이력을 보존하는 플랫폼 ledger로 간주하면 안 된다. 모두비전의 기존 작업 영수증과 durable binding이 필요하다.
 
 ## 다음 완료 조건
 
-실제 CPU 학습→평가→모델 variant 내보내기, worker 수명주기 보완, 인증된 gateway와 child 직접 접근 차단, 기존 데이터의 명시적 왕복 변환, 10개 모델군 확장, 한국어 작업 UI, 정확 최종 head CI·OS 패키지·매뉴얼이 남았다. 원본 UI의 별도 실행 성공을 이 항목들의 대체 근거로 쓰지 않는다.
+worker 수명주기 보완, 인증된 gateway와 child 직접 접근 차단, 기존 데이터의 명시적 왕복 변환, 10개 모델군 확장, 한국어 작업 UI, 사용자 화면 전주기, 정확 최종 head CI·OS 패키지·매뉴얼이 남았다. 독립 원본 플랫폼의 학습·추론 성공을 모두비전 제품 통합의 대체 근거로 쓰지 않는다.
 
 세부 설계는 [전체 플랫폼 설계](../superpowers/specs/2026-11-16-full-training-platform-design.md), 실행 순서는 [계획](../superpowers/plans/2026-11-16-full-training-platform.md)에 기록했다.
 
@@ -59,3 +80,4 @@
 - `api-qa-20261116T232648-5fabc387/`: harness 경로 오타 실패.
 - `api-qa-20261116T232833-6a631301/receipt.json`: 실제 API·재접속 95개 확인.
 - 같은 QA root의 `observations.json`: worker terminate와 ObjC 경고, 각 원본 로그 SHA.
+- `training-runs/api-qa-20261116T234619-92016670/receipt.json`: 실제 CPU 학습 전주기. 영수증 SHA256 `c553b01ca3e2d4089545aa3b5ac97fa9d7b3e3b511be9a3ec9770ee8bdb39154`; 같은 폴더의 `observations.json`에 종료·경고를 보존했다.
