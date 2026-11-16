@@ -71,7 +71,7 @@ function markup(focus = false, {reviewOpen = false, draftWide = false, draftBoun
   const allowed = new Set(['App', 'BrowserSessionGate', 'browserSession', 'WizardHeader', 'WizardFooter', 'LabelingTool', 'LabelingStudio', 'LabelingToolbar', 'LabelSetBar',
     'TeamDataPanel', 'ImageReviewPanel', 'ClassificationClassPicker', 'CategorySelector', 'DraftReviewQueue', 'ModelAssistPanel',
     'ImageFilmstrip', 'DerivedImagePanel', 'SavedReviewQueuePanel', 'WorkflowImpactPanel', 'AsyncAction',
-    'labelingLayout', 'convertedAnnotation', 'coordinateMath', 'draftReview', 'popoverRoom', 'imageReadCustody',
+    'labelingLayout', 'labelingToolPresentation', 'convertedAnnotation', 'coordinateMath', 'draftReview', 'popoverRoom', 'imageReadCustody',
     'beginnerJourney', 'jargonDictionary', 'jargonEnglish',
     // A state hook the panels render through (ModelAssistPanel's error line); an empty stub returned undefined there.
     'useScopedError']);
