@@ -8,6 +8,7 @@ import {trainingSettingsRecovery} from '../services/assistantTasks/settingsRecov
 import type {AssistantConfigState} from '../../types/electron';
 import {assistantTaskClient} from '../services/assistantTasks/client';
 import {AssistantTaskController,type TaskControllerState} from '../services/assistantTasks/controller';
+import {SavedTaskRestore} from '../services/assistantTasks/savedTaskRestore';
 import {taskConnectionKey,taskConnectionGeneration,taskConnectionReady} from '../services/assistantTasks/connection';
 import {taskRuntimeBinding,taskRuntimeGeneration,executeTaskAction,reconcileTaskAction,taskActionCatalog,inspectTaskScreen} from '../services/assistantTasks/runtime';
 import {reducePaths} from '../services/assistantContext';
@@ -15,7 +16,7 @@ import {executionLeaseOwner} from '../services/assistantTasks/executionLease';
 import type {AssistantTask,TaskExecutionRequest} from '../services/assistantTasks/types';
 import {hasPendingTaskQuality} from '../services/assistantTasks/types';
 import {oneclickPlan} from '../services/assistantTasks/oneclickPlan';
-import {getProjectContext,getApiPersistenceIdentity} from '../services/api';
+import {getProjectContext,getApiPersistenceIdentity,subscribeProjectContext} from '../services/api';
 import {qualifyCompletedTaskStep} from '../services/assistantTasks/qualification';
 import {subscribeWorkflowEvidence} from './workflowEvidence';
 
@@ -25,7 +26,9 @@ const connection=()=>connectionReader();
 let poll:ReturnType<typeof setTimeout>|null=null;
 let pollCount=0;
 let observedConnection='';
+let savedTaskRestore:SavedTaskRestore|null=null;
 interface TaskState extends TaskControllerState {
+  restoreConnectionRevision:number;
   propose(input:unknown,executionRequest?:TaskExecutionRequest):Promise<Record<string,unknown>>;
   restore(id?:string):Promise<void>;
   prepareNewRequest(id:string,revision:number):Promise<boolean>;
@@ -52,11 +55,12 @@ function schedule(){
 
 export const useAssistantTaskStore=create<TaskState>(()=>({
   task:null,busy:false,loading:false,error:null,contextMatches:true,settingsRecoveryLabel:null,planningNew:false,history:[],readPending:false,
-  propose:async(input,executionRequest)=>{await controller.propose(input,executionRequest);return controller.summary();},
-  restore:id=>operate(()=>controller.restore(id)),
-  prepareNewRequest:(id,revision)=>controller.prepareNewRequest(id,revision),
-  stopRead:()=>controller.stopRead(),
-  loadHistory:()=>operate(()=>controller.loadHistory()),
+  restoreConnectionRevision:0,
+  propose:async(input,executionRequest)=>{savedTaskRestore?.stop();await controller.propose(input,executionRequest);return controller.summary();},
+  restore:id=>{savedTaskRestore?.stop();return operate(()=>controller.restore(id));},
+  prepareNewRequest:(id,revision)=>{savedTaskRestore?.stop();return controller.prepareNewRequest(id,revision);},
+  stopRead:()=>{savedTaskRestore?.stop();controller.stopRead();},
+  loadHistory:()=>{savedTaskRestore?.stop();return operate(()=>controller.loadHistory());},
   restoreSettings:(id,revision)=>operate(()=>controller.restoreSettings(id,revision)),
   approve:(id,revision)=>operate(()=>controller.approve(id,revision)),
   pause:()=>operate(()=>controller.pause()),
@@ -89,21 +93,37 @@ const controller=new AssistantTaskController({
   mayStart:()=>{const state=connection();return executionLeaseOwner()!=='automatic'&&!state.busy&&!state.writing&&!state.pending&&!state.configuring;},
   execute:executeTaskAction,reconcile:reconcileTaskAction,
   afterStep:qualifyCompletedTaskStep,
-  onChange:state=>{useAssistantTaskStore.setState(state);schedule();},
+  onChange:state=>{useAssistantTaskStore.setState(state);schedule();savedTaskRestore?.notify();},
 });
 
+savedTaskRestore=new SavedTaskRestore({
+  snapshot:()=>{
+    const state=controller.state,connected=connection();
+    return{authority:connectionIdentity(),context:taskRuntimeGeneration(),ready:!connected.configuring&&taskConnectionReady(connected.config),
+      blocked:Boolean(state.task||state.busy||state.loading||state.readPending||state.planningNew||state.error||connected.busy||connected.writing||connected.pending)};
+  },
+  restore:()=>controller.restore(),
+});
+/** Opening a ready panel authorizes saved-state GETs for this connection only. */
+export function beginPanelTaskRestore():()=>void{return savedTaskRestore!.start();}
+
 export function configureTaskConnection(reader:()=>ConnectionState):void{
+  savedTaskRestore?.stop();
   connectionReader=reader;observedConnection=connectionIdentity();
 }
 function connectionIdentity(){const state=connection();return JSON.stringify([taskConnectionKey(state.config),taskConnectionGeneration(state.config),state.configuring,taskConnectionReady(state.config)]);}
 export function notifyTaskConnectionChange():void{
-  const next=connectionIdentity();if(next===observedConnection)return;
+  const next=connectionIdentity();if(next===observedConnection){savedTaskRestore?.notify();return;}
   observedConnection=next;pollCount=0;
   if(poll!==null){clearTimeout(poll);poll=null;}
   controller.invalidateConnection();
+  useAssistantTaskStore.setState(state=>({restoreConnectionRevision:state.restoreConnectionRevision+1}));
+  savedTaskRestore?.notify();
 }
 
-for(const store of [useProjectStore,useDatasetStore,useTrainingStore,useComputeStore])store.subscribe?.(()=>controller.refreshContext());
+const refreshTaskContext=()=>{controller.refreshContext();savedTaskRestore?.notify();};
+for(const store of [useProjectStore,useDatasetStore,useTrainingStore,useComputeStore])store.subscribe?.(refreshTaskContext);
+subscribeProjectContext(refreshTaskContext);
 
 /** These operations can be exposed to a model; approval/run are intentionally absent. */
 export const assistantTaskTools={

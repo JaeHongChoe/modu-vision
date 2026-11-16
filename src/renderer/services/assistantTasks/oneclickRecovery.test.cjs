@@ -9,7 +9,7 @@ function fixture({delayed=false}={}){
  function load(file){if(cache.has(file))return cache.get(file).exports;const m=new Module(file,module);m.filename=file;m.paths=Module._nodeModulePaths(path.dirname(file));cache.set(file,m);const req=m.require.bind(m);m.require=name=>{
   if(name.endsWith('/controller')){const actual=load(path.resolve(__dirname,'controller.ts')).AssistantTaskController;return{AssistantTaskController:class extends actual{constructor(deps){super({...deps,runnerFactory:()=>({run:async task=>{calls.push('dispatch');return{...task,status:'completed'};},pause:async()=>null})});captured.push(this);}}};}
   for(const namePart of ['Training','Project','Dataset','Compute'])if(name.includes('use'+namePart+'Store'))return{['use'+namePart+'Store']:store};
-  if(name.endsWith('/api'))return{getProjectContext:()=>({workspace_id:'w',actor_id:'a',mode:'local'}),getApiPersistenceIdentity:()=>runtime};
+  if(name.endsWith('/api'))return{getProjectContext:()=>({workspace_id:'w',actor_id:'a',mode:'local'}),getApiPersistenceIdentity:()=>runtime,subscribeProjectContext:()=>()=>{}};
   if(name.endsWith('/runtime'))return{taskRuntimeBinding:()=>runtime,taskRuntimeGeneration:()=>0,executeTaskAction:async()=>{},reconcileTaskAction:async()=>{},taskActionCatalog:()=>[]};
   if(name.endsWith('/connection'))return{taskConnectionKey:()=>'',taskConnectionGeneration:()=>0,taskConnectionReady:()=>false};
   if(name.endsWith('/workflowEvidence'))return{subscribeWorkflowEvidence:()=>()=>{}};

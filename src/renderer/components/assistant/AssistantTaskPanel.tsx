@@ -1,5 +1,5 @@
 import React,{useEffect} from 'react';
-import {useAssistantTaskStore} from '../../stores/useAssistantTaskStore';
+import {useAssistantTaskStore,beginPanelTaskRestore} from '../../stores/useAssistantTaskStore';
 import {useProjectStore} from '../../stores/useProjectStore';
 import type {WorkflowStep} from '../wizard/workflowReadiness';
 import {AssistantTaskCard} from './AssistantTaskCard';
@@ -12,8 +12,9 @@ export function AssistantTaskPanel({ready,blocked,connectionKey,onNewRequestPrep
   const restore=useAssistantTaskStore(state=>state.restore),approve=useAssistantTaskStore(state=>state.approve);
   const pause=useAssistantTaskStore(state=>state.pause),resume=useAssistantTaskStore(state=>state.resume),refresh=useAssistantTaskStore(state=>state.refresh);
   const planningNew=useAssistantTaskStore(state=>state.planningNew),history=useAssistantTaskStore(state=>state.history),readPending=useAssistantTaskStore(state=>state.readPending);
+  const restoreConnectionRevision=useAssistantTaskStore(state=>state.restoreConnectionRevision);
   const prepareNewRequest=useAssistantTaskStore(state=>state.prepareNewRequest),stopRead=useAssistantTaskStore(state=>state.stopRead),loadHistory=useAssistantTaskStore(state=>state.loadHistory);
-  useEffect(()=>{if(ready&&!task&&!busy&&!planningNew)void restore();},[ready,connectionKey]);
+  useEffect(()=>{if(ready&&!task&&!busy&&!planningNew)return beginPanelTaskRestore();},[ready,connectionKey,restoreConnectionRevision]);
   const mayContinue=()=>!useAssistantTaskStore.getState().planningNew;
   return <AssistantTaskCard task={task} busy={busy} loading={loading} error={error} ready={ready} blocked={blocked} contextMatches={contextMatches} settingsRecoveryLabel={settingsRecoveryLabel} onRestoreSettings={(id,revision)=>{if(mayContinue())void restoreSettings(id,revision);}}
     planningNew={planningNew} history={history} readPending={readPending}
