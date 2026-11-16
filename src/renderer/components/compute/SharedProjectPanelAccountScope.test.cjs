@@ -11,7 +11,7 @@ function load(filename, mocks = {}) {
   loaded.filename = filename;
   loaded.paths = Module._nodeModulePaths(path.dirname(filename));
   const original = loaded.require.bind(loaded);
-  loaded.require = name => Object.hasOwn(mocks, name) ? mocks[name] : original(name);
+  loaded.require = name => Object.hasOwn(mocks, name) ? mocks[name] : name === '../onboarding/projectPurpose' ? load(path.resolve(__dirname, '../onboarding/projectPurpose.ts'), {}) : name === './localTrace' ? load(path.resolve(path.dirname(filename), 'localTrace.ts'), {}) : original(name);
   loaded._compile(ts.transpileModule(fs.readFileSync(filename, 'utf8'), {
     compilerOptions: {module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022,
       jsx: ts.JsxEmit.React, esModuleInterop: true},

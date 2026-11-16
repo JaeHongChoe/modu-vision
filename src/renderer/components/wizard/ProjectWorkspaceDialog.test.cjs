@@ -34,7 +34,7 @@ function render(refusal,{busy=false}={}){
  const icons=new Proxy({},{get:(_,name)=>name==='__esModule'?true:()=>null});
  const {ProjectWorkspaceDialog}=load('ProjectWorkspaceDialog.tsx',{'../common/useWorkspaceDialogFocus':{useWorkspaceDialogFocus:()=>()=>{}},'lucide-react':icons,'../onboarding/projectPurpose':load('../onboarding/projectPurpose.ts',{}),
   '../../stores/useProjectStore':{useProjectStore:()=>state,projectSwitchRefusal:()=>refusal,subscribeProjectSwitchRefusal:()=>()=>{}},
-  '../../services/hostAdapter':{host:{can:()=>false,unavailableReason:()=> '로컬 파일 선택 연결을 확인하세요.'}},'./ArtifactRetentionPanel':{ArtifactRetentionPanel:()=>null},'../../services/api':{api:{project:{}}}});
+  '../../services/hostAdapter':{host:{can:()=>false,unavailableReason:()=> '로컬 파일 선택 연결을 확인하세요.'}},'./ArtifactRetentionPanel':{ArtifactRetentionPanel:()=>null},'../../services/api':{api:{project:{}},getProjectContextGeneration:()=>0,subscribeProjectContext:()=>()=>{}}});
  return renderToStaticMarkup(react.createElement(ProjectWorkspaceDialog,{onClose(){}}));
 }
 const projectButton=(html,dir)=>{const at=html.indexOf(`title="${dir}"`);assert.ok(at>0,dir);return html.slice(html.lastIndexOf('<button',at),at);};
@@ -60,7 +60,7 @@ function createFixture({viewMode='simple',refusal=null,busy=false,initialTab='cr
   createProject:async data=>{created.push(data);return true;},openProject:async()=>false,backupProject:async()=>null,restoreProject:async()=>false};
  const icons=new Proxy({},{get:(_,name)=>name==='__esModule'?true:()=>null});
  const mocks={react:hooks,'../common/useWorkspaceDialogFocus':{useWorkspaceDialogFocus:()=>()=>{}},'lucide-react':icons,'../../stores/useProjectStore':{useProjectStore:()=>state,projectSwitchRefusal:()=>refusal,subscribeProjectSwitchRefusal:()=>()=>{}},
-  '../../services/hostAdapter':{host:{can:()=>false,unavailableReason:()=> '선택 불가'}},'./ArtifactRetentionPanel':{ArtifactRetentionPanel:()=>null},'../../services/api':{api:{project:{}}}};
+  '../../services/hostAdapter':{host:{can:()=>false,unavailableReason:()=> '선택 불가'}},'./ArtifactRetentionPanel':{ArtifactRetentionPanel:()=>null},'../../services/api':{api:{project:{}},getProjectContextGeneration:()=>0,subscribeProjectContext:()=>()=>{}}};
  if(fs.existsSync(path.join(__dirname,'../onboarding/projectPurpose.ts')))mocks['../onboarding/projectPurpose']=load('../onboarding/projectPurpose.ts',{});
  const {ProjectWorkspaceDialog}=load('ProjectWorkspaceDialog.tsx',mocks);
  const nodes=tree=>{const list=[];const walk=n=>{if(!n||typeof n!=='object')return;list.push(n);react.Children.forEach(n.props?.children,walk);};walk(tree);return list;};

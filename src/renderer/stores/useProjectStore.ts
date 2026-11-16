@@ -70,6 +70,21 @@ function refuseEditsMadeDuringSelection(): void {
   }
 }
 
+/** Call only after dirty/save guards. Saved labels remain on disk while their
+ * image, mask and edit authority leave the renderer in one synchronous step. */
+function retireAnnotationCustody(): void {
+  const annotation = useAnnotationStore.getState();
+  if (annotation.currentImage || annotation.activeImage || annotation.metadata || annotation.images?.length || annotation.annotations?.length) {
+    useAnnotationStore.setState({
+      images: [], currentImageIndex: -1, currentImage: null, activeImage: null,
+      externalSelectionPath: null, metadata: null, loadedAnnotationContext: null, maskUrl: null,
+      annotations: [], selectedAnnotationId: null, history: [], future: [],
+      editLease: null, editLeaseAcquiring: null, teamEditingEnabled: false, teamReviewEnabled: false,
+      annotationLoadStatus: 'ready', annotationLoadError: null, autoSelectError: null,
+    });
+  }
+}
+
 /**
  * Accepts a selected project after the store's guards: the request context (HTTP and telemetry) and the
  * visible project change in one synchronous step, before any dataset, annotation or flow read for it. A
@@ -91,16 +106,7 @@ async function acceptSelectedProject(project: ProjectConfig, view: { activeStep?
       // this accepted synchronous commit, before consumers can read the new
       // project with the previous image UUID or client lease. Dirty/save and
       // running-operation guards have already passed; saved data is untouched.
-      const annotation = useAnnotationStore.getState();
-      if (annotation.currentImage || annotation.activeImage || annotation.metadata || annotation.images?.length) {
-        useAnnotationStore.setState({
-          images: [], currentImageIndex: -1, currentImage: null, activeImage: null,
-          externalSelectionPath: null, metadata: null, loadedAnnotationContext: null,
-          annotations: [], selectedAnnotationId: null, history: [], future: [],
-          editLease: null, editLeaseAcquiring: null, teamEditingEnabled: false, teamReviewEnabled: false,
-          annotationLoadStatus: 'ready', annotationLoadError: null, autoSelectError: null,
-        });
-      }
+      retireAnnotationCustody();
       if (useFlowchartStore.getState().selectedImage) useFlowchartStore.getState().setSelectedImage(null);
     }
     useProjectStore.setState({
@@ -271,20 +277,28 @@ export async function saveOpenEdits(options?: {allowCleanDisconnect?: boolean}):
   const sourceNeedsSave = currentProject && dataset.hasSelectedFolder
     && dataset.datasetKey === `${dataset.folderPath}\0${currentProject.task}` && !dataset.importError
     && (dataset.sourceSaveError || currentProject.source_dataset_dir !== dataset.folderPath);
+  const editingScope = sourceNeedsSave ? taskChangeScope(useProjectStore.getState()) : null;
+  const requireSourceOwner = () => {
+    if (sourceNeedsSave && editingScope !== taskChangeScope(useProjectStore.getState()))
+      throw new Error('데이터 출처를 저장하는 중 프로젝트 또는 계정이 변경되었습니다.');
+  };
   if (options?.allowCleanDisconnect && !sourceNeedsSave && !flow.pipelineDirty
       && !useAnnotationStore.getState().isDirty) return;
 
   if (currentProject) {
     const backendProject = await api.project.getCurrent();
+    requireSourceOwner();
     if (backendProject.id !== currentProject.id || backendProject.project_dir !== currentProject.project_dir) {
       // A daemon restart can restore a different active pointer while the
       // renderer still holds unsaved work from the previous project.
       const reopened = await (currentProject.registration_id ? api.project.open(currentProject.project_dir,currentProject.registration_id) : api.project.open(currentProject.project_dir));
+      requireSourceOwner();
       if (reopened.id !== currentProject.id || reopened.project_dir !== currentProject.project_dir) {
         throw new Error('편집 중인 프로젝트를 백엔드에서 다시 열지 못해 저장을 중단했습니다.');
       }
       // The daemon reopened the project being edited; bind its requests to that same project.
       await api.project.prepareContext?.(reopened);
+      requireSourceOwner();
       if(useProjectStore.getState().project!==currentProject)throw new Error('편집 중인 프로젝트가 바뀌었습니다. 저장을 다시 확인하세요.');
       api.project.acceptContext(reopened);
     }
@@ -295,12 +309,27 @@ export async function saveOpenEdits(options?: {allowCleanDisconnect?: boolean}):
     // A successful import may have saved its source in the daemon while the
     // renderer still holds the previous config. Refresh it before checking
     // a dirty flow. Retry a failed source save instead of losing that link.
+    const sourceScope = taskChangeScope(useProjectStore.getState());
+    const requireCurrentSource = () => {
+      if (sourceScope !== taskChangeScope(useProjectStore.getState()))
+        throw new Error('데이터 출처를 저장하는 중 프로젝트 또는 계정이 변경되었습니다.');
+    };
+    const sameSource = () => {
+      const selected = useDatasetStore.getState();
+      return selected.folderPath === dataset.folderPath && selected.datasetKey === dataset.datasetKey && !selected.isLoading;
+    };
     const refreshed = await api.project.update({ source_dataset_dir: dataset.folderPath });
-    if (refreshed.id !== currentProject.id) {
+    requireCurrentSource();
+    if (!sameSource()) return;
+    if (refreshed.id !== currentProject.id || refreshed.project_dir !== currentProject.project_dir) {
       throw new Error('데이터 출처를 저장하는 중 활성 프로젝트가 변경되었습니다.');
     }
     useProjectStore.setState({ project: refreshed, projectName: refreshed.name, projectDir: refreshed.project_dir });
     useDatasetStore.setState({ sourceSaveError: null });
+    await api.project.prepareContext?.(refreshed);
+    requireCurrentSource();
+    if (!sameSource()) return;
+    api.project.acceptContext?.(refreshed);
     verifiedSource = refreshed.source_dataset_dir;
     // The saved source is resolved (a symlink, or a mapped drive's network path on Windows): the loaded dataset is the
     // same folder, so follow the saved spelling, as an import does, or training would keep waiting for the source.
@@ -347,11 +376,12 @@ export async function saveOpenEdits(options?: {allowCleanDisconnect?: boolean}):
   }
 }
 
-async function applyProject(project: ProjectConfig, previous: ProjectConfig | null, forceReset = false): Promise<void> {
+async function applyProject(project: ProjectConfig, previous: ProjectConfig | null, forceReset = false, isCurrent?: () => boolean): Promise<void> {
   const contextChanged = previous?.id !== project.id || previous?.project_dir !== project.project_dir
     || (previous?.active_labelset_id || 'default') !== (project.active_labelset_id || 'default');
   if (forceReset || contextChanged) {
     const cleared = await useAnnotationStore.getState().setImages([]);
+    if (isCurrent && !isCurrent()) return;
     if (!cleared) throw new Error('라벨 화면을 정리하지 못했습니다.');
     useAnnotationStore.getState().setTask(project.task);
     if (contextChanged) {
@@ -494,6 +524,9 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
       applied = true;
       if (!sameScope() || (origin && (project.id !== origin.id || project.project_dir !== origin.project_dir))) return leftScope(true);
       set({ task: project.task, project, projectName: project.name });
+      await api.project.prepareContext?.(project);
+      if (!sameScope()) return leftScope(true);
+      api.project.acceptContext?.(project);
       useAnnotationStore.getState().setTask(project.task);
       const dataset = useDatasetStore.getState();
       if (dataset.hasSelectedFolder) {
@@ -549,6 +582,7 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
     settledProjectError(get(), get().task);
     const failure = currentTaskFailure(get());
     const kept = failure && (failure.applied || deferred) ? failure.message : null;
+    const startingProject = get().project, startingError = get().projectError, startingIdentity = getApiPersistenceIdentity();
     set({ isProjectBusy: true, projectError: kept });
     const choicesAtStart = stepChoices;
     try {
@@ -560,6 +594,18 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
       }
       if (useModelAssistRunStore.getState().activeOperations > 0) {
         throw new Error('모델 보조 라벨링 요청이 진행 중입니다. 완료 후 프로젝트를 동기화하세요.');
+      }
+      const dataset = useDatasetStore.getState();
+      if (previous && previous === startingProject && startingIdentity === getApiPersistenceIdentity()
+          && projectViewScope(previous, startingIdentity) === projectViewScope(project, startingIdentity)
+          && dataset.isLoading && !dataset.isSplitting && !dataset.isGenerating && !dataset.importError
+          && dataset.folderPath === previous.source_dataset_dir && dataset.datasetKey === `${dataset.folderPath}\0${previous.task}`
+          && !useAnnotationStore.getState().isDirty && !useFlowchartStore.getState().pipelineDirty) {
+        // The mounted data step is already restoring this exact saved source.
+        // Skip its redundant health sync instead of saving/resetting its live
+        // import and persisting a project-switch refusal after it succeeds.
+        if (get().projectError === kept) set({ projectError: startingError });
+        return;
       }
       if (!changed && previous) await saveOpenEdits();
       // A daemon restart loses its imported dataset cache. Reconnect the saved source.
@@ -653,21 +699,35 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
 
   activateLabelset: async (id) => {
     if (get().isProjectBusy) return false;
+    const originScope = taskChangeScope(get());
+    const sameScope = () => taskChangeScope(get()) === originScope;
     set({ isProjectBusy: true, projectError: settledProjectError(get(), get().task) });
     try {
       await saveOpenEdits();
+      if (!sameScope()) return false;
       const previous = get().project;
       if (!previous) throw new Error('열린 프로젝트가 없습니다.');
+      refuseEditsMadeDuringSelection();
+      // Retire clean saved images before the daemon can change labelsets.
+      // A failed ticket mint must never leave old labels available to Save.
+      retireAnnotationCustody();
       const project = await api.project.activateLabelset(id);
-      await applyProject(project, previous, true);
+      if (!sameScope() || project.id !== previous.id || project.project_dir !== previous.project_dir) return false;
+      set({ project, projectName: project.name, projectDir: project.project_dir, task: project.task });
+      await api.project.prepareContext?.(project);
+      if (!sameScope()) return false;
+      api.project.acceptContext?.(project);
+      await applyProject(project, previous, true, sameScope);
+      if (!sameScope()) return false;
       set({ project, projectName: project.name, projectDir: project.project_dir, task: project.task });
       if (project.source_dataset_dir) {
         await useDatasetStore.getState().importFolder(project.source_dataset_dir, project.task);
+        if (!sameScope()) return false;
       }
       set({ projectError: settledProjectError(get(), project.task) });
       return true;
     } catch (error) {
-      set({ projectError: projectErrorMessage(error) });
+      if (sameScope()) set({ projectError: projectErrorMessage(error) });
       return false;
     } finally {
       set({ isProjectBusy: false });
@@ -676,22 +736,35 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
 
   createAndActivateLabelset: async (name) => {
     if (get().isProjectBusy) return false;
+    const originScope = taskChangeScope(get());
+    const sameScope = () => taskChangeScope(get()) === originScope;
     set({ isProjectBusy: true, projectError: settledProjectError(get(), get().task) });
     try {
       await saveOpenEdits();
+      if (!sameScope()) return false;
       const previous = get().project;
       if (!previous) throw new Error('열린 프로젝트가 없습니다.');
+      refuseEditsMadeDuringSelection();
+      retireAnnotationCustody();
       const created = await api.project.createLabelset(name);
+      if (!sameScope()) return false;
       const project = await api.project.activateLabelset(created.id);
-      await applyProject(project, previous, true);
+      if (!sameScope() || project.id !== previous.id || project.project_dir !== previous.project_dir) return false;
+      set({ project, projectName: project.name, projectDir: project.project_dir, task: project.task });
+      await api.project.prepareContext?.(project);
+      if (!sameScope()) return false;
+      api.project.acceptContext?.(project);
+      await applyProject(project, previous, true, sameScope);
+      if (!sameScope()) return false;
       set({ project, projectName: project.name, projectDir: project.project_dir, task: project.task });
       if (project.source_dataset_dir) {
         await useDatasetStore.getState().importFolder(project.source_dataset_dir, project.task);
+        if (!sameScope()) return false;
       }
       set({ projectError: settledProjectError(get(), project.task) });
       return true;
     } catch (error) {
-      set({ projectError: projectErrorMessage(error) });
+      if (sameScope()) set({ projectError: projectErrorMessage(error) });
       return false;
     } finally {
       set({ isProjectBusy: false });

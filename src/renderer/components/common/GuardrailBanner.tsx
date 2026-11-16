@@ -5,7 +5,7 @@
  * or prerequisites are missing, providing prominent 1-click remediation actions.
  */
 
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import {
   AlertTriangle,
   Info,
@@ -15,6 +15,9 @@ import {
   LucideIcon,
   Lightbulb,
 } from 'lucide-react';
+import { useProjectStore } from '../../stores/useProjectStore';
+import { getProjectContextGeneration, subscribeProjectContext } from '../../services/api';
+import { hostErrorMessage } from '../../services/hostAdapter';
 
 export interface GuardrailAction {
   label: string;
@@ -43,17 +46,77 @@ export const GuardrailBanner: React.FC<GuardrailBannerProps> = ({
   actions,
   className = '',
 }) => {
-  const [loadingIndex, setLoadingIndex] = useState<number | null>(null);
+  const language = useProjectStore(state => state.language);
+  const projectId = useProjectStore(state => state.project?.id);
+  const projectDir = useProjectStore(state => state.projectDir);
+  const task = useProjectStore(state => state.task);
+  const sourceDir = useProjectStore(state => state.project?.source_dataset_dir);
+  const labelsetId = useProjectStore(state => state.project?.active_labelset_id);
+  const authority = useSyncExternalStore(
+    subscribeProjectContext, getProjectContextGeneration, getProjectContextGeneration,
+  );
+  const projectScope = JSON.stringify([projectId, projectDir, task, sourceDir, labelsetId]);
+  // Callbacks are recreated by parents during progress updates. Bind feedback to the
+  // actual project/authority and visible action context, rather than function identity.
+  const contextKey = JSON.stringify([
+    projectScope, authority, language, type, title, description, shopFloorTip, stepContext,
+    actions.map(action => [action.label, action.variant, action.loadingText]),
+  ]);
+  const owner = useRef({ key: contextKey, revision: 0 });
+  if (owner.current.key !== contextKey) {
+    owner.current = { key: contextKey, revision: owner.current.revision + 1 };
+  }
+  const revision = owner.current.revision;
+  const mounted = useRef(true);
+  const activeRequest = useRef<{ revision: number } | null>(null);
+  const [feedback, setFeedback] = useState<{
+    revision: number; loadingIndex: number | null; error: string;
+  } | null>(null);
+  const loadingIndex = feedback?.revision === revision ? feedback.loadingIndex : null;
+  const error = feedback?.revision === revision ? feedback.error : '';
+  useEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+      activeRequest.current = null;
+    };
+  }, []);
+
+  const ownsContext = () => {
+    const current = useProjectStore.getState();
+    return mounted.current && owner.current.revision === revision
+      && getProjectContextGeneration() === authority
+      && JSON.stringify([current.project?.id, current.projectDir, current.task,
+        current.project?.source_dataset_dir, current.project?.active_labelset_id]) === projectScope;
+  };
 
   const handleActionClick = async (action: GuardrailAction, index: number) => {
-    if (loadingIndex !== null) return;
+    if (!ownsContext() || activeRequest.current?.revision === revision) return;
+    const request = { revision };
+    activeRequest.current = request;
+    const current = () => ownsContext() && activeRequest.current === request;
+    setFeedback({ revision, loadingIndex: index, error: '' });
     try {
-      setLoadingIndex(index);
       await action.onClick();
     } catch (err) {
       console.error('Guardrail remediation action failed:', err);
+      if (current()) {
+        const fallback = language === 'ko'
+          ? '원인을 확인한 뒤 다시 시도하세요.' : 'Check the cause before trying again.';
+        const message = err instanceof Error && err.message === 'Approve this web account in the local host dialog first'
+          ? language === 'ko'
+            ? '로컬 보조 프로그램의 승인 창에서 이 웹 계정을 먼저 승인하세요.'
+            : 'Approve this web account in the local host dialog first.'
+          : hostErrorMessage(err, fallback);
+        const prefix = language === 'ko' ? '작업을 완료하지 못했습니다.' : 'Could not complete this action.';
+        setFeedback({ revision, loadingIndex: index, error: `${prefix} ${message}` });
+      }
     } finally {
-      setLoadingIndex(null);
+      if (current()) {
+        activeRequest.current = null;
+        setFeedback(previous => previous?.revision === revision
+          ? { ...previous, loadingIndex: null } : previous);
+      }
     }
   };
 
@@ -166,6 +229,11 @@ export const GuardrailBanner: React.FC<GuardrailBannerProps> = ({
           })}
         </div>
       </div>
+      {error && (
+        <p role="alert" className="mt-3 text-xs text-[var(--workspace-danger)] break-words select-text">
+          {error}
+        </p>
+      )}
     </div>
   );
 };

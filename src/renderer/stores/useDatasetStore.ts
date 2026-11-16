@@ -78,6 +78,7 @@ interface DatasetState {
 let latestImageRequest = 0;
 let latestImportRequest = 0;
 let latestSplitRequest = 0;
+let latestSyntheticRequest = 0;
 let splitPrefillSequence = 0;
 
 const importKey = (folder: string, task: VisionTask) => `${folder}\0${task}`;
@@ -158,18 +159,28 @@ export const useDatasetStore = create<DatasetState>((set, get) => ({
   quickValidation: null,
 
   setFolderPath: (folderPath) => {
-    if (folderPath === get().folderPath) return;
+    if (folderPath === get().folderPath) {
+      // Reauthentication explicitly clears the source even when a fresh
+      // project's source was already empty. Retire only that pending generator;
+      // ordinary same-folder calls must preserve the selected data and edits.
+      if (!folderPath && get().isGenerating) {
+        latestSyntheticRequest += 1;
+        set({ isGenerating: false });
+      }
+      return;
+    }
     invalidateDownstream();
     latestImportRequest += 1;
     latestImageRequest += 1;
     latestSplitRequest += 1;
+    latestSyntheticRequest += 1;
     set({
       folderPath, hasSelectedFolder: Boolean(folderPath), datasetKey: null, sourceAuthority: null, importError: null, sourceSaveError: null, splitError: null,
       splitSupported: null, splitUnavailableReason: null, splitPrefill: null,
       totalImages: 0, sourceImages: 0, unlabeledImages: 0,
       classes: {}, classCountUnit: null, classSplitCounts: null, split: { train: 0, val: 0, test: 0 },
       images: [], totalImagesCount: 0, corruptedImages: [], excludedUndecodable: null, splitState: null, labelsMissing: false, expectedLayout: '', quickValidation: null,
-      activeSplitFilter: 'all', activeClassFilter: null, activeLabelFilter: 'all', page: 1, isLoading: false, isSplitting: false,
+      activeSplitFilter: 'all', activeClassFilter: null, activeLabelFilter: 'all', page: 1, isLoading: false, isSplitting: false, isGenerating: false,
     });
   },
   setShowGeneratorModal: (showGeneratorModal) => set({ showGeneratorModal }),
@@ -241,6 +252,7 @@ export const useDatasetStore = create<DatasetState>((set, get) => ({
         ? await api.dataset.currentSummary({ folder_path: folder, task })
         : await api.dataset.import({ folder_path: folder, task, validate_images: true });
       if (!current()) return;
+      let savedProject: Awaited<ReturnType<typeof api.project.update>> | null = null;
       if (!restoreSaved) try {
         const project = await api.project.update({ source_dataset_dir: folder, ...(expectedSource ? {expected_source: expectedSource} : {}) });
         if (!current()) return;
@@ -251,6 +263,7 @@ export const useDatasetStore = create<DatasetState>((set, get) => ({
         useProjectStore.setState((state) => state.project?.id === project.id
           ? { project, projectName: project.name, projectDir: project.project_dir }
           : {});
+        savedProject = project;
         // The backend saves the source resolved (a symlinked folder, or a mapped network drive on Windows, gets another
         // spelling). Follow its spelling, or training would wait for "the current source" forever.
         const canonical = project.source_dataset_dir;
@@ -278,6 +291,13 @@ export const useDatasetStore = create<DatasetState>((set, get) => ({
         if (current()) {
           set({ sourceSaveError: `데이터는 불러왔지만 프로젝트에 경로를 저장하지 못했습니다: ${importErrorMessage(error)}` });
         }
+      }
+      // Saving the source changes the server's image-ticket binding. Renew it
+      // before loading images; failure here does not undo the durable source save.
+      if (savedProject) {
+        await api.project.prepareContext?.(savedProject);
+        if (!current()) return;
+        api.project.acceptContext?.(savedProject);
       }
       if (!current()) return;
       set({
@@ -337,25 +357,62 @@ export const useDatasetStore = create<DatasetState>((set, get) => ({
   },
 
   generateSynthetic: async (params) => {
-    invalidateDownstream();
-    set({ isGenerating: true });
+    const requestId = ++latestSyntheticRequest, authority = readAuthority(), selection = latestImportRequest;
+    const ownsRequest = () => requestId === latestSyntheticRequest && authority === readAuthority();
+    let generatedDir: string | null = null;
+    let current = ownsRequest;
     try {
+      const { useProjectStore } = await import('./useProjectStore');
+      if (!ownsRequest() || selection !== latestImportRequest) return;
+      const project = useProjectStore.getState().project, context = getProjectContext();
+      if (!project || !context || context.project_id !== project.id)
+        throw new Error('프로젝트 선택을 완료한 뒤 합성 데이터를 생성하세요.');
+      if (project.task !== params.task || useProjectStore.getState().task !== params.task)
+        throw new Error('현재 프로젝트의 작업 종류를 먼저 변경한 뒤 합성 데이터를 생성하세요.');
+      current = () => {
+        const selected = useProjectStore.getState();
+        return ownsRequest() && selected.project?.id === project.id && selected.project.project_dir === project.project_dir
+          && selected.project.task === project.task && selected.task === project.task
+          && selected.project.active_labelset_id === project.active_labelset_id;
+      };
+      // A new direct child of the canonical project root avoids trusting a
+      // configurable dataset_dir or overwriting any previous generated source.
+      const output = `${project.project_dir.replace(/[\\/]+$/, '')}/generated-synthetic_${params.modality}_${globalThis.crypto.randomUUID()}`;
+      if (!current() || selection !== latestImportRequest) return;
+      invalidateDownstream();
+      set({ isGenerating: true, importError: null });
       const res = await api.dataset.generate({
         task: params.task,
         num_samples: params.num_samples,
-        output_dir: `./datasets/synthetic_${params.modality}`,
+        output_dir: output,
         modality: params.modality,
         split_ratio: params.split_ratio,
         seed: 42,
       });
-      set({ isGenerating: false, showGeneratorModal: false });
+      if (!current() || selection !== latestImportRequest) return;
+      // Python normalizes Windows separators in its response. No other output
+      // location may become this project's source through a generation reply.
+      const normalized = (value: string) => value.replace(/\\/g, '/').replace(/\/+$/, '');
+      if (typeof res.output_dir !== 'string' || normalized(res.output_dir) !== normalized(output))
+        throw new Error('합성 데이터 생성 결과의 프로젝트 경로를 확인하지 못했습니다.');
+      generatedDir = res.output_dir;
       set((state) => ({
         staleDatasetKeys: [...new Set([...state.staleDatasetKeys, importKey(res.output_dir, params.task)])],
       }));
-      await get().importFolder(res.output_dir, params.task, false);
+      const importing = get().importFolder(res.output_dir, params.task, false, false, current);
+      const importedSelection = latestImportRequest;
+      await importing;
+      if (!current() || importedSelection !== latestImportRequest) return;
+      set({ showGeneratorModal: false });
     } catch (err) {
-      set({ isGenerating: false });
-      throw err;
+      if (!current() || !generatedDir && selection !== latestImportRequest) return;
+      const message = generatedDir
+        ? `합성 데이터 생성은 완료됐지만 불러오지 못했습니다 (${generatedDir}): ${importErrorMessage(err)}`
+        : importErrorMessage(err, '합성 데이터를 생성하지 못했습니다.');
+      set({ importError: message });
+      throw new Error(message);
+    } finally {
+      if (ownsRequest()) set({ isGenerating: false });
     }
   },
 
