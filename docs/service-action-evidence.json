@@ -11,7 +11,7 @@
     "src/renderer/components/labeling/LabelbookEditor.tsx": "2b46bc631bd6c8c1187dfd9f87cd3e24cfbff6be26616373e1196482991c54fb",
     "src/renderer/components/labeling/DicomPanel.tsx": "1e191527a5572743bd92888d92445734dd314d9d64125ff62c02204cd15cd0e7",
     "src/renderer/components/runtime/ProductDeliveryWorkspace.tsx": "86be90dc03431ccfaf1b2f5216cc2f6dd07c9d43c821fa98998311e0f63d074a",
-    "src/renderer/components/wizard/ProjectWorkspaceDialog.tsx": "bf5de328942c61050970e559a8e93da307aaf09f77c056a8b88feeaddef1148d",
+    "src/renderer/components/wizard/ProjectWorkspaceDialog.tsx": "7d359e776ea421d864c2ba1772f427f6fbda091e97cfd0bd11c33a5cc1593d3f",
     "src/renderer/components/wizard/ArtifactRetentionPanel.tsx": "b892d9aa9aa0707ec5c58fc142d2b3ec4ecbffa15df8d513b4da20267c045dd4",
     "src/renderer/components/common/ImagePickerModal.tsx": "169020303e9b7a1de70cc483d3a19a7881bbb84b22ed73e87053f06e9af7f72f",
     "src/renderer/components/labeling/DerivedImagePanel.tsx": "18b54f80e288a2a3d304947141858fcc4bb2c091297a434528b723ce4367ac94",

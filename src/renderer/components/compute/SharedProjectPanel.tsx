@@ -9,6 +9,7 @@ import {telemetryService} from '../../services/websocket';
 import {host} from '../../services/hostAdapter';
 import type {SharedConnection} from '../../../types/electron';
 import type {VisionTask} from '../../types';
+import {PROJECT_PURPOSES,purposeToTask} from '../onboarding/projectPurpose';
 type ProjectChoice={id:string;path:string;role:string};
 type BrowserProjectMode='shared'|'local_host';
 type BrowserAccountState={user:{id:string};projects:ProjectChoice[];selected_project_id:string|null;browser_project_mode?:unknown};
@@ -22,8 +23,18 @@ function assertBrowserAuthority(value:BrowserProjectAuthority):void {
 function ownContextChange(value:BrowserProjectAuthority,change:()=>void):void {
   assertBrowserAuthority(value);change();value.generation=getProjectContextGeneration();assertBrowserAuthority(value);
 }
-export const LocalProjectGate:React.FC<{projects:ProjectChoice[];mode:BrowserProjectMode|null;busy:boolean;onSelect:(id:string)=>Promise<void>;onReconnect:(id:string)=>Promise<void>;onLogout:()=>Promise<void>}>=({projects,mode,busy,onSelect,onReconnect,onLogout})=>{
+export const LocalProjectGate:React.FC<{projects:ProjectChoice[];mode:BrowserProjectMode|null;busy:boolean;onSelect:(id:string)=>Promise<void>;onReconnect:(id:string)=>Promise<void>;onLogout:()=>Promise<void>;onCreate?:(data:{name:string;task:VisionTask})=>Promise<void>;onRefresh?:()=>Promise<void>}>=({projects,mode,busy,onSelect,onReconnect,onLogout,onCreate,onRefresh})=>{
   const [selection,setSelection]=useState(''),[error,setError]=useState(''),[recoverable,setRecoverable]=useState(false),[pending,setPending]=useState(false);
+  const [firstName,setFirstName]=useState(''),[purpose,setPurpose]=useState('');
+  const [creation]=useState({pending:false,attempted:false,active:true});
+  useEffect(()=>{creation.active=true;return()=>{creation.active=false;};},[creation]);
+  const create=async(event:React.FormEvent)=>{
+    event.preventDefault();const task=purposeToTask(purpose);
+    if(blocked||creation.pending||creation.attempted||mode!=='local_host'||projects.length||!onCreate||!firstName.trim()||!task)return;
+    creation.pending=true;creation.attempted=true;setPending(true);setError('');
+    try{await onCreate({name:firstName.trim(),task});}catch(reason){if(creation.active)setError((reason as {message?:string})?.message||'프로젝트를 만들지 못했습니다. 등록된 프로젝트를 다시 확인하세요.');}
+    finally{creation.pending=false;if(creation.active)setPending(false);}
+  };
   const blocked=busy||pending||(mode!=='shared'&&mode!=='local_host');
   const select=async(id:string)=>{
     if(blocked)return;
@@ -47,7 +58,14 @@ export const LocalProjectGate:React.FC<{projects:ProjectChoice[];mode:BrowserPro
     <select aria-label={mode==='local_host'?'작업할 로컬 프로젝트':'작업할 프로젝트'} className="mt-2 w-full rounded border border-[var(--workspace-border)] bg-[var(--workspace-inset)] p-2 text-sm text-[var(--workspace-text)]" value={selection} disabled={blocked} onChange={event=>select(event.target.value)}>
       <option value="">프로젝트 선택</option>{projects.map(project=><option key={project.id} value={project.id}>{project.path.split('/').pop()}</option>)}
     </select>
-    {!projects.length&&<p className="mt-2 text-sm">등록된 프로젝트가 없습니다. 프로젝트 관리에서 새 프로젝트를 만드세요.</p>}
+    {!projects.length&&<p className="mt-2 text-sm">등록된 프로젝트가 없습니다.{mode==='local_host'&&onCreate?' 이름과 원하는 결과를 정해 첫 프로젝트를 만드세요.':' 관리자에게 프로젝트 등록과 접근 권한을 요청하세요.'}</p>}
+    {!projects.length&&mode==='local_host'&&onCreate&&<form noValidate onSubmit={create} className="mt-3 space-y-3">
+      <label className="block text-sm">프로젝트 이름<input aria-label="새 프로젝트 이름" value={firstName} maxLength={100} disabled={blocked} onChange={event=>setFirstName(event.target.value)} className="mt-1 w-full rounded border border-[var(--workspace-border)] bg-[var(--workspace-inset)] p-2 text-[var(--workspace-text)]"/></label>
+      <label className="block text-sm">원하는 결과<select aria-label="새 프로젝트 결과" value={purpose} disabled={blocked} onChange={event=>setPurpose(event.target.value)} className="mt-1 w-full rounded border border-[var(--workspace-border)] bg-[var(--workspace-inset)] p-2 text-[var(--workspace-text)]"><option value="">원하는 결과 선택</option>{PROJECT_PURPOSES.map(choice=><option key={choice.id} value={choice.id}>{choice.title}</option>)}</select></label>
+      <p className="text-xs text-[var(--workspace-muted)]">이 브라우저의 기본 프로젝트 폴더에 저장합니다. 만든 뒤 사진을 가져올 수 있습니다.</p>
+      <button type="submit" className="workspace-button workspace-button--primary" disabled={blocked||creation.attempted||!firstName.trim()||!purposeToTask(purpose)}>첫 프로젝트 만들기</button>
+    </form>}
+    {creation.attempted&&!projects.length&&onRefresh&&<button type="button" disabled={blocked} className="workspace-button mt-3" onClick={async()=>{if(blocked||creation.pending)return;creation.pending=true;setPending(true);try{await onRefresh();}catch(reason){if(creation.active)setError((reason as {message?:string})?.message||'프로젝트 목록을 확인하지 못했습니다.');}finally{creation.pending=false;if(creation.active)setPending(false);}}}>프로젝트 목록 다시 확인</button>}
     {error&&<p role="alert" className="mt-2 text-sm text-[var(--workspace-danger)]">{error}</p>}
     {recoverable&&<div className="mt-3 space-y-2"><p className="text-sm">저장된 폴더를 다시 선택하고 이 컴퓨터의 확인창에서 재연결을 승인하세요. 승인하면 이 계정의 열린 로컬 웹 세션이 종료됩니다.</p><button type="button" className="workspace-button workspace-button--primary" disabled={blocked} onClick={reconnect}>프로젝트 폴더 다시 확인</button></div>}
     <button type="button" className="workspace-button mt-3" disabled={blocked} onClick={async()=>{if(!blocked)await onLogout();}}>로그아웃</button>
@@ -191,6 +209,47 @@ export const SharedProjectPanel:React.FC<{localAuthenticationOnly?:boolean;onAut
     if(!browserAuthority)throw new Error('현재 계정의 프로젝트 연결 방식을 확인하고 다시 로그인하세요.');
     const authority={...browserAuthority};assertBrowserAuthority(authority);return authority;
   };
+  const refreshLocalGate=async(authority=gateAuthority())=>{
+    const account=await request<BrowserAccountState>('/api/accounts/me',{projectContext:null});assertBrowserAuthority(authority);
+    if(account.user?.id!==authority.actor||account.browser_project_mode!=='local_host')throw new Error('현재 계정의 프로젝트 목록을 확인하지 못했습니다. 다시 로그인하세요.');
+    setProjects(account.projects);return account;
+  };
+  const localGateCreate=async(data:{name:string;task:VisionTask})=>{
+    if(changing)return;
+    const authority=gateAuthority();
+    if(authority.mode!=='local_host'||projects.length||!host.localBrowser?.())throw new Error('현재 로컬 계정의 빈 프로젝트 목록에서만 첫 프로젝트를 만들 수 있습니다.');
+    assertProjectIdle();await saveOpenEdits();assertBrowserAuthority(authority);assertProjectIdle();
+    const initialGeneration=authority.generation;
+    let acceptanceStarted=false;
+    try{
+      // Creating at the default owned location needs no external path/native approval.
+      // Keep the workspace gate closed until its fresh account selection is accepted.
+      const project=await api.project.create(data);assertBrowserAuthority(authority);
+      const registered=project as typeof project&Pick<NativeRegistration,'context'>;
+      const account=await refreshLocalGate(authority);
+      const membership=account.projects.find(value=>value.id===project.id&&value.path===project.project_dir);
+      if(!project.registration_id||!project.workspace_id||registered.context?.actor_id!==authority.actor
+        ||registered.context.project_id!==project.id||registered.context.workspace_id!==project.workspace_id
+        ||!membership||account.selected_project_id!==membership.id)
+        throw new Error('만든 프로젝트의 저장 위치와 계정 선택을 확인하지 못했습니다. 목록에서 프로젝트를 다시 선택하세요.');
+      acceptanceStarted=true;
+      await activate(membership.id,authority);assertBrowserAuthority(authority);onAuthenticated?.();
+    }catch(error){
+      // A published create with a lost reply or failed context preparation must be
+      // discovered, never automatically created again. Stale accounts publish nothing.
+      // activate expects one accepted context. A preparation refusal can leave
+      // the original null epoch intact; retain its actual error without claiming
+      // a publication. A changed/ABA epoch or session still fails the fence.
+      if(acceptanceStarted&&getProjectContextGeneration()===initialGeneration
+        &&authority.generation===initialGeneration+1)authority.generation=initialGeneration;
+      assertBrowserAuthority(authority);
+      if(!acceptanceStarted)await refreshLocalGate(authority);
+      throw acceptanceStarted&&useProjectStore.getState().projectError
+        ?new Error(useProjectStore.getState().projectError!):error;
+    }finally{
+      try{assertBrowserAuthority(authority);setBrowserAuthority({...authority});}catch{/* A newer account owns the gate. */}
+    }
+  };
   const localGateSelect=async(id:string)=>{
     if(changing)return;const authority=gateAuthority();assertProjectIdle();
     if(!projects.some(project=>project.id===id))throw new Error('현재 계정의 프로젝트를 직접 선택하세요.');
@@ -226,7 +285,7 @@ export const SharedProjectPanel:React.FC<{localAuthenticationOnly?:boolean;onAut
   const sourceReady=!!sourceScope&&sourceDraft.scope===sourceScope;
   const input='min-w-0 rounded border border-slate-600 bg-slate-950 px-2 py-1.5 text-xs text-slate-200';
   return <details className="mt-3 rounded-lg border border-slate-700 bg-[#142131] p-3" open={!!connection||localAuthenticationOnly}><summary className="flex cursor-pointer items-center gap-2 text-xs font-semibold text-cyan-200"><Users className="h-4 w-4"/>{localAuthenticationOnly?'이 브라우저의 계정':'공동 작업 서버'}{connection&&<span className="ml-auto text-[10px] text-emerald-300">{connection.user.username}</span>}</summary>
-    {connection&&localAuthenticationOnly?<LocalProjectGate projects={projects} mode={browserAuthority?.mode??null} busy={changing} onSelect={localGateSelect} onReconnect={localGateReconnect} onLogout={()=>run(()=>changingSession(disconnect))}/>:!connection?<div className="mt-3 space-y-2"><p className="text-[11px] text-slate-400">{localAuthenticationOnly?'현재 HTTPS 주소의 계정으로 다시 로그인하세요. 저장된 프로젝트와 데이터는 로그인 후 확인합니다.':'공유 서버 계정으로 프로젝트와 라벨을 함께 관리합니다.'}</p><input aria-label="공동 작업 서버 주소" disabled={localAuthenticationOnly} value={localAuthenticationOnly?window.location.origin:server} onChange={e=>setServer(e.target.value)} placeholder="https://vision.example.com 또는 로컬 SSH 터널" className={`${input} w-full`}/>{insecureAddress(server)&&<p role="alert" className="text-[11px] text-amber-200">암호화되지 않은 주소입니다. https:// 주소나 SSH 터널(http://127.0.0.1:포트)로 연결하세요.</p>}<div className="flex gap-2"><input aria-label="공유 계정 이름" value={username} onChange={e=>setUsername(e.target.value)} placeholder="계정 이름" autoComplete="username" className={`${input} flex-1`}/><input aria-label="공유 계정 비밀번호" type="password" value={password} onChange={e=>setPassword(e.target.value)} placeholder="비밀번호" autoComplete="current-password" className={`${input} flex-1`}/></div><button disabled={changing||!server||!username||!password} onClick={()=>void run(()=>changingSession(login))} className="flex items-center gap-1 rounded bg-cyan-700 px-3 py-2 text-xs disabled:opacity-40"><LogIn className="h-3.5 w-3.5"/>연결·로그인</button></div>:<div className="mt-3 space-y-3">{host.kind()==='browser'&&!connection.remote_id&&<button disabled={changing} onClick={()=>{setConnection(null);setServer('');setUsername('');setPassword('');}} className="rounded border border-cyan-700 px-2 py-1 text-xs">다른 원격 서버 연결</button>}<p className="break-all text-[10px] text-slate-400">{connection.server_url} · 세션 만료 {new Date(connection.expires_at*1000).toLocaleTimeString()}</p><div className="flex gap-2"><select aria-label="공동 작업 프로젝트" value={selection} onChange={e=>void run(()=>changingSession(()=>activate(e.target.value)))} disabled={changing} className={`${input} flex-1`}><option value="">프로젝트 선택</option>{projects.map(p=><option key={p.id} value={p.id}>{p.path.split('/').pop()} · {roleNames[p.role]}</option>)}</select><button disabled={changing} onClick={()=>void run(()=>changingSession(disconnect))} aria-label="공동 작업 서버 연결 해제" className="rounded border border-slate-600 p-2"><LogOut className="h-4 w-4"/></button></div>
+    {connection&&localAuthenticationOnly?<LocalProjectGate key={browserAuthority?JSON.stringify([browserAuthority.origin,browserAuthority.actor,browserAuthority.revision,browserAuthority.transport]):'unverified'} projects={projects} mode={browserAuthority?.mode??null} busy={changing} onRefresh={browserAuthority?.mode==='local_host'?async()=>{await refreshLocalGate();}:undefined} onCreate={browserAuthority?.mode==='local_host'&&!projects.length?localGateCreate:undefined} onSelect={localGateSelect} onReconnect={localGateReconnect} onLogout={()=>run(()=>changingSession(disconnect))}/>:!connection?<div className="mt-3 space-y-2"><p className="text-[11px] text-slate-400">{localAuthenticationOnly?'현재 HTTPS 주소의 계정으로 다시 로그인하세요. 저장된 프로젝트와 데이터는 로그인 후 확인합니다.':'공유 서버 계정으로 프로젝트와 라벨을 함께 관리합니다.'}</p><input aria-label="공동 작업 서버 주소" disabled={localAuthenticationOnly} value={localAuthenticationOnly?window.location.origin:server} onChange={e=>setServer(e.target.value)} placeholder="https://vision.example.com 또는 로컬 SSH 터널" className={`${input} w-full`}/>{insecureAddress(server)&&<p role="alert" className="text-[11px] text-amber-200">암호화되지 않은 주소입니다. https:// 주소나 SSH 터널(http://127.0.0.1:포트)로 연결하세요.</p>}<div className="flex gap-2"><input aria-label="공유 계정 이름" value={username} onChange={e=>setUsername(e.target.value)} placeholder="계정 이름" autoComplete="username" className={`${input} flex-1`}/><input aria-label="공유 계정 비밀번호" type="password" value={password} onChange={e=>setPassword(e.target.value)} placeholder="비밀번호" autoComplete="current-password" className={`${input} flex-1`}/></div><button disabled={changing||!server||!username||!password} onClick={()=>void run(()=>changingSession(login))} className="flex items-center gap-1 rounded bg-cyan-700 px-3 py-2 text-xs disabled:opacity-40"><LogIn className="h-3.5 w-3.5"/>연결·로그인</button></div>:<div className="mt-3 space-y-3">{host.kind()==='browser'&&!connection.remote_id&&<button disabled={changing} onClick={()=>{setConnection(null);setServer('');setUsername('');setPassword('');}} className="rounded border border-cyan-700 px-2 py-1 text-xs">다른 원격 서버 연결</button>}<p className="break-all text-[10px] text-slate-400">{connection.server_url} · 세션 만료 {new Date(connection.expires_at*1000).toLocaleTimeString()}</p><div className="flex gap-2"><select aria-label="공동 작업 프로젝트" value={selection} onChange={e=>void run(()=>changingSession(()=>activate(e.target.value)))} disabled={changing} className={`${input} flex-1`}><option value="">프로젝트 선택</option>{projects.map(p=><option key={p.id} value={p.id}>{p.path.split('/').pop()} · {roleNames[p.role]}</option>)}</select><button disabled={changing} onClick={()=>void run(()=>changingSession(disconnect))} aria-label="공동 작업 서버 연결 해제" className="rounded border border-slate-600 p-2"><LogOut className="h-4 w-4"/></button></div>
       {!!connection.user.administrator&&<details><summary className="cursor-pointer text-xs text-slate-300">프로젝트·계정 관리</summary><div className="mt-2 space-y-2"><div className="flex gap-2"><input aria-label="공유 프로젝트 이름" value={name} onChange={e=>setName(e.target.value)} placeholder="새 프로젝트 이름" className={`${input} flex-1`}/><select aria-label="공유 프로젝트 작업 종류" value={newTask} onChange={e=>setNewTask(e.target.value as VisionTask)} className={input}>{(Object.keys(taskNames) as VisionTask[]).map(task=><option key={task} value={task}>{taskNames[task]}</option>)}</select><button disabled={changing||!name.trim()} onClick={()=>void run(()=>changingSession(createProject))} className="rounded bg-cyan-800 px-2 text-xs">만들기</button></div>
       <div className="flex gap-2"><input aria-label="서버 데이터 원본 경로" value={sourceReady?sourceDraft.value:''} disabled={changing||!sourceReady} onChange={e=>{setSourceConfirmation(null);setSourceDraft({value:e.target.value,scope:sourceScope});}} placeholder="서버에 있는 데이터 원본 경로" className={`${input} flex-1`}/><button disabled={changing||!sourceReady||!sourceDraft.value.trim()||sourceConfirmation!==confirmationKey} onClick={()=>void run(updateSource)} className="rounded border border-cyan-700 px-2 text-xs">원본 지정</button></div>
       <label className="flex items-start gap-2 text-[11px] text-slate-400"><input type="checkbox" aria-label="원본 경로 공유 확인" checked={!!confirmationKey&&sourceConfirmation===confirmationKey} disabled={changing||!sourceReady} onChange={e=>setSourceConfirmation(e.target.checked?confirmationKey:null)}/>{connection.server_url}의 현재 프로젝트 구성원이 지정한 원본 데이터를 사용할 수 있도록 공유합니다.</label>

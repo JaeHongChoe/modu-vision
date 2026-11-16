@@ -5,6 +5,7 @@ import type {Readable,Writable} from 'node:stream';
 import {FrameDecoder,HostError,MAX_FRAME_BYTES,parseRequest,type HostRequest,type HostResponse} from './protocol';
 import {LocalHostService,prepareStateDirectory} from './service';
 import {electronEncryptor} from '../assistant/keyStore';
+import {chooseNativeDialog} from './nativeDialog';
 
 export function runProtocol(input:Readable,output:Writable,service:Pick<LocalHostService,'handle'|'dispose'>,onClose:(cause?:HostError)=>void,
  limits:{maxBytes?:number;maxOutputBytes?:number;maxConcurrent?:number;maxControlConcurrent?:number}={}):()=>void {
@@ -50,7 +51,7 @@ export async function main(argv:string[]=process.argv.slice(2)):Promise<void> {
    confirmLinkedSource:async input=>{const result=await dialog.showMessageBox({type:'question',title:'링크 대상 복사 확인',message:'검토한 링크 대상만 프로젝트 복사본으로 만드시겠습니까?',
     detail:`웹: ${origin}\n프로젝트: ${input.scope.project_id}\n작업공간: ${input.scope.workspace_id}\n복사 위치: ${input.project_dir}\n원본: ${input.source}\n\n${input.targets.map(target=>`${target.link} → ${target.path} (${target.kind})`).join('\n')}\n\n파일 ${input.file_count}개 · ${input.total_bytes} bytes\n계획 SHA-256: ${input.plan_sha256}\n\n복사한 내용은 이 프로젝트의 다른 멤버도 읽을 수 있습니다. 원본은 읽기만 합니다. 복사 뒤 ‘이 복사본으로 작업 시작’을 직접 눌러야 프로젝트 원본이 바뀝니다.`,
     buttons:['취소','검토한 대상 복사'],defaultId:0,cancelId:0,noLink:true});return result.response===1;},
-   choose:options=>dialog.showOpenDialog(options),openPath:value=>shell.openPath(value),openExternal:value=>shell.openExternal(value)}});
+   choose:options=>chooseNativeDialog(app,dialog,options),openPath:value=>shell.openPath(value),openExternal:value=>shell.openExternal(value)}});
  const stop=runProtocol(process.stdin,process.stdout,service,cause=>{if(cause)console.error(`Local host protocol stopped: ${cause.code}`);app.quit();});
  let quitSettled=false;app.on('before-quit',event=>{if(quitSettled)return;event.preventDefault();stop();void service.dispose().then(()=>{quitSettled=true;app.quit();},()=>{quitSettled=true;app.quit();});});process.once('SIGTERM',()=>app.quit());process.once('SIGINT',()=>app.quit());
  // Native adapters have been bound after app readiness. The parent verifies a framed round trip before server READY.
