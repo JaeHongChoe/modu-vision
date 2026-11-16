@@ -3,6 +3,15 @@ const Module = require('node:module'), test = require('node:test'), ts = require
 
 function fixture({warmParentsFailure = null, resumeFailure = null, deferResume = false} = {}) {
   const slots = [], effects = [], cache = new Map(), resumeReads = [], taskHandlers = new Map(), savedJob = {job:null,error:null}; let cursor = 0, tree;
+  const storageValues = new Map();
+  const storage = {
+    get length() { return storageValues.size; },
+    key(index) { return [...storageValues.keys()][index] ?? null; },
+    getItem(key) { return storageValues.get(String(key)) ?? null; },
+    setItem(key, value) { storageValues.set(String(key), String(value)); },
+    removeItem(key) { storageValues.delete(String(key)); },
+    clear() { storageValues.clear(); },
+  };
   const react = { createElement: (type, props, ...children) => ({ type, props: { ...props, children } }), Fragment: 'Fragment',
     useRef(initial) { const i = cursor++; return slots[i] ?? (slots[i] = { current: initial }); },
     useState(initial) { const i = cursor++; if (!(i in slots)) slots[i] = { value: typeof initial === 'function' ? initial() : initial };
@@ -45,7 +54,7 @@ function fixture({warmParentsFailure = null, resumeFailure = null, deferResume =
       if (name.endsWith('/autoRunChannel')) return { registerAutoRun: () => () => {}, registerTaskAutoRun: (kind, handler, settings) => {const record={handler,settings};taskHandlers.set(kind,record);return()=>{if(taskHandlers.get(kind)===record)taskHandlers.delete(kind);};} };
       if (name.endsWith('/datasetSplitCapability')) return { isSplitUnavailable: () => false };
       if (name.endsWith('/trainingComputeReadiness')) return load('../../utils/trainingComputeReadiness.ts', true);
-      if (name.endsWith('/taskHandoff')) return { clearTaskHandoff: () => {} };
+      if (name.endsWith('/taskHandoff')) return load('taskHandoff.ts', true);
       if (name === './useTaskHandoff') return { useTaskHandoff: () => null };
       if (name === './useSelectedCoreJob') return { useSelectedCoreJob: () => savedJob };
       if (name === './TrainingSchedulingSettings') return load('TrainingSchedulingSettings.tsx', true);
@@ -55,9 +64,13 @@ function fixture({warmParentsFailure = null, resumeFailure = null, deferResume =
       if (name.endsWith('/importChecklist')) return { classGaps: () => ({ thin: [] }), classStartBlocker: () => null, splitMissesLabels: () => false };
       return new Proxy({}, { get: (_, key) => String(key) });
     };
-    m._compile(ts.transpileModule(fs.readFileSync(filename, 'utf8'), { compilerOptions: {
+    const compiled = ts.transpileModule(fs.readFileSync(filename, 'utf8'), { compilerOptions: {
       module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, jsx: ts.JsxEmit.ReactJSX, esModuleInterop: true,
-    } }).outputText, filename);
+    } }).outputText;
+    // Browser storage belongs to this mounted fixture, independent of whether
+    // the host Node version exposes a native global localStorage implementation.
+    new Function('exports', 'require', 'module', '__filename', '__dirname', 'localStorage', compiled)
+      .call(m.exports, m.exports, m.require.bind(m), m, filename, path.dirname(filename), storage);
     return m.exports;
   }
   const h = load('trainingStartSummary.ts', true), shared = load('../../stores/assistContext.ts', true), { TrainingController } = load('TrainingController.tsx');
@@ -67,7 +80,7 @@ function fixture({warmParentsFailure = null, resumeFailure = null, deferResume =
     preset: training.preset, nextDevice: training.nextDevice, nextBatchSize: training.nextBatchSize, selectedProfileId: compute.selectedProfileId,
     profile: compute.profiles.find(row => row.id === compute.selectedProfileId), transportRevision: compute.transportRevision,
     computeLoaded: compute.isLoaded, computeLoading: compute.isLoading, computeLoadError: compute.loadError });
-  return { project, data, training, compute, h, shared, scope, render, resumeReads, savedJob, taskHandler: () => taskHandlers.get('train')?.handler,
+  return { project, data, training, compute, h, shared, scope, render, resumeReads, savedJob, storage, taskHandler: () => taskHandlers.get('train')?.handler,
     async settle() { for (let i = 0; i < 8; i++) { render(); effects.splice(0).forEach(effect => effect()); await new Promise(setImmediate); } },
     change(label, value) { const field = nodes(tree).find(node => node.props?.['aria-label'] === label); assert.ok(field, label); field.props.onChange({ target: { value } }); },
     summary: () => h.currentTrainingSummary(scope()),
@@ -386,6 +399,22 @@ test('the final model block contains next-run location, recipe, advanced control
 });
 test('model catalog browsing does not change the wizard navigation scope',async()=>{
  const f=fixture();await f.settle();const scope=f.workflow().scope;f.catalog().onSelect('ocr');await f.settle();assert.equal(f.workflow().scope,scope);assert.equal(f.catalog().selectedFamily,'ocr');f.unmount();
+});
+test('catalog changes clear only their fixture handoff and never share browser storage or replace the Node global',async()=>{
+ const globalStorage=Object.getOwnPropertyDescriptor(globalThis,'localStorage');
+ const first=fixture(),second=fixture();
+ assert.ok(first.storage&&second.storage,'each fixture supplies its own browser storage');
+ assert.notEqual(first.storage,second.storage);
+ const key='vision-task-handoff:["/project","p","/images","default","local","local"]';
+ first.storage.setItem(key,'first handoff');second.storage.setItem(key,'second handoff');
+ first.storage.setItem('unrelated','keep first');second.storage.setItem('unrelated','keep second');
+ await first.settle();await second.settle();first.catalog().onSelect('ocr');await first.settle();
+ assert.equal(first.storage.getItem(key),null,'the real controller clears its own scoped handoff');
+ assert.equal(second.storage.getItem(key),'second handoff','another mounted fixture keeps the same-scope record');
+ assert.equal(first.storage.getItem('unrelated'),'keep first');assert.equal(second.storage.getItem('unrelated'),'keep second');
+ second.catalog().onSelect('rotation');await second.settle();assert.equal(second.storage.getItem(key),null);
+ assert.deepEqual(Object.getOwnPropertyDescriptor(globalThis,'localStorage'),globalStorage,'no ambient Node storage is installed or replaced');
+ first.unmount();second.unmount();
 });
 test('core job status, failure, logs and saved history stay outside wizard panels when browsing another model',async()=>{
  const f=fixture();await f.settle();f.training.jobId='finished-core';f.training.status='completed';f.training.startError='Current core failure';f.savedJob.job={job_id:'saved-core',status:'completed'};f.savedJob.error='Saved history read failure';await f.settle();f.catalog().onSelect('ocr');await f.settle();

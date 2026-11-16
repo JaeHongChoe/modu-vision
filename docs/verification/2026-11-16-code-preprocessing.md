@@ -7,7 +7,8 @@
 
 ## 검사 결과
 
-- renderer/main 3,474 PASS, 기존 opt-in 2 SKIP, 실패 0.
+- 초기 코드 구현의 macOS 기본 Node에서 renderer/main 3,474 PASS, 기존
+  opt-in 2 SKIP, 실패 0.
 - numeric/input/export 및 CI 선택·보존 계약 141 PASS. 기존 multipart
   deprecation 경고 1개 유지.
 - renderer/main 타입·E2E 타입·build 통과. 기존 Vite 500kB chunk 경고 유지.
@@ -45,3 +46,21 @@ backend/renderer/type/build 로그를 `.superpowers/sdd/2026-11-16-code-preproce
 
 로컬 검사 결과와 원격 exact-head CI, main 병합, 앱·웹 배포는 별개다.
 이 문서만으로 원격 CI나 배포 완료를 주장하지 않는다.
+
+## 원격 CI 후속 수정
+
+`b8d5044e`의 fast `43815899580`은 11 job 중 8 SUCCESS, 3 FAILURE였다.
+브라우저 4개 shard는 통과했다. static은 CI의 Node 24에 없는 전역
+`localStorage`에 의존하던 네 개 단위 테스트에서 실패했다. 테스트 fixture에
+독립 메모리 저장소를 주입하고 실제 handoff 삭제·격리를 검사했다. 전역
+저장소를 교체하거나 제품의 실행 가드를 바꾸지 않았다. Node 24.22.1에서
+동일 실패를 먼저 재현한 뒤 전체 renderer/main **3,475 PASS / 기존 2 SKIP /
+실패 0**을 확인했다.
+
+CPU shard 4/5는 새 전처리 파일을 과거 소스 집합과 비교해 안전하게 거절한
+검사였다. 과거 여섯 집합의 profile·파일 해시는 유지하고, 새 수치 해석기를
+포함한 별도 아홉 파일 집합을 추가했다. 파일 누락·변조·심볼릭 링크·검사
+도중 변경·미등록 observer의 거절 조건을 유지했다. 관련 모델 없는 소스
+계약 110개와 resident-resource 10개가 통과했다. 이는 실제 GPU 실행이나
+서버 운영 수락이 아니다. 원본 CI 로그, 실패한 checkout merge-ref와 run의
+head, RED/GREEN 기록을 private `ci-b8-failure`에 따로 보존했다.
