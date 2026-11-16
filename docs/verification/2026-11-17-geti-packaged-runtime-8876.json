@@ -1,0 +1,112 @@
+{
+  "schema_version": 1,
+  "status": "passed",
+  "started_at": "2026-11-16T18:50:38.751Z",
+  "finished_at": "2026-11-16T18:53:37.867Z",
+  "app_sha256": "710ca888a879bd27ef979f9380df00feda41aba22a8211d3ca70c30a9f039e6f",
+  "asar_sha256": "f1282114685cf78a1078c6311ac83aaada0ebd5d79327245b71518f7dd29988b",
+  "backend_sha256": "8876b875fe651aa88426f55eeae1576e5699922a913daf9327e62c56f4fae80f",
+  "backend_build_identity_sha256": "8f64d87925b27dc94d95268dac338c4525f03d462bf07c316a79e73858bd44cc",
+  "geti_descriptor_sha256": "c1573a40313869c4af2f91ccb27d48a34bdb47abad1e8f0c6eec2aff174a7192",
+  "geti_python_sha256": "1c4fc444d4dcf01d64c76ffec27834551254e494a211f34b00ad438e07cabfb6",
+  "training": false,
+  "weights_download": false,
+  "gpt": false,
+  "resource_tree_sha256": "4ce1c4a18cf916dd629634b3b84f4f120179c44f2e873f491f584e1c8af5c529",
+  "signature_before": {
+    "status": "passed",
+    "deep": true,
+    "strict": true,
+    "trust": "ad-hoc; notarization unverified"
+  },
+  "accounts_mode": "native-local-capability",
+  "restart_persistence": {
+    "project": true,
+    "context": true,
+    "receipt": true,
+    "originals_unchanged": true,
+    "new_training_jobs": 0
+  },
+  "source_commit": "85a388ab0d8be0e121709bbe26c0688d6f000289",
+  "target": "macOS arm64",
+  "source_receipt_sha256": "1780ada3351ac8c9a814069b69a179dac4bfcb695ebcbb434ac1ccfd2edd5720",
+  "qualification": {
+    "signing": "ad-hoc deep strict verified before and after both launches",
+    "notarization": "unverified",
+    "managed_automatic_update": "unqualified",
+    "model_quality": "unverified"
+  },
+  "scope": "Actual signed built package, two launches in isolated synthetic user data. Installed user app and8443 unchanged during this acceptance.",
+  "launches": [
+    {
+      "receipt_id": "e6b0bb7e04f64609bf4189ba0ab208ab",
+      "image_listing": {
+        "count": 64,
+        "pagination": true,
+        "frozen_media_ids": true,
+        "original_hashes": true,
+        "library_activation": false
+      },
+      "resource_integrity": {
+        "changed_paths": [],
+        "unchanged": true
+      },
+      "signature_after": {
+        "status": "passed",
+        "deep": true,
+        "strict": true,
+        "trust": "ad-hoc; notarization unverified"
+      },
+      "observed": {
+        "backend": true,
+        "geti": true,
+        "remaining_processes": [],
+        "ports_closed": true
+      }
+    },
+    {
+      "receipt_id": "e6b0bb7e04f64609bf4189ba0ab208ab",
+      "image_listing": {
+        "count": 64,
+        "pagination": true,
+        "frozen_media_ids": true,
+        "original_hashes": true,
+        "library_activation": false,
+        "did_not_start_child": true
+      },
+      "resource_integrity": {
+        "changed_paths": [],
+        "unchanged": true
+      },
+      "signature_after": {
+        "status": "passed",
+        "deep": true,
+        "strict": true,
+        "trust": "ad-hoc; notarization unverified"
+      },
+      "observed": {
+        "backend": true,
+        "geti": true,
+        "remaining_processes": [],
+        "ports_closed": true
+      }
+    }
+  ],
+  "prepared": {
+    "project_id": "15cc5acc",
+    "receipt_id": "e6b0bb7e04f64609bf4189ba0ab208ab",
+    "counts": {
+      "training": 38,
+      "validation": 12,
+      "testing": 14,
+      "total": 64
+    },
+    "recipe_sha256": "4f4769ac00a8f370c96b8ed4f1ea811ea4f7b6a5c4c7220fc18ad99da47cc046",
+    "original_count": 64
+  },
+  "portable_inventory_sha256": "0de512ee05d5c3888abc87ac916dc4e515b91330f3b7938c5b2f22138160907b",
+  "frozen_saved_model_proof": "2026-11-17-geti-frozen-model-reuse.json",
+  "previous_package_proof": "2026-11-17-geti-packaged-runtime.json",
+  "field_quality_qualified": false,
+  "installed_user_data_qualified": false
+}
