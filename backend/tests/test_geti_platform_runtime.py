@@ -59,13 +59,20 @@ def test_client_fences_absolute_urls_and_sanitizes_child_error(tmp_path):
         server.server_close()
 
 
-def test_owned_real_upstream_child_requires_secret_on_every_route_and_restarts(tmp_path):
+def test_owned_real_upstream_child_requires_secret_on_every_route_and_restarts(tmp_path, monkeypatch):
     import http.client
     import os
     from backend.platforms.geti.runtime import GetiRuntimeManager
     python = os.environ.get('MODU_GETI_QA_PYTHON')
     if not python:
         pytest.skip('explicit isolated Python 3.14 QA environment required')
+    from backend.engine import process_isolation
+    isolation_calls = []
+    isolation = process_isolation.session_isolation
+    def owned_isolation():
+        isolation_calls.append(isolation())
+        return isolation_calls[-1]
+    monkeypatch.setattr(process_isolation, 'session_isolation', owned_isolation)
     manager = GetiRuntimeManager(tmp_path, python=Path(python))
     try:
         client = manager.client('owned-a')
@@ -88,6 +95,7 @@ def test_owned_real_upstream_child_requires_secret_on_every_route_and_restarts(t
         assert again.request('GET', '/api/projects/' + identifier)['name'] == 'Owned wrapper test'
         other = manager.client('owned-b')
         assert other.request('GET', '/api/projects') == []
+        assert isolation_calls == [isolation(), isolation(), isolation()]
     finally:
         manager.shutdown()
 

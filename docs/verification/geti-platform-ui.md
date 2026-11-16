@@ -100,3 +100,7 @@ node scripts/qa/geti_browser_model_results.cjs \
 ![고정 입력 규칙과 저장된 평가·OpenVINO 예측을 함께 확인한 합성 화면](assets/geti-platform/trained-model-results.png)
 
 ![학습 기준에 추가하지 않은 새 검사 사진의 실제 ONNX 예측](assets/geti-platform/trained-model-new-photo.png)
+
+## 화면 검증과 별도인 운영 소유권 범위
+
+위 캡처와 `23f926b9` 시점 패키지 영수증은 당시 소스의 근거로 보존하며, 이후 변경의 새 head 통과를 뜻하지 않는다. 별도의 macOS 관리 데몬 강제 종료 복구 검사 묶음은 14건 통과·1건 실패였고, 격리 재시도 1건의 성공은 원래 실패의 원인이나 수정 효과를 입증하지 않는다. 이 소유권 확인의 제한과 위 Geti 화면·추론 결과는 각자의 범위로 기록한다. 자동 관리 업데이트는 미검증으로 유지하고 소유권·종료가 불확실하면 거절한다. [자세한 자격 범위와 보존 근거](2026-11-16-full-training-platform.md#macos-관리-데몬-복구의-별도-검증-범위)를 확인한다.

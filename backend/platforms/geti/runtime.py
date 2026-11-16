@@ -175,10 +175,11 @@ class GetiRuntimeManager:
                     if original_library: env[library_var] = original_library
             log = (instance / 'runtime.log').open('ab')
             try:
+                from backend.engine.process_isolation import session_isolation
                 process = subprocess.Popen([str(self.python), '-B', str(self.entrypoint)], cwd=self.source_root / 'application/backend', env=env,
                                            stdin=subprocess.PIPE, stdout=log, stderr=subprocess.STDOUT,
                                            pass_fds=(lockfile.fileno(),) if os.name != 'nt' else (),
-                                           start_new_session=os.name != 'nt', creationflags=subprocess.CREATE_NEW_PROCESS_GROUP if os.name == 'nt' else 0)
+                                           **session_isolation())
             except BaseException:
                 log.close()
                 lockfile.close()

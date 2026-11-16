@@ -36,10 +36,14 @@ INPUT_PREPARATION_FILES = {
     'backend/engine/input_preparation.py': {'size': 7463, 'sha256': '7981f99900c0310a978d08f4b38f39bc19f312adb0e13ea71e1b9d9b185b7efa'},
 }
 
-CURRENT_FILES = {
+NUMERIC_PREPARATION_FILES = {
     **INPUT_PREPARATION_FILES,
     'backend/engine/input_preparation.py': {'size': 8212, 'sha256': '2ab20dcde936f1f66776571dcca98905c298db340a350f2b3e374aa5a7c54c7c'},
     'backend/engine/numeric_preparation.py': {'size': 13316, 'sha256': 'e1633accf819f99c293c4bc71c73d59bd0a461e0026cc706854ae21201dcc4e1'},
+}
+CURRENT_FILES = {
+    **NUMERIC_PREPARATION_FILES,
+    'backend/engine/flowchart_engine.py': {'size': 151741, 'sha256': 'efee63d16fa32310a36a2c9f6abf14982d5f6a5d229ed0ead25ca5a7f37a1c5f'},
 }
 
 
@@ -71,7 +75,7 @@ def test_current_actual_source_binds_only_an_unused_passive_prepared_record(tmp_
     proof = capture._verify_fixed_source_files(ROOT)
     assert {name: {key: row[key] for key in ('size', 'sha256')}
             for name, row in proof['files'].items()} == CURRENT_FILES
-    assert selector.cohort is capture.NUMERIC_PREPARATION_CAPTURE_COHORT
+    assert selector.cohort is capture.GETI_NATIVE_FLOW_CAPTURE_COHORT
     assert capture._pins_dictionary(selector.cohort) == CURRENT_FILES
     assert proof['actual_installer_runtime_or_required_call_accepted'] is False
 
@@ -156,13 +160,16 @@ def test_unknown_source_does_not_activate_a_selector_or_prepared_record(tmp_path
 def test_new_exact_cohort_keeps_historical_source_and_profile_bindings():
     cohort = capture._cohort_for_data(PROFILE, PROFILE_SHA, CURRENT_FILES)
     assert dict(cohort['source_pins']) == CURRENT_FILES
-    assert cohort['source_pins'] is capture.NUMERIC_PREPARATION_PRODUCER_SOURCE_PINS
+    assert cohort['source_pins'] is capture.GETI_NATIVE_FLOW_PRODUCER_SOURCE_PINS
     historical = (capture.PRODUCER_SOURCE_PINS, capture.CURRENT_PRODUCER_SOURCE_PINS,
                   capture.COMBINED_PRODUCER_SOURCE_PINS,
                   capture.PARAMETERLESS_ROTATION_PRODUCER_SOURCE_PINS,
                   capture.COLD_SCHEMA_PRODUCER_SOURCE_PINS,
                   capture.INPUT_PREPARATION_PRODUCER_SOURCE_PINS)
     assert tuple(row['source_pins'] for row in capture.RETAINED_CAPTURE_COHORTS[:6]) == historical
+    assert capture.RETAINED_CAPTURE_COHORTS[6] is capture.NUMERIC_PREPARATION_CAPTURE_COHORT
+    assert dict(capture.NUMERIC_PREPARATION_PRODUCER_SOURCE_PINS) == NUMERIC_PREPARATION_FILES
+    assert capture._cohort_for_data(PROFILE, PROFILE_SHA, NUMERIC_PREPARATION_FILES) is capture.NUMERIC_PREPARATION_CAPTURE_COHORT
     legacy_rotation = {
         'size': 20447, 'sha256': 'b02622ed1c444272950b5f1f52523a29df096d71b8f257fc27903e380a492b45'}
     combined = {**PARAMETERLESS_SIX, 'backend/engine/rotation.py': legacy_rotation}

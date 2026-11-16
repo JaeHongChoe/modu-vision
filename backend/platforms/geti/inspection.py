@@ -95,6 +95,9 @@ def class_metadata(bound):
 def catalog_entries(request,project,source):
     if request is None or not project.get('source_dataset_dir') or not source or getattr(request.app.state,'geti_runtime',None) is None:
         return []
+    store=getattr(request.app.state,'geti_store',None)
+    if store is None or not store.has_dataset_for_project(project):
+        return []
     runtime,store,key=_services(request,project,source)
     receipt=store.get_dataset(key)
     if not receipt: return []

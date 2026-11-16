@@ -1,7 +1,7 @@
 """Durable project, immutable transfer and operation/job bindings."""
 from __future__ import annotations
 
-from contextlib import contextmanager
+from contextlib import closing, contextmanager
 import hashlib
 import json
 from pathlib import Path
@@ -59,6 +59,30 @@ class PlatformStore:
     def save_project(self, key, values): return self._save(key, 'project', values)
     def get_dataset(self, key): return self._get(key, 'dataset')
     def save_dataset(self, key, receipt): return self._save(key, 'dataset', receipt)
+
+    def has_dataset_for_project(self, project):
+        """Advisory presence only; a positive result never supplies authority.
+
+        An unlinked native catalog need not enter Geti's separate account and
+        context resolution. Match the retained physical project, since copies
+        may share both a logical project ID and the original source folder.
+        Unidentifiable records conservatively keep the authorized adapter path.
+        """
+        root = Path(project['project_dir']).resolve()
+        with closing(sqlite3.connect(self.path, timeout=30)) as db:
+            rows = db.execute("SELECT data FROM bindings WHERE kind='dataset'").fetchall()
+        for (encoded,) in rows:
+            try: receipt = json.loads(encoded)
+            except (ValueError, TypeError): return True
+            if not isinstance(receipt, dict): return True
+            if receipt.get('project_id') != project['id']: continue
+            binding = receipt.get('training_binding')
+            version = binding.get('version_dir') if isinstance(binding, dict) else None
+            if not isinstance(version, str) or not version: return True
+            try:
+                if Path(version).parent.parent.resolve() == root: return True
+            except (OSError, RuntimeError, ValueError): return True
+        return False
 
     def reserve_operation(self, key, actor, operation_id, kind, spec):
         key, actor, operation_id = opaque_key(key), opaque_key(actor), opaque_key(operation_id)

@@ -14,6 +14,11 @@ export type ActorRequest = {
   actor?: string;
 };
 
+export type AdoptBody = {
+  operation_id: string;
+  expected_revision: string;
+};
+
 export type AdvanceRequest = {
   expected_revision: number;
   relative_path: string;
@@ -690,6 +695,7 @@ export type FlowSelectionRequest = {
 };
 
 export type FlowchartModelReference = {
+  platform_model?: GetiFlowModelReference | null;
   job_id: string;
   task: "detection" | "anomaly" | "segmentation" | "classification" | "patch_classification" | "ocr" | "rotated_detection" | "enhancement" | "rotation";
 };
@@ -809,6 +815,13 @@ export type GeometryMeasureRequest = {
   image_path: string;
   params?: { [key: string]: unknown };
   polygons?: Array<{ [key: string]: unknown }>;
+};
+
+export type GetiFlowModelReference = {
+  platform?: "geti";
+  transfer_id: string;
+  model_id: string;
+  variant_id: string;
 };
 
 export type GoldPolicyRequest = {
@@ -1262,6 +1275,12 @@ export type Predict = {
   device?: "cpu" | "cuda" | "mps";
 };
 
+export type PredictBody = {
+  model_id: string;
+  variant_id: string;
+  image_path: string;
+};
+
 export type PreferenceUpdate = {
   expected_revision: number;
   actor: string;
@@ -1280,6 +1299,14 @@ export type Prepare = {
   seed?: number;
   image_paths?: Array<string> | null;
   image_limit?: number | null;
+};
+
+export type PrepareBody = {
+  operation_id: string;
+  dataset_version_id?: string | null;
+  preparation_id?: string | null;
+  input_recipe?: { [key: string]: unknown } | null;
+  target_task?: "instance_segmentation" | null;
 };
 
 export type ProfileInput = {
@@ -1626,6 +1653,8 @@ export type SplitRequest = {
   expected_qualification_sha256?: string | null;
 };
 
+export type StartBody = Record<string, never>;
+
 export type StartRequest = {
   task?: string;
   dataset_path: string;
@@ -1683,6 +1712,12 @@ export type Train = {
   device?: "cpu" | "cuda" | "mps";
   background?: boolean;
   warm_start_job_id?: string | null;
+};
+
+export type TrainBody = {
+  operation_id: string;
+  architecture_id: string;
+  max_epochs: number;
 };
 
 export type TrainingStartRequest = {
@@ -1772,6 +1807,11 @@ export type WeightImportRequest = {
 
 export type WeightPrefetchRequest = {
   model: string;
+};
+
+export type WeightsBody = {
+  operation_id: string;
+  architecture_id: string;
 };
 
 export type ZeroEscapeCalibrateRequest = {
@@ -2146,6 +2186,14 @@ export interface ApiRequestBody {
   "POST /api/patch-classification/prepare": backend__api__routes_patch_classification__PrepareRequest;
   "POST /api/patch-classification/recipe-flow": RecipeFlowRequest;
   "POST /api/patch-classification/train": backend__api__routes_patch_classification__TrainRequest;
+  "POST /api/platform/geti/adopt-labels": AdoptBody;
+  "POST /api/platform/geti/jobs/{job_id}/cancel": StartBody;
+  "POST /api/platform/geti/predict": PredictBody;
+  "POST /api/platform/geti/prepare": PrepareBody;
+  "POST /api/platform/geti/recover": StartBody;
+  "POST /api/platform/geti/start": StartBody;
+  "POST /api/platform/geti/train": TrainBody;
+  "POST /api/platform/geti/weights": WeightsBody;
   "POST /api/product-delivery/diagnostics": DiagnosticsOptions;
   "PUT /api/product-delivery/operations/notification-policy": OperationsNotificationPolicy;
   "PUT /api/product-delivery/operator/inputs": OperatorInputs;

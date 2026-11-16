@@ -218,3 +218,72 @@ def test_platform_model_compute_reports_actual_cpu_and_preserves_threshold_bound
         'project_id':project['id'],'execution_target':'model_compute','device':'cpu'})
     assert response.status_code==200,response.text
     assert response.json()['execution_device']=='cpu' and response.json()['final_verdict']=='NG'
+
+
+def test_native_catalog_ignores_geti_binding_from_another_physical_project(tmp_path, monkeypatch):
+    import asyncio
+    import httpx
+    from backend.tests.test_original_owned_flow_lifetime import _stack, _login_current
+
+    app, admission, observer, _, project, _, _, _, _ = _stack(tmp_path, monkeypatch)
+    # Restored copies can retain a logical ID and source but have independent
+    # physical project authority. Another copy must not activate this adapter.
+    app.state.geti_store.save_dataset('other-physical-scope', {
+        'project_id': project['id'], 'source_root': project['source_dataset_dir'],
+        'training_binding': {'version_dir': str(tmp_path/'other-project'/'dataset_versions'/'sealed')},
+    })
+
+    async def read():
+        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url='http://owned.invalid') as client:
+            headers = await _login_current(client, app, project)
+            response = await client.get('/api/flowchart/models/catalog', headers=headers,
+                params={'source_dataset_path': project['source_dataset_dir']})
+            assert response.status_code == 200 and response.json() == {'models': [], 'total': 0}
+
+    asyncio.run(read())
+    admission.close()
+    assert admission.drain(.03) == {'status': 'managed_scopes_drained', 'active_scopes': 0, 'unsupported': []}
+    assert observer.snapshot()['failures'] == []
+    assert all(observer.snapshot()[field] is False for field in (
+        'whole_writer_coverage', 'process_tree_exit_verified', 'can_release_launch_lease'))
+
+
+def test_linked_geti_catalog_does_not_borrow_native_managed_protocol(tmp_path, monkeypatch):
+    import asyncio
+    import httpx
+    from backend.tests.test_original_owned_flow_lifetime import _stack, _login_current
+    from backend.platforms.geti.dataset_transfer import prepare_dataset
+    from tests.test_geti_platform_dataset_transfer import GetiMemoryHTTP
+
+    app, admission, observer, actor, project, _, _, _, _ = _stack(tmp_path, monkeypatch)
+    source = Path(project['source_dataset_dir'])
+    for index, subset in enumerate(('train', 'val', 'test')):
+        image = source/subset/'scratch'/f'image-{index}.png'
+        image.parent.mkdir(parents=True)
+        Image.new('RGB', (32, 24), (20 + index*10, 40, 100)).save(image)
+        image.with_suffix('.json').write_text(json.dumps({'imagePath': image.name,
+            'imageWidth': 32, 'imageHeight': 24, 'shapes': [
+                {'label': 'scratch', 'shape_type': 'polygon', 'points': [[2, 3], [12, 3], [10, 13]]}]}))
+    receipt = prepare_dataset(project, {'actor': 'Reviewer', 'target_task': 'instance_segmentation'}, GetiMemoryHTTP())
+    context = app.state.context_registry.context(project, actor)
+    key = app.state.context_registry.project_key(context)
+    app.state.geti_store.save_dataset(key, receipt)
+
+    class StoppedRuntime:
+        def status(self, project_key): return {'state': 'stopped'}
+        def client(self, project_key): raise AssertionError('Catalog read must not start a child')
+    app.state.geti_runtime = StoppedRuntime()
+
+    async def read():
+        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url='http://owned.invalid') as client:
+            headers = await _login_current(client, app, project)
+            response = await client.get('/api/flowchart/models/catalog', headers=headers,
+                params={'source_dataset_path': project['source_dataset_dir']})
+            assert response.status_code == 200 and response.json() == {'models': [], 'total': 0}
+
+    asyncio.run(read())
+    admission.close()
+    drained = admission.drain(.03)
+    assert drained['status'] == 'refused' and 'uncovered_request_protocol' in drained['unsupported']
+    assert all(observer.snapshot()[field] is False for field in (
+        'whole_writer_coverage', 'process_tree_exit_verified', 'can_release_launch_lease'))

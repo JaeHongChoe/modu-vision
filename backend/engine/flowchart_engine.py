@@ -64,7 +64,6 @@ from backend.engine.segmentation_evidence import class_evidence, remap_class_evi
 from backend.engine.rule_evaluation import validate_blob_rules, measure_blob_rules, validate_ocr_rules, evaluate_ocr_rules
 from backend.engine.geometry_measurement import measure_geometry, validate_measurement_params
 from backend.engine.flow_executor import execute_layers
-from backend.platforms.geti.inspection import step_artifacts as platform_step_artifacts
 from backend.engine.original_owned_flow_execution_request import observe_original_execution_effect
 
 logger = logging.getLogger("vision_ai_studio.flowchart_engine")
@@ -74,6 +73,21 @@ _VERIFIED_CHECKPOINTS: ContextVar[Optional[Dict[Tuple[str, str], Path]]] = Conte
     "flowchart_verified_checkpoints", default=None,
 )
 _PARTIAL_RUN: ContextVar[Any] = ContextVar('flowchart_local_CPU_partial_run', default=None)
+
+
+def _platform_session(job_id):
+    # Compact native flow packages intentionally omit the desktop Geti gateway.
+    if not isinstance(job_id, str) or not job_id.startswith('geti:'):
+        return None
+    from backend.platforms.geti.inspection import active_session
+    return active_session(job_id)
+
+
+def _platform_step_artifacts(node):
+    if not isinstance(node.data.model_job_id, str) or not node.data.model_job_id.startswith('geti:'):
+        return []
+    from backend.platforms.geti.inspection import step_artifacts
+    return step_artifacts(node)
 
 
 class FlowchartPartialCancelled(Exception):
@@ -1365,8 +1379,7 @@ class FlowchartEngine:
         )
         job_id = inspect_node.data.model_job_id if inspect_node else None
 
-        from backend.platforms.geti.inspection import active_session
-        platform_session=active_session(job_id)
+        platform_session=_platform_session(job_id)
         if platform_session is not None:
             return platform_session.inspect(img_rgb,rois,inspect_node)
 
@@ -1937,8 +1950,7 @@ class FlowchartEngine:
         self, img_rgb: np.ndarray, regions: List[Dict[str, Any]], node: FlowNode,
     ) -> Tuple[List[Dict[str, Any]], float, str]:
         """Run a detector on the image or inherited ROIs and restore source coordinates."""
-        from backend.platforms.geti.inspection import active_session
-        platform_session=active_session(node.data.model_job_id)
+        platform_session=_platform_session(node.data.model_job_id)
         if platform_session is not None:
             return platform_session.detect(img_rgb,regions,node)
         if any('image' in region for region in regions):
@@ -2483,7 +2495,7 @@ class FlowchartEngine:
                     selected_edge_ids=[edge.id for edge in selected],
                     skip_reason=step_reason,
                     count_rule_results=count_results if node.data.node_type == "detection_crop" and count_rules is not None and status in ("passed", "flagged_ng") else [],
-                    artifacts=fixture_artifacts + region_artifacts(img_rgb, node_rois[node.id], node_evidence[node.id]) + platform_step_artifacts(node),
+                    artifacts=fixture_artifacts + region_artifacts(img_rgb, node_rois[node.id], node_evidence[node.id]) + _platform_step_artifacts(node),
                 ))
             return (node_rois[selected_node.id], node_evidence[selected_node.id],
                     node_branch_verdict[selected_node.id], execution_steps,

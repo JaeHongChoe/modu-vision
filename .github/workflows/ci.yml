@@ -79,17 +79,6 @@ jobs:
           MV_CI_RECORD_DIR: ${{ runner.temp }}/modu-ci-manifests
         run: >-
           python -m pytest -q --junitxml="$MV_CI_RECORD_DIR/ci-pytest.xml"
-          backend/tests/test_geti_platform_application.py
-          backend/tests/test_geti_platform_authority.py
-          backend/tests/test_geti_platform_authority_images.py
-          backend/tests/test_geti_platform_dataset_transfer.py
-          backend/tests/test_geti_platform_flow.py
-          backend/tests/test_geti_platform_installation.py
-          backend/tests/test_geti_platform_jobs.py
-          backend/tests/test_geti_platform_jobs_activity.py
-          backend/tests/test_geti_platform_model_runtime.py
-          backend/tests/test_geti_platform_runtime.py
-          backend/tests/test_geti_platform_runtime_build.py
           backend/tests/test_local_location_identity.py
           backend/tests/test_local_location_recovery.py
           backend/tests/test_local_project_assets.py

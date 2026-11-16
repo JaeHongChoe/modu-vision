@@ -122,6 +122,8 @@ ChatGPT 연결에는 **텍스트·구조화된 앱 상태와 사용자가 첨부
 
 [Geti v3.3.0 전체 소스](platforms/geti/README.md)의 backend와 학습 library를 고정하고, 별도 실행 환경을 기존 앱·웹의 인증 gateway에 연결했습니다. 합성 자료로 실제 CPU 학습·세 형식의 평가·내보내기·재접속과 OpenVINO·ONNX 예측을 확인했습니다. 원본 플랫폼의 전체 UI 소스는 별도로 보존하며, 사용자는 모두비전의 한국어 작업대에서 같은 프로젝트를 이어갑니다. [현재 검증 범위와 릴리스 상태](docs/verification/2026-11-16-full-training-platform.md)를 확인하세요.
 
+Geti 계약 검사는 [별도 workflow](.github/workflows/ci-geti-platform.yml)의 `source`·`platform-cpu` 작업에 추가하며, 후자는 부모 gateway 검사 파일 12개를 열거합니다. 기존 fast/full CI는 원형을 유지합니다. macOS 관리 데몬의 강제 종료 복구 소유권에는 [별도 미확인 범위](docs/verification/2026-11-16-full-training-platform.md#macos-관리-데몬-복구의-별도-검증-범위)가 남아 있습니다. 자동 관리 업데이트는 아직 검증되지 않았으며, 소유권·종료가 불확실하면 계속 거절합니다.
+
 ### 데이터와 라벨링
 
 - 폴더·지원 LabelMe 형상 가져오기, 데이터셋 분할과 버전·원본 출처 관리

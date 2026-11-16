@@ -63,9 +63,11 @@
 
 공개 가능한 합성 sample ID·split·원본 해시·실제 job/model/variant·산출물 해시·평가·미검증 범위는 [축약 실행 영수증](2026-11-16-geti-cpu-cycle.json)에 보존했다. 실제 모델 binary나 사용자 자료를 저장소에 올리지 않았다.
 
-## 추가한 소스 CI
+## 별도 Geti CI 계약 검사
 
-[Geti platform source checks](../../.github/workflows/ci-geti-platform.yml)는 관련 source/gitlink/guard·패키지 inventory 변경의 PR과 main push에 추가된다. Ubuntu 24.04·Node 24에서 정확 submodule을 checkout하고 18개 소스 fixture, 4개 패키지 inventory 계약과 전체 source 검사를 실행한다. npm/Python 설치·upstream script·학습은 실행하지 않는다. 제품 gateway·권한·데이터·모델·작업·runtime의 11개 검사 파일은 기존 전체 CPU 회귀 목록에도 추가했으며, 빠른 검사의 관련 파일 선택에도 포함된다. 기존 검사와 fast/full/gate·보호 조건은 유지한다. 로컬 검사 결과와 실제 원격 workflow 결과를 구분하며, 이 소스 workflow만으로 모델 학습·제품 통합을 승인하지 않는다.
+[Geti platform source checks](../../.github/workflows/ci-geti-platform.yml)는 관련 source·부모 gateway·패키지 변경의 PR과 main push에 별도로 추가된다. `source` 작업은 Ubuntu 24.04·Node 24에서 고정 submodule을 checkout하고 source guard·패키지 inventory 계약과 전체 source 검사를 실행한다. 이 작업은 npm/Python 설치·upstream script·학습을 실행하지 않는다.
+
+`platform-cpu` 작업은 Ubuntu 24.04·Python 3.13의 해시 잠금 CPU 환경을 설치하고 gateway·권한·사진 목록·데이터·모델·흐름 경계·작업·runtime의 검사 파일 **12개**를 명시적으로 열거한다. 원래 [ci.yml](../../.github/workflows/ci.yml)은 기준 브랜치와 바이트가 같도록 복원했으며, 기존 fast/full/gate와 보호 조건은 바꾸지 않는다. 별도 계약 검사 설정을 추가한 사실과 실제 원격 CI 성공은 구분한다. 두 작업만으로 Python 3.14 런타임의 실제 학습, 패키지 실행이나 자동 관리 업데이트를 승인하지 않는다.
 
 ## 보존한 실패와 관측
 
@@ -76,9 +78,17 @@
 5. 최초 CRUD 시험의 두 종료와 실제 학습 시험의 재시작 직후 종료에서는 **Geti scheduler 자체가 InferenceWorker와 StreamLoader를 각각 10초 기다린 뒤 terminate**했다. 실제 학습을 수행한 첫 server의 worker는 이 강제 종료 없이 끝났다. harness가 신호를 강제 확대한 것은 아니지만, 전체 수명주기가 깨끗하다고 표현하지 않는다.
 6. 원본 `/api/jobs`는 현재 server session의 메모리 큐다. 재시작 뒤 작업 이력을 보존하는 플랫폼 ledger로 간주하면 안 된다. 모두비전의 기존 작업 영수증과 durable binding이 필요하다.
 
+## macOS 관리 데몬 복구의 별도 검증 범위
+
+추가 소유권·재시작 검사 15건의 원래 실행은 **14건 통과·1건 실패**로 보존했다. 실패한 관리 데몬의 강제 종료 복구 시험에서는 실제 CPU 모델 결과가 먼저 저장됐고, 이후 종료 관측기가 그 추론 작업자의 PID를 `unknown_members`로 분류해 소유권을 확정하지 않았다. 별도 격리 재시도 1건은 통과했지만 원래 실패를 재현하지 못했으므로 원인이나 수정 효과를 입증하지 않는다. 이를 원래 묶음의 15/15 성공으로 합산하지 않는다.
+
+이 실패의 범위는 관리 데몬의 복구 소유권 확인이다. Geti core·실제 추론·작업대 UI는 위의 별도 실행 영수증으로 범위를 판단한다. **자동 관리 업데이트는 여전히 미검증이며, 소유권·종료가 불확실하면 거절하는 보호를 유지한다.** 소유권 관측기나 제한 시간을 낮추지 않았고, 프로세스 그룹 전환 가설을 확인된 원인으로 쓰지 않는다. 원래 실패와 격리 재시도의 로그·추론 결과 소유권은 로컬 `qa/native-portable-followup-proof.json`, `qa/daemon-original-failure-persisted-provenance.json`에 보존했다.
+
 ## 릴리스 확인 조건
 
 릴리스할 때는 정확한 최종 head CI와 위 OS 패키지 근거를 확인하고, 실제 설치·기존 프로젝트 재접속과 매뉴얼 반영을 별도 인계 기록에 남긴다. 원본 플랫폼의 실행 성공과 분리된 패키지 시험만으로 기존 사용자 자료의 교체·전체 현장 수락을 선언하지 않는다.
+
+위의 `23f926b9` 시점 패키지와 결과 화면 영수증은 당시 소스의 보존된 근거다. 이후 runtime·흐름 경계·CI 변경의 새 head를 검증한 것으로 소급하지 않으며, 새 패키지·최종 CI·설치 반영은 각각 별도로 확인한다.
 
 첫 서명 패키지에서는 준비 후 재시작 시 Python 캐시가 앱 리소스를 바꿔 무결성 검사에 실패했다. 버전 확인과 실제 실행을 모두 `-B`로 고정하고 패키지의 개발 캐시를 제외했다. 실패한 패키지·해시 차이·서명 진단을 보존했으며, 최종 패키지의 첫 실행과 재실행 각각에서 전체 Geti 파일 트리와 서명을 다시 대조해 통과했다. Frozen diagnostics의 새 파일 최초 실행은 120초 제한으로 실패했고, 같은 바이트의 제한 내 진단과 acceptance-only 재검사가 통과했다. 최초 지연의 OS 검사 가설은 확인된 원인으로 쓰지 않는다.
 
