@@ -292,7 +292,12 @@ async function testOwnedBootstrapOrdering(completion) {
   };
   const startup = supervisor.startBackend().then(value => ({ value }), error => ({ error }));
   try {
-    await discovered;
+    // A rejected startup cannot produce a port. Surface that original failure
+    // instead of leaving this controlled fixture's HTTP server open forever.
+    await Promise.race([discovered, startup.then(result => {
+      if (result.error) throw result.error;
+      throw new Error('Controlled startup completed before port discovery');
+    })]);
     await new Promise(resolve => setImmediate(resolve));
     assert.equal(binds, 1);
     assert.equal(supervisor.isHealthy(), false);
@@ -321,7 +326,7 @@ async function testOwnedBootstrapOrdering(completion) {
     assert.equal(spawns, 1);
     assert.ok(!events.includes('modeled-stop:SIGKILL'));
   } finally {
-    if (!settled) reject(new Error('controlled fixture teardown'));
+    if (!settled && binds) reject(new Error('controlled fixture teardown'));
     await startup;
     await supervisor.stopBackend();
     child.stdio.forEach(stream => stream.destroy());

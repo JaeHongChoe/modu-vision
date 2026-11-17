@@ -559,7 +559,11 @@ def get_conditional_inspection_template() -> FlowchartPipeline:
     return get_conditional_inspection_flowchart()
 
 
+from backend.platforms.geti.inspection import GetiFlowModelReference
+
+
 class FlowchartModelReference(BaseModel):
+    platform_model: Optional[GetiFlowModelReference] = None
     job_id: str
     task: Literal["detection", "anomaly", "segmentation", "classification", "patch_classification", "ocr", "rotated_detection", "enhancement", "rotation"]
 
@@ -653,6 +657,17 @@ def verify_flowchart_models(request: FlowchartModelVerificationRequest, http_req
     """Verify every saved model against the selected source and its node task."""
     verified: List[str] = []
     for model in request.models:
+        from backend.platforms.geti.inspection import is_platform_reference, resolve_reference, parse_reference
+        if is_platform_reference(model.job_id):
+            try:
+                project=get_current_project(http_request)
+                if model.platform_model is not None and model.platform_model!=parse_reference(model.job_id):
+                    raise ValueError('Typed platform model differs from selected reference')
+                resolve_reference(http_request,project,request.source_dataset_path,model.job_id,model.task,export=True)
+            except (ValueError,OSError) as exc: raise HTTPException(409,str(exc)) from exc
+            verified.append(model.job_id)
+            continue
+        if model.platform_model is not None: raise HTTPException(409,'학습 작업대 모델은 저장된 모델 참조와 작업 유형이 일치해야 합니다. 모델을 다시 선택하세요.')
         if not valid_flow_job(model.job_id, model.task):
             raise HTTPException(status_code=409, detail=f"모델 작업 ID가 올바르지 않습니다: {model.job_id}")
         try:
@@ -774,6 +789,11 @@ def catalog_flowchart_models(source_dataset_path: str, request: Request = None):
             models.append({'job_id': job_id, 'task': 'rotation', 'label': f"rotation · {job_id}",
                 'created_at': time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime(checkpoint.stat().st_mtime)),
                 'source_dataset_path': str(source), 'best_metric': None, 'preset': None, **settings})
+    if project:
+        from backend.platforms.geti.inspection import catalog_entries
+        try: models.extend(catalog_entries(request,project,str(source)))
+        except (ValueError,RuntimeError,OSError) as exc:
+            logger.info('Platform model catalog unavailable: %s',type(exc).__name__)
     for model in models:
         model['capabilities'] = ({'role': 'preprocess', 'operation': 'learned_rotation', 'native_source_coordinates': True}
             if model['task'] == 'rotation' else {'role': 'preprocess', 'operation': 'enhancement'}
@@ -786,6 +806,11 @@ def _save_class_model_metadata(node, project, source_dataset_path, request=None)
     """Resolve only model references used by class rules, without loading inference models."""
     job_id = node.data.model_job_id
     task = flow_model_task(node)
+    from backend.platforms.geti.inspection import is_platform_reference,resolve_reference,class_metadata
+    if is_platform_reference(job_id):
+        if project is None: raise ValueError('Platform class rules require an active project')
+        bound=resolve_reference(request,project,source_dataset_path,job_id,task)
+        return {'metadata':class_metadata(bound),'task':task}
     if not valid_flow_job(job_id, task):
         raise ValueError(f"Model node {node.id} has an invalid model job ID for its class rules.")
     try:
@@ -1368,12 +1393,21 @@ def run_flowchart(req: FlowchartRunRequest, request: Request = None):
         model_contexts: Dict[str, Any] = {}
         local_model_jobs: set[str] = set()
         verified_checkpoints: Dict[tuple[str, str], Path] = {}
+        from backend.platforms.geti.inspection import is_platform_reference,resolve_reference
         for node in ordered_nodes:
             if flow_model_task(node) is None:
                 continue
             job_id = node.data.model_job_id
             if not job_id:
                 raise HTTPException(status_code=409, detail=f"{node.data.label} 노드에 모델이 연결되어 있지 않습니다. 학습을 끝낸 모델을 고르세요.")
+            if is_platform_reference(job_id):
+                if project is None or request is None: raise HTTPException(409,'학습 작업대 모델을 실행하려면 사용할 권한이 있는 프로젝트를 먼저 여세요.')
+                if req.execution_target=='selected_compute' or req.device!='cpu':
+                    raise HTTPException(422,'학습 작업대 모델은 현재 이 컴퓨터의 CPU에서만 실행할 수 있습니다. 실행 위치를 이 컴퓨터로, 장치를 CPU로 선택하세요.')
+                try: resolve_reference(request,project,project.get('source_dataset_dir'),job_id,flow_model_task(node),export=True)
+                except (ValueError,OSError) as exc: raise HTTPException(409,str(exc)) from exc
+                local_model_jobs.add(job_id)
+                continue
             known_job = training_job_manager.get_job(job_id)
             if known_job is not None and known_job.status != "completed":
                 raise HTTPException(
@@ -1433,9 +1467,13 @@ def run_flowchart(req: FlowchartRunRequest, request: Request = None):
             try:
                 with compute_lease_scope(f"flow_{uuid.uuid4().hex}", str(device)):
                     engine = _local_execution_engine(device)
-                    with verified_checkpoint_scope(verified_checkpoints), _project_calibrations(project):
-                        result = local_debug_run(_DEBUG_RUN_CACHE, engine, pipeline, req.image_path,
-                            req.image_id, req.stop_node_id, project, verified_checkpoints)
+                    from backend.platforms.geti.inspection import execution_scope
+                    with verified_checkpoint_scope(verified_checkpoints), _project_calibrations(project), execution_scope(request,project,pipeline,req.image_path):
+                        if any(is_platform_reference(node.data.model_job_id) for node in pipeline.nodes):
+                            result=engine.execute(pipeline=pipeline,image_path=req.image_path,image_id=req.image_id,stop_node_id=req.stop_node_id)
+                        else:
+                            result = local_debug_run(_DEBUG_RUN_CACHE, engine, pipeline, req.image_path,
+                                req.image_id, req.stop_node_id, project, verified_checkpoints)
             except ValueError as exc:
                 raise HTTPException(status_code=409, detail=str(exc)) from exc
             return {**result, "execution_target": "local", "execution_device": str(device), "compute_profile_id": None}
@@ -1491,13 +1529,20 @@ def run_flowchart(req: FlowchartRunRequest, request: Request = None):
                 raise HTTPException(status_code=503, detail=f"원격 플로우 연결이 끊겼습니다. 같은 실행을 다시 시도하세요: {exc}") from exc
             except ArtifactValidationError as exc:
                 raise HTTPException(status_code=502, detail=f"원격 플로우 결과를 확인하지 못했습니다: {exc}") from exc
-        with verified_checkpoint_scope(verified_checkpoints), _project_calibrations(project):
-            result = _ENGINE.execute(
+        from backend.platforms.geti.inspection import execution_scope
+        from contextlib import nullcontext
+        platform_run=any(is_platform_reference(node.data.model_job_id) for node in pipeline.nodes)
+        execution_engine=_CPU_ENGINE if platform_run else _ENGINE
+        if platform_run:
+            from backend.engine.shared_scheduler import compute_lease_scope
+        lease=compute_lease_scope(f"flow_{uuid.uuid4().hex}",'cpu') if platform_run else nullcontext()
+        with lease, verified_checkpoint_scope(verified_checkpoints), _project_calibrations(project), execution_scope(request,project,pipeline,req.image_path):
+            result = execution_engine.execute(
                 pipeline=pipeline,
                 image_path=req.image_path,
                 image_id=req.image_id,
             )
-        return {**result, "execution_target": "model_compute", "execution_device": str(_ENGINE.device),
+        return {**result, "execution_target": "model_compute", "execution_device": str(execution_engine.device),
                 "compute_profile_id": None}
     except FlowchartPartialCancelled:
         raise

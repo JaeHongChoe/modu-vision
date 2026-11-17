@@ -59,3 +59,7 @@ Thumbs.db
 
 # Local implementation ledgers and owned QA artifacts are not product source.
 /.superpowers/sdd/
+
+# Installer-owned Geti runtime; source and manifests live under platforms/geti.
+/dist-geti/
+/platforms/geti/runtime/installed-runtime.json

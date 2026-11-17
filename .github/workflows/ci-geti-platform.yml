@@ -1,0 +1,95 @@
+name: Geti platform source checks
+
+# Additive source/inventory and parent gateway contracts; no model training or upstream runtime installation.
+"on":
+  pull_request:
+    paths:
+      - '.gitmodules'
+      - 'backend/**'
+      - 'src/renderer/components/platform/**'
+      - 'src/renderer/services/getiPlatform.ts'
+      - 'build/electron-builder.yml'
+      - 'build/release-hooks.cjs'
+      - 'platforms/geti/**'
+      - 'scripts/geti-platform.cjs'
+      - 'scripts/tests/geti-platform.test.cjs'
+      - 'scripts/geti-package-runtime.cjs'
+      - 'scripts/tests/geti-package-runtime.test.cjs'
+      - 'scripts/build_geti_runtime.py'
+      - '.github/workflows/ci-geti-platform.yml'
+  push:
+    branches: [main]
+    paths:
+      - '.gitmodules'
+      - 'backend/**'
+      - 'src/renderer/components/platform/**'
+      - 'src/renderer/services/getiPlatform.ts'
+      - 'build/electron-builder.yml'
+      - 'build/release-hooks.cjs'
+      - 'platforms/geti/**'
+      - 'scripts/geti-platform.cjs'
+      - 'scripts/tests/geti-platform.test.cjs'
+      - 'scripts/geti-package-runtime.cjs'
+      - 'scripts/tests/geti-package-runtime.test.cjs'
+      - 'scripts/build_geti_runtime.py'
+      - '.github/workflows/ci-geti-platform.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: geti-platform-${{ github.workflow }}-${{ github.ref }}
+  queue: max
+  cancel-in-progress: false
+
+jobs:
+  source:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          submodules: true
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: '24'
+      - name: Source guard contracts with owned Git fixtures
+        run: node --test scripts/tests/geti-platform.test.cjs
+      - name: Packaged runtime inventory contracts
+        run: node --test scripts/tests/geti-package-runtime.test.cjs
+      - name: Verify the complete pinned upstream source
+        run: node scripts/geti-platform.cjs check --json
+  platform-cpu:
+    name: Geti parent gateway contracts
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    env:
+      OMP_NUM_THREADS: '2'
+      MKL_NUM_THREADS: '2'
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: '3.13'
+      - name: Install locked CPU environment
+        run: >-
+          python -m pip install --require-hashes --only-binary=:all:
+          -r build/ci/requirements-ubuntu-py313-cpu.lock
+      - name: Project authority, dataset, models, jobs, and runtime contracts
+        run: >-
+          python -m pytest -q
+          backend/tests/test_geti_platform_application.py
+          backend/tests/test_geti_platform_authority.py
+          backend/tests/test_geti_platform_authority_images.py
+          backend/tests/test_geti_platform_dataset_transfer.py
+          backend/tests/test_geti_platform_flow_boundary.py
+          backend/tests/test_geti_platform_flow.py
+          backend/tests/test_geti_platform_installation.py
+          backend/tests/test_geti_platform_jobs.py
+          backend/tests/test_geti_platform_jobs_activity.py
+          backend/tests/test_geti_platform_model_runtime.py
+          backend/tests/test_geti_platform_runtime.py
+          backend/tests/test_geti_platform_runtime_build.py

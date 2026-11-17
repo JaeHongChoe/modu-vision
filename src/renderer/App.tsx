@@ -15,6 +15,7 @@ import { WizardFooter } from './components/wizard/WizardFooter';
 import { DatasetStudio } from './components/dataset/DatasetStudio';
 import { LabelingTool } from './components/labeling/LabelingTool';
 import { TrainingController } from './components/training/TrainingController';
+import { PlatformWorkspace } from './components/platform/PlatformWorkspace';
 import { EvaluationStudio } from './components/evaluation/EvaluationStudio';
 import { FlowchartStudio } from './components/flowchart/FlowchartStudio';
 import { InferenceCenterStudio } from './components/inference/InferenceCenterStudio';
@@ -31,7 +32,7 @@ import { useFlowchartStore } from './stores/useFlowchartStore';
 import { completedSteps, mergeStepProgress } from './components/wizard/stepProgress';
 import { subscribeWorkflowProgress, workflowProgressReport } from './stores/workflowProgress';
 import { telemetryService } from './services/websocket';
-import { getApiBaseUrl, getBackendPort, request } from './services/api';
+import { getApiBaseUrl, getApiDiagnosticScope, getBackendPort, request } from './services/api';
 import { needsBrowserHealthProbe, startBrowserHealthProbe } from './services/browserHealth';
 import { createCatchUp, createJobEventStream } from './services/jobEventFeed';
 import { AssistantPanel } from './components/assistant/AssistantPanel';
@@ -66,7 +67,7 @@ function StudioApp() {
   const doneSteps = mergeStepProgress(completedSteps({ hasData, images, unlabeled, trainingDone, evaluated, flowSaved }), workflowProgressReport(progressScope));
   const { updateFromTelemetry } = useTrainingStore();
   const [workspace,setWorkspace]=useState<'studio'|'operator'>('studio');
-  const [utility,setUtility]=useState<'tasks'|'delivery'|null>(null);
+  const [utility,setUtility]=useState<'tasks'|'delivery'|'platform'|null>(null);
   const [workspaceRequest,setWorkspaceRequest]=useState<{tab:'recent'|'create';nonce:number}>();
   const transportRevision=useComputeStore(s=>s.transportRevision);
   const project=useProjectStore(s=>s.project);
@@ -195,6 +196,7 @@ function StudioApp() {
               ?<button className={MENU_ITEM} onClick={()=>setWorkspace('studio')}>{language==='ko'?'모델·플로우 작업':'Models and flows'}</button>
               :<button className={MENU_ITEM} onClick={()=>setWorkspace('operator')}>{language==='ko'?'운영자 검사 화면':'Operator inspection'}</button>}
             <button className={MENU_ITEM} onClick={()=>setUtility('tasks')}>{language==='ko'?'작업 센터 · 진행 중인 작업':'Task center'}</button>
+            <button className={MENU_ITEM} onClick={()=>setUtility('platform')}>{language==='ko'?'학습 작업대 · 데이터부터 모델까지':'Training workspace'}</button>
             <button className={MENU_ITEM} onClick={()=>useAssistantStore.getState().open()}>{language==='ko'?'도우미에게 묻기':'Ask the assistant'}</button>
             <button className={MENU_ITEM} onClick={()=>setUtility('delivery')}>{language==='ko'?'패키지·장치·진단':'Packages, devices and diagnostics'}</button>
         </>}/>
@@ -210,7 +212,12 @@ function StudioApp() {
       <main key={transportRevision} className="modu-stage-content flex min-w-0 min-h-0 overflow-hidden">
         {workspace==='studio' && activeStep === 1 && <DatasetStudio />}
         {workspace==='studio' && activeStep === 2 && <LabelingTool />}
-        {workspace==='studio' && activeStep === 3 && <TrainingController key={transportRevision}/>}
+        {workspace==='studio' && activeStep === 3 && <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+          <div className="shrink-0 border-b border-slate-700 px-4 py-2">
+            <button type="button" className="workspace-button" onClick={()=>setUtility('platform')}>{language==='ko'?'학습 작업대 열기 · 데이터부터 모델까지':'Open training workspace'}</button>
+          </div>
+          <TrainingController key={transportRevision}/>
+        </div>}
         {workspace==='studio' && activeStep === 4 && <EvaluationStudio />}
         {workspace==='studio' && activeStep === 5 && <FlowchartStudio />}
         {workspace==='studio' && activeStep === 6 && <InferenceCenterStudio />}
@@ -229,8 +236,15 @@ function StudioApp() {
         <FirstRunStudio onClose={()=>setFirstRunOpen(false)} onDismiss={()=>void dismissFirstRun()}
           onOpenWorkspace={tab=>{setFirstRunOpen(false);setWorkspace('studio');setWorkspaceRequest(previous=>({tab,nonce:(previous?.nonce??0)+1}));}}/>
       </WorkspaceDialog>}
-      {utility&&<WorkspaceDialog key={`${utility}:${transportRevision}`} title={utility==='tasks'?'작업 센터':'패키지·장치·설치·진단'} onClose={()=>setUtility(null)}>
-        {utility==='tasks'?<TaskCenter initialOpen onNavigate={()=>{setUtility(null);setWorkspace('studio');}}/>:<ProductDeliveryWorkspace onNavigate={step=>{setUtility(null);setWorkspace('studio');void useProjectStore.getState().setStep(step);}}/>}
+      {utility&&<WorkspaceDialog key={`${utility}:${transportRevision}`} title={utility==='tasks'?'작업 센터':utility==='platform'?'학습 작업대':'패키지·장치·설치·진단'} onClose={()=>setUtility(null)}>
+        {utility==='platform'?<PlatformWorkspace onClose={()=>setUtility(null)} onNavigate={async step=>{
+          if (!Number.isInteger(step) || step < 1 || step > 6) return false;
+          const origin=getApiDiagnosticScope(),started=useProjectStore.getState();
+          await started.setStep(step as 1|2|3|4|5|6);
+          const current=useProjectStore.getState();
+          if (origin!==getApiDiagnosticScope() || current.project?.id!==started.project?.id || current.projectDir!==started.projectDir || current.activeStep!==step) return false;
+          setUtility(null);setWorkspace('studio');return true;
+        }}/>:utility==='tasks'?<TaskCenter initialOpen onNavigate={()=>{setUtility(null);setWorkspace('studio');}}/>:<ProductDeliveryWorkspace onNavigate={step=>{setUtility(null);setWorkspace('studio');void useProjectStore.getState().setStep(step);}}/>}
       </WorkspaceDialog>}
     </div>
   );

@@ -1,0 +1,172 @@
+{
+  "schema_version": 1,
+  "kind": "optional_geti_supervisor_descriptor_and_owned_bootstrap_repair",
+  "status": "local_validation_passed",
+  "fixed_source_commit": "8b6330f83558845ecf2b22b77d2c863ec91ec50a",
+  "retained_remote_attempt": {
+    "source_commit": "6ec0d084779da93ae26bc0c2aaf77d2d619b46b9",
+    "workflow_run_id": 43934314190,
+    "run_attempt": 1,
+    "job_id": 133534757922,
+    "conclusion": "cancelled",
+    "configured_job_budget_minutes": 20,
+    "observed_completion_after_approximately_minutes": 20,
+    "log_sha256": "0cba79ed9255da765317c070d41eb58ceaca82908f5463269d699e82727c8e35",
+    "last_subcommand": "node scripts/verify-supervisor.js --owned-bootstrap-order",
+    "observed_error": "path argument must be a string; received undefined",
+    "error_before_child_spawn": true,
+    "renderer_command_started": false,
+    "agent_cancel_or_rerun": false,
+    "cancellation_initiator_or_timeout_reason": "not established from the retained log"
+  },
+  "confirmed_code_boundary": {
+    "cause": "Packaged app context was treated as proof that the plain-Node process had an Electron resources root. The optional descriptor join threw before modeled backend spawn.",
+    "original_fixture_hang": "The separate discovery promise never settled after startup had already rejected; the fixture listener kept the process active.",
+    "descriptor_injection_requires": [
+      "packaged app context",
+      "string resources root",
+      "nonempty resources root",
+      "absolute resources root"
+    ],
+    "valid_absolute_root_overrides_inherited_descriptor": true,
+    "missing_manifest_still_injected_for_installer_validation": true,
+    "filesystem_exists_fallback_added": false,
+    "nonpackaged_explicit_environment_preserved": true
+  },
+  "controlled_reproduction": {
+    "original_old_product": {
+      "hung": true,
+      "external_observation_guard_seconds": 10,
+      "stop_scope": "only the owned modeled harness group; no product child process",
+      "log_sha256": "0760f98eeb725c9bc3e018bd4735c8ee219fec44058a2e4ba6f5b060a9d310c8"
+    },
+    "diagnostic_race_with_old_product": {
+      "exit_code": 1,
+      "elapsed_seconds_approximately": 0.25,
+      "original_startup_error_preserved": true,
+      "original_ordering_assertions_preserved": true,
+      "log_sha256": "b3e8d571b45405a5f17ab2742c525dd136ac9624740b7bee53c6afe63d699cd6"
+    },
+    "fixed_original_fixture": {
+      "resolve_passed": true,
+      "refusal_passed": true,
+      "log_sha256": "28b1b4b8becd8632824d2b676217c378ded31ba6f5fd4ba7ddffd1f701f2038a"
+    }
+  },
+  "focused_validation": {
+    "actual_supervisor_source": true,
+    "new_cases": 6,
+    "old_product_passed": 3,
+    "old_product_failed": 3,
+    "fixed_total_supervisor_checks_passed": 36,
+    "fixed_failed": 0,
+    "red_log_sha256": "49f29a77b74bac317b262f503a19cbcd07ee23a16c611b37a170a230679e55cb",
+    "green_log_sha256": "bc38415391dc0835370be2788647d2aaf9e54d68e5e7a2cc16427880e9bb6bd2",
+    "product_diff_sha256": "984d2eddf39f3212e9134f52c62a1957f0e485013c9b172c38f0a91818e1f197"
+  },
+  "preserved_native_contract": {
+    "packaged_discovery_budget_ms": 180000,
+    "health_budget_ms": 15000,
+    "owned_fd": 3,
+    "artifact_build_checked": true,
+    "bootstrap_precedes_health": true,
+    "missing_descriptor_still_injected_for_absolute_packaged_root": true,
+    "nonpackaged_explicit_environment_preserved": true
+  },
+  "local_static_verification": {
+    "source_commit": "8b6330f83558845ecf2b22b77d2c863ec91ec50a",
+    "primary_typecheck": "passed on the same source before the remaining command group",
+    "original_owned_bootstrap_order": "resolve and refusal passed on the same source",
+    "remaining_command_steps": [
+      {
+        "name": "e2e_typecheck",
+        "status": "passed",
+        "exit_code": 0,
+        "log_sha256": "0919024eaa08b11e2a01bdac079bf8c8debb38d3c424bdc824ed6c296484d515"
+      },
+      {
+        "name": "renderer_and_main_regressions",
+        "status": "passed",
+        "exit_code": 0,
+        "log_sha256": "12a5d9bbc73b878d5019e18f478c9691cbbdc3730884d5a0a8a45960cd881a61"
+      },
+      {
+        "name": "assistant_storage_and_account_acceptance",
+        "status": "passed",
+        "exit_code": 0,
+        "log_sha256": "94dc5f6d69964fc91e347532b9a406e9b297ffcaf0c38f2a83cf9d01161fceec"
+      },
+      {
+        "name": "browser_gate_login",
+        "status": "passed",
+        "exit_code": 0,
+        "log_sha256": "ea0c066f4d522091839b2e6d3618c55838a624a11e0a183e2c2e361a61eb8ec7"
+      },
+      {
+        "name": "clean_head_application_build",
+        "status": "passed",
+        "exit_code": 0,
+        "log_sha256": "8bb873bb3ef05b8b8634ebf7615426a3ca80f5d9d1cd7df98233dd251493089d"
+      },
+      {
+        "name": "e2e_harness",
+        "status": "passed",
+        "exit_code": 0,
+        "log_sha256": "26cd6537418ce834a5c33c00ff3417842c580a65227656f2b42c8d9ac70491d0"
+      },
+      {
+        "name": "action_inventory",
+        "status": "passed",
+        "exit_code": 0,
+        "log_sha256": "a8f2bc477682aaf102dd6a4635d98a014edc4e909fe782ce4e88c0f0e091542e"
+      },
+      {
+        "name": "release_readiness_license_text_and_recovery",
+        "status": "passed",
+        "exit_code": 0,
+        "log_sha256": "228094b5cad6778f6f965d9abec0ed10d4cf486b767f77eee31e5d5f6870f378"
+      }
+    ],
+    "renderer_and_main_checks": {
+      "passed": 3558,
+      "skipped": 2,
+      "failed": 0
+    },
+    "clean_head_build_passed": true,
+    "summary_sha256": "71412e63f4fbd91b95e4f41fae5cf94ceb8820b7b39bdc20f62b22fecd64d48b",
+    "source_gates": {
+      "service_plan": {
+        "status": "passed",
+        "accepted_work_packages": 0,
+        "log_sha256": "fb87fcf4fb0e1340acaef34c006d03d6fbbcb0b539cd423db686fcbe1efe4939"
+      },
+      "action_evidence": {
+        "status": "passed",
+        "accepted_features": 0,
+        "log_sha256": "4e5179fd47bd450c75ee3bf736b57e13bf7b88533d07d0397703195d8175b159"
+      },
+      "scope": "Metadata/source evidence integrity; no additional execution or product acceptance is implied."
+    }
+  },
+  "unchanged_components": {
+    "backend_executable_sha256": "8876b875fe651aa88426f55eeae1576e5699922a913daf9327e62c56f4fae80f",
+    "portable_inventory_sha256": "0de512ee05d5c3888abc87ac916dc4e515b91330f3b7938c5b2f22138160907b",
+    "saved_model_inference_repeated": false,
+    "model_training_performed": false
+  },
+  "qualification_limits": [
+    "The observed cancellation belongs only to the retained 6ec attempt; no cancellation cause is attributed to the earlier 23f attempt.",
+    "Current-source remote CI success and installed application delivery are not established by these local checks.",
+    "The previous 6ec packaged-app evidence is historical for that source.",
+    "The 8b packaged-app two-launch qualification passed separately; see packaged_app_successor. User installation and remote CI are still separate.",
+    "Original ownership, artifact, FD, discovery and health protections remain in force."
+  ],
+  "packaged_app_successor": {
+    "source_commit": "8b6330f83558845ecf2b22b77d2c863ec91ec50a",
+    "public_proof": "2026-11-17-geti-packaged-runtime-8b6330f8.json",
+    "receipt_sha256": "95d707ce56cd11e12f646190d1a2646a99854b09f6fca897778c706ab3b23e9c",
+    "actual_launches": 2,
+    "status": "passed",
+    "installed_user_data_qualified": false
+  }
+}

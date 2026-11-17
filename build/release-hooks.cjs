@@ -13,6 +13,7 @@ exports.beforePack = async context => {
     const source=path.join(context.packager.projectDir,row.path);
     if(!fs.existsSync(source)||checks.digest(source)!==row.sha256)throw new Error('Backend source changed since frozen acceptance; rebuild before packaging: '+row.path);
   }
+  if(platform==='darwin')require('../scripts/geti-package-runtime.cjs').verifyRuntime(path.join(context.packager.projectDir,'dist-geti'));
 };
 
 exports.afterPack = async context => {
@@ -32,5 +33,10 @@ exports.afterPack = async context => {
                   python_missing:pythonLicenses.missing,public_distribution_approved:false},
                 signature:{status:'unverified',reason:'Packaging precedes final signing; run release-readiness on the delivered artifact'},
                 physical_acceptance:'unverified'};
+  if(context.electronPlatformName==='darwin'){
+    const geti=require('../scripts/geti-package-runtime.cjs'),target=path.join(resources,'geti-platform');
+    const restored=geti.completeFilteredMarkers(path.join(context.packager.projectDir,'dist-geti'),target);
+    report.geti_runtime={...geti.verifyRuntime(target),restored_empty_source_markers:restored};
+  }
   fs.writeFileSync(path.join(context.appOutDir,'release-package-diagnostics.json'),JSON.stringify(report,null,2));
 };

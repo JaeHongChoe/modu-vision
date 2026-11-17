@@ -1,0 +1,91 @@
+{
+  "schema_version": 1,
+  "kind": "owned_synthetic_frozen_geti_saved_model_reuse",
+  "status": "passed",
+  "source": {
+    "commit": "85a388ab0d8be0e121709bbe26c0688d6f000289",
+    "backend_executable_sha256": "8876b875fe651aa88426f55eeae1576e5699922a913daf9327e62c56f4fae80f",
+    "build_identity_sha256": "8f64d87925b27dc94d95268dac338c4525f03d462bf07c316a79e73858bd44cc"
+  },
+  "saved_model": {
+    "model_id": "9d0ab6d5-5f1b-4e24-8a7e-d2de4ede6a7a",
+    "variant_id": "90ce2e3a-be96-4b75-b9fa-ae00f9dc5961",
+    "format": "openvino",
+    "dataset_revision_id": "9e084f83-8d10-4268-b62f-876b8f6b7b69",
+    "recipe_sha256": "87944c467bc879eee52d5a4638653531580bc37e1a1533c6120d04b338c75366",
+    "export_sha256": "f700cba8bde82d43288ea420e7d00e889e2eb21f429508d1ceef3ba8f199e5db"
+  },
+  "native_inspection": {
+    "run_id": "cf91a5eb-f77e-4d26-883f-1673c3ec7b9b",
+    "execution_device": "cpu",
+    "actual_execution_count": 1,
+    "reused_completed_model": true,
+    "durable_readback_equal": true
+  },
+  "authentication": {
+    "transport": "https_cookie",
+    "csrf_checked": true,
+    "anonymous_status": 401,
+    "proxy_process_token_injected": false
+  },
+  "preservation": {
+    "original_image_count": 25,
+    "original_images_unchanged": true,
+    "same_training_job": true,
+    "same_frozen_cohort_receipt": true,
+    "frozen_image_count": 24,
+    "previous_integrated_receipt_unchanged": true
+  },
+  "closure": {
+    "observed_owned_process_count": 6,
+    "remaining_observed_process_count": 0,
+    "observed_loopback_port_count": 2,
+    "all_observed_ipv4_ports_closed": true,
+    "all_observed_ipv6_ports_closed": true
+  },
+  "portable_runtime": {
+    "inventory_sha256": "0de512ee05d5c3888abc87ac916dc4e515b91330f3b7938c5b2f22138160907b",
+    "declared_file_count": 60169,
+    "declared_link_count": 41,
+    "extra_file_or_link_count": 0,
+    "missing_file_or_link_count": 0,
+    "runtime_pack_rebuilt": false
+  },
+  "frozen_startup_acceptance": {
+    "scope": "startup_and_restart_only_separate_from_saved_model_inference",
+    "compiler_invocations": 1,
+    "deadline_seconds": 120,
+    "deadline_changed": false,
+    "initial_diagnostic": {
+      "outcome": "timeout",
+      "failure_preserved": true,
+      "acceptance_sha256": "02fef15ed2eece18ca1b55233c88fa7aed96000f6ca4cc8e4d1fdb1ab29dd072"
+    },
+    "bounded_same_binary_diagnostic": {
+      "status": "passed",
+      "elapsed_seconds": 9.922960875032004,
+      "executable_sha256": "8876b875fe651aa88426f55eeae1576e5699922a913daf9327e62c56f4fae80f"
+    },
+    "acceptance_only_retry": {
+      "status": "passed",
+      "count": 1,
+      "startup_passed": true,
+      "restart_passed": true,
+      "model_inference_performed": false,
+      "acceptance_sha256": "45b1f0de29dd58138a7ee2cbe0c9ff78016fc54e65c5e418c003d843f6b5e8fe",
+      "release_sha256": "e6a5824d56b6fa622d3ba0dd829e9502f9b131df4833cb15b431c66a562457fe"
+    },
+    "initial_delay_cause": "unproven; cold OS scan is a hypothesis"
+  },
+  "evidence_hashes": {
+    "saved_model_receipt_sha256": "3945ef70b070b1b7ddf1d48a0e12988d2822d14d15d176782eccb0301930bfc1",
+    "durable_run_sha256": "5f286245e53dbf7de4595504930d23b81e630e2d5722f7ccb6fc41e6bc934a71"
+  },
+  "scope_limits": [
+    "Synthetic execution evidence only; no installation or model quality conclusion.",
+    "No new training, preparation, weight download, label adoption or provider call.",
+    "The earlier 23f926b9 packaged-app receipt is historical evidence for its source.",
+    "Same-source signed packaged-app two-launch proof is recorded separately in 2026-11-17-geti-packaged-runtime-8876.json.",
+    "This does not qualify general macOS daemon fault-injection cleanup or automatic managed updates."
+  ]
+}

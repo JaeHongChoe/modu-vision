@@ -1,0 +1,236 @@
+{
+  "schema_version": 1,
+  "scope": "synthetic macOS ARM CPU integrated gateway acceptance",
+  "upstream_commit": "ddcf394d550bf1b84ca262888260043af361f5e7",
+  "receipt_sha256": "00732bfebf2d921a87c5160e18719489c1210a49763fcb734712ba3f889d25e4",
+  "descriptor_sha256": "758e3ce76cb0cb5f6c992fe9c913eb09233797851cf0d905c6d5bf2416f2d7b2",
+  "status": "PASS",
+  "dataset": {
+    "id": "20192d13dad64a3d87215e5fac170900",
+    "task": "classification",
+    "counts": {
+      "training": 16,
+      "validation": 4,
+      "testing": 4,
+      "total": 24
+    },
+    "dataset_version_id": "v_20261116_154528_de65834b",
+    "manifest_sha256": "8490af7399dc457987f2cd0bda71d4e201c0dffe6925c410b693c2ee48702520",
+    "dataset_fingerprint": "v1:4e9e77bf13c6426b8a708bb2b172c5dbe488487db488ed229c19d769f0fc645c",
+    "recipe_sha256": "87944c467bc879eee52d5a4638653531580bc37e1a1533c6120d04b338c75366",
+    "labelset_id": "default",
+    "revision": "7c11cbc52f1a2b9d3a1cc4db8758e9bb2f6ed4afb1eafb3bf043e22ae2e9053e"
+  },
+  "job": {
+    "id": "gt_75c8693bac8ee94bb1eb5cc1fab278fc",
+    "platform_job_id": "0b1dd4b3-9dd5-4531-aa2b-f7356385e9cc",
+    "model_id": "9d0ab6d5-5f1b-4e24-8a7e-d2de4ede6a7a",
+    "generation": "51ce1d714342bb9cd90ffcbd11dbaeac",
+    "status": "done",
+    "progress": 100.0,
+    "worker_exited": true,
+    "created_at": "2026-11-16T15:45:38.316613Z",
+    "finished_at": "2026-11-16T15:48:27.864179Z"
+  },
+  "models": [
+    {
+      "id": "9d0ab6d5-5f1b-4e24-8a7e-d2de4ede6a7a",
+      "architecture": "image-classification-efficientnet-b0",
+      "binding_state": "verified",
+      "dataset_revision_id": "9e084f83-8d10-4268-b62f-876b8f6b7b69",
+      "variants": [
+        {
+          "id": "09f5fc14-f061-4c86-ad46-176b14fd353e",
+          "format": "pytorch",
+          "precision": "fp32",
+          "weights_size": 32452929,
+          "evaluations": [
+            {
+              "dataset_revision_id": "9e084f83-8d10-4268-b62f-876b8f6b7b69",
+              "subset": "testing",
+              "metrics": [
+                {
+                  "name": "Accuracy",
+                  "value": 0.5,
+                  "primary": true
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "90ce2e3a-be96-4b75-b9fa-ae00f9dc5961",
+          "format": "openvino",
+          "precision": "fp16",
+          "weights_size": 8329127,
+          "evaluations": [
+            {
+              "dataset_revision_id": "9e084f83-8d10-4268-b62f-876b8f6b7b69",
+              "subset": "testing",
+              "metrics": [
+                {
+                  "name": "Accuracy",
+                  "value": 0.5,
+                  "primary": true
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "cd2c1f0f-80c3-4a1b-ab5c-55c7ad27eae5",
+          "format": "onnx",
+          "precision": "fp16",
+          "weights_size": 8949143,
+          "evaluations": [
+            {
+              "dataset_revision_id": "9e084f83-8d10-4268-b62f-876b8f6b7b69",
+              "subset": "testing",
+              "metrics": [
+                {
+                  "name": "Accuracy",
+                  "value": 0.5,
+                  "primary": true
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "native_flow": {
+    "job_id": "geti:20192d13dad64a3d87215e5fac170900:9d0ab6d5-5f1b-4e24-8a7e-d2de4ede6a7a:90ce2e3a-be96-4b75-b9fa-ae00f9dc5961",
+    "run_id": "b20c4588-2719-45bd-8503-b2fa09467722",
+    "verdict": "OK",
+    "durable_verdict": "OK",
+    "artifact": {
+      "kind": "geti_model_prediction",
+      "model_id": "9d0ab6d5-5f1b-4e24-8a7e-d2de4ede6a7a",
+      "variant_id": "90ce2e3a-be96-4b75-b9fa-ae00f9dc5961",
+      "format": "openvino",
+      "export_sha256": "f700cba8bde82d43288ea420e7d00e889e2eb21f429508d1ceef3ba8f199e5db",
+      "weights_sha256": "4b23b7ea6ab97e9ff9080e119d0d11e18d4c1e32c7ff6ba051418ddc82a13023",
+      "dataset_revision_id": "9e084f83-8d10-4268-b62f-876b8f6b7b69",
+      "dataset_version_id": "v_20261116_154528_de65834b",
+      "recipe_sha256": "87944c467bc879eee52d5a4638653531580bc37e1a1533c6120d04b338c75366",
+      "image_sha256": "828bb615fceee45a4f233db7e46e2e126dcb156c442294adeb225eda527b3390",
+      "coordinate_space": "original",
+      "source_size": [
+        96,
+        80
+      ],
+      "transfer_id": "20192d13dad64a3d87215e5fac170900",
+      "platform_task": "classification",
+      "prediction_count": 1
+    }
+  },
+  "variant_predictions": {
+    "openvino": {
+      "model_id": "9d0ab6d5-5f1b-4e24-8a7e-d2de4ede6a7a",
+      "variant_id": "90ce2e3a-be96-4b75-b9fa-ae00f9dc5961",
+      "format": "openvino",
+      "export_sha256": "f700cba8bde82d43288ea420e7d00e889e2eb21f429508d1ceef3ba8f199e5db",
+      "weights_sha256": "4b23b7ea6ab97e9ff9080e119d0d11e18d4c1e32c7ff6ba051418ddc82a13023",
+      "dataset_revision_id": "9e084f83-8d10-4268-b62f-876b8f6b7b69",
+      "dataset_version_id": "v_20261116_154528_de65834b",
+      "recipe_sha256": "87944c467bc879eee52d5a4638653531580bc37e1a1533c6120d04b338c75366",
+      "image_sha256": "c35e5f377733b576c5d63f653a3f7f4b57236ceb228442626e27ea102f9b7074",
+      "coordinate_space": "original",
+      "source_size": [
+        96,
+        80
+      ],
+      "predictions": [
+        {
+          "label": "red",
+          "shape": {
+            "type": "full_image"
+          },
+          "confidence": 0.565568745136261
+        }
+      ],
+      "raw": {
+        "predictions": [
+          {
+            "media": {
+              "id": "85b7d3c2-31c1-4486-8259-4b5b1044669f",
+              "frame_index": null
+            },
+            "prediction": [
+              {
+                "shape": {
+                  "type": "full_image"
+                },
+                "labels": [
+                  {
+                    "id": "77d7a619-f672-4bb7-994a-a494e2cf43fa"
+                  }
+                ],
+                "confidences": [
+                  0.565568745136261
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    },
+    "onnx": {
+      "model_id": "9d0ab6d5-5f1b-4e24-8a7e-d2de4ede6a7a",
+      "variant_id": "cd2c1f0f-80c3-4a1b-ab5c-55c7ad27eae5",
+      "format": "onnx",
+      "export_sha256": "e5654071e82336b2f82a996a6d38e9edb6a83d8f6d183e4fc081e8e214344ddc",
+      "weights_sha256": "bf2ab1f3e52a0d1a43ea11ce21c65e816bf80846bb8055a4ede7ed9e91c5ef9c",
+      "dataset_revision_id": "9e084f83-8d10-4268-b62f-876b8f6b7b69",
+      "dataset_version_id": "v_20261116_154528_de65834b",
+      "recipe_sha256": "87944c467bc879eee52d5a4638653531580bc37e1a1533c6120d04b338c75366",
+      "image_sha256": "c35e5f377733b576c5d63f653a3f7f4b57236ceb228442626e27ea102f9b7074",
+      "coordinate_space": "original",
+      "source_size": [
+        96,
+        80
+      ],
+      "predictions": [
+        {
+          "label": "red",
+          "shape": {
+            "type": "full_image"
+          },
+          "confidence": 0.5652987360954285
+        }
+      ],
+      "raw": {
+        "predictions": [
+          {
+            "media": {
+              "id": "1c267de1-15fb-42cb-9612-58a1d7a531ff",
+              "frame_index": null
+            },
+            "prediction": [
+              {
+                "shape": {
+                  "type": "full_image"
+                },
+                "labels": [
+                  {
+                    "id": "77d7a619-f672-4bb7-994a-a494e2cf43fa"
+                  }
+                ],
+                "confidences": [
+                  0.5652987360954285
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    }
+  },
+  "restarted_without_duplicate": true,
+  "frozen_cohort_preserved": true,
+  "source_originals_unchanged": true,
+  "logout_revoked": true,
+  "product_quality_approved": false,
+  "installed_package_qualified": false
+}

@@ -22,7 +22,7 @@ function render(state,ui={}){
   const presentationFile=path.join(__dirname,'../../services/assistantTasks/taskRecoveryPresentation.ts');
   const presentation=fs.existsSync(presentationFile)?load(presentationFile,{}):{};
   const card=load(path.join(__dirname,'AssistantTaskCard.tsx'),{react:{__esModule:true,default:react,...react},'../../services/assistantTasks/catalog':catalog,'../../services/assistantTasks/taskRecoveryPresentation':presentation});
-  taskPanel=load(path.join(__dirname,'AssistantTaskPanel.tsx'),{react:{__esModule:true,default:react,...react},'../../stores/useAssistantTaskStore':{useAssistantTaskStore:taskStore},'../../stores/useProjectStore':{useProjectStore:{getState:()=>({setStep(){}})}},'./AssistantTaskCard':card}).AssistantTaskPanel;
+  taskPanel=load(path.join(__dirname,'AssistantTaskPanel.tsx'),{react:{__esModule:true,default:react,...react},'../../stores/useAssistantTaskStore':{useAssistantTaskStore:taskStore,beginPanelTaskRestore:()=>()=>{}},'../../stores/useProjectStore':{useProjectStore:{getState:()=>({setStep(){}})}},'./AssistantTaskCard':card}).AssistantTaskPanel;
  }
  const setup=ui.withSetup?load(path.join(__dirname,'ChatgptConnectionSetup.tsx'),{react:{__esModule:true,default:react,...react},'../../stores/useAssistantStore':{useAssistantStore:store,assistantBridge:()=>state.bridge},'../common/WorkspaceDialog':{WorkspaceDialog:()=>null}}).ChatgptConnectionSetup:()=>null;
  const {AssistantPanel}=load(path.join(__dirname,'AssistantPanel.tsx'),{react:{__esModule:true,default:react,...react},

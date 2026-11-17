@@ -138,7 +138,7 @@ def test_original_GET_send_failure_is_not_resident_metadata_completion(tmp_path,
     _refused(admission, observer)
 
 
-def test_current_numeric_preparation_producer_cohort_equals_actual_source_files():
+def test_current_geti_native_producer_cohort_equals_actual_source_files():
     """A registered current cohort must describe this source tree, not a prior build."""
     import hashlib
     from pathlib import Path
@@ -148,9 +148,14 @@ def test_current_numeric_preparation_producer_cohort_equals_actual_source_files(
     assert historical['backend/engine/input_preparation.py'] == {
         'size': 7463, 'sha256': '7981f99900c0310a978d08f4b38f39bc19f312adb0e13ea71e1b9d9b185b7efa'}
     assert 'backend/engine/numeric_preparation.py' not in historical
-    pins = capture.NUMERIC_PREPARATION_PRODUCER_SOURCE_PINS
-    assert all(pins[name] == pin for name, pin in historical.items()
+    numeric = capture.NUMERIC_PREPARATION_PRODUCER_SOURCE_PINS
+    assert all(numeric[name] == pin for name, pin in historical.items()
                if name != 'backend/engine/input_preparation.py')
+    assert numeric['backend/engine/flowchart_engine.py'] == {
+        'size': 150814, 'sha256': '8773a5b5a687d214041fc33957560a644e71496fa0ce2f2463dc3b92d86e07c2'}
+    pins = capture.GETI_NATIVE_FLOW_PRODUCER_SOURCE_PINS
+    assert all(pins[name] == pin for name, pin in numeric.items()
+               if name != 'backend/engine/flowchart_engine.py')
     assert set(pins) == {
         'backend/engine/flow_operators.py', 'backend/engine/flow_package_runtime.py',
         'backend/engine/flowchart_engine.py', 'backend/engine/flowchart_schema.py',

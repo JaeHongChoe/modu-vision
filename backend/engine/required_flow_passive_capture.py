@@ -393,7 +393,8 @@ def verify_bound_functions(functions, source_root, source_pins):
                      or source_pins == PARAMETERLESS_ROTATION_PRODUCER_SOURCE_PINS
                      or source_pins == COLD_SCHEMA_PRODUCER_SOURCE_PINS
                      or source_pins == INPUT_PREPARATION_PRODUCER_SOURCE_PINS
-                     or source_pins == NUMERIC_PREPARATION_PRODUCER_SOURCE_PINS)):
+                     or source_pins == NUMERIC_PREPARATION_PRODUCER_SOURCE_PINS
+                     or source_pins == GETI_NATIVE_FLOW_PRODUCER_SOURCE_PINS)):
             # Current execute must remain the registered observer even when an
             # unwrapped original engine code object is otherwise source-pinned.
             relative = 'backend/engine/original_owned_flow_execution_request.py'
@@ -492,6 +493,14 @@ NUMERIC_PREPARATION_PRODUCER_SOURCE_PINS = types.MappingProxyType({name: types.M
             'sha256': '2ab20dcde936f1f66776571dcca98905c298db340a350f2b3e374aa5a7c54c7c'},
         'backend/engine/numeric_preparation.py': {'size': 13316,
             'sha256': 'e1633accf819f99c293c4bc71c73d59bd0a461e0026cc706854ae21201dcc4e1'}}.items()})
+# Separate exact successor: the native engine now enters the optional Geti
+# adapter only for explicit platform references. The retained graph still uses
+# its native producers; this cohort grants no Geti or installed-runtime credit.
+# All seven historical coupled records retain their original source bytes.
+GETI_NATIVE_FLOW_PRODUCER_SOURCE_PINS = types.MappingProxyType({name: types.MappingProxyType(dict(row))
+    for name, row in {**NUMERIC_PREPARATION_PRODUCER_SOURCE_PINS,
+        'backend/engine/flowchart_engine.py': {'size': 151741,
+            'sha256': 'efee63d16fa32310a36a2c9f6abf14982d5f6a5d229ed0ead25ca5a7f37a1c5f'}}.items()})
 REGISTERED_ENGINE_OBSERVER_PIN = types.MappingProxyType({'size': 40214,
     'sha256': '9102a6126774d9d68b6097d844dcc5c8984b09fe0ab14b97fd06ce7d4db80fe3'})
 
@@ -798,6 +807,10 @@ NUMERIC_PREPARATION_CAPTURE_COHORT = types.MappingProxyType({
     'profile_id': 'server42-l40s-2-native43-20261016-01',
     'execution_profile_sha256': '6f36f621864d3c6b327295f684118434c6c1d18ddee8b21f30071527b0e7ea49',
     'source_pins': NUMERIC_PREPARATION_PRODUCER_SOURCE_PINS})
+GETI_NATIVE_FLOW_CAPTURE_COHORT = types.MappingProxyType({
+    'profile_id': 'server42-l40s-2-native43-20261016-01',
+    'execution_profile_sha256': '6f36f621864d3c6b327295f684118434c6c1d18ddee8b21f30071527b0e7ea49',
+    'source_pins': GETI_NATIVE_FLOW_PRODUCER_SOURCE_PINS})
 RETAINED_CAPTURE_COHORTS = (
     types.MappingProxyType({'profile_id': RETAINED_PROFILE_ID,
         'execution_profile_sha256': RETAINED_EXECUTION_PROFILE_SHA,
@@ -812,6 +825,7 @@ RETAINED_CAPTURE_COHORTS = (
     COLD_SCHEMA_CAPTURE_COHORT,
     INPUT_PREPARATION_CAPTURE_COHORT,
     NUMERIC_PREPARATION_CAPTURE_COHORT,
+    GETI_NATIVE_FLOW_CAPTURE_COHORT,
 )
 
 

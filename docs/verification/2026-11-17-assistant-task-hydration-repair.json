@@ -1,0 +1,76 @@
+{
+  "schema_version": 1,
+  "scope": "Saved assistant task observation after project-context hydration; not execution approval or field-quality acceptance.",
+  "failed_head": "eb179f716c0abf23fd803ea2b1e8d94d71f989a3",
+  "original_full": {
+    "run": 43968007814,
+    "attempt": 1,
+    "source": "success",
+    "browser": {
+      "passed": 378,
+      "skipped": 3,
+      "failed": 1
+    },
+    "failed_test": "scripts/e2e/assistant-task-plan.spec.ts:356",
+    "log_sha256": "dfd25d1c403b81ad7565c902a0031efa294e22798e7bf761daa1f9369eb06fa4",
+    "artifact_id": 14282491345,
+    "artifact_sha256": "b2fa909a455f0e1d58203fdcc1bb91ae0b4c9f1bcd5deb00aac439a1829e80c9",
+    "original_failure_preserved": true
+  },
+  "cause": "An automatic saved-task GET is correctly discarded when project/data/settings authority changes during hydration; the former panel effect did not arrange a fresh current-context read and could leave the task/history empty. Original Linux trace recording was disabled for privacy; source-supported race was reproduced by the real controller/store/panel with a deferred GET.",
+  "repair": "Panel-owned read-only intent coalesces context notifications and issues one single-flight saved-state GET per current context token. A changed connection needs fresh panel intent. No stale payload acceptance or action replay.",
+  "preserved_guards": [
+    "controller authority/context generations unchanged",
+    "original browser spec/assertions/timeouts unchanged",
+    "manual stop, errors/timeouts, explicit history, prepared new requests and panel unmount suppress hidden reads",
+    "current tasks and busy/loading state are preserved",
+    "unchanged empty ledger is read once, without a timer loop",
+    "no create/event/approve/resume/execute/provider path added",
+    "backend and Geti source trees unchanged",
+    "GUI history manifests and workflow files unchanged"
+  ],
+  "verification": {
+    "deterministic_red": {
+      "assertion": "expected two lists after hydration; Alpha issued one",
+      "sha256": "b1cfec0260db7c0faf8468ce1764f41852cb27ba3ae8f13b034db6d802451cb4"
+    },
+    "focused_green": {
+      "pass": 142,
+      "fail": 0,
+      "skip": 0,
+      "new_lifecycle_cases": 16,
+      "sha256": "5d8a5b9c0c4063e4651e312500867f73df6f592dfc3e06ed601ecdcc1234580f"
+    },
+    "renderer_main": {
+      "pass": 3574,
+      "fail": 0,
+      "existing_optional_skip": 2,
+      "log_sha256": "156b97ff985827d3fa15a9c00f4cca499b29a36a21d72c98ca2c37c4e6e5b878"
+    },
+    "actual_browser_and_native": {
+      "pass": 6,
+      "fail": 0,
+      "original_task_plan_unchanged": true,
+      "log_sha256": "40bee6097e482f6d91ee27c31c92e30cbb9e98cbefe793c0cde3efa2527be115",
+      "scope": "Owned synthetic HTTPS/browser and native Electron app; controlled provider, no actual ChatGPT or training."
+    },
+    "types_e2e_types_service_action_gates": "all passed; original checks unchanged",
+    "independent_review": "CLEAR; no critical/high/medium finding"
+  },
+  "product_source_sha256": {
+    "src/renderer/services/assistantTasks/savedTaskRestore.ts": "0b3827b9d96047012bde8eb595f5c57459ec0fc17e561b6660e5684445e9ebe8",
+    "src/renderer/stores/useAssistantTaskStore.ts": "1eab788b06493dbcb3b6ad2b19aea80d7d71a69ab2f46f6ab962ad5b3626e391",
+    "src/renderer/components/assistant/AssistantTaskPanel.tsx": "74cdc6c4a7f34e820db9a7b1e08f2ad27a34ec7bf9a0c4deb7cf29e1b3862452"
+  },
+  "test_source_sha256": {
+    "src/renderer/components/assistant/AssistantPanel.test.cjs": "3514f44e9269fe0a8b1d2d1b22b14e6ab6f3feefd9aa8b554c0bdd03d88e9a37",
+    "src/renderer/components/assistant/AssistantTaskPanel.test.cjs": "99992d364190ade286a86d16968f309e9ef30508b73c50b9d04c6a29a2e88279",
+    "src/renderer/services/assistantTasks/oneclickRecovery.test.cjs": "5a8d11521e8fd173c14fb551a7d592d9faf021e994d33968be5cdd46581856c8",
+    "src/renderer/stores/assistantTaskPolling.test.cjs": "a943d118ce3100bf7ff8b0c80b68cfa0fd093b89a61536e5ae23808ddc775218",
+    "src/renderer/stores/assistantTaskRestore.test.cjs": "41534d68c1b7c3febe49d8d23ff1027a0031d4043d9a72f14e7a8470a40fa956"
+  },
+  "remote_requalification": "New exact-head fast/full/gate required before merge. No old failed full was rerun or relabeled.",
+  "real_provider_calls": 0,
+  "new_training": 0,
+  "installed_app_web_replaced": false
+}

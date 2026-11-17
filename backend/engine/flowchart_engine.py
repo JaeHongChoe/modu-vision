@@ -75,6 +75,21 @@ _VERIFIED_CHECKPOINTS: ContextVar[Optional[Dict[Tuple[str, str], Path]]] = Conte
 _PARTIAL_RUN: ContextVar[Any] = ContextVar('flowchart_local_CPU_partial_run', default=None)
 
 
+def _platform_session(job_id):
+    # Compact native flow packages intentionally omit the desktop Geti gateway.
+    if not isinstance(job_id, str) or not job_id.startswith('geti:'):
+        return None
+    from backend.platforms.geti.inspection import active_session
+    return active_session(job_id)
+
+
+def _platform_step_artifacts(node):
+    if not isinstance(node.data.model_job_id, str) or not node.data.model_job_id.startswith('geti:'):
+        return []
+    from backend.platforms.geti.inspection import step_artifacts
+    return step_artifacts(node)
+
+
 class FlowchartPartialCancelled(Exception):
     """Only the admitted partial control's cooperative cancellation, not a fault."""
     def __init__(self, control):
@@ -1364,6 +1379,10 @@ class FlowchartEngine:
         )
         job_id = inspect_node.data.model_job_id if inspect_node else None
 
+        platform_session=_platform_session(job_id)
+        if platform_session is not None:
+            return platform_session.inspect(img_rgb,rois,inspect_node)
+
         # 전처리·정렬된 ROI는 자체 영상 좌표에서 검사한 뒤 bbox·마스크·문자 위치를 원본 좌표로 되돌린다.
         if any("image" in roi for roi in rois):
             combined = []
@@ -1931,6 +1950,9 @@ class FlowchartEngine:
         self, img_rgb: np.ndarray, regions: List[Dict[str, Any]], node: FlowNode,
     ) -> Tuple[List[Dict[str, Any]], float, str]:
         """Run a detector on the image or inherited ROIs and restore source coordinates."""
+        platform_session=_platform_session(node.data.model_job_id)
+        if platform_session is not None:
+            return platform_session.detect(img_rgb,regions,node)
         if any('image' in region for region in regions):
             detected=[];latency=0;status='passed'
             for region in regions:
@@ -2473,7 +2495,7 @@ class FlowchartEngine:
                     selected_edge_ids=[edge.id for edge in selected],
                     skip_reason=step_reason,
                     count_rule_results=count_results if node.data.node_type == "detection_crop" and count_rules is not None and status in ("passed", "flagged_ng") else [],
-                    artifacts=fixture_artifacts + region_artifacts(img_rgb, node_rois[node.id], node_evidence[node.id]),
+                    artifacts=fixture_artifacts + region_artifacts(img_rgb, node_rois[node.id], node_evidence[node.id]) + _platform_step_artifacts(node),
                 ))
             return (node_rois[selected_node.id], node_evidence[selected_node.id],
                     node_branch_verdict[selected_node.id], execution_steps,

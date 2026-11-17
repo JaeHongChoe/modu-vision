@@ -1,0 +1,108 @@
+{
+  "schema_version": 1,
+  "status": "passed",
+  "started_at": "2026-11-16T17:30:42.437Z",
+  "finished_at": "2026-11-16T17:33:58.160Z",
+  "app_sha256": "263d6727d3a3e1ffd70499acee281dd27f2beaf12111408d0bb7c8b31ee959c7",
+  "asar_sha256": "0d45a96605dc6dc47b7e03eed61e5a7d9995daaa59d29cde1c3df59785327948",
+  "backend_sha256": "6f548b48696878aceea2b86b5708a4e7ff28c5c5b4e0b85871044cf9fd5f5345",
+  "backend_build_identity_sha256": "fda172ca8e47bd4fe0cde19f483ff55a58a3d3f70b370e5072736162e9888540",
+  "geti_descriptor_sha256": "c1573a40313869c4af2f91ccb27d48a34bdb47abad1e8f0c6eec2aff174a7192",
+  "geti_python_sha256": "1c4fc444d4dcf01d64c76ffec27834551254e494a211f34b00ad438e07cabfb6",
+  "training": false,
+  "weights_download": false,
+  "gpt": false,
+  "qualification": {
+    "signing": "unverified",
+    "notarization": "unverified",
+    "managed_automatic_update": "unqualified",
+    "model_quality": "unverified"
+  },
+  "resource_tree_sha256": "4ce1c4a18cf916dd629634b3b84f4f120179c44f2e873f491f584e1c8af5c529",
+  "signature_before": {
+    "status": "passed",
+    "deep": true,
+    "strict": true,
+    "trust": "ad-hoc; notarization unverified"
+  },
+  "accounts_mode": "native-local-capability",
+  "restart_persistence": {
+    "project": true,
+    "context": true,
+    "receipt": true,
+    "originals_unchanged": true,
+    "new_training_jobs": 0
+  },
+  "target": "macOS arm64",
+  "source_receipt_sha256": "07201e9e604510542a5af47fdadc3958c7fa9a97378505290c55ae713a4d8abc",
+  "scope": "Actual built package, two launches in isolated synthetic user data; installed user app and8443 unchanged during this acceptance.",
+  "launches": [
+    {
+      "receipt_id": "2263c5e6708047baa5d74f2e7b5c6c6b",
+      "image_listing": {
+        "count": 64,
+        "pagination": true,
+        "frozen_media_ids": true,
+        "original_hashes": true,
+        "library_activation": false
+      },
+      "resource_integrity": {
+        "changed_paths": [],
+        "unchanged": true
+      },
+      "signature_after": {
+        "status": "passed",
+        "deep": true,
+        "strict": true,
+        "trust": "ad-hoc; notarization unverified"
+      },
+      "observed": {
+        "backend": true,
+        "geti": true,
+        "remaining_processes": [],
+        "ports_closed": true
+      }
+    },
+    {
+      "receipt_id": "2263c5e6708047baa5d74f2e7b5c6c6b",
+      "image_listing": {
+        "count": 64,
+        "pagination": true,
+        "frozen_media_ids": true,
+        "original_hashes": true,
+        "library_activation": false,
+        "did_not_start_child": true
+      },
+      "resource_integrity": {
+        "changed_paths": [],
+        "unchanged": true
+      },
+      "signature_after": {
+        "status": "passed",
+        "deep": true,
+        "strict": true,
+        "trust": "ad-hoc; notarization unverified"
+      },
+      "observed": {
+        "backend": true,
+        "geti": true,
+        "remaining_processes": [],
+        "ports_closed": true
+      }
+    }
+  ],
+  "prepared": {
+    "project_id": "341fa6ad",
+    "receipt_id": "2263c5e6708047baa5d74f2e7b5c6c6b",
+    "counts": {
+      "training": 38,
+      "validation": 12,
+      "testing": 14,
+      "total": 64
+    },
+    "recipe_sha256": "4f4769ac00a8f370c96b8ed4f1ea811ea4f7b6a5c4c7220fc18ad99da47cc046",
+    "original_count": 64
+  },
+  "field_quality_qualified": false,
+  "installed_user_data_qualified": false
+}
