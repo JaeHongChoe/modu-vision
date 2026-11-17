@@ -262,7 +262,7 @@ export const AnnotationList: React.FC = () => {
       {/* Main Annotation List */}
       <div className="flex-1 min-h-0 overflow-y-auto p-2 space-y-1.5">
         <div className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider px-1">
-          라벨 목록 ({annotations.length})
+          {classification ? '추가 영역·표시' : '라벨 목록'} ({annotations.length})
         </div>
 
         {annotations.length === 0 ? (
@@ -270,7 +270,7 @@ export const AnnotationList: React.FC = () => {
             <div className="w-8 h-8 mx-auto mb-2 text-slate-500 flex items-center justify-center">
               <Ruler className="w-5 h-5 stroke-[1.5]" />
             </div>
-            <div className="text-xs font-medium text-slate-300">이 이미지에는 라벨이 없습니다</div>
+            <div className="text-xs font-medium text-slate-300">{classification ? '선택적으로 그린 영역이 없습니다' : '이 이미지에는 라벨이 없습니다'}</div>
             <div className="mt-1 text-[11px] text-slate-400">{classification ? "이미지 분류의 정답은 위 '이 이미지의 클래스'에서 정합니다. 영역은 패치 분류·근거용이라 그리지 않아도 됩니다." : '왼쪽 도구(단축키 1~6)로 결함 영역을 그리세요.'}</div>
           </div>
         ) : (

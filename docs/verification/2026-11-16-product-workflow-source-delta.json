@@ -1,0 +1,26 @@
+{
+  "base": "8f1b6051af64774b8f2f00b63cf9eabbaf26a36c",
+  "current_source_changes": {
+    "src/renderer/components/labeling/LabelingToolbar.tsx": {
+      "before": "8345e80148b919dbd2dcff6bd1876cbc069d82230108b966b49a52f4d5125ab5",
+      "after": "5f4ce5ab82dc1b7c04d18cb1df58a32070e5456fa418bb0d6dafa45190b292b4"
+    },
+    "src/renderer/components/labeling/AnnotationList.tsx": {
+      "before": "7cedc622d6bb2209ffc2279848bd35eb3d705a94a4bf99d96ab575d4075795b7",
+      "after": "9455991233c3d9005283fe09d88cfbb7496b5937027a0fdb04ed274dc95965dc"
+    },
+    "src/renderer/components/inference/BatchInspectionPanel.tsx": {
+      "before": "985e087c0fddf7d938a9d3ea0dc24ab4ed1a61fd7a0fb40c0860f02ca37256c4",
+      "after": "503d77ce8fb202c9205f9a2210fc0d329159204b3d09c502edde9b60610683a1"
+    }
+  },
+  "fixture_label_only": {
+    "file": "scripts/e2e/core-cohort-target.spec.ts",
+    "before": "100b143d0bc988364ea2ba94f438f31c9fd37189cf1fd9a0f92a0c3f579c7efd",
+    "after": "f0b8094817c471c6231f8481b38f7cf9e1d7b37f7968ec689a73d312591aca06",
+    "change": "Step4 evaluation action now uses the same readable visible and accessible name. Existing requests, assertions, scope and run guards unchanged. This fixture was not re-executed locally because it starts real owned models."
+  },
+  "historical_records_unchanged": true,
+  "new_historical_acceptance_credit": 0,
+  "scope": "Current source bindings only; historical receipts, recorded test bytes, execution source SHAs and review states stay unchanged. New focused and browser regressions are separate."
+}

@@ -16,6 +16,7 @@ import { useScopedError } from '../common/useScopedError';
 import type { FlowchartPipeline } from '../../types';
 import { activeSavedVersion, savedFlowIdentity, type SavedFlowIdentity } from '../flowchart/flowHandoff';
 import { SavedFlowIdentityCard } from '../flowchart/SavedFlowIdentityCard';
+import { InspectionRunIdentityCard } from './InspectionRunIdentityCard';
 import { ReviewQueuePanel } from './ReviewQueuePanel';
 import {useTaskHandoff} from '../training/useTaskHandoff';
 import {openSelectedInspectionRun} from './inspectionHistorySelection';
@@ -636,31 +637,7 @@ export const BatchInspectionPanel: React.FC = () => {
 
       {report && (
         <>
-          {report.run_id && <div className="rounded-lg border border-sky-700/50 bg-[#111D2D] px-3 py-3 text-[11px] text-slate-300" aria-label="선택한 검사 실행 식별자">
-            <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
-              <strong className="text-xs text-sky-200">선택한 검사 실행의 기록</strong>
-              <span className="font-mono text-slate-400" title={report.run_id}>실행 ID {report.run_id.slice(0, 8)}</span>
-            </div>
-            {report.execution_config && <p className="mb-2 text-sky-100">
-              실행 위치: {report.execution_config.execution_target === 'model_compute' ? '모델 학습 위치 · 기존 방식'
-                : report.execution_config.execution_target === 'local' ? '이 컴퓨터'
-                : report.execution_config.profile?.name || report.execution_config.compute_profile_name
-                  || report.execution_config.compute_profile_id || '선택 서버'}
-              {report.execution_config.execution_target !== 'model_compute' && ` · ${report.execution_config.device.toUpperCase()}`}
-              {report.execution_config.execution_target === 'model_compute' && ' · 실제 장치는 이미지별 기록에서 확인'}
-            </p>}
-            {technicalDetails ? <div className="grid gap-1.5 sm:grid-cols-2">
-              <span className="break-all">저장 플로우 버전 <strong className="font-mono text-slate-100">{report.saved_version_id || '이전 기록 · 미기록'}</strong></span>
-              <span className="break-all">그래프 SHA-256 <strong className="font-mono text-slate-100" title={report.pipeline_hash}>{report.pipeline_hash || '이전 기록 · 미기록'}</strong></span>
-            </div> : <p className="text-slate-400">저장한 검사 플로우 {report.saved_version_id ? `v${report.saved_version_id.slice(0, 8)}` : '(이전 기록)'}로 검사했습니다. 버전 해시는 상단 "기술 상세"에서 볼 수 있습니다.</p>}
-            {!technicalDetails ? null : Object.entries(report.model_sha256 || {}).length > 0 ? <div className="mt-2 space-y-1 border-t border-sky-800/50 pt-2">
-              <span className="font-semibold text-sky-200">검사 시작 시 검증한 체크포인트</span>
-              {Object.entries(report.model_sha256 || {}).map(([jobId, digest]) => <div key={jobId} className="grid gap-0.5 sm:grid-cols-[minmax(150px,0.35fr)_minmax(0,1fr)]">
-                <span className="truncate font-mono" title={jobId}>{jobId}</span>
-                <span className="break-all font-mono text-slate-100">SHA-256 {digest}</span>
-              </div>)}
-            </div> : <p className="mt-2 text-slate-500">이전 형식의 기록에는 체크포인트 해시가 없습니다.</p>}
-          </div>}
+          {report.run_id && <InspectionRunIdentityCard report={report} />}
           <div className="space-y-2">
             <div className="flex flex-wrap justify-between gap-2 text-xs text-slate-300">
               <span>플로우: <strong className="text-slate-100">{report.pipeline_name}</strong> · 범위: {scopeNames[report.scope]}</span>

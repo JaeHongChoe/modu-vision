@@ -32,10 +32,13 @@ import {
 import { useAnnotationStore } from '../../stores/useAnnotationStore';
 import { calculateActualSize, calculateCenterZoom, calculateFitToScreen } from '../../utils/coordinateMath';
 import { isShapeConvertible } from './convertedAnnotation';
+import { labelingToolGroups, type LabelingDrawingTool, type LabelingTask } from './labelingToolPresentation';
 
 /** `classification`: the project's class comes from the folder or the class picker, so the OK-tag toggle (which
  *  classification training never reads) is not offered. */
-export const LabelingToolbar: React.FC<{ classification?: boolean }> = ({ classification = false }) => {
+export const LabelingToolbar: React.FC<{ classification?: boolean; task?: LabelingTask; simpleView?: boolean }> = ({ classification: legacyClassification = false, task, simpleView = false }) => {
+  const classification = task ? task === 'classification' : legacyClassification;
+  const displayTask = task ?? (classification ? 'classification' : 'detection');
   const {
     activeTool,
     setActiveTool,
@@ -106,15 +109,24 @@ export const LabelingToolbar: React.FC<{ classification?: boolean }> = ({ classi
     setViewTransform((prev) => calculateCenterZoom(prev, factor, rect.width, rect.height, 0.01, 40.0));
   };
 
-  return (
-    // shrink-0: the studio is a column that can be shorter than its rows; a wrapped toolbar must keep both lines
-    // instead of being squeezed to its 48px minimum with the second line (the save button) under the next row.
-    <div data-labeling-toolbar className="min-h-12 shrink-0 bg-[#131822] border-b border-[#2B3547] px-4 py-1 flex flex-wrap items-center justify-between gap-y-1 text-slate-200 select-none whitespace-nowrap">
-      {/* Tool Selector: 7 Industrial Tools */}
-      <div data-labeling-tools className="flex items-center space-x-1">
-        {/* Tool 1: Select / Move */}
+  const tools = labelingToolGroups(displayTask, simpleView, activeTool);
+  const selectDrawingTool = (tool: LabelingDrawingTool, event?: React.MouseEvent<HTMLButtonElement>) => {
+    const disclosure = event?.currentTarget.closest<HTMLDetailsElement>('details[data-labeling-other-tools]');
+    if (disclosure) {
+      // The chosen tool moves into the primary group. Focus the stable summary
+      // before its old button is unmounted, so keyboard selection has a return.
+      disclosure.open = false;
+      disclosure.querySelector('summary')?.focus();
+    }
+    setActiveTool(tool);
+  };
+  const toolButtons: Record<LabelingDrawingTool, React.ReactElement> = {
+    select: (
         <button
-          onClick={() => setActiveTool('select')}
+          key="select"
+          type="button"
+          aria-pressed={activeTool === 'select'}
+          onClick={event => selectDrawingTool('select', event)}
           title="선택 및 이동 (Select / Move - 1)"
           className={`flex items-center px-2 py-1.5 rounded border transition-all cursor-pointer ${
             activeTool === 'select'
@@ -125,10 +137,13 @@ export const LabelingToolbar: React.FC<{ classification?: boolean }> = ({ classi
           <MousePointer className="w-4 h-4" />
           <span className="ml-1 text-xs">선택</span>
         </button>
-
-        {/* Tool 2: BBox */}
+    ),
+    bbox: (
         <button
-          onClick={() => setActiveTool('bbox')}
+          key="bbox"
+          type="button"
+          aria-pressed={activeTool === 'bbox'}
+          onClick={event => selectDrawingTool('bbox', event)}
           title="바운딩 박스 (BBox - 2)"
           className={`flex items-center px-2 py-1.5 rounded border transition-all cursor-pointer ${
             activeTool === 'bbox'
@@ -139,10 +154,13 @@ export const LabelingToolbar: React.FC<{ classification?: boolean }> = ({ classi
           <Square className="w-4 h-4" />
           <span className="ml-1 text-xs">박스</span>
         </button>
-
-        {/* Tool 3: Rotated BBox (OBB) */}
+    ),
+    rotated_bbox: (
         <button
-          onClick={() => setActiveTool('rotated_bbox')}
+          key="rotated_bbox"
+          type="button"
+          aria-pressed={activeTool === 'rotated_bbox'}
+          onClick={event => selectDrawingTool('rotated_bbox', event)}
           title="회전 바운딩 박스 (Rotated BBox OBB - 3)"
           className={`flex items-center px-2 py-1.5 rounded border transition-all cursor-pointer ${
             activeTool === 'rotated_bbox'
@@ -153,10 +171,13 @@ export const LabelingToolbar: React.FC<{ classification?: boolean }> = ({ classi
           <RotateCw className="w-4 h-4" />
           <span className="ml-1 text-xs">회전 박스</span>
         </button>
-
-        {/* Tool 4: Polygon */}
+    ),
+    polygon: (
         <button
-          onClick={() => setActiveTool('polygon')}
+          key="polygon"
+          type="button"
+          aria-pressed={activeTool === 'polygon'}
+          onClick={event => selectDrawingTool('polygon', event)}
           title="다각형 폴리곤 (Polygon - 4)"
           className={`flex items-center px-2 py-1.5 rounded border transition-all cursor-pointer ${
             activeTool === 'polygon'
@@ -167,10 +188,13 @@ export const LabelingToolbar: React.FC<{ classification?: boolean }> = ({ classi
           <Scissors className="w-4 h-4" />
           <span className="ml-1 text-xs">다각형</span>
         </button>
-
-        {/* Tool 5: Brush Mask */}
+    ),
+    brush: (
         <button
-          onClick={() => setActiveTool('brush')}
+          key="brush"
+          type="button"
+          aria-pressed={activeTool === 'brush'}
+          onClick={event => selectDrawingTool('brush', event)}
           title="브러시 마스크 (Brush - 5)"
           className={`flex items-center px-2 py-1.5 rounded border transition-all cursor-pointer ${
             activeTool === 'brush'
@@ -181,10 +205,13 @@ export const LabelingToolbar: React.FC<{ classification?: boolean }> = ({ classi
           <Paintbrush className="w-4 h-4" />
           <span className="ml-1 text-xs">브러시</span>
         </button>
-
-        {/* Tool 6: Eraser */}
+    ),
+    eraser: (
         <button
-          onClick={() => setActiveTool('eraser')}
+          key="eraser"
+          type="button"
+          aria-pressed={activeTool === 'eraser'}
+          onClick={event => selectDrawingTool('eraser', event)}
           title="마스크 지우개 (Eraser - 6)"
           className={`flex items-center px-2 py-1.5 rounded border transition-all cursor-pointer ${
             activeTool === 'eraser'
@@ -195,12 +222,13 @@ export const LabelingToolbar: React.FC<{ classification?: boolean }> = ({ classi
           <Eraser className="w-4 h-4" />
           <span className="ml-1 text-xs">지우개</span>
         </button>
-
-        <div className="w-[1px] h-5 bg-[#2B3547] mx-1" />
-
-        {/* Tool 7: Color/boundary based auto selection */}
+    ),
+    auto_select: (
         <button
-          onClick={() => setActiveTool('auto_select')}
+          key="auto_select"
+          type="button"
+          aria-pressed={activeTool === 'auto_select'}
+          onClick={event => selectDrawingTool('auto_select', event)}
           title="OpenCV 외곽선 추출: 클릭한 지점의 색상·경계로 선택 (SAM2는 모델 보조 패널 사용)"
           className={`flex items-center space-x-1.5 px-2.5 py-1.5 rounded text-xs font-medium transition-all border cursor-pointer ${
             activeTool === 'auto_select'
@@ -211,6 +239,26 @@ export const LabelingToolbar: React.FC<{ classification?: boolean }> = ({ classi
           <Wand2 className="w-3.5 h-3.5" />
           <span>오토 셀렉터</span>
         </button>
+    ),
+  };
+
+  return (
+    // shrink-0: the studio is a column that can be shorter than its rows; a wrapped toolbar must keep both lines
+    // instead of being squeezed to its 48px minimum with the second line (the save button) under the next row.
+    <div data-labeling-toolbar className="min-h-12 shrink-0 bg-[#131822] border-b border-[#2B3547] px-4 py-1 flex flex-wrap items-center justify-between gap-y-1 text-slate-200 select-none whitespace-nowrap">
+      {/* The same tools and callbacks, grouped for the current task. */}
+      <div data-labeling-tools className="flex flex-wrap items-center gap-1">
+        {simpleView && classification && <span className="mr-1 text-xs text-[var(--workspace-muted)]">사진 분류 · 영역은 선택 사항</span>}
+        <div role="group" aria-label="이 작업의 라벨 도구" className="flex flex-wrap items-center gap-1">
+          {tools.primary.map(tool => toolButtons[tool])}
+        </div>
+        {tools.other.length > 0 && <details data-labeling-other-tools className="relative text-xs">
+          <summary className="workspace-button cursor-pointer">다른 영역 도구<ChevronDown className="ml-1 h-3 w-3" aria-hidden="true" /></summary>
+          <div role="group" aria-label="다른 영역 도구" className="absolute left-0 top-full z-40 mt-1 grid min-w-48 gap-1 rounded border border-[var(--workspace-border)] bg-[var(--workspace-surface)] p-2 shadow-lg">
+            {tools.other.map(tool => toolButtons[tool])}
+          </div>
+        </details>}
+        {tools.supportToolLabel && <span role="status" className="text-xs text-[var(--workspace-muted)]">현재 도구: {tools.supportToolLabel}</span>}
 
         {/* AI Shape Converter Menu */}
         <div className="relative inline-flex items-center">

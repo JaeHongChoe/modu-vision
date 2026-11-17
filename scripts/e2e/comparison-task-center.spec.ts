@@ -240,8 +240,8 @@ async function exercise(page: Page, workspace: Workspace, evidence: Evidence, ap
   const editReturn=page.getByRole('region',{name:'판정 근거에서 시작한 라벨 편집'});
   await expect(editReturn).toContainText(editRow.image_id);
   // Step 2 of a classification project has no OK tag (the class comes from the folder or the class picker, F-04); the
-  // label edit that goes through 변경 저장 is a region drawn on the image.
-  await expect(page.getByText(`라벨 목록 (${beforeLabels.annotations.length})`,{exact:true})).toBeVisible();
+  // label edit that goes through 변경 저장 is an optional region, shown separately from the image's class.
+  await expect(page.getByText(`추가 영역·표시 (${beforeLabels.annotations.length})`,{exact:true})).toBeVisible();
   await expect(page.getByText('기존 라벨을 불러오는 중입니다.',{exact:true})).toHaveCount(0);
   // 모두 보기 opens every helper panel, which leaves the canvas almost no height; 집중 편집 folds them (the evidence return
   // bar stays) as a user would before drawing.
@@ -262,7 +262,7 @@ async function exercise(page: Page, workspace: Workspace, evidence: Evidence, ap
   const start=point(.45),end=point(.55);
   await page.mouse.move(start.x,start.y);await page.mouse.down();
   await page.mouse.move(end.x,end.y,{steps:8});await page.mouse.up();
-  await expect(page.getByText(`라벨 목록 (${beforeLabels.annotations.length+1})`,{exact:true})).toBeVisible();
+  await expect(page.getByText(`추가 영역·표시 (${beforeLabels.annotations.length+1})`,{exact:true})).toBeVisible();
   await expect(editReturn.getByRole('button',{name:'원래 판정 근거로 돌아가기',exact:true})).toBeDisabled();
   await expect(editReturn.getByRole('button',{name:'근거 이미지의 현재 라벨 다시 열기',exact:true})).toBeDisabled();
   await page.getByRole('button',{name:'변경 저장',exact:true}).click();
@@ -305,7 +305,7 @@ async function exercise(page: Page, workspace: Workspace, evidence: Evidence, ap
   await evidence.screenshot(page,native?'native-evidence-label-reopen-error':'browser-evidence-label-reopen-error');
   await page.unroute(metadataRoute);await reopen.click();
   await expect(editReturn.getByRole('alert')).toHaveCount(0);
-  await expect(page.getByText(`라벨 목록 (${afterLabels.annotations.length})`,{exact:true})).toBeVisible();
+  await expect(page.getByText(`추가 영역·표시 (${afterLabels.annotations.length})`,{exact:true})).toBeVisible();
   await expect(reopen).toBeEnabled();
   await expect(editReturn).toContainText(`확인한 수정 버전 ${savedMetadata.revision}`);
   await evidence.screenshot(page,native?'native-evidence-label-reopened':'browser-evidence-label-reopened');
@@ -382,7 +382,7 @@ async function exercise(page: Page, workspace: Workspace, evidence: Evidence, ap
   expect(await api(`/api/annotations/${editRow.image_id}?file_path=${encodeURIComponent(editRow.file_path)}`)).toEqual(afterLabels);
   const cancelCustodyAfter=custody();expect(cancelCustodyAfter).toEqual(cancelCustodyBefore);expect(posted).toBe(boundaryPosts);
   await evidence.screenshot(page,native?'native-evidence-label-cancelled-read':'browser-evidence-label-cancelled-read');
-  await page.unroute(metadataRoute);page.off('request',countAnnotation);await reopen.click();await expect(page.getByText(`라벨 목록 (${afterLabels.annotations.length})`,{exact:true})).toBeVisible();await expect(reopen).toBeEnabled();
+  await page.unroute(metadataRoute);page.off('request',countAnnotation);await reopen.click();await expect(page.getByText(`추가 영역·표시 (${afterLabels.annotations.length})`,{exact:true})).toBeVisible();await expect(reopen).toBeEnabled();
   evidence.note('evidence_label_boundary_custody',{cells:['U030.evidence-current-label-return.error','U030.evidence-current-label-return.cancel'],
     comparison_id:secondJob.report_id,project_id:project.id,source,task:'classification',labelset_id:selectedReport.labelset_id,
     image_id:editRow.image_id,image_uuid:savedMetadata.image_uuid,image_path:editRow.file_path,image_sha256:editRow.image_sha256,

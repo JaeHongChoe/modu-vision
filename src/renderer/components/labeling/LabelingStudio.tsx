@@ -106,7 +106,7 @@ export const LabelingStudio: React.FC = () => {
   return (
     <div className="flex flex-col h-full w-full bg-[var(--workspace-bg)] text-[var(--workspace-text)] overflow-hidden select-none">
       {/* Top Action Toolbar */}
-      <LabelingToolbar classification={projectTask === 'classification'} />
+      <LabelingToolbar classification={projectTask === 'classification'} task={projectTask} simpleView={viewMode === 'simple'} />
       <EvidenceEditReturn />
       <div data-surface="bar" className="flex shrink-0 items-center justify-end gap-2 border-b border-[var(--workspace-border)] px-3 py-0.5 text-[11px] text-[var(--workspace-muted)]">
         <h1 className="mr-auto shrink-0 text-sm font-semibold text-[var(--workspace-text)]">라벨 확인</h1>

@@ -21,7 +21,7 @@ async function exercise(page:Page,workspace:Workspace,evidence:Evidence,api:Api,
  const trained=await trainClassifier();
  const version=await api('/api/dataset/versions',{name:'Independent original heldout evaluation'});
  await stage(3);await page.getByLabel('평가 모델',{exact:true}).selectOption(trained.job_id);await page.getByLabel('평가 데이터 버전',{exact:true}).selectOption(version.id);await page.getByLabel('평가 장치',{exact:true}).selectOption('cpu');
- const execute=async()=>{const waiting=page.waitForResponse(r=>new URL(r.url()).pathname==='/api/model-execution/recipes'&&r.request().method()==='POST');await page.getByRole('button',{name:'선택 코호트 평가',exact:true}).click();return waiting;};
+ const execute=async()=>{const waiting=page.waitForResponse(r=>new URL(r.url()).pathname==='/api/model-execution/recipes'&&r.request().method()==='POST');await page.getByRole('button',{name:'선택한 시험 이미지 평가',exact:true}).click();return waiting;};
  let response=await execute();expect(response.ok(),await response.text()).toBe(true);const result=await response.json();
  expect(response.request().postDataJSON()).toMatchObject({task:'classification',stage:'evaluate',execution_target:'local',device:'cpu',params:{job_id:trained.job_id,dataset_path:fixture.source,evaluation_dataset_version_id:version.id}});
  expect(result.common_cohort).toMatchObject({dataset_version_id:version.id,image_count:3,split:'test'});expect(result.metrics).toMatchObject({evaluated_split:'test',selection_overlap:false});expect(result.quality_approved).toBe(false);expect(result.execution.runtime).toMatchObject({device:'cpu'});

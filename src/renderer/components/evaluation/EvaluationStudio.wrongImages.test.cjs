@@ -32,5 +32,6 @@ test('results missing from the screen: the footer reaches the refresh button; a 
  assert.match(studio,/selectedCell \? '선택한 혼동 행렬 칸에는 미검 이미지가 없습니다 · 위의 필터 초기화를 누르면 모든 미검 이미지가 보입니다' : hasDefectSamples \? '현재 검증 표본에서 미검 0건' : 'NG 검증 표본 없음'/);
  assert.match(studio,/\{selectedCell \? '선택한 혼동 행렬 칸에는 과검 이미지가 없습니다 · 위의 필터 초기화를 누르면 모든 과검 이미지가 보입니다' : hasNormalSamples/);
  assert.match(studio,/<div id="evaluation-image-list" role="tabpanel" aria-label="평가 이미지 목록" className="contents \[&>\*\]:mt-2">/,'the panel the five tabs control, keeping the cards\' gap');
- assert.equal(studio.match(/aria-controls="evaluation-image-list"/g).length,5);
+ const tabArea=studio.slice(studio.indexOf('<div role="tablist" aria-label="평가 이미지 필터"'),studio.indexOf('<div id="evaluation-image-list"'));
+ assert.equal(tabArea.match(/aria-controls="evaluation-image-list"/g).length,5,'the five preview tabs retain their own panel connection; summary buttons can also reveal it');
 });

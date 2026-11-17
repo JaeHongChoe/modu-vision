@@ -169,3 +169,21 @@ or human usability certification.
 - The dataset path fallback remains mounted; an unsupported native-picker request reveals it. Imports preserve source ownership and errors. The gallery never relabels or crops source pixels for appearance.
 - Assistant close remains presentation-only; opening it does not send a question. Existing credential, image-consent and write-authority boundaries remain intact.
 - QA uses isolated profiles/synthetic examples. Screenshot and source-check results do not establish user acceptance or manufacturing model quality.
+
+## Task-centered workbench presentation — 2026-11-16
+
+| Surface | Canonical owner | Presentation contract |
+| --- | --- | --- |
+| Label tools | LabelingToolbar + existing annotation activeTool | Task-aware primary tools in simple view; the current tool is always outside the closed other-tools disclosure. Disclosure/render never mutates annotations, tool or save state. Full view keeps every tool. |
+| Classification empty regions | ClassificationClassPicker + AnnotationList | Optional region count is separate from photo-class truth. Zero regions is not evidence of an unlabelled classification image. |
+| Evaluation selection | EvaluationStudio + useEvaluationStore | Readable option labels keep original job/version values and source/labelset/revision fences. Navigation and filtering never start evaluation. |
+| Result-to-photo navigation | Existing sampleFilter / clearCellSelection | Preview counts open the corresponding current-preview list. Saved missed-image review retains its separate saved-threshold owner and action. |
+| Evaluation details | Existing evaluation state/controller | Simple view folds advanced statistics and exact IDs, preserving mounted state. Running/cancel-request/ACK/worker-exit distinctions, errors and cancel/recovery actions remain outside details. |
+| Next-use identity | SavedFlowIdentityCard + flowHandoff | Current saved selection is named and counted; all exact version/graph/model identities remain available. No claim of historical execution or approval. |
+| Historical inspection identity | BatchInspectionPanel + InspectionRunIdentityCard | Render the selected report snapshot only. Current selection cannot replace missing historical provenance. Source/project changes retire the old report through existing guards. |
+
+Native select popups remain platform-owned as declared in `premium-ui.json`.
+Native disclosures supply keyboard activation without a new overlay, focus trap,
+or persisted state owner. Shared workspace focus and theme tokens apply. Lists,
+filters, saved truth, operation ownership and execution policies retain their
+existing API/store contracts; this layer does not infer readiness or acceptance.

@@ -57,6 +57,7 @@ function fixture({commonCohort=false,browser=false}={}){
   if(name.endsWith('/useTrainingStore'))return{useTrainingStore:hook(training)};
   if(name.endsWith('/useEvaluationStore'))return{useEvaluationStore:hook(evaluation),computeSampleVerdict:()=> 'REVIEW',isDefectLabel:()=>false,isNormalLabel:()=>false};
   if(name.endsWith('/useTaskHandoff'))return{useTaskHandoff:()=>handoff};
+  if(name.endsWith('/workflowReadiness'))return{focusWorkflowTarget(){}};
   if(name.endsWith('/assistContext'))return shared;
   if(name.endsWith('/useScopedError'))return loadLocal('../common/useScopedError');
   if(name.endsWith('/services/api'))return{
